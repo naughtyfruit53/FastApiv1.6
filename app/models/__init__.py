@@ -43,6 +43,18 @@ from .enhanced_inventory_models import (
     Warehouse, StockLocation, ProductTracking, WarehouseStock, ProductBatch,
     ProductSerial, BatchLocation, StockMovement, StockAdjustment, StockAdjustmentItem
 )
+# Import asset management models
+from .asset_models import (
+    Asset, AssetStatus, AssetCondition, MaintenanceSchedule, MaintenanceRecord,
+    MaintenanceType, MaintenanceStatus, DepreciationRecord, MaintenancePartUsed,
+    DepreciationMethod
+)
+# Import transport and freight models
+from .transport_models import (
+    Carrier, CarrierType, Route, RouteStatus, FreightRate, FreightMode,
+    Shipment, ShipmentStatus, ShipmentItem, ShipmentTracking, FreightCostAnalysis,
+    VehicleType
+)
 from .vouchers import (
     BaseVoucher, PurchaseVoucher, PurchaseVoucherItem,
     SalesVoucher, SalesVoucherItem, PurchaseOrder, PurchaseOrderItem,
@@ -84,5 +96,15 @@ __all__ = [
     "SalesOrder", "SalesOrderItem", "GoodsReceiptNote", "GoodsReceiptNoteItem",
     "DeliveryChallan", "DeliveryChallanItem", "ProformaInvoice", "ProformaInvoiceItem",
     "Quotation", "QuotationItem", "CreditNote", "CreditNoteItem",
-    "DebitNote", "DebitNoteItem"
+    "DebitNote", "DebitNoteItem",
+    
+    # Asset management models
+    "Asset", "AssetStatus", "AssetCondition", "MaintenanceSchedule", "MaintenanceRecord",
+    "MaintenanceType", "MaintenanceStatus", "DepreciationRecord", "MaintenancePartUsed",
+    "DepreciationMethod",
+    
+    # Transport and freight models
+    "Carrier", "CarrierType", "Route", "RouteStatus", "FreightRate", "FreightMode",
+    "Shipment", "ShipmentStatus", "ShipmentItem", "ShipmentTracking", "FreightCostAnalysis",
+    "VehicleType"
 ]
