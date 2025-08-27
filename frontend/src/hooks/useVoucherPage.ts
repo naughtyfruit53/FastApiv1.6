@@ -134,7 +134,31 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     enabled: isOrgContextReady && (config.entityType === 'sales' || config.entityType === 'financial'),
   });
 
-  // Enhanced computed values with rate formatting and GST breakdown
+  // Extract isIntrastate as separate memo for UI usage
+  const isIntrastate = useMemo(() => {
+    let isIntra = true;
+    try {
+      const selectedEntityId = watch('customer_id') || watch('vendor_id');
+      let selectedEntity = null;
+      
+      if (config.entityType === 'sales' && customerList && selectedEntityId) {
+        selectedEntity = customerList.find((c: any) => c.id === selectedEntityId);
+      } else if (config.entityType === 'purchase' && vendorList && selectedEntityId) {
+        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
+      }
+      
+      if (selectedEntity) {
+        const companyStateCode = company?.state_code || '27';
+        const entityStateCode = selectedEntity.state_code || selectedEntity.gst_number?.slice(0, 2);
+        isIntra = entityStateCode === companyStateCode;
+      }
+    } catch (error) {
+      console.warn('Error determining transaction state:', error);
+    }
+    return isIntra;
+  }, [watch('customer_id'), watch('vendor_id'), config.entityType, customerList, vendorList, company?.state_code]);
+
+  // Enhanced computed values using the extracted isIntrastate
   const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst } = useMemo(() => {
     if (config.hasItems === false || !itemsWatch) {
       return {
@@ -148,32 +172,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       };
     }
     
-    // Determine if this is an intrastate transaction based on customer/vendor state
-    let isIntrastate = true; // Default to intrastate
-    
-    try {
-      // Get the selected entity (customer/vendor)
-      const selectedEntityId = watch('customer_id') || watch('vendor_id');
-      let selectedEntity = null;
-      
-      if (config.entityType === 'sales' && customerList && selectedEntityId) {
-        selectedEntity = customerList.find((c: any) => c.id === selectedEntityId);
-      } else if (config.entityType === 'purchase' && vendorList && selectedEntityId) {
-        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
-      }
-      
-      // If we have entity with state_code, check against company state
-      if (selectedEntity && selectedEntity.state_code) {
-        // Use company state code from context
-        const companyStateCode = company?.state_code || '27';  // Fallback to '27' if not loaded
-        isIntrastate = selectedEntity.state_code === companyStateCode;
-      }
-    } catch (error) {
-      console.warn('Error determining transaction state:', error);
-      // Fallback to intrastate if error occurs
-      isIntrastate = true;
-    }
-    
     // Ensure all rates are properly formatted
     const formattedItems = itemsWatch.map((item: any) => ({
       ...item,
@@ -181,7 +179,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }));
     
     return calculateVoucherTotals(formattedItems, isIntrastate);
-  }, [itemsWatch, config.hasItems, config.entityType, watch, customerList, vendorList, company?.state_code]);
+  }, [itemsWatch, config.hasItems, watch, isIntrastate]);
 
   // Enhanced queries with pagination and sorting
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({
@@ -226,7 +224,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const { data: voucherData, isLoading: isFetching } = useQuery({
     queryKey: [config.voucherType, selectedId],
     queryFn: () => voucherService.getVoucherById(config.apiEndpoint || config.voucherType, selectedId!),
-    enabled: !!selectedId && isOrgContextReady
+    enabled: !!selectedId && isOrgContextReady && (mode === 'view' || mode === 'edit')
   });
 
   const { data: nextVoucherNumber, isLoading: isNextNumberLoading, refetch: refetchNextNumber } = useQuery({
@@ -280,6 +278,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     setMode('create');
     setReferenceDocument(null); // Clear reference
     router.push({ query: { mode: 'create' } }, undefined, { shallow: true });
+    reset(defaultValues);
   };
 
   const handleEdit = (voucherId: number) => {
@@ -427,9 +426,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   }, []);
 
   // Enhanced PDF generation with proper config
-  const handleGeneratePDF = useCallback(async () => {
+  const handleGeneratePDF = useCallback(async (voucher?: any) => {
     const pdfConfig = getVoucherPdfConfig(config.voucherType);
-    const voucherToUse = voucherData || watch();
+    const voucherToUse = voucher || voucherData || watch();
     
     const pdfData: VoucherPdfData = {
       voucher_number: voucherToUse.voucher_number,
@@ -729,6 +728,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalCgst,
     totalSgst,
     totalIgst,
+    isIntrastate,
 
     // Mutations
     createMutation,

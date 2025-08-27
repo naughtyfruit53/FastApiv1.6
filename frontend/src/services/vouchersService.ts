@@ -6,7 +6,7 @@ import api from '../lib/api';
 export const voucherService = {
   // Generic Voucher Methods
   getVouchers: async (type: string, params?: any) => {
-    const endpoint = `/${type}`;  // Remove extra 's' - use type as is (already plural)
+    const endpoint = `/${type}`;  // Use type directly since it's already plural
     console.log(`[voucherService] Fetching vouchers from endpoint: ${endpoint}`);
     const response = await api.get(endpoint, { params });
     console.log(`[voucherService] Received data for ${type}:`, response.data);
@@ -114,7 +114,7 @@ export const voucherService = {
 
   sendVoucherEmail: async (voucherType: string, id: number) => {
     try {
-      const response = await api.post(`/${voucherType}s/${id}/send-email`);
+      const response = await api.post(`/${voucherType}/${id}/send-email`);
       return response.data;
     } catch (error) {
       console.error('Error sending voucher email:', error);
@@ -124,7 +124,7 @@ export const voucherService = {
 
   deleteVoucher: async (voucherType: string, id: number) => {
     try {
-      const response = await api.delete(`/${voucherType}s/${id}`);
+      const response = await api.delete(`/${voucherType}/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting voucher:', error);

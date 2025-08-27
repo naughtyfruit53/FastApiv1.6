@@ -82,6 +82,7 @@ const PurchaseVoucherPage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
+    voucherData,
 
     // Computed
     computedItems,
@@ -91,6 +92,7 @@ const PurchaseVoucherPage: React.FC = () => {
     totalCgst,
     totalSgst,
     totalIgst,
+    isIntrastate,
 
     // Mutations
     createMutation,
@@ -140,35 +142,6 @@ const PurchaseVoucherPage: React.FC = () => {
 
   const companyStateCode = company?.state_code;
 
-  // State for intrastate determination
-  const [isIntrastate, setIsIntrastate] = useState(true);
-
-  useEffect(() => {
-    if (selectedVendor && companyStateCode) {
-      const vendorStateCode = selectedVendor.state_code || selectedVendor.gst_number?.slice(0, 2);
-      setIsIntrastate(isIntrastateTransaction(companyStateCode, vendorStateCode));
-    }
-  }, [selectedVendor, companyStateCode]);
-
-  // Memoized computed items with GST split
-  const computedItemsMemo = useMemo(() => {
-    return fields.map((field, index) => {
-      const item = {
-        ...field,
-        quantity: watch(`items.${index}.quantity`),
-        unit_price: watch(`items.${index}.unit_price`),
-        discount_percentage: watch(`items.${index}.discount_percentage`),
-        gst_rate: watch(`items.${index}.gst_rate`),
-      };
-      return calculateItemTotals(item, isIntrastate);
-    });
-  }, [fields, isIntrastate, ...fields.flatMap((_, index) => [
-    watch(`items.${index}.quantity`),
-    watch(`items.${index}.unit_price`),
-    watch(`items.${index}.discount_percentage`),
-    watch(`items.${index}.gst_rate`)
-  ])]);
-
   // Purchase Voucher specific handlers
   const handleAddItem = () => {
     append({
@@ -189,36 +162,22 @@ const PurchaseVoucherPage: React.FC = () => {
   const onSubmit = async (data: any) => {
     try {
       if (config.hasItems !== false) {
-        data.items = computedItemsMemo;
+        data.items = computedItems;
         data.total_amount = totalAmount;
       }
 
       let response;
       if (mode === 'create') {
-        response = await api.post('/purchase-vouchers', data);
+        response = await createMutation.mutateAsync(data);
         if (confirm('Voucher created successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
-        }
-        // Reset form and prepare for next entry
-        reset();
-        setMode('create');
-        // Fetch next voucher number
-        try {
-          const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
-          setValue('voucher_number', nextNumber);
-          setValue('date', new Date().toISOString().split('T')[0]);
-        } catch (err) {
-          console.error('Failed to fetch next voucher number:', err);
+          handleGeneratePDF(response);
         }
       } else if (mode === 'edit') {
-        response = await api.put('/purchase-vouchers/' + data.id, data);
+        response = await updateMutation.mutateAsync(data);
         if (confirm('Voucher updated successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
+          handleGeneratePDF(response);
         }
       }
-      
-      // Refresh voucher list to show latest at top
-      await refreshMasterData();
       
     } catch (error) {
       console.error('Error saving purchase voucher:', error);
@@ -272,47 +231,18 @@ const PurchaseVoucherPage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
-  const handleVoucherClick = async (voucher: any) => {
-    try {
-      // Fetch complete voucher data including items
-      const response = await api.get(`/purchase-vouchers/${voucher.id}`);
-      const fullVoucherData = response.data;
-      
-      // Load the complete voucher data into the form
-      setMode('view');
-      reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      // Fallback to available data
-      setMode('view');
-      reset(voucher);
-    }
+  const handleVoucherClick = (voucher: any) => {
+    handleView(voucher.id);
   };
   
-  // Enhanced handleEdit to fetch complete data
-  const handleEditWithData = async (voucher: any) => {
-    try {
-      const response = await api.get(`/purchase-vouchers/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode('edit');
-      reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      handleEdit(voucher);
-    }
+  // Enhanced handleEdit to use hook
+  const handleEditWithData = (voucher: any) => {
+    handleEdit(voucher.id);
   };
   
-  // Enhanced handleView to fetch complete data
-  const handleViewWithData = async (voucher: any) => {
-    try {
-      const response = await api.get(`/purchase-vouchers/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode('view');
-      reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      handleView(voucher);
-    }
+  // Enhanced handleView to use hook
+  const handleViewWithData = (voucher: any) => {
+    handleView(voucher.id);
   };
 
   const indexContent = (
@@ -357,7 +287,7 @@ const PurchaseVoucherPage: React.FC = () => {
                       onView={() => handleViewWithData(voucher)}
                       onEdit={() => handleEditWithData(voucher)}
                       onDelete={() => handleDelete(voucher)}
-                      onPrint={() => handleGeneratePDF()}
+                      onPrint={() => handleGeneratePDF(voucher)}
                       showKebab={true}
                       onClose={() => {}}
                     />
@@ -386,7 +316,7 @@ const PurchaseVoucherPage: React.FC = () => {
         />
       </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1} sx={voucherStyles.centerText}>
           {/* First Row: Voucher Number, Date, Vendor */}
           <Grid size={3}>
@@ -598,7 +528,7 @@ const PurchaseVoucherPage: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, fontSize: 14, textAlign: 'center' }}>
-                          ₹{computedItemsMemo[index]?.total_amount?.toLocaleString() || '0'}
+                          ₹{computedItems[index]?.total_amount?.toLocaleString() || '0'}
                         </TableCell>
                         {mode !== 'view' && (
                           <TableCell sx={{ p: 1 }}>
@@ -720,23 +650,6 @@ const PurchaseVoucherPage: React.FC = () => {
               size="small"
             />
           </Grid>
-
-          {/* Action buttons - removed Generate PDF */}
-          <Grid size={12}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              {mode !== 'view' && (
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  color="success" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  sx={{ fontSize: 12 }}
-                >
-                  Save
-                </Button>
-              )}
-            </Box>
-          </Grid>
         </Grid>
       </form>
     </Box>
@@ -777,7 +690,7 @@ const PurchaseVoucherPage: React.FC = () => {
             onEdit={handleEditWithData}
             onView={handleViewWithData}
             onDelete={handleDelete}
-            onGeneratePDF={handleGeneratePDF}
+            onGeneratePDF={(voucher) => handleGeneratePDF(voucher)}
             vendorList={vendorList}
           />
         }
