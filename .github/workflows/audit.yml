@@ -1,0 +1,467 @@
+name: 🔍 UI Audit System
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - 'app/**'
+      - 'scripts/audit_ui_features.py'
+      - '.github/workflows/audit.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - 'app/**'
+      - 'scripts/audit_ui_features.py'
+  schedule:
+    # Run comprehensive audit daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      audit_scope:
+        description: 'Audit scope'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - smoke
+          - accessibility-only
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  setup-environment:
+    name: 🚀 Setup Test Environment
+    runs-on: ubuntu-latest
+    outputs:
+      frontend-url: ${{ steps.urls.outputs.frontend-url }}
+      api-url: ${{ steps.urls.outputs.api-url }}
+      
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set environment URLs
+        id: urls
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+            echo "frontend-url=https://tritiq-erp.com" >> $GITHUB_OUTPUT
+            echo "api-url=https://api.tritiq-erp.com" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            echo "frontend-url=https://staging.tritiq-erp.com" >> $GITHUB_OUTPUT
+            echo "api-url=https://api-staging.tritiq-erp.com" >> $GITHUB_OUTPUT
+          else
+            echo "frontend-url=http://localhost:3000" >> $GITHUB_OUTPUT
+            echo "api-url=http://localhost:8000" >> $GITHUB_OUTPUT
+          fi
+
+  start-services:
+    name: 🏗️ Start Application Services
+    runs-on: ubuntu-latest
+    needs: setup-environment
+    if: contains(needs.setup-environment.outputs.frontend-url, 'localhost')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 🔧 Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🔧 Install Node.js dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: 🗄️ Setup test database
+        run: |
+          # Setup PostgreSQL test database
+          sudo systemctl start postgresql.service
+          sudo -u postgres createdb tritiq_test || true
+          sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';" || true
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;" || true
+
+      - name: ⚙️ Configure environment
+        run: |
+          cat > .env.test << EOF
+          DATABASE_URL=postgresql://tritiq_user:tritiq_pass@localhost/tritiq_test
+          SECRET_KEY=test-secret-key-for-ci
+          ALGORITHM=HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES=30
+          ENVIRONMENT=test
+          CORS_ORIGINS=["http://localhost:3000"]
+          EOF
+
+      - name: 🗄️ Run database migrations
+        run: |
+          export $(cat .env.test | xargs)
+          alembic upgrade head
+
+      - name: 🏃‍♂️ Start backend server
+        run: |
+          export $(cat .env.test | xargs)
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo $! > backend.pid
+          
+          # Wait for backend to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:8000/health > /dev/null 2>&1; do sleep 2; done'
+        
+      - name: 🏃‍♂️ Start frontend server
+        run: |
+          cd frontend
+          npm run build
+          npm start &
+          echo $! > ../frontend.pid
+          
+          # Wait for frontend to be ready
+          timeout 120 bash -c 'until curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done'
+
+      - name: 💾 Cache running services
+        run: |
+          echo "Services started successfully"
+          echo "Backend PID: $(cat backend.pid)"
+          echo "Frontend PID: $(cat frontend.pid)"
+
+  run-ui-audit:
+    name: 🔍 Run UI Audit
+    runs-on: ubuntu-latest
+    needs: [setup-environment, start-services]
+    if: always() && (needs.start-services.result == 'success' || contains(needs.setup-environment.outputs.frontend-url, 'https'))
+    
+    strategy:
+      matrix:
+        browser: [chromium]
+        # Future: Add webkit, firefox for cross-browser testing
+        
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 🔧 Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install ${{ matrix.browser }}
+          playwright install-deps
+
+      - name: 🔄 Start services (if local environment)
+        if: contains(needs.setup-environment.outputs.frontend-url, 'localhost')
+        run: |
+          # For local testing, replicate the service startup
+          sudo systemctl start postgresql.service
+          sudo -u postgres createdb tritiq_test || true
+          sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';" || true
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;" || true
+          
+          cat > .env.test << EOF
+          DATABASE_URL=postgresql://tritiq_user:tritiq_pass@localhost/tritiq_test
+          SECRET_KEY=test-secret-key-for-ci
+          ALGORITHM=HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES=30
+          ENVIRONMENT=test
+          CORS_ORIGINS=["http://localhost:3000"]
+          EOF
+          
+          export $(cat .env.test | xargs)
+          alembic upgrade head
+          
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          timeout 60 bash -c 'until curl -f http://localhost:8000/health > /dev/null 2>&1; do sleep 2; done'
+          
+          cd frontend
+          npm ci
+          npm run build
+          npm start &
+          cd ..
+          timeout 120 bash -c 'until curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done'
+
+      - name: 🔍 Run comprehensive UI audit
+        id: audit
+        run: |
+          mkdir -p audit_results
+          
+          # Set audit parameters based on inputs
+          AUDIT_ARGS="--headless"
+          
+          if [ "${{ github.event.inputs.audit_scope }}" = "smoke" ]; then
+            AUDIT_ARGS="$AUDIT_ARGS --smoke-test"
+          elif [ "${{ github.event.inputs.audit_scope }}" = "accessibility-only" ]; then
+            AUDIT_ARGS="$AUDIT_ARGS --accessibility-only"
+          fi
+          
+          # Run the audit
+          python scripts/audit_ui_features.py \
+            --url "${{ needs.setup-environment.outputs.frontend-url }}" \
+            --api "${{ needs.setup-environment.outputs.api-url }}" \
+            --username "admin@test.com" \
+            --password "admin123" \
+            $AUDIT_ARGS
+          
+          # Set outputs for downstream jobs
+          echo "audit-completed=true" >> $GITHUB_OUTPUT
+          
+          # Extract key metrics for job summary
+          if [ -f audit_results/audit_report_*.json ]; then
+            LATEST_JSON=$(ls audit_results/audit_report_*.json | tail -1)
+            ACCESSIBILITY_RATE=$(python3 -c "import json; data=json.load(open('$LATEST_JSON')); print(data['summary_statistics']['accessibility_rate'])")
+            BROKEN_COUNT=$(python3 -c "import json; data=json.load(open('$LATEST_JSON')); print(data['summary_statistics']['broken'])")
+            TOTAL_FEATURES=$(python3 -c "import json; data=json.load(open('$LATEST_JSON')); print(data['summary_statistics']['total_features'])")
+            
+            echo "accessibility-rate=$ACCESSIBILITY_RATE" >> $GITHUB_OUTPUT
+            echo "broken-count=$BROKEN_COUNT" >> $GITHUB_OUTPUT
+            echo "total-features=$TOTAL_FEATURES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📊 Generate job summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # 🔍 UI Audit Results
+          
+          ## Overview
+          - **Environment**: ${{ github.event.inputs.environment || 'development' }}
+          - **Scope**: ${{ github.event.inputs.audit_scope || 'full' }}
+          - **Browser**: ${{ matrix.browser }}
+          - **Frontend URL**: ${{ needs.setup-environment.outputs.frontend-url }}
+          
+          ## Results
+          EOF
+          
+          if [ "${{ steps.audit.outputs.audit-completed }}" = "true" ]; then
+            cat >> $GITHUB_STEP_SUMMARY << EOF
+          - **Total Features Tested**: ${{ steps.audit.outputs.total-features }}
+          - **Accessibility Rate**: ${{ steps.audit.outputs.accessibility-rate }}%
+          - **Broken Features**: ${{ steps.audit.outputs.broken-count }}
+          
+          EOF
+            
+            if [ "${{ steps.audit.outputs.broken-count }}" -gt "0" ]; then
+              cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          > ⚠️ **Warning**: Broken features detected. Check the detailed audit report.
+          
+          EOF
+            else
+              cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          > ✅ **Success**: All tested features are accessible.
+          
+          EOF
+            fi
+          else
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          > ❌ **Error**: Audit failed to complete. Check the logs for details.
+          
+          EOF
+          fi
+
+      - name: 📤 Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-audit-report-${{ matrix.browser }}-${{ github.run_number }}
+          path: |
+            audit_results/
+            !audit_results/.gitkeep
+          retention-days: 30
+
+      - name: 📤 Upload screenshots (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-audit-screenshots-${{ matrix.browser }}-${{ github.run_number }}
+          path: audit_results/screenshots/
+          retention-days: 7
+
+      - name: 🚨 Set audit status
+        if: always()
+        run: |
+          if [ "${{ steps.audit.outputs.broken-count }}" -gt "0" ]; then
+            echo "❌ Audit failed: ${{ steps.audit.outputs.broken-count }} broken features detected"
+            exit 1
+          elif [ "${{ steps.audit.outputs.accessibility-rate }}" ]; then
+            RATE="${{ steps.audit.outputs.accessibility-rate }}"
+            if (( $(echo "$RATE < 85" | bc -l) )); then
+              echo "⚠️ Audit warning: Low accessibility rate ($RATE%)"
+              exit 1
+            else
+              echo "✅ Audit passed: $RATE% accessibility rate"
+            fi
+          else
+            echo "❌ Audit failed: Unable to determine results"
+            exit 1
+          fi
+
+  post-audit-analysis:
+    name: 📈 Post-Audit Analysis
+    runs-on: ubuntu-latest
+    needs: [run-ui-audit]
+    if: always()
+    
+    steps:
+      - name: 📥 Download audit reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ui-audit-report-*
+          merge-multiple: true
+          path: ./audit_reports
+
+      - name: 📊 Aggregate results
+        run: |
+          echo "# 🔍 UI Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Find all JSON reports
+          JSON_FILES=$(find audit_reports -name "*.json" | head -1)
+          
+          if [ -n "$JSON_FILES" ]; then
+            echo "## 📈 Key Metrics" >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+            import json
+            import glob
+            
+            for file in glob.glob('audit_reports/**/audit_report_*.json', recursive=True):
+                with open(file) as f:
+                    data = json.load(f)
+                stats = data['summary_statistics']
+                
+                print(f'- **Accessibility Rate**: {stats[\"accessibility_rate\"]}%')
+                print(f'- **Total Features**: {stats[\"total_features\"]}')
+                print(f'- **Accessible**: {stats[\"accessible\"]}')
+                print(f'- **Broken**: {stats[\"broken\"]}')
+                print(f'- **Average Load Time**: {stats[\"average_load_time\"]}s')
+                print(f'- **Performance Grade**: {stats[\"performance_grade\"]}')
+                break
+            " >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No audit reports found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 💬 Comment on PR (if PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Find the latest audit report
+            const reportFiles = fs.readdirSync('./audit_reports', { recursive: true })
+              .filter(file => file.endsWith('.json') && file.includes('audit_report_'));
+            
+            if (reportFiles.length === 0) {
+              console.log('No audit reports found');
+              return;
+            }
+            
+            const latestReport = reportFiles[0];
+            const reportPath = path.join('./audit_reports', latestReport);
+            const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            const stats = reportData.summary_statistics;
+            
+            const statusIcon = stats.broken > 0 ? '❌' : 
+                              stats.accessibility_rate >= 95 ? '✅' : 
+                              stats.accessibility_rate >= 85 ? '⚠️' : '🚨';
+            
+            const comment = `## ${statusIcon} UI Audit Results
+            
+            **Audit completed for PR #${{ github.event.number }}**
+            
+            | Metric | Value |
+            |--------|-------|
+            | 🎯 Accessibility Rate | **${stats.accessibility_rate}%** |
+            | 📊 Total Features | ${stats.total_features} |
+            | ✅ Accessible | ${stats.accessible} |
+            | ❌ Broken | ${stats.broken} |
+            | ⚠️ Not Accessible | ${stats.not_accessible} |
+            | ⚡ Avg Load Time | ${stats.average_load_time}s |
+            | 🏆 Performance Grade | ${stats.performance_grade} |
+            
+            ${stats.broken > 0 ? `> 🚨 **${stats.broken} broken features detected** - Please review and fix before merging.` : ''}
+            ${stats.accessibility_rate < 85 ? `> ⚠️ **Low accessibility rate** - Consider improving before merging.` : ''}
+            ${stats.broken === 0 && stats.accessibility_rate >= 95 ? `> ✅ **Excellent!** All features are accessible and working properly.` : ''}
+            
+            📄 **Detailed report available in the workflow artifacts.**
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  notify-results:
+    name: 📢 Notify Results
+    runs-on: ubuntu-latest
+    needs: [run-ui-audit, post-audit-analysis]
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'push')
+    
+    steps:
+      - name: 📧 Send notification (scheduled runs)
+        if: github.event_name == 'schedule'
+        run: |
+          # This is a placeholder for notification logic
+          # In a real implementation, you might:
+          # - Send Slack notifications
+          # - Create GitHub issues for broken features
+          # - Send email reports to stakeholders
+          # - Update monitoring dashboards
+          
+          echo "📅 Scheduled audit completed"
+          echo "🔗 Results: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          # Example: Create issue for broken features (if any)
+          if [ "${{ needs.run-ui-audit.outputs.broken-count }}" -gt "0" ]; then
+            echo "Would create GitHub issue for ${{ needs.run-ui-audit.outputs.broken-count }} broken features"
+          fi
+
+  cleanup:
+    name: 🧹 Cleanup
+    runs-on: ubuntu-latest
+    needs: [run-ui-audit, post-audit-analysis]
+    if: always()
+    
+    steps:
+      - name: 🧹 Clean up test environment
+        run: |
+          echo "Cleaning up test environment..."
+          # Kill any remaining processes
+          pkill -f "uvicorn\|node\|npm" || true
+          
+          # Clean up temporary files
+          rm -rf .env.test audit_results/temp* || true
+          
+          echo "✅ Cleanup completed"

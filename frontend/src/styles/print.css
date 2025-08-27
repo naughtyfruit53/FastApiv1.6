@@ -1,0 +1,200 @@
+/* Print styles for reports */
+@media print {
+  /* Hide non-essential elements when printing */
+  .MuiButton-root,
+  .MuiIconButton-root,
+  .MuiTabs-root,
+  nav,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Optimize page layout for printing */
+  body {
+    margin: 0;
+    font-size: 12pt;
+    line-height: 1.4;
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Make tables fit better on printed pages */
+  .MuiTableContainer-root {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  .MuiTable-root {
+    page-break-inside: auto;
+  }
+
+  .MuiTableRow-root {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .MuiTableHead-root {
+    display: table-header-group;
+  }
+
+  .MuiTableCell-root {
+    border: 1px solid #000 !important;
+    padding: 4px 8px !important;
+    font-size: 10pt !important;
+  }
+
+  .MuiTableCell-head {
+    background-color: #f5f5f5 !important;
+    font-weight: bold !important;
+  }
+
+  /* Chip styles for print */
+  .MuiChip-root {
+    background-color: transparent !important;
+    border: 1px solid #000 !important;
+    color: black !important;
+  }
+
+  /* Typography adjustments */
+  .MuiTypography-h4 {
+    font-size: 18pt !important;
+    margin-bottom: 12pt !important;
+  }
+
+  .MuiTypography-h5 {
+    font-size: 16pt !important;
+    margin-bottom: 10pt !important;
+  }
+
+  .MuiTypography-h6 {
+    font-size: 14pt !important;
+    margin-bottom: 8pt !important;
+  }
+
+  /* Page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* Header and footer for printed pages */
+  @page {
+    margin: 0.5in;
+    
+    @top-center {
+      content: "Report Generated on " date();
+    }
+    
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+    }
+  }
+
+  /* Summary boxes */
+  .print-summary {
+    border: 2px solid #000 !important;
+    padding: 12pt !important;
+    margin-bottom: 12pt !important;
+    background-color: #f9f9f9 !important;
+  }
+
+  /* Ensure proper spacing */
+  .MuiBox-root {
+    margin-bottom: 8pt !important;
+  }
+
+  /* Hide Material-UI specific elements that don't work well in print */
+  .MuiPaper-root {
+    box-shadow: none !important;
+    background-color: transparent !important;
+  }
+
+  .MuiContainer-root {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* Make sure tables use full width */
+  .MuiTableContainer-root {
+    width: 100% !important;
+  }
+
+  /* Adjust grid layout for print */
+  .MuiGrid-root {
+    width: 100% !important;
+  }
+
+  /* Ensure text contrast */
+  .MuiTypography-root {
+    color: black !important;
+  }
+
+  /* Tab content should be visible in print */
+  div[role="tabpanel"] {
+    display: block !important;
+  }
+
+  /* Hide tab navigation but show content */
+  .MuiTabs-root ~ div[role="tabpanel"][hidden] {
+    display: none !important;
+  }
+
+  .MuiTabs-root ~ div[role="tabpanel"]:not([hidden]) {
+    display: block !important;
+  }
+}
+
+/* Utility classes for better print control */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block !important;
+  }
+  
+  .screen-only {
+    display: none !important;
+  }
+}
+
+/* Report header styles */
+.report-header {
+  text-align: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #333;
+  padding-bottom: 10px;
+}
+
+@media print {
+  .report-header {
+    margin-bottom: 12pt;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8pt;
+  }
+}
+
+/* Summary card styles for print */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media print {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12pt;
+    margin-bottom: 16pt;
+  }
+}

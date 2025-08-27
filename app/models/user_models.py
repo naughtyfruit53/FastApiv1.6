@@ -1,0 +1,382 @@
+# app/models/user_models.py
+
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+from app.core.database import Base
+from typing import List, Optional
+from datetime import datetime, date
+
+# Platform User Model - For SaaS platform-level users (kept here, removed from base.py)
+class PlatformUser(Base):
+    __tablename__ = "platform_users"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # User credentials
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+
+    # User details
+    full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    role: Mapped[str] = mapped_column(String, nullable=False, default="super_admin") # super_admin, platform_admin
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Temporary master password support
+    temp_password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Temporary password hash
+    temp_password_expires: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True) # Expiry for temp password
+    force_password_reset: Mapped[bool] = mapped_column(Boolean, default=False) # Force password reset on next login
+
+    # Security
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index('idx_platform_user_email', 'email'),
+        Index('idx_platform_user_active', 'is_active'),
+        {'extend_existing': True}
+    )
+
+# Organization/Tenant Model - Core of Multi-tenancy (kept here, removed from base.py)
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    subdomain: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True) # For subdomain-based tenancy
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active") # active, suspended, trial
+
+    # Business details
+    business_type: Mapped[Optional[str]] = mapped_column(String, nullable=True) # manufacturing, trading, service, etc.
+    industry: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    website: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Contact information
+    primary_email: Mapped[str] = mapped_column(String, nullable=False)
+    primary_phone: Mapped[str] = mapped_column(String, nullable=False)
+
+    # Address
+    address1: Mapped[str] = mapped_column(String, nullable=False)
+    address2: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    city: Mapped[str] = mapped_column(String, nullable=False)
+    state: Mapped[str] = mapped_column(String, nullable=False)
+    pin_code: Mapped[str] = mapped_column(String, nullable=False)
+    country: Mapped[str] = mapped_column(String, nullable=False, default="India")
+    state_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Legal details
+    gst_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    pan_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    cin_number: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Corporate Identification Number
+
+    # Subscription details
+    plan_type: Mapped[str] = mapped_column(String, default="trial") # trial, basic, premium, enterprise
+    max_users: Mapped[int] = mapped_column(Integer, default=5)
+    storage_limit_gb: Mapped[int] = mapped_column(Integer, default=1)
+    features: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # Feature flags
+    
+    # License management
+    license_type: Mapped[str] = mapped_column(String, default="trial") # trial, month, year, perpetual
+    license_issued_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    license_expiry_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    license_duration_months: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # null for perpetual
+
+    # Settings
+    timezone: Mapped[str] = mapped_column(String, default="Asia/Kolkata")
+    currency: Mapped[str] = mapped_column(String, default="INR")
+    date_format: Mapped[str] = mapped_column(String, default="DD/MM/YYYY")
+    financial_year_start: Mapped[str] = mapped_column(String, default="04/01") # April 1st
+
+    # Module Access Control - Organization level module enablement
+    enabled_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
+        "CRM": True,
+        "ERP": True, 
+        "HR": True,
+        "Inventory": True,
+        "Service": True,
+        "Analytics": True,
+        "Finance": True
+    }) # Modules enabled for this organization
+
+    # Onboarding status
+    company_details_completed: Mapped[bool] = mapped_column(Boolean, default=False) # Track if company details have been filled
+
+    # Custom org code
+    org_code: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True, index=True) # Custom format: yy/mm-(total user)-tqnnnn
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships with fully qualified paths
+    users: Mapped[List["app.models.user_models.User"]] = relationship(
+        "app.models.user_models.User", 
+        back_populates="organization"
+    )
+    companies: Mapped[List["app.models.system_models.Company"]] = relationship(
+        "app.models.system_models.Company", 
+        back_populates="organization"
+    )
+    vendors: Mapped[List["app.models.customer_models.Vendor"]] = relationship(
+        "app.models.customer_models.Vendor", 
+        back_populates="organization"
+    )
+    customers: Mapped[List["app.models.customer_models.Customer"]] = relationship(
+        "app.models.customer_models.Customer", 
+        back_populates="organization"
+    )
+    products: Mapped[List["app.models.product_models.Product"]] = relationship(
+        "app.models.product_models.Product", 
+        back_populates="organization"
+    )
+    stock_entries: Mapped[List["app.models.product_models.Stock"]] = relationship(
+        "app.models.product_models.Stock", 
+        back_populates="organization"
+    )
+
+    __table_args__ = (
+        Index('idx_org_status_subdomain', 'status', 'subdomain'),
+        {'extend_existing': True}
+    )
+
+# Merged User model (took the more complete version from base.py, with fields from user_models.py like permissions, is_sso_user added)
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # Multi-tenant fields - REQUIRED for all organization users
+    organization_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_user_organization_id"), nullable=True, index=True)
+
+    # User credentials
+    email: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    username: Mapped[str] = mapped_column(String, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+
+    # Supabase Auth integration
+    supabase_uuid: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True) # Supabase user UUID for auth integration
+
+    # User details
+    full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    role: Mapped[str] = mapped_column(String, nullable=False, default="standard_user") # org_admin, admin, standard_user
+    department: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    designation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    employee_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Permissions and status
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_super_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_stock_access: Mapped[bool] = mapped_column(Boolean, default=True) # Module access for stock functionality
+
+    # Module Access Control - User level module assignments
+    assigned_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
+        "CRM": True,
+        "ERP": True,
+        "HR": True, 
+        "Inventory": True,
+        "Service": True,
+        "Analytics": True,
+        "Finance": True
+    }) # Modules assigned to this user (subset of org enabled modules)
+
+    # Temporary master password support
+    temp_password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Temporary password hash
+    temp_password_expires: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True) # Expiry for temp password
+    force_password_reset: Mapped[bool] = mapped_column(Boolean, default=False) # Force password reset on next login
+
+    # Profile
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    avatar_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Security
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Added from user_models.py
+    permissions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # JSON field for flexible permissions
+    is_sso_user: Mapped[bool] = mapped_column(Boolean, default=False) # Flag to identify SSO users
+    sso_provider: Mapped[Optional[str]] = mapped_column(String, nullable=True) # SSO provider name
+    sso_id: Mapped[Optional[str]] = mapped_column(String, nullable=True) # SSO provider user ID
+
+    # Relationships with fully qualified paths
+    organization: Mapped[Optional["app.models.user_models.Organization"]] = relationship(
+        "app.models.user_models.Organization", 
+        back_populates="users"
+    )
+
+    __table_args__ = (
+        # Unique email per organization
+        UniqueConstraint('organization_id', 'email', name='uq_user_org_email'),
+        # Unique username per organization
+        UniqueConstraint('organization_id', 'username', name='uq_user_org_username'),
+        Index('idx_user_org_email', 'organization_id', 'email'),
+        Index('idx_user_org_username', 'organization_id', 'username'),
+        Index('idx_user_org_active', 'organization_id', 'is_active'),
+        {'extend_existing': True}
+    )
+
+# Merged ServiceRole (took version from base.py with display_name, removed from base.py)
+class ServiceRole(Base):
+    """Service CRM roles (admin, manager, support, viewer)"""
+    __tablename__ = "service_roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_service_role_organization_id"), nullable=False, index=True)
+
+    # Role details
+    name: Mapped[str] = mapped_column(String, nullable=False) # admin, manager, support, viewer
+    display_name: Mapped[str] = mapped_column(String, nullable=False) # Human-readable name
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships with fully qualified paths
+    organization: Mapped["app.models.user_models.Organization"] = relationship(
+        "app.models.user_models.Organization"
+    )
+    user_assignments: Mapped[List["app.models.user_models.UserServiceRole"]] = relationship(
+        "app.models.user_models.UserServiceRole", 
+        back_populates="role"
+    )
+    role_permissions: Mapped[List["app.models.user_models.ServiceRolePermission"]] = relationship(
+        "app.models.user_models.ServiceRolePermission", 
+        back_populates="role"
+    )
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'name', name='uq_service_role_org_name'),
+        Index('idx_service_role_org_active', 'organization_id', 'is_active'),
+        {'extend_existing': True}
+    )
+
+# Merged ServicePermission (took version from base.py with module, action, removed from base.py)
+class ServicePermission(Base):
+    """Service CRM permissions for granular access control"""
+    __tablename__ = "service_permissions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # Permission details
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True) # e.g., service_create, technician_read
+    display_name: Mapped[str] = mapped_column(String, nullable=False) # Human-readable name
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    module: Mapped[str] = mapped_column(String, nullable=False, index=True) # service, technician, appointment, etc.
+    action: Mapped[str] = mapped_column(String, nullable=False, index=True) # create, read, update, delete
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships with fully qualified paths
+    role_permissions: Mapped[List["app.models.user_models.ServiceRolePermission"]] = relationship(
+        "app.models.user_models.ServiceRolePermission", 
+        back_populates="permission"
+    )
+
+    __table_args__ = (
+        Index('idx_service_permission_module_action', 'module', 'action'),
+        {'extend_existing': True}
+    )
+
+# Merged ServiceRolePermission (took version from base.py, added organization_id from user_models.py)
+class ServiceRolePermission(Base):
+    """Many-to-many relationship between Service roles and permissions"""
+    __tablename__ = "service_role_permissions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # Added organization_id for consistency with multi-tenancy
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_service_role_permission_organization_id"), nullable=False, index=True)
+
+    # Foreign keys
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("service_roles.id", name="fk_service_role_permission_role_id"), nullable=False)
+    permission_id: Mapped[int] = mapped_column(Integer, ForeignKey("service_permissions.id", name="fk_service_role_permission_permission_id"), nullable=False)
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships with fully qualified paths
+    organization: Mapped["app.models.user_models.Organization"] = relationship(
+        "app.models.user_models.Organization"
+    )
+    role: Mapped["app.models.user_models.ServiceRole"] = relationship(
+        "app.models.user_models.ServiceRole", 
+        back_populates="role_permissions"
+    )
+    permission: Mapped["app.models.user_models.ServicePermission"] = relationship(
+        "app.models.user_models.ServicePermission", 
+        back_populates="role_permissions"
+    )
+
+    __table_args__ = (
+        UniqueConstraint('role_id', 'permission_id', name='uq_service_role_permission'),
+        Index('idx_service_role_permission_role', 'role_id'),
+        Index('idx_service_role_permission_permission', 'permission_id'),
+        {'extend_existing': True}
+    )
+
+# Merged UserServiceRole (took version from base.py, added organization_id and assigned_at from user_models.py)
+class UserServiceRole(Base):
+    """Many-to-many relationship between Users and Service roles"""
+    __tablename__ = "user_service_roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # Added organization_id for consistency with multi-tenancy
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_user_service_role_organization_id"), nullable=False, index=True)
+
+    # Foreign keys
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_service_role_user_id"), nullable=False)
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("service_roles.id", name="fk_user_service_role_role_id"), nullable=False)
+
+    # Assignment details
+    assigned_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_service_role_assigned_by_id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())  # Added from user_models.py
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships with fully qualified paths
+    organization: Mapped["app.models.user_models.Organization"] = relationship(
+        "app.models.user_models.Organization"
+    )
+    user: Mapped["app.models.user_models.User"] = relationship(
+        "app.models.user_models.User", 
+        foreign_keys=[user_id]
+    )
+    role: Mapped["app.models.user_models.ServiceRole"] = relationship(
+        "app.models.user_models.ServiceRole", 
+        back_populates="user_assignments"
+    )
+    assigned_by: Mapped[Optional["app.models.user_models.User"]] = relationship(
+        "app.models.user_models.User", 
+        foreign_keys=[assigned_by_id]
+    )
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'role_id', name='uq_user_service_role'),
+        Index('idx_user_service_role_user', 'user_id'),
+        Index('idx_user_service_role_role', 'role_id'),
+        Index('idx_user_service_role_active', 'is_active'),
+        {'extend_existing': True}
+    )

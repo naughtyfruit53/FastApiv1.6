@@ -1,0 +1,810 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Menu,
+  MenuItem,
+  Box,
+  Paper,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  IconButton,
+  Avatar,
+  ListItemButton,
+  Grid,
+  Tooltip
+} from '@mui/material';
+import {
+  Dashboard,
+  Receipt,
+  Inventory,
+  People,
+  Business,
+  Assessment,
+  Settings,
+  AccountCircle,
+  ExpandMore,
+  ShoppingCart,
+  LocalShipping,
+  AccountBalance,
+  SwapHoriz,
+  TrendingUp,
+  BarChart,
+  Security,
+  Storage,
+  Build,
+  ReceiptLong,
+  NoteAdd,
+  AddBusiness,
+  DeveloperMode,
+  Analytics,
+  SupervisorAccount,
+  Engineering,
+  Schedule,
+  Feedback,
+  AdminPanelSettings,
+  NotificationsActive,
+  History,
+  CloudUpload,
+  SupportAgent,
+  Assignment,
+  Timeline,
+  Groups,
+  CorporateFare,
+  ChevronRight,
+  LockOutlined
+} from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
+import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
+import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers, canShowUserManagementInMegaMenu } from '../types/user.types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { companyService } from '../services/authService';
+import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
+import { organizationService } from '../services/organizationService';
+
+interface MegaMenuProps {
+  user?: any;
+  onLogout: () => void;
+  isVisible?: boolean;
+}
+
+const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [subAnchorEl, setSubAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeSubCategory, setActiveSubCategory] = useState<any>(null);
+  const [createLicenseModalOpen, setCreateLicenseModalOpen] = useState(false);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // Query for company data to show logo
+  const { data: companyData } = useQuery({
+    queryKey: ['company'],
+    queryFn: companyService.getCurrentCompany,
+    enabled: !isAppSuperAdmin(user), // Only fetch for organization users
+    retry: false,
+    staleTime: 0, // 5 minutes
+  });
+
+  // Query for current organization (to get enabled_modules)
+  const { data: organizationData } = useQuery({
+    queryKey: ['currentOrganization'],
+    queryFn: organizationService.getCurrentOrganization,
+    enabled: !isAppSuperAdmin(user), // Only for organization users
+    retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 10000, // Auto-refetch every 10 seconds for testing
+    onSuccess: (data) => {
+      console.log('Organization data fetched:', {
+        enabled_modules: data.enabled_modules,
+        timestamp: new Date().toISOString()
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to fetch organization data:', error);
+    }
+  });
+
+  // Query for current user's service permissions
+  const { data: userPermissions = [] } = useQuery({
+    queryKey: ['userServicePermissions'],
+    queryFn: rbacService.getCurrentUserPermissions,
+    enabled: !!user && !isAppSuperAdmin(user), // Only fetch for organization users
+    retry: false,
+    staleTime: 0, // 5 minutes
+    onSuccess: (data) => {
+      console.log('User permissions fetched:', data);
+    }
+  });
+
+  // Add keyboard event listener for Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (anchorEl) {
+          handleMenuClose();
+        }
+        if (userMenuAnchor) {
+          handleUserMenuClose();
+        }
+        if (subAnchorEl) {
+          handleSubClose();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [anchorEl, userMenuAnchor, subAnchorEl]);
+
+  // Don't render if not visible
+  if (!isVisible) {
+    return null;
+  }
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
+    setAnchorEl(event.currentTarget);
+    setActiveMenu(menuName);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setActiveMenu(null);
+  };
+
+  const handleSubClick = (event: React.MouseEvent<HTMLElement>, category: any) => {
+    setSubAnchorEl(event.currentTarget);
+    setActiveSubCategory(category);
+  };
+
+  const handleSubClose = () => {
+    setSubAnchorEl(null);
+    setActiveSubCategory(null);
+  };
+
+  const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setUserMenuAnchor(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const navigateTo = (path: string) => {
+    router.push(path);
+    handleMenuClose();
+    handleSubClose();
+  };
+
+  const _handleCreateOrgLicense = () => {
+    // For now, we'll use a state to control the modal
+    // In a full implementation, this would be managed by parent component
+    setCreateLicenseModalOpen(true);
+    handleMenuClose();
+  };
+
+  const handleDemoMode = () => {
+    // Navigate to demo page
+    router.push('/demo');
+    handleMenuClose();
+  };
+
+  // Check user roles using proper utility functions
+  const isSuperAdmin = isAppSuperAdmin(user);
+  const _isOrgAdmin = isOrgSuperAdmin(user);
+  const _canManage = canManageUsers(user);
+  const _canShowUserMgmtInMenu = canShowUserManagementInMegaMenu(user);
+
+  // Service permission helper functions
+  const hasServicePermission = (permission: string): boolean => {
+    return userPermissions.includes(permission);
+  };
+
+  const hasAnyServicePermission = (permissions: string[]): boolean => {
+    return permissions.some(permission => userPermissions.includes(permission));
+  };
+
+  const canAccessServiceFeatures = (): boolean => {
+    const hasAccess = hasAnyServicePermission([
+      SERVICE_PERMISSIONS.SERVICE_READ,
+      SERVICE_PERMISSIONS.APPOINTMENT_READ,
+      SERVICE_PERMISSIONS.TECHNICIAN_READ,
+      SERVICE_PERMISSIONS.WORK_ORDER_READ
+    ]);
+    console.log('Permission check - canAccessService:', hasAccess, {
+      userPermissions,
+      timestamp: new Date().toISOString()
+    });
+    return hasAccess;
+  };
+
+  const canAccessServiceAnalytics = (): boolean => {
+    return hasServicePermission(SERVICE_PERMISSIONS.SERVICE_REPORTS_READ);
+  };
+
+  const canManageServiceRoles = (): boolean => {
+    return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
+  };
+
+  // Enhanced logo navigation function
+  const navigateToHome = () => {
+    router.push('/dashboard');
+    handleMenuClose();
+  };
+
+  // Helper to check if a module is enabled for the organization
+  const isModuleEnabled = (module: string): boolean => {
+    if (isSuperAdmin) return true; // Super admins see all
+    const enabled = organizationData?.enabled_modules?.[module] ?? false;
+    console.log(`Module check - ${module}:`, enabled, {
+      allModules: organizationData?.enabled_modules,
+      timestamp: new Date().toISOString()
+    });
+    return enabled;
+  };
+
+  // Function to handle contact support (placeholder - open email or ticket)
+  const handleContactSupport = () => {
+    // In production, this could open a support ticket form or email client
+    window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
+  };
+
+  const menuItems = {
+    // Master Data - Restored as top-level menu with direct navigation
+    masterData: {
+      title: 'Master Data',
+      icon: <People />,
+      sections: [
+        {
+          title: 'Business Entities',
+          items: [
+            { name: 'Vendors', path: '/vendors', icon: <People /> },
+            { name: 'Customers', path: '/customers', icon: <Business /> },
+            { name: 'Employees', path: '/employees', icon: <People /> },
+            { name: 'Company Details', path: '/company-details', icon: <Business /> }
+          ]
+        },
+        {
+          title: 'Product & Inventory',
+          items: [
+            { name: 'Products', path: '/products', icon: <Inventory /> },
+            { name: 'Categories', path: '/categories', icon: <Storage /> },
+            { name: 'Units', path: '/units', icon: <Storage /> },
+            { name: 'Bill of Materials (BOM)', path: '/bom', icon: <Build /> }
+          ]
+        },
+        {
+          title: 'Financial Configuration',
+          items: [
+            { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: <AccountBalance /> },
+            { name: 'Tax Codes', path: '/tax-codes', icon: <Assessment /> },
+            { name: 'Payment Terms', path: '/payment-terms', icon: <Business /> }
+          ]
+        }
+      ]
+    },
+    // ERP menu now contains inventory and vouchers only
+    erp: {
+      title: 'ERP',
+      icon: <Business />,
+      sections: [
+        {
+          title: 'Inventory',
+          items: [
+            { name: 'Current Stock', path: '/inventory/stock', icon: <Inventory /> },
+            { name: 'Stock Movements', path: '/inventory/movements', icon: <SwapHoriz /> },
+            { name: 'Low Stock Report', path: '/inventory/low-stock', icon: <TrendingUp /> },
+            { name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
+            { name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
+            { name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
+          ]
+        },
+        {
+          title: 'Vouchers',
+          items: [
+            {
+              name: 'Purchase Vouchers',
+              subItems: [
+                { name: 'Purchase Order', path: '/vouchers/Purchase-Vouchers/purchase-order', icon: <LocalShipping /> },
+                { name: 'GRN (Goods Received Note)', path: '/vouchers/Purchase-Vouchers/grn', icon: <Inventory /> },
+                { name: 'Purchase Voucher', path: '/vouchers/Purchase-Vouchers/purchase-voucher', icon: <ShoppingCart /> },
+                { name: 'Purchase Return', path: '/vouchers/Purchase-Vouchers/purchase-return', icon: <SwapHoriz /> }
+              ]
+            },
+            {
+              name: 'Pre-Sales Vouchers',
+              subItems: [
+                { name: 'Quotation', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
+                { name: 'Proforma Invoice', path: '/vouchers/Pre-Sales-Voucher/proforma-invoice', icon: <ReceiptLong /> },
+                { name: 'Sales Order', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Assessment /> }
+              ]
+            },
+            {
+              name: 'Sales Vouchers',
+              subItems: [
+                { name: 'Sales Voucher', path: '/vouchers/Sales-Vouchers/sales-voucher', icon: <TrendingUp /> },
+                { name: 'Delivery Challan', path: '/vouchers/Sales-Vouchers/delivery-challan', icon: <LocalShipping /> },
+                { name: 'Sales Return', path: '/vouchers/Sales-Vouchers/sales-return', icon: <SwapHoriz /> }
+              ]
+            },
+            {
+              name: 'Financial Vouchers',
+              subItems: [
+                { name: 'Payment Voucher', path: '/vouchers/Financial-Vouchers/payment-voucher', icon: <AccountBalance /> },
+                { name: 'Receipt Voucher', path: '/vouchers/Financial-Vouchers/receipt-voucher', icon: <AccountBalance /> },
+                { name: 'Journal Voucher', path: '/vouchers/Financial-Vouchers/journal-voucher', icon: <AccountBalance /> },
+                { name: 'Contra Voucher', path: '/vouchers/Financial-Vouchers/contra-voucher', icon: <AccountBalance /> },
+                { name: 'Credit Note', path: '/vouchers/Financial-Vouchers/credit-note', icon: <AccountBalance /> },
+                { name: 'Debit Note', path: '/vouchers/Financial-Vouchers/debit-note', icon: <AccountBalance /> },
+                { name: 'Non-Sales Credit Note', path: '/vouchers/Financial-Vouchers/non-sales-credit-note', icon: <AccountBalance /> },
+                { name: 'Inter Department Voucher', path: '/vouchers/inter-department-voucher', icon: <SwapHoriz /> }
+              ]
+            },
+            {
+              name: 'Manufacturing Vouchers',
+              subItems: [
+                { name: 'Production Order', path: '/vouchers/Manufacturing-Vouchers/production-order', icon: <Build /> },
+                { name: 'Material Requisition', path: '/vouchers/Manufacturing-Vouchers/material-requisition', icon: <Storage /> },
+                { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
+                { name: 'Finished Goods Receipt', path: '/vouchers/Manufacturing-Vouchers/finished-goods-receipt', icon: <Inventory /> }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    // Combined Reports & Analytics menu
+    reportsAnalytics: {
+      title: 'Reports & Analytics',
+      icon: <Assessment />,
+      sections: [
+        {
+          title: 'Financial Reports',
+          items: [
+            { name: 'Ledgers', path: '/reports/ledgers', icon: <AccountBalance /> },
+            { name: 'Trial Balance', path: '/reports/trial-balance', icon: <BarChart /> },
+            { name: 'Profit & Loss', path: '/reports/profit-loss', icon: <TrendingUp /> },
+            { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> }
+          ]
+        },
+        {
+          title: 'Inventory Reports',
+          items: [
+            { name: 'Stock Report', path: '/reports/stock', icon: <Inventory /> },
+            { name: 'Valuation Report', path: '/reports/valuation', icon: <BarChart /> },
+            { name: 'Movement Report', path: '/reports/movements', icon: <SwapHoriz /> }
+          ]
+        },
+        {
+          title: 'Business Reports',
+          items: [
+            { name: 'Sales Analysis', path: '/reports/sales-analysis', icon: <TrendingUp /> },
+            { name: 'Purchase Analysis', path: '/reports/purchase-analysis', icon: <ShoppingCart /> },
+            { name: 'Vendor Analysis', path: '/reports/vendor-analysis', icon: <People /> }
+          ]
+        },
+        {
+          title: 'Business Analytics',
+          items: [
+            { name: 'Customer Analytics', path: '/analytics/customer', icon: <TrendingUp /> },
+            { name: 'Sales Analytics', path: '/analytics/sales', icon: <BarChart /> },
+            { name: 'Purchase Analytics', path: '/analytics/purchase', icon: <ShoppingCart /> }
+          ]
+        },
+        {
+          title: 'Service Analytics',
+          items: [
+            { name: 'Service Dashboard', path: '/analytics/service', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_REPORTS_READ },
+            { name: 'Job Completion', path: '/analytics/service/job-completion', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.SERVICE_REPORTS_READ },
+            { name: 'Technician Performance', path: '/analytics/service/technician-performance', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.SERVICE_REPORTS_READ },
+            { name: 'Customer Satisfaction', path: '/analytics/service/customer-satisfaction', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.SERVICE_REPORTS_READ },
+            { name: 'SLA Compliance', path: '/analytics/service/sla-compliance', icon: <Timeline />, servicePermission: SERVICE_PERMISSIONS.SERVICE_REPORTS_READ }
+          ]
+        }
+      ]
+    },
+    service: {
+      title: 'Service CRM',
+      icon: <SupportAgent />,
+      sections: [
+        {
+          title: 'Operations',
+          items: [
+            { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
+          ]
+        },
+        {
+          title: 'Management',
+          items: [
+            { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
+            { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
+          ]
+        }
+      ]
+    },
+    settings: {
+      title: 'Settings',
+      icon: <Settings />,
+      sections: [
+        {
+          title: 'Organization Settings',
+          items: [
+            { name: 'General Settings', path: '/settings', icon: <Settings /> },
+            { name: 'Company Profile', path: '/settings/company', icon: <Business /> },
+            { name: 'User Management', path: '/settings/users', icon: <People /> }
+          ]
+        },
+        {
+          title: 'Administration',
+          items: [
+            { name: 'App Users', path: '/admin/app-user-management', icon: <Groups />, superAdminOnly: true },
+            { name: 'Organization Management', path: '/admin/manage-organizations', icon: <CorporateFare />, superAdminOnly: true },
+            { name: 'License Management', path: '/admin/license-management', icon: <Security />, superAdminOnly: true },
+            { name: 'Role Management', path: '/admin/rbac', icon: <SupervisorAccount />, servicePermission: SERVICE_PERMISSIONS.CRM_ADMIN },
+            { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, servicePermission: SERVICE_PERMISSIONS.CRM_SETTINGS },
+            { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, role: 'org_admin' },
+            { name: 'Notification Management', path: '/admin/notifications', icon: <NotificationsActive />, role: 'org_admin' }
+          ]
+        }
+      ]
+    }
+  };
+
+  const renderMegaMenu = () => {
+    if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) return null;
+
+    const menu = menuItems[activeMenu as keyof typeof menuItems];
+
+    // Filter menu items based on user permissions
+    const filterMenuItems = (section: any) => {
+      return section.items.filter((item: any) => {
+        // Check role-based permissions
+        if (item.role && !canManageUsers(user)) {
+          return false;
+        }
+        
+        // Check super admin only items
+        if (item.superAdminOnly && !isSuperAdmin) {
+          return false;
+        }
+        
+        // Check service permissions
+        if (item.servicePermission && !hasServicePermission(item.servicePermission)) {
+          return false;
+        }
+        
+        return true;
+      });
+    };
+
+    const filteredSections = menu.sections.map(section => ({
+      ...section,
+      items: filterMenuItems(section)
+    })).filter(section => section.items.length > 0);
+
+    if (filteredSections.length === 0) {
+      console.log(`No items in submenu for ${activeMenu} - permissions may be missing`);
+      return null;
+    }
+
+    return (
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            width: 800,
+            maxHeight: 500,
+            mt: 1
+          }
+        }}
+        MenuListProps={{
+          sx: { p: 2 }
+        }}
+      >
+        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+          {menu.title}
+        </Typography>
+        <Grid container spacing={2}>
+          {filteredSections.map((section, index) => (
+            <Grid
+              key={index}
+              size={{
+                xs: 12,
+                sm: 6,
+                md: 3
+              }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
+                {section.title}
+              </Typography>
+              <List dense>
+                {section.items.map((item: any, itemIndex: number) => (
+                  <ListItemButton
+                    key={itemIndex}
+                    onClick={(e) => item.subItems ? handleSubClick(e, item) : navigateTo(item.path)}
+                    sx={{
+                      borderRadius: 1,
+                      mb: 0.5,
+                      '&:hover': {
+                        backgroundColor: 'primary.light',
+                        color: 'primary.contrastText'
+                      }
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText primary={item.name} />
+                    {item.subItems && <ChevronRight />}
+                  </ListItemButton>
+                ))}
+              </List>
+              {index < filteredSections.length - 1 && <Divider sx={{ mt: 1 }} />}
+            </Grid>
+          ))}
+        </Grid>
+      </Menu>
+    );
+  };
+
+  const renderSubMenu = () => {
+    if (!activeSubCategory) return null;
+
+    return (
+      <Menu
+        anchorEl={subAnchorEl}
+        open={Boolean(subAnchorEl)}
+        onClose={handleSubClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: {
+            ml: 1
+          }
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ px: 2, py: 1, fontWeight: 'bold' }}>
+          {activeSubCategory.name}
+        </Typography>
+        <Divider />
+        <List dense>
+          {activeSubCategory.subItems.map((subItem: any, subIndex: number) => (
+            <ListItemButton
+              key={subIndex}
+              onClick={() => navigateTo(subItem.path)}
+              sx={{
+                px: 3,
+                py: 1,
+                minWidth: 200,
+                '&:hover': {
+                  backgroundColor: 'primary.light',
+                  color: 'primary.contrastText'
+                }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                {subItem.icon}
+              </ListItemIcon>
+              <ListItemText primary={subItem.name} />
+            </ListItemButton>
+          ))}
+        </List>
+      </Menu>
+    );
+  };
+
+  return (
+    <>
+      <AppBar position="static">
+        <Toolbar>
+          {/* Enhanced Logo Section */}
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              cursor: 'pointer',
+              mr: 3,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 1
+              },
+              p: 1,
+              borderRadius: 1,
+              transition: 'background-color 0.2s'
+            }}
+            onClick={navigateToHome}
+          >
+            <Avatar 
+              src={companyData?.logo_path ? companyService.getLogoUrl(companyData.id) : undefined}
+              sx={{ 
+                bgcolor: 'white', 
+                color: 'primary.main', 
+                mr: 1,
+                width: 40,
+                height: 40
+              }}
+            >
+              {!companyData?.logo_path && <Dashboard />}
+            </Avatar>
+            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+              {companyData?.name || 'TRITIQ ERP'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            {/* Different menu structures based on user type */}
+            {isSuperAdmin ? (
+              <>
+                {/* App Super Admins: Dashboard, Demo, Settings (with Admin submenu) */}
+                <Button
+                  color="inherit"
+                  startIcon={<Dashboard />}
+                  onClick={() => router.push('/dashboard')}
+                  sx={{ mx: 1 }}
+                >
+                  Dashboard
+                </Button>
+                <Button
+                  color="inherit"
+                  startIcon={<DeveloperMode />}
+                  onClick={handleDemoMode}
+                  sx={{ mx: 1 }}
+                >
+                  Demo
+                </Button>
+                <Button
+                  color="inherit"
+                  startIcon={<Settings />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'settings')}
+                  sx={{ mx: 1 }}
+                >
+                  Settings
+                </Button>
+              </>
+            ) : (
+              <>
+                {/* Organization users: Master Data with direct navigation to individual pages */}
+                
+                {/* Master Data - Top level menu with direct navigation (no hub) */}
+                <Button
+                  color="inherit"
+                  startIcon={<People />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'masterData')}
+                  sx={{ mx: 1 }}
+                >
+                  Master Data
+                </Button>
+                
+                {/* ERP Menu - Contains inventory and vouchers */}
+                <Button
+                  color="inherit"
+                  startIcon={<Business />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'erp')}
+                  sx={{ mx: 1 }}
+                >
+                  ERP
+                </Button>
+
+                {/* Combined Reports & Analytics menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<Assessment />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'reportsAnalytics')}
+                  sx={{ mx: 1 }}
+                >
+                  Reports & Analytics
+                </Button>
+
+                {/* Service menu - always show, but disabled if not enabled */}
+                <Tooltip 
+                  title={isModuleEnabled('Service') ? '' : 'Module not activated - contact support to enable'}
+                  placement="bottom"
+                  arrow
+                >
+                  <span>
+                    <Button
+                      color="inherit"
+                      startIcon={<SupportAgent />}
+                      endIcon={<ExpandMore />}
+                      onClick={(e) => {
+                        console.log('Service CRM clicked - checking if submenu opens');
+                        handleMenuClick(e, 'service');
+                      }}
+                      sx={{ 
+                        mx: 1,
+                        opacity: isModuleEnabled('Service') ? 1 : 0.5,
+                        cursor: isModuleEnabled('Service') ? 'pointer' : 'not-allowed'
+                      }}
+                      disabled={!isModuleEnabled('Service')}
+                    >
+                      Service CRM
+                    </Button>
+                  </span>
+                </Tooltip>
+
+                {/* Settings with Administration as submenu */}
+                <Button
+                  color="inherit"
+                  startIcon={<Settings />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'settings')}
+                  sx={{ mx: 1 }}
+                >
+                  Settings
+                </Button>
+              </>
+            )}
+          </Box>
+
+          <IconButton
+            color="inherit"
+            onClick={handleUserMenuClick}
+            sx={{ ml: 2 }}
+          >
+            <AccountCircle />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+
+      {renderMegaMenu()}
+
+      {renderSubMenu()}
+
+      <Menu
+        anchorEl={userMenuAnchor}
+        open={Boolean(userMenuAnchor)}
+        onClose={handleUserMenuClose}
+      >
+        <MenuItem onClick={handleUserMenuClose}>
+          <Typography variant="body2">
+            {user?.full_name || user?.email || 'User'}
+          </Typography>
+        </MenuItem>
+        <MenuItem onClick={handleUserMenuClose}>
+          <Typography variant="body2" color="textSecondary">
+            Role: {user?.role || 'Standard User'}
+          </Typography>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => router.push('/profile')}>
+          Profile Settings
+        </MenuItem>
+        <MenuItem onClick={onLogout}>
+          Logout
+        </MenuItem>
+      </Menu>
+
+      {/* Organization License Creation Modal */}
+      <CreateOrganizationLicenseModal
+        open={createLicenseModalOpen}
+        onClose={() => setCreateLicenseModalOpen(false)}
+        onSuccess={(result) => {
+          console.log('License created:', result);
+          // You might want to show a success notification here
+        }}
+      />
+    </>
+  );
+};
+
+export default MegaMenu;

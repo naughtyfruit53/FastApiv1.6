@@ -1,0 +1,112 @@
+{
+  "tooltips": {
+    "vouchers": {
+      "purchase_voucher": {
+        "voucher_number": "Auto-generated voucher number for tracking",
+        "invoice_number": "Vendor's invoice number for reference",
+        "invoice_date": "Date on the vendor's invoice",
+        "payment_terms": "Payment terms agreed with vendor (e.g., Net 30)",
+        "pdf_upload": "Upload vendor invoice PDF to auto-extract data and populate form fields"
+      },
+      "sales_order": {
+        "voucher_number": "Auto-generated sales order number",
+        "reference": "Customer's purchase order number or reference",
+        "payment_terms": "Payment terms for the customer (e.g., Net 15)",
+        "pdf_upload": "Upload customer order PDF to auto-extract data and populate form fields"
+      }
+    },
+    "masters": {
+      "products": {
+        "name": "Product name as it appears in inventory",
+        "hsn_code": "HSN/SAC code for GST classification",
+        "part_number": "Internal part number for identification",
+        "unit_price": "Base selling price per unit",
+        "gst_rate": "GST rate applicable to this product",
+        "reorder_level": "Minimum stock level before reordering",
+        "is_manufactured": "Check if this product is manufactured in-house",
+        "file_upload": "Upload product documentation, drawings, or specifications (max 5 files)"
+      },
+      "vendors": {
+        "name": "Vendor/supplier business name",
+        "gst_number": "Vendor's GSTIN number",
+        "contact_person": "Primary contact person at vendor",
+        "payment_terms": "Default payment terms with this vendor",
+        "pdf_upload": "Upload vendor GST certificate or business documents"
+      },
+      "customers": {
+        "name": "Customer business name",
+        "gst_number": "Customer's GSTIN number", 
+        "billing_address": "Primary billing address",
+        "shipping_address": "Default shipping address if different from billing",
+        "credit_limit": "Maximum credit limit for this customer",
+        "pdf_upload": "Upload customer GST certificate or business documents"
+      }
+    },
+    "common": {
+      "required_field": "This field is required",
+      "auto_generated": "This value will be auto-generated when you save",
+      "file_size_limit": "Maximum file size is 10MB",
+      "pdf_only": "Only PDF files are accepted",
+      "processing": "Processing your file, please wait..."
+    }
+  },
+  "help_text": {
+    "vouchers": {
+      "pdf_extraction": {
+        "title": "Smart PDF Data Extraction",
+        "description": "Our system can automatically extract data from your PDF invoices and orders to save time on data entry.",
+        "steps": [
+          "Upload a clear, text-based PDF (scanned images may not work well)",
+          "Wait for the system to process and extract data",
+          "Review and verify the extracted information",
+          "Make any necessary corrections before saving"
+        ],
+        "tips": [
+          "PDFs with clear text work best",
+          "Ensure the PDF contains structured data (invoices, orders, etc.)",
+          "File size should be under 10MB",
+          "Processing may take a few seconds depending on document complexity"
+        ]
+      }
+    },
+    "products": {
+      "file_management": {
+        "title": "Product File Management", 
+        "description": "Store up to 5 files per product including drawings, specifications, datasheets, or certificates.",
+        "supported_formats": "All file types supported (PDF, images, documents, CAD files, etc.)",
+        "features": [
+          "Drag and drop upload",
+          "Preview file information",
+          "Download files anytime",
+          "Easy file removal",
+          "Automatic file organization"
+        ]
+      }
+    }
+  },
+  "error_messages": {
+    "file_upload": {
+      "invalid_type": "Please upload a valid file type",
+      "too_large": "File size exceeds the maximum limit of 10MB",
+      "upload_failed": "File upload failed. Please try again.",
+      "extraction_failed": "Could not extract data from the PDF. Please check the file and try again.",
+      "max_files_reached": "Maximum number of files reached for this item"
+    },
+    "pdf_extraction": {
+      "invalid_pdf": "Please upload a valid PDF file",
+      "corrupted_file": "The PDF file appears to be corrupted",
+      "no_text_found": "No extractable text found in the PDF",
+      "extraction_timeout": "PDF processing timed out. Please try with a smaller file."
+    }
+  },
+  "success_messages": {
+    "file_upload": {
+      "uploaded": "File uploaded successfully",
+      "deleted": "File deleted successfully"
+    },
+    "pdf_extraction": {
+      "completed": "PDF data extracted successfully",
+      "data_populated": "Form fields have been auto-populated with extracted data"
+    }
+  }
+}
