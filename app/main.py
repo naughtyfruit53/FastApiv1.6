@@ -48,6 +48,12 @@ from app.api.v1 import inventory as v1_inventory
 # Add import for GST
 from app.api.v1 import gst as v1_gst
 
+# Add imports for new ERP modules
+from app.api.v1 import erp as v1_erp
+from app.api.v1 import procurement as v1_procurement
+from app.api.v1 import tally as v1_tally
+from app.api.v1 import warehouse as v1_warehouse
+
 # Add import for RBAC
 from app.api.v1 import rbac as v1_rbac
 
@@ -266,6 +272,19 @@ logger.info("Inventory management router included successfully at prefix: /api/v
 # Include service analytics router
 app.include_router(v1_service_analytics.router, prefix="/api/v1/service-analytics", tags=["service-analytics"])
 logger.info("Service Analytics router included successfully at prefix: /api/v1/service-analytics")
+
+# Include new ERP module routers
+app.include_router(v1_erp.router, prefix="/api/v1/erp", tags=["erp-core"])
+logger.info("ERP Core router included successfully at prefix: /api/v1/erp")
+
+app.include_router(v1_procurement.router, prefix="/api/v1/procurement", tags=["procurement"])
+logger.info("Procurement router included successfully at prefix: /api/v1/procurement")
+
+app.include_router(v1_tally.router, prefix="/api/v1/tally", tags=["tally-integration"])
+logger.info("Tally Integration router included successfully at prefix: /api/v1/tally")
+
+app.include_router(v1_warehouse.router, prefix="/api/v1/warehouse", tags=["warehouse-management"])
+logger.info("Warehouse Management router included successfully at prefix: /api/v1/warehouse")
 
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}

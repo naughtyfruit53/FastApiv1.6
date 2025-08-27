@@ -42,6 +42,36 @@ class Vendor(Base):
         "app.models.customer_models.VendorFile", 
         back_populates="vendor"
     )
+    
+    # ERP relationships
+    accounts_payable: Mapped[List["app.models.erp_models.AccountsPayable"]] = relationship(
+        "app.models.erp_models.AccountsPayable",
+        back_populates="vendor"
+    )
+    
+    # Procurement relationships
+    vendor_rfqs: Mapped[List["app.models.procurement_models.VendorRFQ"]] = relationship(
+        "app.models.procurement_models.VendorRFQ",
+        back_populates="vendor"
+    )
+    quotations: Mapped[List["app.models.procurement_models.VendorQuotation"]] = relationship(
+        "app.models.procurement_models.VendorQuotation",
+        back_populates="vendor"
+    )
+    evaluations: Mapped[List["app.models.procurement_models.VendorEvaluation"]] = relationship(
+        "app.models.procurement_models.VendorEvaluation",
+        back_populates="vendor"
+    )
+    
+    # Enhanced inventory relationships
+    product_batches: Mapped[List["app.models.enhanced_inventory_models.ProductBatch"]] = relationship(
+        "app.models.enhanced_inventory_models.ProductBatch",
+        back_populates="supplier"
+    )
+    product_serials: Mapped[List["app.models.enhanced_inventory_models.ProductSerial"]] = relationship(
+        "app.models.enhanced_inventory_models.ProductSerial",
+        back_populates="supplier"
+    )
   
     __table_args__ = (
         # Unique vendor name per organization
@@ -92,6 +122,18 @@ class Customer(Base):
     )
     segments: Mapped[List["app.models.customer_models.CustomerSegment"]] = relationship(
         "app.models.customer_models.CustomerSegment", 
+        back_populates="customer"
+    )
+    
+    # ERP relationships
+    accounts_receivable: Mapped[List["app.models.erp_models.AccountsReceivable"]] = relationship(
+        "app.models.erp_models.AccountsReceivable",
+        back_populates="customer"
+    )
+    
+    # Enhanced inventory relationships
+    product_serials: Mapped[List["app.models.enhanced_inventory_models.ProductSerial"]] = relationship(
+        "app.models.enhanced_inventory_models.ProductSerial",
         back_populates="customer"
     )
   
