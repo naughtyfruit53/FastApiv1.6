@@ -21,7 +21,18 @@ from .analytics_models import (
 from .service_models import (
     Ticket, TicketHistory, TicketAttachment, SLAPolicy, SLATracking,
     DispatchOrder, DispatchItem, InstallationJob, InstallationTask,
-    CompletionRecord, CustomerFeedback, ServiceClosure
+    CompletionRecord, CustomerFeedback, ServiceClosure,
+    ChatbotConversation, ChatbotMessage, SurveyTemplate, CustomerSurvey, ChannelConfiguration
+)
+# Import CRM models
+from .crm_models import (
+    Lead, Opportunity, OpportunityProduct, LeadActivity, OpportunityActivity,
+    SalesPipeline, SalesForecast
+)
+# Import Marketing models  
+from .marketing_models import (
+    Campaign, Promotion, PromotionRedemption, CampaignAnalytics,
+    MarketingList, MarketingListContact
 )
 # Import ERP core models
 from .erp_models import (
@@ -89,6 +100,15 @@ __all__ = [
     "Ticket", "TicketHistory", "TicketAttachment", "SLAPolicy", "SLATracking",
     "DispatchOrder", "DispatchItem", "InstallationJob", "InstallationTask",
     "CompletionRecord", "CustomerFeedback", "ServiceClosure",
+    "ChatbotConversation", "ChatbotMessage", "SurveyTemplate", "CustomerSurvey", "ChannelConfiguration",
+    
+    # CRM models (new)
+    "Lead", "Opportunity", "OpportunityProduct", "LeadActivity", "OpportunityActivity",
+    "SalesPipeline", "SalesForecast",
+    
+    # Marketing models (new)
+    "Campaign", "Promotion", "PromotionRedemption", "CampaignAnalytics",
+    "MarketingList", "MarketingListContact",
     
     # Voucher models
     "BaseVoucher", "PurchaseVoucher", "PurchaseVoucherItem",

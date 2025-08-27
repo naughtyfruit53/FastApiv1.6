@@ -86,6 +86,28 @@ except Exception as import_error:
     logger.error(f"Failed to import stock_router: {str(import_error)}")
     raise
 
+# Import new module routers
+try:
+    from app.api.v1 import crm as v1_crm
+    logger.info("Successfully imported crm_router")
+except Exception as import_error:
+    logger.error(f"Failed to import crm_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import marketing as v1_marketing
+    logger.info("Successfully imported marketing_router")
+except Exception as import_error:
+    logger.error(f"Failed to import marketing_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import service_desk as v1_service_desk
+    logger.info("Successfully imported service_desk_router")
+except Exception as import_error:
+    logger.error(f"Failed to import service_desk_router: {str(import_error)}")
+    raise
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
@@ -303,6 +325,16 @@ app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{b
 logger.info("BOM router included successfully at prefix: /api/v1")
 app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])  # Potential dynamic paths
 logger.info("Manufacturing router included successfully at prefix: /api/v1")
+
+# Include new business module routers
+app.include_router(v1_crm.router, prefix="/api/v1", tags=["crm"])
+logger.info("CRM router included successfully at prefix: /api/v1/crm")
+
+app.include_router(v1_marketing.router, prefix="/api/v1", tags=["marketing"])
+logger.info("Marketing router included successfully at prefix: /api/v1/marketing")
+
+app.include_router(v1_service_desk.router, prefix="/api/v1", tags=["service-desk"])
+logger.info("Service Desk router included successfully at prefix: /api/v1/service-desk")
 
 @app.get("/routes")
 def get_routes():

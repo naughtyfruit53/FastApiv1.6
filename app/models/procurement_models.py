@@ -194,7 +194,7 @@ class VendorQuotation(Base):
 
 class QuotationItem(Base):
     """Quotation item details"""
-    __tablename__ = "quotation_items"
+    __tablename__ = "vendor_quotation_items"
 
     id = Column(Integer, primary_key=True, index=True)
     quotation_id = Column(Integer, ForeignKey("vendor_quotations.id"), nullable=False, index=True)
