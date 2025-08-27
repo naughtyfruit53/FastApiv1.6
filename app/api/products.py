@@ -614,4 +614,111 @@ async def delete_product_file(
             detail="Error deleting file"
         )
 
+
+@router.post("/check-consistency")
+async def check_products_stock_consistency(
+    fix_issues: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """
+    Check consistency between products and stock tables.
+    If fix_issues=True, creates missing stock entries and removes orphaned stock.
+    """
+    
+    # Get organization context
+    org_id = ensure_organization_context(current_user)
+    
+    # Count products and stock entries
+    products_count = db.query(Product).filter(Product.organization_id == org_id).count()
+    stock_count = db.query(Stock).filter(Stock.organization_id == org_id).count()
+    
+    result = {
+        "organization_id": org_id,
+        "products_count": products_count,
+        "stock_count": stock_count,
+        "consistency_issues": []
+    }
+    
+    # Find products without stock entries
+    products_without_stock = db.query(Product).outerjoin(
+        Stock, Product.id == Stock.product_id
+    ).filter(
+        Product.organization_id == org_id,
+        Product.is_active == True,
+        Stock.id.is_(None)
+    ).all()
+    
+    if products_without_stock:
+        result["consistency_issues"].append({
+            "type": "products_without_stock",
+            "count": len(products_without_stock),
+            "products": [{"id": p.id, "name": p.name} for p in products_without_stock[:5]]
+        })
+        
+        if fix_issues:
+            # Create missing stock entries
+            for product in products_without_stock:
+                new_stock = Stock(
+                    organization_id=org_id,
+                    product_id=product.id,
+                    quantity=0.0,
+                    unit=product.unit,
+                    location=""
+                )
+                db.add(new_stock)
+            
+            db.commit()
+            result["fixed_missing_stock"] = len(products_without_stock)
+    
+    # Find orphaned stock entries
+    orphaned_stock = db.query(Stock).outerjoin(
+        Product, Stock.product_id == Product.id
+    ).filter(
+        Stock.organization_id == org_id,
+        Product.id.is_(None)
+    ).all()
+    
+    if orphaned_stock:
+        result["consistency_issues"].append({
+            "type": "orphaned_stock",
+            "count": len(orphaned_stock),
+            "stock_ids": [s.id for s in orphaned_stock[:5]]
+        })
+        
+        if fix_issues:
+            # Remove orphaned stock entries
+            for stock in orphaned_stock:
+                db.delete(stock)
+            
+            db.commit()
+            result["removed_orphaned_stock"] = len(orphaned_stock)
+    
+    # Check for inactive products with stock
+    inactive_products_with_stock = db.query(Product, Stock).join(
+        Stock, Product.id == Stock.product_id
+    ).filter(
+        Product.organization_id == org_id,
+        Product.is_active == False,
+        Stock.quantity > 0
+    ).all()
+    
+    if inactive_products_with_stock:
+        result["consistency_issues"].append({
+            "type": "inactive_products_with_stock",
+            "count": len(inactive_products_with_stock),
+            "products": [{"id": p.id, "name": p.name, "stock_qty": s.quantity} 
+                        for p, s in inactive_products_with_stock[:5]]
+        })
+    
+    result["is_consistent"] = len(result["consistency_issues"]) == 0
+    result["recommendations"] = []
+    
+    if not result["is_consistent"]:
+        result["recommendations"].append("Run with fix_issues=true to automatically fix missing stock entries and orphaned stock")
+        result["recommendations"].append("Consider reactivating products with existing stock or transferring stock to active products")
+    
+    return result
+
+
 logger.info("Products router loaded")

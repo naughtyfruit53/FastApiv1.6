@@ -553,13 +553,16 @@ export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
  */
 export const getReferenceVoucherOptions = (voucherType: keyof typeof REFERENCE_CONFIGS) => {
   const config = REFERENCE_CONFIGS[voucherType];
-  if (!config) return [];
+  if (!config) return [{ value: 'new', label: 'New', endpoint: '' }];
   
-  return config.allowedTypes.map(type => ({
+  const options = config.allowedTypes.map(type => ({
     value: type,
     label: VOUCHER_CONFIGS[type]?.voucherTitle || type,
     endpoint: VOUCHER_CONFIGS[type]?.endpoint || `/${type}s`
   }));
+  
+  // Add 'New' as the first option instead of 'None'
+  return [{ value: 'new', label: 'New', endpoint: '' }, ...options];
 };
 
 /**
@@ -680,9 +683,10 @@ export const getVoucherStyles = () => ({
   
   // Full-width edge-to-edge layout container
   edgeToEdgeContainer: {
-    width: '100vw',
+    width: '100%',
     margin: 0,
     padding: 0,
+    boxSizing: 'border-box' as const,
     '& .MuiContainer-root': {
       maxWidth: 'none !important',
       padding: '0 !important',
@@ -704,6 +708,7 @@ export const getVoucherStyles = () => ({
     width: '100%',
     padding: '8px',
     margin: 0,
+    boxSizing: 'border-box' as const,
     '& .MuiTextField-root': {
       '& .MuiInputBase-input': {
         textAlign: 'center' as const,
@@ -712,6 +717,26 @@ export const getVoucherStyles = () => ({
     '& .MuiFormLabel-root': {
       textAlign: 'center' as const,
     },
+    // Enhanced dropdown width for voucher numbers
+    '& .voucher-dropdown': {
+      minWidth: '200px',
+      '& .MuiSelect-select': {
+        minWidth: '180px',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap'
+      }
+    },
+    // Reference dropdown width
+    '& .reference-dropdown': {
+      minWidth: '250px',
+      '& .MuiSelect-select': {
+        minWidth: '230px',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap'
+      }
+    }
   },
   
   // Table with center-aligned content
