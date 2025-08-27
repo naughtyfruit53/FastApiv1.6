@@ -245,6 +245,35 @@ const PurchaseVoucherPage: React.FC = () => {
     handleView(voucher.id);
   };
 
+  // Handle data population for view and edit modes
+  useEffect(() => {
+    if (voucherData && (mode === 'view' || mode === 'edit')) {
+      const formattedData = {
+        ...voucherData,
+        date: voucherData.date ? voucherData.date.split('T')[0] : '',
+      };
+      reset(formattedData);
+      if (voucherData.items && voucherData.items.length > 0) {
+        remove();
+        voucherData.items.forEach((item: any) => {
+          append({
+            ...item,
+            product_id: item.product_id,
+            product_name: item.product?.product_name || item.product_name || '',
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            discount_percentage: item.discount_percentage || 0,
+            gst_rate: item.gst_rate || 18,
+            amount: item.total_amount,
+            unit: item.unit,
+            current_stock: item.current_stock || 0,
+            reorder_level: item.reorder_level || 0
+          });
+        });
+      }
+    }
+  }, [voucherData, mode, reset, append, remove]);
+
   const indexContent = (
     <>
       {/* Voucher list table */}

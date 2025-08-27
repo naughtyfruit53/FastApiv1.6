@@ -23,7 +23,7 @@ import api from '../lib/api';  // Direct import for list fetch
 export const useVoucherPage = (config: VoucherPageConfig) => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
-  const { isOrgContextReady } = useAuth();  // Get company from context
+  const { isOrgContextReady, company } = useAuth();  // Get company from context
   const queryClient = useQueryClient();
 
   console.log('[useVoucherPage] Enhanced hook initialized for:', config.voucherType);
@@ -63,13 +63,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const [selectedReferenceType, setSelectedReferenceType] = useState<string | null>(null);
   const [selectedReferenceId, setSelectedReferenceId] = useState<number | null>(null);
   const [referenceDocument, setReferenceDocument] = useState<any>(null);
-
-  // Fetch company details
-  const { data: company } = useQuery({
-    queryKey: ['company'],
-    queryFn: () => api.get('/companies/current').then(res => res.data),
-    enabled: isOrgContextReady
-  });
 
   // Enhanced form management with reference support
   const defaultValues = useMemo(() => {
