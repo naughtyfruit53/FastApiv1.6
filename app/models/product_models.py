@@ -34,6 +34,20 @@ class Product(Base):
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization", back_populates="products")
     files: Mapped[List["ProductFile"]] = relationship("ProductFile", back_populates="product", cascade="all, delete-orphan")
+    
+    # Enhanced inventory relationships
+    tracking_config: Mapped[List["app.models.enhanced_inventory_models.ProductTracking"]] = relationship(
+        "app.models.enhanced_inventory_models.ProductTracking",
+        back_populates="product"
+    )
+    warehouse_stock: Mapped[List["app.models.enhanced_inventory_models.WarehouseStock"]] = relationship(
+        "app.models.enhanced_inventory_models.WarehouseStock",
+        back_populates="product"
+    )
+    stock_movements: Mapped[List["app.models.enhanced_inventory_models.StockMovement"]] = relationship(
+        "app.models.enhanced_inventory_models.StockMovement",
+        back_populates="product"
+    )
   
     __table_args__ = (
         # Unique product name per organization

@@ -23,6 +23,26 @@ from .service_models import (
     DispatchOrder, DispatchItem, InstallationJob, InstallationTask,
     CompletionRecord, CustomerFeedback, ServiceClosure
 )
+# Import ERP core models
+from .erp_models import (
+    ChartOfAccounts, GSTConfiguration, TaxCode, JournalEntry,
+    AccountsPayable, AccountsReceivable, PaymentRecord
+)
+# Import procurement models
+from .procurement_models import (
+    RequestForQuotation, RFQItem, VendorRFQ, VendorQuotation, QuotationItem,
+    VendorEvaluation, PurchaseRequisition, PurchaseRequisitionItem
+)
+# Import Tally integration models
+from .tally_models import (
+    TallyConfiguration, TallyLedgerMapping, TallyVoucherMapping, TallySyncLog,
+    TallySyncItem, TallyDataCache, TallyErrorLog
+)
+# Import enhanced inventory models
+from .enhanced_inventory_models import (
+    Warehouse, StockLocation, ProductTracking, WarehouseStock, ProductBatch,
+    ProductSerial, BatchLocation, StockMovement, StockAdjustment, StockAdjustmentItem
+)
 from .vouchers import (
     BaseVoucher, PurchaseVoucher, PurchaseVoucherItem,
     SalesVoucher, SalesVoucherItem, PurchaseOrder, PurchaseOrderItem,

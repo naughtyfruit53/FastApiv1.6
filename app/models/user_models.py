@@ -139,6 +139,94 @@ class Organization(Base):
         "app.models.product_models.Stock", 
         back_populates="organization"
     )
+    
+    # ERP Core relationships
+    chart_of_accounts: Mapped[List["app.models.erp_models.ChartOfAccounts"]] = relationship(
+        "app.models.erp_models.ChartOfAccounts",
+        back_populates="organization"
+    )
+    gst_configuration: Mapped[List["app.models.erp_models.GSTConfiguration"]] = relationship(
+        "app.models.erp_models.GSTConfiguration",
+        back_populates="organization"
+    )
+    tax_codes: Mapped[List["app.models.erp_models.TaxCode"]] = relationship(
+        "app.models.erp_models.TaxCode",
+        back_populates="organization"
+    )
+    journal_entries: Mapped[List["app.models.erp_models.JournalEntry"]] = relationship(
+        "app.models.erp_models.JournalEntry",
+        back_populates="organization"
+    )
+    accounts_payable: Mapped[List["app.models.erp_models.AccountsPayable"]] = relationship(
+        "app.models.erp_models.AccountsPayable",
+        back_populates="organization"
+    )
+    accounts_receivable: Mapped[List["app.models.erp_models.AccountsReceivable"]] = relationship(
+        "app.models.erp_models.AccountsReceivable",
+        back_populates="organization"
+    )
+    payment_records: Mapped[List["app.models.erp_models.PaymentRecord"]] = relationship(
+        "app.models.erp_models.PaymentRecord",
+        back_populates="organization"
+    )
+    
+    # Procurement relationships
+    rfqs: Mapped[List["app.models.procurement_models.RequestForQuotation"]] = relationship(
+        "app.models.procurement_models.RequestForQuotation",
+        back_populates="organization"
+    )
+    vendor_quotations: Mapped[List["app.models.procurement_models.VendorQuotation"]] = relationship(
+        "app.models.procurement_models.VendorQuotation",
+        back_populates="organization"
+    )
+    vendor_evaluations: Mapped[List["app.models.procurement_models.VendorEvaluation"]] = relationship(
+        "app.models.procurement_models.VendorEvaluation",
+        back_populates="organization"
+    )
+    purchase_requisitions: Mapped[List["app.models.procurement_models.PurchaseRequisition"]] = relationship(
+        "app.models.procurement_models.PurchaseRequisition",
+        back_populates="organization"
+    )
+    
+    # Tally integration relationships
+    tally_configuration: Mapped[List["app.models.tally_models.TallyConfiguration"]] = relationship(
+        "app.models.tally_models.TallyConfiguration",
+        back_populates="organization"
+    )
+    tally_data_cache: Mapped[List["app.models.tally_models.TallyDataCache"]] = relationship(
+        "app.models.tally_models.TallyDataCache",
+        back_populates="organization"
+    )
+    tally_error_logs: Mapped[List["app.models.tally_models.TallyErrorLog"]] = relationship(
+        "app.models.tally_models.TallyErrorLog",
+        back_populates="organization"
+    )
+    
+    # Enhanced inventory relationships
+    warehouses: Mapped[List["app.models.enhanced_inventory_models.Warehouse"]] = relationship(
+        "app.models.enhanced_inventory_models.Warehouse",
+        back_populates="organization"
+    )
+    warehouse_stock: Mapped[List["app.models.enhanced_inventory_models.WarehouseStock"]] = relationship(
+        "app.models.enhanced_inventory_models.WarehouseStock",
+        back_populates="organization"
+    )
+    product_batches: Mapped[List["app.models.enhanced_inventory_models.ProductBatch"]] = relationship(
+        "app.models.enhanced_inventory_models.ProductBatch",
+        back_populates="organization"
+    )
+    product_serials: Mapped[List["app.models.enhanced_inventory_models.ProductSerial"]] = relationship(
+        "app.models.enhanced_inventory_models.ProductSerial",
+        back_populates="organization"
+    )
+    stock_movements: Mapped[List["app.models.enhanced_inventory_models.StockMovement"]] = relationship(
+        "app.models.enhanced_inventory_models.StockMovement",
+        back_populates="organization"
+    )
+    stock_adjustments: Mapped[List["app.models.enhanced_inventory_models.StockAdjustment"]] = relationship(
+        "app.models.enhanced_inventory_models.StockAdjustment",
+        back_populates="organization"
+    )
 
     __table_args__ = (
         Index('idx_org_status_subdomain', 'status', 'subdomain'),
