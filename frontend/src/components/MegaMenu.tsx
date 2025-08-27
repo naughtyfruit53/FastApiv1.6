@@ -59,7 +59,21 @@ import {
   Groups,
   CorporateFare,
   ChevronRight,
-  LockOutlined
+  LockOutlined,
+  // New icons for CRM, Marketing, and Service Desk
+  Person,
+  ContactPhone,
+  PersonAdd,
+  AssignmentTurnedIn,
+  MonetizationOn,
+  Campaign,
+  LocalOffer,
+  Email,
+  Sms,
+  Chat,
+  SmartToy,
+  Survey,
+  SupportAgent as ServiceDeskIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
@@ -433,6 +447,107 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
             { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
             { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
+          ]
+        }
+      ]
+    },
+    // CRM Module
+    crm: {
+      title: 'CRM',
+      icon: <Person />,
+      sections: [
+        {
+          title: 'Lead Management',
+          items: [
+            { name: 'CRM Dashboard', path: '/crm', icon: <Dashboard /> },
+            { name: 'Leads', path: '/crm/leads', icon: <PersonAdd /> },
+            { name: 'Lead Activities', path: '/crm/lead-activities', icon: <Assignment /> },
+            { name: 'Lead Conversion', path: '/crm/conversion', icon: <AssignmentTurnedIn /> }
+          ]
+        },
+        {
+          title: 'Sales Pipeline',
+          items: [
+            { name: 'Opportunities', path: '/crm/opportunities', icon: <MonetizationOn /> },
+            { name: 'Sales Pipeline', path: '/crm/pipeline', icon: <Timeline /> },
+            { name: 'Sales Forecasting', path: '/crm/forecasting', icon: <TrendingUp /> },
+            { name: 'Customer 360°', path: '/crm/customer-360', icon: <Groups /> }
+          ]
+        },
+        {
+          title: 'Analytics',
+          items: [
+            { name: 'CRM Analytics', path: '/crm/analytics', icon: <Analytics /> },
+            { name: 'Sales Performance', path: '/crm/sales-performance', icon: <BarChart /> },
+            { name: 'Conversion Reports', path: '/crm/reports/conversion', icon: <Assessment /> }
+          ]
+        }
+      ]
+    },
+    // Marketing Module
+    marketing: {
+      title: 'Marketing',
+      icon: <Campaign />,
+      sections: [
+        {
+          title: 'Campaign Management',
+          items: [
+            { name: 'Marketing Dashboard', path: '/marketing', icon: <Dashboard /> },
+            { name: 'Campaigns', path: '/marketing/campaigns', icon: <Campaign /> },
+            { name: 'Email Campaigns', path: '/marketing/campaigns/email', icon: <Email /> },
+            { name: 'SMS Campaigns', path: '/marketing/campaigns/sms', icon: <Sms /> },
+            { name: 'Social Media', path: '/marketing/campaigns/social', icon: <Groups /> }
+          ]
+        },
+        {
+          title: 'Promotions & Offers',
+          items: [
+            { name: 'Promotions', path: '/marketing/promotions', icon: <LocalOffer /> },
+            { name: 'Discount Codes', path: '/marketing/discount-codes', icon: <LocalOffer /> },
+            { name: 'Promotion Analytics', path: '/marketing/promotion-analytics', icon: <Analytics /> }
+          ]
+        },
+        {
+          title: 'Customer Engagement',
+          items: [
+            { name: 'Marketing Lists', path: '/marketing/lists', icon: <ContactPhone /> },
+            { name: 'Segmentation', path: '/marketing/segmentation', icon: <Groups /> },
+            { name: 'Campaign Analytics', path: '/marketing/analytics', icon: <Assessment /> },
+            { name: 'ROI Reports', path: '/marketing/reports/roi', icon: <MonetizationOn /> }
+          ]
+        }
+      ]
+    },
+    // Enhanced Service Desk Module
+    serviceDesk: {
+      title: 'Service Desk',
+      icon: <ServiceDeskIcon />,
+      sections: [
+        {
+          title: 'Helpdesk & Ticketing',
+          items: [
+            { name: 'Service Desk Dashboard', path: '/service-desk', icon: <Dashboard /> },
+            { name: 'Tickets', path: '/service-desk/tickets', icon: <Assignment /> },
+            { name: 'SLA Management', path: '/service-desk/sla', icon: <Schedule /> },
+            { name: 'Escalations', path: '/service-desk/escalations', icon: <TrendingUp /> }
+          ]
+        },
+        {
+          title: 'Omnichannel Support',
+          items: [
+            { name: 'Chat Conversations', path: '/service-desk/chat', icon: <Chat /> },
+            { name: 'Chatbot Management', path: '/service-desk/chatbot', icon: <SmartToy /> },
+            { name: 'Channel Configuration', path: '/service-desk/channels', icon: <Settings /> },
+            { name: 'Knowledge Base', path: '/service-desk/knowledge', icon: <Storage /> }
+          ]
+        },
+        {
+          title: 'Feedback & Surveys',
+          items: [
+            { name: 'Customer Surveys', path: '/service-desk/surveys', icon: <Survey /> },
+            { name: 'Survey Templates', path: '/service-desk/survey-templates', icon: <NoteAdd /> },
+            { name: 'Feedback Analytics', path: '/service-desk/feedback-analytics', icon: <Analytics /> },
+            { name: 'Satisfaction Reports', path: '/service-desk/satisfaction', icon: <Feedback /> }
           ]
         }
       ]
