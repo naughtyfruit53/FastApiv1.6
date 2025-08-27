@@ -1,3 +1,5 @@
+# app/schemas/reset.py
+
 # Revised: v1/app/schemas/reset.py
 
 from pydantic import BaseModel, EmailStr, validator
@@ -187,3 +189,12 @@ class EmergencyAccessResponse(BaseModel):
 # Admin Reset Request Schema
 class AdminPasswordResetRequest(BaseModel):
     user_email: EmailStr
+
+
+# OTP Schemas for reset
+class OTPRequest(BaseModel):
+    pass  # No body needed, uses current user
+
+
+class OTPVerify(BaseModel):
+    otp: str

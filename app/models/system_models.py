@@ -1,5 +1,7 @@
 # app/models/system_models.py
 
+# app/models/system_models.py
+
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -253,6 +255,10 @@ class OTPVerification(Base):
     __tablename__ = "otp_verifications"
  
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field added
+    organization_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_otp_organization_id"), nullable=True, index=True)
+    
     email: Mapped[str] = mapped_column(String, nullable=False, index=True)
     otp_hash: Mapped[str] = mapped_column(String, nullable=False) # Store hashed OTP for security
     purpose: Mapped[str] = mapped_column(String, nullable=False, default="login") # login, password_reset, registration

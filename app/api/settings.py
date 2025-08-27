@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user, get_current_super_admin
 from app.models import User, Organization
 from app.services.reset_service import ResetService
-from app.services.otp_service import otp_service
+from app.services.otp_service import OTPService
 from app.core.tenant import require_current_organization_id
 from app.schemas.reset import DataResetRequest, ResetScope, DataResetType
 import logging
@@ -53,8 +53,9 @@ async def request_factory_reset_otp(
             "scope": scope,
             "organization_id": organization_id
         }
-        otp = otp_service.create_otp_verification(db, current_user.email, purpose, additional_data=otp_data)
-        if not otp:
+        otp_service = OTPService(db)
+        success = otp_service.generate_and_send_otp(current_user.email, purpose, additional_data=otp_data)
+        if not success:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate OTP")
         
         return {"message": "OTP sent to your email", "purpose": purpose}
@@ -75,7 +76,8 @@ async def confirm_factory_reset(
     
     try:
         purpose = "factory_reset"
-        verified, additional_data = otp_service.verify_otp(db, current_user.email, otp, purpose, return_data=True)
+        otp_service = OTPService(db)
+        verified, additional_data = otp_service.verify_otp(current_user.email, otp, purpose, return_data=True)
         if not verified:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP")
         
@@ -87,14 +89,7 @@ async def confirm_factory_reset(
             scope=scope,
             organization_id=organization_id,
             reset_type=DataResetType.FULL_RESET,
-            confirm_reset=True,
-            include_vouchers=True,
-            include_products=True,
-            include_customers=True,
-            include_vendors=True,
-            include_stock=True,
-            include_companies=True,
-            include_users=True
+            confirm_reset=True
         )
         
         if scope == ResetScope.ORGANIZATION:
@@ -251,6 +246,59 @@ async def reset_entity_data(
             detail=f"Failed to reset entity data: {str(e)}"
         )
 
+@router.post("/reset/all-organizations")
+async def reset_all_organizations(
+    confirm: bool = False,
+    force: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_super_admin)
+):
+    """Reset data for ALL organizations (Super Admin only) - DANGEROUS OPERATION"""
+    
+    if not confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Confirmation required. Set confirm=true to proceed."
+        )
+    
+    if not force:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This operation will delete ALL organization data. Set force=true if you are absolutely sure."
+        )
+    
+    try:
+        # Create reset request for all
+        reset_request = DataResetRequest(
+            scope=ResetScope.ALL_ORGANIZATIONS,
+            reset_type=DataResetType.FULL_RESET,
+            confirm_reset=True
+        )
+        
+        result = ResetService.reset_all_organizations_data(
+            db, 
+            current_user, 
+            reset_request
+        )
+        
+        logger.warning(f"ALL ORGANIZATIONS data reset by super admin {current_user.id}")
+        
+        return {
+            "message": result.message,
+            "total_organizations": len(result.organizations_affected),
+            "successful_resets": result.success,
+            "reset_results": result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to reset all organizations: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reset all organizations: {str(e)}"
+        )
+
 @router.post("/organization/{organization_id}/suspend")
 async def suspend_organization(
     organization_id: int,
@@ -282,7 +330,7 @@ async def suspend_organization(
         
         return {
             "message": "Organization suspended successfully",
-            "organization_id": org_id,
+            "organization_id": organization_id,
             "organization_name": organization.name,
             "status": "suspended",
             "reason": reason
@@ -372,7 +420,7 @@ async def update_max_users(
         
         return {
             "message": "Maximum users updated successfully",
-            "organization_id": org_id,
+            "organization_id": organization_id,
             "organization_name": organization.name,
             "old_max_users": old_max_users,
             "new_max_users": max_users
@@ -385,57 +433,4 @@ async def update_max_users(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update max users: {str(e)}"
-        )
-
-@router.post("/reset/all-organizations")
-async def reset_all_organizations(
-    confirm: bool = False,
-    force: bool = False,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_super_admin)
-):
-    """Reset data for ALL organizations (Super Admin only) - DANGEROUS OPERATION"""
-    
-    if not confirm:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Confirmation required. Set confirm=true to proceed."
-        )
-    
-    if not force:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This operation will delete ALL organization data. Set force=true if you are absolutely sure."
-        )
-    
-    try:
-        # Create reset request for all
-        reset_request = DataResetRequest(
-            scope=ResetScope.ALL_ORGANIZATIONS,
-            reset_type=DataResetType.FULL_RESET,
-            confirm_reset=True
-        )
-        
-        result = ResetService.reset_all_organizations_data(
-            db, 
-            current_user, 
-            reset_request
-        )
-        
-        logger.warning(f"ALL ORGANIZATIONS data reset by super admin {current_user.id}")
-        
-        return {
-            "message": result.message,
-            "total_organizations": len(result.organizations_affected),
-            "successful_resets": result.success,
-            "reset_results": result
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to reset all organizations: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset all organizations: {str(e)}"
         )

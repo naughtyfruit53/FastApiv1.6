@@ -1,14 +1,14 @@
-# Revised: v1/app/services/reset_service.py
+# app/services/reset_service.py
 
 """
 System-level reset service for factory default operations
 """
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from app.models import (
-    Organization, User, Company, Product, Customer, Vendor, 
-    Stock, EmailNotification, PaymentTerm, OTPVerification, AuditLog
-)
+from app.models.user_models import Organization, User
+from app.models.system_models import Company, EmailNotification, PaymentTerm, OTPVerification, AuditLog
+from app.models.customer_models import Customer, Vendor
+from app.models.product_models import Product, Stock
 import logging
 
 logger = logging.getLogger(__name__)
@@ -107,7 +107,6 @@ class ResetService:
             result = {"message": "Organization business data reset completed", "deleted": {}}
             
             # Validate organization exists
-            from app.models.base import Organization
             org = db.query(Organization).filter(Organization.id == organization_id).first()
             if not org:
                 raise ValueError(f"Organization with ID {organization_id} not found")

@@ -24,6 +24,8 @@ from .user_routes import user_router
 from .invitation_routes import invitation_router
 from .module_routes import module_router
 from .license_routes import license_router
+from app.services.otp_service import OTPService
+from app.schemas.reset import OTPRequest, OTPVerify
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -296,3 +298,106 @@ async def create_organization_license(
     result = OrganizationService.create_license(db, license_data, current_user)
 
     return result
+
+@router.post("/reset-data/request-otp")
+async def request_reset_otp(
+    request: OTPRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Request OTP for organization data reset (org admin only)"""
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any organization"
+        )
+  
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization administrators can request OTP for data reset"
+        )
+  
+    try:
+        otp_service = OTPService(db)
+        otp_service.generate_and_send_otp(current_user.email, "reset_data", organization_id=current_user.organization_id)
+        return {"message": "OTP sent to your email. Please verify to proceed with data reset."}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send OTP. Please try again."
+        )
+
+@router.post("/reset-data/verify-otp")
+async def verify_reset_otp_and_reset(
+    verify_data: OTPVerify,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Verify OTP and perform organization data reset (org admin only)"""
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any organization"
+        )
+  
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization administrators can reset organization data"
+        )
+  
+    try:
+        otp_service = OTPService(db)
+        if not otp_service.verify_otp(current_user.email, verify_data.otp, "reset_data"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired OTP"
+            )
+        
+        from app.services.org_reset_service import OrgResetService
+        result = OrgResetService.reset_organization_business_data(db, current_user.organization_id)
+        return {
+            "message": "Organization data has been reset successfully",
+            "details": result.get("deleted", {}),
+            "organization_state": "business_data_cleared"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset organization data. Please try again."
+        )
+
+@router.post("/reset-data")
+async def reset_organization_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Reset organization business data (org admin only)"""
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with any organization"
+        )
+  
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization administrators can reset organization data"
+        )
+  
+    try:
+        from app.services.org_reset_service import OrgResetService
+        result = OrgResetService.reset_organization_business_data(db, current_user.organization_id)
+        return {
+            "message": "Organization data has been reset successfully",
+            "details": result.get("deleted", {}),
+            "organization_state": "business_data_cleared"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset organization data. Please try again."
+        )

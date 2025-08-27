@@ -1,3 +1,5 @@
+# app/api/v1/password.py
+
 """
 Password management endpoints for authentication
 """
@@ -20,7 +22,7 @@ from app.schemas.user import (
 from app.schemas.base import PasswordResetResponse
 from app.schemas.reset import AdminPasswordResetRequest
 from app.services.user_service import UserService
-from app.services.otp_service import otp_service
+from app.services.otp_service import OTPService
 from app.services.email_service import email_service
 from .user import get_current_active_user, get_current_super_admin
 from app.core.logging import log_password_change
@@ -209,8 +211,9 @@ async def forgot_password(
             )
         
         # Generate and send OTP for password reset
-        otp = otp_service.create_otp_verification(db, forgot_data.email, "password_reset")
-        if not otp:
+        otp_service = OTPService(db)
+        success = otp_service.generate_and_send_otp(forgot_data.email, "password_reset")
+        if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to generate OTP. Please try again."
@@ -241,7 +244,8 @@ async def reset_password(
     """Reset password using OTP with audit logging"""
     try:
         # Verify OTP for password reset
-        otp_valid = otp_service.verify_otp(db, reset_data.email, reset_data.otp, "password_reset")
+        otp_service = OTPService(db)
+        otp_valid = otp_service.verify_otp(reset_data.email, reset_data.otp, "password_reset")
         
         # Find user
         user = UserService.get_user_by_email(db, reset_data.email)

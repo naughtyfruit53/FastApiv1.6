@@ -1,3 +1,5 @@
+# app/api/v1/otp.py
+
 """
 OTP (One-Time Password) authentication endpoints
 Handles OTP request and verification for secure authentication
@@ -17,7 +19,7 @@ from app.schemas.user import (
     Token, OTPRequest, OTPVerifyRequest, OTPResponse
 )
 from app.services.user_service import UserService
-from app.services.otp_service import otp_service
+from app.services.otp_service import OTPService
 
 import logging
 
@@ -68,8 +70,9 @@ async def request_otp(
             )
         
         # Generate and send OTP
-        otp = otp_service.create_otp_verification(db, otp_request.email, otp_request.purpose)
-        if not otp:
+        otp_service = OTPService(db)
+        success = otp_service.generate_and_send_otp(otp_request.email, otp_request.purpose)
+        if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to generate OTP. Please try again."
@@ -100,7 +103,8 @@ async def verify_otp(
     """Verify OTP and generate access token with audit logging"""
     try:
         # Verify OTP
-        otp_valid = otp_service.verify_otp(db, otp_verify.email, otp_verify.otp, otp_verify.purpose)
+        otp_service = OTPService(db)
+        otp_valid = otp_service.verify_otp(otp_verify.email, otp_verify.otp, otp_verify.purpose)
         
         # Find user
         user = UserService.get_user_by_email(db, otp_verify.email)
