@@ -118,7 +118,7 @@ class VoucherAutoPopulationService:
     @staticmethod
     def populate_grn_from_po(db: Session, purchase_order, current_user) -> dict:
         """Auto-populate GRN data from Purchase Order"""
-        from app.models.vouchers import GoodsReceiptNote
+        from app.models.vouchers.purchase import GoodsReceiptNote
         
         # Get pending PO items
         po_items = [item for item in purchase_order.items if item.pending_quantity > 0]
@@ -162,7 +162,7 @@ class VoucherAutoPopulationService:
     @staticmethod
     def populate_purchase_voucher_from_grn(db: Session, grn, current_user, gst_rate: float = 18.0) -> dict:
         """Auto-populate Purchase Voucher data from GRN"""
-        from app.models.vouchers import PurchaseVoucher
+        from app.models.vouchers.purchase import PurchaseVoucher
         
         # Get accepted GRN items
         grn_items = [item for item in grn.items if item.accepted_quantity > 0]
@@ -270,7 +270,7 @@ class VoucherSearchService:
     @staticmethod
     def get_pending_purchase_orders(db: Session, organization_id: int, vendor_id: int = None):
         """Get purchase orders with pending items"""
-        from app.models.vouchers import PurchaseOrder, PurchaseOrderItem
+        from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem
         from app.core.tenant import TenantQueryFilter
         
         query = TenantQueryFilter.apply_organization_filter(
@@ -288,7 +288,7 @@ class VoucherSearchService:
     @staticmethod
     def get_pending_grns_for_invoicing(db: Session, organization_id: int, vendor_id: int = None):
         """Get GRNs that haven't been fully invoiced"""
-        from app.models.vouchers import GoodsReceiptNote, GoodsReceiptNoteItem
+        from app.models.vouchers.purchase import GoodsReceiptNote, GoodsReceiptNoteItem
         from app.core.tenant import TenantQueryFilter
         
         query = TenantQueryFilter.apply_organization_filter(

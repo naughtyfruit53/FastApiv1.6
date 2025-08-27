@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers import PurchaseVoucher, PurchaseOrder, GoodsReceiptNote, PurchaseOrderItem, GoodsReceiptNoteItem
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, GoodsReceiptNote, PurchaseOrderItem, GoodsReceiptNoteItem
 from app.schemas.vouchers import PurchaseVoucherCreate, PurchaseVoucherInDB, PurchaseVoucherUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService

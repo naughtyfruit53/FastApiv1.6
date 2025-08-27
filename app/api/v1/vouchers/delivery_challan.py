@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers import DeliveryChallan
+from app.models.vouchers.sales import DeliveryChallan
 from app.schemas.vouchers import DeliveryChallanCreate, DeliveryChallanInDB, DeliveryChallanUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService

@@ -23,7 +23,7 @@ import api from '../lib/api';  // Direct import for list fetch
 export const useVoucherPage = (config: VoucherPageConfig) => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
-  const { isOrgContextReady } = useAuth();
+  const { isOrgContextReady, company } = useAuth();  // Get company from context
   const queryClient = useQueryClient();
 
   console.log('[useVoucherPage] Enhanced hook initialized for:', config.voucherType);
@@ -164,9 +164,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       
       // If we have entity with state_code, check against company state
       if (selectedEntity && selectedEntity.state_code) {
-        // For now, assuming company state code is available from auth context
-        // TODO: Get actual company state code from organization settings
-        const companyStateCode = '27'; // Default to Maharashtra for demo
+        // Use company state code from context
+        const companyStateCode = company?.state_code || '27';  // Fallback to '27' if not loaded
         isIntrastate = selectedEntity.state_code === companyStateCode;
       }
     } catch (error) {
@@ -182,7 +181,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }));
     
     return calculateVoucherTotals(formattedItems, isIntrastate);
-  }, [itemsWatch, config.hasItems, config.entityType, watch, customerList, vendorList]);
+  }, [itemsWatch, config.hasItems, config.entityType, watch, customerList, vendorList, company?.state_code]);
 
   // Enhanced queries with pagination and sorting
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({
@@ -241,6 +240,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     mutationFn: (data: any) => voucherService.createVoucher(config.apiEndpoint || config.voucherType, data),
     onSuccess: async (newVoucher) => {
       console.log('[useVoucherPage] Voucher created successfully:', newVoucher);
+      // Optimistically update the voucher list by prepending the new voucher
+      queryClient.setQueryData([config.voucherType, currentPage, pageSize], (oldData: any) => {
+        if (!oldData) return [newVoucher];
+        return [newVoucher, ...oldData];
+      });
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
       await refetchVoucherList();  // Explicit refetch after invalidation
       setMode('create');

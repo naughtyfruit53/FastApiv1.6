@@ -22,7 +22,8 @@ import { useAuth } from '../../../context/AuthContext';  // Assume companyState 
 import { useRouter } from 'next/router';
 
 const PurchaseOrderPage: React.FC = () => {
-  const { companyState } = useAuth();  // Assume companyState is fetched from AuthContext (e.g., 'MH' for Maharashtra)
+  const { company } = useAuth();  // Fetch company from context (includes state)
+  const companyState = company?.state_code;  // Use company.state_code for comparison
   const router = useRouter();
   const { productId, vendorId } = router.query;
   const config = getVoucherConfig('purchase-order');
@@ -139,6 +140,7 @@ const PurchaseOrderPage: React.FC = () => {
       product_name: '',
       quantity: 1,
       unit_price: 0,
+      original_unit_price: 0,  // Added for master price comparison
       discount_percentage: 0,
       gst_rate: 18,
       amount: 0,
@@ -163,6 +165,25 @@ const PurchaseOrderPage: React.FC = () => {
         data.items = computedItems;
         data.total_amount = totalAmount;
       }
+
+      // Check for price updates and prompt
+      const itemsToUpdate = data.items.filter(
+        (item: any) => item.unit_price !== item.original_unit_price && item.product_id
+      );
+      if (itemsToUpdate.length > 0) {
+        if (confirm(`Some items have updated prices. Update master product prices for ${itemsToUpdate.length} items?`)) {
+          await Promise.all(
+            itemsToUpdate.map((item: any) =>
+              api.put(`/products/${item.product_id}`, { unit_price: item.unit_price })
+            )
+          );
+          // Optional: refresh product list if needed
+          refreshMasterData();
+        }
+      }
+
+      // Remove original_unit_price from items before saving
+      data.items = data.items.map(({ original_unit_price, ...item }: any) => item);
 
       let response;
       if (mode === 'create') {
@@ -254,6 +275,7 @@ const PurchaseOrderPage: React.FC = () => {
           product_name: product.product_name || product.name,
           quantity: 1,
           unit_price: product.unit_price || 0,
+          original_unit_price: product.unit_price || 0,  // Set original from master
           discount_percentage: 0,
           gst_rate: product.gst_rate || 18,
           amount: 0,
@@ -336,6 +358,7 @@ const PurchaseOrderPage: React.FC = () => {
             product_name: item.product?.product_name || item.product_name || '',
             quantity: item.quantity,
             unit_price: item.unit_price,
+            original_unit_price: item.product?.unit_price || item.unit_price || 0,  // Set original from master product
             discount_percentage: item.discount_percentage || 0,
             gst_rate: item.gst_rate || 18,
             amount: item.total_amount,
@@ -555,6 +578,7 @@ const PurchaseOrderPage: React.FC = () => {
                             setValue(`items.${index}.product_id`, product?.id || null);
                             setValue(`items.${index}.product_name`, product?.product_name || '');
                             setValue(`items.${index}.unit_price`, product?.unit_price || 0);
+                            setValue(`items.${index}.original_unit_price`, product?.unit_price || 0);  // Set original from master
                             setValue(`items.${index}.gst_rate`, product?.gst_rate || 18);
                             setValue(`items.${index}.unit`, product?.unit || '');
                             setValue(`items.${index}.reorder_level`, product?.reorder_level || 0);
@@ -574,16 +598,17 @@ const PurchaseOrderPage: React.FC = () => {
                         ) : null}
                       </TableCell>
                       <TableCell sx={{ p: 1, textAlign: 'right' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          <TextField
-                            type="number"
-                            {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
-                            disabled={mode === 'view'}
-                            size="small"
-                            sx={{ width: 100 }}  // Increased width for qty field
-                          />
-                          <Typography sx={{ ml: 1, fontSize: 12 }}>{watch(`items.${index}.unit`)}</Typography>
-                        </Box>
+                        <TextField
+                          type="number"
+                          {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                          disabled={mode === 'view'}
+                          size="small"
+                          sx={{ width: 120 }}  // Increased width for qty field to fit unit
+                          InputProps={{
+                            endAdornment: <InputAdornment position="end">{watch(`items.${index}.unit`)}</InputAdornment>,
+                            inputProps: { min: 0, step: 1 },  // Prevent negative qty, integer steps
+                          }}
+                        />
                       </TableCell>
                       <TableCell sx={{ p: 1, textAlign: 'right' }}>
                         <TextField
@@ -592,6 +617,9 @@ const PurchaseOrderPage: React.FC = () => {
                           disabled={mode === 'view'}
                           size="small"
                           sx={{ width: 80 }}
+                          InputProps={{
+                            inputProps: { min: 0, step: 0.01 },  // Allow decimals up to 2 digits
+                          }}
                         />
                       </TableCell>
                       <TableCell sx={{ p: 1 }}>
@@ -601,6 +629,9 @@ const PurchaseOrderPage: React.FC = () => {
                           disabled={mode === 'view'}
                           size="small"
                           sx={{ width: 60 }}
+                          InputProps={{
+                            inputProps: { min: 0, step: 0.01 },  // Allow decimals for discount
+                          }}
                         />
                       </TableCell>
                       <TableCell sx={{ p: 1 }}>
@@ -658,7 +689,7 @@ const PurchaseOrderPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
-                  {selectedVendor?.state === companyState ? (
+                  {selectedVendor?.state_code === companyState ? (
                     <>
                       <Grid size={6}>
                         <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
@@ -787,6 +818,7 @@ const PurchaseOrderPage: React.FC = () => {
           setValue(`items.${addingItemIndex}.product_id`, newProduct.id);
           setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name);
           setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0);
+          setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0);
           setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate || 18);
           setValue(`items.${addingItemIndex}.unit`, newProduct.unit || '');
           setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0);

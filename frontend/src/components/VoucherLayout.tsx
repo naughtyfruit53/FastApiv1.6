@@ -43,8 +43,8 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   
   return (
     <>
-      <Box sx={voucherStyles.edgeToEdgeContainer}>
-        <Container maxWidth={false} sx={{ padding: 0, margin: 0, width: '100vw' }}>
+      <Box sx={{ ...voucherStyles.edgeToEdgeContainer, maxWidth: '100vw', overflowX: 'hidden' }}>
+        <Container maxWidth={false} sx={{ padding: 0, margin: 0, width: '100vw', maxWidth: '100vw', overflowX: 'hidden' }}>
           {/* Remove redundant top-level title per requirements */}
           
           <Grid container spacing={0} sx={{ minHeight: '100vh' }}>
