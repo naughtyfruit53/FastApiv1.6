@@ -60,6 +60,10 @@ from app.api.v1 import rbac as v1_rbac
 # Add import for service analytics
 from app.api.v1 import service_analytics as v1_service_analytics
 
+# Add imports for new Asset Management and Transport modules
+from app.api.v1 import assets as v1_assets
+from app.api.v1 import transport as v1_transport
+
 # Log imports with try/except for error handling
 try:
     from app.api import companies
@@ -285,6 +289,14 @@ logger.info("Tally Integration router included successfully at prefix: /api/v1/t
 
 app.include_router(v1_warehouse.router, prefix="/api/v1/warehouse", tags=["warehouse-management"])
 logger.info("Warehouse Management router included successfully at prefix: /api/v1/warehouse")
+
+# Include Asset Management router
+app.include_router(v1_assets.router, prefix="/api/v1/assets", tags=["asset-management"])
+logger.info("Asset Management router included successfully at prefix: /api/v1/assets")
+
+# Include Transport and Freight router
+app.include_router(v1_transport.router, prefix="/api/v1/transport", tags=["transport-freight"])
+logger.info("Transport and Freight router included successfully at prefix: /api/v1/transport")
 
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}

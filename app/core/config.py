@@ -1,6 +1,6 @@
 import os
 from typing import Any, Dict, Optional, List
-from pydantic_settings import BaseSettings, SettingsConfigDict  # Use pydantic-settings for env loading
+from pydantic import BaseModel
 from dotenv import load_dotenv  # Explicitly load .env (optional, as BaseSettings handles it)
 import logging
 
@@ -18,7 +18,7 @@ print(f"DEBUG: .env exists: {os.path.exists(env_path)}")
 load_dotenv(env_path)
 logger.info(f"Loaded .env from: {env_path}")
 
-class Settings(BaseSettings):
+class Settings:
     # App Settings
     PROJECT_NAME: str = "TRITIQ ERP API"
     VERSION: str = "1.0.0"
@@ -26,10 +26,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     
     # Security
-    SECRET_KEY: str = "your-secret-key-here-change-in-production"
-    ALGORITHM: str = "HS256"
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
+    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     # JWT Token Expiry: minimum 120 minutes (2 hours), maximum 300 minutes (5 hours)
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 180  # Default 3 hours, within required range
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "180"))  # Default 3 hours, within required range
     
     @classmethod
     def validate_token_expiry(cls, v: int) -> int:
@@ -48,11 +48,11 @@ class Settings(BaseSettings):
         return v
     
     # Database (Supabase PostgreSQL)
-    DATABASE_URL: Optional[str] = None
-    SUPABASE_URL: Optional[str] = None
-    SUPABASE_KEY: Optional[str] = None
-    SUPABASE_SERVICE_KEY: Optional[str] = None
-    SUPABASE_JWT_SECRET: Optional[str] = None
+    DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
+    SUPABASE_URL: Optional[str] = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY: Optional[str] = os.getenv("SUPABASE_KEY")
+    SUPABASE_SERVICE_KEY: Optional[str] = os.getenv("SUPABASE_SERVICE_KEY")
+    SUPABASE_JWT_SECRET: Optional[str] = os.getenv("SUPABASE_JWT_SECRET")
     
     # Email Settings (SMTP)
     SMTP_HOST: str = "smtp.gmail.com"  # Changed back to SMTP_HOST to match .env
@@ -110,12 +110,5 @@ class Settings(BaseSettings):
         value = self.SUPABASE_JWT_SECRET or self.SECRET_KEY
         print(f"DEBUG: Loaded jwt_secret = {value}")  # Debug print for troubleshooting
         return value
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding='utf-8',
-        case_sensitive=True,
-        extra='ignore'  # Ignore extra fields in .env to prevent validation errors
-    )
 
 settings = Settings()
