@@ -26,7 +26,7 @@ interface AddProductModalProps {
 }
 
 interface ProductFormData {
-  name: string;
+  product_name: string;
   hsn_code: string;
   part_number: string;
   unit: string;
@@ -47,7 +47,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 }) => {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ProductFormData>({
     defaultValues: {
-      name: initialName,
+      product_name: initialName,
       hsn_code: '',
       part_number: '',
       unit: 'PCS',
@@ -63,7 +63,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   React.useEffect(() => {
     if (open && initialName) {
       reset({ 
-        name: initialName,
+        product_name: initialName,
         hsn_code: '',
         part_number: '',
         unit: 'PCS',
@@ -80,7 +80,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const onSubmit = async (data: ProductFormData) => {
     try {
       // Remove empty fields to match backend schema (consistent with customer modal)
-      const allowedFields = ['name', 'hsn_code', 'part_number', 'unit', 'unit_price', 'gst_rate', 'is_gst_inclusive', 'reorder_level', 'description', 'is_manufactured'];
+      const allowedFields = ['product_name', 'hsn_code', 'part_number', 'unit', 'unit_price', 'gst_rate', 'is_gst_inclusive', 'reorder_level', 'description', 'is_manufactured'];
       const cleanData = Object.fromEntries(
         Object.entries(data).filter(([key, value]) => {
           if (key === 'unit_price' || key === 'gst_rate' || key === 'reorder_level') {
@@ -125,9 +125,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               <TextField
                 fullWidth
                 label="Product Name"
-                {...register('name', { required: 'Product name is required' })}
-                error={!!errors.name}
-                helperText={errors.name?.message}
+                {...register('product_name', { required: 'Product name is required' })}
+                error={!!errors.product_name}
+                helperText={errors.product_name?.message}
                 disabled={loading}
               />
             </Grid>
@@ -170,7 +170,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 inputProps={{ step: 0.01 }}
                 {...register('unit_price', { 
                   required: 'Unit price is required',
-                  min: { value: 0, message: 'Price must be positive' },
+                  min: { value: 0.01, message: 'Price must be greater than 0' },
                   valueAsNumber: true 
                 })}
                 error={!!errors.unit_price}

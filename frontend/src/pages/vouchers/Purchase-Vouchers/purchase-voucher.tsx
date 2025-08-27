@@ -162,7 +162,12 @@ const PurchaseVoucherPage: React.FC = () => {
       };
       return calculateItemTotals(item, isIntrastate);
     });
-  }, [fields, watch, isIntrastate]);
+  }, [fields, isIntrastate, ...fields.flatMap((_, index) => [
+    watch(`items.${index}.quantity`),
+    watch(`items.${index}.unit_price`),
+    watch(`items.${index}.discount_percentage`),
+    watch(`items.${index}.gst_rate`)
+  ])]);
 
   // Purchase Voucher specific handlers
   const handleAddItem = () => {
