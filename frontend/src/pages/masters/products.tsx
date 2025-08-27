@@ -80,7 +80,7 @@ const ProductsPage: React.FC = () => {
     if (!products) return [];
     
     // Filter products based on search term
-    let filtered = products.filter((product: any) => {
+    const filtered = products.filter((product: any) => {
       const searchLower = searchTerm.toLowerCase();
       return (
         (product.product_name || product.name || '').toLowerCase().includes(searchLower) ||
