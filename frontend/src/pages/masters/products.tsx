@@ -1,5 +1,5 @@
 // Standalone Products Page - Extract from masters/index.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
@@ -26,14 +26,17 @@ import {
   FormControlLabel,
   Checkbox,
   InputLabel,
-  FormControl
+  FormControl,
+  TableSortLabel,
+  InputAdornment
 } from '@mui/material';
 import {
   Add,
   Edit,
   Delete,
   Inventory,
-  Visibility
+  Visibility,
+  Search
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataService } from '../../services/authService';
@@ -49,6 +52,8 @@ const ProductsPage: React.FC = () => {
   const [itemDialog, setItemDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [formData, setFormData] = useState({
     product_name: '',
     hsn_code: '',
@@ -69,6 +74,39 @@ const ProductsPage: React.FC = () => {
     queryFn: () => masterDataService.getProducts(),
     enabled: isOrgContextReady,
   });
+
+  // Filter and sort products
+  const filteredAndSortedProducts = useMemo(() => {
+    if (!products) return [];
+    
+    // Filter products based on search term
+    let filtered = products.filter((product: any) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        (product.product_name || product.name || '').toLowerCase().includes(searchLower) ||
+        (product.hsn_code || '').toLowerCase().includes(searchLower) ||
+        (product.part_number || '').toLowerCase().includes(searchLower)
+      );
+    });
+    
+    // Sort products by name
+    filtered.sort((a: any, b: any) => {
+      const nameA = (a.product_name || a.name || '').toLowerCase();
+      const nameB = (b.product_name || b.name || '').toLowerCase();
+      
+      if (sortOrder === 'asc') {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
+    
+    return filtered;
+  }, [products, searchTerm, sortOrder]);
+
+  const handleSortToggle = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
 
   const createItemMutation = useMutation({
     mutationFn: (data: any) => masterDataService.createProduct(data),
@@ -214,11 +252,37 @@ const ProductsPage: React.FC = () => {
             />
           </Box>
           
+          {/* Search Bar */}
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              fullWidth
+              placeholder="Search products by name, HSN code, or part number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ maxWidth: 500 }}
+            />
+          </Box>
+          
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Name</TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={true}
+                      direction={sortOrder}
+                      onClick={handleSortToggle}
+                    >
+                      Name
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell>HSN Code</TableCell>
                   <TableCell>Part Number</TableCell>
                   <TableCell>Unit</TableCell>
@@ -230,12 +294,12 @@ const ProductsPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {products?.map((item: any) => (
+                {filteredAndSortedProducts?.map((item: any) => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <Box>
                         <Typography variant="body2" fontWeight="bold">
-                          {item.product_name}
+                          {item.product_name || item.name}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
                           {item.description}

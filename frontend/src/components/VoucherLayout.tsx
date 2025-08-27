@@ -43,19 +43,47 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   
   return (
     <>
-      <Box sx={{ ...voucherStyles.edgeToEdgeContainer, maxWidth: '100vw', overflowX: 'hidden' }}>
-        <Container maxWidth={false} sx={{ padding: 0, margin: 0, width: '100vw', maxWidth: '100vw', overflowX: 'hidden' }}>
+      <Box sx={{ 
+        ...voucherStyles.edgeToEdgeContainer, 
+        width: '100%',
+        maxWidth: '100%', 
+        overflowX: 'hidden',
+        boxSizing: 'border-box'
+      }}>
+        <Container 
+          maxWidth={false} 
+          sx={{ 
+            padding: 0, 
+            margin: 0, 
+            width: '100%',
+            maxWidth: '100%', 
+            overflowX: 'hidden',
+            boxSizing: 'border-box'
+          }}
+        >
           {/* Remove redundant top-level title per requirements */}
           
-          <Grid container spacing={0} sx={{ minHeight: '100vh' }}>
+          <Grid container spacing={0} sx={{ 
+            minHeight: '100vh',
+            width: '100%',
+            margin: 0,
+            '& .MuiGrid-item': {
+              paddingLeft: 0,
+              paddingTop: 0
+            }
+          }}>
             {/* Index Panel - approximately 40% */}
-            <Grid size={{ xs: 12, md: 5, lg: 5 }} sx={{ borderRight: '1px solid #e0e0e0' }}>
+            <Grid size={{ xs: 12, md: 5, lg: 4 }} sx={{ 
+              borderRight: '1px solid #e0e0e0',
+              maxWidth: { xs: '100%', md: '40%', lg: '33.333%' }
+            }}>
               <Paper sx={{ 
                 p: 1,
                 height: '100vh',
                 borderRadius: 0,
                 boxShadow: 'none',
                 overflow: 'auto',
+                width: '100%',
                 ...voucherStyles.indexContainer
               }}>
                 <Box 
@@ -117,13 +145,16 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
             </Grid>
 
             {/* Form Panel - approximately 60% */}
-            <Grid size={{ xs: 12, md: 7, lg: 7 }}>
+            <Grid size={{ xs: 12, md: 7, lg: 8 }} sx={{
+              maxWidth: { xs: '100%', md: '60%', lg: '66.667%' }
+            }}>
               <Paper sx={{ 
                 p: 1,
                 height: '100vh',
                 borderRadius: 0,
                 boxShadow: 'none',
                 overflow: 'auto',
+                width: '100%',
                 ...voucherStyles.formContainer
               }}>
                 {formContent}
