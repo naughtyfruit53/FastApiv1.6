@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 
 class Ticket(Base):
@@ -714,4 +714,262 @@ class ServiceClosure(Base):
         Index('idx_service_closure_approval_required', 'requires_manager_approval'),
         Index('idx_service_closure_feedback_received', 'feedback_received'),
         Index('idx_service_closure_escalation', 'escalation_required'),
+    )
+
+# Enhanced Service Desk Models for Omnichannel Support and Chatbot
+
+class ChatbotConversation(Base):
+    """
+    Model for chatbot conversations for omnichannel support.
+    Provides automated customer support and escalation to human agents.
+    """
+    __tablename__ = "chatbot_conversations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_chatbot_conversation_organization_id"), nullable=False, index=True)
+    
+    # Conversation identification
+    conversation_id: Mapped[str] = mapped_column(String, nullable=False, unique=True, index=True)
+    session_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    
+    # Customer information
+    customer_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("customers.id", name="fk_chatbot_conversation_customer_id"), nullable=True)
+    customer_email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    customer_phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    customer_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Channel information
+    channel: Mapped[str] = mapped_column(String, nullable=False) # web, whatsapp, telegram, facebook, etc.
+    channel_user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Conversation state
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active") # active, escalated, resolved, closed
+    intent: Mapped[Optional[str]] = mapped_column(String, nullable=True) # product_inquiry, support_request, complaint, etc.
+    confidence_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # AI confidence in intent detection
+    
+    # Escalation
+    escalated_to_human: Mapped[bool] = mapped_column(Boolean, default=False)
+    escalated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    assigned_agent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_chatbot_conversation_agent_id"), nullable=True)
+    escalation_reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Resolution
+    resolved_by_bot: Mapped[bool] = mapped_column(Boolean, default=False)
+    resolution_category: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    customer_satisfaction: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # 1-5 rating
+    
+    # Linked ticket (if escalated)
+    ticket_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("tickets.id", name="fk_chatbot_conversation_ticket_id"), nullable=True)
+    
+    # Metadata
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_message_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    customer: Mapped[Optional["Customer"]] = relationship("Customer")
+    assigned_agent: Mapped[Optional["User"]] = relationship("User")
+    ticket: Mapped[Optional["Ticket"]] = relationship("Ticket")
+    messages: Mapped[List["ChatbotMessage"]] = relationship("ChatbotMessage", back_populates="conversation", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index('idx_chatbot_conversation_org_status', 'organization_id', 'status'),
+        Index('idx_chatbot_conversation_channel', 'channel'),
+        Index('idx_chatbot_conversation_intent', 'intent'),
+        Index('idx_chatbot_conversation_escalated', 'escalated_to_human'),
+        Index('idx_chatbot_conversation_started', 'started_at'),
+        UniqueConstraint('organization_id', 'conversation_id', name='uq_chatbot_conversation_org_id'),
+    )
+
+class ChatbotMessage(Base):
+    """
+    Individual messages within chatbot conversations.
+    """
+    __tablename__ = "chatbot_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_chatbot_message_organization_id"), nullable=False, index=True)
+    
+    # References
+    conversation_id: Mapped[int] = mapped_column(Integer, ForeignKey("chatbot_conversations.id", name="fk_chatbot_message_conversation_id"), nullable=False)
+    
+    # Message details
+    message_type: Mapped[str] = mapped_column(String, nullable=False) # user, bot, agent, system
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    message_format: Mapped[str] = mapped_column(String, nullable=False, default="text") # text, image, file, quick_reply, etc.
+    
+    # Sender information
+    sender_id: Mapped[Optional[str]] = mapped_column(String, nullable=True) # For external channels
+    agent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_chatbot_message_agent_id"), nullable=True)
+    
+    # Bot processing information
+    intent_detected: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    confidence_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    entities_extracted: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    
+    # Message metadata
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    conversation: Mapped["ChatbotConversation"] = relationship("ChatbotConversation", back_populates="messages")
+    agent: Mapped[Optional["User"]] = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_chatbot_message_org_conversation', 'organization_id', 'conversation_id'),
+        Index('idx_chatbot_message_type', 'message_type'),
+        Index('idx_chatbot_message_created', 'created_at'),
+    )
+
+class SurveyTemplate(Base):
+    """
+    Templates for customer satisfaction surveys and feedback collection.
+    """
+    __tablename__ = "survey_templates"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_survey_template_organization_id"), nullable=False, index=True)
+    
+    # Template details
+    name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    template_type: Mapped[str] = mapped_column(String, nullable=False) # service_satisfaction, product_feedback, nps, etc.
+    
+    # Survey configuration
+    questions: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, nullable=False) # Question definitions
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Trigger configuration
+    trigger_event: Mapped[str] = mapped_column(String, nullable=False) # ticket_closure, purchase_completion, etc.
+    trigger_delay_hours: Mapped[int] = mapped_column(Integer, default=0) # Delay before sending survey
+    
+    # Assignment
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_survey_template_created_by_id"), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    created_by: Mapped[Optional["User"]] = relationship("User")
+    surveys: Mapped[List["CustomerSurvey"]] = relationship("CustomerSurvey", back_populates="template", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index('idx_survey_template_org_type', 'organization_id', 'template_type'),
+        Index('idx_survey_template_active', 'is_active'),
+        Index('idx_survey_template_trigger', 'trigger_event'),
+        UniqueConstraint('organization_id', 'name', name='uq_survey_template_org_name'),
+    )
+
+class CustomerSurvey(Base):
+    """
+    Individual customer survey instances.
+    """
+    __tablename__ = "customer_surveys"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_customer_survey_organization_id"), nullable=False, index=True)
+    
+    # References
+    template_id: Mapped[int] = mapped_column(Integer, ForeignKey("survey_templates.id", name="fk_customer_survey_template_id"), nullable=False)
+    customer_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("customers.id", name="fk_customer_survey_customer_id"), nullable=True)
+    ticket_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("tickets.id", name="fk_customer_survey_ticket_id"), nullable=True)
+    
+    # Survey details
+    survey_token: Mapped[str] = mapped_column(String, nullable=False, unique=True, index=True) # Unique token for anonymous access
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending") # pending, sent, completed, expired
+    
+    # Customer information (for external surveys)
+    customer_email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    customer_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Survey lifecycle
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Survey responses
+    responses: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True) # Question ID -> Response mapping
+    overall_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # Overall satisfaction rating
+    nps_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # Net Promoter Score (-100 to 100)
+    
+    # Additional feedback
+    comments: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    template: Mapped["SurveyTemplate"] = relationship("SurveyTemplate", back_populates="surveys")
+    customer: Mapped[Optional["Customer"]] = relationship("Customer")
+    ticket: Mapped[Optional["Ticket"]] = relationship("Ticket")
+    
+    __table_args__ = (
+        Index('idx_customer_survey_org_template', 'organization_id', 'template_id'),
+        Index('idx_customer_survey_status', 'status'),
+        Index('idx_customer_survey_customer', 'customer_id'),
+        Index('idx_customer_survey_ticket', 'ticket_id'),
+        Index('idx_customer_survey_completed', 'completed_at'),
+        UniqueConstraint('organization_id', 'survey_token', name='uq_customer_survey_org_token'),
+    )
+
+class ChannelConfiguration(Base):
+    """
+    Configuration for omnichannel support channels.
+    """
+    __tablename__ = "channel_configurations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_channel_config_organization_id"), nullable=False, index=True)
+    
+    # Channel details
+    channel_type: Mapped[str] = mapped_column(String, nullable=False) # whatsapp, telegram, facebook, email, web_chat, etc.
+    channel_name: Mapped[str] = mapped_column(String, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Channel configuration
+    configuration: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False) # API keys, webhooks, etc.
+    
+    # Bot configuration
+    bot_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    auto_escalation_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    escalation_threshold_minutes: Mapped[int] = mapped_column(Integer, default=10)
+    
+    # Business hours
+    business_hours: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    timezone: Mapped[str] = mapped_column(String, default="UTC")
+    
+    # Assignment
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_channel_config_created_by_id"), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    created_by: Mapped[Optional["User"]] = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_channel_config_org_type', 'organization_id', 'channel_type'),
+        Index('idx_channel_config_active', 'is_active'),
+        UniqueConstraint('organization_id', 'channel_type', 'channel_name', name='uq_channel_config_org_type_name'),
     )
