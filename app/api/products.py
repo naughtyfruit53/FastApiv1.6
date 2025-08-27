@@ -1,3 +1,5 @@
+# app/api/products.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -653,7 +655,7 @@ async def check_products_stock_consistency(
         result["consistency_issues"].append({
             "type": "products_without_stock",
             "count": len(products_without_stock),
-            "products": [{"id": p.id, "name": p.name} for p in products_without_stock[:5]]
+            "products": [{"id": p.id, "name": p.name} for p in products_without_stock]
         })
         
         if fix_issues:
@@ -664,11 +666,10 @@ async def check_products_stock_consistency(
                     product_id=product.id,
                     quantity=0.0,
                     unit=product.unit,
-                    location=""
+                    location="UNASSIGNED"
                 )
                 db.add(new_stock)
             
-            db.commit()
             result["fixed_missing_stock"] = len(products_without_stock)
     
     # Find orphaned stock entries
@@ -683,7 +684,7 @@ async def check_products_stock_consistency(
         result["consistency_issues"].append({
             "type": "orphaned_stock",
             "count": len(orphaned_stock),
-            "stock_ids": [s.id for s in orphaned_stock[:5]]
+            "stock_ids": [s.id for s in orphaned_stock]
         })
         
         if fix_issues:
@@ -691,7 +692,6 @@ async def check_products_stock_consistency(
             for stock in orphaned_stock:
                 db.delete(stock)
             
-            db.commit()
             result["removed_orphaned_stock"] = len(orphaned_stock)
     
     # Check for inactive products with stock
@@ -708,7 +708,7 @@ async def check_products_stock_consistency(
             "type": "inactive_products_with_stock",
             "count": len(inactive_products_with_stock),
             "products": [{"id": p.id, "name": p.name, "stock_qty": s.quantity} 
-                        for p, s in inactive_products_with_stock[:5]]
+                        for p, s in inactive_products_with_stock]
         })
     
     result["is_consistent"] = len(result["consistency_issues"]) == 0
@@ -717,6 +717,10 @@ async def check_products_stock_consistency(
     if not result["is_consistent"]:
         result["recommendations"].append("Run with fix_issues=true to automatically fix missing stock entries and orphaned stock")
         result["recommendations"].append("Consider reactivating products with existing stock or transferring stock to active products")
+    
+    # Commit all fixes at once for atomicity if any fixes were applied
+    if fix_issues and ("fixed_missing_stock" in result or "removed_orphaned_stock" in result):
+        db.commit()
     
     return result
 

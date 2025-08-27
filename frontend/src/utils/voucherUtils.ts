@@ -1,4 +1,4 @@
-// src/utils/voucherUtils.ts
+// frontend/src/utils/voucherUtils.ts
 
 export const GST_SLABS = [0, 5, 12, 18, 28];
 
@@ -919,7 +919,6 @@ export const getVoucherStyles = () => ({
   optimizedTableContainer: {
     '& .MuiTableContainer-root': {
       borderRadius: '4px',
-      border: '1px solid #e0e0e0'
     },
     '& .MuiTable-root': {
       borderCollapse: 'separate',
@@ -927,14 +926,12 @@ export const getVoucherStyles = () => ({
     },
     '& .MuiTableCell-root': {
       padding: '4px 4px',
-      borderRight: '1px solid #f0f0f0',
       '&:last-child': {
         borderRight: 'none'
       }
     },
     '& .MuiTableHead-root .MuiTableCell-root': {
       backgroundColor: '#fafafa',
-      borderBottom: '2px solid #e0e0e0',
       fontSize: '12px',
       fontWeight: 'bold'
     },

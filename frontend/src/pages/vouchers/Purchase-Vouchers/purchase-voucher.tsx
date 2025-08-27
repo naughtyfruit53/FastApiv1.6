@@ -15,10 +15,11 @@ import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField, getVoucherStyles } from '../../../utils/voucherUtils';
+import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField, getVoucherStyles, isIntrastateTransaction, calculateItemTotals } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
+import { useQuery } from '@tanstack/react-query';
 
 const PurchaseVoucherPage: React.FC = () => {
   const config = getVoucherConfig('purchase-voucher');
@@ -87,6 +88,9 @@ const PurchaseVoucherPage: React.FC = () => {
     totalAmount,
     totalSubtotal,
     totalGst,
+    totalCgst,
+    totalSgst,
+    totalIgst,
 
     // Mutations
     createMutation,
@@ -128,6 +132,38 @@ const PurchaseVoucherPage: React.FC = () => {
   // Stock data state for items
   const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
 
+  // Fetch company details
+  const { data: company } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => api.get('/companies/current').then(res => res.data),
+  });
+
+  const companyStateCode = company?.state_code;
+
+  // State for intrastate determination
+  const [isIntrastate, setIsIntrastate] = useState(true);
+
+  useEffect(() => {
+    if (selectedVendor && companyStateCode) {
+      const vendorStateCode = selectedVendor.state_code || selectedVendor.gst_number?.slice(0, 2);
+      setIsIntrastate(isIntrastateTransaction(companyStateCode, vendorStateCode));
+    }
+  }, [selectedVendor, companyStateCode]);
+
+  // Memoized computed items with GST split
+  const computedItemsMemo = useMemo(() => {
+    return fields.map((field, index) => {
+      const item = {
+        ...field,
+        quantity: watch(`items.${index}.quantity`),
+        unit_price: watch(`items.${index}.unit_price`),
+        discount_percentage: watch(`items.${index}.discount_percentage`),
+        gst_rate: watch(`items.${index}.gst_rate`),
+      };
+      return calculateItemTotals(item, isIntrastate);
+    });
+  }, [fields, watch, isIntrastate]);
+
   // Purchase Voucher specific handlers
   const handleAddItem = () => {
     append({
@@ -148,7 +184,7 @@ const PurchaseVoucherPage: React.FC = () => {
   const onSubmit = async (data: any) => {
     try {
       if (config.hasItems !== false) {
-        data.items = computedItems;
+        data.items = computedItemsMemo;
         data.total_amount = totalAmount;
       }
 
@@ -347,8 +383,8 @@ const PurchaseVoucherPage: React.FC = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1} sx={voucherStyles.centerText}>
-          {/* Voucher Number */}
-          <Grid size={6}>
+          {/* First Row: Voucher Number, Date, Vendor */}
+          <Grid size={3}>
             <TextField
               fullWidth
               label="Voucher Number"
@@ -361,8 +397,7 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          {/* Date */}
-          <Grid size={6}>
+          <Grid size={3}>
             <TextField
               fullWidth
               label="Date"
@@ -379,7 +414,6 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          {/* Vendor, Reference, Payment Terms in one row */}
           <Grid size={6}>
             <Autocomplete
               size="small"
@@ -409,7 +443,8 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={3}>
+          {/* Second Row: Reference and Payment Terms */}
+          <Grid size={6}>
             <VoucherReferenceDropdown
               voucherType="purchase-voucher"
               value={{
@@ -427,7 +462,7 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={3}>
+          <Grid size={6}>
             <TextField
               fullWidth
               label="Payment Terms"
@@ -437,20 +472,6 @@ const PurchaseVoucherPage: React.FC = () => {
               inputProps={{ style: { fontSize: 14 } }}
               size="small"
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
-            />
-          </Grid>
-
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Notes"
-              {...control.register('notes')}
-              multiline
-              rows={2}
-              disabled={mode === 'view'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14 } }}
-              size="small"
             />
           </Grid>
 
@@ -466,12 +487,12 @@ const PurchaseVoucherPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={voucherStyles.productTableColumns.productName}>Product</TableCell>
-                    <TableCell sx={{ width: 80, textAlign: 'center', fontSize: '0.8rem' }}>Stock</TableCell>
+                    <TableCell sx={{ width: 80, textAlign: 'center', fontSize: '0.8rem' }}></TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.quantity}>Qty</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.rate}>Rate</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.discount}>Disc%</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.gst}>GST%</TableCell>
-                    <TableCell sx={voucherStyles.productTableColumns.amount}>Amount</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.amount}>Line Total</TableCell>
                     {mode !== 'view' && (
                       <TableCell sx={voucherStyles.productTableColumns.action}>Action</TableCell>
                     )}
@@ -511,16 +532,20 @@ const PurchaseVoucherPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'right' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                            <TextField
-                              type="number"
-                              {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
-                              disabled={mode === 'view'}
-                              size="small"
-                              sx={{ width: 60 }}
-                            />
-                            <Typography sx={{ ml: 1, fontSize: 12 }}>{watch(`items.${index}.unit`)}</Typography>
-                          </Box>
+                          <TextField
+                            type="number"
+                            {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                            disabled={mode === 'view'}
+                            size="small"
+                            sx={{ width: 100 }}
+                            InputProps={{
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <Typography sx={{ fontSize: 12 }}>{watch(`items.${index}.unit`)}</Typography>
+                                </InputAdornment>
+                              )
+                            }}
+                          />
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
@@ -567,8 +592,8 @@ const PurchaseVoucherPage: React.FC = () => {
                             disabled={mode === 'view'}
                           />
                         </TableCell>
-                        <TableCell sx={{ p: 1, fontSize: 14 }}>
-                          ₹{computedItems[index]?.amount?.toLocaleString() || '0'}
+                        <TableCell sx={{ p: 1, fontSize: 14, textAlign: 'center' }}>
+                          ₹{computedItemsMemo[index]?.total_amount?.toLocaleString() || '0'}
                         </TableCell>
                         {mode !== 'view' && (
                           <TableCell sx={{ p: 1 }}>
@@ -611,16 +636,43 @@ const PurchaseVoucherPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
-                      GST:
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-                      ₹{totalGst.toLocaleString()}
-                    </Typography>
-                  </Grid>
+                  {isIntrastate ? (
+                    <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          CGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalCgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          SGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalSgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </>
+                  ) : (
+                    <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          IGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalIgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </>
+                  )}
                   <Grid size={6}>
                     <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
                       Total:
@@ -645,6 +697,21 @@ const PurchaseVoucherPage: React.FC = () => {
               disabled
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
               inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+              size="small"
+            />
+          </Grid>
+
+          {/* Notes below Amount in Words */}
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              label="Notes"
+              {...control.register('notes')}
+              multiline
+              rows={1}
+              disabled={mode === 'view'}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
               size="small"
             />
           </Grid>
@@ -715,7 +782,10 @@ const PurchaseVoucherPage: React.FC = () => {
       <AddVendorModal 
         open={showAddVendorModal}
         onClose={() => setShowAddVendorModal(false)}
-        onVendorAdded={refreshMasterData}
+        onAdd={(newVendor) => {
+          refreshMasterData();
+          setValue('vendor_id', newVendor.id);
+        }}
         loading={addVendorLoading}
         setLoading={setAddVendorLoading}
       />
@@ -723,7 +793,11 @@ const PurchaseVoucherPage: React.FC = () => {
       <AddProductModal 
         open={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
-        onProductAdded={refreshMasterData}
+        onAdd={(newProduct) => {
+          refreshMasterData();
+          // Since product modal is global, auto-selection for specific item not implemented here.
+          // If opened from ProductAutocomplete, that component should handle selection.
+        }}
         loading={addProductLoading}
         setLoading={setAddProductLoading}
       />

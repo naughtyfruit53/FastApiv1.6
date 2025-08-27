@@ -1,3 +1,5 @@
+// frontend/src/components/AddProductModal.tsx
+
 import React from 'react';
 import {
   Dialog,

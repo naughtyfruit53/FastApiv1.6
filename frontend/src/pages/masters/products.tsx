@@ -1,3 +1,5 @@
+// frontend/src/pages/masters/products.tsx
+
 // Standalone Products Page - Extract from masters/index.tsx
 import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
@@ -45,6 +47,11 @@ import { bulkImportProducts } from '../../services/masterService';
 import Grid from '@mui/material/Grid';
 import { useAuth } from '../../context/AuthContext';
 
+// Utility function to get product display name
+const getProductDisplayName = (product: any): string => {
+  return product.product_name || product.name || '';
+};
+
 const ProductsPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
@@ -75,15 +82,24 @@ const ProductsPage: React.FC = () => {
     enabled: isOrgContextReady,
   });
 
+  // Normalize products to ensure consistent product_name property
+  const normalizedProducts = useMemo(() => {
+    if (!products) return [];
+    return products.map((product: any) => ({
+      ...product,
+      product_name: product.product_name || product.name || '',
+    }));
+  }, [products]);
+
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
-    if (!products) return [];
+    if (!normalizedProducts) return [];
     
     // Filter products based on search term
-    const filtered = products.filter((product: any) => {
+    const filtered = normalizedProducts.filter((product: any) => {
       const searchLower = searchTerm.toLowerCase();
       return (
-        (product.product_name || product.name || '').toLowerCase().includes(searchLower) ||
+        (product.product_name || '').toLowerCase().includes(searchLower) ||
         (product.hsn_code || '').toLowerCase().includes(searchLower) ||
         (product.part_number || '').toLowerCase().includes(searchLower)
       );
@@ -91,8 +107,8 @@ const ProductsPage: React.FC = () => {
     
     // Sort products by name
     filtered.sort((a: any, b: any) => {
-      const nameA = (a.product_name || a.name || '').toLowerCase();
-      const nameB = (b.product_name || b.name || '').toLowerCase();
+      const nameA = (a.product_name || '').toLowerCase();
+      const nameB = (b.product_name || '').toLowerCase();
       
       if (sortOrder === 'asc') {
         return nameA.localeCompare(nameB);
@@ -102,7 +118,7 @@ const ProductsPage: React.FC = () => {
     });
     
     return filtered;
-  }, [products, searchTerm, sortOrder]);
+  }, [normalizedProducts, searchTerm, sortOrder]);
 
   const handleSortToggle = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -299,7 +315,7 @@ const ProductsPage: React.FC = () => {
                     <TableCell>
                       <Box>
                         <Typography variant="body2" fontWeight="bold">
-                          {item.product_name || item.name}
+                          {getProductDisplayName(item)}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
                           {item.description}

@@ -13,7 +13,8 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Popper
 } from '@mui/material';
 import { getReferenceVoucherOptions, getVoucherConfig } from '../utils/voucherUtils';
 import api from '../lib/api';
@@ -145,9 +146,6 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
                 }
               }}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               {allowedTypes.map((type) => (
                 <MenuItem key={type.value} value={type.value}>
                   {type.label}
@@ -202,6 +200,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
                   ? `No ${allowedTypes.find(t => t.value === value.referenceType)?.label || 'documents'} found`
                   : 'Select reference type first'
               }
+              PopperComponent={(props) => <Popper {...props} sx={{ width: '400px !important' }} />}
             />
           </Grid>
         )}
