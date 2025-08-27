@@ -23,7 +23,7 @@ import api from '../lib/api';  // Direct import for list fetch
 export const useVoucherPage = (config: VoucherPageConfig) => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
-  const { isOrgContextReady, company } = useAuth();  // Get company from context
+  const { isOrgContextReady } = useAuth();  // Get company from context
   const queryClient = useQueryClient();
 
   console.log('[useVoucherPage] Enhanced hook initialized for:', config.voucherType);
@@ -63,6 +63,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const [selectedReferenceType, setSelectedReferenceType] = useState<string | null>(null);
   const [selectedReferenceId, setSelectedReferenceId] = useState<number | null>(null);
   const [referenceDocument, setReferenceDocument] = useState<any>(null);
+
+  // Fetch company details
+  const { data: company } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => api.get('/companies/current').then(res => res.data),
+    enabled: isOrgContextReady
+  });
 
   // Enhanced form management with reference support
   const defaultValues = useMemo(() => {
@@ -148,12 +155,19 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       }
       
       if (selectedEntity) {
-        const companyStateCode = company?.state_code || '27';
+        const companyStateCode = company?.state_code;
+        if (!companyStateCode) {
+          throw new Error('Company state code is not available.');
+        }
         const entityStateCode = selectedEntity.state_code || selectedEntity.gst_number?.slice(0, 2);
+        if (!entityStateCode) {
+          throw new Error('Entity state code or GST number is not available.');
+        }
         isIntra = entityStateCode === companyStateCode;
       }
     } catch (error) {
-      console.warn('Error determining transaction state:', error);
+      console.error('Error determining transaction state:', error);
+      throw error; // Re-throw to propagate the error
     }
     return isIntra;
   }, [watch('customer_id'), watch('vendor_id'), config.entityType, customerList, vendorList, company?.state_code]);
