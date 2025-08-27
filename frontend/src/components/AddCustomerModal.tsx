@@ -1,4 +1,4 @@
-// frontend/src/components/AddVendorModal.tsx
+// frontend/src/components/AddCustomerModal.tsx
 
 import React, { useEffect, useState, useRef } from 'react';
 import {
@@ -25,15 +25,15 @@ import { useForm } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';  // Assume this is the correct path; adjust if needed
 import api from '../lib/api';  // Axios instance for API calls
 
-interface AddVendorModalProps {
+interface AddCustomerModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd?: (vendorData: any) => Promise<void>;  // Optional
+  onAdd?: (customerData: any) => Promise<void>;  // Optional
   loading?: boolean;
   initialName?: string;
 }
 
-interface VendorFormData {
+interface CustomerFormData {
   name: string;
   contact_number: string;
   email: string;
@@ -47,7 +47,7 @@ interface VendorFormData {
   state_code: string;
 }
 
-const AddVendorModal: React.FC<AddVendorModalProps> = ({
+const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   open,
   onClose,
   onAdd,
@@ -61,7 +61,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   const [gstUploadError, setGstUploadError] = useState<string | null>(null);
   const [gstSearchLoading, setGstSearchLoading] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<VendorFormData>({
+  const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<CustomerFormData>({
     defaultValues: {
       name: initialName,
       contact_number: '',
@@ -114,7 +114,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       formData.append('file', file);
       
       // Call backend PDF extraction API
-      const response = await api.post('/pdf-extraction/extract/vendor', formData, {
+      const response = await api.post('/pdf-extraction/extract/customer', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -126,7 +126,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         // Auto-populate form fields with processed extracted data
         Object.entries(extractedData).forEach(([key, value]) => {
           if (value) {
-            setValue(key as keyof VendorFormData, value as string);
+            setValue(key as keyof CustomerFormData, value as string);
           }
         });
         
@@ -189,7 +189,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       // Auto-populate fields from API response
       Object.entries(data).forEach(([key, value]) => {
         if (value) {
-          setValue(key as keyof VendorFormData, value as string);
+          setValue(key as keyof CustomerFormData, value as string);
         }
       });
       
@@ -200,7 +200,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     }
   };
 
-  const onSubmit = async (data: VendorFormData) => {
+  const onSubmit = async (data: CustomerFormData) => {
     try {
       // Remove empty fields and exclude unexpected fields like 'is_active'
       const allowedFields = ['name', 'contact_number', 'email', 'address1', 'address2', 'city', 'state', 'pin_code', 'gst_number', 'pan_number', 'state_code'];
@@ -208,9 +208,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         Object.entries(data).filter(([key, value]) => allowedFields.includes(key) && value != null && String(value).trim() !== '')
       );
       
-      // Direct API call to save vendor
-      const response = await api.post('/vendors', cleanData);
-      console.log('Vendor added successfully:', response.data);
+      // Direct API call to save customer
+      const response = await api.post('/customers', cleanData);
+      console.log('Customer added successfully:', response.data);
       
       // Call onAdd if provided and is a function
       if (typeof onAdd === 'function') {
@@ -220,9 +220,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       reset();
       onClose();  // Close modal on success
     } catch (error: any) {
-      console.error('Error adding vendor:', error);
+      console.error('Error adding customer:', error);
       // Set more specific error message
-      const errorMessage = error.response?.data?.detail || 'Failed to add vendor. Please try again.';
+      const errorMessage = error.response?.data?.detail || 'Failed to add customer. Please try again.';
       setGstUploadError(errorMessage);
     }
   };
@@ -237,7 +237,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Typography variant="h6">Add New Vendor</Typography>
+        <Typography variant="h6">Add New Customer</Typography>
       </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
@@ -245,8 +245,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="Vendor Name *"
-                {...register('name', { required: 'Vendor name is required' })}
+                label="Customer Name *"
+                {...register('name', { required: 'Customer name is required' })}
                 error={!!errors.name}
                 helperText={errors.name?.message}
                 margin="normal"
@@ -324,7 +324,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                   <Typography variant="subtitle2" color="textSecondary">
                     GST Certificate Upload (Optional)
                   </Typography>
-                  <Tooltip title="Upload GST certificate PDF to auto-fill vendor details">
+                  <Tooltip title="Upload GST certificate PDF to auto-fill customer details">
                     <Typography variant="caption" color="textSecondary">
                       PDF Auto-Extract
                     </Typography>
