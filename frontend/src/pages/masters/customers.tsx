@@ -66,7 +66,7 @@ const CustomersPage: React.FC = () => {
   const filteredAndSortedCustomers = useMemo(() => {
     if (!customers) return [];
 
-    let filtered = customers.filter((customer: any) =>
+    const filtered = customers.filter((customer: any) =>
       customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())

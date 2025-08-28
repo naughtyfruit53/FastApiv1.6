@@ -61,7 +61,7 @@ const VendorsPage: React.FC = () => {
   const filteredAndSortedVendors = useMemo(() => {
     if (!vendors) return [];
 
-    let filtered = vendors.filter((vendor: any) =>
+    const filtered = vendors.filter((vendor: any) =>
       vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
