@@ -20,10 +20,8 @@ import {
   Chip,
   TextField,
   InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  CircularProgress,
+  Alert,
   FormControl,
   InputLabel,
   Select,
@@ -38,16 +36,23 @@ import {
   Phone as PhoneIcon,
   Email as EmailIcon
 } from '@mui/icons-material';
+import AddLeadModal from '../../components/AddLeadModal';
+import { crmService } from '../../services/crmService';
 
 interface Lead {
   id: number;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  phone: string;
+  phone?: string;
+  company?: string;
+  job_title?: string;
   source: string;
   status: string;
   score: number;
   created_at: string;
+  estimated_value?: number;
+  expected_close_date?: string;
 }
 
 const LeadManagement: React.FC = () => {
@@ -56,49 +61,61 @@ const LeadManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [openDialog, setOpenDialog] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for demonstration
+  // Fetch leads from API
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const leadsData = await crmService.getLeads();
+      setLeads(leadsData);
+    } catch (err) {
+      console.error('Error fetching leads:', err);
+      setError('Failed to load leads. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // In real implementation, this would fetch from API
-    const mockLeads: Lead[] = [
-      {
-        id: 1,
-        name: 'John Doe',
-        email: 'john@example.com',
-        phone: '+1234567890',
-        source: 'Website',
-        status: 'new',
-        score: 85,
-        created_at: '2024-01-15'
-      },
-      {
-        id: 2,
-        name: 'Jane Smith',
-        email: 'jane@example.com', 
-        phone: '+1234567891',
-        source: 'Referral',
-        status: 'contacted',
-        score: 92,
-        created_at: '2024-01-14'
-      }
-    ];
-    setLeads(mockLeads);
+    fetchLeads();
   }, []);
+
+  const handleAddLead = async (leadData: any) => {
+    try {
+      setAddLoading(true);
+      await crmService.createLead(leadData);
+      await fetchLeads(); // Refresh the list
+      setOpenDialog(false);
+    } catch (err) {
+      console.error('Error adding lead:', err);
+      throw err; // Let the modal handle the error
+    } finally {
+      setAddLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'new': return 'primary';
       case 'contacted': return 'info';
       case 'qualified': return 'warning';
+      case 'proposal_sent': return 'secondary';
+      case 'negotiation': return 'error';
       case 'converted': return 'success';
-      case 'lost': return 'error';
+      case 'lost': return 'default';
+      case 'disqualified': return 'error';
       default: return 'default';
     }
   };
 
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const fullName = `${lead.first_name || ''} ${lead.last_name || ''}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+                         (lead.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (lead.company || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -199,89 +216,129 @@ const LeadManagement: React.FC = () => {
               <MenuItem value="new">New</MenuItem>
               <MenuItem value="contacted">Contacted</MenuItem>
               <MenuItem value="qualified">Qualified</MenuItem>
+              <MenuItem value="proposal_sent">Proposal Sent</MenuItem>
+              <MenuItem value="negotiation">Negotiation</MenuItem>
               <MenuItem value="converted">Converted</MenuItem>
               <MenuItem value="lost">Lost</MenuItem>
+              <MenuItem value="disqualified">Disqualified</MenuItem>
             </Select>
           </FormControl>
         </Box>
 
-        {/* Leads Table */}
-        <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Contact</TableCell>
-                  <TableCell>Source</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Score</TableCell>
-                  <TableCell>Created</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredLeads.map((lead) => (
-                  <TableRow key={lead.id}>
-                    <TableCell>
-                      <Typography variant="subtitle2">{lead.name}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                          <EmailIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                          <Typography variant="body2">{lead.email}</Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <PhoneIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                          <Typography variant="body2">{lead.phone}</Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{lead.source}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={lead.status} 
-                        color={getStatusColor(lead.status) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color={lead.score >= 80 ? 'success.main' : 'text.primary'}>
-                        {lead.score}%
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{lead.created_at}</TableCell>
-                    <TableCell>
-                      <IconButton size="small" title="View">
-                        <ViewIcon />
-                      </IconButton>
-                      <IconButton size="small" title="Edit">
-                        <EditIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Card>
+        {/* Error Display */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-        {/* Add Lead Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Add New Lead</DialogTitle>
-          <DialogContent>
-            <Box sx={{ pt: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Lead management functionality is under development. Contact your administrator to enable full CRM features.
-              </Typography>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Close</Button>
-            <Button variant="contained" disabled>Add Lead</Button>
-          </DialogActions>
-        </Dialog>
+        {/* Loading Display */}
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {/* Leads Table */}
+        {!loading && (
+          <Card>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Contact</TableCell>
+                    <TableCell>Company</TableCell>
+                    <TableCell>Source</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Score</TableCell>
+                    <TableCell>Created</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredLeads.map((lead) => (
+                    <TableRow key={lead.id}>
+                      <TableCell>
+                        <Typography variant="subtitle2">
+                          {`${lead.first_name || ''} ${lead.last_name || ''}`}
+                        </Typography>
+                        {lead.job_title && (
+                          <Typography variant="caption" color="text.secondary">
+                            {lead.job_title}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                            <EmailIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                            <Typography variant="body2">{lead.email}</Typography>
+                          </Box>
+                          {lead.phone && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <PhoneIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                              <Typography variant="body2">{lead.phone}</Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {lead.company || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{lead.source}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={lead.status.replace('_', ' ').toUpperCase()} 
+                          color={getStatusColor(lead.status) as any}
+                          size="small"
+                          sx={{ textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color={lead.score >= 80 ? 'success.main' : 'text.primary'}>
+                          {lead.score}%
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {new Date(lead.created_at).toLocaleDateString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <IconButton size="small" title="View">
+                          <ViewIcon />
+                        </IconButton>
+                        <IconButton size="small" title="Edit">
+                          <EditIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredLeads.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
+                          No leads found. {leads.length === 0 ? 'Start by adding your first lead!' : 'Try adjusting your search filters.'}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
+        )}
+
+        {/* Add Lead Modal */}
+        <AddLeadModal
+          open={openDialog}
+          onClose={() => setOpenDialog(false)}
+          onAdd={handleAddLead}
+          loading={addLoading}
+        />
       </Box>
     </Container>
   );

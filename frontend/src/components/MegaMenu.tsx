@@ -643,8 +643,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Sales Operations',
           items: [
-            { name: 'Quotations', path: '/sales/quotations', icon: <NoteAdd /> },
-            { name: 'Sales Orders', path: '/sales/orders', icon: <Receipt /> },
+            { name: 'Quotations', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
+            { name: 'Sales Orders', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Receipt /> },
             { name: 'Commission Tracking', path: '/sales/commissions', icon: <MonetizationOn /> },
             { name: 'Sales Reports', path: '/sales/reports', icon: <Assessment /> }
           ]
@@ -709,8 +709,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Contact Management', path: '/sales/contacts', icon: <ContactPhone /> },
             { name: 'Account Management', path: '/sales/accounts', icon: <Business /> },
             { name: 'Customer Analytics', path: '/sales/customer-analytics', icon: <Analytics /> },
-            { name: 'Quotations', path: '/sales/quotations', icon: <NoteAdd /> },
-            { name: 'Sales Orders', path: '/sales/orders', icon: <Receipt /> },
+            { name: 'Quotations', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
+            { name: 'Sales Orders', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Receipt /> },
             { name: 'Commission Tracking', path: '/sales/commissions', icon: <MonetizationOn /> },
             { name: 'Sales Reports', path: '/sales/reports', icon: <Assessment /> }
           ]

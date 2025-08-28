@@ -44,8 +44,14 @@ import {
   PieChart as PieChartIcon,
   Download as DownloadIcon,
   Print as PrintIcon,
-  Share as ShareIcon
+  Share as ShareIcon,
+  FileDownload as ExcelIcon,
+  PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
+import * as XLSX from 'exceljs';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface SalesData {
   period: string;
@@ -154,10 +160,110 @@ const SalesReports: React.FC = () => {
     ? salesData.reduce((sum, data) => sum + data.conversionRate, 0) / salesData.length 
     : 0;
 
-  const handleExport = (format: 'excel' | 'pdf') => {
-    // Implementation for export functionality
-    console.log(`Exporting report as ${format}`);
-    // This would integrate with your export service
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    try {
+      if (format === 'excel') {
+        await exportToExcel();
+      } else if (format === 'pdf') {
+        await exportToPDF();
+      }
+    } catch (error) {
+      console.error(`Error exporting as ${format}:`, error);
+    }
+  };
+
+  const exportToExcel = async () => {
+    const workbook = new XLSX.Workbook();
+    
+    // Sales Overview Sheet
+    const overviewSheet = workbook.addWorksheet('Sales Overview');
+    
+    // Add headers
+    overviewSheet.addRow(['Metric', 'Value']);
+    overviewSheet.addRow(['Total Revenue', `$${totalRevenue.toLocaleString()}`]);
+    overviewSheet.addRow(['Revenue Growth', `${avgGrowth.toFixed(1)}%`]);
+    overviewSheet.addRow(['Conversion Rate', `${avgConversion.toFixed(1)}%`]);
+    overviewSheet.addRow(['Total Leads', totalLeads]);
+    overviewSheet.addRow(['Export Date', new Date().toLocaleDateString()]);
+    overviewSheet.addRow(['Time Range', timeRange.replace('_', ' ').toUpperCase()]);
+
+    // Style the header row
+    overviewSheet.getRow(1).font = { bold: true };
+    overviewSheet.getColumn(1).width = 20;
+    overviewSheet.getColumn(2).width = 20;
+
+    // Sales Data Sheet
+    const dataSheet = workbook.addWorksheet('Sales Data');
+    
+    // Add headers for sales data
+    dataSheet.addRow(['Period', 'Revenue', 'Leads', 'Customers', 'Conversion Rate (%)', 'Growth (%)']);
+    
+    // Add sales data
+    salesData.forEach(data => {
+      dataSheet.addRow([
+        data.period,
+        data.revenue,
+        data.leads,
+        data.customers,
+        data.conversionRate,
+        data.growth
+      ]);
+    });
+
+    // Style the header row
+    dataSheet.getRow(1).font = { bold: true };
+    dataSheet.columns.forEach(column => {
+      column.width = 15;
+    });
+
+    // Generate buffer and save file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `sales-report-${timeRange}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.text('Sales Report', 20, 20);
+    
+    // Add metadata
+    doc.setFontSize(12);
+    doc.text(`Time Range: ${timeRange.replace('_', ' ').toUpperCase()}`, 20, 35);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 45);
+    
+    // Add summary metrics
+    doc.setFontSize(14);
+    doc.text('Summary Metrics:', 20, 65);
+    
+    doc.setFontSize(11);
+    doc.text(`Total Revenue: $${totalRevenue.toLocaleString()}`, 20, 75);
+    doc.text(`Revenue Growth: ${avgGrowth.toFixed(1)}%`, 20, 85);
+    doc.text(`Conversion Rate: ${avgConversion.toFixed(1)}%`, 20, 95);
+    doc.text(`Total Leads: ${totalLeads}`, 20, 105);
+
+    // Add sales data table
+    const tableData = salesData.map(data => [
+      data.period,
+      `$${data.revenue.toLocaleString()}`,
+      data.leads.toString(),
+      data.customers.toString(),
+      `${data.conversionRate}%`,
+      `${data.growth}%`
+    ]);
+
+    (doc as any).autoTable({
+      head: [['Period', 'Revenue', 'Leads', 'Customers', 'Conversion Rate', 'Growth']],
+      body: tableData,
+      startY: 120,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+
+    // Save the PDF
+    doc.save(`sales-report-${timeRange}-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handlePrint = () => {
@@ -202,10 +308,10 @@ const SalesReports: React.FC = () => {
             </Select>
           </FormControl>
           <ButtonGroup variant="outlined" size="small">
-            <Button startIcon={<DownloadIcon />} onClick={() => handleExport('excel')}>
+            <Button startIcon={<ExcelIcon />} onClick={() => handleExport('excel')}>
               Excel
             </Button>
-            <Button startIcon={<DownloadIcon />} onClick={() => handleExport('pdf')}>
+            <Button startIcon={<PdfIcon />} onClick={() => handleExport('pdf')}>
               PDF
             </Button>
             <Button startIcon={<PrintIcon />} onClick={handlePrint}>
