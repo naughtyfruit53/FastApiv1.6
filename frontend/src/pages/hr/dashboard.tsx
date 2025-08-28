@@ -37,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
-import { hrService, HRDashboardData, HRActivity, HRTask } from '../../services/hrService';
+import { hrService, HRDashboardData, HRActivity, HRTask } from '../../services';
 
 interface TabPanelProps {
   children?: React.ReactNode;

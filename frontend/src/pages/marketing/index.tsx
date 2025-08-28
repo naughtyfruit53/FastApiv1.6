@@ -42,7 +42,7 @@ import {
   Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
-import { marketingService, Campaign, Promotion, MarketingAnalytics } from '../../services/marketingService';
+import { marketingService, Campaign, Promotion, MarketingAnalytics } from '../../services';
 
 const campaignStatusColors: Record<string, string> = {
   draft: 'default',

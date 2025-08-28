@@ -28,6 +28,7 @@ import {
   MenuItem,
   Tabs,
   Tab,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,7 +39,7 @@ import {
   AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
-import { crmService, Lead, Opportunity, CRMAnalytics } from '../../services/crmService';
+import { crmService, Lead, Opportunity, CRMAnalytics } from '../../services';
 
 const statusColors: Record<string, string> = {
   new: 'default',
@@ -110,82 +111,12 @@ export default function CRMDashboard() {
       setLoading(false);
     }
   };
-        {
-          id: 1,
-          lead_number: 'LD000001',
-          first_name: 'John',
-          last_name: 'Doe',
-          email: 'john.doe@example.com',
-          phone: '+1234567890',
-          company: 'ABC Corp',
-          status: 'qualified',
-          source: 'website',
-          score: 85,
-          estimated_value: 50000,
-          created_at: '2024-08-27T10:00:00Z',
-        },
-        {
-          id: 2,
-          lead_number: 'LD000002',
-          first_name: 'Jane',
-          last_name: 'Smith',
-          email: 'jane.smith@example.com',
-          company: 'XYZ Inc',
-          status: 'contacted',
-          source: 'referral',
-          score: 65,
-          estimated_value: 30000,
-          created_at: '2024-08-26T14:30:00Z',
-        },
-      ];
-
-      const mockOpportunities: Opportunity[] = [
-        {
-          id: 1,
-          opportunity_number: 'OP000001',
-          name: 'ABC Corp - ERP Implementation',
-          stage: 'proposal',
-          amount: 75000,
-          probability: 60,
-          expected_revenue: 45000,
-          expected_close_date: '2024-09-15',
-          created_at: '2024-08-20T09:00:00Z',
-        },
-        {
-          id: 2,
-          opportunity_number: 'OP000002',
-          name: 'XYZ Inc - Software License',
-          stage: 'negotiation',
-          amount: 25000,
-          probability: 80,
-          expected_revenue: 20000,
-          expected_close_date: '2024-08-30',
-          created_at: '2024-08-22T11:15:00Z',
-        },
-      ];
-
-      const mockAnalytics: CRMAnalytics = {
-        leads_total: 15,
-        leads_by_status: {
-          new: 3,
-          contacted: 5,
-          qualified: 4,
-          converted: 2,
-          lost: 1,
-        },
-        opportunities_total: 8,
-        pipeline_value: 250000,
-        weighted_pipeline_value: 150000,
-        conversion_rate: 13.3,
-        win_rate: 75.0,
-  };
-
   const filteredLeads = leads.filter(
     (lead) =>
-      lead.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase()))
+      (lead.contact_person || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.lead_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.contact_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.company_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredOpportunities = opportunities.filter(
@@ -378,6 +309,16 @@ export default function CRMDashboard() {
           </Button>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+          <Button size="small" onClick={loadCRMData} sx={{ ml: 1 }}>
+            Retry
+          </Button>
+        </Alert>
+      )}
 
       {renderAnalyticsCards()}
 

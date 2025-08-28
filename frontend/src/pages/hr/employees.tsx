@@ -53,7 +53,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
-import { hrService, Employee } from '../../services/hrService';
+import { hrService, Employee } from '../../services';
 
 interface TabPanelProps {
   children?: React.ReactNode;

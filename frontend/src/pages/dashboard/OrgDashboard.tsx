@@ -40,7 +40,7 @@ const OrgDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchOrgStatistics();
-    // eslint-disable-next-line
+     
   }, []);
 
   const fetchOrgStatistics = async () => {
