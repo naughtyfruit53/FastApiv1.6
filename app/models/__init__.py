@@ -66,6 +66,20 @@ from .transport_models import (
     Shipment, ShipmentStatus, ShipmentItem, ShipmentTracking, FreightCostAnalysis,
     VehicleType
 )
+# Import HR, Payroll, Recruitment and Talent models
+from .hr_models import (
+    EmployeeProfile, AttendanceRecord, LeaveType, LeaveApplication, PerformanceReview
+)
+from .payroll_models import (
+    SalaryStructure, PayrollPeriod, Payslip, TaxSlab, EmployeeLoan, PayrollSettings
+)
+from .recruitment_models import (
+    JobPosting, Candidate, JobApplication, Interview, JobOffer, RecruitmentPipeline
+)
+from .talent_models import (
+    SkillCategory, Skill, EmployeeSkill, TrainingProgram, TrainingSession, 
+    TrainingEnrollment, LearningPath, LearningPathProgram, EmployeeLearningPath
+)
 from .vouchers import (
     BaseVoucher, PurchaseVoucher, PurchaseVoucherItem,
     SalesVoucher, SalesVoucherItem, PurchaseOrder, PurchaseOrderItem,
@@ -126,5 +140,18 @@ __all__ = [
     # Transport and freight models
     "Carrier", "CarrierType", "Route", "RouteStatus", "FreightRate", "FreightMode",
     "Shipment", "ShipmentStatus", "ShipmentItem", "ShipmentTracking", "FreightCostAnalysis",
-    "VehicleType"
+    "VehicleType",
+    
+    # HR models
+    "EmployeeProfile", "AttendanceRecord", "LeaveType", "LeaveApplication", "PerformanceReview",
+    
+    # Payroll models
+    "SalaryStructure", "PayrollPeriod", "Payslip", "TaxSlab", "EmployeeLoan", "PayrollSettings",
+    
+    # Recruitment models
+    "JobPosting", "Candidate", "JobApplication", "Interview", "JobOffer", "RecruitmentPipeline",
+    
+    # Talent models
+    "SkillCategory", "Skill", "EmployeeSkill", "TrainingProgram", "TrainingSession", 
+    "TrainingEnrollment", "LearningPath", "LearningPathProgram", "EmployeeLearningPath"
 ]
