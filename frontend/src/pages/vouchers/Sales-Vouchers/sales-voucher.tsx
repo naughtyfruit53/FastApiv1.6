@@ -158,30 +158,16 @@ const SalesVoucherPage: React.FC = () => {
 
       let response;
       if (mode === 'create') {
-        response = await api.post('/sales-vouchers', data);
+        response = await createMutation.mutateAsync(data);
         if (confirm('Voucher created successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
-        }
-        // Reset form and prepare for next entry
-        reset();
-        setMode('create');
-        // Fetch next voucher number
-        try {
-          const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
-          setValue('voucher_number', nextNumber);
-          setValue('date', new Date().toISOString().split('T')[0]);
-        } catch (err) {
-          console.error('Failed to fetch next voucher number:', err);
+          handleGeneratePDF(response);
         }
       } else if (mode === 'edit') {
-        response = await api.put('/sales-vouchers/' + data.id, data);
+        response = await updateMutation.mutateAsync(data);
         if (confirm('Voucher updated successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
+          handleGeneratePDF(response);
         }
       }
-      
-      // Refresh voucher list to show latest at top
-      await refreshMasterData();
       
     } catch (error) {
       console.error('Error saving sales voucher:', error);
@@ -235,47 +221,28 @@ const SalesVoucherPage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
-  const handleVoucherClick = async (voucher: any) => {
-    try {
-      // Fetch complete voucher data including items
-      const response = await api.get(`/sales-vouchers/${voucher.id}`);
-      const fullVoucherData = response.data;
-      
-      // Load the complete voucher data into the form
-      setMode('view');
-      reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      // Fallback to available data
-      setMode('view');
-      reset(voucher);
-    }
+  const handleVoucherClick = (voucher: any) => {
+    handleView(voucher.id);
   };
   
-  // Enhanced handleEdit to fetch complete data
-  const handleEditWithData = async (voucher: any) => {
-    try {
-      const response = await api.get(`/sales-vouchers/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode('edit');
-      reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      handleEdit(voucher);
-    }
+  // Enhanced handleEdit to use hook
+  const handleEditWithData = (voucher: any) => {
+    handleEdit(voucher.id);
   };
   
-  // Enhanced handleView to fetch complete data
-  const handleViewWithData = async (voucher: any) => {
-    try {
-      const response = await api.get(`/sales-vouchers/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode('view');
-      reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      handleView(voucher);
-    }
+  // Enhanced handleView to use hook
+  const handleViewWithData = (voucher: any) => {
+    handleView(voucher.id);
+  };
+  
+  // Enhanced handleEdit to use hook
+  const handleEditWithData = (voucher: any) => {
+    handleEdit(voucher.id);
+  };
+  
+  // Enhanced handleView to use hook
+  const handleViewWithData = (voucher: any) => {
+    handleView(voucher.id);
   };
 
   const indexContent = (

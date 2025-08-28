@@ -1,5 +1,29 @@
 # FastAPI Migration Enhancements
 
+## 🆕 Latest Enhancements - Voucher System Overhaul (v1.6)
+
+### Voucher System Comprehensive Update
+- **Enhanced Data Loading**: Fixed bug where vouchers showed blank fields when reopened
+- **UI Consistency**: Standardized all voucher types (sales, purchase, pre-sales) to use consistent patterns
+- **PDF Generation**: Enhanced PDF service with actual company logo support and comprehensive field coverage
+- **Company Branding**: Integrated logo upload functionality with PDF generation
+- **Error Handling**: Improved error handling and user feedback across all voucher operations
+
+### Voucher Types Updated
+- ✅ **Sales Vouchers**: sales-voucher.tsx, delivery-challan.tsx, sales-return.tsx  
+- ✅ **Purchase Vouchers**: purchase-voucher.tsx, purchase-order.tsx, purchase-return.tsx, grn.tsx
+- ✅ **Pre-Sales Vouchers**: sales-order.tsx, quotation.tsx, proforma-invoice.tsx
+
+### Key Features
+- **Mutation-Based Operations**: All vouchers now use consistent React Query mutations
+- **Real Logo Integration**: PDFs display actual company logos in top left corner
+- **Comprehensive PDFs**: Include all data fields, totals, and professional formatting
+- **Enhanced Hook**: `useVoucherPage` now properly handles nested data and items arrays
+
+See [VOUCHER_SYSTEM_ENHANCEMENTS.md](./VOUCHER_SYSTEM_ENHANCEMENTS.md) for detailed documentation.
+
+---
+
 This document outlines the enhancements made to the TRITIQ ERP FastAPI migration as part of the Turbopack frontend upgrade and backend improvements.
 
 ## 🚀 Frontend Enhancements

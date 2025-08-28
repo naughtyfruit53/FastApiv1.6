@@ -241,26 +241,15 @@ const GoodsReceiptNotePage: React.FC = () => {
 
       let response;
       if (mode === 'create') {
-        response = await api.post('/goods-receipt-notes', data);
-        // Refresh index immediately
-        await refreshMasterData();
-        // Fetch next voucher number immediately
-        const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
-        setValue('voucher_number', nextNumber);
-        setValue('date', new Date().toISOString().split('T')[0]);
-        // Refetch PO/PV to update dropdowns
-        refetchPurchaseOrders();
-        refetchPurchaseVouchers();
-        // Reset form
-        reset();
-        setSelectedVoucherType(null);
-        setSelectedVoucherId(null);
-        setMode('create');
+        response = await createMutation.mutateAsync(data);
+        if (confirm('Voucher created successfully. Generate PDF?')) {
+          handleGeneratePDF(response);
+        }
       } else if (mode === 'edit') {
-        response = await api.put('/goods-receipt-notes/' + data.id, data);
-        // Refresh index immediately
-        await refreshMasterData();
-        setMode('view');
+        response = await updateMutation.mutateAsync(data);
+        if (confirm('Voucher updated successfully. Generate PDF?')) {
+          handleGeneratePDF(response);
+        }
       }
       
     } catch (error) {

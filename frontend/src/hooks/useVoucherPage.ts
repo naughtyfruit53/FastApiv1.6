@@ -593,16 +593,40 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
   }, [setAddShippingLoading, setShowShippingModal]);
 
-  // Effects
+  // Effects - Enhanced data loading to fix bug where vouchers don't load saved data properly
   useEffect(() => {
     if (mode === 'create' && nextVoucherNumber) {
       setValue('voucher_number', nextVoucherNumber);
     } else if (voucherData) {
+      console.log('[useVoucherPage] Loading voucher data:', voucherData);
+      // Reset with voucher data
       reset(voucherData);
+      
+      // Ensure items array is properly loaded for vouchers with items
+      if (config.hasItems !== false && voucherData.items && Array.isArray(voucherData.items)) {
+        // Clear existing items first
+        while (fields.length > 0) {
+          remove(0);
+        }
+        // Add items from voucher data
+        voucherData.items.forEach((item: any) => {
+          append({
+            ...item,
+            // Ensure proper field mapping for UI
+            original_unit_price: item.unit_price || 0,
+            product_id: item.product_id,
+            product_name: item.product_name || item.product?.product_name || '',
+            unit: item.unit || item.product?.unit || '',
+            current_stock: item.current_stock || 0,
+            reorder_level: item.reorder_level || 0,
+          });
+        });
+        console.log('[useVoucherPage] Loaded items:', voucherData.items.length);
+      }
     } else if (mode === 'create') {
       reset(defaultValues);
     }
-  }, [voucherData, mode, reset, nextVoucherNumber, setValue, defaultValues]);
+  }, [voucherData, mode, reset, nextVoucherNumber, setValue, defaultValues, config.hasItems, fields.length, remove, append]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {

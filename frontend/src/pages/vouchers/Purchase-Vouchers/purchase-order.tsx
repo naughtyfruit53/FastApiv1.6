@@ -187,31 +187,16 @@ const PurchaseOrderPage: React.FC = () => {
 
       let response;
       if (mode === 'create') {
-        response = await api.post('/purchase-orders', data);
+        response = await createMutation.mutateAsync(data);
         if (confirm('Voucher created successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
-        }
-        // Reset form and prepare for next entry
-        reset();
-        setMode('create');
-        // Fetch next voucher number
-        try {
-          const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
-          setValue('voucher_number', nextNumber);
-          setValue('date', new Date().toISOString().split('T')[0]);
-        } catch (err) {
-          console.error('Failed to fetch next voucher number:', err);
+          handleGeneratePDF(response);
         }
       } else if (mode === 'edit') {
-        response = await api.put('/purchase-orders/' + data.id, data);
+        response = await updateMutation.mutateAsync(data);
         if (confirm('Voucher updated successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
+          handleGeneratePDF(response);
         }
-        setMode('view');
       }
-      
-      // Refresh voucher list to show latest at top
-      await refreshMasterData();
       
     } catch (error) {
       console.error('Error saving purchase order:', error);
