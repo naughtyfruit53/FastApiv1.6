@@ -37,12 +37,13 @@ import {
   Person
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getEmployees, createEmployee } from '../services/masterService';
+import { getEmployees, createEmployee } from '../../services/masterService';
+import AddEmployeeModal from '../../components/AddEmployeeModal';
 
 const EmployeesPage: React.FC = () => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [addDialog, setAddDialog] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -72,7 +73,7 @@ const EmployeesPage: React.FC = () => {
     mutationFn: createEmployee,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      setAddDialog(false);
+      setAddModalOpen(false);
       resetForm();
     },
     onError: (error: any) => {
@@ -98,7 +99,7 @@ const EmployeesPage: React.FC = () => {
 
   const handleAddClick = () => {
     resetForm();
-    setAddDialog(true);
+    setAddModalOpen(true);
   };
 
   const handleEditClick = (employee: any) => {
@@ -131,6 +132,10 @@ const EmployeesPage: React.FC = () => {
   const handleDeleteClick = (employee: any) => {
     // TODO: Implement delete functionality
     console.log('Delete employee:', employee.id);
+  };
+
+  const handleAddEmployee = async (data: any) => {
+    createMutation.mutate(data);
   };
 
   const filteredEmployees = employees?.filter((employee: any) =>
@@ -244,15 +249,23 @@ const EmployeesPage: React.FC = () => {
           </TableContainer>
         )}
 
-        {/* Add/Edit Employee Dialog */}
+        {/* Add Employee Modal */}
+        <AddEmployeeModal
+          open={addModalOpen}
+          onClose={() => setAddModalOpen(false)}
+          onAdd={handleAddEmployee}
+          mode="create"
+        />
+
+        {/* Edit Employee Dialog */}
         <Dialog 
-          open={addDialog || editDialog} 
-          onClose={() => { setAddDialog(false); setEditDialog(false); }}
+          open={editDialog} 
+          onClose={() => setEditDialog(false)}
           maxWidth="md" 
           fullWidth
         >
           <DialogTitle>
-            {selectedEmployee ? 'Edit Employee' : 'Add New Employee'}
+            Edit Employee
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -349,11 +362,11 @@ const EmployeesPage: React.FC = () => {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => { setAddDialog(false); setEditDialog(false); }}>
+            <Button onClick={() => setEditDialog(false)}>
               Cancel
             </Button>
             <Button onClick={handleSubmit} variant="contained">
-              {selectedEmployee ? 'Update' : 'Create'}
+              Update
             </Button>
           </DialogActions>
         </Dialog>

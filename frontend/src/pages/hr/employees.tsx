@@ -1,5 +1,3 @@
-// frontend/src/pages/hr/employees.tsx
-
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import {
@@ -103,7 +101,7 @@ const EmployeesManagement: NextPage = () => {
   const [rowsPerPage] = useState(10);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'create'>('view');
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'view'>('view');
 
   useEffect(() => {
     fetchEmployees();
@@ -531,7 +529,7 @@ const EmployeesManagement: NextPage = () => {
         onClose={handleCloseDialog}
         onAdd={handleAddEmployee}
         initialData={selectedEmployee}
-        mode={dialogMode === 'create' ? 'create' : 'edit'}
+        mode={dialogMode}
       />
     </Container>
   );

@@ -1,7 +1,7 @@
 // services/assetService.ts
 // Asset Management service for API interactions
 
-import apiClient from './apiClient';
+import api from '../lib/api';
 
 export interface Asset {
   id: number;
@@ -159,31 +159,31 @@ class AssetService {
     location?: string;
     department?: string;
   }): Promise<Asset[]> {
-    const response = await apiClient.get('/api/v1/assets/', { params });
+    const response = await api.get('/api/v1/assets/', { params });
     return response.data;
   }
 
   async getAsset(id: number): Promise<Asset> {
-    const response = await apiClient.get(`/api/v1/assets/${id}`);
+    const response = await api.get(`/api/v1/assets/${id}`);
     return response.data;
   }
 
   async createAsset(data: AssetCreate): Promise<Asset> {
-    const response = await apiClient.post('/api/v1/assets/', data);
+    const response = await api.post('/api/v1/assets/', data);
     return response.data;
   }
 
   async updateAsset(id: number, data: Partial<AssetCreate>): Promise<Asset> {
-    const response = await apiClient.put(`/api/v1/assets/${id}`, data);
+    const response = await api.put(`/api/v1/assets/${id}`, data);
     return response.data;
   }
 
   async deleteAsset(id: number): Promise<void> {
-    await apiClient.delete(`/api/v1/assets/${id}`);
+    await api.delete(`/api/v1/assets/${id}`);
   }
 
   async getAssetCategories(): Promise<string[]> {
-    const response = await apiClient.get('/api/v1/assets/categories/');
+    const response = await api.get('/api/v1/assets/categories/');
     return response.data;
   }
 
@@ -195,17 +195,17 @@ class AssetService {
     maintenance_type?: string;
     is_active?: boolean;
   }): Promise<MaintenanceSchedule[]> {
-    const response = await apiClient.get('/api/v1/assets/maintenance-schedules/', { params });
+    const response = await api.get('/api/v1/assets/maintenance-schedules/', { params });
     return response.data;
   }
 
   async createMaintenanceSchedule(data: MaintenanceScheduleCreate): Promise<MaintenanceSchedule> {
-    const response = await apiClient.post('/api/v1/assets/maintenance-schedules/', data);
+    const response = await api.post('/api/v1/assets/maintenance-schedules/', data);
     return response.data;
   }
 
   async getDueMaintenance(daysAhead: number = 30): Promise<MaintenanceSchedule[]> {
-    const response = await apiClient.get('/api/v1/assets/maintenance-schedules/due/', {
+    const response = await api.get('/api/v1/assets/maintenance-schedules/due/', {
       params: { days_ahead: daysAhead }
     });
     return response.data;
@@ -219,12 +219,12 @@ class AssetService {
     maintenance_type?: string;
     status?: string;
   }): Promise<MaintenanceRecord[]> {
-    const response = await apiClient.get('/api/v1/assets/maintenance-records/', { params });
+    const response = await api.get('/api/v1/assets/maintenance-records/', { params });
     return response.data;
   }
 
   async createMaintenanceRecord(data: MaintenanceRecordCreate): Promise<MaintenanceRecord> {
-    const response = await apiClient.post('/api/v1/assets/maintenance-records/', data);
+    const response = await api.post('/api/v1/assets/maintenance-records/', data);
     return response.data;
   }
 
@@ -236,26 +236,26 @@ class AssetService {
       findings?: string;
     }
   ): Promise<MaintenanceRecord> {
-    const response = await apiClient.put(`/api/v1/assets/maintenance-records/${id}/complete`, data);
+    const response = await api.put(`/api/v1/assets/maintenance-records/${id}/complete`, data);
     return response.data;
   }
 
   // Asset Depreciation
   async getAssetDepreciation(assetId: number, year?: number): Promise<any[]> {
-    const response = await apiClient.get(`/api/v1/assets/${assetId}/depreciation`, {
+    const response = await api.get(`/api/v1/assets/${assetId}/depreciation`, {
       params: year ? { year } : {}
     });
     return response.data;
   }
 
   async calculateDepreciation(assetId: number, year: number): Promise<any> {
-    const response = await apiClient.post(`/api/v1/assets/${assetId}/depreciation`, { year });
+    const response = await api.post(`/api/v1/assets/${assetId}/depreciation`, { year });
     return response.data;
   }
 
   // Dashboard
   async getDashboardSummary(): Promise<AssetDashboard> {
-    const response = await apiClient.get('/api/v1/assets/dashboard/summary');
+    const response = await api.get('/api/v1/assets/dashboard/summary');
     return response.data;
   }
 }

@@ -1,7 +1,7 @@
 // services/transportService.ts
 // Transport and Freight Management service for API interactions
 
-import apiClient from './apiClient';
+import api from '../lib/api';
 
 export interface Carrier {
   id: number;
@@ -219,22 +219,22 @@ class TransportService {
     is_active?: boolean;
     is_preferred?: boolean;
   }): Promise<Carrier[]> {
-    const response = await apiClient.get('/api/v1/transport/carriers/', { params });
+    const response = await api.get('/api/v1/transport/carriers/', { params });
     return response.data;
   }
 
   async getCarrier(id: number): Promise<Carrier> {
-    const response = await apiClient.get(`/api/v1/transport/carriers/${id}`);
+    const response = await api.get(`/api/v1/transport/carriers/${id}`);
     return response.data;
   }
 
   async createCarrier(data: CarrierCreate): Promise<Carrier> {
-    const response = await apiClient.post('/api/v1/transport/carriers/', data);
+    const response = await api.post('/api/v1/transport/carriers/', data);
     return response.data;
   }
 
   async updateCarrier(id: number, data: Partial<CarrierCreate>): Promise<Carrier> {
-    const response = await apiClient.put(`/api/v1/transport/carriers/${id}`, data);
+    const response = await api.put(`/api/v1/transport/carriers/${id}`, data);
     return response.data;
   }
 
@@ -247,12 +247,12 @@ class TransportService {
     destination_city?: string;
     status?: string;
   }): Promise<Route[]> {
-    const response = await apiClient.get('/api/v1/transport/routes/', { params });
+    const response = await api.get('/api/v1/transport/routes/', { params });
     return response.data;
   }
 
   async createRoute(data: RouteCreate): Promise<Route> {
-    const response = await apiClient.post('/api/v1/transport/routes/', data);
+    const response = await api.post('/api/v1/transport/routes/', data);
     return response.data;
   }
 
@@ -265,12 +265,12 @@ class TransportService {
     freight_mode?: string;
     is_active?: boolean;
   }): Promise<FreightRate[]> {
-    const response = await apiClient.get('/api/v1/transport/freight-rates/', { params });
+    const response = await api.get('/api/v1/transport/freight-rates/', { params });
     return response.data;
   }
 
   async createFreightRate(data: FreightRateCreate): Promise<FreightRate> {
-    const response = await apiClient.post('/api/v1/transport/freight-rates/', data);
+    const response = await api.post('/api/v1/transport/freight-rates/', data);
     return response.data;
   }
 
@@ -282,7 +282,7 @@ class TransportService {
     volume_cbm?: number;
     freight_mode?: string;
   }): Promise<any> {
-    const response = await apiClient.post('/api/v1/transport/freight-rates/compare', data);
+    const response = await api.post('/api/v1/transport/freight-rates/compare', data);
     return response.data;
   }
 
@@ -294,17 +294,17 @@ class TransportService {
     carrier_id?: number;
     tracking_number?: string;
   }): Promise<Shipment[]> {
-    const response = await apiClient.get('/api/v1/transport/shipments/', { params });
+    const response = await api.get('/api/v1/transport/shipments/', { params });
     return response.data;
   }
 
   async createShipment(data: ShipmentCreate): Promise<Shipment> {
-    const response = await apiClient.post('/api/v1/transport/shipments/', data);
+    const response = await api.post('/api/v1/transport/shipments/', data);
     return response.data;
   }
 
   async getShipmentTracking(shipmentId: number): Promise<any> {
-    const response = await apiClient.get(`/api/v1/transport/shipments/${shipmentId}/tracking`);
+    const response = await api.get(`/api/v1/transport/shipments/${shipmentId}/tracking`);
     return response.data;
   }
 
@@ -323,13 +323,13 @@ class TransportService {
       notes?: string;
     }
   ): Promise<any> {
-    const response = await apiClient.post(`/api/v1/transport/shipments/${shipmentId}/tracking`, data);
+    const response = await api.post(`/api/v1/transport/shipments/${shipmentId}/tracking`, data);
     return response.data;
   }
 
   // Dashboard
   async getDashboardSummary(): Promise<TransportDashboard> {
-    const response = await apiClient.get('/api/v1/transport/dashboard/summary');
+    const response = await api.get('/api/v1/transport/dashboard/summary');
     return response.data;
   }
 }

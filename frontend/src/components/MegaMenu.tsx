@@ -284,16 +284,16 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Business Entities',
           items: [
-            { name: 'Vendors', path: '/vendors', icon: <People /> },
-            { name: 'Customers', path: '/customers', icon: <Business /> },
-            { name: 'Employees', path: '/employees', icon: <People /> },
-            { name: 'Company Details', path: '/company-details', icon: <Business /> }
+            { name: 'Vendors', path: '/masters/vendors', icon: <People /> },
+            { name: 'Customers', path: '/masters/customers', icon: <Business /> },
+            { name: 'Employees', path: '/masters/employees', icon: <People /> },
+            { name: 'Company Details', path: '/masters/company-details', icon: <Business /> }
           ]
         },
         {
           title: 'Product & Inventory',
           items: [
-            { name: 'Products', path: '/products', icon: <Inventory /> },
+            { name: 'Products', path: '/masters/products', icon: <Inventory /> },
             { name: 'Categories', path: '/categories', icon: <Storage /> },
             { name: 'Units', path: '/units', icon: <Storage /> },
             { name: 'Bill of Materials (BOM)', path: '/bom', icon: <Build /> }
@@ -658,7 +658,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Employee Management',
           items: [
-            { name: 'Employee Directory', path: '/hr/employees', icon: <People /> },
+            { name: 'Employee Directory', path: '/hr/employees-directory', icon: <People /> },
             { name: 'Employee Onboarding', path: '/hr/onboarding', icon: <PersonAdd /> },
             { name: 'Performance Management', path: '/hr/performance', icon: <Assessment /> },
             { name: 'Employee Records', path: '/hr/records', icon: <Storage /> }
