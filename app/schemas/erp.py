@@ -563,8 +563,8 @@ class FinancialStatementResponse(BaseModel):
     statement_name: str
     period_start: date
     period_end: date
-    statement_data: dict
-    summary_data: Optional[dict]
+    statement_data: dict = Field(..., description="Comprehensive financial statement data including account balances, sub-totals, and detailed line items. Contains nested structure with accounts, amounts, and calculation details.")
+    summary_data: Optional[dict] = Field(None, description="Aggregated summary metrics and KPIs derived from statement data. Includes key ratios, totals, and comparative analysis data for quick insights.")
     is_final: bool
     is_audited: bool
     generated_at: datetime

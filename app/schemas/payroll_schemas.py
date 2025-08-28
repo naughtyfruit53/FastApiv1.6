@@ -32,7 +32,7 @@ class SalaryStructureBase(BaseModel):
     net_salary: Decimal = Field(..., description="Net salary amount")
     
     # Variable components
-    variable_components: Optional[Dict[str, Any]] = None
+    variable_components: Optional[Dict[str, Any]] = Field(None, description="Dynamic salary components and calculations. Contains allowances, bonuses, overtime rates, incentives, performance-based pay, reimbursements, statutory deductions (PF, ESI, TDS), and custom pay components with calculation rules.")
 
 class SalaryStructureCreate(SalaryStructureBase):
     employee_id: int = Field(..., description="Reference to EmployeeProfile")

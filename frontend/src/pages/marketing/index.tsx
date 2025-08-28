@@ -29,6 +29,7 @@ import {
   Tabs,
   Tab,
   LinearProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,51 +42,7 @@ import {
   Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
-
-interface Campaign {
-  id: number;
-  campaign_number: string;
-  name: string;
-  campaign_type: string;
-  status: string;
-  start_date: string;
-  end_date?: string;
-  budget?: number;
-  sent_count: number;
-  delivered_count: number;
-  opened_count: number;
-  clicked_count: number;
-  converted_count: number;
-  revenue_generated: number;
-  created_at: string;
-}
-
-interface Promotion {
-  id: number;
-  promotion_code: string;
-  name: string;
-  promotion_type: string;
-  is_active: boolean;
-  valid_from: string;
-  valid_until?: string;
-  discount_percentage?: number;
-  discount_amount?: number;
-  total_redemptions: number;
-  total_discount_given: number;
-  created_at: string;
-}
-
-interface MarketingAnalytics {
-  total_campaigns: number;
-  active_campaigns: number;
-  total_contacts: number;
-  average_open_rate: number;
-  average_click_rate: number;
-  average_conversion_rate: number;
-  total_marketing_spend: number;
-  total_marketing_revenue: number;
-  marketing_roi: number;
-}
+import { marketingService, Campaign, Promotion, MarketingAnalytics } from '../../services';
 
 const campaignStatusColors: Record<string, string> = {
   draft: 'default',
@@ -110,6 +67,7 @@ export default function MarketingDashboard() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [analytics, setAnalytics] = useState<MarketingAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openCampaignDialog, setOpenCampaignDialog] = useState(false);
   const [openPromotionDialog, setOpenPromotionDialog] = useState(false);
@@ -120,90 +78,39 @@ export default function MarketingDashboard() {
 
   const loadMarketingData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Simulate API calls - in production these would be real API calls
-      const mockCampaigns: Campaign[] = [
-        {
-          id: 1,
-          campaign_number: 'CMP000001',
-          name: 'Summer Sale Email Campaign',
-          campaign_type: 'email',
-          status: 'active',
-          start_date: '2024-08-01',
-          end_date: '2024-08-31',
-          budget: 5000,
-          sent_count: 10000,
-          delivered_count: 9850,
-          opened_count: 2955,
-          clicked_count: 590,
-          converted_count: 118,
-          revenue_generated: 15000,
-          created_at: '2024-07-25T10:00:00Z',
-        },
-        {
-          id: 2,
-          campaign_number: 'CMP000002',
-          name: 'Product Launch Social Media',
-          campaign_type: 'social_media',
-          status: 'completed',
-          start_date: '2024-07-15',
-          end_date: '2024-07-30',
-          budget: 3000,
-          sent_count: 0,
-          delivered_count: 0,
-          opened_count: 0,
-          clicked_count: 1200,
-          converted_count: 85,
-          revenue_generated: 8500,
-          created_at: '2024-07-10T14:30:00Z',
-        },
-      ];
+      const [campaignsData, promotionsData, analyticsData] = await Promise.all([
+        marketingService.getCampaigns(),
+        marketingService.getPromotions(),
+        marketingService.getAnalytics()
+      ]);
 
-      const mockPromotions: Promotion[] = [
-        {
-          id: 1,
-          promotion_code: 'SUMMER20',
-          name: 'Summer Sale 20% Off',
-          promotion_type: 'percentage_discount',
-          is_active: true,
-          valid_from: '2024-08-01',
-          valid_until: '2024-08-31',
-          discount_percentage: 20,
-          total_redemptions: 150,
-          total_discount_given: 4500,
-          created_at: '2024-07-25T10:00:00Z',
-        },
-        {
-          id: 2,
-          promotion_code: 'NEWCUSTOMER',
-          name: 'New Customer $50 Off',
-          promotion_type: 'fixed_amount_discount',
-          is_active: true,
-          valid_from: '2024-08-01',
-          discount_amount: 50,
-          total_redemptions: 75,
-          total_discount_given: 3750,
-          created_at: '2024-07-20T09:15:00Z',
-        },
-      ];
+      setCampaigns(campaignsData);
+      setPromotions(promotionsData);
+      setAnalytics(analyticsData);
 
-      const mockAnalytics: MarketingAnalytics = {
-        total_campaigns: 12,
-        active_campaigns: 3,
-        total_contacts: 25000,
-        average_open_rate: 30.2,
-        average_click_rate: 6.1,
-        average_conversion_rate: 1.2,
-        total_marketing_spend: 15000,
-        total_marketing_revenue: 35000,
-        marketing_roi: 133.3,
-      };
-
-      setCampaigns(mockCampaigns);
-      setPromotions(mockPromotions);
-      setAnalytics(mockAnalytics);
-    } catch (error) {
-      console.error('Error loading marketing data:', error);
+    } catch (err: any) {
+      console.error('Error loading marketing data:', err);
+      setError(err.userMessage || 'Failed to load marketing data');
+      
+      // Fallback to empty data to prevent crashes
+      setCampaigns([]);
+      setPromotions([]);
+      setAnalytics({
+        total_campaigns: 0,
+        active_campaigns: 0,
+        total_promotions: 0,
+        active_promotions: 0,
+        campaign_roi: 0,
+        promotion_redemption_rate: 0,
+        email_open_rate: 0,
+        click_through_rate: 0,
+        conversion_rate: 0,
+        customer_acquisition_cost: 0,
+        lifetime_value: 0,
+        revenue_from_campaigns: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -236,10 +143,10 @@ export default function MarketingDashboard() {
                     Total Campaigns
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {analytics.total_campaigns}
+                    {analytics?.total_campaigns || 0}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {analytics.active_campaigns} active
+                    {analytics?.active_campaigns || 0} active
                   </Typography>
                 </Box>
               </Box>
@@ -256,10 +163,10 @@ export default function MarketingDashboard() {
                     Total Contacts
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {analytics.total_contacts.toLocaleString()}
+                    {(analytics?.total_promotions || 0).toLocaleString()}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {analytics.average_open_rate}% avg open rate
+                    {analytics?.email_open_rate || 0}% avg open rate
                   </Typography>
                 </Box>
               </Box>
@@ -276,10 +183,10 @@ export default function MarketingDashboard() {
                     Marketing Revenue
                   </Typography>
                   <Typography variant="h5" component="div">
-                    ${analytics.total_marketing_revenue.toLocaleString()}
+                    ${(analytics?.revenue_from_campaigns || 0).toLocaleString()}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    ${analytics.total_marketing_spend.toLocaleString()} spent
+                    ${(analytics?.customer_acquisition_cost || 0).toLocaleString()} spent
                   </Typography>
                 </Box>
               </Box>
@@ -296,10 +203,10 @@ export default function MarketingDashboard() {
                     Marketing ROI
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {analytics.marketing_roi}%
+                    {analytics?.campaign_roi || 0}%
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {analytics.average_conversion_rate}% conversion rate
+                    {analytics?.conversion_rate || 0}% conversion rate
                   </Typography>
                 </Box>
               </Box>
@@ -457,6 +364,16 @@ export default function MarketingDashboard() {
           </Button>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+          <Button size="small" onClick={loadMarketingData} sx={{ ml: 1 }}>
+            Retry
+          </Button>
+        </Alert>
+      )}
 
       {renderAnalyticsCards()}
 

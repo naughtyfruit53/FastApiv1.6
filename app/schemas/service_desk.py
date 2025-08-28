@@ -150,7 +150,7 @@ class ChatbotMessageBase(BaseModel):
     agent_id: Optional[int] = Field(None, description="Agent ID")
     intent_detected: Optional[str] = Field(None, description="Detected intent")
     confidence_score: Optional[float] = Field(None, ge=0, le=1, description="Confidence score")
-    entities_extracted: Optional[Dict[str, Any]] = Field(None, description="Extracted entities")
+    entities_extracted: Optional[Dict[str, Any]] = Field(None, description="Named entities and structured data extracted from user messages using NLP. Contains person names, locations, organizations, dates, product names, issue categories, sentiment scores, and other relevant semantic information for automated processing.")
     is_read: bool = Field(False, description="Is message read")
 
 class ChatbotMessageCreate(ChatbotMessageBase):
