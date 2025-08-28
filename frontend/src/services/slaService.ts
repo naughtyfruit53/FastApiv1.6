@@ -78,7 +78,7 @@ export interface SLAPolicyCreate {
   is_default?: boolean;
 }
 
-export interface SLAPolicyUpdate extends Partial<SLAPolicyCreate> {}
+export type SLAPolicyUpdate = Partial<SLAPolicyCreate>;
 
 export const slaService = {
   // SLA Policy Management

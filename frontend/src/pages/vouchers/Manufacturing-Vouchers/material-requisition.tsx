@@ -326,7 +326,7 @@ const MaterialRequisition: React.FC = () => {
                     disabled
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={4}>

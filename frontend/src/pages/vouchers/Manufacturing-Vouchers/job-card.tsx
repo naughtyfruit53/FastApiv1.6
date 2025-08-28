@@ -388,7 +388,7 @@ export default function JobCardVoucher() {
                             label={voucher.job_type} 
                             size="small"
                             color="primary"
-                          /> */}
+                          />
                         </TableCell>
                         <TableCell>
                           <Chip 

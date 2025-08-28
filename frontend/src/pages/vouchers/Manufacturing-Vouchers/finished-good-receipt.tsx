@@ -81,7 +81,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                       label={order.status.replace('_', ' ')} 
                       color={getStatusColor(order.status)}
                       size="small"
-                    /> */}
+                    />
                   </Box>
 
                   <Box sx={{ mb: 2 }}>

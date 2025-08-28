@@ -807,4 +807,13 @@ export default function StockJournal() {
                 {/* VoucherHeaderActions commented out */}
                 {/* VoucherHeaderActions commented out */}
                 {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+export default StockJournal;</Container>
