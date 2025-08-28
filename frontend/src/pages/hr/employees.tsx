@@ -53,6 +53,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
+import { hrService, Employee } from '../../services/hrService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -87,79 +88,40 @@ function a11yProps(index: number) {
   };
 }
 
-// Mock employee data for development
-const mockEmployees = [
-  {
-    id: 1,
-    employee_code: 'EMP001001',
-    user: { full_name: 'John Doe', email: 'john.doe@company.com', department: 'Engineering' },
-    job_title: 'Senior Software Engineer',
-    employment_status: 'active',
-    hire_date: '2023-01-15',
-    employee_type: 'permanent',
-    work_location: 'Mumbai Office',
-    reporting_manager: 'Jane Smith'
-  },
-  {
-    id: 2,
-    employee_code: 'EMP001002',
-    user: { full_name: 'Jane Smith', email: 'jane.smith@company.com', department: 'Engineering' },
-    job_title: 'Engineering Manager',
-    employment_status: 'active',
-    hire_date: '2022-08-20',
-    employee_type: 'permanent',
-    work_location: 'Mumbai Office',
-    reporting_manager: 'Mike Johnson'
-  },
-  {
-    id: 3,
-    employee_code: 'EMP001003',
-    user: { full_name: 'Sarah Wilson', email: 'sarah.wilson@company.com', department: 'Sales' },
-    job_title: 'Sales Manager',
-    employment_status: 'active',
-    hire_date: '2023-03-10',
-    employee_type: 'permanent',
-    work_location: 'Delhi Office',
-    reporting_manager: 'David Brown'
-  },
-  {
-    id: 4,
-    employee_code: 'EMP001004',
-    user: { full_name: 'Mike Johnson', email: 'mike.johnson@company.com', department: 'HR' },
-    job_title: 'HR Director',
-    employment_status: 'active',
-    hire_date: '2021-12-05',
-    employee_type: 'permanent',
-    work_location: 'Mumbai Office',
-    reporting_manager: null
-  },
-  {
-    id: 5,
-    employee_code: 'EMP001005',
-    user: { full_name: 'Emily Davis', email: 'emily.davis@company.com', department: 'Marketing' },
-    job_title: 'Marketing Specialist',
-    employment_status: 'active',
-    hire_date: '2023-06-01',
-    employee_type: 'contract',
-    work_location: 'Bangalore Office',
-    reporting_manager: 'Lisa Anderson'
-  },
-];
-
 const EmployeesManagement: NextPage = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [employees, setEmployees] = useState(mockEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
   const [rowsPerPage] = useState(10);
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'create'>('view');
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const employeesData = await hrService.getEmployees();
+      setEmployees(employeesData);
+    } catch (err: any) {
+      console.error('Error fetching employees:', err);
+      setError(err.userMessage || 'Failed to load employees');
+      setEmployees([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -239,11 +201,12 @@ const EmployeesManagement: NextPage = () => {
 
   // Filter employees based on search and filters
   const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = employee.user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (employee.user?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          employee.employee_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.user.email.toLowerCase().includes(searchTerm.toLowerCase());
+                         (employee.user?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDepartment = !filterDepartment || employee.user.department === filterDepartment;
+    const employeeDept = employee.department || employee.user?.department;
+    const matchesDepartment = !filterDepartment || employeeDept === filterDepartment;
     const matchesStatus = !filterStatus || employee.employment_status === filterStatus;
     
     return matchesSearch && matchesDepartment && matchesStatus;
@@ -258,7 +221,7 @@ const EmployeesManagement: NextPage = () => {
   const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage);
 
   // Get unique departments for filter
-  const departments = [...new Set(employees.map(emp => emp.user.department))];
+  const departments = [...new Set(employees.map(emp => emp.department || emp.user?.department).filter(Boolean))];
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -289,6 +252,16 @@ const EmployeesManagement: NextPage = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+          <Button size="small" onClick={fetchEmployees} sx={{ ml: 1 }}>
+            Retry
+          </Button>
+        </Alert>
+      )}
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -463,22 +436,22 @@ const EmployeesManagement: NextPage = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
-                        {employee.user.full_name}
+                        {employee.user?.full_name || 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="textSecondary">
-                        {employee.user.email}
+                        {employee.user?.email || 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {employee.user.department}
+                        {employee.department || employee.user?.department || 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {employee.job_title}
+                        {employee.position || 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>

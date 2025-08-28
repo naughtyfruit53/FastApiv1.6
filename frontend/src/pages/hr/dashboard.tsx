@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
+import { hrService, HRDashboardData, HRActivity, HRTask } from '../../services/hrService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -71,75 +72,55 @@ function a11yProps(index: number) {
   };
 }
 
-// Mock data for development
-const mockDashboardData = {
-  total_employees: 150,
-  active_employees: 142,
-  employees_on_leave: 8,
-  pending_leave_approvals: 12,
-  upcoming_performance_reviews: 25,
-  recent_joiners: 5,
-  employees_in_probation: 3,
-  average_attendance_rate: 87.5,
-};
-
-const mockRecentActivities = [
-  {
-    id: 1,
-    type: 'leave_application',
-    employee: 'John Doe',
-    action: 'Applied for Annual Leave',
-    date: '2024-01-15',
-    status: 'pending'
-  },
-  {
-    id: 2,
-    type: 'performance_review',
-    employee: 'Jane Smith',
-    action: 'Performance review submitted',
-    date: '2024-01-14',
-    status: 'completed'
-  },
-  {
-    id: 3,
-    type: 'employee_onboarding',
-    employee: 'Mike Johnson',
-    action: 'New employee joined',
-    date: '2024-01-13',
-    status: 'active'
-  },
-];
-
-const mockUpcomingTasks = [
-  {
-    id: 1,
-    task: 'Review Sarah\'s probation period',
-    due_date: '2024-01-20',
-    priority: 'high',
-    category: 'probation'
-  },
-  {
-    id: 2,
-    task: 'Approve pending leave applications',
-    due_date: '2024-01-18',
-    priority: 'medium',
-    category: 'leaves'
-  },
-  {
-    id: 3,
-    task: 'Conduct quarterly reviews',
-    due_date: '2024-01-25',
-    priority: 'low',
-    category: 'performance'
-  },
-];
-
 const HRDashboard: NextPage = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [dashboardData, setDashboardData] = useState(mockDashboardData);
+  const [dashboardData, setDashboardData] = useState<HRDashboardData | null>(null);
+  const [recentActivities, setRecentActivities] = useState<HRActivity[]>([]);
+  const [upcomingTasks, setUpcomingTasks] = useState<HRTask[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [dashboard, activities, tasks] = await Promise.all([
+        hrService.getDashboardData(),
+        hrService.getRecentActivities(5),
+        hrService.getUpcomingTasks(5)
+      ]);
+      
+      setDashboardData(dashboard);
+      setRecentActivities(activities);
+      setUpcomingTasks(tasks);
+    } catch (err: any) {
+      console.error('Error fetching HR dashboard data:', err);
+      setError(err.userMessage || 'Failed to load dashboard data');
+      
+      // Fallback to empty data structure to prevent crashes
+      setDashboardData({
+        total_employees: 0,
+        active_employees: 0,
+        employees_on_leave: 0,
+        pending_leave_approvals: 0,
+        upcoming_performance_reviews: 0,
+        recent_joiners: 0,
+        employees_in_probation: 0,
+        average_attendance_rate: 0,
+      });
+      setRecentActivities([]);
+      setUpcomingTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -197,6 +178,16 @@ const HRDashboard: NextPage = () => {
         </Box>
       </Box>
 
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+          <Button size="small" onClick={fetchDashboardData} sx={{ ml: 1 }}>
+            Retry
+          </Button>
+        </Alert>
+      )}
+
       {/* Key Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -208,7 +199,7 @@ const HRDashboard: NextPage = () => {
                     Total Employees
                   </Typography>
                   <Typography variant="h4">
-                    {loading ? <CircularProgress size={24} /> : dashboardData.total_employees}
+                    {loading ? <CircularProgress size={24} /> : dashboardData?.total_employees || 0}
                   </Typography>
                 </Box>
                 <PeopleIcon color="primary" sx={{ fontSize: 40 }} />
@@ -226,7 +217,7 @@ const HRDashboard: NextPage = () => {
                     Active Employees
                   </Typography>
                   <Typography variant="h4" color="success.main">
-                    {loading ? <CircularProgress size={24} /> : dashboardData.active_employees}
+                    {loading ? <CircularProgress size={24} /> : dashboardData?.active_employees || 0}
                   </Typography>
                 </Box>
                 <TrendingUpIcon color="success" sx={{ fontSize: 40 }} />
@@ -244,7 +235,7 @@ const HRDashboard: NextPage = () => {
                     On Leave Today
                   </Typography>
                   <Typography variant="h4" color="warning.main">
-                    {loading ? <CircularProgress size={24} /> : dashboardData.employees_on_leave}
+                    {loading ? <CircularProgress size={24} /> : dashboardData?.employees_on_leave || 0}
                   </Typography>
                 </Box>
                 <AccessTimeIcon color="warning" sx={{ fontSize: 40 }} />
@@ -262,7 +253,7 @@ const HRDashboard: NextPage = () => {
                     Pending Approvals
                   </Typography>
                   <Typography variant="h4" color="error.main">
-                    {loading ? <CircularProgress size={24} /> : dashboardData.pending_leave_approvals}
+                    {loading ? <CircularProgress size={24} /> : dashboardData?.pending_leave_approvals || 0}
                   </Typography>
                 </Box>
                 <ApprovalIcon color="error" sx={{ fontSize: 40 }} />
@@ -281,7 +272,7 @@ const HRDashboard: NextPage = () => {
                 Recent Joiners (30 days)
               </Typography>
               <Typography variant="h5">
-                {dashboardData.recent_joiners}
+                {dashboardData?.recent_joiners || 0}
               </Typography>
             </CardContent>
           </Card>
@@ -294,7 +285,7 @@ const HRDashboard: NextPage = () => {
                 In Probation
               </Typography>
               <Typography variant="h5">
-                {dashboardData.employees_in_probation}
+                {dashboardData?.employees_in_probation || 0}
               </Typography>
             </CardContent>
           </Card>
@@ -307,7 +298,7 @@ const HRDashboard: NextPage = () => {
                 Upcoming Reviews
               </Typography>
               <Typography variant="h5">
-                {dashboardData.upcoming_performance_reviews}
+                {dashboardData?.upcoming_performance_reviews || 0}
               </Typography>
             </CardContent>
           </Card>
@@ -320,7 +311,7 @@ const HRDashboard: NextPage = () => {
                 Avg. Attendance
               </Typography>
               <Typography variant="h5" color="primary">
-                {dashboardData.average_attendance_rate}%
+                {dashboardData?.average_attendance_rate || 0}%
               </Typography>
             </CardContent>
           </Card>
@@ -352,7 +343,7 @@ const HRDashboard: NextPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {mockRecentActivities.map((activity) => (
+                {recentActivities.map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell>{activity.employee}</TableCell>
                     <TableCell>{activity.action}</TableCell>
@@ -386,7 +377,7 @@ const HRDashboard: NextPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {mockUpcomingTasks.map((task) => (
+                {upcomingTasks.map((task) => (
                   <TableRow key={task.id}>
                     <TableCell>{task.task}</TableCell>
                     <TableCell>{task.due_date}</TableCell>
@@ -483,11 +474,11 @@ const HRDashboard: NextPage = () => {
       {/* Alerts and Notifications */}
       <Box sx={{ mb: 4 }}>
         <Alert severity="info" sx={{ mb: 2 }}>
-          You have {dashboardData.pending_leave_approvals} pending leave applications that require your attention.
+          You have {dashboardData?.pending_leave_approvals || 0} pending leave applications that require your attention.
         </Alert>
-        {dashboardData.employees_in_probation > 0 && (
+        {(dashboardData?.employees_in_probation || 0) > 0 && (
           <Alert severity="warning">
-            {dashboardData.employees_in_probation} employees are currently in their probation period. 
+            {dashboardData?.employees_in_probation || 0} employees are currently in their probation period. 
             Review their progress and schedule confirmation meetings.
           </Alert>
         )}
