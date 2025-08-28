@@ -693,6 +693,42 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
+    // Combined CRM Menu - Top-level CRM with Sales and Service as sections
+    crm: {
+      title: 'CRM',
+      icon: <Person />,
+      sections: [
+        {
+          title: 'Sales CRM',
+          items: [
+            { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
+            { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
+            { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
+            { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> },
+            { name: 'Customer Database', path: '/sales/customers', icon: <People /> },
+            { name: 'Contact Management', path: '/sales/contacts', icon: <ContactPhone /> },
+            { name: 'Account Management', path: '/sales/accounts', icon: <Business /> },
+            { name: 'Customer Analytics', path: '/sales/customer-analytics', icon: <Analytics /> },
+            { name: 'Quotations', path: '/sales/quotations', icon: <NoteAdd /> },
+            { name: 'Sales Orders', path: '/sales/orders', icon: <Receipt /> },
+            { name: 'Commission Tracking', path: '/sales/commissions', icon: <MonetizationOn /> },
+            { name: 'Sales Reports', path: '/sales/reports', icon: <Assessment /> }
+          ]
+        },
+        {
+          title: 'Service CRM',
+          items: [
+            { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ },
+            { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
+            { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
+          ]
+        }
+      ]
+    },
     settings: {
       title: 'Settings',
       icon: <Settings />,
@@ -898,7 +934,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               }}
             />
             <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-              TritiQ {companyData?.name || 'ERP'}
+              {companyData?.name || 'ERP'}
             </Typography>
           </Box>
 
@@ -981,42 +1017,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   Reports & Analytics
                 </Button>
 
-                {/* Service menu - always show, but disabled if not enabled */}
-                <Tooltip 
-                  title={isModuleEnabled('Service') ? '' : 'Module not activated - contact support to enable'}
-                  placement="bottom"
-                  arrow
-                >
-                  <span>
-                    <Button
-                      color="inherit"
-                      startIcon={<SupportAgent />}
-                      endIcon={<ExpandMore />}
-                      onClick={(e) => {
-                        console.log('Service CRM clicked - checking if submenu opens');
-                        handleMenuClick(e, 'service');
-                      }}
-                      sx={{ 
-                        mx: 1,
-                        opacity: isModuleEnabled('Service') ? 1 : 0.5,
-                        cursor: isModuleEnabled('Service') ? 'pointer' : 'not-allowed'
-                      }}
-                      disabled={!isModuleEnabled('Service')}
-                    >
-                      Service CRM
-                    </Button>
-                  </span>
-                </Tooltip>
-
-                {/* Sales CRM Menu */}
+                {/* CRM Menu - Contains both Sales CRM and Service CRM */}
                 <Button
                   color="inherit"
-                  startIcon={<MonetizationOn />}
+                  startIcon={<Person />}
                   endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'salesCrm')}
+                  onClick={(e) => handleMenuClick(e, 'crm')}
                   sx={{ mx: 1 }}
                 >
-                  Sales CRM
+                  CRM
                 </Button>
 
                 {/* HR Management Menu */}
