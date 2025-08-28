@@ -218,7 +218,7 @@ const GeneralLedger: React.FC = () => {
 
         {/* Summary Cards */}
         <Grid container spacing={3} mb={3}>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -230,7 +230,7 @@ const GeneralLedger: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -242,7 +242,7 @@ const GeneralLedger: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -259,7 +259,7 @@ const GeneralLedger: React.FC = () => {
         {/* Filters */}
         <Paper sx={{ p: 2, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid size={{ xs: 12, sm: 4 }}>
+            <Grid item xs={12} sm={4}>
               <FormControl fullWidth>
                 <InputLabel>Account</InputLabel>
                 <Select
@@ -276,7 +276,7 @@ const GeneralLedger: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 3 }}>
+            <Grid item xs={12} sm={3}>
               <DatePicker
                 label="Start Date"
                 value={dateFilter.start}
@@ -284,7 +284,7 @@ const GeneralLedger: React.FC = () => {
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 3 }}>
+            <Grid item xs={12} sm={3}>
               <DatePicker
                 label="End Date"
                 value={dateFilter.end}
@@ -292,7 +292,7 @@ const GeneralLedger: React.FC = () => {
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 2 }}>
+            <Grid item xs={12} sm={2}>
               <Button
                 variant="outlined"
                 startIcon={<FilterList />}
@@ -414,7 +414,7 @@ const GeneralLedger: React.FC = () => {
           <DialogTitle>Create General Ledger Entry</DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Account</InputLabel>
                   <Select
@@ -430,7 +430,7 @@ const GeneralLedger: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Transaction Number"
@@ -439,7 +439,7 @@ const GeneralLedger: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   type="date"
@@ -450,7 +450,7 @@ const GeneralLedger: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Reference Number"
@@ -458,7 +458,7 @@ const GeneralLedger: React.FC = () => {
                   onChange={(e) => setCreateData(prev => ({ ...prev, reference_number: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   type="number"
@@ -468,7 +468,7 @@ const GeneralLedger: React.FC = () => {
                   inputProps={{ min: 0, step: 0.01 }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   type="number"
@@ -478,7 +478,7 @@ const GeneralLedger: React.FC = () => {
                   inputProps={{ min: 0, step: 0.01 }}
                 />
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Description"
@@ -486,7 +486,7 @@ const GeneralLedger: React.FC = () => {
                   onChange={(e) => setCreateData(prev => ({ ...prev, description: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   multiline

@@ -1,5 +1,4 @@
-// pages/hr/employees.tsx
-// Employee Management Page with CRUD operations
+// frontend/src/pages/hr/employees.tsx
 
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
@@ -55,6 +54,7 @@ import {
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
 import { hrService, Employee } from '../../services';
+import AddEmployeeModal from '../../components/AddEmployeeModal';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -93,7 +93,6 @@ const EmployeesManagement: NextPage = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [dialogTabValue, setDialogTabValue] = useState(0);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,7 +168,11 @@ const EmployeesManagement: NextPage = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedEmployee(null);
-    setDialogTabValue(0); // Reset dialog tab to first tab
+  };
+
+  const handleAddEmployee = async (newEmployee: any) => {
+    setDialogOpen(false);
+    await fetchEmployees(); // Refresh list
   };
 
   const getStatusColor = (status: string) => {
@@ -268,7 +271,7 @@ const EmployeesManagement: NextPage = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -286,7 +289,7 @@ const EmployeesManagement: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -304,7 +307,7 @@ const EmployeesManagement: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -322,7 +325,7 @@ const EmployeesManagement: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -344,7 +347,7 @@ const EmployeesManagement: NextPage = () => {
       {/* Filters and Search */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid item xs={12} md={4}>
             <TextField
               fullWidth
               placeholder="Search employees..."
@@ -359,7 +362,7 @@ const EmployeesManagement: NextPage = () => {
               }}
             />
           </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel>Department</InputLabel>
               <Select
@@ -376,7 +379,7 @@ const EmployeesManagement: NextPage = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
@@ -392,7 +395,7 @@ const EmployeesManagement: NextPage = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, md: 2 }}>
+          <Grid item xs={12} md={2}>
             <Button
               fullWidth
               variant="outlined"
@@ -522,422 +525,14 @@ const EmployeesManagement: NextPage = () => {
         </Box>
       </Paper>
 
-      {/* Employee Details Dialog */}
-      <Dialog
+      {/* Employee Modal */}
+      <AddEmployeeModal
         open={dialogOpen}
         onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {dialogMode === 'create' ? 'Add New Employee' : 
-           dialogMode === 'edit' ? 'Edit Employee' : 'Employee Details'}
-        </DialogTitle>
-        <DialogContent>
-          {selectedEmployee && (
-            <Box sx={{ mt: 2 }}>
-              <Tabs value={dialogTabValue} onChange={(e, newValue) => setDialogTabValue(newValue)}>
-                <Tab label="Basic Information" />
-                <Tab label="Employment Details" />
-                <Tab label="KYC Documents" />
-                <Tab label="Contact & Address" />
-              </Tabs>
-              
-              {/* Basic Information Tab */}
-              {dialogTabValue === 0 && (
-                <Box sx={{ mt: 3 }}>
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Employee Code"
-                        value={selectedEmployee.employee_code}
-                        disabled={dialogMode === 'view'}
-                        helperText="Auto-generated if empty"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Full Name"
-                        value={selectedEmployee.user.full_name}
-                        disabled={dialogMode === 'view'}
-                        required
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Email"
-                        type="email"
-                        value={selectedEmployee.user.email}
-                        disabled={dialogMode === 'view'}
-                        required
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Phone Number"
-                        value={selectedEmployee.phone || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Date of Birth"
-                        type="date"
-                        value={selectedEmployee.date_of_birth || ''}
-                        disabled={dialogMode === 'view'}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <FormControl fullWidth disabled={dialogMode === 'view'}>
-                        <InputLabel>Gender</InputLabel>
-                        <Select value={selectedEmployee.gender || ''} label="Gender">
-                          <MenuItem value="male">Male</MenuItem>
-                          <MenuItem value="female">Female</MenuItem>
-                          <MenuItem value="other">Other</MenuItem>
-                          <MenuItem value="prefer_not_to_say">Prefer not to say</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </Grid>
-                </Box>
-              )}
-              
-              {/* Employment Details Tab */}
-              {dialogTabValue === 1 && (
-                <Box sx={{ mt: 3 }}>
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Department"
-                        value={selectedEmployee.user.department}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Job Title"
-                        value={selectedEmployee.job_title}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <FormControl fullWidth disabled={dialogMode === 'view'}>
-                        <InputLabel>Employee Type</InputLabel>
-                        <Select
-                          value={selectedEmployee.employee_type}
-                          label="Employee Type"
-                        >
-                          <MenuItem value="permanent">Permanent</MenuItem>
-                          <MenuItem value="contract">Contract</MenuItem>
-                          <MenuItem value="intern">Intern</MenuItem>
-                          <MenuItem value="consultant">Consultant</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Work Location"
-                        value={selectedEmployee.work_location}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Hire Date"
-                        type="date"
-                        value={selectedEmployee.hire_date}
-                        disabled={dialogMode === 'view'}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Reporting Manager"
-                        value={selectedEmployee.reporting_manager || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Salary"
-                        type="number"
-                        value={selectedEmployee.salary || ''}
-                        disabled={dialogMode === 'view'}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <FormControl fullWidth disabled={dialogMode === 'view'}>
-                        <InputLabel>Employment Status</InputLabel>
-                        <Select value={selectedEmployee.employment_status || 'active'} label="Employment Status">
-                          <MenuItem value="active">Active</MenuItem>
-                          <MenuItem value="inactive">Inactive</MenuItem>
-                          <MenuItem value="terminated">Terminated</MenuItem>
-                          <MenuItem value="on_leave">On Leave</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </Grid>
-                </Box>
-              )}
-              
-              {/* KYC Documents Tab */}
-              {dialogTabValue === 2 && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    KYC Documents (Indian Requirements)
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Aadhaar Number"
-                        value={selectedEmployee.aadhaar_number || ''}
-                        disabled={dialogMode === 'view'}
-                        inputProps={{ maxLength: 12 }}
-                        helperText="12-digit Aadhaar number"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="PAN Number"
-                        value={selectedEmployee.pan_number || ''}
-                        disabled={dialogMode === 'view'}
-                        inputProps={{ maxLength: 10 }}
-                        helperText="10-character PAN number"
-                        style={{ textTransform: 'uppercase' }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Employee State Insurance (ESI) Number"
-                        value={selectedEmployee.esi_number || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Provident Fund (PF) Number"
-                        value={selectedEmployee.pf_number || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="UAN (Universal Account Number)"
-                        value={selectedEmployee.uan_number || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Driving License Number"
-                        value={selectedEmployee.driving_license || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Passport Number"
-                        value={selectedEmployee.passport_number || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Bank Account Number"
-                        value={selectedEmployee.bank_account || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="IFSC Code"
-                        value={selectedEmployee.ifsc_code || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Bank Name"
-                        value={selectedEmployee.bank_name || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    
-                    {/* Document Upload Section */}
-                    <Grid size={{ xs: 12 }}>
-                      <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-                        Document Uploads
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid size={{ xs: 12, md: 4 }}>
-                          <Button
-                            variant="outlined"
-                            component="label"
-                            fullWidth
-                            disabled={dialogMode === 'view'}
-                            startIcon={<UploadIcon />}
-                          >
-                            Upload Aadhaar Card
-                            <input type="file" hidden accept=".pdf,.jpg,.jpeg,.png" />
-                          </Button>
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 4 }}>
-                          <Button
-                            variant="outlined"
-                            component="label"
-                            fullWidth
-                            disabled={dialogMode === 'view'}
-                            startIcon={<UploadIcon />}
-                          >
-                            Upload PAN Card
-                            <input type="file" hidden accept=".pdf,.jpg,.jpeg,.png" />
-                          </Button>
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 4 }}>
-                          <Button
-                            variant="outlined"
-                            component="label"
-                            fullWidth
-                            disabled={dialogMode === 'view'}
-                            startIcon={<PhotoCameraIcon />}
-                          >
-                            Upload Photo
-                            <input type="file" hidden accept=".jpg,.jpeg,.png" />
-                          </Button>
-                        </Grid>
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                </Box>
-              )}
-              
-              {/* Contact & Address Tab */}
-              {dialogTabValue === 3 && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Contact Information
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Emergency Contact Name"
-                        value={selectedEmployee.emergency_contact_name || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Emergency Contact Number"
-                        value={selectedEmployee.emergency_contact_phone || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Relationship"
-                        value={selectedEmployee.emergency_contact_relation || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                  </Grid>
-                  
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Current Address
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12 }}>
-                      <TextField
-                        fullWidth
-                        label="Address Line 1"
-                        value={selectedEmployee.address_line1 || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <TextField
-                        fullWidth
-                        label="Address Line 2"
-                        value={selectedEmployee.address_line2 || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="City"
-                        value={selectedEmployee.city || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="State"
-                        value={selectedEmployee.state || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="PIN Code"
-                        value={selectedEmployee.pin_code || ''}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Country"
-                        value={selectedEmployee.country || 'India'}
-                        disabled={dialogMode === 'view'}
-                      />
-                    </Grid>
-                  </Grid>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>
-            {dialogMode === 'view' ? 'Close' : 'Cancel'}
-          </Button>
-          {dialogMode !== 'view' && (
-            <Button variant="contained" onClick={handleCloseDialog}>
-              {dialogMode === 'create' ? 'Create' : 'Save'}
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+        onAdd={handleAddEmployee}
+        initialData={selectedEmployee}
+        mode={dialogMode === 'create' ? 'create' : 'edit'}
+      />
     </Container>
   );
 };

@@ -45,7 +45,7 @@ const CustomerAnalyticsPage: NextPage = () => {
 
       <Grid container spacing={3}>
         {/* Overview Cards */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -61,7 +61,7 @@ const CustomerAnalyticsPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -77,7 +77,7 @@ const CustomerAnalyticsPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -94,7 +94,7 @@ const CustomerAnalyticsPage: NextPage = () => {
         </Grid>
 
         {/* Main Analytics Component */}
-        <Grid size={{ xs: 12 }}>
+        <Grid item xs={12}>
           <Card>
             <CardContent>
               <CustomerAnalytics />

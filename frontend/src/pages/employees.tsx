@@ -256,7 +256,7 @@ const EmployeesPage: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Full Name *"
@@ -264,7 +264,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Employee ID"
@@ -272,7 +272,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Email"
@@ -281,7 +281,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Phone"
@@ -289,7 +289,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Address"
@@ -297,7 +297,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   label="City"
@@ -305,7 +305,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   label="State"
@@ -313,7 +313,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   label="Pincode"
@@ -321,7 +321,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Department"
@@ -329,7 +329,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Designation"
@@ -337,7 +337,7 @@ const EmployeesPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, designation: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Salary"

@@ -235,28 +235,28 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       {/* Analytics Charts Grid */}
       <Grid container spacing={3}>
         {/* Job Completion Metrics */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid item xs={12} md={6}>
           <JobCompletionChart data={dashboardData.job_completion} />
         </Grid>
 
         {/* Customer Satisfaction Metrics */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid item xs={12} md={6}>
           <CustomerSatisfactionChart data={dashboardData.customer_satisfaction} />
         </Grid>
 
         {/* Job Volume Chart */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid item xs={12} md={6}>
           <JobVolumeChart data={dashboardData.job_volume} />
         </Grid>
 
         {/* SLA Compliance Chart */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid item xs={12} md={6}>
           <SLAComplianceChart data={dashboardData.sla_compliance} />
         </Grid>
 
         {/* Technician Performance - Full width if data available */}
         {dashboardData.technician_performance.length > 0 && (
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <TechnicianPerformanceChart data={dashboardData.technician_performance} />
           </Grid>
         )}
@@ -267,7 +267,7 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
         <CardHeader title="Summary Statistics" />
         <CardContent>
           <Grid container spacing={3}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="primary">
                   {dashboardData.job_completion.total_jobs}
@@ -278,7 +278,7 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
               </Box>
             </Grid>
             
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="success.main">
                   {dashboardData.job_completion.completion_rate.toFixed(1)}%
@@ -289,7 +289,7 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
               </Box>
             </Grid>
             
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="info.main">
                   {dashboardData.customer_satisfaction.average_overall_rating.toFixed(1)}/5
@@ -300,7 +300,7 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
               </Box>
             </Grid>
             
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="warning.main">
                   {dashboardData.technician_performance.length}

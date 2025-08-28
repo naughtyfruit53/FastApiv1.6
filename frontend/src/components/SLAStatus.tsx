@@ -143,7 +143,7 @@ const SLAStatus: React.FC<SLAStatusProps> = ({ slaTracking, variant = 'compact' 
         
         <Grid container spacing={3}>
           {/* Response SLA */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid item xs={12} md={6}>
             <Stack spacing={1}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="subtitle2">Response Time</Typography>
@@ -184,7 +184,7 @@ const SLAStatus: React.FC<SLAStatusProps> = ({ slaTracking, variant = 'compact' 
           </Grid>
 
           {/* Resolution SLA */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid item xs={12} md={6}>
             <Stack spacing={1}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="subtitle2">Resolution Time</Typography>
@@ -226,7 +226,7 @@ const SLAStatus: React.FC<SLAStatusProps> = ({ slaTracking, variant = 'compact' 
 
           {/* Escalation Status */}
           {slaTracking.escalation_triggered && (
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <Box sx={{ 
                 p: 2, 
                 bgcolor: 'error.light', 
@@ -246,7 +246,7 @@ const SLAStatus: React.FC<SLAStatusProps> = ({ slaTracking, variant = 'compact' 
           )}
 
           {/* Policy Info */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
               <Typography variant="caption" color="textSecondary">
                 Policy: {slaTracking.policy.name} | 

@@ -189,7 +189,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
 
         <Grid container spacing={3}>
           {/* Overall Rating */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Card variant="outlined">
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -212,12 +212,12 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
           </Grid>
 
           {/* Detailed Ratings */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
               Detailed Ratings
             </Typography>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <Box>
                   <Typography variant="body2" gutterBottom>
                     Service Quality
@@ -229,7 +229,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   />
                 </Box>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <Box>
                   <Typography variant="body2" gutterBottom>
                     Technician Performance
@@ -241,7 +241,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   />
                 </Box>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <Box>
                   <Typography variant="body2" gutterBottom>
                     Timeliness
@@ -253,7 +253,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   />
                 </Box>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <Box>
                   <Typography variant="body2" gutterBottom>
                     Communication
@@ -269,7 +269,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
           </Grid>
 
           {/* Satisfaction Level */}
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
               <InputLabel>Satisfaction Level</InputLabel>
               <Select
@@ -295,7 +295,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
           </Grid>
 
           {/* Would Recommend */}
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <FormControlLabel
               control={
                 <Switch
@@ -318,7 +318,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
           </Grid>
 
           {/* Feedback Comments */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <TextField
               fullWidth
               multiline
@@ -331,7 +331,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
           </Grid>
 
           {/* Improvement Suggestions */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <TextField
               fullWidth
               multiline
@@ -343,18 +343,18 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
             />
           </Grid>
 
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Divider />
           </Grid>
 
           {/* Follow-up Preferences */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
               Follow-up Preferences
             </Typography>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <FormControlLabel
               control={
                 <Switch
@@ -368,7 +368,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
           </Grid>
 
           {formData.follow_up_preferred && (
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Preferred Contact Method</InputLabel>
                 <Select

@@ -54,7 +54,7 @@ const ServiceDashboardPage: NextPage = () => {
 
       <Grid container spacing={3}>
         {/* Quick Stats */}
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -71,7 +71,7 @@ const ServiceDashboardPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -88,7 +88,7 @@ const ServiceDashboardPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -105,7 +105,7 @@ const ServiceDashboardPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -123,7 +123,7 @@ const ServiceDashboardPage: NextPage = () => {
         </Grid>
 
         {/* Dashboard Content */}
-        <Grid size={{ xs: 12 }}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h5" gutterBottom>
               Service Dashboard

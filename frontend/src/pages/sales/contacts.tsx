@@ -298,7 +298,7 @@ const ContactManagement: React.FC = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -310,7 +310,7 @@ const ContactManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -322,7 +322,7 @@ const ContactManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -334,7 +334,7 @@ const ContactManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -515,7 +515,7 @@ const ContactManagement: React.FC = () => {
               
               {tabValue === 0 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="First Name"
@@ -523,7 +523,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Last Name"
@@ -531,7 +531,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Job Title"
@@ -539,7 +539,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Department"
@@ -547,7 +547,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Company"
@@ -555,7 +555,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <FormControl fullWidth disabled={dialogMode === 'view'}>
                       <InputLabel>Status</InputLabel>
                       <Select value={selectedContact.status} label="Status">
@@ -565,7 +565,7 @@ const ContactManagement: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Source"
@@ -578,7 +578,7 @@ const ContactManagement: React.FC = () => {
               
               {tabValue === 1 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Email"
@@ -587,7 +587,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Phone"
@@ -595,7 +595,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Address"
@@ -603,7 +603,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
+                  <Grid item xs={12} md={4}>
                     <TextField
                       fullWidth
                       label="City"
@@ -611,7 +611,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
+                  <Grid item xs={12} md={4}>
                     <TextField
                       fullWidth
                       label="State"
@@ -619,7 +619,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
+                  <Grid item xs={12} md={4}>
                     <TextField
                       fullWidth
                       label="Zip Code"
@@ -627,7 +627,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Country"
@@ -640,7 +640,7 @@ const ContactManagement: React.FC = () => {
               
               {tabValue === 2 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Notes"
@@ -650,7 +650,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Assigned To"
@@ -658,7 +658,7 @@ const ContactManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Last Contact Date"
@@ -668,7 +668,7 @@ const ContactManagement: React.FC = () => {
                       InputLabelProps={{ shrink: true }}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <Typography variant="h6" gutterBottom>Activity Timeline</Typography>
                     <Typography color="textSecondary">
                       Activity tracking will be implemented with backend integration.

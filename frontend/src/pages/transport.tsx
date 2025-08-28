@@ -183,7 +183,7 @@ const TransportManagementPage: NextPage = () => {
 
       {/* Dashboard Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -200,7 +200,7 @@ const TransportManagementPage: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -217,7 +217,7 @@ const TransportManagementPage: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -234,7 +234,7 @@ const TransportManagementPage: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -608,7 +608,7 @@ const TransportManagementPage: NextPage = () => {
         
         <Paper sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={3}>
-            <Grid size={{ xs: 12, md: 3 }}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 label="Origin City"
@@ -619,7 +619,7 @@ const TransportManagementPage: NextPage = () => {
                 }))}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 label="Destination City"
@@ -630,7 +630,7 @@ const TransportManagementPage: NextPage = () => {
                 }))}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 2 }}>
+            <Grid item xs={12} md={2}>
               <TextField
                 fullWidth
                 label="Weight (kg)"
@@ -642,7 +642,7 @@ const TransportManagementPage: NextPage = () => {
                 }))}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 2 }}>
+            <Grid item xs={12} md={2}>
               <TextField
                 fullWidth
                 label="Volume (cbm)"
@@ -654,7 +654,7 @@ const TransportManagementPage: NextPage = () => {
                 }))}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 2 }}>
+            <Grid item xs={12} md={2}>
               <Button
                 fullWidth
                 variant="contained"
@@ -677,7 +677,7 @@ const TransportManagementPage: NextPage = () => {
         <Typography variant="h6" sx={{ mb: 3 }}>Transport Analytics</Typography>
         
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -690,7 +690,7 @@ const TransportManagementPage: NextPage = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>

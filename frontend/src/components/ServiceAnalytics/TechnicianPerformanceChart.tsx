@@ -94,7 +94,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
       <CardContent>
         {/* Summary Statistics */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="primary.main">
                 {data.length}
@@ -105,7 +105,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="info.main">
                 {totalJobsAssigned}
@@ -116,7 +116,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="success.main">
                 {totalJobsCompleted}
@@ -127,7 +127,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="warning.main">
                 {averageEfficiency.toFixed(1)}%
@@ -145,7 +145,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             Team Performance Overview
           </Typography>
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
                 <Typography variant="body2" gutterBottom>
                   Average Team Utilization
@@ -164,7 +164,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               </Paper>
             </Grid>
             
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
                 <Typography variant="body2" gutterBottom>
                   Team Completion Rate
@@ -299,7 +299,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                       <Collapse in={expandedTechnician === technician.technician_id}>
                         <Box sx={{ p: 2, bgcolor: 'background.default' }}>
                           <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, sm: 4 }}>
+                            <Grid item xs={12} sm={4}>
                               <Box display="flex" alignItems="center" gap={1}>
                                 <JobIcon color="action" fontSize="small" />
                                 <Typography variant="body2">
@@ -309,7 +309,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                             </Grid>
                             
                             {technician.average_completion_time_hours && (
-                              <Grid size={{ xs: 12, sm: 4 }}>
+                              <Grid item xs={12} sm={4}>
                                 <Box display="flex" alignItems="center" gap={1}>
                                   <TimeIcon color="action" fontSize="small" />
                                   <Typography variant="body2">
@@ -319,7 +319,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                               </Grid>
                             )}
                             
-                            <Grid size={{ xs: 12, sm: 4 }}>
+                            <Grid item xs={12} sm={4}>
                               <Box display="flex" alignItems="center" gap={1}>
                                 <EfficiencyIcon color="action" fontSize="small" />
                                 <Typography variant="body2">
@@ -356,7 +356,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               
               return (
                 <>
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     <Paper elevation={1} sx={{ p: 2, bgcolor: 'success.light', color: 'success.contrastText' }}>
                       <Typography variant="body2" gutterBottom>
                         Top Performer
@@ -370,7 +370,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                     </Paper>
                   </Grid>
                   
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     <Paper elevation={1} sx={{ p: 2, bgcolor: 'info.light', color: 'info.contrastText' }}>
                       <Typography variant="body2" gutterBottom>
                         Highest Utilization

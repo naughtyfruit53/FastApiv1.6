@@ -64,7 +64,7 @@ const JobCompletionChart: React.FC<JobCompletionChartProps> = ({ data }) => {
       <CardContent>
         {/* Key Metrics Summary */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Box textAlign="center">
               <Typography variant="h5" color="success.main">
                 {data.completed_jobs}
@@ -75,7 +75,7 @@ const JobCompletionChart: React.FC<JobCompletionChartProps> = ({ data }) => {
             </Box>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Box textAlign="center">
               <Typography variant="h5" color="warning.main">
                 {data.pending_jobs}
@@ -86,7 +86,7 @@ const JobCompletionChart: React.FC<JobCompletionChartProps> = ({ data }) => {
             </Box>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Box textAlign="center">
               <Typography variant="h5" color="error.main">
                 {data.cancelled_jobs}
@@ -97,7 +97,7 @@ const JobCompletionChart: React.FC<JobCompletionChartProps> = ({ data }) => {
             </Box>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Box textAlign="center">
               <Typography variant="h5" color="primary.main">
                 {data.completion_rate.toFixed(1)}%
@@ -171,7 +171,7 @@ const JobCompletionChart: React.FC<JobCompletionChartProps> = ({ data }) => {
           </Typography>
           <Grid container spacing={1}>
             {Object.entries(data.jobs_by_status).map(([status, count]) => (
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6} key={status}>
                 <Paper 
                   elevation={1} 
                   sx={{ 

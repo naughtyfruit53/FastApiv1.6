@@ -23,8 +23,12 @@ class EmployeeProfileBase(BaseModel):
     emergency_contact_relation: Optional[str] = None
     
     # Address details
-    current_address: Optional[str] = None
-    permanent_address: Optional[str] = None
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pin_code: Optional[str] = None
+    country: Optional[str] = Field(default="India")
     
     # Employment details
     hire_date: Optional[date] = None
@@ -43,7 +47,7 @@ class EmployeeProfileBase(BaseModel):
     
     # Documents
     pan_number: Optional[str] = None
-    aadhar_number: Optional[str] = None
+    aadhaar_number: Optional[str] = None
     passport_number: Optional[str] = None
     driving_license: Optional[str] = None
     
@@ -62,50 +66,14 @@ class EmployeeProfileBase(BaseModel):
     # Additional data
     skills: Optional[Dict[str, Any]] = Field(None, description="Employee skills and competencies data. Contains skill categories, proficiency levels, certifications, training history, assessment scores, and skill development plans with timestamps.")
     certifications: Optional[Dict[str, Any]] = Field(None, description="Professional certifications and qualifications. Includes certification names, issuing bodies, issue/expiry dates, certification IDs, renewal requirements, and verification status.")
+    documents: Optional[Dict[str, Any]] = None  # {filename: extracted_data}
     notes: Optional[str] = None
 
 class EmployeeProfileCreate(EmployeeProfileBase):
     user_id: int = Field(..., description="Reference to User table")
 
-class EmployeeProfileUpdate(BaseModel):
-    employee_code: Optional[str] = None
-    employee_type: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    gender: Optional[str] = None
-    marital_status: Optional[str] = None
-    blood_group: Optional[str] = None
-    nationality: Optional[str] = None
-    personal_email: Optional[str] = None
-    personal_phone: Optional[str] = None
-    emergency_contact_name: Optional[str] = None
-    emergency_contact_phone: Optional[str] = None
-    emergency_contact_relation: Optional[str] = None
-    current_address: Optional[str] = None
-    permanent_address: Optional[str] = None
-    hire_date: Optional[date] = None
-    confirmation_date: Optional[date] = None
-    probation_period_months: Optional[int] = None
-    reporting_manager_id: Optional[int] = None
-    job_title: Optional[str] = None
-    job_level: Optional[str] = None
-    work_location: Optional[str] = None
-    work_type: Optional[str] = None
-    salary_currency: Optional[str] = None
-    pan_number: Optional[str] = None
-    aadhar_number: Optional[str] = None
-    passport_number: Optional[str] = None
-    driving_license: Optional[str] = None
-    bank_account_number: Optional[str] = None
-    bank_name: Optional[str] = None
-    bank_ifsc: Optional[str] = None
-    bank_branch: Optional[str] = None
-    employment_status: Optional[str] = None
-    resignation_date: Optional[date] = None
-    last_working_date: Optional[date] = None
-    resignation_reason: Optional[str] = None
-    skills: Optional[Dict[str, Any]] = None
-    certifications: Optional[Dict[str, Any]] = None
-    notes: Optional[str] = None
+class EmployeeProfileUpdate(EmployeeProfileBase):
+    pass  # All fields optional for update
 
 class EmployeeProfileResponse(EmployeeProfileBase):
     model_config = ConfigDict(from_attributes=True)

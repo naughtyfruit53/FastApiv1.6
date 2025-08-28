@@ -447,7 +447,7 @@ const NotificationTemplates: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Template Name"
@@ -456,7 +456,7 @@ const NotificationTemplates: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Template Type</InputLabel>
                 <Select
@@ -472,7 +472,7 @@ const NotificationTemplates: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Channel</InputLabel>
                 <Select
@@ -488,7 +488,7 @@ const NotificationTemplates: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <FormControlLabel
                 control={
                   <Switch
@@ -499,7 +499,7 @@ const NotificationTemplates: React.FC = () => {
                 label="Active"
               />
             </Grid>
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Description"
@@ -510,7 +510,7 @@ const NotificationTemplates: React.FC = () => {
               />
             </Grid>
             {formData.channel === 'email' && (
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Subject"
@@ -519,7 +519,7 @@ const NotificationTemplates: React.FC = () => {
                 />
               </Grid>
             )}
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Message Body"
@@ -532,7 +532,7 @@ const NotificationTemplates: React.FC = () => {
               />
             </Grid>
             {formData.channel === 'email' && (
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="HTML Body (Optional)"
@@ -544,7 +544,7 @@ const NotificationTemplates: React.FC = () => {
                 />
               </Grid>
             )}
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Trigger Event (Optional)"

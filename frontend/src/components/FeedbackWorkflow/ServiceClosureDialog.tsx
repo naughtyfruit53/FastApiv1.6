@@ -311,7 +311,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
         <Grid container spacing={3}>
           {/* Action Selection for Existing Closures */}
           {currentClosure && isManager && (
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -357,7 +357,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
           {/* Create New Closure Form */}
           {!currentClosure && (
             <>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Closure Reason</InputLabel>
                   <Select
@@ -377,7 +377,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                 </FormControl>
               </Grid>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -395,7 +395,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                 />
               </Grid>
 
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   multiline
@@ -407,7 +407,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -426,7 +426,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
               </Grid>
 
               {formData.escalation_required && (
-                <Grid size={{ xs: 12 }}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     multiline
@@ -443,7 +443,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
 
           {/* Approval Form */}
           {action === 'approve' && (
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 multiline
@@ -458,7 +458,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
 
           {/* Final Closure Form */}
           {action === 'close' && (
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 multiline
@@ -473,7 +473,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
 
           {/* Reopen Form */}
           {action === 'reopen' && (
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 multiline
@@ -489,14 +489,14 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
 
           {/* Current Closure Details */}
           {currentClosure && action === 'create' && (
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Closure Details
                   </Typography>
                   <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">
                         Reason
                       </Typography>
@@ -504,7 +504,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                         {CLOSURE_REASONS.find(r => r.value === currentClosure.closure_reason)?.label || currentClosure.closure_reason}
                       </Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">
                         Created At
                       </Typography>
@@ -513,7 +513,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                       </Typography>
                     </Grid>
                     {currentClosure.closure_notes && (
-                      <Grid size={{ xs: 12 }}>
+                      <Grid item xs={12}>
                         <Typography variant="body2" color="text.secondary">
                           Notes
                         </Typography>
@@ -523,7 +523,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                       </Grid>
                     )}
                     {currentClosure.escalation_required && (
-                      <Grid size={{ xs: 12 }}>
+                      <Grid item xs={12}>
                         <Alert severity="warning">
                           <Typography variant="body2">
                             <strong>Escalation Required:</strong> {currentClosure.escalation_reason}

@@ -315,7 +315,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
         <Collapse in={showFiltersPanel}>
           <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 3 }}>
+              <Grid item xs={12} sm={3}>
                 <TextField
                   select
                   fullWidth
@@ -332,7 +332,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   ))}
                 </TextField>
               </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
+              <Grid item xs={12} sm={3}>
                 <TextField
                   select
                   fullWidth
@@ -348,7 +348,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   <MenuItem value="in_app">In-App</MenuItem>
                 </TextField>
               </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
+              <Grid item xs={12} sm={3}>
                 <TextField
                   select
                   fullWidth
@@ -364,7 +364,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   <MenuItem value="feedback_request">Feedback Request</MenuItem>
                 </TextField>
               </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
+              <Grid item xs={12} sm={3}>
                 <TextField
                   select
                   fullWidth

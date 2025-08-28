@@ -65,7 +65,7 @@ const NotificationDemo: React.FC = () => {
 
         <Grid container spacing={4}>
           {/* Notification Bell Demo */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -88,7 +88,7 @@ const NotificationDemo: React.FC = () => {
           </Grid>
 
           {/* Settings Modal Demo */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -116,7 +116,7 @@ const NotificationDemo: React.FC = () => {
           </Grid>
 
           {/* Alerts Feed Demo */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -139,13 +139,13 @@ const NotificationDemo: React.FC = () => {
           </Grid>
 
           {/* Feature Overview */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 🚀 Implemented Features
               </Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
                   <Box sx={{ textAlign: 'center', p: 2 }}>
                     <Notifications color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="subtitle2" gutterBottom>
@@ -156,7 +156,7 @@ const NotificationDemo: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
                   <Box sx={{ textAlign: 'center', p: 2 }}>
                     <Settings color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="subtitle2" gutterBottom>
@@ -167,7 +167,7 @@ const NotificationDemo: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
                   <Box sx={{ textAlign: 'center', p: 2 }}>
                     <Send color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="subtitle2" gutterBottom>
@@ -178,7 +178,7 @@ const NotificationDemo: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
                   <Box sx={{ textAlign: 'center', p: 2 }}>
                     <Dashboard color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="subtitle2" gutterBottom>
@@ -194,13 +194,13 @@ const NotificationDemo: React.FC = () => {
           </Grid>
 
           {/* Implementation Status */}
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 📋 Implementation Status
               </Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="success.main" gutterBottom>
                     ✅ Completed Backend Features
                   </Typography>
@@ -214,7 +214,7 @@ const NotificationDemo: React.FC = () => {
                     <li>Unit tests and service validation</li>
                   </ul>
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="success.main" gutterBottom>
                     ✅ Completed Frontend Features
                   </Typography>

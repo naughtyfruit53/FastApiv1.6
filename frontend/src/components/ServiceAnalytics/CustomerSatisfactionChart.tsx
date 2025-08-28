@@ -89,7 +89,7 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
 
         {/* Rating Breakdown */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h6" sx={{ color: getRatingColor(data.average_service_quality || 0) }}>
                 {formatRating(data.average_service_quality)}
@@ -100,7 +100,7 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h6" sx={{ color: getRatingColor(data.average_technician_rating || 0) }}>
                 {formatRating(data.average_technician_rating)}
@@ -111,7 +111,7 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h6" sx={{ color: getRatingColor(data.average_timeliness_rating || 0) }}>
                 {formatRating(data.average_timeliness_rating)}
@@ -122,7 +122,7 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h6" sx={{ color: getRatingColor(data.average_communication_rating || 0) }}>
                 {formatRating(data.average_communication_rating)}
@@ -188,7 +188,7 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Typography>
             <Grid container spacing={1}>
               {Object.entries(data.satisfaction_distribution).map(([level, count]) => (
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid item xs={12} sm={4} key={level}>
                   <Paper 
                     elevation={1} 
                     sx={{ 

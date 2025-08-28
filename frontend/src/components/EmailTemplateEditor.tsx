@@ -294,7 +294,7 @@ Best regards,
         {/* Template Settings Tab */}
         <TabPanel value={activeTab} index={0}>
           <Grid container spacing={3}>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Template Name"
@@ -303,7 +303,7 @@ Best regards,
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Template Type</InputLabel>
                 <Select
@@ -319,7 +319,7 @@ Best regards,
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Description"
@@ -329,7 +329,7 @@ Best regards,
                 rows={2}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Trigger Event"
@@ -338,7 +338,7 @@ Best regards,
                 helperText="When should this template be automatically sent?"
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Channel</InputLabel>
                 <Select
@@ -358,7 +358,7 @@ Best regards,
         {/* Email Content Tab */}
         <TabPanel value={activeTab} index={1}>
           <Grid container spacing={3}>
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Email Subject"
@@ -368,7 +368,7 @@ Best regards,
                 helperText="Use {{variable_name}} for dynamic content"
               />
             </Grid>
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Email Body (Plain Text)"
@@ -380,7 +380,7 @@ Best regards,
                 helperText="Plain text version of the email"
               />
             </Grid>
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Email Body (HTML)"
@@ -404,7 +404,7 @@ Best regards,
           </Typography>
 
           <Grid container spacing={3}>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <Paper sx={{ p: 2 }}>
                 <Typography variant="subtitle1" gutterBottom>
                   Available Variables
@@ -435,7 +435,7 @@ Best regards,
               </Paper>
             </Grid>
             
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <Paper sx={{ p: 2 }}>
                 <Typography variant="subtitle1" gutterBottom>
                   Used Variables

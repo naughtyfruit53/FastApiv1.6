@@ -47,7 +47,7 @@ const StockBulkImportPage: NextPage = () => {
 
       <Grid container spacing={3}>
         {/* Instructions */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
@@ -61,7 +61,7 @@ const StockBulkImportPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
@@ -75,7 +75,7 @@ const StockBulkImportPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
@@ -90,7 +90,7 @@ const StockBulkImportPage: NextPage = () => {
         </Grid>
 
         {/* Main Import Component */}
-        <Grid size={{ xs: 12 }}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
             <StockBulkImport />
           </Paper>

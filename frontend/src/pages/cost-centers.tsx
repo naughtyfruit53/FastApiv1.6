@@ -210,7 +210,7 @@ const CostCenters: React.FC = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} mb={3}>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid item xs={12} sm={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -228,7 +228,7 @@ const CostCenters: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid item xs={12} sm={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -246,7 +246,7 @@ const CostCenters: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid item xs={12} sm={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -273,7 +273,7 @@ const CostCenters: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Cost Center Hierarchy */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid item xs={12} md={4}>
           <Paper sx={{ p: 2, height: 500, overflow: 'auto' }}>
             <Typography variant="h6" gutterBottom>
               Cost Center Hierarchy
@@ -289,7 +289,7 @@ const CostCenters: React.FC = () => {
         </Grid>
 
         {/* Cost Centers Table */}
-        <Grid size={{ xs: 12, md: 8 }}>
+        <Grid item xs={12} md={8}>
           <Paper>
             <TableContainer sx={{ maxHeight: 500 }}>
               <Table stickyHeader>
@@ -404,7 +404,7 @@ const CostCenters: React.FC = () => {
         <DialogTitle>Create Cost Center</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Cost Center Code"
@@ -413,7 +413,7 @@ const CostCenters: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Cost Center Name"
@@ -422,7 +422,7 @@ const CostCenters: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Parent Cost Center</InputLabel>
                 <Select
@@ -439,7 +439,7 @@ const CostCenters: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Department"
@@ -447,7 +447,7 @@ const CostCenters: React.FC = () => {
                 onChange={(e) => setCreateData(prev => ({ ...prev, department: e.target.value }))}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 type="number"
@@ -458,7 +458,7 @@ const CostCenters: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12 }}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 multiline

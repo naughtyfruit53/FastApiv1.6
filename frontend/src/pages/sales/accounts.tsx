@@ -349,7 +349,7 @@ const AccountManagement: React.FC = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -361,7 +361,7 @@ const AccountManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -373,7 +373,7 @@ const AccountManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -385,7 +385,7 @@ const AccountManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -554,7 +554,7 @@ const AccountManagement: React.FC = () => {
               
               {tabValue === 0 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Account Name"
@@ -562,7 +562,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <FormControl fullWidth disabled={dialogMode === 'view'}>
                       <InputLabel>Account Type</InputLabel>
                       <Select value={selectedAccount.type} label="Account Type">
@@ -573,7 +573,7 @@ const AccountManagement: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Industry"
@@ -581,7 +581,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <FormControl fullWidth disabled={dialogMode === 'view'}>
                       <InputLabel>Company Size</InputLabel>
                       <Select value={selectedAccount.size} label="Company Size">
@@ -592,7 +592,7 @@ const AccountManagement: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <FormControl fullWidth disabled={dialogMode === 'view'}>
                       <InputLabel>Status</InputLabel>
                       <Select value={selectedAccount.status} label="Status">
@@ -602,7 +602,7 @@ const AccountManagement: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Account Manager"
@@ -615,7 +615,7 @@ const AccountManagement: React.FC = () => {
               
               {tabValue === 1 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Phone"
@@ -623,7 +623,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Email"
@@ -632,7 +632,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Website"
@@ -640,7 +640,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Primary Contact"
@@ -648,7 +648,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Address"
@@ -656,7 +656,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
+                  <Grid item xs={12} md={4}>
                     <TextField
                       fullWidth
                       label="City"
@@ -664,7 +664,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
+                  <Grid item xs={12} md={4}>
                     <TextField
                       fullWidth
                       label="State"
@@ -672,7 +672,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
+                  <Grid item xs={12} md={4}>
                     <TextField
                       fullWidth
                       label="Zip Code"
@@ -685,7 +685,7 @@ const AccountManagement: React.FC = () => {
               
               {tabValue === 2 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Annual Revenue"
@@ -694,7 +694,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Number of Employees"
@@ -703,7 +703,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Total Contracts"
@@ -712,7 +712,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Total Revenue with Us"
@@ -721,7 +721,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Description"
@@ -736,7 +736,7 @@ const AccountManagement: React.FC = () => {
               
               {tabValue === 3 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Source"
@@ -744,7 +744,7 @@ const AccountManagement: React.FC = () => {
                       disabled={dialogMode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       label="Last Activity Date"
@@ -754,7 +754,7 @@ const AccountManagement: React.FC = () => {
                       InputLabelProps={{ shrink: true }}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid item xs={12}>
                     <Typography variant="h6" gutterBottom>Recent Activities</Typography>
                     <List>
                       <ListItem>

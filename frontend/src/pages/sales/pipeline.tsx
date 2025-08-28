@@ -226,7 +226,7 @@ const SalesPipeline: React.FC = () => {
 
       {/* Pipeline Summary */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -238,7 +238,7 @@ const SalesPipeline: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -250,7 +250,7 @@ const SalesPipeline: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -262,7 +262,7 @@ const SalesPipeline: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -298,7 +298,7 @@ const SalesPipeline: React.FC = () => {
               const stageOpps = opportunities[stage.id] || [];
               
               return (
-                <Grid size={{ xs: 12 }}>
+                <Grid item xs={12} md={2.4} key={stage.id}>
                   <Paper 
                     sx={{ 
                       p: 2, 

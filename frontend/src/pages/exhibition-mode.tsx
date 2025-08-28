@@ -354,7 +354,7 @@ const ExhibitionMode: React.FC = () => {
 
           <Grid container spacing={3}>
             {events?.map(event => (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+              <Grid item xs={12} md={6} lg={4} key={event.id}>
                 <Card 
                   sx={{ 
                     cursor: 'pointer',

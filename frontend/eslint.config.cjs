@@ -13,21 +13,6 @@ const compat = new FlatCompat({
 });
 
 module.exports = [
-  // Global ignores first
-  {
-    ignores: [
-      'src/pages/vouchers/Manufacturing-Vouchers/**',
-      'src/components/DispatchManagement/**',
-      'src/pages/service/dispatch.tsx',
-      'src/components/NotificationLogs.tsx',
-      'src/components/SendNotification.tsx',
-      'node_modules/**',
-      '.next/**',
-      'out/**',
-      'build/**',
-      'dist/**'
-    ],
-  },
   ...compat.extends(
     'next/core-web-vitals',
     'plugin:@typescript-eslint/recommended'
@@ -65,8 +50,7 @@ module.exports = [
       'no-useless-escape': 'off',
       'no-console': 'off',
       'react/jsx-no-undef': 'error',
-      'react/no-unescaped-entities': 'off',  // Off for quote issues in JSX strings
-      'react/jsx-key': 'off' // Temporarily off to focus on main functionality
+      'react/no-unescaped-entities': 'off'  // Off for quote issues in JSX strings
     },
   },
   // Override for test files

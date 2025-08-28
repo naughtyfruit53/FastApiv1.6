@@ -1,3 +1,5 @@
+// frontend/src/pages/vouchers/Manufacturing-Vouchers/production-order.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -48,6 +50,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import AddBOMModal from '../../../components/AddBOMModal';
 
 interface ManufacturingOrder {
   id?: number;
@@ -93,6 +96,7 @@ const ProductionOrder: React.FC = () => {
   const [filteredVouchers, setFilteredVouchers] = useState<any[]>([]);
   const [selectedBOM, setSelectedBOM] = useState<any>(null);
   const [bomCostBreakdown, setBomCostBreakdown] = useState<any>(null);
+  const [showAddBOMModal, setShowAddBOMModal] = useState(false);
   const queryClient = useQueryClient();
 
   const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ManufacturingOrder>({
@@ -113,6 +117,12 @@ const ProductionOrder: React.FC = () => {
     queryKey: ['boms'],
     queryFn: () => api.get('/bom').then(res => res.data),
   });
+
+  // Enhanced BOM options with "Create New"
+  const enhancedBOMOptions = [
+    ...(bomList || []),
+    { id: null, bom_name: 'Create New BOM...', version: '' }
+  ];
 
   // Fetch specific manufacturing order
   const { data: orderData, isLoading: isFetching } = useQuery({
@@ -253,6 +263,11 @@ const ProductionOrder: React.FC = () => {
     }
   };
 
+  const handleAddBOM = (newBOM: any) => {
+    setValue('bom_id', newBOM.id);
+    setShowAddBOMModal(false);
+  };
+
   return (
     <Container maxWidth="xl">
       <Grid container spacing={3}>
@@ -316,7 +331,7 @@ const ProductionOrder: React.FC = () => {
                             label={order.priority} 
                             color={getPriorityColor(order.priority)}
                             size="small"
-                          /> */}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -346,7 +361,7 @@ const ProductionOrder: React.FC = () => {
                     disabled
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={4}>
@@ -360,7 +375,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={4}>
@@ -384,10 +399,16 @@ const ProductionOrder: React.FC = () => {
                 {/* BOM Selection */}
                 <Grid size={6}>
                   <Autocomplete
-                    options={bomList || []}
-                    getOptionLabel={(option) => `${option.bom_name} v${option.version}`}
-                    value={bomList?.find((b: any) => b.id === watch('bom_id')) || null}
-                    onChange={(_, newValue) => setValue('bom_id', newValue?.id || 0)}
+                    options={enhancedBOMOptions}
+                    getOptionLabel={(option: any) => option.id === null ? option.bom_name : `${option.bom_name} v${option.version}`}
+                    value={enhancedBOMOptions.find((b: any) => b.id === watch('bom_id')) || null}
+                    onChange={(_, newValue) => {
+                      if (newValue?.id === null) {
+                        setShowAddBOMModal(true);
+                      } else {
+                        setValue('bom_id', newValue?.id || 0);
+                      }
+                    }}
                     disabled={mode === 'view'}
                     renderInput={(params) => (
                       <TextField
@@ -396,9 +417,9 @@ const ProductionOrder: React.FC = () => {
                         error={!!errors.bom_id}
                         size="small"
                         sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                      /> */}
+                      />
                     )}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={3}>
@@ -412,7 +433,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputProps={{ inputProps: { step: 0.01 } }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={3}>
@@ -444,7 +465,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={6}>
@@ -457,7 +478,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 {/* Location Information */}
@@ -469,7 +490,7 @@ const ProductionOrder: React.FC = () => {
                     disabled={mode === 'view'}
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={6}>
@@ -480,7 +501,7 @@ const ProductionOrder: React.FC = () => {
                     disabled={mode === 'view'}
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  /> */}
+                  />
                 </Grid>
 
                 <Grid size={12}>
@@ -492,7 +513,7 @@ const ProductionOrder: React.FC = () => {
                     rows={2}
                     disabled={mode === 'view'}
                     size="small"
-                  /> */}
+                  />
                 </Grid>
 
                 {/* BOM Details */}
@@ -583,6 +604,14 @@ const ProductionOrder: React.FC = () => {
           }
           setContextMenu(null);
         }}
+      />
+
+      {/* Add BOM Modal */}
+      <AddBOMModal
+        open={showAddBOMModal}
+        onClose={() => setShowAddBOMModal(false)}
+        onAdd={handleAddBOM}
+        mode="create"
       />
     </Container>
   );

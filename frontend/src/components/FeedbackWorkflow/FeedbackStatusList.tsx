@@ -393,7 +393,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
           <Grid container spacing={2}>
             {activeTab === 0 ? (
               <>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Status</InputLabel>
                     <Select
@@ -409,7 +409,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Rating</InputLabel>
                     <Select
@@ -426,7 +426,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Satisfaction</InputLabel>
                     <Select
@@ -446,7 +446,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
               </>
             ) : (
               <>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Status</InputLabel>
                     <Select
@@ -462,7 +462,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Manager Approval</InputLabel>
                     <Select
@@ -476,7 +476,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Escalation</InputLabel>
                     <Select
@@ -531,15 +531,15 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
         <DialogContent>
           {selectedFeedback && (
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">Customer</Typography>
                 <Typography variant="body1">{selectedFeedback.customer_name}</Typography>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">Overall Rating</Typography>
                 <Rating value={selectedFeedback.overall_rating} readOnly />
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <Typography variant="body2" color="text.secondary">Comments</Typography>
                 <Typography variant="body1">{selectedFeedback.feedback_comments}</Typography>
               </Grid>

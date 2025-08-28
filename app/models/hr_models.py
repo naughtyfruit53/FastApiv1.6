@@ -40,8 +40,12 @@ class EmployeeProfile(Base):
     emergency_contact_relation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Address details
-    current_address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    permanent_address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    address_line1: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    address_line2: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    state: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    pin_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(String, nullable=True, default="India")
     
     # Employment details
     hire_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
@@ -60,7 +64,7 @@ class EmployeeProfile(Base):
     
     # Documents
     pan_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    aadhar_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    aadhaar_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     passport_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     driving_license: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
@@ -79,6 +83,7 @@ class EmployeeProfile(Base):
     # Additional data
     skills: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     certifications: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    documents: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # {filename: {extracted_data, file_path}}
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Metadata

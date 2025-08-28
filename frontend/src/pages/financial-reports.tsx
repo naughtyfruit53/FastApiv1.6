@@ -342,7 +342,7 @@ const FinancialReports: React.FC = () => {
           {/* Trial Balance */}
           <TabPanel value={activeTab} index={0}>
             <Grid container spacing={3}>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid item xs={12} md={4}>
                 <Card>
                   <CardContent>
                     <Box display="flex" alignItems="center" mb={2}>
@@ -359,10 +359,10 @@ const FinancialReports: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid size={{ xs: 12, md: 8 }}>
+              <Grid item xs={12} md={8}>
                 {trialBalance && (
                   <Grid container spacing={2}>
-                    <Grid size={{ xs: 6 }}>
+                    <Grid item xs={6}>
                       <Card>
                         <CardContent>
                           <Typography color="textSecondary" gutterBottom>
@@ -374,7 +374,7 @@ const FinancialReports: React.FC = () => {
                         </CardContent>
                       </Card>
                     </Grid>
-                    <Grid size={{ xs: 6 }}>
+                    <Grid item xs={6}>
                       <Card>
                         <CardContent>
                           <Typography color="textSecondary" gutterBottom>
@@ -433,11 +433,11 @@ const FinancialReports: React.FC = () => {
           {/* Profit & Loss */}
           <TabPanel value={activeTab} index={1}>
             <Grid container spacing={3}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid size={{ xs: 5 }}>
+                      <Grid item xs={5}>
                         <DatePicker
                           label="From Date"
                           value={fromDate}
@@ -445,7 +445,7 @@ const FinancialReports: React.FC = () => {
                           renderInput={(params) => <TextField {...params} fullWidth />}
                         />
                       </Grid>
-                      <Grid size={{ xs: 5 }}>
+                      <Grid item xs={5}>
                         <DatePicker
                           label="To Date"
                           value={toDate}
@@ -453,7 +453,7 @@ const FinancialReports: React.FC = () => {
                           renderInput={(params) => <TextField {...params} fullWidth />}
                         />
                       </Grid>
-                      <Grid size={{ xs: 2 }}>
+                      <Grid item xs={2}>
                         <Button onClick={fetchProfitLoss} variant="contained" fullWidth>
                           Generate
                         </Button>
@@ -462,7 +462,7 @@ const FinancialReports: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item xs={12} md={6}>
                 {profitLoss && profitLossChartData && (
                   <Card>
                     <CardContent>
@@ -484,7 +484,7 @@ const FinancialReports: React.FC = () => {
               </Box>
             ) : profitLoss ? (
               <Grid container spacing={3} sx={{ mt: 1 }}>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid item xs={12} md={6}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" color="success.main" gutterBottom>
@@ -513,7 +513,7 @@ const FinancialReports: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid item xs={12} md={6}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" color="error.main" gutterBottom>
@@ -542,7 +542,7 @@ const FinancialReports: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={{ xs: 12 }}>
+                <Grid item xs={12}>
                   <Card>
                     <CardContent>
                       <Box display="flex" justifyContent="center" alignItems="center">
@@ -567,7 +567,7 @@ const FinancialReports: React.FC = () => {
           {/* Balance Sheet */}
           <TabPanel value={activeTab} index={2}>
             <Grid container spacing={3}>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid item xs={12} md={4}>
                 <Card>
                   <CardContent>
                     <Box display="flex" alignItems="center" mb={2}>
@@ -584,7 +584,7 @@ const FinancialReports: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid size={{ xs: 12, md: 8 }}>
+              <Grid item xs={12} md={8}>
                 {balanceSheet && balanceSheetChartData && (
                   <Card>
                     <CardContent>
@@ -606,7 +606,7 @@ const FinancialReports: React.FC = () => {
               </Box>
             ) : balanceSheet ? (
               <Grid container spacing={3} sx={{ mt: 1 }}>
-                <Grid size={{ xs: 12, md: 4 }}>
+                <Grid item xs={12} md={4}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" color="primary.main" gutterBottom>
@@ -629,7 +629,7 @@ const FinancialReports: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
+                <Grid item xs={12} md={4}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" color="warning.main" gutterBottom>
@@ -652,7 +652,7 @@ const FinancialReports: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
+                <Grid item xs={12} md={4}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" color="secondary.main" gutterBottom>
@@ -682,11 +682,11 @@ const FinancialReports: React.FC = () => {
           {/* Cash Flow */}
           <TabPanel value={activeTab} index={3}>
             <Grid container spacing={3}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid size={{ xs: 5 }}>
+                      <Grid item xs={5}>
                         <DatePicker
                           label="From Date"
                           value={fromDate}
@@ -694,7 +694,7 @@ const FinancialReports: React.FC = () => {
                           renderInput={(params) => <TextField {...params} fullWidth />}
                         />
                       </Grid>
-                      <Grid size={{ xs: 5 }}>
+                      <Grid item xs={5}>
                         <DatePicker
                           label="To Date"
                           value={toDate}
@@ -702,7 +702,7 @@ const FinancialReports: React.FC = () => {
                           renderInput={(params) => <TextField {...params} fullWidth />}
                         />
                       </Grid>
-                      <Grid size={{ xs: 2 }}>
+                      <Grid item xs={2}>
                         <Button onClick={fetchCashFlow} variant="contained" fullWidth>
                           Generate
                         </Button>
@@ -711,7 +711,7 @@ const FinancialReports: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item xs={12} md={6}>
                 {cashFlow && (
                   <Card>
                     <CardContent>
@@ -742,7 +742,7 @@ const FinancialReports: React.FC = () => {
                     Cash Flow Statement
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 4 }}>
+                    <Grid item xs={12} md={4}>
                       <Typography variant="subtitle1" gutterBottom>
                         Operating Activities
                       </Typography>
@@ -758,7 +758,7 @@ const FinancialReports: React.FC = () => {
                         <Typography variant="body1"><strong>{formatCurrency(cashFlow.net_operating_cash)}</strong></Typography>
                       </Box>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
+                    <Grid item xs={12} md={4}>
                       <Typography variant="subtitle1" gutterBottom>
                         Investing Activities
                       </Typography>
@@ -774,7 +774,7 @@ const FinancialReports: React.FC = () => {
                         <Typography variant="body1"><strong>{formatCurrency(cashFlow.net_investing_cash)}</strong></Typography>
                       </Box>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
+                    <Grid item xs={12} md={4}>
                       <Typography variant="subtitle1" gutterBottom>
                         Financing Activities
                       </Typography>

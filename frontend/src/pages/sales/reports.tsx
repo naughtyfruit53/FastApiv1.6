@@ -323,7 +323,7 @@ const SalesReports: React.FC = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -345,7 +345,7 @@ const SalesReports: React.FC = () => {
           </Card>
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -366,7 +366,7 @@ const SalesReports: React.FC = () => {
           </Card>
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -388,7 +388,7 @@ const SalesReports: React.FC = () => {
           </Card>
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -423,7 +423,7 @@ const SalesReports: React.FC = () => {
       {/* Sales Trends Tab */}
       {tabValue === 0 && (
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Monthly Sales Performance</Typography>
@@ -476,7 +476,7 @@ const SalesReports: React.FC = () => {
       {/* Salesperson Performance Tab */}
       {tabValue === 1 && (
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Salesperson Performance</Typography>
@@ -542,7 +542,7 @@ const SalesReports: React.FC = () => {
       {/* Product Performance Tab */}
       {tabValue === 2 && (
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Product Performance</Typography>
@@ -609,7 +609,7 @@ const SalesReports: React.FC = () => {
       {/* Regional Analysis Tab */}
       {tabValue === 3 && (
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12 }}>
+          <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Regional Performance</Typography>

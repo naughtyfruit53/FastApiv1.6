@@ -115,7 +115,7 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
           </Alert>
           
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Button
                 variant="contained"
                 startIcon={<CloseIcon />}
@@ -126,7 +126,7 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
                 Close Service Ticket
               </Button>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Button
                 variant="outlined"
                 startIcon={<TrendingUpIcon />}
@@ -202,7 +202,7 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
         </Typography>
         
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
                 <Box display="flex" alignItems="center" gap={1}>
@@ -219,7 +219,7 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
                 <Box display="flex" alignItems="center" gap={1}>
@@ -236,7 +236,7 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
                 <Box display="flex" alignItems="center" gap={1}>
@@ -253,7 +253,7 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
             </Paper>
           </Grid>
           
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
                 <Box display="flex" alignItems="center" gap={1}>
@@ -292,7 +292,7 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
 
       <Grid container spacing={3}>
         {/* Role Switcher */}
-        <Grid size={{ xs: 12 }}>
+        <Grid item xs={12}>
           <Card variant="outlined">
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -326,17 +326,17 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
         </Grid>
 
         {/* User Interface */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid item xs={12} md={6}>
           {userRole === 'customer' ? renderCustomerInterface() : renderManagerInterface()}
         </Grid>
 
         {/* Workflow Steps */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid item xs={12} md={6}>
           {renderWorkflowSteps()}
         </Grid>
 
         {/* Features */}
-        <Grid size={{ xs: 12 }}>
+        <Grid item xs={12}>
           {renderFeatures()}
         </Grid>
       </Grid>

@@ -206,7 +206,7 @@ const ChartOfAccountsPage: React.FC = () => {
         {/* Account Type Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           {accountTypes.map((type) => (
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6} md={2.4} key={type.value}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -330,7 +330,7 @@ const ChartOfAccountsPage: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Account Code *"
@@ -338,7 +338,7 @@ const ChartOfAccountsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, account_code: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Account Type</InputLabel>
                   <Select
@@ -354,7 +354,7 @@ const ChartOfAccountsPage: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Account Name *"
@@ -362,7 +362,7 @@ const ChartOfAccountsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, account_name: e.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel>Parent Account</InputLabel>
                   <Select
@@ -383,7 +383,7 @@ const ChartOfAccountsPage: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Description"

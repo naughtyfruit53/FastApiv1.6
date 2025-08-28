@@ -1,10 +1,12 @@
 # app/api/v1/hr.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func, extract
 from typing import List, Optional
 from datetime import date, datetime, timedelta
+import os
+import uuid
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -21,17 +23,19 @@ from app.schemas.hr_schemas import (
     PerformanceReviewCreate, PerformanceReviewUpdate, PerformanceReviewResponse,
     HRDashboard, EmployeeDashboard, AttendanceSummary
 )
+from app.services.pdf_extraction import pdf_extraction_service
 
 router = APIRouter(prefix="/hr", tags=["Human Resources"])
 
 # Employee Profile Management
 @router.post("/employees", response_model=EmployeeProfileResponse)
 async def create_employee_profile(
-    employee_data: EmployeeProfileCreate,
+    employee_data: EmployeeProfileCreate = Depends(),
+    documents: List[UploadFile] = File(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new employee profile"""
+    """Create a new employee profile with optional documents"""
     
     # Check if employee profile already exists for this user
     existing_profile = db.query(EmployeeProfile).filter(
@@ -66,6 +70,33 @@ async def create_employee_profile(
         organization_id=current_user.organization_id,
         created_by_id=current_user.id
     )
+    
+    # Handle document uploads
+    uploaded_docs = []
+    if documents:
+        if len(documents) > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum 5 documents allowed"
+            )
+        
+        for doc in documents:
+            if not doc.filename.lower().endswith('.pdf'):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only PDF documents are allowed"
+                )
+            
+            # Save document
+            doc_path = await pdf_extraction_service._save_temp_file(doc)
+            uploaded_docs.append(doc_path)
+            
+            # Optional: Extract data from document
+            # extracted = await pdf_extraction_service.extract_kyc_data(doc)
+            # Update employee_profile with extracted data if needed
+    
+    # Save documents paths to employee profile
+    employee_profile.documents = uploaded_docs  # Assuming documents is a list field
     
     db.add(employee_profile)
     db.commit()
@@ -137,11 +168,12 @@ async def get_employee(
 @router.put("/employees/{employee_id}", response_model=EmployeeProfileResponse)
 async def update_employee(
     employee_id: int,
-    employee_data: EmployeeProfileUpdate,
+    employee_data: EmployeeProfileUpdate = Depends(),
+    documents: List[UploadFile] = File(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update employee profile"""
+    """Update employee profile with optional new documents"""
     
     employee = db.query(EmployeeProfile).filter(
         and_(
@@ -175,6 +207,25 @@ async def update_employee(
     # Update fields
     for field, value in employee_data.model_dump(exclude_unset=True).items():
         setattr(employee, field, value)
+    
+    # Handle new documents
+    if documents:
+        new_docs = []
+        for doc in documents:
+            if not doc.filename.lower().endswith('.pdf'):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only PDF documents are allowed"
+                )
+            
+            doc_path = await pdf_extraction_service._save_temp_file(doc)
+            new_docs.append(doc_path)
+        
+        # Append new documents (limit total to 5)
+        current_docs = employee.documents or []
+        employee.documents = current_docs + new_docs
+        if len(employee.documents) > 5:
+            employee.documents = employee.documents[-5:]  # Keep latest 5
     
     employee.updated_by_id = current_user.id
     
