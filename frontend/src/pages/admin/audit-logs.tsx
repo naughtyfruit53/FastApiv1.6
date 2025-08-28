@@ -46,7 +46,7 @@ const AuditLogsPage: NextPage = () => {
 
       <Grid container spacing={3}>
         {/* Overview Cards */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -62,7 +62,7 @@ const AuditLogsPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -78,7 +78,7 @@ const AuditLogsPage: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -95,7 +95,7 @@ const AuditLogsPage: NextPage = () => {
         </Grid>
 
         {/* Main Content */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h5" gutterBottom>
               Audit Trail

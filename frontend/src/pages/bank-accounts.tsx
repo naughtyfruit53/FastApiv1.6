@@ -234,7 +234,7 @@ const BankAccounts: React.FC = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -252,7 +252,7 @@ const BankAccounts: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -270,7 +270,7 @@ const BankAccounts: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -428,7 +428,7 @@ const BankAccounts: React.FC = () => {
         <DialogTitle>Create Bank Account</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Chart Account</InputLabel>
                 <Select
@@ -444,7 +444,7 @@ const BankAccounts: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Bank Name"
@@ -453,7 +453,7 @@ const BankAccounts: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Account Number"
@@ -462,7 +462,7 @@ const BankAccounts: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Account Type</InputLabel>
                 <Select
@@ -478,7 +478,7 @@ const BankAccounts: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Branch Name"
@@ -486,7 +486,7 @@ const BankAccounts: React.FC = () => {
                 onChange={(e) => setCreateData(prev => ({ ...prev, branch_name: e.target.value }))}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="IFSC Code"
@@ -494,7 +494,7 @@ const BankAccounts: React.FC = () => {
                 onChange={(e) => setCreateData(prev => ({ ...prev, ifsc_code: e.target.value }))}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="SWIFT Code"
@@ -502,7 +502,7 @@ const BankAccounts: React.FC = () => {
                 onChange={(e) => setCreateData(prev => ({ ...prev, swift_code: e.target.value }))}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Currency</InputLabel>
                 <Select
@@ -518,7 +518,7 @@ const BankAccounts: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -528,7 +528,7 @@ const BankAccounts: React.FC = () => {
                 inputProps={{ step: 0.01 }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -539,7 +539,7 @@ const BankAccounts: React.FC = () => {
                 label="Set as Default Account"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <FormControlLabel
                 control={
                   <Switch

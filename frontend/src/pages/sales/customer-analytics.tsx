@@ -233,7 +233,7 @@ const CustomerAnalytics: React.FC = () => {
         <>
           {/* Key Metrics Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -255,7 +255,7 @@ const CustomerAnalytics: React.FC = () => {
               </Card>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -276,7 +276,7 @@ const CustomerAnalytics: React.FC = () => {
               </Card>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -298,7 +298,7 @@ const CustomerAnalytics: React.FC = () => {
               </Card>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -332,7 +332,7 @@ const CustomerAnalytics: React.FC = () => {
           {/* Customer Overview Tab */}
           {tabValue === 0 && (
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Customer Status Distribution</Typography>
@@ -378,7 +378,7 @@ const CustomerAnalytics: React.FC = () => {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Customer Health Metrics</Typography>
@@ -422,7 +422,7 @@ const CustomerAnalytics: React.FC = () => {
           {/* Customer Segmentation Tab */}
           {tabValue === 1 && (
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Customer Segments by Revenue</Typography>
@@ -468,7 +468,7 @@ const CustomerAnalytics: React.FC = () => {
           {/* Top Customers Tab */}
           {tabValue === 2 && (
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Top Customers by Revenue</Typography>

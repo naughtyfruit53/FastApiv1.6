@@ -87,7 +87,7 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
         
         <Grid container spacing={3}>
           {/* Period Selection */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth>
               <InputLabel>Period</InputLabel>
               <Select
@@ -108,7 +108,7 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           {/* Custom Date Range - Only show when Custom is selected */}
           {localFilters.period === ReportPeriod.CUSTOM && (
             <>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <DatePicker
                   label="Start Date"
                   value={localFilters.start_date ? new Date(localFilters.start_date) : null}
@@ -122,7 +122,7 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
                 />
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <DatePicker
                   label="End Date"
                   value={localFilters.end_date ? new Date(localFilters.end_date) : null}
@@ -140,7 +140,7 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           )}
 
           {/* Technician Filter */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Autocomplete
               options={technicians}
               getOptionLabel={(option) => option.name}
@@ -167,7 +167,7 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           </Grid>
 
           {/* Customer Filter */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Autocomplete
               options={customers}
               getOptionLabel={(option) => option.name}
@@ -194,7 +194,7 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           </Grid>
 
           {/* Action Buttons */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Box display="flex" gap={2} justifyContent="flex-end">
               <Button 
                 variant="outlined" 

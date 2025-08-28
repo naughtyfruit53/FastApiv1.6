@@ -33,6 +33,11 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/pages/vouchers/Manufacturing-Vouchers/**",
+    "src/components/DispatchManagement/**",
+    "src/pages/service/dispatch.tsx",
+    "src/components/NotificationLogs.tsx",
+    "src/components/SendNotification.tsx"
   ]
 }

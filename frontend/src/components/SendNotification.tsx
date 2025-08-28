@@ -309,7 +309,7 @@ const SendNotification: React.FC = () => {
           {/* Single Notification Tab */}
           <TabPanel value={selectedTab} index={0}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Template (Optional)</InputLabel>
                   <Select
@@ -327,7 +327,7 @@ const SendNotification: React.FC = () => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Channel</InputLabel>
                   <Select
@@ -347,7 +347,7 @@ const SendNotification: React.FC = () => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Recipient Type</InputLabel>
                   <Select
@@ -365,7 +365,7 @@ const SendNotification: React.FC = () => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Autocomplete
                   options={singleForm.recipient_type === 'customer' ? customers : users}
                   getOptionLabel={(option) => option.name}
@@ -387,7 +387,7 @@ const SendNotification: React.FC = () => {
 
               {!singleForm.template_id && (
                 <>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Subject"
@@ -396,7 +396,7 @@ const SendNotification: React.FC = () => {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Message Content"
@@ -412,13 +412,13 @@ const SendNotification: React.FC = () => {
               )}
 
               {selectedTemplate && selectedTemplate.variables && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="h6" gutterBottom>
                     Template Variables
                   </Typography>
                   <Grid container spacing={2}>
                     {selectedTemplate.variables.map(variable => (
-                      <Grid item xs={12} sm={6} key={variable}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           fullWidth
                           label={variable}
@@ -437,7 +437,7 @@ const SendNotification: React.FC = () => {
                 </Grid>
               )}
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Box display="flex" gap={2}>
                   <Button
                     variant="contained"
@@ -465,7 +465,7 @@ const SendNotification: React.FC = () => {
           {/* Bulk Notification Tab */}
           <TabPanel value={selectedTab} index={1}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Template (Optional)</InputLabel>
                   <Select
@@ -483,7 +483,7 @@ const SendNotification: React.FC = () => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Channel</InputLabel>
                   <Select
@@ -503,7 +503,7 @@ const SendNotification: React.FC = () => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Recipient Type</InputLabel>
                   <Select
@@ -524,7 +524,7 @@ const SendNotification: React.FC = () => {
               </Grid>
 
               {bulkForm.recipient_type === 'customers' && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Autocomplete
                     multiple
                     options={customers}
@@ -557,7 +557,7 @@ const SendNotification: React.FC = () => {
               )}
 
               {bulkForm.recipient_type === 'segment' && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Segment Name"
@@ -570,7 +570,7 @@ const SendNotification: React.FC = () => {
               )}
 
               {bulkForm.recipient_type === 'users' && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Autocomplete
                     multiple
                     options={users}
@@ -604,7 +604,7 @@ const SendNotification: React.FC = () => {
 
               {!bulkForm.template_id && (
                 <>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Subject"
@@ -613,7 +613,7 @@ const SendNotification: React.FC = () => {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Message Content"
@@ -628,7 +628,7 @@ const SendNotification: React.FC = () => {
                 </>
               )}
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Box display="flex" gap={2}>
                   <Button
                     variant="contained"

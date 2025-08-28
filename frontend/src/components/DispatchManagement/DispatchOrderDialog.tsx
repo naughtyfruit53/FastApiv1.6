@@ -201,7 +201,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
         )}
 
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Customer ID"
@@ -212,7 +212,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Ticket ID"
@@ -223,7 +223,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
@@ -240,7 +240,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Expected Delivery Date"
@@ -251,7 +251,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               multiline
@@ -263,7 +263,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Contact Person"
@@ -272,7 +272,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Contact Number"
@@ -281,7 +281,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Tracking Number"
@@ -290,7 +290,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Courier Name"
@@ -299,7 +299,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               multiline

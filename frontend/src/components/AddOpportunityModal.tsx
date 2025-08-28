@@ -161,13 +161,13 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
           <Box sx={{ mt: 1 }}>
             <Grid container spacing={3}>
               {/* Basic Information */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2 }}>
                   Opportunity Details
                 </Typography>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('name', { 
                     required: 'Opportunity name is required',
@@ -181,7 +181,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('account_name')}
                   label="Account Name"
@@ -190,7 +190,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('contact_name')}
                   label="Contact Name"
@@ -199,7 +199,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('amount', { 
                     required: 'Amount is required',
@@ -218,7 +218,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('probability', {
                     required: 'Probability is required',
@@ -238,7 +238,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Stage</InputLabel>
                   <Controller
@@ -273,7 +273,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Source</InputLabel>
                   <Controller
@@ -302,7 +302,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('close_date', { 
                     required: 'Expected close date is required' 
@@ -320,13 +320,13 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
 
               {/* Additional Information */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Additional Information
                 </Typography>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('description')}
                   label="Description"
@@ -338,7 +338,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('next_step')}
                   label="Next Step"
@@ -349,7 +349,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
 
               {/* Optional Reference Fields */}
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('lead_id')}
                   label="Lead ID (if converted from lead)"
@@ -360,7 +360,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('assigned_to_id')}
                   label="Assigned To (User ID)"

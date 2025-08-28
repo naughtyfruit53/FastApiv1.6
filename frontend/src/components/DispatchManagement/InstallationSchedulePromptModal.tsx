@@ -179,7 +179,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                 )}
 
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Priority</InputLabel>
                       <Select
@@ -196,7 +196,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                     </FormControl>
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <DateTimePicker
                       label="Scheduled Date & Time"
                       value={scheduledDate}
@@ -210,7 +210,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       type="number"
@@ -222,7 +222,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="Assigned Technician ID"
@@ -233,7 +233,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                     />
                   </Grid>
 
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       multiline
@@ -246,7 +246,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="Contact Person"
@@ -256,7 +256,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="Contact Number"
@@ -266,7 +266,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                     />
                   </Grid>
 
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       multiline

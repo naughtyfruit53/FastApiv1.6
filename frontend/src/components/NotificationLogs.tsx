@@ -194,7 +194,7 @@ const NotificationLogs: React.FC = () => {
       {/* Analytics Cards */}
       {analytics && (
         <Grid container spacing={3} mb={3}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -212,7 +212,7 @@ const NotificationLogs: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -232,7 +232,7 @@ const NotificationLogs: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -250,7 +250,7 @@ const NotificationLogs: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -288,7 +288,7 @@ const NotificationLogs: React.FC = () => {
 
           {/* Filters */}
           <Grid container spacing={2} mb={3}>
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Channel</InputLabel>
                 <Select
@@ -306,7 +306,7 @@ const NotificationLogs: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -324,7 +324,7 @@ const NotificationLogs: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Recipient Type</InputLabel>
                 <Select
@@ -340,7 +340,7 @@ const NotificationLogs: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 fullWidth
                 size="small"
@@ -351,7 +351,7 @@ const NotificationLogs: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Box display="flex" gap={1}>
                 <Button
                   variant="outlined"
@@ -504,7 +504,7 @@ const NotificationLogs: React.FC = () => {
           ) : logDetail ? (
             <Box>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Recipient
                   </Typography>
@@ -513,7 +513,7 @@ const NotificationLogs: React.FC = () => {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Channel
                   </Typography>
@@ -523,7 +523,7 @@ const NotificationLogs: React.FC = () => {
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Status
                   </Typography>
@@ -537,7 +537,7 @@ const NotificationLogs: React.FC = () => {
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Created At
                   </Typography>
@@ -547,7 +547,7 @@ const NotificationLogs: React.FC = () => {
                 </Grid>
 
                 {logDetail.subject && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Subject
                     </Typography>
@@ -557,7 +557,7 @@ const NotificationLogs: React.FC = () => {
                   </Grid>
                 )}
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Content
                   </Typography>
@@ -569,7 +569,7 @@ const NotificationLogs: React.FC = () => {
                 </Grid>
 
                 {logDetail.error_message && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="subtitle2" color="error">
                       Error Message
                     </Typography>
@@ -580,7 +580,7 @@ const NotificationLogs: React.FC = () => {
                 )}
 
                 {logDetail.context_data && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Context Data
                     </Typography>
@@ -591,7 +591,7 @@ const NotificationLogs: React.FC = () => {
                 )}
 
                 {/* Timeline */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Timeline
                   </Typography>

@@ -166,13 +166,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           <Box sx={{ mt: 1 }}>
             <Grid container spacing={3}>
               {/* Basic Information */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2 }}>
                   Basic Information
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('first_name', { 
                     required: 'First name is required',
@@ -186,7 +186,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('last_name', { 
                     required: 'Last name is required',
@@ -200,7 +200,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('email', { 
                     required: 'Email is required',
@@ -218,7 +218,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('phone')}
                   label="Phone"
@@ -228,13 +228,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
 
               {/* Company Information */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Company Information
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('company')}
                   label="Company"
@@ -243,7 +243,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('job_title')}
                   label="Job Title"
@@ -252,7 +252,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('website')}
                   label="Website"
@@ -262,13 +262,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
 
               {/* Address Information */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Address Information
                 </Typography>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('address')}
                   label="Address"
@@ -277,7 +277,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('city')}
                   label="City"
@@ -286,7 +286,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('state')}
                   label="State"
@@ -295,7 +295,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('postal_code')}
                   label="Postal Code"
@@ -304,7 +304,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('country')}
                   label="Country"
@@ -314,13 +314,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
 
               {/* Lead Details */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Lead Details
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Source</InputLabel>
                   <Controller
@@ -349,7 +349,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Status</InputLabel>
                   <Controller
@@ -383,7 +383,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('score', {
                     min: { value: 0, message: 'Score must be at least 0' },
@@ -399,7 +399,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('estimated_value', {
                     min: { value: 0, message: 'Value must be positive' }
@@ -414,7 +414,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('expected_close_date')}
                   label="Expected Close Date"
@@ -427,7 +427,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('notes')}
                   label="Notes"

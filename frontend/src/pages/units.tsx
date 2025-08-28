@@ -235,7 +235,7 @@ const UnitsPage: React.FC = () => {
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -252,7 +252,7 @@ const UnitsPage: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -269,7 +269,7 @@ const UnitsPage: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -286,7 +286,7 @@ const UnitsPage: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -425,7 +425,7 @@ const UnitsPage: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Unit Name *"
@@ -433,7 +433,7 @@ const UnitsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Symbol *"
@@ -441,7 +441,7 @@ const UnitsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, symbol: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Description"
@@ -451,7 +451,7 @@ const UnitsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>Unit Type</InputLabel>
                   <Select
@@ -467,7 +467,7 @@ const UnitsPage: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -480,7 +480,7 @@ const UnitsPage: React.FC = () => {
               </Grid>
 
               {/* Alternate Units Section */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMore />}>
                     <Typography variant="h6">
@@ -501,7 +501,7 @@ const UnitsPage: React.FC = () => {
                     
                     {formData.alternate_units.map((altUnit: any, index: number) => (
                       <Grid container spacing={2} key={index} sx={{ mb: 2 }}>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                           <TextField
                             fullWidth
                             label="Unit Name"
@@ -510,7 +510,7 @@ const UnitsPage: React.FC = () => {
                             size="small"
                           />
                         </Grid>
-                        <Grid item xs={3}>
+                        <Grid size={{ xs: 3 }}>
                           <TextField
                             fullWidth
                             label="Symbol"
@@ -519,7 +519,7 @@ const UnitsPage: React.FC = () => {
                             size="small"
                           />
                         </Grid>
-                        <Grid item xs={3}>
+                        <Grid size={{ xs: 3 }}>
                           <TextField
                             fullWidth
                             label="Conversion Factor"
@@ -530,7 +530,7 @@ const UnitsPage: React.FC = () => {
                             helperText={`1 ${formData.symbol} = ${altUnit.conversion_factor} ${altUnit.symbol}`}
                           />
                         </Grid>
-                        <Grid item xs={2}>
+                        <Grid size={{ xs: 2 }}>
                           <IconButton
                             color="error"
                             onClick={() => removeAlternateUnit(index)}

@@ -181,7 +181,7 @@ const CompanyDetailsPage: React.FC = () => {
 
         <Grid container spacing={3}>
           {/* Company Overview Card */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ height: 'fit-content' }}>
               <CardHeader
                 avatar={
@@ -224,7 +224,7 @@ const CompanyDetailsPage: React.FC = () => {
           </Grid>
 
           {/* Company Details Form */}
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Basic Information
@@ -232,7 +232,7 @@ const CompanyDetailsPage: React.FC = () => {
               <Divider sx={{ mb: 3 }} />
 
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Company Name"
@@ -241,7 +241,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Business Type"
@@ -250,7 +250,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Industry"
@@ -259,7 +259,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Website"
@@ -269,14 +269,14 @@ const CompanyDetailsPage: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
                     Contact Information
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Primary Email"
@@ -286,7 +286,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Primary Phone"
@@ -296,14 +296,14 @@ const CompanyDetailsPage: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
                     Address Information
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Address Line 1"
@@ -312,7 +312,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Address Line 2"
@@ -321,7 +321,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <TextField
                     fullWidth
                     label="City"
@@ -330,7 +330,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <TextField
                     fullWidth
                     label="State"
@@ -339,7 +339,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <TextField
                     fullWidth
                     label="PIN Code"
@@ -349,14 +349,14 @@ const CompanyDetailsPage: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
                     Legal Information
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="GST Number"
@@ -365,7 +365,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="PAN Number"
@@ -374,7 +374,7 @@ const CompanyDetailsPage: React.FC = () => {
                     disabled={!editMode}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Company Description"

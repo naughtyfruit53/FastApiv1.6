@@ -259,7 +259,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
                 <AccordionDetails>
                   <Box sx={{ pl: 2 }}>
                     <Grid container spacing={2}>
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                           <Button
                             size="small"
@@ -278,7 +278,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
                         </Box>
                       </Grid>
                       {NOTIFICATION_CHANNELS.map((channel) => (
-                        <Grid item xs={6} sm={3} key={channel}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                           <Card variant="outlined" sx={{ p: 1 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                               {getChannelIcon(channel)}

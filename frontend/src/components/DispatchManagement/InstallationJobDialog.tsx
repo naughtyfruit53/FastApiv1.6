@@ -301,7 +301,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
               <TabPanel value={currentTab} index={0}>
                 {/* Overview Tab */}
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography variant="h6" gutterBottom>Job Information</Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
                       <Box>
@@ -329,7 +329,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                     </Box>
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography variant="h6" gutterBottom>Progress Summary</Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
                       <Box>
@@ -376,7 +376,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       <CardContent>
                         <Typography variant="subtitle2" gutterBottom>Create New Task</Typography>
                         <Grid container spacing={2}>
-                          <Grid item xs={12} md={6}>
+                          <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                               fullWidth
                               label="Task Title"
@@ -385,7 +385,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               size="small"
                             />
                           </Grid>
-                          <Grid item xs={12} md={3}>
+                          <Grid size={{ xs: 12, md: 3 }}>
                             <FormControl fullWidth size="small">
                               <InputLabel>Priority</InputLabel>
                               <Select
@@ -398,7 +398,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               </Select>
                             </FormControl>
                           </Grid>
-                          <Grid item xs={12} md={3}>
+                          <Grid size={{ xs: 12, md: 3 }}>
                             <TextField
                               fullWidth
                               type="number"
@@ -408,7 +408,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               size="small"
                             />
                           </Grid>
-                          <Grid item xs={12}>
+                          <Grid size={{ xs: 12 }}>
                             <TextField
                               fullWidth
                               multiline
@@ -419,7 +419,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               size="small"
                             />
                           </Grid>
-                          <Grid item xs={12}>
+                          <Grid size={{ xs: 12 }}>
                             <Button 
                               variant="contained" 
                               onClick={handleCreateTask}
@@ -497,7 +497,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                   <Typography variant="h6" gutterBottom>Complete Installation Job</Typography>
                   
                   <Grid container spacing={3}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
                         multiline
@@ -509,7 +509,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         multiline
@@ -520,7 +520,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         multiline
@@ -531,7 +531,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <DateTimePicker
                         label="Actual Start Time"
                         value={completionForm.actual_start_time}
@@ -540,7 +540,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <DateTimePicker
                         label="Actual End Time"
                         value={completionForm.actual_end_time}
@@ -549,7 +549,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Box display="flex" flexDirection="column" gap={2}>
                         <FormControlLabel
                           control={
@@ -583,7 +583,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       </Box>
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         multiline
@@ -594,7 +594,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Box>
                         <Typography variant="body2" gutterBottom>Customer Rating</Typography>
                         <Rating
@@ -613,7 +613,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                   <Typography variant="h6" gutterBottom>Completion Details</Typography>
                   
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Typography variant="subtitle2" gutterBottom>Work Performed</Typography>
                       <Typography variant="body2" paragraph>
                         {job.completion_record.work_performed}
@@ -629,7 +629,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       )}
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Typography variant="subtitle2" gutterBottom>Quality & Customer</Typography>
                       <Box display="flex" flexDirection="column" gap={1}>
                         <Chip 
@@ -654,7 +654,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                 </TabPanel>
               )}
             </>
-          )}
+          ) : null}
         </DialogContent>
 
         <DialogActions>
