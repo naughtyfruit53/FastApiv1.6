@@ -358,7 +358,54 @@ export const SERVICE_PERMISSIONS = {
   
   // CRM Admin
   CRM_ADMIN: 'crm_admin',
-  CRM_SETTINGS: 'crm_settings'
+  CRM_SETTINGS: 'crm_settings',
+  
+  // Finance & Accounting
+  FINANCE_DASHBOARD_READ: 'finance_dashboard_read',
+  FINANCE_ACCOUNTS_CREATE: 'finance_accounts_create',
+  FINANCE_ACCOUNTS_READ: 'finance_accounts_read',
+  FINANCE_ACCOUNTS_UPDATE: 'finance_accounts_update',
+  FINANCE_ACCOUNTS_DELETE: 'finance_accounts_delete',
+  
+  // General Ledger
+  GL_ENTRY_CREATE: 'gl_entry_create',
+  GL_ENTRY_READ: 'gl_entry_read',
+  GL_ENTRY_UPDATE: 'gl_entry_update',
+  GL_ENTRY_DELETE: 'gl_entry_delete',
+  GL_RECONCILE: 'gl_reconcile',
+  
+  // Cost Centers
+  COST_CENTER_CREATE: 'cost_center_create',
+  COST_CENTER_READ: 'cost_center_read',
+  COST_CENTER_UPDATE: 'cost_center_update',
+  COST_CENTER_DELETE: 'cost_center_delete',
+  COST_CENTER_BUDGET: 'cost_center_budget',
+  
+  // Bank Management
+  BANK_ACCOUNT_CREATE: 'bank_account_create',
+  BANK_ACCOUNT_READ: 'bank_account_read',
+  BANK_ACCOUNT_UPDATE: 'bank_account_update',
+  BANK_ACCOUNT_DELETE: 'bank_account_delete',
+  BANK_RECONCILIATION: 'bank_reconciliation',
+  
+  // Financial Reports
+  FINANCIAL_REPORTS_READ: 'financial_reports_read',
+  FINANCIAL_REPORTS_EXPORT: 'financial_reports_export',
+  TRIAL_BALANCE_READ: 'trial_balance_read',
+  PROFIT_LOSS_READ: 'profit_loss_read',
+  BALANCE_SHEET_READ: 'balance_sheet_read',
+  CASH_FLOW_READ: 'cash_flow_read',
+  
+  // Financial Analytics
+  FINANCE_ANALYTICS_READ: 'finance_analytics_read',
+  FINANCE_KPI_CREATE: 'finance_kpi_create',
+  FINANCE_KPI_READ: 'finance_kpi_read',
+  FINANCE_KPI_UPDATE: 'finance_kpi_update',
+  FINANCE_KPI_DELETE: 'finance_kpi_delete',
+  
+  // Finance Admin
+  FINANCE_ADMIN: 'finance_admin',
+  FINANCE_SETTINGS: 'finance_settings'
 } as const;
 
 export type ServicePermissionType = typeof SERVICE_PERMISSIONS[keyof typeof SERVICE_PERMISSIONS];

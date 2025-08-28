@@ -328,5 +328,6 @@ export const rbacService = {
 
 // Export permission constants for easy import
 export * from '../types/rbac.types';
+export { SERVICE_PERMISSIONS } from '../types/rbac.types';
 
 export default rbacService;
