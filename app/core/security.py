@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models import User, PlatformUser
+from app.models.user_models import User, PlatformUser
+from app.schemas.user import UserInDB, PlatformUserInDB
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
 
@@ -72,33 +73,13 @@ def verify_token(token: str) -> tuple[Union[str, None], Union[int, None], Union[
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-def check_password_strength(password: str) -> tuple[bool, str]:
-    """Check password strength and return validation result"""
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters long"
-
-    if not any(c.isupper() for c in password):
-        return False, "Password must contain at least one uppercase letter"
-
-    if not any(c.islower() for c in password):
-        return False, "Password must contain at least one lowercase letter"
-
-    if not any(c.isdigit() for c in password):
-        return False, "Password must contain at least one digit"
-
-    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-    if not any(c in special_chars for c in password):
-        return False, "Password must contain at least one special character"
-
-    return True, "Password is strong"
-
 def is_super_admin_email(email: str) -> bool:
     """Check if email belongs to a super admin"""
     super_admin_emails = getattr(settings, 'SUPER_ADMIN_EMAILS', [])
     return email.lower() in [e.lower() for e in super_admin_emails]
 
 # Dependency for FastAPI routes
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> Union[UserInDB, PlatformUserInDB]:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

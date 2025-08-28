@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr, field_validator, Field, ConfigDict
 from typing import Optional, Union
 from datetime import datetime
 from enum import Enum
-from app.core.security import check_password_strength
+# Removed import of check_password_strength from security to break circular import
 
 
 class UserRole(str, Enum):
@@ -46,10 +46,31 @@ class UserCreate(UserBase):
     
     @field_validator('password')
     def validate_password(cls, v):
-        is_strong, msg = check_password_strength(v)
+        is_strong, msg = cls.check_password_strength(v)
         if not is_strong:
             raise ValueError(msg)
         return v
+    
+    @staticmethod
+    def check_password_strength(password: str) -> tuple[bool, str]:
+        """Check password strength and return validation result"""
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters long"
+
+        if not any(c.isupper() for c in password):
+            return False, "Password must contain at least one uppercase letter"
+
+        if not any(c.islower() for c in password):
+            return False, "Password must contain at least one lowercase letter"
+
+        if not any(c.isdigit() for c in password):
+            return False, "Password must contain at least one digit"
+
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(c in special_chars for c in password):
+            return False, "Password must contain at least one special character"
+
+        return True, "Password is strong"
     
     def model_post_init(self, __context):
         """Auto-generate username from email if not provided"""
@@ -128,10 +149,31 @@ class PlatformUserCreate(PlatformUserBase):
     
     @field_validator('password')
     def validate_password(cls, v):
-        is_strong, msg = check_password_strength(v)
+        is_strong, msg = cls.check_password_strength(v)
         if not is_strong:
             raise ValueError(msg)
         return v
+    
+    @staticmethod
+    def check_password_strength(password: str) -> tuple[bool, str]:
+        """Check password strength and return validation result"""
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters long"
+
+        if not any(c.isupper() for c in password):
+            return False, "Password must contain at least one uppercase letter"
+
+        if not any(c.islower() for c in password):
+            return False, "Password must contain at least one lowercase letter"
+
+        if not any(c.isdigit() for c in password):
+            return False, "Password must contain at least one digit"
+
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(c in special_chars for c in password):
+            return False, "Password must contain at least one special character"
+
+        return True, "Password is strong"
 
 
 class PlatformUserUpdate(BaseModel):
@@ -161,10 +203,31 @@ class PasswordChangeRequest(BaseModel):
     
     @field_validator('new_password')
     def validate_password(cls, v):
-        is_strong, msg = check_password_strength(v)
+        is_strong, msg = cls.check_password_strength(v)
         if not is_strong:
             raise ValueError(msg)
         return v
+    
+    @staticmethod
+    def check_password_strength(password: str) -> tuple[bool, str]:
+        """Check password strength and return validation result"""
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters long"
+
+        if not any(c.isupper() for c in password):
+            return False, "Password must contain at least one uppercase letter"
+
+        if not any(c.islower() for c in password):
+            return False, "Password must contain at least one lowercase letter"
+
+        if not any(c.isdigit() for c in password):
+            return False, "Password must contain at least one digit"
+
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(c in special_chars for c in password):
+            return False, "Password must contain at least one special character"
+
+        return True, "Password is strong"
     
     @field_validator('confirm_password')
     def validate_password_match(cls, v, info):
@@ -186,10 +249,31 @@ class PasswordResetRequest(BaseModel):
     
     @field_validator('new_password')
     def validate_password(cls, v):
-        is_strong, msg = check_password_strength(v)
+        is_strong, msg = cls.check_password_strength(v)
         if not is_strong:
             raise ValueError(msg)
         return v
+    
+    @staticmethod
+    def check_password_strength(password: str) -> tuple[bool, str]:
+        """Check password strength and return validation result"""
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters long"
+
+        if not any(c.isupper() for c in password):
+            return False, "Password must contain at least one uppercase letter"
+
+        if not any(c.islower() for c in password):
+            return False, "Password must contain at least one lowercase letter"
+
+        if not any(c.isdigit() for c in password):
+            return False, "Password must contain at least one digit"
+
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(c in special_chars for c in password):
+            return False, "Password must contain at least one special character"
+
+        return True, "Password is strong"
 
 
 class PasswordChangeResponse(BaseModel):

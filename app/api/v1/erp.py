@@ -1,7 +1,4 @@
 # app/api/v1/erp.py
-"""
-ERP Core API endpoints - Chart of Accounts, AP/AR, GST, and Financial Management
-"""
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
@@ -15,8 +12,8 @@ from app.api.v1.auth import get_current_active_user
 from app.core.tenant import TenantQueryMixin, validate_company_setup_for_operations
 from app.core.org_restrictions import require_current_organization_id
 from app.core.rbac_dependencies import check_service_permission
-from app.models import (
-    User, Organization,
+from app.schemas.user import UserInDB
+from app.models.erp_models import (
     ChartOfAccounts, GSTConfiguration, TaxCode, JournalEntry,
     AccountsPayable, AccountsReceivable, PaymentRecord,
     GeneralLedger, CostCenter, BankAccount, BankReconciliation,
@@ -87,7 +84,7 @@ async def get_chart_of_accounts(
     is_active: Optional[bool] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get chart of accounts with filtering options"""
@@ -118,7 +115,7 @@ async def get_chart_of_accounts(
 async def create_chart_of_account(
     account_data: ChartOfAccountsCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new chart of account"""
@@ -183,7 +180,7 @@ async def create_chart_of_account(
 async def get_chart_of_account(
     account_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific chart of account"""
@@ -206,7 +203,7 @@ async def update_chart_of_account(
     account_id: int,
     account_data: ChartOfAccountsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update a chart of account"""
@@ -255,7 +252,7 @@ async def update_chart_of_account(
 async def delete_chart_of_account(
     account_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a chart of account"""
@@ -304,7 +301,7 @@ async def delete_chart_of_account(
 @router.get("/gst-configuration", response_model=List[GSTConfigurationResponse])
 async def get_gst_configurations(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get GST configurations"""
@@ -319,7 +316,7 @@ async def get_gst_configurations(
 async def create_gst_configuration(
     config_data: GSTConfigurationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create GST configuration"""
@@ -354,7 +351,7 @@ async def get_tax_codes(
     tax_type: Optional[str] = None,
     is_active: Optional[bool] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get tax codes with filtering options"""
@@ -376,7 +373,7 @@ async def get_tax_codes(
 async def create_tax_code(
     tax_data: TaxCodeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new tax code"""
@@ -409,7 +406,7 @@ async def create_tax_code(
 async def get_trial_balance(
     as_of_date: date = Query(..., description="As of date for trial balance"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Generate trial balance report"""
@@ -474,7 +471,7 @@ async def get_general_ledger(
     end_date: Optional[date] = None,
     reference_type: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get general ledger entries with filtering options"""
@@ -504,7 +501,7 @@ async def get_general_ledger(
 async def create_general_ledger_entry(
     entry: GeneralLedgerCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new general ledger entry"""
@@ -552,7 +549,7 @@ async def get_cost_centers(
     is_active: Optional[bool] = None,
     parent_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get cost centers with filtering options"""
@@ -574,7 +571,7 @@ async def get_cost_centers(
 async def create_cost_center(
     cost_center: CostCenterCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new cost center"""
@@ -618,7 +615,7 @@ async def get_bank_accounts(
     limit: int = 100,
     is_active: Optional[bool] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get bank accounts with filtering options"""
@@ -637,7 +634,7 @@ async def get_bank_accounts(
 async def create_bank_account(
     bank_account: BankAccountCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new bank account"""
@@ -681,7 +678,7 @@ async def get_financial_kpis(
     period_start: Optional[date] = None,
     period_end: Optional[date] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get financial KPIs with filtering options"""
@@ -706,7 +703,7 @@ async def get_financial_kpis(
 async def create_financial_kpi(
     kpi: FinancialKPICreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new financial KPI"""
@@ -733,7 +730,7 @@ async def create_financial_kpi(
 @router.get("/dashboard")
 async def get_financial_dashboard(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get financial dashboard data"""

@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.core.security import get_current_user
 from app.models.user_models import User
 from app.models.hr_models import EmployeeProfile, AttendanceRecord
 from app.models.payroll_models import (
