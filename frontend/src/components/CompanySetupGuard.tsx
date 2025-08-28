@@ -51,8 +51,13 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
       return;
     }
 
-    // Show modal immediately if company setup is required
-    if (isCompanySetupRequired) {
+    // Skip if company query is still loading to avoid premature modal display
+    if (companyLoading) {
+      return;
+    }
+
+    // Only show modal if company setup is actually required AND modal not already shown
+    if (isCompanySetupRequired && !showCompanyModal) {
       setShowCompanyModal(true);
       
       // Show appropriate toast notification based on route
@@ -71,7 +76,12 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
         setHasShownToast(true);
       }
     }
-  }, [authLoading, user, isCompanySetupRequired, isRestrictedRoute, hasShownToast, isExemptRoute]);
+    
+    // If company data exists, ensure modal is hidden
+    if (company && showCompanyModal) {
+      setShowCompanyModal(false);
+    }
+  }, [authLoading, user, isCompanySetupRequired, isRestrictedRoute, hasShownToast, isExemptRoute, companyLoading, company, showCompanyModal]);
 
   const handleCompanyModalClose = () => {
     if (isCompanySetupRequired) {

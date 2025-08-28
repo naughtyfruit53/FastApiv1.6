@@ -309,7 +309,7 @@ const ProductionOrder: React.FC = () => {
                             label={order.production_status} 
                             color={getStatusColor(order.production_status)}
                             size="small"
-                          /> */}
+                          />
                         </TableCell>
                         <TableCell>
                           <Chip 

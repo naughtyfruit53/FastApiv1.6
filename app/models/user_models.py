@@ -251,6 +251,12 @@ class Organization(Base):
         "app.models.enhanced_inventory_models.StockAdjustment",
         back_populates="organization"
     )
+    
+    # Exhibition mode relationships
+    exhibition_events: Mapped[List["app.models.exhibition_models.ExhibitionEvent"]] = relationship(
+        "app.models.exhibition_models.ExhibitionEvent",
+        back_populates="organization"
+    )
 
     __table_args__ = (
         Index('idx_org_status_subdomain', 'status', 'subdomain'),

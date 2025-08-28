@@ -42,9 +42,9 @@ export interface DispatchItemBase {
   status: keyof DispatchItemStatus;
 }
 
-export interface DispatchItemCreate extends DispatchItemBase {}
+export type DispatchItemCreate = DispatchItemBase;
 
-export interface DispatchItemUpdate extends Partial<DispatchItemBase> {}
+export type DispatchItemUpdate = Partial<DispatchItemBase>;
 
 export interface DispatchItemInDB extends DispatchItemBase {
   id: number;
@@ -73,7 +73,7 @@ export interface DispatchOrderCreate extends DispatchOrderBase {
   items: DispatchItemCreate[];
 }
 
-export interface DispatchOrderUpdate extends Partial<Omit<DispatchOrderBase, 'items'>> {}
+export type DispatchOrderUpdate = Partial<Omit<DispatchOrderBase, 'items'>>;
 
 export interface DispatchOrderInDB extends DispatchOrderBase {
   id: number;
@@ -241,7 +241,7 @@ export interface CompletionRecordCreate extends CompletionRecordBase {
   installation_job_id: number;
 }
 
-export interface CompletionRecordUpdate extends Partial<CompletionRecordBase> {}
+export type CompletionRecordUpdate = Partial<CompletionRecordBase>;
 
 export interface CompletionRecordInDB extends CompletionRecordBase {
   id: number;

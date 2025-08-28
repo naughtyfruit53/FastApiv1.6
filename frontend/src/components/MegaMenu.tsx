@@ -48,6 +48,7 @@ import {
   SupervisorAccount,
   Engineering,
   Schedule,
+  Payment,
   Feedback,
   AdminPanelSettings,
   NotificationsActive,
