@@ -60,8 +60,8 @@ class EmployeeProfileBase(BaseModel):
     resignation_reason: Optional[str] = None
     
     # Additional data
-    skills: Optional[Dict[str, Any]] = None
-    certifications: Optional[Dict[str, Any]] = None
+    skills: Optional[Dict[str, Any]] = Field(None, description="Employee skills and competencies data. Contains skill categories, proficiency levels, certifications, training history, assessment scores, and skill development plans with timestamps.")
+    certifications: Optional[Dict[str, Any]] = Field(None, description="Professional certifications and qualifications. Includes certification names, issuing bodies, issue/expiry dates, certification IDs, renewal requirements, and verification status.")
     notes: Optional[str] = None
 
 class EmployeeProfileCreate(EmployeeProfileBase):

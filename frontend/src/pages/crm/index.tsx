@@ -38,44 +38,7 @@ import {
   AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
-
-interface Lead {
-  id: number;
-  lead_number: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  status: string;
-  source: string;
-  score: number;
-  estimated_value?: number;
-  created_at: string;
-}
-
-interface Opportunity {
-  id: number;
-  opportunity_number: string;
-  name: string;
-  stage: string;
-  amount: number;
-  probability: number;
-  expected_revenue: number;
-  expected_close_date: string;
-  customer_id?: number;
-  created_at: string;
-}
-
-interface CRMAnalytics {
-  leads_total: number;
-  leads_by_status: Record<string, number>;
-  opportunities_total: number;
-  pipeline_value: number;
-  weighted_pipeline_value: number;
-  conversion_rate: number;
-  win_rate: number;
-}
+import { crmService, Lead, Opportunity, CRMAnalytics } from '../../services/crmService';
 
 const statusColors: Record<string, string> = {
   new: 'default',
@@ -102,6 +65,7 @@ export default function CRMDashboard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [analytics, setAnalytics] = useState<CRMAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openLeadDialog, setOpenLeadDialog] = useState(false);
   const [openOpportunityDialog, setOpenOpportunityDialog] = useState(false);
@@ -112,9 +76,40 @@ export default function CRMDashboard() {
 
   const loadCRMData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Simulate API calls - in production these would be real API calls
-      const mockLeads: Lead[] = [
+      const [leadsData, opportunitiesData, analyticsData] = await Promise.all([
+        crmService.getLeads(),
+        crmService.getOpportunities(),
+        crmService.getAnalytics()
+      ]);
+
+      setLeads(leadsData);
+      setOpportunities(opportunitiesData);
+      setAnalytics(analyticsData);
+    } catch (err: any) {
+      console.error('Error loading CRM data:', err);
+      setError(err.userMessage || 'Failed to load CRM data');
+      
+      // Fallback to empty data to prevent crashes
+      setLeads([]);
+      setOpportunities([]);
+      setAnalytics({
+        total_leads: 0,
+        qualified_leads: 0,
+        total_opportunities: 0,
+        won_opportunities: 0,
+        total_pipeline_value: 0,
+        avg_deal_size: 0,
+        lead_conversion_rate: 0,
+        sales_cycle_length: 0,
+        monthly_sales_target: 0,
+        monthly_sales_actual: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
         {
           id: 1,
           lead_number: 'LD000001',
@@ -183,16 +178,6 @@ export default function CRMDashboard() {
         weighted_pipeline_value: 150000,
         conversion_rate: 13.3,
         win_rate: 75.0,
-      };
-
-      setLeads(mockLeads);
-      setOpportunities(mockOpportunities);
-      setAnalytics(mockAnalytics);
-    } catch (error) {
-      console.error('Error loading CRM data:', error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const filteredLeads = leads.filter(

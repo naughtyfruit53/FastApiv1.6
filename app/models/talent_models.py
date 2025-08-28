@@ -4,9 +4,13 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from datetime import datetime, date
 from decimal import Decimal
+
+if TYPE_CHECKING:
+    from app.models.user_models import Organization, User
+    from app.models.hr_models import EmployeeProfile
 
 # Skills Management
 class SkillCategory(Base):
@@ -34,7 +38,7 @@ class SkillCategory(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     parent_category: Mapped[Optional["SkillCategory"]] = relationship("SkillCategory", remote_side=[id])
     skills: Mapped[List["Skill"]] = relationship("Skill", back_populates="category")
 
@@ -82,7 +86,7 @@ class Skill(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     category: Mapped[Optional["SkillCategory"]] = relationship("SkillCategory", back_populates="skills")
     employee_skills: Mapped[List["EmployeeSkill"]] = relationship("EmployeeSkill", back_populates="skill")
 
@@ -140,10 +144,10 @@ class EmployeeSkill(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
-    employee: Mapped["app.models.hr_models.EmployeeProfile"] = relationship("app.models.hr_models.EmployeeProfile")
+    organization: Mapped["Organization"] = relationship("Organization")
+    employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile")
     skill: Mapped["Skill"] = relationship("Skill", back_populates="employee_skills")
-    assessed_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
+    assessed_by: Mapped[Optional["User"]] = relationship("User")
 
     __table_args__ = (
         UniqueConstraint('employee_id', 'skill_id', name='uq_employee_skill_emp_skill'),
@@ -217,9 +221,9 @@ class TrainingProgram(Base):
     created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_training_program_created_by_id"), nullable=True)
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
-    approved_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User", foreign_keys=[approved_by_id])
-    created_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User", foreign_keys=[created_by_id])
+    organization: Mapped["Organization"] = relationship("Organization")
+    approved_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by_id])
+    created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
     
     # Training relationships
     sessions: Mapped[List["TrainingSession"]] = relationship("TrainingSession", back_populates="program")
@@ -287,9 +291,9 @@ class TrainingSession(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     program: Mapped["TrainingProgram"] = relationship("TrainingProgram", back_populates="sessions")
-    instructor: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
+    instructor: Mapped[Optional["User"]] = relationship("User")
     enrollments: Mapped[List["TrainingEnrollment"]] = relationship("TrainingEnrollment", back_populates="session")
 
     __table_args__ = (
@@ -349,11 +353,11 @@ class TrainingEnrollment(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
-    employee: Mapped["app.models.hr_models.EmployeeProfile"] = relationship("app.models.hr_models.EmployeeProfile")
+    organization: Mapped["Organization"] = relationship("Organization")
+    employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile")
     program: Mapped["TrainingProgram"] = relationship("TrainingProgram", back_populates="enrollments")
     session: Mapped[Optional["TrainingSession"]] = relationship("TrainingSession", back_populates="enrollments")
-    approved_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
+    approved_by: Mapped[Optional["User"]] = relationship("User")
 
     __table_args__ = (
         UniqueConstraint('employee_id', 'program_id', 'session_id', name='uq_training_enrollment_emp_prog_session'),
@@ -402,8 +406,8 @@ class LearningPath(Base):
     created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_learning_path_created_by_id"), nullable=True)
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
-    created_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
+    organization: Mapped["Organization"] = relationship("Organization")
+    created_by: Mapped[Optional["User"]] = relationship("User")
     
     # Learning relationships
     path_programs: Mapped[List["LearningPathProgram"]] = relationship("LearningPathProgram", back_populates="learning_path")
@@ -485,10 +489,10 @@ class EmployeeLearningPath(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
-    employee: Mapped["app.models.hr_models.EmployeeProfile"] = relationship("app.models.hr_models.EmployeeProfile")
+    organization: Mapped["Organization"] = relationship("Organization")
+    employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile")
     learning_path: Mapped["LearningPath"] = relationship("LearningPath", back_populates="employee_paths")
-    assigned_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
+    assigned_by: Mapped[Optional["User"]] = relationship("User")
 
     __table_args__ = (
         UniqueConstraint('employee_id', 'learning_path_id', name='uq_employee_learning_path'),

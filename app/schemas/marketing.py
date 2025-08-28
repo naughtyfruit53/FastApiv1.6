@@ -49,7 +49,7 @@ class CampaignBase(BaseModel):
     objective: Optional[str] = Field(None, description="Campaign objective")
     subject_line: Optional[str] = Field(None, description="Email subject line")
     content: Optional[str] = Field(None, description="Campaign content")
-    creative_assets: Optional[Dict[str, Any]] = Field(None, description="Creative assets")
+    creative_assets: Optional[Dict[str, Any]] = Field(None, description="Creative assets and media files for the campaign. Contains image URLs, video links, document attachments, design specifications, brand guidelines, and asset metadata with versioning information.")
     target_criteria: Optional[Dict[str, Any]] = Field(None, description="Target criteria")
     assigned_to_id: Optional[int] = Field(None, description="Assigned user ID")
     integration_settings: Optional[Dict[str, Any]] = Field(None, description="Integration settings")
