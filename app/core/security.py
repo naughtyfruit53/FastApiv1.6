@@ -93,12 +93,19 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 
     if user_type == "platform":
         user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
+        if not user:
+            print("DEBUG: Platform user not found in DB (security.py), raising credentials_exception")
+            raise credentials_exception
+        
+        print("DEBUG: Authenticated platform user (security.py):", user.email)
+        # Convert SQLAlchemy model to Pydantic schema
+        return PlatformUserInDB.model_validate(user)
     else:
         user = db.query(User).filter(User.email == email).first()
+        if not user:
+            print("DEBUG: User not found in DB (security.py), raising credentials_exception")
+            raise credentials_exception
 
-    if not user:
-        print("DEBUG: User not found in DB (security.py), raising credentials_exception")
-        raise credentials_exception
-
-    print("DEBUG: Authenticated user (security.py):", user.email)
-    return user
+        print("DEBUG: Authenticated user (security.py):", user.email)
+        # Convert SQLAlchemy model to Pydantic schema
+        return UserInDB.model_validate(user)
