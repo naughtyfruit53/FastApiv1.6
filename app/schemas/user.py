@@ -4,7 +4,7 @@
 User schemas for authentication and user management
 """
 from pydantic import BaseModel, EmailStr, field_validator, Field, ConfigDict
-from typing import Optional, Union
+from typing import Optional, Union, TypeAlias
 from datetime import datetime
 from enum import Enum
 # Removed import of check_password_strength from security to break circular import
@@ -393,3 +393,5 @@ class LoginResponse(BaseModel):
     is_first_login: bool = False
     company_details_completed: bool = True
     user: Union[UserResponse, PlatformUserInDB]
+
+CurrentUser: TypeAlias = Union[UserInDB, PlatformUserInDB]

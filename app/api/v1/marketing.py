@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 
 from app.core.database import get_db
-from app.core.tenant import get_current_organization_id
+from app.core.tenant import require_current_organization_id
 from app.models.marketing_models import (
     Campaign, Promotion, PromotionRedemption, CampaignAnalytics,
     MarketingList, MarketingListContact, CampaignType, CampaignStatus, PromotionType
@@ -44,6 +44,19 @@ def generate_campaign_number(db: Session, org_id: int) -> str:
         if not existing:
             return number
 
+def generate_promotion_code(db: Session, org_id: int) -> str:
+    """Generate unique promotion code"""
+    while True:
+        random_suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        code = f"PROMO-{random_suffix}"
+        
+        existing = db.query(Promotion).filter(
+            and_(Promotion.organization_id == org_id, Promotion.promotion_code == code)
+        ).first()
+        
+        if not existing:
+            return code
+
 # Campaign Management Endpoints
 @router.get("/campaigns", response_model=List[CampaignSchema])
 async def get_campaigns(
@@ -54,7 +67,7 @@ async def get_campaigns(
     assigned_to_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get all campaigns with filtering and pagination"""
     query = db.query(Campaign).filter(Campaign.organization_id == org_id)
@@ -86,7 +99,7 @@ async def get_campaigns(
 async def create_campaign(
     campaign_data: CampaignCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new campaign"""
     # Generate unique campaign number
@@ -109,7 +122,7 @@ async def create_campaign(
 async def get_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific campaign"""
     campaign = db.query(Campaign).filter(
@@ -123,10 +136,10 @@ async def get_campaign(
 
 @router.put("/campaigns/{campaign_id}", response_model=CampaignSchema)
 async def update_campaign(
-    campaign_id: int = Path(...),
     campaign_data: CampaignUpdate,
+    campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Update a campaign"""
     campaign = db.query(Campaign).filter(
@@ -151,7 +164,7 @@ async def update_campaign(
 async def delete_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Delete a campaign"""
     campaign = db.query(Campaign).filter(
@@ -173,7 +186,7 @@ async def delete_campaign(
 async def launch_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Launch a campaign"""
     campaign = db.query(Campaign).filter(
@@ -197,7 +210,7 @@ async def launch_campaign(
 async def pause_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Pause a campaign"""
     campaign = db.query(Campaign).filter(
@@ -219,7 +232,7 @@ async def pause_campaign(
 async def complete_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Complete a campaign"""
     campaign = db.query(Campaign).filter(
@@ -249,7 +262,7 @@ async def get_promotions(
     campaign_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get all promotions with filtering and pagination"""
     query = db.query(Promotion).filter(Promotion.organization_id == org_id)
@@ -282,7 +295,7 @@ async def get_promotions(
 async def create_promotion(
     promotion_data: PromotionCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new promotion"""
     # Check if promotion code already exists
@@ -312,7 +325,7 @@ async def create_promotion(
 async def get_promotion(
     promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific promotion"""
     promotion = db.query(Promotion).filter(
@@ -326,10 +339,10 @@ async def get_promotion(
 
 @router.put("/promotions/{promotion_id}", response_model=PromotionSchema)
 async def update_promotion(
-    promotion_id: int = Path(...),
     promotion_data: PromotionUpdate,
+    promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Update a promotion"""
     promotion = db.query(Promotion).filter(
@@ -354,7 +367,7 @@ async def update_promotion(
 async def delete_promotion(
     promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Delete a promotion"""
     promotion = db.query(Promotion).filter(
@@ -383,7 +396,7 @@ async def validate_promotion(
     order_amount: float = Query(..., ge=0),
     customer_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Validate a promotion code"""
     promotion = db.query(Promotion).filter(
@@ -448,10 +461,10 @@ async def validate_promotion(
 
 @router.post("/promotions/{promotion_id}/redeem", response_model=PromotionRedemptionSchema)
 async def redeem_promotion(
-    promotion_id: int = Path(...),
     redemption_data: PromotionRedemptionCreate,
+    promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Redeem a promotion"""
     promotion = db.query(Promotion).filter(
@@ -471,6 +484,28 @@ async def redeem_promotion(
     
     if promotion.valid_until and promotion.valid_until < today:
         raise HTTPException(status_code=400, detail="Promotion expired")
+    
+    # Check minimum purchase amount
+    if promotion.minimum_purchase_amount and redemption_data.order_amount < promotion.minimum_purchase_amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Minimum purchase amount of {promotion.minimum_purchase_amount} required"
+        )
+    
+    # Check usage limits
+    if promotion.usage_limit_total and promotion.current_usage_count >= promotion.usage_limit_total:
+        raise HTTPException(status_code=400, detail="Promotion usage limit reached")
+    
+    if promotion.usage_limit_per_customer and redemption_data.customer_id:
+        customer_usage = db.query(PromotionRedemption).filter(
+            and_(
+                PromotionRedemption.promotion_id == promotion.id,
+                PromotionRedemption.customer_id == redemption_data.customer_id
+            )
+        ).count()
+        
+        if customer_usage >= promotion.usage_limit_per_customer:
+            raise HTTPException(status_code=400, detail="Customer usage limit reached for this promotion")
     
     # Create redemption record
     redemption = PromotionRedemption(
@@ -500,7 +535,7 @@ async def get_marketing_lists(
     is_active: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get all marketing lists"""
     query = db.query(MarketingList).filter(MarketingList.organization_id == org_id)
@@ -530,7 +565,7 @@ async def get_marketing_lists(
 async def create_marketing_list(
     list_data: MarketingListCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new marketing list"""
     # Check if list name already exists
@@ -562,7 +597,7 @@ async def get_marketing_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get marketing analytics for a specific period"""
     # Campaign analytics
@@ -639,7 +674,7 @@ async def get_promotion_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get promotion analytics for a specific period"""
     # Promotion analytics

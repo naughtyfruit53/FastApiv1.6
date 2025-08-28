@@ -17,6 +17,7 @@ class PurchaseOrder(BaseVoucher):
     
     vendor = relationship("Vendor")
     items = relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan")
+    purchase_requisition = relationship("app.models.procurement_models.PurchaseRequisition", back_populates="purchase_order", uselist=False)
     
     __table_args__ = (
         # Unique voucher number per organization

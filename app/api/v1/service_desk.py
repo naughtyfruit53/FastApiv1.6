@@ -1,13 +1,13 @@
 # app/api/v1/service_desk.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, BackgroundTasks, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc, asc
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 
 from app.core.database import get_db
-from app.core.tenant import get_current_organization_id
+from app.core.tenant import require_current_organization_id
 from app.models.service_models import (
     Ticket, SLAPolicy, SLATracking, ChatbotConversation, ChatbotMessage,
     SurveyTemplate, CustomerSurvey, ChannelConfiguration
@@ -63,7 +63,7 @@ async def get_tickets(
     customer_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get all tickets with advanced filtering"""
     query = db.query(Ticket).filter(Ticket.organization_id == org_id)
@@ -107,7 +107,7 @@ async def create_ticket(
     ticket_data: TicketCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new support ticket"""
     # Generate unique ticket number
@@ -134,11 +134,11 @@ async def create_ticket(
 
 @router.post("/tickets/{ticket_id}/escalate", response_model=TicketEscalationResponse)
 async def escalate_ticket(
-    ticket_id: int = Path(...),
     escalation_data: TicketEscalationRequest,
     background_tasks: BackgroundTasks,
+    ticket_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Escalate a ticket"""
     ticket = db.query(Ticket).filter(
@@ -183,7 +183,7 @@ async def escalate_ticket(
 async def bulk_update_tickets(
     bulk_update: BulkTicketUpdate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Bulk update multiple tickets"""
     # Verify all tickets belong to organization
@@ -242,7 +242,7 @@ async def get_chatbot_conversations(
     channel: Optional[str] = Query(None),
     escalated_to_human: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get chatbot conversations"""
     query = db.query(ChatbotConversation).filter(ChatbotConversation.organization_id == org_id)
@@ -266,7 +266,7 @@ async def get_chatbot_conversations(
 async def create_chatbot_conversation(
     conversation_data: ChatbotConversationCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Start a new chatbot conversation"""
     # Generate unique IDs
@@ -289,11 +289,11 @@ async def create_chatbot_conversation(
 
 @router.post("/chatbot/conversations/{conversation_id}/messages", response_model=ChatbotMessageSchema)
 async def add_chatbot_message(
-    conversation_id: str = Path(...),
     message_data: ChatbotMessageCreate,
     background_tasks: BackgroundTasks,
+    conversation_id: str = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Add a message to a chatbot conversation"""
     # Find conversation
@@ -330,12 +330,12 @@ async def add_chatbot_message(
 
 @router.post("/chatbot/conversations/{conversation_id}/escalate")
 async def escalate_conversation_to_human(
+    background_tasks: BackgroundTasks,
     conversation_id: str = Path(...),
     agent_id: Optional[int] = Query(None),
     reason: Optional[str] = Query(None),
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Escalate chatbot conversation to human agent"""
     conversation = db.query(ChatbotConversation).filter(
@@ -378,7 +378,7 @@ async def get_survey_templates(
     template_type: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get survey templates"""
     query = db.query(SurveyTemplate).filter(SurveyTemplate.organization_id == org_id)
@@ -400,7 +400,7 @@ async def get_survey_templates(
 async def create_survey_template(
     template_data: SurveyTemplateCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new survey template"""
     # Check if template name already exists
@@ -428,14 +428,14 @@ async def create_survey_template(
 
 @router.post("/surveys/send")
 async def send_survey(
+    background_tasks: BackgroundTasks,
     template_id: int = Query(...),
     customer_id: Optional[int] = Query(None),
     ticket_id: Optional[int] = Query(None),
     customer_email: Optional[str] = Query(None),
     customer_name: Optional[str] = Query(None),
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Send a survey to a customer"""
     # Verify template exists
@@ -496,12 +496,12 @@ async def get_public_survey(
 
 @router.post("/surveys/{survey_token}/submit")
 async def submit_survey(
+    background_tasks: BackgroundTasks,
     survey_token: str = Path(...),
-    responses: Dict[str, Any] = Query(...),
+    responses: Dict[str, Any] = Body(...),
     overall_rating: Optional[int] = Query(None, ge=1, le=5),
     nps_score: Optional[int] = Query(None, ge=-100, le=100),
     comments: Optional[str] = Query(None),
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """Submit survey responses (no auth required)"""
@@ -541,7 +541,7 @@ async def get_channel_configurations(
     channel_type: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get channel configurations"""
     query = db.query(ChannelConfiguration).filter(ChannelConfiguration.organization_id == org_id)
@@ -560,7 +560,7 @@ async def get_channel_configurations(
 async def create_channel_configuration(
     channel_data: ChannelConfigurationCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new channel configuration"""
     # Check if channel already exists
@@ -593,7 +593,7 @@ async def get_service_desk_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get service desk analytics"""
     # Ticket analytics

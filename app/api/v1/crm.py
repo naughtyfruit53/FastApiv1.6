@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 
 from app.core.database import get_db
-from app.core.tenant import get_current_organization_id
+from app.core.tenant import require_current_organization_id
 from app.models.crm_models import (
     Lead, Opportunity, OpportunityProduct, LeadActivity, OpportunityActivity,
     SalesPipeline, SalesForecast, LeadStatus, LeadSource, OpportunityStage
@@ -59,7 +59,7 @@ async def get_leads(
     assigned_to_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get all leads with filtering and pagination"""
     query = db.query(Lead).filter(Lead.organization_id == org_id)
@@ -93,7 +93,7 @@ async def get_leads(
 async def create_lead(
     lead_data: LeadCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new lead"""
     # Generate unique lead number
@@ -116,7 +116,7 @@ async def create_lead(
 async def get_lead(
     lead_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific lead"""
     lead = db.query(Lead).filter(
@@ -130,10 +130,10 @@ async def get_lead(
 
 @router.put("/leads/{lead_id}", response_model=LeadSchema)
 async def update_lead(
-    lead_id: int = Path(...),
     lead_data: LeadUpdate,
+    lead_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Update a lead"""
     lead = db.query(Lead).filter(
@@ -158,7 +158,7 @@ async def update_lead(
 async def delete_lead(
     lead_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Delete a lead"""
     lead = db.query(Lead).filter(
@@ -175,10 +175,10 @@ async def delete_lead(
 
 @router.post("/leads/{lead_id}/convert", response_model=LeadConversionResponse)
 async def convert_lead(
-    lead_id: int = Path(...),
     conversion_data: LeadConversionRequest,
+    lead_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Convert lead to customer and/or opportunity"""
     lead = db.query(Lead).filter(
@@ -262,7 +262,7 @@ async def convert_lead(
 async def get_lead_activities(
     lead_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get activities for a lead"""
     # Verify lead exists
@@ -281,10 +281,10 @@ async def get_lead_activities(
 
 @router.post("/leads/{lead_id}/activities", response_model=LeadActivitySchema)
 async def create_lead_activity(
-    lead_id: int = Path(...),
     activity_data: LeadActivityCreate,
+    lead_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new lead activity"""
     # Verify lead exists
@@ -321,7 +321,7 @@ async def get_opportunities(
     customer_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get all opportunities with filtering and pagination"""
     query = db.query(Opportunity).filter(Opportunity.organization_id == org_id)
@@ -353,7 +353,7 @@ async def get_opportunities(
 async def create_opportunity(
     opportunity_data: OpportunityCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new opportunity"""
     # Generate unique opportunity number
@@ -379,7 +379,7 @@ async def create_opportunity(
 async def get_opportunity(
     opportunity_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific opportunity"""
     opportunity = db.query(Opportunity).filter(
@@ -393,10 +393,10 @@ async def get_opportunity(
 
 @router.put("/opportunities/{opportunity_id}", response_model=OpportunitySchema)
 async def update_opportunity(
-    opportunity_id: int = Path(...),
     opportunity_data: OpportunityUpdate,
+    opportunity_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Update an opportunity"""
     opportunity = db.query(Opportunity).filter(
@@ -432,7 +432,7 @@ async def get_crm_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(get_current_organization_id)
+    org_id: int = Depends(require_current_organization_id)
 ):
     """Get CRM analytics for a specific period"""
     # Lead analytics

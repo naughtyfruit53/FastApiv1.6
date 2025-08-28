@@ -16,7 +16,7 @@ class Quotation(BaseVoucher):
     terms_conditions = Column(Text)
     
     customer = relationship("Customer")
-    items = relationship("QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
+    items = relationship("app.models.vouchers.presales.QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
     
     __table_args__ = (
         # Unique voucher number per organization

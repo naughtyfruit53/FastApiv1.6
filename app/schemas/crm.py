@@ -190,6 +190,38 @@ class OpportunityInDB(OpportunityBase):
 class Opportunity(OpportunityInDB):
     pass
 
+# Opportunity Activity Schemas
+class OpportunityActivityBase(BaseModel):
+    activity_type: str = Field(..., description="Activity type (call, email, meeting, note, task)")
+    subject: str = Field(..., description="Activity subject")
+    description: Optional[str] = Field(None, description="Activity description")
+    outcome: Optional[str] = Field(None, description="Activity outcome")
+    activity_date: datetime = Field(..., description="Activity date and time")
+    duration_minutes: Optional[int] = Field(None, ge=0, description="Activity duration in minutes")
+
+class OpportunityActivityCreate(OpportunityActivityBase):
+    opportunity_id: int = Field(..., description="Opportunity ID")
+
+class OpportunityActivityUpdate(BaseModel):
+    activity_type: Optional[str] = None
+    subject: Optional[str] = None
+    description: Optional[str] = None
+    outcome: Optional[str] = None
+    activity_date: Optional[datetime] = None
+    duration_minutes: Optional[int] = Field(None, ge=0)
+
+class OpportunityActivityInDB(OpportunityActivityBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    opportunity_id: int
+    created_by_id: Optional[int] = None
+    created_at: datetime
+
+class OpportunityActivity(OpportunityActivityInDB):
+    pass
+
 # Opportunity Product Schemas
 class OpportunityProductBase(BaseModel):
     product_name: str = Field(..., description="Product name")

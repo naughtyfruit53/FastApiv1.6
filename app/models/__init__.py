@@ -1,3 +1,5 @@
+# app/models/__init__.py
+
 # Import all models from the new modular structure for backward compatibility
 from .user_models import (
     PlatformUser, Organization, User, ServiceRole, ServicePermission, 
@@ -90,6 +92,10 @@ from .vouchers import (
     Quotation, QuotationItem, CreditNote, CreditNoteItem,
     DebitNote, DebitNoteItem
 )
+# Import exhibition models
+from .exhibition_models import (
+    ExhibitionEvent, BusinessCardScan, ExhibitionProspect
+)
 
 # No imports from .base as all models have been moved
 
@@ -161,5 +167,8 @@ __all__ = [
     
     # Talent models
     "SkillCategory", "Skill", "EmployeeSkill", "TrainingProgram", "TrainingSession", 
-    "TrainingEnrollment", "LearningPath", "LearningPathProgram", "EmployeeLearningPath"
+    "TrainingEnrollment", "LearningPath", "LearningPathProgram", "EmployeeLearningPath",
+    
+    # Exhibition models
+    "ExhibitionEvent", "BusinessCardScan", "ExhibitionProspect"
 ]

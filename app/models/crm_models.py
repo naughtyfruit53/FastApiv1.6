@@ -89,7 +89,6 @@ class Lead(Base):
     
     # Conversion tracking
     converted_to_customer_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("customers.id", name="fk_lead_converted_customer_id"), nullable=True)
-    converted_to_opportunity_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("opportunities.id", name="fk_lead_converted_opportunity_id"), nullable=True)
     converted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Custom fields (JSON for flexibility)
@@ -105,7 +104,7 @@ class Lead(Base):
     assigned_to: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_to_id])
     created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
     converted_customer: Mapped[Optional["Customer"]] = relationship("Customer")
-    converted_opportunity: Mapped[Optional["Opportunity"]] = relationship("Opportunity")
+    converted_opportunity: Mapped[Optional["Opportunity"]] = relationship("Opportunity", foreign_keys="Opportunity.lead_id", back_populates="lead", uselist=False)
     activities: Mapped[List["LeadActivity"]] = relationship("LeadActivity", back_populates="lead", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -175,7 +174,7 @@ class Opportunity(Base):
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization")
     customer: Mapped[Optional["Customer"]] = relationship("Customer")
-    lead: Mapped[Optional["Lead"]] = relationship("Lead")
+    lead: Mapped[Optional["Lead"]] = relationship("Lead", back_populates="converted_opportunity")
     assigned_to: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_to_id])
     created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
     activities: Mapped[List["OpportunityActivity"]] = relationship("OpportunityActivity", back_populates="opportunity", cascade="all, delete-orphan")

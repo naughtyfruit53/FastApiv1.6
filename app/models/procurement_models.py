@@ -105,7 +105,7 @@ class RFQItem(Base):
 
     # Relationships
     rfq = relationship("RequestForQuotation", back_populates="rfq_items")
-    quotation_items = relationship("QuotationItem", back_populates="rfq_item")
+    quotation_items = relationship("app.models.procurement_models.QuotationItem", back_populates="rfq_item")
 
 
 class VendorRFQ(Base):
@@ -182,7 +182,7 @@ class VendorQuotation(Base):
     organization = relationship("Organization", back_populates="vendor_quotations")
     rfq = relationship("RequestForQuotation", back_populates="quotations")
     vendor = relationship("Vendor", back_populates="quotations")
-    quotation_items = relationship("QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
+    quotation_items = relationship("app.models.procurement_models.QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
     
     # Constraints
     __table_args__ = (
