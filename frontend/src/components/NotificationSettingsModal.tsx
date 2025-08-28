@@ -278,7 +278,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
                         </Box>
                       </Grid>
                       {NOTIFICATION_CHANNELS.map((channel) => (
-                        <Grid size={{ xs: 6, sm: 3 }}>
+                        <Grid key={channel} size={{ xs: 6, sm: 3 }}>
                           <Card variant="outlined" sx={{ p: 1 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                               {getChannelIcon(channel)}

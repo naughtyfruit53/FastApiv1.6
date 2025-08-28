@@ -73,7 +73,7 @@ import {
   Sms,
   Chat,
   SmartToy,
-  Survey,
+  Poll,
   SupportAgent as ServiceDeskIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
@@ -118,15 +118,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     staleTime: 0,
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 10000, // Auto-refetch every 10 seconds for testing
-    onSuccess: (data) => {
-      console.log('Organization data fetched:', {
-        enabled_modules: data.enabled_modules,
-        timestamp: new Date().toISOString()
-      });
-    },
-    onError: (error) => {
-      console.error('Failed to fetch organization data:', error);
-    }
   });
 
   // Query for current user's service permissions
@@ -136,9 +127,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     enabled: !!user && !isAppSuperAdmin(user), // Only fetch for organization users
     retry: false,
     staleTime: 0, // 5 minutes
-    onSuccess: (data) => {
-      console.log('User permissions fetched:', data);
-    }
   });
 
   // Add keyboard event listener for Escape key
@@ -610,7 +598,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Feedback & Surveys',
           items: [
-            { name: 'Customer Surveys', path: '/service-desk/surveys', icon: <Survey /> },
+            { name: 'Customer Surveys', path: '/service-desk/surveys', icon: <Poll /> },
             { name: 'Survey Templates', path: '/service-desk/survey-templates', icon: <NoteAdd /> },
             { name: 'Feedback Analytics', path: '/service-desk/feedback-analytics', icon: <Analytics /> },
             { name: 'Satisfaction Reports', path: '/service-desk/satisfaction', icon: <Feedback /> }

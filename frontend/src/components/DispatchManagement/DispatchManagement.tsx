@@ -207,7 +207,8 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
   };
 
   const renderDispatchOrderRow = (order: DispatchOrderInDB) => {
-    const statusConfig = DISPATCH_ORDER_STATUS_CONFIG[order.status];
+    const statusConfig = DISPATCH_ORDER_STATUS_CONFIG[order.status as keyof typeof DISPATCH_ORDER_STATUS_CONFIG] || 
+                        DISPATCH_ORDER_STATUS_CONFIG.pending;
     
     return (
       <TableRow key={order.id}>
@@ -268,8 +269,10 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
   };
 
   const renderInstallationJobRow = (job: InstallationJobInDB) => {
-    const statusConfig = INSTALLATION_JOB_STATUS_CONFIG[job.status];
-    const priorityConfig = INSTALLATION_JOB_PRIORITY_CONFIG[job.priority];
+    const statusConfig = INSTALLATION_JOB_STATUS_CONFIG[job.status as keyof typeof INSTALLATION_JOB_STATUS_CONFIG] || 
+                        INSTALLATION_JOB_STATUS_CONFIG.scheduled;
+    const priorityConfig = INSTALLATION_JOB_PRIORITY_CONFIG[job.priority as keyof typeof INSTALLATION_JOB_PRIORITY_CONFIG] ||
+                          INSTALLATION_JOB_PRIORITY_CONFIG.medium;
     
     return (
       <TableRow key={job.id}>

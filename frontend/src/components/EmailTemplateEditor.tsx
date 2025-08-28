@@ -400,7 +400,7 @@ Best regards,
             Template Variables
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Variables allow you to personalize emails with dynamic content. Use {{variable_name}} in your template.
+            Variables allow you to personalize emails with dynamic content. Use {`{{variable_name}}`} in your template.
           </Typography>
 
           <Grid container spacing={3}>
