@@ -120,10 +120,14 @@ const CompanyDetails: React.FC = () => {
             <Typography variant="subtitle2">Primary Phone</Typography>
             <Typography>{data?.contact_number}</Typography>
           </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Typography variant="subtitle2">State</Typography>
+            <Typography>{data?.state} ({data?.state_code})</Typography>
+          </Grid>
           <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2">Address</Typography>
             <Typography>
-              {data?.address1}{data?.address2 ? `, ${data?.address2}` : ''}, {data?.city}, {data?.state} {data?.pin_code}
+              {data?.address1}{data?.address2 ? `, ${data?.address2}` : ''}, {data?.city}, {data?.state} - {data?.pin_code}
             </Typography>
           </Grid>
         </Grid>

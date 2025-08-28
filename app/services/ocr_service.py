@@ -1,0 +1,342 @@
+# app/services/ocr_service.py
+
+import os
+import re
+import uuid
+import shutil
+from typing import Dict, Any, Optional, List
+from fastapi import UploadFile, HTTPException, status
+from PIL import Image
+import pytesseract
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class BusinessCardOCRService:
+    """Service for OCR extraction from business cards"""
+    
+    def __init__(self):
+        self.UPLOAD_DIR = "uploads/business_cards"
+        self.MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+        self.ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.tiff', '.bmp'}
+        
+        # Ensure upload directory exists
+        os.makedirs(self.UPLOAD_DIR, exist_ok=True)
+        
+        # Configure tesseract if needed
+        # pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'  # Adjust path as needed
+    
+    async def process_business_card(self, file: UploadFile) -> Dict[str, Any]:
+        """
+        Process uploaded business card image and extract contact information
+        
+        Args:
+            file: Uploaded image file
+            
+        Returns:
+            Dict containing extracted information and metadata
+        """
+        try:
+            # Validate file
+            await self._validate_image_file(file)
+            
+            # Save temporary file
+            temp_file_path = await self._save_temp_file(file)
+            
+            try:
+                # Extract text using OCR
+                raw_text = await self._extract_text_from_image(temp_file_path)
+                
+                # Parse extracted text into structured data
+                extracted_data = self._parse_business_card_text(raw_text)
+                
+                # Calculate confidence score
+                confidence_score = self._calculate_confidence_score(extracted_data, raw_text)
+                
+                return {
+                    "raw_text": raw_text,
+                    "extracted_data": extracted_data,
+                    "confidence_score": confidence_score,
+                    "image_path": temp_file_path,
+                    **extracted_data  # Flatten extracted fields to top level
+                }
+                
+            except Exception as e:
+                # Clean up temp file if processing fails
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+                raise
+                
+        except Exception as e:
+            logger.error(f"Error processing business card: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to process business card: {str(e)}"
+            )
+    
+    async def _validate_image_file(self, file: UploadFile) -> None:
+        """Validate uploaded image file"""
+        
+        if not file.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No file uploaded"
+            )
+        
+        file_ext = os.path.splitext(file.filename.lower())[1]
+        if file_ext not in self.ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File type {file_ext} not allowed. Supported types: {', '.join(self.ALLOWED_EXTENSIONS)}"
+            )
+        
+        if file.size and file.size > self.MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size must be less than 10MB"
+            )
+    
+    async def _save_temp_file(self, file: UploadFile) -> str:
+        """Save uploaded file temporarily"""
+        
+        file_extension = os.path.splitext(file.filename or "")[1]
+        temp_filename = f"{uuid.uuid4()}{file_extension}"
+        temp_file_path = os.path.join(self.UPLOAD_DIR, temp_filename)
+        
+        with open(temp_file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        return temp_file_path
+    
+    async def _extract_text_from_image(self, file_path: str) -> str:
+        """Extract text from image using OCR"""
+        
+        try:
+            # Open and preprocess image
+            image = Image.open(file_path)
+            
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Use pytesseract to extract text
+            # Using multiple PSM modes for better accuracy
+            psm_modes = [6, 8, 13]  # Block, single word, raw line
+            extracted_texts = []
+            
+            for psm in psm_modes:
+                try:
+                    config = f'--oem 3 --psm {psm}'
+                    text = pytesseract.image_to_string(image, config=config)
+                    if text.strip():
+                        extracted_texts.append(text.strip())
+                except Exception as e:
+                    logger.warning(f"OCR with PSM {psm} failed: {str(e)}")
+                    continue
+            
+            # Return the longest extracted text (usually most complete)
+            if extracted_texts:
+                return max(extracted_texts, key=len)
+            else:
+                return ""
+                
+        except Exception as e:
+            logger.error(f"Error extracting text from image {file_path}: {str(e)}")
+            raise
+    
+    def _parse_business_card_text(self, text: str) -> Dict[str, Any]:
+        """Parse raw OCR text into structured contact information"""
+        
+        # Clean up text
+        text = text.strip()
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        
+        # Initialize extracted data
+        extracted = {
+            "full_name": None,
+            "company_name": None,
+            "designation": None,
+            "email": None,
+            "phone": None,
+            "mobile": None,
+            "website": None,
+            "address": None
+        }
+        
+        # Patterns for different types of information
+        patterns = {
+            "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+            "phone": r'(?:\+91[\s\-]?)?(?:\d{3}[\s\-]?\d{3}[\s\-]?\d{4}|\d{10})',
+            "website": r'(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]*\.(?:com|org|net|edu|gov|mil|biz|info|mobi|name|aero|jobs|museum)',
+            "mobile": r'(?:\+91[\s\-]?)?(?:9|8|7|6)\d{9}',
+        }
+        
+        # Extract email
+        email_matches = re.findall(patterns["email"], text, re.IGNORECASE)
+        if email_matches:
+            extracted["email"] = email_matches[0].lower()
+        
+        # Extract phone numbers
+        phone_matches = re.findall(patterns["phone"], text)
+        mobile_matches = re.findall(patterns["mobile"], text)
+        
+        if phone_matches:
+            extracted["phone"] = phone_matches[0]
+        if mobile_matches:
+            extracted["mobile"] = mobile_matches[0]
+        
+        # Extract website
+        website_matches = re.findall(patterns["website"], text, re.IGNORECASE)
+        if website_matches:
+            website = website_matches[0]
+            if not website.startswith(('http://', 'https://')):
+                website = 'https://' + website
+            extracted["website"] = website
+        
+        # Extract name, company, and designation using heuristics
+        self._extract_name_company_designation(lines, extracted)
+        
+        # Extract address (remaining lines that don't match other patterns)
+        address_lines = self._extract_address(lines, extracted)
+        if address_lines:
+            extracted["address"] = ", ".join(address_lines)
+        
+        return extracted
+    
+    def _extract_name_company_designation(self, lines: List[str], extracted: Dict[str, Any]) -> None:
+        """Extract name, company, and designation using heuristics"""
+        
+        # Common designation patterns
+        designation_patterns = [
+            r'\b(?:CEO|CTO|CFO|COO|VP|President|Director|Manager|Engineer|Developer|Analyst|Consultant|Executive|Officer|Head|Lead|Senior|Junior|Assistant)\b',
+            r'\b(?:Chief|Senior|Lead|Principal|Associate|Executive|Regional|National|International)\s+\w+',
+        ]
+        
+        # Company indicators
+        company_indicators = [
+            r'\b(?:Ltd|Limited|Inc|Incorporated|Corp|Corporation|LLC|LLP|Pvt|Private|Co|Company|Group|Solutions|Technologies|Tech|Software|Systems|Services|Enterprises|Industries)\b',
+            r'\b(?:& Co|and Co|& Sons|and Sons|& Associates|and Associates)\b'
+        ]
+        
+        name_line = None
+        company_line = None
+        designation_line = None
+        
+        for i, line in enumerate(lines):
+            # Skip lines that are clearly not names (contain email, phone, website)
+            if any(pattern in line.lower() for pattern in ['@', 'www.', '.com', '+91']):
+                continue
+            
+            # Check for designation patterns
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in designation_patterns):
+                designation_line = line
+                continue
+            
+            # Check for company patterns
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in company_indicators):
+                company_line = line
+                continue
+            
+            # First non-matching line is likely the name (if it looks like a name)
+            if name_line is None and self._looks_like_name(line):
+                name_line = line
+                continue
+            
+            # Second non-matching line might be company if not already found
+            if company_line is None and name_line is not None:
+                company_line = line
+        
+        # Assign extracted values
+        if name_line:
+            extracted["full_name"] = name_line.strip()
+        if company_line:
+            extracted["company_name"] = company_line.strip()
+        if designation_line:
+            extracted["designation"] = designation_line.strip()
+    
+    def _looks_like_name(self, line: str) -> bool:
+        """Check if a line looks like a person's name"""
+        
+        # Basic heuristics for name detection
+        words = line.split()
+        
+        # Should have 1-4 words
+        if len(words) < 1 or len(words) > 4:
+            return False
+        
+        # Should be mostly alphabetic
+        if not all(word.replace('.', '').isalpha() for word in words):
+            return False
+        
+        # Should not contain common non-name words
+        non_name_words = {'the', 'and', 'or', 'of', 'in', 'at', 'to', 'for', 'with', 'by'}
+        if any(word.lower() in non_name_words for word in words):
+            return False
+        
+        return True
+    
+    def _extract_address(self, lines: List[str], extracted: Dict[str, Any]) -> List[str]:
+        """Extract address lines from remaining text"""
+        
+        address_lines = []
+        
+        for line in lines:
+            # Skip lines that are already identified
+            if line == extracted.get("full_name") or \
+               line == extracted.get("company_name") or \
+               line == extracted.get("designation"):
+                continue
+            
+            # Skip lines with email, phone, website
+            if any(pattern in line.lower() for pattern in ['@', 'www.', '.com']) or \
+               re.search(r'\d{10}|\+91', line):
+                continue
+            
+            # Remaining lines are likely address
+            address_lines.append(line)
+        
+        return address_lines
+    
+    def _calculate_confidence_score(self, extracted_data: Dict[str, Any], raw_text: str) -> float:
+        """Calculate confidence score based on extracted data quality"""
+        
+        score = 0.0
+        max_score = 100.0
+        
+        # Check for presence of key fields
+        if extracted_data.get("full_name"):
+            score += 20.0
+        if extracted_data.get("company_name"):
+            score += 20.0
+        if extracted_data.get("email"):
+            score += 25.0
+        if extracted_data.get("phone") or extracted_data.get("mobile"):
+            score += 20.0
+        if extracted_data.get("designation"):
+            score += 10.0
+        if extracted_data.get("website"):
+            score += 5.0
+        
+        # Quality checks
+        if len(raw_text.strip()) > 50:  # Sufficient text extracted
+            score *= 1.0
+        elif len(raw_text.strip()) > 20:
+            score *= 0.8
+        else:
+            score *= 0.5
+        
+        return min(score / max_score, 1.0)  # Normalize to 0-1 range
+    
+    def cleanup_temp_file(self, file_path: str) -> None:
+        """Clean up temporary file"""
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup temp file {file_path}: {str(e)}")
+
+
+# Global service instance
+ocr_service = BusinessCardOCRService()
