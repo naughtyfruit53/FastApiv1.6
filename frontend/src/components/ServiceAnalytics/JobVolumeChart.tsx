@@ -61,7 +61,7 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
       <CardContent>
         {/* Key Volume Metrics */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="primary.main">
                 {data.total_jobs}
@@ -72,7 +72,7 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
             </Paper>
           </Grid>
           
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="info.main">
                 {data.jobs_per_day_average.toFixed(1)}
@@ -83,7 +83,7 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
             </Paper>
           </Grid>
           
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="success.main">
                 {data.peak_day_count}
@@ -94,7 +94,7 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
             </Paper>
           </Grid>
           
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="warning.main">
                 {data.jobs_by_customer.length}
@@ -140,7 +140,7 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
             </Typography>
             <Grid container spacing={1}>
               {Object.entries(data.jobs_by_priority).map(([priority, count]) => (
-                <Grid item xs={6} sm={3} key={priority}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Paper 
                     elevation={1} 
                     sx={{ 

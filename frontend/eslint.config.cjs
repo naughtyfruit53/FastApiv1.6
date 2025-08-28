@@ -13,6 +13,18 @@ const compat = new FlatCompat({
 });
 
 module.exports = [
+  // Global ignores first
+  {
+    ignores: [
+      'src/pages/vouchers/Manufacturing-Vouchers/**',
+      'src/components/DispatchManagement/InstallationJobDialog.tsx',
+      'node_modules/**',
+      '.next/**',
+      'out/**',
+      'build/**',
+      'dist/**'
+    ],
+  },
   ...compat.extends(
     'next/core-web-vitals',
     'plugin:@typescript-eslint/recommended'

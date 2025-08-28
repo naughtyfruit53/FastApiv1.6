@@ -268,7 +268,7 @@ const EmployeesManagement: NextPage = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -286,7 +286,7 @@ const EmployeesManagement: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -304,7 +304,7 @@ const EmployeesManagement: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -322,7 +322,7 @@ const EmployeesManagement: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -344,7 +344,7 @@ const EmployeesManagement: NextPage = () => {
       {/* Filters and Search */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               placeholder="Search employees..."
@@ -359,7 +359,7 @@ const EmployeesManagement: NextPage = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth>
               <InputLabel>Department</InputLabel>
               <Select
@@ -376,7 +376,7 @@ const EmployeesManagement: NextPage = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
@@ -392,7 +392,7 @@ const EmployeesManagement: NextPage = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={2}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <Button
               fullWidth
               variant="outlined"
@@ -547,7 +547,7 @@ const EmployeesManagement: NextPage = () => {
               {dialogTabValue === 0 && (
                 <Box sx={{ mt: 3 }}>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Employee Code"
@@ -556,7 +556,7 @@ const EmployeesManagement: NextPage = () => {
                         helperText="Auto-generated if empty"
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Full Name"
@@ -565,7 +565,7 @@ const EmployeesManagement: NextPage = () => {
                         required
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Email"
@@ -575,7 +575,7 @@ const EmployeesManagement: NextPage = () => {
                         required
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Phone Number"
@@ -583,7 +583,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Date of Birth"
@@ -593,7 +593,7 @@ const EmployeesManagement: NextPage = () => {
                         InputLabelProps={{ shrink: true }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth disabled={dialogMode === 'view'}>
                         <InputLabel>Gender</InputLabel>
                         <Select value={selectedEmployee.gender || ''} label="Gender">
@@ -612,7 +612,7 @@ const EmployeesManagement: NextPage = () => {
               {dialogTabValue === 1 && (
                 <Box sx={{ mt: 3 }}>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Department"
@@ -620,7 +620,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Job Title"
@@ -628,7 +628,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth disabled={dialogMode === 'view'}>
                         <InputLabel>Employee Type</InputLabel>
                         <Select
@@ -642,7 +642,7 @@ const EmployeesManagement: NextPage = () => {
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Work Location"
@@ -650,7 +650,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Hire Date"
@@ -660,7 +660,7 @@ const EmployeesManagement: NextPage = () => {
                         InputLabelProps={{ shrink: true }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Reporting Manager"
@@ -668,7 +668,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Salary"
@@ -680,7 +680,7 @@ const EmployeesManagement: NextPage = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth disabled={dialogMode === 'view'}>
                         <InputLabel>Employment Status</InputLabel>
                         <Select value={selectedEmployee.employment_status || 'active'} label="Employment Status">
@@ -702,7 +702,7 @@ const EmployeesManagement: NextPage = () => {
                     KYC Documents (Indian Requirements)
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Aadhaar Number"
@@ -712,7 +712,7 @@ const EmployeesManagement: NextPage = () => {
                         helperText="12-digit Aadhaar number"
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="PAN Number"
@@ -723,7 +723,7 @@ const EmployeesManagement: NextPage = () => {
                         style={{ textTransform: 'uppercase' }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Employee State Insurance (ESI) Number"
@@ -731,7 +731,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Provident Fund (PF) Number"
@@ -739,7 +739,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="UAN (Universal Account Number)"
@@ -747,7 +747,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Driving License Number"
@@ -755,7 +755,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Passport Number"
@@ -763,7 +763,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Bank Account Number"
@@ -771,7 +771,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="IFSC Code"
@@ -779,7 +779,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Bank Name"
@@ -789,12 +789,12 @@ const EmployeesManagement: NextPage = () => {
                     </Grid>
                     
                     {/* Document Upload Section */}
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                         Document Uploads
                       </Typography>
                       <Grid container spacing={2}>
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                           <Button
                             variant="outlined"
                             component="label"
@@ -806,7 +806,7 @@ const EmployeesManagement: NextPage = () => {
                             <input type="file" hidden accept=".pdf,.jpg,.jpeg,.png" />
                           </Button>
                         </Grid>
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                           <Button
                             variant="outlined"
                             component="label"
@@ -818,7 +818,7 @@ const EmployeesManagement: NextPage = () => {
                             <input type="file" hidden accept=".pdf,.jpg,.jpeg,.png" />
                           </Button>
                         </Grid>
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                           <Button
                             variant="outlined"
                             component="label"
@@ -843,7 +843,7 @@ const EmployeesManagement: NextPage = () => {
                     Contact Information
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Emergency Contact Name"
@@ -851,7 +851,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Emergency Contact Number"
@@ -859,7 +859,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Relationship"
@@ -873,7 +873,7 @@ const EmployeesManagement: NextPage = () => {
                     Current Address
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
                         label="Address Line 1"
@@ -881,7 +881,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
                         label="Address Line 2"
@@ -889,7 +889,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
                         fullWidth
                         label="City"
@@ -897,7 +897,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
                         fullWidth
                         label="State"
@@ -905,7 +905,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
                         fullWidth
                         label="PIN Code"
@@ -913,7 +913,7 @@ const EmployeesManagement: NextPage = () => {
                         disabled={dialogMode === 'view'}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Country"

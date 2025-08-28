@@ -190,7 +190,7 @@ const HRDashboard: NextPage = () => {
 
       {/* Key Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -208,7 +208,7 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -226,7 +226,7 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -244,7 +244,7 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -265,7 +265,7 @@ const HRDashboard: NextPage = () => {
 
       {/* Additional Metrics */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -278,7 +278,7 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -291,7 +291,7 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -304,7 +304,7 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -401,7 +401,7 @@ const HRDashboard: NextPage = () => {
             Quick Actions
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Button
                 variant="outlined"
                 fullWidth
@@ -412,7 +412,7 @@ const HRDashboard: NextPage = () => {
                 Add New Employee
               </Button>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Button
                 variant="outlined"
                 fullWidth
@@ -423,7 +423,7 @@ const HRDashboard: NextPage = () => {
                 Review Leave Applications
               </Button>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Button
                 variant="outlined"
                 fullWidth
@@ -434,7 +434,7 @@ const HRDashboard: NextPage = () => {
                 Attendance Management
               </Button>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Button
                 variant="outlined"
                 fullWidth
@@ -445,7 +445,7 @@ const HRDashboard: NextPage = () => {
                 Performance Reviews
               </Button>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Button
                 variant="outlined"
                 fullWidth
@@ -456,7 +456,7 @@ const HRDashboard: NextPage = () => {
                 Generate Reports
               </Button>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Button
                 variant="outlined"
                 fullWidth

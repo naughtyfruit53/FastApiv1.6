@@ -104,7 +104,7 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
 
             {/* Key Metrics Summary */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
                   <Typography variant="h5" color="success.main">
                     {data.sla_met_count}
@@ -115,7 +115,7 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </Paper>
               </Grid>
               
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
                   <Typography variant="h5" color="error.main">
                     {data.sla_breached_count}
@@ -126,7 +126,7 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </Paper>
               </Grid>
               
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
                   <Typography variant="h5" color="primary.main">
                     {data.total_jobs_with_sla}
@@ -137,7 +137,7 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </Paper>
               </Grid>
               
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
                   <Typography variant="h5" color="info.main">
                     {formatTime(data.average_resolution_time_hours)}
@@ -157,7 +157,7 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </Typography>
                 <Grid container spacing={1}>
                   {Object.entries(data.compliance_by_priority).map(([priority, rate]) => (
-                    <Grid item xs={12} sm={6} md={3} key={priority}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                       <Paper 
                         elevation={1} 
                         sx={{ 
@@ -290,7 +290,7 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 Performance Indicators
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
                     <Box display="flex" alignItems="center" gap={2}>
                       <PerformanceIcon color={getComplianceColor(data.overall_compliance_rate)} />
@@ -308,7 +308,7 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                   </Paper>
                 </Grid>
                 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
                     <Box display="flex" alignItems="center" gap={2}>
                       <TimeIcon color="action" />

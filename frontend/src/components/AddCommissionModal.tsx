@@ -154,13 +154,13 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
           <Box sx={{ mt: 1 }}>
             <Grid container spacing={3}>
               {/* Basic Information */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2 }}>
                   Commission Details
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('sales_person_id', { 
                     required: 'Sales person ID is required',
@@ -176,7 +176,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Commission Type</InputLabel>
                   <Controller
@@ -205,7 +205,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('base_amount', { 
                     required: 'Base amount is required',
@@ -225,7 +225,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
               </Grid>
 
               {commissionType === 'percentage' && (
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     {...register('commission_rate', {
                       min: { value: 0, message: 'Rate must be positive' },
@@ -246,7 +246,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
               )}
 
               {(commissionType === 'fixed_amount' || commissionType === 'bonus') && (
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     {...register('commission_amount', {
                       min: { value: 0, message: 'Amount must be positive' }
@@ -265,7 +265,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                 </Grid>
               )}
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('commission_date', { 
                     required: 'Commission date is required' 
@@ -282,7 +282,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Payment Status</InputLabel>
                   <Controller
@@ -312,13 +312,13 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
               </Grid>
 
               {/* Reference Fields */}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Reference Information (Optional)
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('opportunity_id')}
                   label="Opportunity ID"
@@ -330,7 +330,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('lead_id')}
                   label="Lead ID"
@@ -342,7 +342,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('notes')}
                   label="Notes"
@@ -356,7 +356,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
 
               {/* Calculation Display */}
               {commissionType === 'percentage' && baseAmount && commissionRate && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Calculated Commission Amount
