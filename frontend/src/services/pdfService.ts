@@ -85,32 +85,51 @@ class ProfessionalPdfService {
     };
   }
 
-  private drawHeader(company: CompanyBranding, voucherTitle: string): number {
+  private async loadLogoImage(logoPath: string): Promise<string | null> {
+    try {
+      const response = await fetch(logoPath, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load logo image:', error);
+    }
+    return null;
+  }
+
+  private async drawHeader(company: CompanyBranding, voucherTitle: string): Promise<number> {
     let yPosition = this.margins.top;
 
-    // Company Logo (if available)
+    // Company Logo (if available) - Enhanced to load actual logo
     if (company.logo_path) {
       try {
-        // Create a more realistic logo placeholder with company initial
-        const companyInitial = company.name.charAt(0).toUpperCase();
-        this.doc.setDrawColor(100);
-        this.doc.setFillColor(245, 245, 245);
-        this.doc.roundedRect(this.margins.left, yPosition, 40, 25, 3, 3, 'FD');
-        
-        // Company initial in the logo area
-        this.doc.setFontSize(16);
-        this.doc.setFont('helvetica', 'bold');
-        this.doc.setTextColor(80);
-        this.doc.text(companyInitial, this.margins.left + 20, yPosition + 16, { align: 'center' });
-        
-        // Logo text
-        this.doc.setFontSize(6);
-        this.doc.setTextColor(120);
-        this.doc.text('LOGO', this.margins.left + 20, yPosition + 21, { align: 'center' });
-        this.doc.setTextColor(0);
+        const logoImageData = await this.loadLogoImage(company.logo_path);
+        if (logoImageData) {
+          // Display actual logo image
+          this.doc.addImage(logoImageData, 'JPEG', this.margins.left, yPosition, 40, 25);
+        } else {
+          // Fallback to placeholder if logo fails to load
+          this.drawLogoPlaceholder(company, yPosition);
+        }
       } catch (error) {
         console.warn('Logo display error:', error);
+        // Fallback to placeholder
+        this.drawLogoPlaceholder(company, yPosition);
       }
+    } else {
+      // No logo available, show placeholder
+      this.drawLogoPlaceholder(company, yPosition);
     }
 
     // Company Information (right aligned)
@@ -162,6 +181,26 @@ class ProfessionalPdfService {
     this.doc.line(this.margins.left, yPosition, this.pageWidth - this.margins.right, yPosition);
     
     return yPosition + 10;
+  }
+
+  private drawLogoPlaceholder(company: CompanyBranding, yPosition: number): void {
+    // Create a more realistic logo placeholder with company initial
+    const companyInitial = company.name.charAt(0).toUpperCase();
+    this.doc.setDrawColor(100);
+    this.doc.setFillColor(245, 245, 245);
+    this.doc.roundedRect(this.margins.left, yPosition, 40, 25, 3, 3, 'FD');
+    
+    // Company initial in the logo area
+    this.doc.setFontSize(16);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setTextColor(80);
+    this.doc.text(companyInitial, this.margins.left + 20, yPosition + 16, { align: 'center' });
+    
+    // Logo text
+    this.doc.setFontSize(6);
+    this.doc.setTextColor(120);
+    this.doc.text('LOGO', this.margins.left + 20, yPosition + 21, { align: 'center' });
+    this.doc.setTextColor(0);
   }
 
   private drawVoucherDetails(voucher: VoucherData, yPosition: number): number {
@@ -464,8 +503,8 @@ class ProfessionalPdfService {
       // Load company branding
       const company = await this.loadCompanyBranding();
       
-      // Draw header
-      let yPosition = this.drawHeader(company, options.voucherTitle);
+      // Draw header (now async to handle logo loading)
+      let yPosition = await this.drawHeader(company, options.voucherTitle);
       
       // Draw voucher details
       yPosition = this.drawVoucherDetails(voucher, yPosition);
