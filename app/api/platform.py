@@ -26,7 +26,7 @@ router = APIRouter()
 async def get_current_platform_user(
     token: str = Depends(OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/platform/login")),
     db: Session = Depends(get_db)
-) -> PlatformUser:
+) -> PlatformUserInDB:
     """Get current platform user from JWT token"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,19 +49,20 @@ async def get_current_platform_user(
     if platform_user is None:
         raise credentials_exception
     
-    return platform_user
+    # Convert SQLAlchemy model to Pydantic schema
+    return PlatformUserInDB.model_validate(platform_user)
 
 async def get_current_active_platform_user(
-    current_platform_user: PlatformUser = Depends(get_current_platform_user),
-) -> PlatformUser:
+    current_platform_user: PlatformUserInDB = Depends(get_current_platform_user),
+) -> PlatformUserInDB:
     """Get current active platform user"""
     if not current_platform_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive platform user")
     return current_platform_user
 
 async def get_current_platform_super_admin(
-    current_platform_user: PlatformUser = Depends(get_current_active_platform_user),
-) -> PlatformUser:
+    current_platform_user: PlatformUserInDB = Depends(get_current_active_platform_user),
+) -> PlatformUserInDB:
     """Get current platform user with super admin privileges"""
     if current_platform_user.role != PlatformUserRole.SUPER_ADMIN:
         raise HTTPException(
