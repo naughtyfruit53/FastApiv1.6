@@ -1,5 +1,5 @@
 // Standalone Customers Page - Extract from masters/index.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
@@ -14,7 +14,10 @@ import {
   TableHead,
   TableRow,
   Chip,
-  IconButton
+  IconButton,
+  TextField,
+  InputAdornment,
+  TableSortLabel
 } from '@mui/material';
 import {
   Add,
@@ -24,7 +27,8 @@ import {
   Phone,
   Person,
   Visibility,
-  Analytics
+  Analytics,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataService } from '../../services/authService';
@@ -42,6 +46,9 @@ const CustomersPage: React.FC = () => {
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [addCustomerLoading, setAddCustomerLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<'name'>('name');
   const [analyticsModal, setAnalyticsModal] = useState<{
     open: boolean;
     customerId?: number;
@@ -54,6 +61,36 @@ const CustomersPage: React.FC = () => {
     queryFn: () => masterDataService.getCustomers(),
     enabled: isOrgContextReady,
   });
+
+  // Debounced search and sorting
+  const filteredAndSortedCustomers = useMemo(() => {
+    if (!customers) return [];
+
+    let filtered = customers.filter((customer: any) =>
+      customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Sort by name
+    if (sortBy === 'name') {
+      filtered.sort((a: any, b: any) => {
+        const nameA = a.name?.toLowerCase() || '';
+        const nameB = b.name?.toLowerCase() || '';
+        if (sortOrder === 'asc') {
+          return nameA.localeCompare(nameB);
+        } else {
+          return nameB.localeCompare(nameA);
+        }
+      });
+    }
+
+    return filtered;
+  }, [customers, searchTerm, sortBy, sortOrder]);
+
+  const handleSort = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
 
   const handleCustomerAdd = async (customerData: any) => {
     setAddCustomerLoading(true);
@@ -140,11 +177,36 @@ const CustomersPage: React.FC = () => {
             />
           </Box>
           
+          {/* Search Field */}
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              placeholder="Search customers by name, email, or contact person..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ width: 400 }}
+            />
+          </Box>
+          
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Name</TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'name'}
+                      direction={sortBy === 'name' ? sortOrder : 'asc'}
+                      onClick={handleSort}
+                    >
+                      Name
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell>Contact</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Location</TableCell>
@@ -154,7 +216,7 @@ const CustomersPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {customers?.map((item: any) => (
+                {filteredAndSortedCustomers?.map((item: any) => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <Box>

@@ -1,5 +1,5 @@
 // Standalone Vendors Page - Extract from masters/index.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
@@ -14,7 +14,10 @@ import {
   TableHead,
   TableRow,
   Chip,
-  IconButton
+  IconButton,
+  TextField,
+  InputAdornment,
+  TableSortLabel
 } from '@mui/material';
 import {
   Add,
@@ -23,7 +26,10 @@ import {
   Email,
   Phone,
   Business,
-  Visibility
+  Visibility,
+  Search as SearchIcon,
+  ArrowUpward,
+  ArrowDownward
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataService } from '../../services/authService';
@@ -40,6 +46,9 @@ const VendorsPage: React.FC = () => {
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [addVendorLoading, setAddVendorLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<'name'>('name');
   const queryClient = useQueryClient();
 
   const { data: vendors, isLoading: vendorsLoading } = useQuery({
@@ -47,6 +56,36 @@ const VendorsPage: React.FC = () => {
     queryFn: () => masterDataService.getVendors(),
     enabled: isOrgContextReady,
   });
+
+  // Debounced search and sorting
+  const filteredAndSortedVendors = useMemo(() => {
+    if (!vendors) return [];
+
+    let filtered = vendors.filter((vendor: any) =>
+      vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Sort by name
+    if (sortBy === 'name') {
+      filtered.sort((a: any, b: any) => {
+        const nameA = a.name?.toLowerCase() || '';
+        const nameB = b.name?.toLowerCase() || '';
+        if (sortOrder === 'asc') {
+          return nameA.localeCompare(nameB);
+        } else {
+          return nameB.localeCompare(nameA);
+        }
+      });
+    }
+
+    return filtered;
+  }, [vendors, searchTerm, sortBy, sortOrder]);
+
+  const handleSort = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
 
   const handleVendorAdd = async (vendorData: any) => {
     setAddVendorLoading(true);
@@ -133,11 +172,36 @@ const VendorsPage: React.FC = () => {
             />
           </Box>
           
+          {/* Search Field */}
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              placeholder="Search vendors by name, email, or contact person..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ width: 400 }}
+            />
+          </Box>
+          
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Name</TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'name'}
+                      direction={sortBy === 'name' ? sortOrder : 'asc'}
+                      onClick={handleSort}
+                    >
+                      Name
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell>Contact</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Location</TableCell>
@@ -147,7 +211,7 @@ const VendorsPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {vendors?.map((item: any) => (
+                {filteredAndSortedVendors?.map((item: any) => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <Box>
