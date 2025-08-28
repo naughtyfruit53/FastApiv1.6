@@ -37,7 +37,9 @@ from .marketing_models import (
 # Import ERP core models
 from .erp_models import (
     ChartOfAccounts, GSTConfiguration, TaxCode, JournalEntry,
-    AccountsPayable, AccountsReceivable, PaymentRecord
+    AccountsPayable, AccountsReceivable, PaymentRecord,
+    GeneralLedger, CostCenter, BankAccount, BankReconciliation,
+    FinancialStatement, FinancialKPI
 )
 # Import procurement models
 from .procurement_models import (
@@ -123,6 +125,12 @@ __all__ = [
     # Marketing models (new)
     "Campaign", "Promotion", "PromotionRedemption", "CampaignAnalytics",
     "MarketingList", "MarketingListContact",
+    
+    # ERP and financial models
+    "ChartOfAccounts", "GSTConfiguration", "TaxCode", "JournalEntry",
+    "AccountsPayable", "AccountsReceivable", "PaymentRecord",
+    "GeneralLedger", "CostCenter", "BankAccount", "BankReconciliation",
+    "FinancialStatement", "FinancialKPI",
     
     # Voucher models
     "BaseVoucher", "PurchaseVoucher", "PurchaseVoucherItem",

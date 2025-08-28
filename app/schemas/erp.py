@@ -383,4 +383,234 @@ class BalanceSheetResponse(BaseModel):
 
 
 # Update forward references
+
+
+# General Ledger Schemas
+class GeneralLedgerBase(BaseModel):
+    account_id: int = Field(..., description="Account ID")
+    transaction_date: date = Field(..., description="Transaction date")
+    transaction_number: str = Field(..., description="Transaction number")
+    reference_type: Optional[str] = Field(None, description="Reference type")
+    reference_id: Optional[int] = Field(None, description="Reference ID")
+    reference_number: Optional[str] = Field(None, description="Reference number")
+    debit_amount: Decimal = Field(0.00, description="Debit amount")
+    credit_amount: Decimal = Field(0.00, description="Credit amount")
+    description: Optional[str] = Field(None, description="Description")
+    narration: Optional[str] = Field(None, description="Narration")
+    cost_center_id: Optional[int] = Field(None, description="Cost center ID")
+
+
+class GeneralLedgerCreate(GeneralLedgerBase):
+    pass
+
+
+class GeneralLedgerUpdate(BaseModel):
+    transaction_date: Optional[date] = None
+    description: Optional[str] = None
+    narration: Optional[str] = None
+    cost_center_id: Optional[int] = None
+    is_reconciled: Optional[bool] = None
+
+
+class GeneralLedgerResponse(GeneralLedgerBase):
+    id: int
+    organization_id: int
+    running_balance: Decimal
+    is_reconciled: bool
+    reconciled_date: Optional[date]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Cost Center Schemas
+class CostCenterBase(BaseModel):
+    cost_center_code: str = Field(..., description="Cost center code")
+    cost_center_name: str = Field(..., description="Cost center name")
+    parent_cost_center_id: Optional[int] = Field(None, description="Parent cost center ID")
+    budget_amount: Decimal = Field(0.00, description="Budget amount")
+    department: Optional[str] = Field(None, description="Department")
+    manager_id: Optional[int] = Field(None, description="Manager ID")
+    description: Optional[str] = Field(None, description="Description")
+
+
+class CostCenterCreate(CostCenterBase):
+    pass
+
+
+class CostCenterUpdate(BaseModel):
+    cost_center_name: Optional[str] = None
+    parent_cost_center_id: Optional[int] = None
+    budget_amount: Optional[Decimal] = None
+    department: Optional[str] = None
+    manager_id: Optional[int] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class CostCenterResponse(CostCenterBase):
+    id: int
+    organization_id: int
+    level: int
+    actual_amount: Decimal
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Bank Account Schemas
+class BankAccountBase(BaseModel):
+    chart_account_id: int = Field(..., description="Chart of accounts ID")
+    bank_name: str = Field(..., description="Bank name")
+    branch_name: Optional[str] = Field(None, description="Branch name")
+    account_number: str = Field(..., description="Account number")
+    ifsc_code: Optional[str] = Field(None, description="IFSC code")
+    swift_code: Optional[str] = Field(None, description="SWIFT code")
+    account_type: str = Field(..., description="Account type")
+    currency: str = Field("INR", description="Currency")
+    opening_balance: Decimal = Field(0.00, description="Opening balance")
+    is_default: bool = Field(False, description="Is default account")
+    auto_reconcile: bool = Field(False, description="Auto reconcile")
+
+
+class BankAccountCreate(BankAccountBase):
+    pass
+
+
+class BankAccountUpdate(BaseModel):
+    bank_name: Optional[str] = None
+    branch_name: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    swift_code: Optional[str] = None
+    account_type: Optional[str] = None
+    currency: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_default: Optional[bool] = None
+    auto_reconcile: Optional[bool] = None
+
+
+class BankAccountResponse(BankAccountBase):
+    id: int
+    organization_id: int
+    current_balance: Decimal
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Bank Reconciliation Schemas
+class BankReconciliationBase(BaseModel):
+    bank_account_id: int = Field(..., description="Bank account ID")
+    reconciliation_date: date = Field(..., description="Reconciliation date")
+    statement_date: date = Field(..., description="Statement date")
+    bank_balance: Decimal = Field(..., description="Bank balance")
+    book_balance: Decimal = Field(..., description="Book balance")
+    outstanding_deposits: Decimal = Field(0.00, description="Outstanding deposits")
+    outstanding_checks: Decimal = Field(0.00, description="Outstanding checks")
+    bank_charges: Decimal = Field(0.00, description="Bank charges")
+    interest_earned: Decimal = Field(0.00, description="Interest earned")
+    notes: Optional[str] = Field(None, description="Notes")
+
+
+class BankReconciliationCreate(BankReconciliationBase):
+    pass
+
+
+class BankReconciliationUpdate(BaseModel):
+    statement_date: Optional[date] = None
+    bank_balance: Optional[Decimal] = None
+    book_balance: Optional[Decimal] = None
+    outstanding_deposits: Optional[Decimal] = None
+    outstanding_checks: Optional[Decimal] = None
+    bank_charges: Optional[Decimal] = None
+    interest_earned: Optional[Decimal] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class BankReconciliationResponse(BankReconciliationBase):
+    id: int
+    organization_id: int
+    status: str
+    difference_amount: Decimal
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Financial Statement Schemas
+class FinancialStatementCreate(BaseModel):
+    statement_type: str = Field(..., description="Statement type")
+    statement_name: str = Field(..., description="Statement name")
+    period_start: date = Field(..., description="Period start date")
+    period_end: date = Field(..., description="Period end date")
+    is_final: bool = Field(False, description="Is final statement")
+    is_audited: bool = Field(False, description="Is audited")
+
+
+class FinancialStatementResponse(BaseModel):
+    id: int
+    organization_id: int
+    statement_type: str
+    statement_name: str
+    period_start: date
+    period_end: date
+    statement_data: dict
+    summary_data: Optional[dict]
+    is_final: bool
+    is_audited: bool
+    generated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Financial KPI Schemas
+class FinancialKPIBase(BaseModel):
+    kpi_code: str = Field(..., description="KPI code")
+    kpi_name: str = Field(..., description="KPI name")
+    kpi_category: str = Field(..., description="KPI category")
+    kpi_value: Decimal = Field(..., description="KPI value")
+    calculation_method: Optional[str] = Field(None, description="Calculation method")
+    period_start: date = Field(..., description="Period start date")
+    period_end: date = Field(..., description="Period end date")
+    target_value: Optional[Decimal] = Field(None, description="Target value")
+
+
+class FinancialKPICreate(FinancialKPIBase):
+    pass
+
+
+class FinancialKPIResponse(FinancialKPIBase):
+    id: int
+    organization_id: int
+    variance_percentage: Optional[Decimal]
+    calculated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Cash Flow Statement Schema
+class CashFlowResponse(BaseModel):
+    operating_activities: List[BalanceSheetItem]
+    investing_activities: List[BalanceSheetItem]
+    financing_activities: List[BalanceSheetItem]
+    net_operating_cash: Decimal
+    net_investing_cash: Decimal
+    net_financing_cash: Decimal
+    net_cash_flow: Decimal
+    opening_cash: Decimal
+    closing_cash: Decimal
+    from_date: date
+    to_date: date
+    organization_id: int
 ChartOfAccountsResponse.model_rebuild()
