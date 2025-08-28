@@ -165,7 +165,7 @@ const SalesDashboard: React.FC = () => {
                 Start managing your sales pipeline with these common actions.
               </Typography>
               <Grid container spacing={2}>
-                <Grid>
+                <Grid item>
                   <Button 
                     variant="contained" 
                     onClick={() => window.location.href = '/sales/leads'}
@@ -174,7 +174,7 @@ const SalesDashboard: React.FC = () => {
                     Manage Leads
                   </Button>
                 </Grid>
-                <Grid>
+                <Grid item>
                   <Button 
                     variant="contained" 
                     onClick={() => window.location.href = '/sales/opportunities'}
@@ -183,7 +183,7 @@ const SalesDashboard: React.FC = () => {
                     Track Opportunities
                   </Button>
                 </Grid>
-                <Grid>
+                <Grid item>
                   <Button 
                     variant="outlined" 
                     onClick={() => window.location.href = '/sales/pipeline'}
@@ -192,7 +192,7 @@ const SalesDashboard: React.FC = () => {
                     View Pipeline
                   </Button>
                 </Grid>
-                <Grid>
+                <Grid item>
                   <Button 
                     variant="outlined" 
                     onClick={() => window.location.href = '/sales/customers'}

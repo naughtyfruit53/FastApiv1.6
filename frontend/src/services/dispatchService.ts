@@ -39,7 +39,7 @@ export interface DispatchItemBase {
   description?: string | null;
   serial_numbers?: string | null;
   batch_numbers?: string | null;
-  status: string; // Changed from keyof DispatchItemStatus to string
+  status: keyof DispatchItemStatus;
 }
 
 export type DispatchItemCreate = DispatchItemBase;
@@ -57,7 +57,7 @@ export interface DispatchItemInDB extends DispatchItemBase {
 export interface DispatchOrderBase {
   customer_id: number;
   ticket_id?: number | null;
-  status: string; // Changed from keyof DispatchOrderStatus to string to match config
+  status: keyof DispatchOrderStatus;
   dispatch_date?: string | null;
   expected_delivery_date?: string | null;
   actual_delivery_date?: string | null;
@@ -90,8 +90,8 @@ export interface DispatchOrderInDB extends DispatchOrderBase {
 export interface InstallationJobBase {
   customer_id: number;
   ticket_id?: number | null;
-  status: string; // Changed from keyof InstallationJobStatus to string
-  priority: string; // Changed from keyof InstallationJobPriority to string
+  status: keyof InstallationJobStatus;
+  priority: keyof InstallationJobPriority;
   scheduled_date?: string | null;
   estimated_duration_hours?: number | null;
   installation_address: string;
@@ -137,7 +137,7 @@ export interface InstallationSchedulePromptResponse {
 
 // Filter interfaces
 export interface DispatchOrderFilter {
-  status?: string; // Changed from keyof DispatchOrderStatus to string
+  status?: keyof DispatchOrderStatus;
   customer_id?: number;
   ticket_id?: number;
   from_date?: string;
@@ -145,8 +145,8 @@ export interface DispatchOrderFilter {
 }
 
 export interface InstallationJobFilter {
-  status?: string; // Changed from keyof InstallationJobStatus to string
-  priority?: string; // Changed from keyof InstallationJobPriority to string
+  status?: keyof InstallationJobStatus;
+  priority?: keyof InstallationJobPriority;
   customer_id?: number;
   assigned_technician_id?: number;
   dispatch_order_id?: number;

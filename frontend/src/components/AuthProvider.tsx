@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
-import { jwtDecode } from 'jwt-decode';
+import jwt_decode from 'jwt-decode';
 import axios from 'axios';
 
 interface User {
@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const decoded: JwtPayload = jwtDecode(token);
+          const decoded: JwtPayload = jwt_decode(token);
           if (decoded.exp * 1000 < Date.now()) {
             console.log('Token expired on load, logging out');
             logout();

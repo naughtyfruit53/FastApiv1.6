@@ -136,7 +136,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
       {/* Controls */}
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
-          <Grid>
+          <Grid item>
             <FormControlLabel
               control={
                 <Switch
@@ -148,7 +148,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             />
           </Grid>
           {includeRecentInteractions && (
-            <Grid>
+            <Grid item>
               <TextField
                 type="number"
                 label="Recent Interactions Limit"

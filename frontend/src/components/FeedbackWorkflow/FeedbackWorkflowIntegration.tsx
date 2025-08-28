@@ -23,8 +23,8 @@ import {
 import {
   CustomerFeedbackModal,
   ServiceClosureDialog
-} from './index';
-import { feedbackService } from '../../services/feedbackService';
+} from './FeedbackWorkflow';
+import { feedbackService } from '../services/feedbackService';
 
 interface FeedbackWorkflowIntegrationProps {
   installationJob: any;

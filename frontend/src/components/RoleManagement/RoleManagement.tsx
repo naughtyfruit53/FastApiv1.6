@@ -336,7 +336,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
 
         <Grid container spacing={3}>
           {filteredRoles.map((role) => (
-            <Grid key={role.id} size={{ xs: 12, md: 6, lg: 4 }}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -493,7 +493,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
         {/* Simplified permission overview */}
         <Grid container spacing={2}>
           {roles.map((role) => (
-            <Grid key={role.id} size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" sx={{ mb: 2 }}>

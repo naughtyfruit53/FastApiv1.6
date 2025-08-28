@@ -19,6 +19,8 @@ module.exports = [
       'src/pages/vouchers/Manufacturing-Vouchers/**',
       'src/components/DispatchManagement/**',
       'src/pages/service/dispatch.tsx',
+      'src/components/NotificationLogs.tsx',
+      'src/components/SendNotification.tsx',
       'node_modules/**',
       '.next/**',
       'out/**',

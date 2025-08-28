@@ -30,10 +30,10 @@ import {
   Edit as EditIcon,
   Visibility as ViewIcon,
   Business as BusinessIcon,
-  Analytics as AnalyticsIcon,
-  Link as LinkIcon
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
+import AddCustomerModal from '../../components/AddCustomerModal';
 
 interface Customer {
   id: number;
@@ -54,6 +54,7 @@ const SalesCustomerDatabase: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [addCustomerModalOpen, setAddCustomerModalOpen] = useState(false);
 
   // Mock data - in production this would link to master customers
   useEffect(() => {
@@ -133,6 +134,18 @@ const SalesCustomerDatabase: React.FC = () => {
     router.push('/customers');
   };
 
+  const handleAddCustomer = async (customerData: any) => {
+    try {
+      // Here you would call the customer creation API
+      console.log('Adding customer:', customerData);
+      // Refresh the customers list after adding
+      setAddCustomerModalOpen(false);
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      throw error; // Let the modal handle the error
+    }
+  };
+
   const handleViewCustomerAnalytics = (customerId: number) => {
     router.push(`/analytics/customer?id=${customerId}`);
   };
@@ -160,23 +173,6 @@ const SalesCustomerDatabase: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Customer Database
       </Typography>
-
-      {/* Integration Notice */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography>
-            This customer database is unified with Master Data. Changes made here will reflect in the master customer records.
-          </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<LinkIcon />}
-            onClick={handleGoToMasterCustomers}
-            size="small"
-          >
-            Manage Master Data
-          </Button>
-        </Box>
-      </Alert>
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
