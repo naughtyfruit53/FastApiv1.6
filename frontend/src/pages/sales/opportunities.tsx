@@ -20,14 +20,6 @@ import {
   Chip,
   TextField,
   InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Tabs,
   Tab,
   CircularProgress,
@@ -42,19 +34,21 @@ import {
   MonetizationOn as MoneyIcon,
   Timeline as TimelineIcon
 } from '@mui/icons-material';
+import AddOpportunityModal from '../../components/AddOpportunityModal';
+import { crmService } from '../../services/crmService';
 
 interface Opportunity {
   id: number;
   name: string;
-  account: string;
-  contact: string;
+  account_name?: string;
+  contact_name?: string;
   stage: string;
   amount: number;
   probability: number;
-  closeDate: string;
-  owner: string;
+  close_date: string;
   source: string;
   created_at: string;
+  assigned_to_id?: number;
 }
 
 const OpportunityTracking: React.FC = () => {
@@ -64,92 +58,59 @@ const OpportunityTracking: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'create'>('view');
+  const [addLoading, setAddLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
-  // Mock data - replace with actual API call
-  useEffect(() => {
-    const fetchOpportunities = async () => {
-      try {
-        setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const mockData: Opportunity[] = [
-          {
-            id: 1,
-            name: 'Enterprise Software License',
-            account: 'TechCorp Ltd',
-            contact: 'John Smith',
-            stage: 'Proposal',
-            amount: 150000,
-            probability: 75,
-            closeDate: '2024-02-15',
-            owner: 'Sarah Johnson',
-            source: 'Website',
-            created_at: '2024-01-10'
-          },
-          {
-            id: 2,
-            name: 'Cloud Migration Project',
-            account: 'Global Systems Inc',
-            contact: 'Mike Wilson',
-            stage: 'Negotiation',
-            amount: 300000,
-            probability: 85,
-            closeDate: '2024-02-28',
-            owner: 'David Brown',
-            source: 'Referral',
-            created_at: '2024-01-05'
-          },
-          {
-            id: 3,
-            name: 'ERP Implementation',
-            account: 'Manufacturing Co',
-            contact: 'Lisa Davis',
-            stage: 'Qualification',
-            amount: 75000,
-            probability: 45,
-            closeDate: '2024-03-30',
-            owner: 'Sarah Johnson',
-            source: 'Cold Call',
-            created_at: '2024-01-15'
-          }
-        ];
-        
-        setOpportunities(mockData);
-      } catch (err) {
-        setError('Failed to load opportunities');
-        console.error('Error fetching opportunities:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch opportunities from API
+  const fetchOpportunities = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const opportunitiesData = await crmService.getOpportunities();
+      setOpportunities(opportunitiesData);
+    } catch (err) {
+      console.error('Error fetching opportunities:', err);
+      setError('Failed to load opportunities. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchOpportunities();
   }, []);
 
+  const handleAddOpportunity = async (opportunityData: any) => {
+    try {
+      setAddLoading(true);
+      await crmService.createOpportunity(opportunityData);
+      await fetchOpportunities(); // Refresh the list
+      setDialogOpen(false);
+    } catch (err) {
+      console.error('Error adding opportunity:', err);
+      throw err; // Let the modal handle the error
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   const filteredOpportunities = opportunities.filter(opportunity =>
     opportunity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    opportunity.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    opportunity.contact.toLowerCase().includes(searchTerm.toLowerCase())
+    (opportunity.account_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (opportunity.contact_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleViewOpportunity = (opportunity: Opportunity) => {
     setSelectedOpportunity(opportunity);
-    setDialogMode('view');
-    setDialogOpen(true);
+    // Add view functionality if needed
   };
 
   const handleEditOpportunity = (opportunity: Opportunity) => {
     setSelectedOpportunity(opportunity);
-    setDialogMode('edit');
-    setDialogOpen(true);
+    // Add edit functionality if needed
   };
 
   const handleCreateOpportunity = () => {
-    setSelectedOpportunity(null);
-    setDialogMode('create');
     setDialogOpen(true);
   };
 
@@ -160,11 +121,13 @@ const OpportunityTracking: React.FC = () => {
 
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case 'Qualification': return 'default';
-      case 'Proposal': return 'primary';
-      case 'Negotiation': return 'warning';
-      case 'Closed Won': return 'success';
-      case 'Closed Lost': return 'error';
+      case 'prospecting': return 'info';
+      case 'qualification': return 'warning';
+      case 'needs_analysis': return 'secondary';
+      case 'proposal': return 'primary';
+      case 'negotiation': return 'error';
+      case 'closed_won': return 'success';
+      case 'closed_lost': return 'default';
       default: return 'default';
     }
   };
@@ -287,7 +250,7 @@ const OpportunityTracking: React.FC = () => {
               <TableCell align="right">Amount</TableCell>
               <TableCell align="right">Probability</TableCell>
               <TableCell>Close Date</TableCell>
-              <TableCell>Owner</TableCell>
+              <TableCell>Source</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -295,19 +258,20 @@ const OpportunityTracking: React.FC = () => {
             {filteredOpportunities.map((opportunity) => (
               <TableRow key={opportunity.id} hover>
                 <TableCell>{opportunity.name}</TableCell>
-                <TableCell>{opportunity.account}</TableCell>
-                <TableCell>{opportunity.contact}</TableCell>
+                <TableCell>{opportunity.account_name || '-'}</TableCell>
+                <TableCell>{opportunity.contact_name || '-'}</TableCell>
                 <TableCell>
                   <Chip 
-                    label={opportunity.stage} 
+                    label={opportunity.stage.replace('_', ' ').toUpperCase()} 
                     color={getStageColor(opportunity.stage) as any}
                     size="small"
+                    sx={{ textTransform: 'capitalize' }}
                   />
                 </TableCell>
                 <TableCell align="right">${opportunity.amount.toLocaleString()}</TableCell>
                 <TableCell align="right">{opportunity.probability}%</TableCell>
-                <TableCell>{new Date(opportunity.closeDate).toLocaleDateString()}</TableCell>
-                <TableCell>{opportunity.owner}</TableCell>
+                <TableCell>{new Date(opportunity.close_date).toLocaleDateString()}</TableCell>
+                <TableCell>{opportunity.source}</TableCell>
                 <TableCell align="center">
                   <IconButton 
                     size="small" 
@@ -326,152 +290,26 @@ const OpportunityTracking: React.FC = () => {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredOpportunities.length === 0 && !loading && (
+              <TableRow>
+                <TableCell colSpan={9} align="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
+                    No opportunities found. {opportunities.length === 0 ? 'Start by adding your first opportunity!' : 'Try adjusting your search terms.'}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      {/* Opportunity Detail Dialog */}
-      <Dialog 
-        open={dialogOpen} 
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {dialogMode === 'create' ? 'Add New Opportunity' : 
-           dialogMode === 'edit' ? 'Edit Opportunity' : 'Opportunity Details'}
-        </DialogTitle>
-        <DialogContent>
-          {selectedOpportunity && (
-            <Box sx={{ mt: 2 }}>
-              <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-                <Tab label="General Information" />
-                <Tab label="Details" />
-                <Tab label="Timeline" />
-              </Tabs>
-              
-              {tabValue === 0 && (
-                <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Opportunity Name"
-                      value={selectedOpportunity.name}
-                      disabled={dialogMode === 'view'}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Account"
-                      value={selectedOpportunity.account}
-                      disabled={dialogMode === 'view'}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Contact"
-                      value={selectedOpportunity.contact}
-                      disabled={dialogMode === 'view'}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth disabled={dialogMode === 'view'}>
-                      <InputLabel>Stage</InputLabel>
-                      <Select value={selectedOpportunity.stage} label="Stage">
-                        <MenuItem value="Qualification">Qualification</MenuItem>
-                        <MenuItem value="Proposal">Proposal</MenuItem>
-                        <MenuItem value="Negotiation">Negotiation</MenuItem>
-                        <MenuItem value="Closed Won">Closed Won</MenuItem>
-                        <MenuItem value="Closed Lost">Closed Lost</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Amount"
-                      type="number"
-                      value={selectedOpportunity.amount}
-                      disabled={dialogMode === 'view'}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Probability (%)"
-                      type="number"
-                      value={selectedOpportunity.probability}
-                      disabled={dialogMode === 'view'}
-                    />
-                  </Grid>
-                </Grid>
-              )}
-              
-              {tabValue === 1 && (
-                <Grid container spacing={3} sx={{ mt: 1 }}>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Close Date"
-                      type="date"
-                      value={selectedOpportunity.closeDate}
-                      disabled={dialogMode === 'view'}
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Owner"
-                      value={selectedOpportunity.owner}
-                      disabled={dialogMode === 'view'}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Source"
-                      value={selectedOpportunity.source}
-                      disabled={dialogMode === 'view'}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Description"
-                      multiline
-                      rows={4}
-                      disabled={dialogMode === 'view'}
-                      placeholder="Enter opportunity description..."
-                    />
-                  </Grid>
-                </Grid>
-              )}
-              
-              {tabValue === 2 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="h6" gutterBottom>Activity Timeline</Typography>
-                  <Typography color="textSecondary">
-                    Timeline functionality will be implemented with backend integration.
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>
-            {dialogMode === 'view' ? 'Close' : 'Cancel'}
-          </Button>
-          {dialogMode !== 'view' && (
-            <Button variant="contained" onClick={handleCloseDialog}>
-              {dialogMode === 'create' ? 'Create' : 'Save'}
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+      {/* Add Opportunity Modal */}
+      <AddOpportunityModal
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onAdd={handleAddOpportunity}
+        loading={addLoading}
+      />
     </Container>
   );
 };
