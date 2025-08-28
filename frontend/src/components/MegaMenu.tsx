@@ -618,6 +618,81 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
+    salesCrm: {
+      title: 'Sales CRM',
+      icon: <MonetizationOn />,
+      sections: [
+        {
+          title: 'Sales Management',
+          items: [
+            { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
+            { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
+            { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
+            { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> }
+          ]
+        },
+        {
+          title: 'Customer Management',
+          items: [
+            { name: 'Customer Database', path: '/sales/customers', icon: <People /> },
+            { name: 'Contact Management', path: '/sales/contacts', icon: <ContactPhone /> },
+            { name: 'Account Management', path: '/sales/accounts', icon: <Business /> },
+            { name: 'Customer Analytics', path: '/sales/customer-analytics', icon: <Analytics /> }
+          ]
+        },
+        {
+          title: 'Sales Operations',
+          items: [
+            { name: 'Quotations', path: '/sales/quotations', icon: <NoteAdd /> },
+            { name: 'Sales Orders', path: '/sales/orders', icon: <Receipt /> },
+            { name: 'Commission Tracking', path: '/sales/commissions', icon: <MonetizationOn /> },
+            { name: 'Sales Reports', path: '/sales/reports', icon: <Assessment /> }
+          ]
+        }
+      ]
+    },
+    hrManagement: {
+      title: 'HR Management',
+      icon: <Groups />,
+      sections: [
+        {
+          title: 'Employee Management',
+          items: [
+            { name: 'Employee Directory', path: '/hr/employees', icon: <People /> },
+            { name: 'Employee Onboarding', path: '/hr/onboarding', icon: <PersonAdd /> },
+            { name: 'Performance Management', path: '/hr/performance', icon: <Assessment /> },
+            { name: 'Employee Records', path: '/hr/records', icon: <Storage /> }
+          ]
+        },
+        {
+          title: 'Payroll & Benefits',
+          items: [
+            { name: 'Payroll Management', path: '/hr/payroll', icon: <MonetizationOn /> },
+            { name: 'Salary Processing', path: '/hr/salary', icon: <Payment /> },
+            { name: 'Benefits Administration', path: '/hr/benefits', icon: <Security /> },
+            { name: 'Tax Management', path: '/hr/tax', icon: <AccountBalance /> }
+          ]
+        },
+        {
+          title: 'Time & Attendance',
+          items: [
+            { name: 'Time Tracking', path: '/hr/timesheet', icon: <Schedule /> },
+            { name: 'Leave Management', path: '/hr/leave', icon: <Timeline /> },
+            { name: 'Attendance Reports', path: '/hr/attendance', icon: <BarChart /> },
+            { name: 'Shift Management', path: '/hr/shifts', icon: <Schedule /> }
+          ]
+        },
+        {
+          title: 'Recruitment',
+          items: [
+            { name: 'Job Postings', path: '/hr/jobs', icon: <AddBusiness /> },
+            { name: 'Candidate Management', path: '/hr/candidates', icon: <Person /> },
+            { name: 'Interview Scheduling', path: '/hr/interviews', icon: <Schedule /> },
+            { name: 'Hiring Pipeline', path: '/hr/hiring', icon: <Timeline /> }
+          ]
+        }
+      ]
+    },
     settings: {
       title: 'Settings',
       icon: <Settings />,
@@ -811,20 +886,19 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             }}
             onClick={navigateToHome}
           >
-            <Avatar 
-              src={companyData?.logo_path ? companyService.getLogoUrl(companyData.id) : undefined}
+            <Box 
+              component="img"
+              src="/Tritiq.png"
+              alt="TritiQ"
               sx={{ 
-                bgcolor: 'white', 
-                color: 'primary.main', 
-                mr: 1,
                 width: 40,
-                height: 40
+                height: 40,
+                mr: 1,
+                objectFit: 'contain'
               }}
-            >
-              {!companyData?.logo_path && <Dashboard />}
-            </Avatar>
+            />
             <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-              {companyData?.name || 'TRITIQ ERP'}
+              TritiQ {companyData?.name || 'ERP'}
             </Typography>
           </Box>
 
@@ -933,6 +1007,28 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                     </Button>
                   </span>
                 </Tooltip>
+
+                {/* Sales CRM Menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<MonetizationOn />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'salesCrm')}
+                  sx={{ mx: 1 }}
+                >
+                  Sales CRM
+                </Button>
+
+                {/* HR Management Menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<Groups />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'hrManagement')}
+                  sx={{ mx: 1 }}
+                >
+                  HR Management
+                </Button>
 
                 {/* Settings with Administration as submenu */}
                 <Button
