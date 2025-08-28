@@ -50,6 +50,7 @@ from app.api.v1 import gst as v1_gst
 
 # Add imports for new ERP modules
 from app.api.v1 import erp as v1_erp
+from app.api.v1 import finance_analytics as v1_finance_analytics
 from app.api.v1 import procurement as v1_procurement
 from app.api.v1 import tally as v1_tally
 from app.api.v1 import warehouse as v1_warehouse
@@ -302,6 +303,9 @@ logger.info("Service Analytics router included successfully at prefix: /api/v1/s
 # Include new ERP module routers
 app.include_router(v1_erp.router, prefix="/api/v1/erp", tags=["erp-core"])
 logger.info("ERP Core router included successfully at prefix: /api/v1/erp")
+
+app.include_router(v1_finance_analytics.router, prefix="/api/v1/finance", tags=["finance-analytics"])
+logger.info("Finance Analytics router included successfully at prefix: /api/v1/finance")
 
 app.include_router(v1_procurement.router, prefix="/api/v1/procurement", tags=["procurement"])
 logger.info("Procurement router included successfully at prefix: /api/v1/procurement")

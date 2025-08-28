@@ -169,6 +169,30 @@ class Organization(Base):
         "app.models.erp_models.PaymentRecord",
         back_populates="organization"
     )
+    general_ledger: Mapped[List["app.models.erp_models.GeneralLedger"]] = relationship(
+        "app.models.erp_models.GeneralLedger",
+        back_populates="organization"
+    )
+    cost_centers: Mapped[List["app.models.erp_models.CostCenter"]] = relationship(
+        "app.models.erp_models.CostCenter",
+        back_populates="organization"
+    )
+    bank_accounts: Mapped[List["app.models.erp_models.BankAccount"]] = relationship(
+        "app.models.erp_models.BankAccount",
+        back_populates="organization"
+    )
+    bank_reconciliations: Mapped[List["app.models.erp_models.BankReconciliation"]] = relationship(
+        "app.models.erp_models.BankReconciliation",
+        back_populates="organization"
+    )
+    financial_statements: Mapped[List["app.models.erp_models.FinancialStatement"]] = relationship(
+        "app.models.erp_models.FinancialStatement",
+        back_populates="organization"
+    )
+    financial_kpis: Mapped[List["app.models.erp_models.FinancialKPI"]] = relationship(
+        "app.models.erp_models.FinancialKPI",
+        back_populates="organization"
+    )
     
     # Procurement relationships
     rfqs: Mapped[List["app.models.procurement_models.RequestForQuotation"]] = relationship(

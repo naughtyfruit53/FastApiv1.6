@@ -18,7 +18,9 @@ from app.core.rbac_dependencies import check_service_permission
 from app.models import (
     User, Organization,
     ChartOfAccounts, GSTConfiguration, TaxCode, JournalEntry,
-    AccountsPayable, AccountsReceivable, PaymentRecord
+    AccountsPayable, AccountsReceivable, PaymentRecord,
+    GeneralLedger, CostCenter, BankAccount, BankReconciliation,
+    FinancialStatement, FinancialKPI
 )
 from app.schemas.erp import (
     ChartOfAccountsCreate, ChartOfAccountsUpdate, ChartOfAccountsResponse,
@@ -28,7 +30,13 @@ from app.schemas.erp import (
     AccountsPayableCreate, AccountsPayableUpdate, AccountsPayableResponse,
     AccountsReceivableCreate, AccountsReceivableUpdate, AccountsReceivableResponse,
     PaymentRecordCreate, PaymentRecordUpdate, PaymentRecordResponse,
-    TrialBalanceResponse, ProfitAndLossResponse, BalanceSheetResponse
+    TrialBalanceResponse, ProfitAndLossResponse, BalanceSheetResponse,
+    GeneralLedgerCreate, GeneralLedgerUpdate, GeneralLedgerResponse,
+    CostCenterCreate, CostCenterUpdate, CostCenterResponse,
+    BankAccountCreate, BankAccountUpdate, BankAccountResponse,
+    BankReconciliationCreate, BankReconciliationUpdate, BankReconciliationResponse,
+    FinancialStatementCreate, FinancialStatementResponse,
+    FinancialKPICreate, FinancialKPIResponse, CashFlowResponse
 )
 import logging
 
@@ -454,4 +462,322 @@ async def get_trial_balance(
 
 
 # Accounts Payable/Receivable endpoints would follow similar patterns...
+
+
+# General Ledger Endpoints
+@router.get("/general-ledger", response_model=List[GeneralLedgerResponse])
+async def get_general_ledger(
+    skip: int = 0,
+    limit: int = 100,
+    account_id: Optional[int] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    reference_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get general ledger entries with filtering options"""
+    query = db.query(GeneralLedger).filter(
+        GeneralLedger.organization_id == organization_id
+    )
+    
+    if account_id:
+        query = query.filter(GeneralLedger.account_id == account_id)
+    
+    if start_date:
+        query = query.filter(GeneralLedger.transaction_date >= start_date)
+    
+    if end_date:
+        query = query.filter(GeneralLedger.transaction_date <= end_date)
+    
+    if reference_type:
+        query = query.filter(GeneralLedger.reference_type == reference_type)
+    
+    query = query.order_by(desc(GeneralLedger.transaction_date), desc(GeneralLedger.id))
+    
+    entries = query.offset(skip).limit(limit).all()
+    return entries
+
+
+@router.post("/general-ledger", response_model=GeneralLedgerResponse)
+async def create_general_ledger_entry(
+    entry: GeneralLedgerCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Create a new general ledger entry"""
+    # Validate account exists
+    account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == entry.account_id,
+        ChartOfAccounts.organization_id == organization_id
+    ).first()
+    
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    # Calculate running balance
+    last_entry = db.query(GeneralLedger).filter(
+        GeneralLedger.account_id == entry.account_id,
+        GeneralLedger.organization_id == organization_id
+    ).order_by(desc(GeneralLedger.transaction_date), desc(GeneralLedger.id)).first()
+    
+    previous_balance = last_entry.running_balance if last_entry else account.opening_balance
+    
+    if account.account_type.value in ['asset', 'expense']:
+        running_balance = previous_balance + entry.debit_amount - entry.credit_amount
+    else:
+        running_balance = previous_balance + entry.credit_amount - entry.debit_amount
+    
+    db_entry = GeneralLedger(
+        organization_id=organization_id,
+        running_balance=running_balance,
+        created_by=current_user.id,
+        **entry.dict()
+    )
+    
+    db.add(db_entry)
+    db.commit()
+    db.refresh(db_entry)
+    
+    return db_entry
+
+
+# Cost Center Endpoints
+@router.get("/cost-centers", response_model=List[CostCenterResponse])
+async def get_cost_centers(
+    skip: int = 0,
+    limit: int = 100,
+    is_active: Optional[bool] = None,
+    parent_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get cost centers with filtering options"""
+    query = db.query(CostCenter).filter(
+        CostCenter.organization_id == organization_id
+    )
+    
+    if is_active is not None:
+        query = query.filter(CostCenter.is_active == is_active)
+    
+    if parent_id is not None:
+        query = query.filter(CostCenter.parent_cost_center_id == parent_id)
+    
+    cost_centers = query.offset(skip).limit(limit).all()
+    return cost_centers
+
+
+@router.post("/cost-centers", response_model=CostCenterResponse)
+async def create_cost_center(
+    cost_center: CostCenterCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Create a new cost center"""
+    # Check if cost center code exists
+    existing = db.query(CostCenter).filter(
+        CostCenter.organization_id == organization_id,
+        CostCenter.cost_center_code == cost_center.cost_center_code
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Cost center code already exists")
+    
+    # Calculate level
+    level = 0
+    if cost_center.parent_cost_center_id:
+        parent = db.query(CostCenter).filter(
+            CostCenter.id == cost_center.parent_cost_center_id,
+            CostCenter.organization_id == organization_id
+        ).first()
+        if parent:
+            level = parent.level + 1
+    
+    db_cost_center = CostCenter(
+        organization_id=organization_id,
+        level=level,
+        created_by=current_user.id,
+        **cost_center.dict()
+    )
+    
+    db.add(db_cost_center)
+    db.commit()
+    db.refresh(db_cost_center)
+    
+    return db_cost_center
+
+
+# Bank Account Endpoints
+@router.get("/bank-accounts", response_model=List[BankAccountResponse])
+async def get_bank_accounts(
+    skip: int = 0,
+    limit: int = 100,
+    is_active: Optional[bool] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get bank accounts with filtering options"""
+    query = db.query(BankAccount).filter(
+        BankAccount.organization_id == organization_id
+    )
+    
+    if is_active is not None:
+        query = query.filter(BankAccount.is_active == is_active)
+    
+    bank_accounts = query.offset(skip).limit(limit).all()
+    return bank_accounts
+
+
+@router.post("/bank-accounts", response_model=BankAccountResponse)
+async def create_bank_account(
+    bank_account: BankAccountCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Create a new bank account"""
+    # Check if account number exists
+    existing = db.query(BankAccount).filter(
+        BankAccount.organization_id == organization_id,
+        BankAccount.account_number == bank_account.account_number
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Account number already exists")
+    
+    # Validate chart account exists
+    chart_account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == bank_account.chart_account_id,
+        ChartOfAccounts.organization_id == organization_id
+    ).first()
+    
+    if not chart_account:
+        raise HTTPException(status_code=404, detail="Chart account not found")
+    
+    db_bank_account = BankAccount(
+        organization_id=organization_id,
+        current_balance=bank_account.opening_balance,
+        **bank_account.dict()
+    )
+    
+    db.add(db_bank_account)
+    db.commit()
+    db.refresh(db_bank_account)
+    
+    return db_bank_account
+
+
+# Financial KPI Endpoints
+@router.get("/financial-kpis", response_model=List[FinancialKPIResponse])
+async def get_financial_kpis(
+    skip: int = 0,
+    limit: int = 100,
+    kpi_category: Optional[str] = None,
+    period_start: Optional[date] = None,
+    period_end: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get financial KPIs with filtering options"""
+    query = db.query(FinancialKPI).filter(
+        FinancialKPI.organization_id == organization_id
+    )
+    
+    if kpi_category:
+        query = query.filter(FinancialKPI.kpi_category == kpi_category)
+    
+    if period_start:
+        query = query.filter(FinancialKPI.period_start >= period_start)
+    
+    if period_end:
+        query = query.filter(FinancialKPI.period_end <= period_end)
+    
+    kpis = query.order_by(desc(FinancialKPI.period_end)).offset(skip).limit(limit).all()
+    return kpis
+
+
+@router.post("/financial-kpis", response_model=FinancialKPIResponse)
+async def create_financial_kpi(
+    kpi: FinancialKPICreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Create a new financial KPI"""
+    # Calculate variance if target is provided
+    variance_percentage = None
+    if kpi.target_value and kpi.target_value != 0:
+        variance_percentage = ((kpi.kpi_value - kpi.target_value) / kpi.target_value) * 100
+    
+    db_kpi = FinancialKPI(
+        organization_id=organization_id,
+        variance_percentage=variance_percentage,
+        calculated_by=current_user.id,
+        **kpi.dict()
+    )
+    
+    db.add(db_kpi)
+    db.commit()
+    db.refresh(db_kpi)
+    
+    return db_kpi
+
+
+# Financial Dashboard Endpoint
+@router.get("/dashboard")
+async def get_financial_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get financial dashboard data"""
+    # Get key financial metrics
+    total_assets = db.query(func.sum(ChartOfAccounts.current_balance)).filter(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == 'asset'
+    ).scalar() or 0
+    
+    total_liabilities = db.query(func.sum(ChartOfAccounts.current_balance)).filter(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == 'liability'
+    ).scalar() or 0
+    
+    total_equity = db.query(func.sum(ChartOfAccounts.current_balance)).filter(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == 'equity'
+    ).scalar() or 0
+    
+    # Get pending AP and AR
+    pending_ap = db.query(func.sum(AccountsPayable.outstanding_amount)).filter(
+        AccountsPayable.organization_id == organization_id,
+        AccountsPayable.payment_status == 'pending'
+    ).scalar() or 0
+    
+    pending_ar = db.query(func.sum(AccountsReceivable.outstanding_amount)).filter(
+        AccountsReceivable.organization_id == organization_id,
+        AccountsReceivable.payment_status == 'pending'
+    ).scalar() or 0
+    
+    # Get total bank balance
+    total_bank_balance = db.query(func.sum(BankAccount.current_balance)).filter(
+        BankAccount.organization_id == organization_id,
+        BankAccount.is_active == True
+    ).scalar() or 0
+    
+    return {
+        "total_assets": float(total_assets),
+        "total_liabilities": float(total_liabilities),
+        "total_equity": float(total_equity),
+        "pending_accounts_payable": float(pending_ap),
+        "pending_accounts_receivable": float(pending_ar),
+        "total_bank_balance": float(total_bank_balance),
+        "working_capital": float(total_assets - total_liabilities),
+        "current_ratio": float(total_assets / total_liabilities) if total_liabilities > 0 else 0
+    }
 # Due to length constraints, I'll implement the key endpoints here and continue with other modules

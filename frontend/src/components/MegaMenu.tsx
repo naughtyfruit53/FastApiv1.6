@@ -378,6 +378,71 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
+    // Finance & Accounting menu
+    finance: {
+      title: 'Finance & Accounting',
+      icon: <AccountBalance />,
+      sections: [
+        {
+          title: 'Chart of Accounts',
+          items: [
+            { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: <AccountBalance /> },
+            { name: 'Account Groups', path: '/account-groups', icon: <Business /> },
+            { name: 'Opening Balances', path: '/opening-balances', icon: <TrendingUp /> }
+          ]
+        },
+        {
+          title: 'Transactions',
+          items: [
+            { name: 'General Ledger', path: '/general-ledger', icon: <ReceiptLong /> },
+            { name: 'Journal Entries', path: '/journal-entries', icon: <NoteAdd /> },
+            { name: 'Bank Reconciliation', path: '/bank-reconciliation', icon: <AccountBalance /> }
+          ]
+        },
+        {
+          title: 'Accounts Payable',
+          items: [
+            { name: 'Vendor Bills', path: '/accounts-payable', icon: <Receipt /> },
+            { name: 'Payment Vouchers', path: '/payment-vouchers', icon: <Payment /> },
+            { name: 'Vendor Aging', path: '/vendor-aging', icon: <Schedule /> }
+          ]
+        },
+        {
+          title: 'Accounts Receivable',
+          items: [
+            { name: 'Customer Invoices', path: '/accounts-receivable', icon: <ReceiptLong /> },
+            { name: 'Receipt Vouchers', path: '/receipt-vouchers', icon: <MonetizationOn /> },
+            { name: 'Customer Aging', path: '/customer-aging', icon: <Schedule /> }
+          ]
+        },
+        {
+          title: 'Cost Management',
+          items: [
+            { name: 'Cost Centers', path: '/cost-centers', icon: <CorporateFare /> },
+            { name: 'Budget Management', path: '/budgets', icon: <TrendingUp /> },
+            { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
+          ]
+        },
+        {
+          title: 'Financial Reports',
+          items: [
+            { name: 'Trial Balance', path: '/reports/trial-balance', icon: <BarChart /> },
+            { name: 'Profit & Loss', path: '/reports/profit-loss', icon: <TrendingUp /> },
+            { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> },
+            { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> }
+          ]
+        },
+        {
+          title: 'Analytics & KPIs',
+          items: [
+            { name: 'Finance Dashboard', path: '/finance-dashboard', icon: <Analytics /> },
+            { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
+            { name: 'Expense Analysis', path: '/expense-analysis', icon: <BarChart /> },
+            { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> }
+          ]
+        }
+      ]
+    },
     // Combined Reports & Analytics menu
     reportsAnalytics: {
       title: 'Reports & Analytics',
@@ -817,6 +882,17 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   sx={{ mx: 1 }}
                 >
                   ERP
+                </Button>
+
+                {/* Finance & Accounting Menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<AccountBalance />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'finance')}
+                  sx={{ mx: 1 }}
+                >
+                  Finance
                 </Button>
 
                 {/* Combined Reports & Analytics menu */}
