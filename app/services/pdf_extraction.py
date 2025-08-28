@@ -1,8 +1,6 @@
-# app/services/pdf_extraction.py
-
 """
-PDF Extraction Service for Vouchers
-Handles PDF processing and data extraction for various voucher types
+PDF Extraction Service for KYC and HR Documents
+Handles PDF processing and data extraction for employee KYC documents and vouchers
 """
 
 import logging
@@ -14,8 +12,8 @@ import tempfile
 import fitz  # PyMuPDF for PDF processing
 import re
 from datetime import datetime
-import requests  # Added for RapidAPI call
-import time  # Added for retry delay
+import requests
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ class PDFExtractionService:
     UPLOAD_DIR = "temp/pdf_uploads"
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     RAPIDAPI_HOST = "powerful-gstin-tool.p.rapidapi.com"
-    RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY')  # Add your RapidAPI key to .env
+    RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY')
     
     def __init__(self):
         os.makedirs(self.UPLOAD_DIR, exist_ok=True)
@@ -38,7 +36,7 @@ class PDFExtractionService:
         For vendor/customer: Extract from PDF only (GSTIN at minimum), GST retrieval is separate via search endpoint
         
         Args:
-            file: Uploaded PDF file
+            file: UploadFile object containing the PDF
             voucher_type: Type of voucher (purchase_voucher, sales_order, vendor, etc.)
             
         Returns:
@@ -80,6 +78,149 @@ class PDFExtractionService:
             # Clean up temporary file
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
+    
+    async def extract_kyc_data(self, file: UploadFile) -> Dict[str, Any]:
+        """
+        Extract KYC data from uploaded PDF document
+        Supports Aadhaar, PAN, Passport, etc.
+        """
+       
+        # Validate file
+        await self._validate_pdf_file(file)
+       
+        # Save file temporarily
+        temp_file_path = await self._save_temp_file(file)
+       
+        try:
+            # Extract text from PDF
+            text_content = await self._extract_text_from_pdf(temp_file_path)
+           
+            # Detect document type and extract accordingly
+            doc_type = self._detect_kyc_type(text_content)
+           
+            if doc_type == "aadhaar":
+                return self._extract_aadhaar_data(text_content)
+            elif doc_type == "pan":
+                return self._extract_pan_data(text_content)
+            elif doc_type == "passport":
+                return self._extract_passport_data(text_content)
+            elif doc_type == "bank":
+                return self._extract_bank_data(text_content)
+            else:
+                return self._extract_generic_kyc_data(text_content)
+               
+        except Exception as e:
+            logger.error(f"KYC extraction failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"KYC extraction failed: {str(e)}"
+            )
+        finally:
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+   
+    def _detect_kyc_type(self, text: str) -> str:
+        """Detect KYC document type based on content"""
+       
+        text_lower = text.lower()
+       
+        if "unique identification authority" in text_lower or "aadhaar" in text_lower:
+            return "aadhaar"
+        elif "income tax department" in text_lower or "permanent account number" in text_lower:
+            return "pan"
+        elif "passport" in text_lower or "government of india" in text_lower:
+            return "passport"
+        elif "account number" in text_lower and ("bank" in text_lower or "ifsc" in text_lower):
+            return "bank"
+        else:
+            return "generic"
+   
+    def _extract_aadhaar_data(self, text: str) -> Dict[str, Any]:
+        """Extract data from Aadhaar card"""
+       
+        patterns = {
+            'aadhaar_number': r'(\d{4}\s?\d{4}\s?\d{4})',
+            'name': r'(?:Name|नाम)\s*:\s*(.+?)(?=\s*(?:Year|DOB|जन्म तिथि|Mobile|Address|$))',
+            'dob': r'(?:DOB|Year of Birth|जन्म तिथि|जन्म वर्ष)\s*:\s*(\d{2}/\d{2}/\d{4})',
+            'gender': r'(?:Gender|लिंग)\s*:\s*(Male|Female|Transgender|MALE|FEMALE|TRANSGENDER)',
+            'address': r'(?:Address|पता)\s*:\s*(.+?)(?=\s*(?:To|Enrolment|Download|www|$))',
+        }
+       
+        extracted = {k: self._extract_with_pattern(text, v) for k, v in patterns.items()}
+       
+        # Parse address
+        if extracted.get('address'):
+            address_parts = extracted['address'].split(',')
+            if len(address_parts) > 1:
+                extracted['address_line1'] = ','.join(address_parts[:-3])
+                extracted['address_line2'] = address_parts[-3].strip() if len(address_parts) > 2 else None
+                extracted['city'] = address_parts[-2].strip() if len(address_parts) > 1 else None
+                last_part = address_parts[-1].strip().split()
+                if len(last_part) >= 2:
+                    extracted['state'] = ' '.join(last_part[:-1])
+                    extracted['pin_code'] = last_part[-1]
+       
+        return {k: v for k, v in extracted.items() if v}
+   
+    def _extract_pan_data(self, text: str) -> Dict[str, Any]:
+        """Extract data from PAN card"""
+       
+        patterns = {
+            'pan_number': r'(?:Permanent Account Number|PAN)\s*:\s*([A-Z]{5}\d{4}[A-Z])',
+            'name': r'(?:Name|नाम)\s*:\s*(.+?)(?=\s*(?:Father|Date|DOB|जन्म तिथि|$))',
+            'father_name': r"(?:Father's Name|पिता का नाम)\s*:\s*(.+?)(?=\s*(?:Date|DOB|जन्म तिथि|$))",
+            'dob': r'(?:Date of Birth|DOB|जन्म तिथि)\s*:\s*(\d{2}/\d{2}/\d{4})',
+        }
+       
+        return {k: self._extract_with_pattern(text, v) for k, v in patterns.items() if self._extract_with_pattern(text, v)}
+   
+    def _extract_passport_data(self, text: str) -> Dict[str, Any]:
+        """Extract data from Passport"""
+       
+        patterns = {
+            'passport_number': r'(?:Passport No|पासपोर्ट संख्या)\s*:\s*([A-Z]\d{7})',
+            'name': r'(?:Given Name|दिए गए नाम)\s*:\s*(.+?)(?=\s*(?:Surname|Date|DOB|$))',
+            'surname': r'(?:Surname|उपनाम)\s*:\s*(.+?)(?=\s*(?:Date|DOB|Place|$))',
+            'dob': r'(?:Date of Birth|DOB|जन्म तिथि)\s*:\s*(\d{2}/\d{2}/\d{4})',
+            'place_of_birth': r'(?:Place of Birth|जन्म स्थान)\s*:\s*(.+?)(?=\s*(?:Date of Issue|$))',
+            'date_of_issue': r'(?:Date of Issue|जारी करने की तिथि)\s*:\s*(\d{2}/\d{2}/\d{4})',
+            'date_of_expiry': r'(?:Date of Expiry|समाप्ति तिथि)\s*:\s*(\d{2}/\d{2}/\d{4})',
+            'address': r'(?:Address|पता)\s*:\s*(.+?)(?=\s*(?:ECR|ECNR|$))',
+        }
+       
+        extracted = {k: self._extract_with_pattern(text, v) for k, v in patterns.items()}
+        if extracted.get('name') and extracted.get('surname'):
+            extracted['full_name'] = f"{extracted['name']} {extracted['surname']}"
+       
+        return {k: v for k, v in extracted.items() if v}
+   
+    def _extract_bank_data(self, text: str) -> Dict[str, Any]:
+        """Extract bank details from statement or passbook"""
+       
+        patterns = {
+            'account_number': r'(?:Account Number|Acct No|A/C No|खाता संख्या)\s*:\s*(\d{9,18})',
+            'ifsc_code': r'(?:IFSC Code|IFSC|आईएफएससी कोड)\s*:\s*([A-Z]{4}0[A-Z0-9]{6})',
+            'bank_name': r'(?:Bank Name|बैंक का नाम)\s*:\s*(.+?)(?=\s*(?:Branch|शाखा|$))',
+            'branch': r'(?:Branch|शाखा)\s*:\s*(.+?)(?=\s*(?:Account Number|खाता संख्या|$))',
+            'name': r'(?:Account Holder Name|खाता धारक का नाम|Name of the Account Holder)\s*:\s*(.+?)(?=\s*(?:Account Number|खाता संख्या|$))',
+        }
+       
+        return {k: self._extract_with_pattern(text, v) for k, v in patterns.items() if self._extract_with_pattern(text, v)}
+   
+    def _extract_generic_kyc_data(self, text: str) -> Dict[str, Any]:
+        """Generic extraction for unknown documents"""
+       
+        patterns = {
+            'name': r'(?:Name|नाम|Full Name|Account Holder)\s*:\s*(.+?)(?=\s*(?:Father|Date|DOB|Address|जन्म तिथि|पता|$))',
+            'dob': r'(?:Date of Birth|DOB|जन्म तिथि)\s*:\s*(\d{2}/\d{2}/\d{4})',
+            'address': r'(?:Address|पता|Current Address|Permanent Address)\s*:\s*(.+?)(?=\s*(?:PIN|Pin Code|State|राज्य|$))',
+            'pan_number': r'(?:PAN|Pan Number|Permanent Account Number)\s*:\s*([A-Z]{5}\d{4}[A-Z])',
+            'aadhaar_number': r'(?:Aadhaar Number|आधार संख्या)\s*:\s*(\d{4}\s?\d{4}\s?\d{4})',
+            'account_number': r'(?:Account Number|खाता संख्या)\s*:\s*(\d{9,18})',
+            'ifsc_code': r'(?:IFSC Code|IFSC|आईएफएससी कोड)\s*:\s*([A-Z]{4}0[A-Z0-9]{6})',
+        }
+       
+        return {k: self._extract_with_pattern(text, v) for k, v in patterns.items() if self._extract_with_pattern(text, v)}
     
     async def _validate_pdf_file(self, file: UploadFile) -> None:
         """Validate uploaded PDF file"""
@@ -139,7 +280,6 @@ class PDFExtractionService:
     async def _extract_purchase_voucher_data(self, text: str) -> Dict[str, Any]:
         """Extract data specific to Purchase Voucher"""
         
-        # Use regex patterns to extract common fields
         patterns = {
             'invoice_number': r'(?:invoice|bill|voucher)[\s#]*:?\s*([A-Z0-9\-\/]+)',
             'invoice_date': r'(?:date|dated)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
@@ -152,7 +292,7 @@ class PDFExtractionService:
             "vendor_name": self._extract_with_pattern(text, patterns['vendor_name']),
             "invoice_number": self._extract_with_pattern(text, patterns['invoice_number']),
             "invoice_date": self._parse_date(self._extract_with_pattern(text, patterns['invoice_date'])),
-            "payment_terms": "Net 30",  # Default
+            "payment_terms": "Net 30",
             "notes": "Extracted from PDF invoice",
             "total_amount": self._parse_amount(self._extract_with_pattern(text, patterns['amount'])),
             "items": self._extract_line_items(text, "purchase")
@@ -174,7 +314,7 @@ class PDFExtractionService:
             "customer_name": self._extract_with_pattern(text, patterns['customer_name']),
             "order_number": self._extract_with_pattern(text, patterns['order_number']),
             "order_date": self._parse_date(self._extract_with_pattern(text, patterns['order_date'])),
-            "payment_terms": "Net 15",  # Default
+            "payment_terms": "Net 15",
             "notes": "Extracted from PDF sales order",
             "total_amount": self._parse_amount(self._extract_with_pattern(text, patterns['amount'])),
             "items": self._extract_line_items(text, "sales")
@@ -192,7 +332,7 @@ class PDFExtractionService:
         }
         
         max_retries = 3
-        retry_delay = 1  # seconds
+        retry_delay = 1
         
         for attempt in range(max_retries):
             try:
@@ -201,7 +341,7 @@ class PDFExtractionService:
                 if response.status_code == 429:
                     logger.warning(f"Rate limit hit (429), retrying after {retry_delay} seconds... (attempt {attempt + 1}/{max_retries})")
                     time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
+                    retry_delay *= 2
                     continue
                 
                 if response.status_code != 200:
@@ -212,16 +352,14 @@ class PDFExtractionService:
                     )
                 
                 api_response = response.json()
-                api_data = api_response.get('data', api_response)  # Handle possible nested 'data'
+                api_data = api_response.get('data', api_response)
                 
-                # Map API response to our fields with alternative key names
                 legal_name = api_data.get('legal_name') or api_data.get('lgnm') or api_data.get('lgn')
                 trade_name = api_data.get('trade_name') or api_data.get('tradeNam') or api_data.get('trdnm')
                 
-                # Use trade_name as name per user instruction
                 extracted_data = {
-                    "name": trade_name,  # Vendor Name / Customer Name
-                    "legal_name": legal_name,  # Additional field for legal name
+                    "name": trade_name,
+                    "legal_name": legal_name,
                     "gst_number": api_data.get('gstin') or gstin,
                     "pan_number": api_data.get('pan_number') or gstin[2:12] if len(gstin) >= 12 else None,
                     "address1": None,
@@ -230,7 +368,7 @@ class PDFExtractionService:
                     "state": None,
                     "pin_code": None,
                     "state_code": api_data.get('state_code') or gstin[:2] if len(gstin) >= 2 else None,
-                    "contact_number": api_data.get('contact_number') or api_data.get('mobile'),  # If available
+                    "contact_number": api_data.get('contact_number') or api_data.get('mobile'),
                     "email": api_data.get('email'),
                     "business_constitution": api_data.get('business_constitution') or api_data.get('ctb'),
                     "taxpayer_type": api_data.get('type') or api_data.get('dty'),
@@ -240,11 +378,9 @@ class PDFExtractionService:
                     "is_active": (api_data.get('status') or api_data.get('sts')) in ['Active', 'ACT', 'Provisional', 'PRO']
                 }
                 
-                # Parse principal address with alternative structures
                 pradr = api_data.get('place_of_business_principal') or api_data.get('pradr') or {}
-                addr = pradr.get('address') or pradr.get('addr') or pradr  # In case flat
+                addr = pradr.get('address') or pradr.get('addr') or pradr
                 
-                # Address parts with alternative keys
                 bno = addr.get('door_num') or addr.get('bno')
                 flno = addr.get('floor_num') or addr.get('flno')
                 bnm = addr.get('building_name') or addr.get('bnm')
@@ -265,7 +401,6 @@ class PDFExtractionService:
                 extracted_data["state"] = state
                 extracted_data["pin_code"] = pin_code
                 
-                # Remove None values
                 return {k: v for k, v in extracted_data.items() if v is not None}
                 
             except Exception as e:
@@ -284,7 +419,6 @@ class PDFExtractionService:
     async def _fallback_pdf_extraction(self, text: str, doc_type: str) -> Dict[str, Any]:
         """Extraction from PDF text"""
         
-        # Clean text: normalize spaces, remove extra newlines
         text = re.sub(r'\s+', ' ', text).strip()
         
         patterns = {
@@ -318,7 +452,7 @@ class PDFExtractionService:
         nature_of_business = self._extract_with_pattern(text, patterns['nature_of_business'])
         
         extracted_data = {
-            "name": trade_name or legal_name,  # Vendor Name / Customer Name
+            "name": trade_name or legal_name,
             "legal_name": legal_name,
             "gst_number": gst_number,
             "pan_number": pan_number,
@@ -336,9 +470,7 @@ class PDFExtractionService:
             "is_active": True
         }
         
-        # Parse address block if available
         if address_block:
-            # Split by comma for parts
             address_parts = [p.strip() for p in address_block.split(',') if p.strip()]
             
             if len(address_parts) >= 4:
@@ -361,14 +493,12 @@ class PDFExtractionService:
                 if pin_match and not extracted_data["pin_code"]:
                     extracted_data["pin_code"] = pin_match.group(0)
         
-        # Remove None values
         return {k: v for k, v in extracted_data.items() if v is not None}
     
     async def _extract_customer_data(self, text: str) -> Dict[str, Any]:
         """Extract customer data from business document"""
         
-        # Reuse vendor logic for customer, as mappings are the same
-        return await self._extract_vendor_data(text)
+        return await extract_vendor_data(text)
     
     def _extract_with_pattern(self, text: str, pattern: str) -> Optional[str]:
         """Extract text using regex pattern with improved cleaning"""
@@ -376,7 +506,6 @@ class PDFExtractionService:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             value = match.group(1).strip()
-            # Clean multiple spaces and newlines
             value = re.sub(r'\s+', ' ', value)
             return value if value else None
         return None
@@ -387,7 +516,6 @@ class PDFExtractionService:
         if not date_str:
             return None
         
-        # Common formats
         formats = ['%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%Y-%m-%d', '%d.%m.%Y']
         
         for fmt in formats:
@@ -396,7 +524,7 @@ class PDFExtractionService:
             except ValueError:
                 continue
         
-        return date_str  # Return original if all fail
+        return date_str
     
     def _parse_amount(self, amount_str: Optional[str]) -> float:
         """Parse amount string to float, removing currency symbols"""
@@ -423,13 +551,11 @@ class PDFExtractionService:
             if not line:
                 continue
                 
-            # Detect table start (headers like Sr Description HSN Qty Rate Amount)
             if re.match(r'(?:Sr|Sl|No|Item)\.?', line, re.IGNORECASE):
                 in_table = True
                 continue
                 
             if in_table:
-                # Simple line item pattern
                 match = re.match(r'(\d+)\s+(.+?)\s+([0-9]{4,8})\s+([0-9.]+)\s+([A-Za-z]+)\s+([0-9.,]+)\s+([0-9.,]+)', line)
                 if match:
                     items.append({
