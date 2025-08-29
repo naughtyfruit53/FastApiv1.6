@@ -21,7 +21,6 @@ import {
   Grid,
   Tooltip
 } from '@mui/material';
-import '../styles/modern-theme.css';
 import {
   Dashboard,
   Receipt,
