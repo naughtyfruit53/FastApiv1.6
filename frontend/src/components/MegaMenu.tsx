@@ -74,7 +74,21 @@ import {
   Chat,
   SmartToy,
   Survey,
-  SupportAgent as ServiceDeskIcon
+  SupportAgent as ServiceDeskIcon,
+  // New icons for Task Management, Calendar, and Mail
+  Task,
+  CalendarToday,
+  EventNote,
+  Alarm,
+  AccessTime,
+  CheckBox,
+  PlayArrow,
+  Inbox,
+  Send,
+  Drafts,
+  Archive,
+  Label,
+  AttachFile
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
@@ -665,6 +679,108 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
+    // Task Management menu
+    taskManagement: {
+      title: 'Task Management',
+      icon: <Task />,
+      sections: [
+        {
+          title: 'Tasks & Projects',
+          items: [
+            { name: 'Task Dashboard', path: '/tasks/dashboard', icon: <Dashboard /> },
+            { name: 'My Tasks', path: '/tasks', icon: <Task /> },
+            { name: 'Task Projects', path: '/tasks/projects', icon: <Assignment /> },
+            { name: 'Create Task', path: '/tasks/create', icon: <NoteAdd /> }
+          ]
+        },
+        {
+          title: 'Time Management',
+          items: [
+            { name: 'Time Tracking', path: '/tasks/time-logs', icon: <AccessTime /> },
+            { name: 'Task Reports', path: '/tasks/reports', icon: <Assessment /> },
+            { name: 'Team Performance', path: '/tasks/team-performance', icon: <Groups /> },
+            { name: 'Project Analytics', path: '/tasks/project-analytics', icon: <Analytics /> }
+          ]
+        },
+        {
+          title: 'Task Operations',
+          items: [
+            { name: 'Task Assignment', path: '/tasks/assignments', icon: <AssignmentTurnedIn /> },
+            { name: 'Task Templates', path: '/tasks/templates', icon: <Storage /> },
+            { name: 'Task Reminders', path: '/tasks/reminders', icon: <Alarm /> },
+            { name: 'Task Comments', path: '/tasks/comments', icon: <Chat /> }
+          ]
+        }
+      ]
+    },
+    // Calendar & Scheduler menu
+    calendar: {
+      title: 'Calendar & Scheduler',
+      icon: <CalendarToday />,
+      sections: [
+        {
+          title: 'Calendar Views',
+          items: [
+            { name: 'Calendar Dashboard', path: '/calendar/dashboard', icon: <Dashboard /> },
+            { name: 'Calendar View', path: '/calendar', icon: <CalendarToday /> },
+            { name: 'My Events', path: '/calendar/events', icon: <EventNote /> },
+            { name: 'Create Event', path: '/calendar/create', icon: <NoteAdd /> }
+          ]
+        },
+        {
+          title: 'Scheduling',
+          items: [
+            { name: 'Appointments', path: '/calendar/appointments', icon: <Schedule /> },
+            { name: 'Meeting Rooms', path: '/calendar/meeting-rooms', icon: <Business /> },
+            { name: 'Event Reminders', path: '/calendar/reminders', icon: <Alarm /> },
+            { name: 'Recurring Events', path: '/calendar/recurring', icon: <Timeline /> }
+          ]
+        },
+        {
+          title: 'Integration',
+          items: [
+            { name: 'Google Calendar', path: '/calendar/google-integration', icon: <CloudUpload /> },
+            { name: 'Calendar Sharing', path: '/calendar/sharing', icon: <Groups /> },
+            { name: 'Task Integration', path: '/calendar/task-integration', icon: <Task /> },
+            { name: 'Calendar Settings', path: '/calendar/settings', icon: <Settings /> }
+          ]
+        }
+      ]
+    },
+    // Mail Management menu
+    mail: {
+      title: 'Mail',
+      icon: <Email />,
+      sections: [
+        {
+          title: 'Email Management',
+          items: [
+            { name: 'Mail Dashboard', path: '/mail/dashboard', icon: <Dashboard /> },
+            { name: 'Inbox', path: '/mail/inbox', icon: <Inbox /> },
+            { name: 'Sent Items', path: '/mail/sent', icon: <Send /> },
+            { name: 'Drafts', path: '/mail/drafts', icon: <Drafts /> }
+          ]
+        },
+        {
+          title: 'Mail Operations',
+          items: [
+            { name: 'Compose Mail', path: '/mail/compose', icon: <NoteAdd /> },
+            { name: 'Email Accounts', path: '/mail/accounts', icon: <AccountCircle /> },
+            { name: 'Email Templates', path: '/mail/templates', icon: <Storage /> },
+            { name: 'Email Rules', path: '/mail/rules', icon: <Settings /> }
+          ]
+        },
+        {
+          title: 'Integration & Sync',
+          items: [
+            { name: 'Email Sync', path: '/mail/sync', icon: <CloudUpload /> },
+            { name: 'Task Linking', path: '/mail/task-linking', icon: <Task /> },
+            { name: 'Calendar Linking', path: '/mail/calendar-linking', icon: <CalendarToday /> },
+            { name: 'Email Analytics', path: '/mail/analytics', icon: <Analytics /> }
+          ]
+        }
+      ]
+    },
     settings: {
       title: 'Settings',
       icon: <Settings />,
@@ -995,6 +1111,39 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   sx={{ mx: 1 }}
                 >
                   Service Desk
+                </Button>
+
+                {/* Task Management Menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<Task />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'taskManagement')}
+                  sx={{ mx: 1 }}
+                >
+                  Tasks
+                </Button>
+
+                {/* Calendar & Scheduler Menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<CalendarToday />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'calendar')}
+                  sx={{ mx: 1 }}
+                >
+                  Calendar
+                </Button>
+
+                {/* Mail Management Menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<Email />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'mail')}
+                  sx={{ mx: 1 }}
+                >
+                  Mail
                 </Button>
 
                 {/* Settings with Administration as submenu */}

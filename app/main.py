@@ -109,6 +109,28 @@ except Exception as import_error:
     logger.error(f"Failed to import service_desk_router: {str(import_error)}")
     raise
 
+# Import new Task Management, Calendar, and Mail APIs
+try:
+    from app.api.v1 import tasks as v1_tasks
+    logger.info("Successfully imported tasks_router")
+except Exception as import_error:
+    logger.error(f"Failed to import tasks_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import calendar as v1_calendar
+    logger.info("Successfully imported calendar_router")
+except Exception as import_error:
+    logger.error(f"Failed to import calendar_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import mail as v1_mail
+    logger.info("Successfully imported mail_router")
+except Exception as import_error:
+    logger.error(f"Failed to import mail_router: {str(import_error)}")
+    raise
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
@@ -339,6 +361,16 @@ logger.info("Marketing router included successfully at prefix: /api/v1/marketing
 
 app.include_router(v1_service_desk.router, prefix="/api/v1", tags=["service-desk"])
 logger.info("Service Desk router included successfully at prefix: /api/v1/service-desk")
+
+# Include new Task Management, Calendar, and Mail routers
+app.include_router(v1_tasks.router, prefix="/api/v1/tasks", tags=["task-management"])
+logger.info("Task Management router included successfully at prefix: /api/v1/tasks")
+
+app.include_router(v1_calendar.router, prefix="/api/v1/calendar", tags=["calendar-scheduler"])
+logger.info("Calendar and Scheduler router included successfully at prefix: /api/v1/calendar")
+
+app.include_router(v1_mail.router, prefix="/api/v1/mail", tags=["mail-management"])
+logger.info("Mail Management router included successfully at prefix: /api/v1/mail")
 
 @app.get("/routes")
 def get_routes():

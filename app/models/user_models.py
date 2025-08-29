@@ -257,6 +257,52 @@ class Organization(Base):
         "app.models.exhibition_models.ExhibitionEvent",
         back_populates="organization"
     )
+    
+    # Task Management relationships
+    tasks: Mapped[List["app.models.task_management.Task"]] = relationship(
+        "app.models.task_management.Task",
+        back_populates="organization"
+    )
+    task_projects: Mapped[List["app.models.task_management.TaskProject"]] = relationship(
+        "app.models.task_management.TaskProject",
+        back_populates="organization"
+    )
+    
+    # Calendar Management relationships
+    calendar_events: Mapped[List["app.models.calendar_management.CalendarEvent"]] = relationship(
+        "app.models.calendar_management.CalendarEvent",
+        back_populates="organization"
+    )
+    calendars: Mapped[List["app.models.calendar_management.Calendar"]] = relationship(
+        "app.models.calendar_management.Calendar",
+        back_populates="organization"
+    )
+    google_calendar_integrations: Mapped[List["app.models.calendar_management.GoogleCalendarIntegration"]] = relationship(
+        "app.models.calendar_management.GoogleCalendarIntegration",
+        back_populates="organization"
+    )
+    
+    # Email Management relationships
+    email_accounts: Mapped[List["app.models.mail_management.EmailAccount"]] = relationship(
+        "app.models.mail_management.EmailAccount",
+        back_populates="organization"
+    )
+    emails: Mapped[List["app.models.mail_management.Email"]] = relationship(
+        "app.models.mail_management.Email",
+        back_populates="organization"
+    )
+    sent_emails: Mapped[List["app.models.mail_management.SentEmail"]] = relationship(
+        "app.models.mail_management.SentEmail",
+        back_populates="organization"
+    )
+    email_templates: Mapped[List["app.models.mail_management.EmailTemplate"]] = relationship(
+        "app.models.mail_management.EmailTemplate",
+        back_populates="organization"
+    )
+    email_rules: Mapped[List["app.models.mail_management.EmailRule"]] = relationship(
+        "app.models.mail_management.EmailRule",
+        back_populates="organization"
+    )
 
     __table_args__ = (
         Index('idx_org_status_subdomain', 'status', 'subdomain'),
@@ -332,6 +378,92 @@ class User(Base):
     organization: Mapped[Optional["app.models.user_models.Organization"]] = relationship(
         "app.models.user_models.Organization", 
         back_populates="users"
+    )
+    
+    # Task Management Relationships
+    created_tasks: Mapped[List["app.models.task_management.Task"]] = relationship(
+        "app.models.task_management.Task",
+        foreign_keys="app.models.task_management.Task.created_by",
+        back_populates="creator"
+    )
+    assigned_tasks: Mapped[List["app.models.task_management.Task"]] = relationship(
+        "app.models.task_management.Task",
+        foreign_keys="app.models.task_management.Task.assigned_to",
+        back_populates="assignee"
+    )
+    created_projects: Mapped[List["app.models.task_management.TaskProject"]] = relationship(
+        "app.models.task_management.TaskProject",
+        back_populates="creator"
+    )
+    project_memberships: Mapped[List["app.models.task_management.TaskProjectMember"]] = relationship(
+        "app.models.task_management.TaskProjectMember",
+        back_populates="user"
+    )
+    task_comments: Mapped[List["app.models.task_management.TaskComment"]] = relationship(
+        "app.models.task_management.TaskComment",
+        back_populates="user"
+    )
+    task_attachments: Mapped[List["app.models.task_management.TaskAttachment"]] = relationship(
+        "app.models.task_management.TaskAttachment",
+        back_populates="user"
+    )
+    time_logs: Mapped[List["app.models.task_management.TaskTimeLog"]] = relationship(
+        "app.models.task_management.TaskTimeLog",
+        back_populates="user"
+    )
+    task_reminders: Mapped[List["app.models.task_management.TaskReminder"]] = relationship(
+        "app.models.task_management.TaskReminder",
+        back_populates="user"
+    )
+    
+    # Calendar Management Relationships
+    created_events: Mapped[List["app.models.calendar_management.CalendarEvent"]] = relationship(
+        "app.models.calendar_management.CalendarEvent",
+        foreign_keys="app.models.calendar_management.CalendarEvent.created_by",
+        back_populates="creator"
+    )
+    event_attendances: Mapped[List["app.models.calendar_management.EventAttendee"]] = relationship(
+        "app.models.calendar_management.EventAttendee",
+        back_populates="user"
+    )
+    event_reminders: Mapped[List["app.models.calendar_management.EventReminder"]] = relationship(
+        "app.models.calendar_management.EventReminder",
+        back_populates="user"
+    )
+    owned_calendars: Mapped[List["app.models.calendar_management.Calendar"]] = relationship(
+        "app.models.calendar_management.Calendar",
+        back_populates="owner"
+    )
+    calendar_shares: Mapped[List["app.models.calendar_management.CalendarShare"]] = relationship(
+        "app.models.calendar_management.CalendarShare",
+        foreign_keys="app.models.calendar_management.CalendarShare.user_id",
+        back_populates="user"
+    )
+    google_calendar_integration: Mapped[List["app.models.calendar_management.GoogleCalendarIntegration"]] = relationship(
+        "app.models.calendar_management.GoogleCalendarIntegration",
+        back_populates="user"
+    )
+    
+    # Email Management Relationships
+    email_accounts: Mapped[List["app.models.mail_management.EmailAccount"]] = relationship(
+        "app.models.mail_management.EmailAccount",
+        back_populates="user"
+    )
+    sent_emails: Mapped[List["app.models.mail_management.SentEmail"]] = relationship(
+        "app.models.mail_management.SentEmail",
+        back_populates="sender"
+    )
+    email_actions: Mapped[List["app.models.mail_management.EmailAction"]] = relationship(
+        "app.models.mail_management.EmailAction",
+        back_populates="user"
+    )
+    created_email_templates: Mapped[List["app.models.mail_management.EmailTemplate"]] = relationship(
+        "app.models.mail_management.EmailTemplate",
+        back_populates="creator"
+    )
+    email_rules: Mapped[List["app.models.mail_management.EmailRule"]] = relationship(
+        "app.models.mail_management.EmailRule",
+        back_populates="user"
     )
 
     __table_args__ = (
