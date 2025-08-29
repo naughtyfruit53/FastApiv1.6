@@ -84,7 +84,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                     />
                   </Box>
 
-                  <Box sx={{ mb: 2 }}>
+                  {/* <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="body2">
                         Production Progress
@@ -97,8 +97,8 @@ const FinishedGoodsReceipt: React.FC = () => {
                       variant="determinate" 
                       value={getCompletionPercentage(order.producedQty, order.plannedQty)}
                       sx={{ height: 8, borderRadius: 4 }}
-                    /> */}
-                  </Box>
+                    />
+                  </Box> */}
 
                   <Grid container spacing={2}>
                     <Grid size={6}>
