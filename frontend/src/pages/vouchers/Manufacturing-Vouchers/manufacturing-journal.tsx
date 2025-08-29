@@ -642,13 +642,15 @@ export default function ManufacturingJournalVoucher() {
                 {/* VoucherHeaderActions commented out */}
                 {/* VoucherHeaderActions commented out */}
                 {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}              </Box>
+                {/* VoucherHeaderActions commented out */}
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
     </Box>
+    </Container>
   );
 };
 
-export default ManufacturingJournal;</Container>
+export default ManufacturingJournal;

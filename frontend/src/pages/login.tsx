@@ -9,6 +9,7 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
+import Image from 'next/image';
 import { toast } from 'react-toastify';
 import LoginForm from '../components/LoginForm';
 import OTPLogin from '../components/OTPLogin';
@@ -76,10 +77,13 @@ const LoginPage: React.FC = () => {
   return (
     <Container maxWidth="xs">
       <Box sx={{ mt: 4, textAlign: 'center' }}>
-        <img 
+        <Image 
           src="/Tritiq.png" 
           alt="TRITIQ ERP" 
-          style={{ maxWidth: '100%', height: 'auto', marginBottom: '16px' }} 
+          width={300}
+          height={120}
+          style={{ maxWidth: '100%', height: 'auto', marginBottom: '16px' }}
+          priority
         />
         <Typography variant="h6" component="h2" gutterBottom color="textSecondary">
           Enterprise Resource Planning System

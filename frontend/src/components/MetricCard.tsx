@@ -97,8 +97,31 @@ const MetricCard: React.FC<MetricCardProps> = ({
   return (
     <Box 
       className={`modern-metric-card ${color} ${className} animate-fade-in-up`}
+      role="group"
+      aria-label={`${title}: ${formatValue(value)}`}
+      tabIndex={0}
       sx={{
         minHeight: size === 'large' ? 140 : size === 'small' ? 100 : 120,
+        cursor: 'pointer',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          transform: 'translateY(-4px) scale(1.02)',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+          '& .metric-card-icon': {
+            transform: 'rotate(5deg) scale(1.1)',
+          },
+          '& .metric-card-value': {
+            color: 'primary.main',
+          }
+        },
+        '&:focus': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: '2px',
+        },
+        '&:active': {
+          transform: 'translateY(-2px) scale(1.01)',
+        }
       }}
     >
       <Box className="metric-card-header">

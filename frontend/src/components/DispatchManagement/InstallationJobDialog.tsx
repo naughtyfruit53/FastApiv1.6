@@ -608,7 +608,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
               )}
               
               {isJobCompleted && job.completion_record && (
-                <TabPanel value={currentTab} index={isJobCompleted ? 2 : 3}>
+                <TabPanel value={currentTab} index={2}>
                   {/* Completion Details Tab */}
                   <Typography variant="h6" gutterBottom>Completion Details</Typography>
                   
@@ -654,6 +654,10 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                 </TabPanel>
               )}
             </>
+          ) : (
+            <Box display="flex" justifyContent="center" p={4}>
+              <Typography>No job data available</Typography>
+            </Box>
           )}
         </DialogContent>
 

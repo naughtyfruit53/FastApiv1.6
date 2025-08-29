@@ -21,7 +21,6 @@ import {
   Grid,
   Tooltip
 } from '@mui/material';
-import '../styles/modern-theme.css';
 import {
   Dashboard,
   Receipt,
@@ -114,6 +113,26 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const [createLicenseModalOpen, setCreateLicenseModalOpen] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // Common button style for enhanced UI/UX
+  const modernButtonStyle = {
+    mx: 1,
+    transition: 'all 0.2s ease-in-out',
+    borderRadius: 2,
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    },
+    '&:focus': {
+      outline: '2px solid',
+      outlineColor: 'primary.main',
+      outlineOffset: '2px',
+    },
+    '&:active': {
+      transform: 'translateY(0) scale(0.98)',
+    }
+  };
 
   // Query for company data to show logo
   const { data: companyData } = useQuery({
@@ -856,11 +875,26 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           sx: {
             width: 800,
             maxHeight: 500,
-            mt: 1
+            mt: 1,
+            borderRadius: 2,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            border: '1px solid',
+            borderColor: 'divider',
+            '& .MuiMenuItem-root': {
+              borderRadius: 1,
+              margin: '2px 8px',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'primary.50',
+                transform: 'translateX(4px)',
+              }
+            }
           }
         }}
         MenuListProps={{
-          sx: { p: 2 }
+          sx: {
+            padding: 1
+          }
         }}
       >
         <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
@@ -920,7 +954,25 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         PaperProps={{
           sx: {
-            ml: 1
+            ml: 1,
+            borderRadius: 2,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            border: '1px solid',
+            borderColor: 'divider',
+            '& .MuiMenuItem-root': {
+              borderRadius: 1,
+              margin: '2px 8px',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'primary.50',
+                transform: 'translateX(4px)',
+              }
+            }
+          }
+        }}
+        MenuListProps={{
+          sx: {
+            padding: 1
           }
         }}
       >
@@ -1009,7 +1061,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   color="inherit"
                   startIcon={<Dashboard />}
                   onClick={() => router.push('/dashboard')}
-                  sx={{ mx: 1 }}
+                  className="modern-menu-button"
+                  sx={modernButtonStyle}
                 >
                   Dashboard
                 </Button>
@@ -1017,7 +1070,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   color="inherit"
                   startIcon={<DeveloperMode />}
                   onClick={handleDemoMode}
-                  sx={{ mx: 1 }}
+                  className="modern-menu-button"
+                  sx={modernButtonStyle}
                 >
                   Demo
                 </Button>
@@ -1026,7 +1080,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Settings />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'settings')}
-                  sx={{ mx: 1 }}
+                  className="modern-menu-button"
+                  sx={modernButtonStyle}
                 >
                   Settings
                 </Button>
@@ -1041,7 +1096,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<People />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'masterData')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Master Data
                 </Button>
@@ -1052,7 +1107,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Business />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'erp')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   ERP
                 </Button>
@@ -1063,7 +1118,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<AccountBalance />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'finance')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Finance
                 </Button>
@@ -1074,7 +1129,18 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Assessment />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'reportsAnalytics')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
+                >
+                  Finance
+                </Button>
+
+                {/* Combined Reports & Analytics menu */}
+                <Button
+                  color="inherit"
+                  startIcon={<Assessment />}
+                  endIcon={<ExpandMore />}
+                  onClick={(e) => handleMenuClick(e, 'reportsAnalytics')}
+                  sx={modernButtonStyle}
                 >
                   Reports & Analytics
                 </Button>
@@ -1085,7 +1151,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Person />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'crm')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   CRM
                 </Button>
@@ -1096,7 +1162,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Groups />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'hrManagement')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   HR Management
                 </Button>
@@ -1107,7 +1173,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Campaign />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'marketing')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Marketing
                 </Button>
@@ -1118,7 +1184,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<ServiceDeskIcon />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'serviceDesk')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Service Desk
                 </Button>
@@ -1129,7 +1195,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Task />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'taskManagement')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Tasks
                 </Button>
@@ -1140,7 +1206,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<CalendarToday />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'calendar')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Calendar
                 </Button>
@@ -1151,7 +1217,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Email />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'mail')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Mail
                 </Button>
@@ -1162,7 +1228,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<Settings />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'settings')}
-                  sx={{ mx: 1 }}
+                  sx={modernButtonStyle}
                 >
                   Settings
                 </Button>
@@ -1188,6 +1254,29 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         anchorEl={userMenuAnchor}
         open={Boolean(userMenuAnchor)}
         onClose={handleUserMenuClose}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            border: '1px solid',
+            borderColor: 'divider',
+            minWidth: 200,
+            '& .MuiMenuItem-root': {
+              borderRadius: 1,
+              margin: '2px 8px',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'primary.50',
+                transform: 'translateX(4px)',
+              }
+            }
+          }
+        }}
+        MenuListProps={{
+          sx: {
+            padding: 1
+          }
+        }}
       >
         <MenuItem onClick={handleUserMenuClose}>
           <Typography variant="body2">

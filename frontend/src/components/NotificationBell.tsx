@@ -154,9 +154,40 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
         aria-describedby={isOpen ? 'notification-menu' : undefined}
         aria-haspopup="true"
         aria-expanded={isOpen ? 'true' : undefined}
+        sx={{
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'scale(1.1)',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          },
+          '&:active': {
+            transform: 'scale(0.95)',
+          }
+        }}
       >
-        <Badge badgeContent={unreadCount} color="error" max={99}>
-          {unreadCount > 0 ? <Notifications /> : <NotificationsNone />}
+        <Badge 
+          badgeContent={unreadCount} 
+          color="error" 
+          max={99}
+          sx={{
+            '& .MuiBadge-badge': {
+              animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none',
+              '@keyframes pulse': {
+                '0%': { transform: 'scale(1)' },
+                '50%': { transform: 'scale(1.2)' },
+                '100%': { transform: 'scale(1)' }
+              }
+            }
+          }}
+        >
+          <Box
+            sx={{
+              transition: 'all 0.3s ease',
+              transform: unreadCount > 0 ? 'rotate(10deg)' : 'rotate(0deg)',
+            }}
+          >
+            {unreadCount > 0 ? <Notifications /> : <NotificationsNone />}
+          </Box>
         </Badge>
       </IconButton>
 
@@ -166,10 +197,26 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
         open={isOpen}
         onClose={handleClose}
         PaperProps={{
-          style: {
+          sx: {
             maxHeight: 400,
             width: 360,
-          },
+            borderRadius: 2,
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+            border: '1px solid',
+            borderColor: 'divider',
+            '& .MuiMenuItem-root': {
+              borderRadius: 1,
+              margin: '2px 8px',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'primary.50',
+                transform: 'translateX(4px)',
+              }
+            }
+          }
+        }}
+        MenuListProps={{
+          sx: { padding: 0 }
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
