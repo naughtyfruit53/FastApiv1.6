@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Notes Settings - UI Mockup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .settings-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+        }
+        
+        .settings-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .settings-icon {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .account-info {
+            background: #f8f9fa;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .account-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .role-info {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .settings-content {
+            padding: 24px;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+        }
+        
+        .settings-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-icon {
+            width: 20px;
+            height: 20px;
+            color: #667eea;
+        }
+        
+        .card-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .preference-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .preference-item:last-child {
+            border-bottom: none;
+        }
+        
+        .preference-icon {
+            width: 20px;
+            height: 20px;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .preference-content {
+            flex: 1;
+        }
+        
+        .preference-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .preference-subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+            margin-top: 2px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .future-note {
+            color: #666;
+            font-style: italic;
+            font-size: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #f1f3f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <div class="settings-header">
+            <div class="settings-title">
+                <svg class="settings-icon" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Settings
+            </div>
+        </div>
+        
+        <div class="account-info">
+            <div class="account-title">Account Information</div>
+            <div class="role-info">Current Role: <strong>Organization Administrator</strong></div>
+        </div>
+        
+        <div class="settings-content">
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <div class="card-title">
+                        <svg class="card-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L19 5V4C19 3.45 18.55 3 18 3S17 3.45 17 4V5L15 7V9C15 9.55 15.45 10 16 10S17 9.55 17 9V8L18 7L19 8V9C19 9.55 19.45 10 20 10S21 9.55 21 9ZM8.5 7.5C9.33 7.5 10 8.17 10 9S9.33 10.5 8.5 10.5S7 9.83 7 9S7.67 7.5 8.5 7.5Z"/>
+                        </svg>
+                        User Preferences
+                    </div>
+                    <div class="card-description">
+                        Customize your dashboard experience and personal settings.
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Dashboard Settings</div>
+                        
+                        <div class="preference-item">
+                            <svg class="preference-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 3h12v12l-4 4H3V3zm2 2v12h6l3-3V5H5z"/>
+                            </svg>
+                            <div class="preference-content">
+                                <div class="preference-title">Enable Sticky Notes</div>
+                                <div class="preference-subtitle">Show sticky notes panel on your dashboard</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="success-message">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        Sticky notes enabled
+                    </div>
+                    
+                    <div class="future-note">
+                        More customization options will be available in future updates.
+                    </div>
+                </div>
+                
+                <div class="settings-card">
+                    <div class="card-title">
+                        <svg class="card-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M16 1H4C2.9 1 2 1.9 2 3V17C2 18.1 2.9 19 4 19H12L16 23V19H20C21.1 19 22 18.1 22 17V7C22 5.9 21.1 5 20 5H16V1ZM14 3V5H20V17H14V19.83L11.17 17H4V3H14ZM6 7H12V9H6V7ZM6 11H10V13H6V11Z"/>
+                        </svg>
+                        User Management
+                    </div>
+                    <div class="card-description">
+                        Manage users within your organization. Add new users, edit existing ones, and control their access permissions.
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button style="background: #667eea; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                            Manage Users
+                        </button>
+                        <button style="background: transparent; color: #667eea; border: 1px solid #667eea; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                            Add New User
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
