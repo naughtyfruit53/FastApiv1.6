@@ -15,7 +15,6 @@ on:
       - 'app/**'
       - 'scripts/audit_ui_features.py'
   schedule:
-    # Run comprehensive audit daily at 2 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
@@ -49,7 +48,7 @@ jobs:
     outputs:
       frontend-url: ${{ steps.urls.outputs.frontend-url }}
       api-url: ${{ steps.urls.outputs.api-url }}
-      
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -73,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup-environment
     if: contains(needs.setup-environment.outputs.frontend-url, 'localhost')
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -103,12 +102,13 @@ jobs:
 
       - name: 🗄️ Setup test database
         run: |
-          # Setup PostgreSQL test database
           sudo systemctl start postgresql.service
-          sudo -u postgres createdb tritiq_test || true
-          sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';" || true
-          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;" || true
-          sudo -u postgres psql -d tritiq_test -c "GRANT ALL ON SCHEMA public TO tritiq_user;"
+          sudo -u postgres dropdb --if-exists tritiq_test
+          sudo -u postgres psql -c "DROP USER IF EXISTS tritiq_user;" || true
+          sudo -u postgres createdb tritiq_test
+          sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;"
+          sudo -u postgres psql -d tritiq_test -c "GRANT USAGE,CREATE ON SCHEMA public TO tritiq_user;"
           sudo -u postgres psql -d tritiq_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO tritiq_user;"
 
       - name: ⚙️ Configure environment
@@ -132,18 +132,14 @@ jobs:
           export $(cat .env.test | xargs)
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           echo $! > backend.pid
-          
-          # Wait for backend to be ready
           timeout 60 bash -c 'until curl -f http://localhost:8000/health > /dev/null 2>&1; do sleep 2; done'
-        
+
       - name: 🏃‍♂️ Start frontend server
         run: |
           cd frontend
           npm run build
           npm start &
           echo $! > ../frontend.pid
-          
-          # Wait for frontend to be ready
           timeout 120 bash -c 'until curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done'
 
       - name: 💾 Cache running services
@@ -157,12 +153,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup-environment, start-services]
     if: always() && (needs.start-services.result == 'success' || contains(needs.setup-environment.outputs.frontend-url, 'https'))
-    
+
     strategy:
       matrix:
         browser: [chromium]
-        # Future: Add webkit, firefox for cross-browser testing
-        
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -183,14 +178,15 @@ jobs:
       - name: 🔄 Start services (if local environment)
         if: contains(needs.setup-environment.outputs.frontend-url, 'localhost')
         run: |
-          # For local testing, replicate the service startup
           sudo systemctl start postgresql.service
-          sudo -u postgres createdb tritiq_test || true
-          sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';" || true
-          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;" || true
-          sudo -u postgres psql -d tritiq_test -c "GRANT ALL ON SCHEMA public TO tritiq_user;"
+          sudo -u postgres dropdb --if-exists tritiq_test
+          sudo -u postgres psql -c "DROP USER IF EXISTS tritiq_user;" || true
+          sudo -u postgres createdb tritiq_test
+          sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;"
+          sudo -u postgres psql -d tritiq_test -c "GRANT USAGE,CREATE ON SCHEMA public TO tritiq_user;"
           sudo -u postgres psql -d tritiq_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO tritiq_user;"
-          
+
           cat > .env.test << EOF
           DATABASE_URL=postgresql://tritiq_user:tritiq_pass@localhost/tritiq_test
           SECRET_KEY=test-secret-key-for-ci
@@ -199,13 +195,13 @@ jobs:
           ENVIRONMENT=test
           CORS_ORIGINS=["http://localhost:3000"]
           EOF
-          
+
           export $(cat .env.test | xargs)
           alembic upgrade head
-          
+
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           timeout 60 bash -c 'until curl -f http://localhost:8000/health > /dev/null 2>&1; do sleep 2; done'
-          
+
           cd frontend
           npm ci
           npm run build
