@@ -543,8 +543,10 @@ class NotificationService:
                 logger.info(f"[MOCK SMS] To: {phone}, Message: {content}")
                 return True
             
-            # TODO: Integrate with real SMS service (Twilio, AWS SNS, etc.)
-            # Example for Twilio:
+            # Production SMS service integration placeholder
+            # Configure SMS_MOCK_MODE=False in production and add service credentials
+            # Supported services: Twilio, AWS SNS, Azure Communication Services
+            # Example configuration for Twilio:
             # client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
             # message = client.messages.create(
             #     body=content,
@@ -568,8 +570,10 @@ class NotificationService:
                 logger.info(f"[MOCK PUSH] To: {device_token}, Title: {title}, Message: {content}")
                 return True
             
-            # TODO: Integrate with push notification service (Firebase, OneSignal, etc.)
-            # Example for Firebase:
+            # Production push notification service integration placeholder
+            # Configure PUSH_MOCK_MODE=False in production and add service credentials
+            # Supported services: Firebase FCM, OneSignal, Apple Push Notification Service
+            # Example configuration for Firebase FCM:
             # from pyfcm import FCMNotification
             # push_service = FCMNotification(api_key=settings.FCM_SERVER_KEY)
             # result = push_service.notify_single_device(
@@ -597,8 +601,13 @@ class NotificationService:
                 logger.info(f"[MOCK IN-APP] To: {user_identifier}, Title: {title}, Message: {content}")
                 return True
             
-            # TODO: Implement real-time in-app notification system
-            # This could involve WebSocket connections or polling endpoints
+            # Real-time in-app notification system implementation placeholder
+            # Configure IN_APP_MOCK_MODE=False in production
+            # Implementation options:
+            # 1. WebSocket connections for real-time delivery
+            # 2. Server-Sent Events (SSE) for live updates
+            # 3. Polling-based notification checking
+            # 4. Database-stored notifications with real-time sync
             
             logger.info(f"In-app notification queued for {user_identifier}: {title} - {content}")
             return True

@@ -395,7 +395,7 @@ export default function JobCardVoucher() {
                             label={voucher.job_status} 
                             size="small"
                             color={voucher.job_status === 'completed' ? 'success' : 'default'}
-                          /> }
+                          />
                         </TableCell>
                         <TableCell align="center">
                           {/* <VoucherContextMenu
@@ -405,7 +405,7 @@ export default function JobCardVoucher() {
                             onEdit={() => handleEdit(voucher)}
                             onDelete={() => handleDelete(voucher.id!)}
                             onClose={() => {}}
-                          /> }
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -447,7 +447,7 @@ export default function JobCardVoucher() {
                       fullWidth
                       disabled
                       value={watch('voucher_number')}
-                    /> }
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     {/* <TextField
@@ -457,7 +457,7 @@ export default function JobCardVoucher() {
                       fullWidth
                       InputLabelProps={{ shrink: true }}
                       disabled={mode === 'view'}
-                    /> }
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
@@ -485,7 +485,7 @@ export default function JobCardVoucher() {
                         <TextField {...params} label="Vendor" required />
                       )}
                       disabled={mode === 'view'}
-                    /> }
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
@@ -497,7 +497,7 @@ export default function JobCardVoucher() {
                         <TextField {...params} label="Manufacturing Order (Optional)" />
                       )}
                       disabled={mode === 'view'}
-                    /> }
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
@@ -533,7 +533,7 @@ export default function JobCardVoucher() {
                           multiline
                           rows={3}
                           disabled={mode === 'view'}
-                        /> }
+                        />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
@@ -542,7 +542,7 @@ export default function JobCardVoucher() {
                           fullWidth
                           placeholder="e.g., Machining, Assembly, Finishing"
                           disabled={mode === 'view'}
-                        /> }
+                        />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <FormControl fullWidth>
@@ -568,7 +568,7 @@ export default function JobCardVoucher() {
                           fullWidth
                           InputLabelProps={{ shrink: true }}
                           disabled={mode === 'view'}
-                        /> }
+                        />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
@@ -578,7 +578,7 @@ export default function JobCardVoucher() {
                           fullWidth
                           InputLabelProps={{ shrink: true }}
                           disabled={mode === 'view'}
-                        /> }
+                        />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
@@ -586,7 +586,7 @@ export default function JobCardVoucher() {
                           {...control.register('transport_mode')}
                           fullWidth
                           disabled={mode === 'view'}
-                        /> }
+                        />
                       </Grid>
                       <Grid size={12}>
                         <TextField
@@ -596,7 +596,7 @@ export default function JobCardVoucher() {
                           multiline
                           rows={2}
                           disabled={mode === 'view'}
-                        /> }
+                        />
                       </Grid>
                     </Grid>
                   </AccordionDetails>
@@ -616,10 +616,10 @@ export default function JobCardVoucher() {
                               checked={watch('quality_check_required')}
                               onChange={(e) => setValue('quality_check_required', e.target.checked)}
                               disabled={mode === 'view'}
-                            /> }
+                            />
                           }
                           label="Quality Check Required"
-                        /> }
+                        />
                       </Grid>
                       <Grid size={12}>
                         <TextField
@@ -629,7 +629,7 @@ export default function JobCardVoucher() {
                           multiline
                           rows={3}
                           disabled={mode === 'view'}
-                        /> }
+                        />
                       </Grid>
                     </Grid>
                   </AccordionDetails>
@@ -688,7 +688,7 @@ export default function JobCardVoucher() {
                                   )}
                                   disabled={mode === 'view'}
                                   sx={{ minWidth: 150 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <TextField
@@ -698,7 +698,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`supplied_materials.${index}.quantity_supplied`, parseFloat(e.target.value) || 0)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 80 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <TextField
@@ -707,7 +707,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`supplied_materials.${index}.unit`, e.target.value)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 70 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <TextField
@@ -717,7 +717,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`supplied_materials.${index}.unit_rate`, parseFloat(e.target.value) || 0)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 80 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">
@@ -731,7 +731,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`supplied_materials.${index}.batch_number`, e.target.value)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 100 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <TextField
@@ -741,7 +741,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`supplied_materials.${index}.supply_date`, e.target.value)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 120 }}
-                                /> }
+                                />
                               </TableCell>
                               {mode !== 'view' && (
                                 <TableCell>
@@ -807,7 +807,7 @@ export default function JobCardVoucher() {
                                   )}
                                   disabled={mode === 'view'}
                                   sx={{ minWidth: 150 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <TextField
@@ -817,7 +817,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`received_outputs.${index}.quantity_received`, parseFloat(e.target.value) || 0)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 80 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <TextField
@@ -826,7 +826,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`received_outputs.${index}.unit`, e.target.value)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 70 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <TextField
@@ -836,7 +836,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`received_outputs.${index}.unit_rate`, parseFloat(e.target.value) || 0)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 80 }}
-                                /> }
+                                />
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">
@@ -866,7 +866,7 @@ export default function JobCardVoucher() {
                                   onChange={(e) => setValue(`received_outputs.${index}.receipt_date`, e.target.value)}
                                   disabled={mode === 'view'}
                                   sx={{ width: 120 }}
-                                /> }
+                                />
                               </TableCell>
                               {mode !== 'view' && (
                                 <TableCell>
@@ -897,7 +897,7 @@ export default function JobCardVoucher() {
                       multiline
                       rows={3}
                       disabled={mode === 'view'}
-                    /> }
+                    />
                   </Grid>
                 </Grid>
 
