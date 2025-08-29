@@ -1,5 +1,7 @@
 // frontend/src/utils/voucherUtils.ts
 
+import { UI_CONSTANTS } from '../constants/ui';
+
 export const GST_SLABS = [0, 5, 12, 18, 28];
 
 // State to GST state code mapping for GST calculations
@@ -719,9 +721,9 @@ export const getVoucherStyles = () => ({
     },
     // Enhanced dropdown width for voucher numbers
     '& .voucher-dropdown': {
-      minWidth: '200px',
+      minWidth: `${UI_CONSTANTS.WIDTH.VOUCHER_MIN}px`,
       '& .MuiSelect-select': {
-        minWidth: '180px',
+        minWidth: `${UI_CONSTANTS.WIDTH.VOUCHER_MIN - 20}px`,
         textOverflow: 'ellipsis',
         overflow: 'hidden',
         whiteSpace: 'nowrap'
@@ -729,9 +731,9 @@ export const getVoucherStyles = () => ({
     },
     // Reference dropdown width
     '& .reference-dropdown': {
-      minWidth: '250px',
+      minWidth: `${UI_CONSTANTS.WIDTH.REFERENCE_MIN}px`,
       '& .MuiSelect-select': {
-        minWidth: '230px',
+        minWidth: `${UI_CONSTANTS.WIDTH.REFERENCE_MIN - 20}px`,
         textOverflow: 'ellipsis',
         overflow: 'hidden',
         whiteSpace: 'nowrap'
