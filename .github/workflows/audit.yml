@@ -108,6 +108,8 @@ jobs:
           sudo -u postgres createdb tritiq_test || true
           sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';" || true
           sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;" || true
+          sudo -u postgres psql -d tritiq_test -c "GRANT ALL ON SCHEMA public TO tritiq_user;"
+          sudo -u postgres psql -d tritiq_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO tritiq_user;"
 
       - name: ⚙️ Configure environment
         run: |
@@ -186,6 +188,8 @@ jobs:
           sudo -u postgres createdb tritiq_test || true
           sudo -u postgres psql -c "CREATE USER tritiq_user WITH PASSWORD 'tritiq_pass';" || true
           sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tritiq_test TO tritiq_user;" || true
+          sudo -u postgres psql -d tritiq_test -c "GRANT ALL ON SCHEMA public TO tritiq_user;"
+          sudo -u postgres psql -d tritiq_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO tritiq_user;"
           
           cat > .env.test << EOF
           DATABASE_URL=postgresql://tritiq_user:tritiq_pass@localhost/tritiq_test
