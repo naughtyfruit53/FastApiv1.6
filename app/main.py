@@ -58,6 +58,9 @@ from app.api.v1 import warehouse as v1_warehouse
 # Add import for RBAC
 from app.api.v1 import rbac as v1_rbac
 
+# Add import for sticky notes
+from app.api.v1 import sticky_notes as v1_sticky_notes
+
 # Add import for service analytics
 from app.api.v1 import service_analytics as v1_service_analytics
 
@@ -245,6 +248,14 @@ app.include_router(
     tags=["v1-user"]
 )
 logger.info("User router included successfully at prefix: /api/v1/user")
+
+# Sticky Notes API
+app.include_router(
+    v1_sticky_notes.router,
+    prefix="/api/v1/sticky-notes",
+    tags=["sticky-notes"]
+)
+logger.info("Sticky notes router included successfully at prefix: /api/v1/sticky-notes")
 
 # PDF Extraction API
 app.include_router(

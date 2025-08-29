@@ -116,6 +116,10 @@ from .mail_management import (
     EmailAccount, Email, EmailAttachment, SentEmail, EmailAction,
     EmailTemplate, EmailRule, EmailAccountType, EmailStatus, EmailPriority
 )
+# Import sticky notes models
+from .sticky_notes import (
+    StickyNote
+)
 
 # No imports from .base as all models have been moved
 
@@ -203,6 +207,9 @@ __all__ = [
     # Mail management models
     "EmailAccount", "Email", "EmailAttachment", "SentEmail", "EmailAction",
     "EmailTemplate", "EmailRule", "EmailAccountType", "EmailStatus", "EmailPriority",
+    
+    # Sticky notes models
+    "StickyNote",
     
     # Migration models
     "MigrationJob", "MigrationDataMapping", "MigrationLog", "MigrationTemplate",

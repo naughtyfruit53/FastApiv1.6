@@ -379,6 +379,11 @@ class User(Base):
     is_sso_user: Mapped[bool] = mapped_column(Boolean, default=False) # Flag to identify SSO users
     sso_provider: Mapped[Optional[str]] = mapped_column(String, nullable=True) # SSO provider name
     sso_id: Mapped[Optional[str]] = mapped_column(String, nullable=True) # SSO provider user ID
+    
+    # User preferences and settings
+    user_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
+        "sticky_notes_enabled": True
+    }) # User-specific settings including sticky notes preference
 
     # Relationships with fully qualified paths
     organization: Mapped[Optional["app.models.user_models.Organization"]] = relationship(
@@ -469,6 +474,12 @@ class User(Base):
     )
     email_rules: Mapped[List["app.models.mail_management.EmailRule"]] = relationship(
         "app.models.mail_management.EmailRule",
+        back_populates="user"
+    )
+    
+    # Sticky Notes relationship
+    sticky_notes: Mapped[List["app.models.sticky_notes.StickyNote"]] = relationship(
+        "app.models.sticky_notes.StickyNote",
         back_populates="user"
     )
 

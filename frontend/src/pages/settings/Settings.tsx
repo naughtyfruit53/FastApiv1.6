@@ -16,13 +16,15 @@ import {
   Security,
   Integration,
   CloudUpload,
-  Timeline
+  Timeline,
+  StickyNote2
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import FactoryReset from './FactoryReset';
 import { useAuth } from '../../context/AuthContext';
 import { getDisplayRole, canAccessAdvancedSettings, isOrgSuperAdmin, canManageUsers } from '../../types/user.types';
 import Grid from '@mui/material/Grid';
+import UserPreferences from './UserPreferences';
 
 const Settings: React.FC = () => {
   const { user } = useAuth();
@@ -53,6 +55,11 @@ const Settings: React.FC = () => {
       </Paper>
 
       <Grid container spacing={3}>
+        {/* User Preferences - Available to all users */}
+        <Grid size={{ xs: 12, md: isOrgAdmin && canManage ? 4 : (isOrgAdmin ? 6 : 12) }}>
+          <UserPreferences />
+        </Grid>
+
         {/* User Management - Only for Organization Super Admins */}
         {isOrgAdmin && canManage && (
           <Grid size={{ xs: 12, md: 6 }}>
