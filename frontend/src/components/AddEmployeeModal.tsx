@@ -26,7 +26,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { CloudUpload, Description, CheckCircle, Error, Search, PhotoCamera } from '@mui/icons-material';
+import { CloudUpload, Description, CheckCircle, Error, Search, PhotoCamera, Delete as DeleteIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
 import api from '../lib/api';
@@ -80,7 +80,13 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   initialData,
   mode,
 }) => {
-  const fileInputRefs = Array.from({ length: 5 }, () => useRef<HTMLInputElement>(null));
+  const fileInputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null)
+  ];
   const [documents, setDocuments] = useState<Array<{ file: File | null; type: string; extractedData?: any; loading: boolean; error?: string }>>(
     Array.from({ length: 5 }, () => ({ file: null, type: '', extractedData: null, loading: false, error: null }))
   );

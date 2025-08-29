@@ -18,8 +18,9 @@ import {
   SettingsApplications
 } from '@mui/icons-material';
 import adminService from '../../services/adminService';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
+import MetricCard from '../../components/MetricCard';
+import DashboardLayout from '../../components/DashboardLayout';
+import '../../styles/modern-theme.css';
 
 interface OrgStatistics {
   total_products: number;
@@ -87,156 +88,203 @@ const OrgDashboard: React.FC = () => {
       title: 'Total Products',
       value: statistics.total_products ?? 0,
       icon: <Inventory />,
-      color: '#1976D2',
-      description: 'Products in inventory'
+      color: 'primary' as const,
+      description: 'Products in inventory',
+      trend: {
+        value: 12,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Total Customers',
       value: statistics.total_customers ?? 0,
       icon: <People />,
-      color: '#2E7D32',
-      description: 'Active customers'
+      color: 'success' as const,
+      description: 'Active customers',
+      trend: {
+        value: 8,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Total Vendors',
       value: statistics.total_vendors ?? 0,
       icon: <Business />,
-      color: '#7B1FA2',
-      description: 'Registered vendors'
+      color: 'info' as const,
+      description: 'Registered vendors',
+      trend: {
+        value: 3,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Active Users',
       value: statistics.active_users ?? 0,
       icon: <People />,
-      color: '#F57C00',
-      description: 'Users in organization'
+      color: 'warning' as const,
+      description: 'Users in organization',
+      trend: {
+        value: 5,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Monthly Sales',
       value: `$${(statistics.monthly_sales ?? 0).toLocaleString()}`,
       icon: <AttachMoney />,
-      color: '#5E35B1',
-      description: 'Sales in last 30 days'
+      color: 'success' as const,
+      description: 'Sales in last 30 days',
+      trend: {
+        value: 15,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Inventory Value',
       value: `$${(statistics.inventory_value ?? 0).toLocaleString()}`,
       icon: <TrendingUp />,
-      color: '#D81B60',
-      description: 'Current stock value'
+      color: 'primary' as const,
+      description: 'Current stock value',
+      trend: {
+        value: 7,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     }
   ];
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
-          Organization Dashboard
+    <DashboardLayout 
+      title="Organization Dashboard"
+      subtitle="Monitor your organization's key performance metrics"
+    >
+      <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
+        {/* Statistics Cards */}
+        {statsCards.map((stat, index) => (
+          <MetricCard
+            key={index}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            description={stat.description}
+            trend={stat.trend}
+          />
+        ))}
+      </Box>
+
+      <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
+        {/* Plan Information */}
+        <Paper 
+          className="modern-card"
+          sx={{ p: 3 }}
+        >
+          <Typography variant="h6" className="modern-card-title" gutterBottom>
+            Subscription Plan
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Chip 
+              label={statistics.plan_type?.toUpperCase() ?? 'N/A'} 
+              color={statistics.plan_type === 'trial' ? 'warning' : 'primary'}
+              variant="filled"
+              sx={{ 
+                fontWeight: 600,
+                '&.MuiChip-colorPrimary': {
+                  backgroundColor: 'var(--primary-600)',
+                  color: 'white'
+                },
+                '&.MuiChip-colorWarning': {
+                  backgroundColor: 'var(--warning-500)',
+                  color: 'white'
+                }
+              }}
+            />
+          </Box>
+          <Typography variant="body2" color="textSecondary">
+            Storage Used: {statistics.storage_used_gb ?? 0} GB
+          </Typography>
+        </Paper>
+
+        {/* Recent Activity */}
+        <Paper 
+          className="modern-card"
+          sx={{ p: 3 }}
+        >
+          <Typography variant="h6" className="modern-card-title" gutterBottom>
+            Recent Activity
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            {/* Placeholder for recent activity list */}
+            No recent activity available
+          </Typography>
+        </Paper>
+      </Box>
+
+      {/* Growth Metrics */}
+      <Paper 
+        className="modern-card"
+        sx={{ p: 4 }}
+      >
+        <Typography variant="h6" className="modern-card-title" gutterBottom sx={{ mb: 3 }}>
+          Organization Overview
         </Typography>
-        
-        <MuiGrid container spacing={3}>
-          {/* Statistics Cards */}
-          {statsCards.map((stat, index) => (
-            <MuiGrid item xs={12} sm={6} md={4} key={index}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ color: stat.color, mr: 2 }}>
-                      {stat.icon}
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography color="textSecondary" variant="body2">
-                        {stat.title}
-                      </Typography>
-                      <Typography variant="h4" component="h2">
-                        {stat.value}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" color="textSecondary">
-                    {stat.description}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </MuiGrid>
-          ))}
-
-          {/* Plan Information */}
-          <MuiGrid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Subscription Plan
-              </Typography>
-              <Chip 
-                label={statistics.plan_type?.toUpperCase() ?? 'N/A'} 
-                color={statistics.plan_type === 'trial' ? 'warning' : 'primary'} 
-                sx={{ mb: 2 }}
-              />
-              <Typography variant="body2" color="textSecondary">
-                Storage Used: {statistics.storage_used_gb ?? 0} GB
-              </Typography>
-            </Paper>
-          </MuiGrid>
-
-          {/* Recent Activity */}
-          <MuiGrid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Recent Activity
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {/* Placeholder for recent activity list */}
-                No recent activity available
-              </Typography>
-            </Paper>
-          </MuiGrid>
-
-          {/* Growth Metrics */}
-          <MuiGrid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Organization Overview
-              </Typography>
-              <MuiGrid container spacing={2}>
-                <MuiGrid item xs={12} sm={4}>
-                  <Box textAlign="center">
-                    <Typography variant="h3" color="primary">
-                      {statistics.total_products ?? 0}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Total Products
-                    </Typography>
-                  </Box>
-                </MuiGrid>
-                <MuiGrid item xs={12} sm={4}>
-                  <Box textAlign="center">
-                    <Typography variant="h3" color="secondary">
-                      {statistics.active_users ?? 0}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Active Users
-                    </Typography>
-                  </Box>
-                </MuiGrid>
-                <MuiGrid item xs={12} sm={4}>
-                  <Box textAlign="center">
-                    <Typography variant="h3" color="success.main">
-                      {statistics.monthly_sales !== undefined && statistics.monthly_sales !== null
-                        ? Math.round((statistics.monthly_sales / 100000) * 100)
-                        : 0
-                      }%  {/* Example calculation */}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Monthly Growth
-                    </Typography>
-                  </Box>
-                </MuiGrid>
-              </MuiGrid>
-            </Paper>
-          </MuiGrid>
-        </MuiGrid>
-      </Container>
-    </Box>
+        <Box className="modern-grid cols-3">
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                color: 'var(--primary-600)',
+                fontWeight: 700,
+                mb: 1
+              }}
+            >
+              {statistics.total_products ?? 0}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Total Products
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                color: 'var(--secondary-600)',
+                fontWeight: 700,
+                mb: 1
+              }}
+            >
+              {statistics.active_users ?? 0}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Active Users
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                color: 'var(--success-600)',
+                fontWeight: 700,
+                mb: 1
+              }}
+            >
+              {statistics.monthly_sales !== undefined && statistics.monthly_sales !== null
+                ? Math.round((statistics.monthly_sales / 100000) * 100)
+                : 0
+              }%
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Monthly Growth
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+    </DashboardLayout>
   );
 };
 

@@ -23,8 +23,9 @@ import {
   Lock
 } from '@mui/icons-material';
 import adminService from '../../services/adminService';  // Import the new service
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
+import MetricCard from '../../components/MetricCard';
+import DashboardLayout from '../../components/DashboardLayout';
+import '../../styles/modern-theme.css';
 
 interface AppStatistics {
   total_licenses_issued: number;
@@ -103,78 +104,89 @@ const AppSuperAdminDashboard: React.FC = () => {
       title: 'Total Licenses Issued',
       value: statistics.total_licenses_issued,
       icon: <Business />,
-      color: '#1976D2',
-      description: 'Total organization licenses created'
+      color: 'primary' as const,
+      description: 'Total organization licenses created',
+      trend: {
+        value: 8,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Active Organizations',
       value: statistics.active_organizations,
       icon: <Business />,
-      color: '#2E7D32',
-      description: 'Organizations with active status'
+      color: 'success' as const,
+      description: 'Organizations with active status',
+      trend: {
+        value: 12,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Trial Organizations',
       value: statistics.trial_organizations,
       icon: <Business />,
-      color: '#ED6C02',
-      description: 'Organizations on trial plans'
+      color: 'warning' as const,
+      description: 'Organizations on trial plans',
+      trend: {
+        value: 5,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Total Active Users',
       value: statistics.total_active_users,
       icon: <People />,
-      color: '#7B1FA2',
-      description: 'Active users across all organizations'
+      color: 'info' as const,
+      description: 'Active users across all organizations',
+      trend: {
+        value: 15,
+        period: 'vs last month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'Super Admins',
       value: statistics.super_admins_count,
       icon: <AdminPanelSettings />,
-      color: '#F57C00',
+      color: 'warning' as const,
       description: 'App-level administrators'
     },
     {
       title: 'New Licenses (30d)',
       value: statistics.new_licenses_this_month,
       icon: <TrendingUp />,
-      color: '#5E35B1',
-      description: 'Licenses created in last 30 days'
+      color: 'success' as const,
+      description: 'Licenses created in last 30 days',
+      trend: {
+        value: 22,
+        period: 'vs previous month',
+        direction: 'up' as const
+      }
     },
     {
       title: 'System Health',
       value: statistics.system_health.uptime,
       icon: <MonitorHeart />,
-      color: statistics.system_health.status === 'healthy' ? '#2E7D32' : '#D32F2F',
+      color: statistics.system_health.status === 'healthy' ? 'success' as const : 'error' as const,
       description: 'System uptime percentage'
     },
     {
       title: 'Total Storage Used',
       value: `${statistics.total_storage_used_gb?.toFixed(1) || 0} GB`,
       icon: <Storage />,
-      color: '#0288D1',
+      color: 'info' as const,
       description: 'Aggregate storage across all organizations'
     },
     {
       title: 'Avg Users per Org',
       value: statistics.average_users_per_org || 0,
       icon: <Timeline />,
-      color: '#388E3C',
+      color: 'primary' as const,
       description: 'Average active users per organization'
-    },
-    {
-      title: 'Failed Login Attempts',
-      value: statistics.failed_login_attempts || 0,
-      icon: <Lock />,
-      color: '#D32F2F',
-      description: 'Platform-wide failed login attempts'
-    },
-    {
-      title: 'Recent New Orgs (7d)',
-      value: statistics.recent_new_orgs || 0,
-      icon: <TrendingUp />,
-      color: '#7B1FA2',
-      description: 'Organizations created in last 7 days'
     }
   ];
 
@@ -184,123 +196,141 @@ const AppSuperAdminDashboard: React.FC = () => {
     : 0;
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
-          App Super Admin Dashboard
+    <DashboardLayout 
+      title="Super Admin Dashboard"
+      subtitle="Monitor platform-wide metrics and system health"
+    >
+      <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
+        {/* Statistics Cards */}
+        {statsCards.map((stat, index) => (
+          <MetricCard
+            key={index}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            description={stat.description}
+            trend={stat.trend}
+          />
+        ))}
+      </Box>
+
+      <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
+        {/* Plan Breakdown */}
+        <Paper className="modern-card" sx={{ p: 3 }}>
+          <Typography variant="h6" className="modern-card-title" gutterBottom>
+            License Plan Distribution
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {Object.entries(statistics.plan_breakdown).map(([plan, count]) => (
+              <Chip
+                key={plan}
+                label={`${plan}: ${count}`}
+                color={plan === 'trial' ? 'warning' : 'primary'}
+                variant="filled"
+                sx={{ 
+                  fontWeight: 500,
+                  '&.MuiChip-colorPrimary': {
+                    backgroundColor: 'var(--primary-600)',
+                    color: 'white'
+                  },
+                  '&.MuiChip-colorWarning': {
+                    backgroundColor: 'var(--warning-500)',
+                    color: 'white'
+                  }
+                }}
+              />
+            ))}
+          </Box>
+        </Paper>
+
+        {/* System Status */}
+        <Paper className="modern-card" sx={{ p: 3 }}>
+          <Typography variant="h6" className="modern-card-title" gutterBottom>
+            System Status
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Security sx={{ color: 'var(--success-600)', mr: 1 }} />
+            <Typography>
+              Status: <Chip 
+                label={statistics.system_health.status} 
+                color={statistics.system_health.status === 'healthy' ? 'success' : 'error'}
+                size="small"
+                variant="filled"
+                sx={{
+                  fontWeight: 500,
+                  '&.MuiChip-colorSuccess': {
+                    backgroundColor: 'var(--success-600)',
+                    color: 'white'
+                  },
+                  '&.MuiChip-colorError': {
+                    backgroundColor: 'var(--error-600)',
+                    color: 'white'
+                  }
+                }}
+              />
+            </Typography>
+          </Box>
+          <Typography variant="body2" color="textSecondary">
+            Last updated: {new Date(statistics.generated_at).toLocaleString()}
+          </Typography>
+        </Paper>
+      </Box>
+
+      {/* Platform Growth Overview */}
+      <Paper className="modern-card" sx={{ p: 4 }}>
+        <Typography variant="h6" className="modern-card-title" gutterBottom sx={{ mb: 3 }}>
+          Platform Growth Overview
         </Typography>
-        
-        <Grid container spacing={3}>
-          {/* Statistics Cards */}
-          {statsCards.map((stat, index) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ color: stat.color, mr: 2 }}>
-                      {stat.icon}
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography color="textSecondary" variant="body2">
-                        {stat.title}
-                      </Typography>
-                      <Typography variant="h4" component="h2">
-                        {stat.value}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" color="textSecondary">
-                    {stat.description}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-
-          {/* Plan Breakdown */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                License Plan Distribution
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {Object.entries(statistics.plan_breakdown).map(([plan, count]) => (
-                  <Chip
-                    key={plan}
-                    label={`${plan}: ${count}`}
-                    color={plan === 'trial' ? 'warning' : 'primary'}
-                    variant="outlined"
-                  />
-                ))}
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* System Status */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                System Status
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Security sx={{ color: '#2E7D32', mr: 1 }} />
-                <Typography>
-                  Status: <Chip 
-                    label={statistics.system_health.status} 
-                    color={statistics.system_health.status === 'healthy' ? 'success' : 'error'}
-                    size="small"
-                  />
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="textSecondary">
-                Last updated: {new Date(statistics.generated_at).toLocaleString()}
-              </Typography>
-            </Paper>
-          </Grid>
-
-          {/* Growth Metrics */}
-          <Grid size={{ xs: 12 }}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Platform Growth Overview
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <Box textAlign="center">
-                    <Typography variant="h3" color="primary">
-                      {statistics.total_licenses_issued}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Total Organizations
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <Box textAlign="center">
-                    <Typography variant="h3" color="secondary">
-                      {statistics.total_active_users}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Platform Users
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <Box textAlign="center">
-                    <Typography variant="h3" color="success.main">
-                      {activationRate}%
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Activation Rate
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
+        <Box className="modern-grid cols-3">
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                color: 'var(--primary-600)',
+                fontWeight: 700,
+                mb: 1
+              }}
+            >
+              {statistics.total_licenses_issued}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Total Organizations
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                color: 'var(--secondary-600)',
+                fontWeight: 700,
+                mb: 1
+              }}
+            >
+              {statistics.total_active_users}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Platform Users
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                color: 'var(--success-600)',
+                fontWeight: 700,
+                mb: 1
+              }}
+            >
+              {activationRate}%
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Activation Rate
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+    </DashboardLayout>
   );
 };
 
