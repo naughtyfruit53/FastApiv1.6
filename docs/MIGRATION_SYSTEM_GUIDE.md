@@ -10,6 +10,22 @@ The Migration & Data Import System provides a comprehensive solution for importi
 - **Super Admin Access Control**: Granular permission management for integration settings
 - **Real-time Job Monitoring**: Live progress tracking with error handling
 - **Rollback Support**: Complete migration undo functionality
+- **Post-Release Monitoring**: Comprehensive error tracking and performance monitoring
+- **User Feedback System**: Built-in feedback collection and issue reporting
+
+## Quick Start Guide
+
+### For System Administrators
+1. **Access Migration Management**: Navigate to **Settings** → **Integration Management** → **Migration & Integrations**
+2. **Review System Health**: Check the dashboard for integration status and system health
+3. **Configure Permissions**: Grant migration access to trusted users as needed
+4. **Monitor Performance**: Use the built-in monitoring tools to track system performance
+
+### For Users with Migration Access
+1. **Start New Migration**: Click "New Migration" button in the Migration Management page
+2. **Follow the Wizard**: Use the step-by-step wizard to upload files and configure mappings
+3. **Validate Data**: Review validation results before executing the migration
+4. **Monitor Progress**: Track real-time progress and handle any errors that arise
 
 ## Features
 
@@ -54,6 +70,35 @@ The Migration & Data Import System provides a comprehensive solution for importi
 ### Standard Users
 - View migration statistics (read-only)
 - No access to migration configuration
+- Can submit feedback and bug reports
+
+## Security and Access Control
+
+### Access Control Features
+- **Organization Isolation**: All migration data is isolated by organization
+- **Role-Based Permissions**: Fine-grained control over migration features
+- **Audit Logging**: Complete tracking of all migration activities
+- **Session Management**: Secure session handling for migration operations
+
+### Permission Management
+Super admins can delegate specific migration permissions:
+```bash
+# Grant migration view permission
+POST /api/v1/integration-settings/permissions/grant
+{
+  "user_id": 123,
+  "integration": "migration",
+  "permission_type": "view"
+}
+
+# Grant migration management permission
+POST /api/v1/integration-settings/permissions/grant
+{
+  "user_id": 123,
+  "integration": "migration", 
+  "permission_type": "manage"
+}
+```
 
 ## Migration Workflow
 
@@ -344,3 +389,198 @@ The system now includes a comprehensive step-by-step wizard accessible through:
 - Maintain audit logs for compliance requirements
 - Data retention policies for migration logs
 - GDPR compliance for personal data migration
+
+## Advanced Troubleshooting Guide
+
+### Migration Job Status Troubleshooting
+
+#### "Migration Stuck in Running Status"
+**Symptoms**: Migration shows as "running" but no progress for extended period
+**Solutions**:
+1. Check system logs: `GET /api/v1/migration/jobs/{job_id}/logs`
+2. Verify database connectivity
+3. Check available memory and disk space
+4. If necessary, cancel job and retry with smaller batch size
+
+#### "Rollback Not Available"
+**Symptoms**: Cannot rollback completed migration
+**Solutions**:
+1. Verify migration completed successfully
+2. Check if rollback timeout period has passed (default: 7 days)
+3. Ensure no dependent data has been created since migration
+4. Contact administrator if rollback is critically needed
+
+#### "Permission Denied Errors"
+**Symptoms**: Users cannot access migration features
+**Solutions**:
+1. Verify user has super admin role or granted migration permissions
+2. Check organization membership
+3. Refresh user session/login again
+4. Contact super admin to grant appropriate permissions
+
+### Integration Dashboard Troubleshooting
+
+#### "Integration Status Shows as Error"
+**Symptoms**: Red error status in integration dashboard
+**Solutions**:
+1. Check integration-specific error logs
+2. Test connection using "Test Connection" button
+3. Verify configuration parameters
+4. Check network connectivity to external systems
+5. Review API rate limits and quotas
+
+#### "Sync Operations Failing"
+**Symptoms**: Manual sync operations fail or timeout
+**Solutions**:
+1. Verify integration credentials are valid
+2. Check external system availability
+3. Review sync logs for specific error messages
+4. Ensure no concurrent sync operations are running
+5. Check data volume - large syncs may timeout
+
+### Performance Troubleshooting
+
+#### "Slow Migration Performance"
+**Symptoms**: Migration taking much longer than expected
+**Solutions**:
+1. Check database performance and indexes
+2. Reduce batch size in migration settings
+3. Schedule migration during off-peak hours
+4. Monitor system CPU and memory usage
+5. Consider breaking large migration into smaller jobs
+
+#### "High Memory Usage During Migration"
+**Symptoms**: System memory usage spikes during migration
+**Solutions**:
+1. Reduce batch processing size
+2. Enable streaming mode for large files
+3. Clear temporary files and caches
+4. Restart migration service if memory leaks suspected
+
+## Error Codes Reference
+
+### Migration Error Codes
+- **MIG001**: Invalid file format
+- **MIG002**: File size exceeds limit
+- **MIG003**: Required fields missing
+- **MIG004**: Data validation failed
+- **MIG005**: Database connection error
+- **MIG006**: Insufficient permissions
+- **MIG007**: Rollback timeout expired
+- **MIG008**: Concurrent migration detected
+- **MIG009**: Template not found
+- **MIG010**: Mapping configuration invalid
+
+### Integration Error Codes
+- **INT001**: Connection timeout
+- **INT002**: Authentication failed
+- **INT003**: API rate limit exceeded
+- **INT004**: Invalid configuration
+- **INT005**: External service unavailable
+- **INT006**: Data sync conflict
+- **INT007**: Permission denied
+- **INT008**: Invalid response format
+- **INT009**: Network connectivity error
+- **INT010**: Service temporarily unavailable
+
+## Monitoring and Alerting
+
+### Health Check Endpoints
+```bash
+# System health check
+GET /api/v1/migration/health
+
+# Integration health check
+GET /api/v1/integration-settings/health
+
+# Migration job health
+GET /api/v1/migration/jobs/{job_id}/health
+```
+
+### Performance Metrics
+- Migration success rate
+- Average migration duration
+- Error rate per integration
+- System resource utilization
+- Database performance metrics
+
+### Alert Thresholds
+- **Error Rate > 10%**: Critical alert
+- **Migration Duration > 2x Expected**: Warning alert
+- **Failed Syncs > 5 in 1 hour**: Error alert
+- **Memory Usage > 90%**: Critical alert
+- **Disk Space < 10%**: Critical alert
+
+## Feedback and Issue Reporting
+
+### Built-in Feedback System
+Users can report issues and provide feedback directly through the system:
+1. Navigate to Migration Management page
+2. Click "Report Issue" or "Provide Feedback"
+3. Fill out the feedback form with details
+4. Attach relevant screenshots or logs if needed
+5. Submit for administrator review
+
+### Issue Escalation Process
+1. **Level 1**: User reports issue via feedback system
+2. **Level 2**: System administrator reviews and attempts resolution
+3. **Level 3**: Technical team investigates complex issues
+4. **Level 4**: Vendor escalation for system-level problems
+
+### Enhancement Requests
+Users can submit enhancement requests for new features:
+1. Use the feedback system to submit enhancement ideas
+2. Provide detailed use case and business justification
+3. Administrator reviews and prioritizes requests
+4. Development team evaluates feasibility
+5. Features are included in future releases based on priority
+
+## API Rate Limits and Quotas
+
+### Migration API Limits
+- **File Upload**: 10 files per hour per user
+- **Job Creation**: 5 jobs per day per organization
+- **Rollback Operations**: 3 per month per organization
+- **Bulk Operations**: 1 concurrent operation per organization
+
+### Integration API Limits
+- **Sync Operations**: 12 per hour per integration
+- **Connection Tests**: 30 per hour per user
+- **Configuration Changes**: 10 per day per integration
+
+### Monitoring Usage
+Check current usage via:
+```bash
+GET /api/v1/migration/usage/current
+GET /api/v1/integration-settings/usage/current
+```
+
+## Data Retention Policies
+
+### Migration Data
+- **Migration Jobs**: Retained for 2 years
+- **Migration Logs**: Retained for 1 year
+- **Uploaded Files**: Retained for 90 days
+- **Rollback Data**: Retained for 30 days
+
+### Integration Data
+- **Sync Logs**: Retained for 6 months
+- **Error Logs**: Retained for 1 year
+- **Performance Metrics**: Retained for 3 months
+- **Audit Logs**: Retained for 7 years
+
+### Data Cleanup
+Automated cleanup processes run weekly to maintain storage limits and comply with retention policies.
+
+## Version Information
+
+**Current Version**: 1.6.0
+**Last Updated**: December 2024
+**Documentation Version**: 2.0
+
+### Recent Changes
+- Added comprehensive troubleshooting guide
+- Enhanced error code reference
+- Expanded monitoring and alerting documentation
+- Added feedback system documentation
+- Updated API rate limits and quotas
