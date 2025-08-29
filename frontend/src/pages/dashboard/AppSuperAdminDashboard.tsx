@@ -25,6 +25,7 @@ import {
 import adminService from '../../services/adminService';  // Import the new service
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
+import ModernLoading from '../../components/ModernLoading';
 import '../../styles/modern-theme.css';
 
 interface AppStatistics {
@@ -79,19 +80,38 @@ const AppSuperAdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <DashboardLayout 
+        title="Super Admin Dashboard"
+        subtitle="Monitor platform-wide metrics and system health"
+      >
+        <ModernLoading 
+          type="skeleton" 
+          skeletonType="dashboard" 
+          count={9}
+          message="Loading platform metrics..." 
+        />
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="error">
+      <DashboardLayout 
+        title="Super Admin Dashboard"
+        subtitle="Monitor platform-wide metrics and system health"
+      >
+        <Alert 
+          severity="error"
+          sx={{ 
+            borderRadius: 'var(--radius-lg)',
+            '& .MuiAlert-message': {
+              fontSize: 'var(--font-size-sm)'
+            }
+          }}
+        >
           Error loading dashboard: {error}
         </Alert>
-      </Container>
+      </DashboardLayout>
     );
   }
 

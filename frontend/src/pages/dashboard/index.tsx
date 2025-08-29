@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
 import AppSuperAdminDashboard from './AppSuperAdminDashboard';
 import OrgDashboard from './OrgDashboard';
+import '../../styles/modern-theme.css';
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -79,7 +80,7 @@ const Dashboard: React.FC = () => {
   });
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="modern-dashboard" style={{ padding: '20px' }}>
       {isSuperAdmin ? (
         <>
           {console.log('[Dashboard] Rendering App Super Admin Dashboard')}

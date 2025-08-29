@@ -20,6 +20,7 @@ import {
 import adminService from '../../services/adminService';
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
+import ModernLoading from '../../components/ModernLoading';
 import '../../styles/modern-theme.css';
 
 interface OrgStatistics {
@@ -57,29 +58,59 @@ const OrgDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <DashboardLayout 
+        title="Organization Dashboard"
+        subtitle="Monitor your organization's key performance metrics"
+      >
+        <ModernLoading 
+          type="skeleton" 
+          skeletonType="dashboard" 
+          count={6}
+          message="Loading dashboard metrics..." 
+        />
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="error">
+      <DashboardLayout 
+        title="Organization Dashboard"
+        subtitle="Monitor your organization's key performance metrics"
+      >
+        <Alert 
+          severity="error"
+          sx={{ 
+            borderRadius: 'var(--radius-lg)',
+            '& .MuiAlert-message': {
+              fontSize: 'var(--font-size-sm)'
+            }
+          }}
+        >
           Error loading dashboard: {error}
         </Alert>
-      </Container>
+      </DashboardLayout>
     );
   }
 
   if (!statistics) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="info">
+      <DashboardLayout 
+        title="Organization Dashboard"
+        subtitle="Monitor your organization's key performance metrics"
+      >
+        <Alert 
+          severity="info"
+          sx={{ 
+            borderRadius: 'var(--radius-lg)',
+            '& .MuiAlert-message': {
+              fontSize: 'var(--font-size-sm)'
+            }
+          }}
+        >
           No statistics available
         </Alert>
-      </Container>
+      </DashboardLayout>
     );
   }
 
