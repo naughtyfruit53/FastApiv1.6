@@ -399,7 +399,7 @@ class CustomerBase(BaseModel):
     pan_number: Optional[str] = None
 
 class CustomerCreate(CustomerBase):
-    pass
+    company_id: Optional[int] = None  # Added for multi-company support
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
@@ -418,6 +418,7 @@ class CustomerUpdate(BaseModel):
 class CustomerInDB(CustomerBase):
     id: int
     organization_id: int
+    company_id: Optional[int] = None  # Added for multi-company support
     is_active: bool = True
     created_at: datetime
     updated_at: Optional[datetime] = None

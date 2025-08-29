@@ -27,7 +27,22 @@ def upgrade() -> None:
     op.create_foreign_key('fk_task_project_company_id', 'task_projects', 'companies', ['company_id'], ['id'])
     op.create_index('idx_task_project_company', 'task_projects', ['company_id'])
     
-    # Data migration: Associate existing tasks and projects with the first company in each organization
+    # Add company_id to vendors table
+    op.add_column('vendors', sa.Column('company_id', sa.Integer(), nullable=True))
+    op.create_foreign_key('fk_vendor_company_id', 'vendors', 'companies', ['company_id'], ['id'])
+    op.create_index('idx_vendor_company', 'vendors', ['company_id'])
+    
+    # Add company_id to customers table
+    op.add_column('customers', sa.Column('company_id', sa.Integer(), nullable=True))
+    op.create_foreign_key('fk_customer_company_id', 'customers', 'companies', ['company_id'], ['id'])
+    op.create_index('idx_customer_company', 'customers', ['company_id'])
+    
+    # Add company_id to products table
+    op.add_column('products', sa.Column('company_id', sa.Integer(), nullable=True))
+    op.create_foreign_key('fk_product_company_id', 'products', 'companies', ['company_id'], ['id'])
+    op.create_index('idx_product_company', 'products', ['company_id'])
+    
+    # Data migration: Associate existing records with the first company in each organization
     # For organizations with only one company, assign all records to that company
     # For organizations with multiple companies, leave company_id as NULL (admin will need to assign manually)
     
@@ -75,14 +90,93 @@ def upgrade() -> None:
             HAVING COUNT(*) = 1
         )
     """))
+    
+    # Update vendors for single-company organizations
+    connection.execute(sa.text("""
+        UPDATE vendors 
+        SET company_id = (
+            SELECT c.id 
+            FROM companies c 
+            WHERE c.organization_id = vendors.organization_id 
+            AND c.id = (
+                SELECT MIN(id) 
+                FROM companies 
+                WHERE organization_id = c.organization_id
+            )
+        )
+        WHERE organization_id IN (
+            SELECT organization_id 
+            FROM companies 
+            GROUP BY organization_id 
+            HAVING COUNT(*) = 1
+        )
+    """))
+    
+    # Update customers for single-company organizations
+    connection.execute(sa.text("""
+        UPDATE customers 
+        SET company_id = (
+            SELECT c.id 
+            FROM companies c 
+            WHERE c.organization_id = customers.organization_id 
+            AND c.id = (
+                SELECT MIN(id) 
+                FROM companies 
+                WHERE organization_id = c.organization_id
+            )
+        )
+        WHERE organization_id IN (
+            SELECT organization_id 
+            FROM companies 
+            GROUP BY organization_id 
+            HAVING COUNT(*) = 1
+        )
+    """))
+    
+    # Update products for single-company organizations
+    connection.execute(sa.text("""
+        UPDATE products 
+        SET company_id = (
+            SELECT c.id 
+            FROM companies c 
+            WHERE c.organization_id = products.organization_id 
+            AND c.id = (
+                SELECT MIN(id) 
+                FROM companies 
+                WHERE organization_id = c.organization_id
+            )
+        )
+        WHERE organization_id IN (
+            SELECT organization_id 
+            FROM companies 
+            GROUP BY organization_id 
+            HAVING COUNT(*) = 1
+        )
+    """))
 
 
 def downgrade() -> None:
-    # Drop foreign keys and indexes
+    # Drop foreign keys and indexes for products
+    op.drop_index('idx_product_company', 'products')
+    op.drop_constraint('fk_product_company_id', 'products', type_='foreignkey')
+    op.drop_column('products', 'company_id')
+    
+    # Drop foreign keys and indexes for customers
+    op.drop_index('idx_customer_company', 'customers')
+    op.drop_constraint('fk_customer_company_id', 'customers', type_='foreignkey')
+    op.drop_column('customers', 'company_id')
+    
+    # Drop foreign keys and indexes for vendors
+    op.drop_index('idx_vendor_company', 'vendors')
+    op.drop_constraint('fk_vendor_company_id', 'vendors', type_='foreignkey')
+    op.drop_column('vendors', 'company_id')
+    
+    # Drop foreign keys and indexes for task_projects
     op.drop_index('idx_task_project_company', 'task_projects')
     op.drop_constraint('fk_task_project_company_id', 'task_projects', type_='foreignkey')
     op.drop_column('task_projects', 'company_id')
     
+    # Drop foreign keys and indexes for tasks
     op.drop_index('idx_task_company', 'tasks')
     op.drop_constraint('fk_task_company_id', 'tasks', type_='foreignkey')
     op.drop_column('tasks', 'company_id')

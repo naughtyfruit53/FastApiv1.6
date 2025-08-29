@@ -14,6 +14,7 @@ class Vendor(Base):
   
     # Multi-tenant field
     organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_vendor_organization_id"), nullable=False, index=True)
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("companies.id", name="fk_vendor_company_id"), nullable=True, index=True)  # Added for multi-company support
   
     # Vendor details
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
@@ -38,6 +39,10 @@ class Vendor(Base):
         "app.models.user_models.Organization", 
         back_populates="vendors"
     )
+    company: Mapped[Optional["app.models.system_models.Company"]] = relationship(
+        "app.models.system_models.Company",
+        back_populates="vendors"
+    )  # Added for multi-company support
     files: Mapped[List["app.models.customer_models.VendorFile"]] = relationship(
         "app.models.customer_models.VendorFile", 
         back_populates="vendor"
@@ -88,6 +93,7 @@ class Customer(Base):
   
     # Multi-tenant field
     organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_customer_organization_id"), nullable=False, index=True)
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("companies.id", name="fk_customer_company_id"), nullable=True, index=True)  # Added for multi-company support
   
     # Customer details
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
@@ -112,6 +118,10 @@ class Customer(Base):
         "app.models.user_models.Organization", 
         back_populates="customers"
     )
+    company: Mapped[Optional["app.models.system_models.Company"]] = relationship(
+        "app.models.system_models.Company",
+        back_populates="customers"
+    )  # Added for multi-company support
     files: Mapped[List["app.models.customer_models.CustomerFile"]] = relationship(
         "app.models.customer_models.CustomerFile", 
         back_populates="customer"

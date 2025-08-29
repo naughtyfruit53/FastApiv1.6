@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user
@@ -9,6 +10,7 @@ from app.core.org_restrictions import ensure_organization_context
 from app.models import User, Customer, CustomerFile
 from app.schemas.base import CustomerCreate, CustomerUpdate, CustomerInDB, BulkImportResponse, CustomerFileResponse
 from app.services.excel_service import CustomerExcelService, ExcelService
+from app.services.rbac import RBACService  # Added for company scoping
 import logging
 import os
 import uuid
@@ -23,16 +25,53 @@ async def get_customers(
     limit: int = 100,
     search: Optional[str] = None,
     active_only: bool = True,
+    company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get customers in current organization"""
+    """Get customers with company scoping"""
     
     # Restrict app super admins from accessing organization data  
     org_id = ensure_organization_context(current_user)
+    rbac = RBACService(db)
     
-    query = db.query(Customer)
-    query = TenantQueryMixin.filter_by_tenant(query, Customer, org_id)
+    # Get user's accessible companies
+    user_companies = rbac.get_user_companies(current_user.id)
+    
+    # Build base query with company filtering
+    if company_id is not None:
+        # User requested specific company - verify access
+        if company_id not in user_companies:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: User does not have access to the specified company"
+            )
+        # Filter by specific company
+        query = db.query(Customer).filter(
+            and_(
+                Customer.organization_id == org_id,
+                Customer.company_id == company_id
+            )
+        )
+    elif user_companies:
+        # Filter by user's accessible companies (including org-level customers with company_id=None)
+        query = db.query(Customer).filter(
+            and_(
+                Customer.organization_id == org_id,
+                or_(
+                    Customer.company_id.in_(user_companies),
+                    Customer.company_id.is_(None)  # Include org-level customers
+                )
+            )
+        )
+    else:
+        # User has no company access, only show org-level customers
+        query = db.query(Customer).filter(
+            and_(
+                Customer.organization_id == org_id,
+                Customer.company_id.is_(None)
+            )
+        )
     
     if active_only:
         query = query.filter(Customer.is_active == True)
@@ -74,21 +113,43 @@ async def create_customer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Create new customer"""
+    """Create new customer with company scoping"""
     
     org_id = current_user.organization_id
     if org_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization to create customers")
     
-    # Check if customer name already exists in organization
-    existing_customer = db.query(Customer).filter(
+    rbac = RBACService(db)
+    
+    # If company_id is provided, verify user has access to it
+    if customer.company_id:
+        rbac.enforce_company_access(current_user.id, customer.company_id, "customer_create")
+    else:
+        # If no company_id provided, auto-assign to user's first company if they have access to only one
+        user_companies = rbac.get_user_companies(current_user.id)
+        if len(user_companies) == 1:
+            customer.company_id = user_companies[0]
+        elif len(user_companies) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="company_id is required when user has access to multiple companies"
+            )
+        # If user has no companies, allow creating organization-level customer (company_id=None)
+    
+    # Check if customer name already exists in organization/company scope
+    existing_filters = [
         Customer.name == customer.name,
         Customer.organization_id == org_id
-    ).first()
+    ]
+    if customer.company_id:
+        existing_filters.append(Customer.company_id == customer.company_id)
+    
+    existing_customer = db.query(Customer).filter(and_(*existing_filters)).first()
     if existing_customer:
+        scope_text = f"company {customer.company_id}" if customer.company_id else "organization"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Customer with this name already exists in organization"
+            detail=f"Customer with this name already exists in {scope_text}"
         )
     
     # Create new customer
@@ -100,7 +161,8 @@ async def create_customer(
     db.commit()
     db.refresh(db_customer)
     
-    logger.info(f"Customer {customer.name} created in org {org_id} by {current_user.email}")
+    company_text = f" in company {customer.company_id}" if customer.company_id else ""
+    logger.info(f"Customer {customer.name} created in org {org_id}{company_text} by {current_user.email}")
     return db_customer
 
 @router.put("/{customer_id}", response_model=CustomerInDB)

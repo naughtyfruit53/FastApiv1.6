@@ -53,6 +53,20 @@ class Company(Base):
         "app.models.task_management.TaskProject",
         back_populates="company"
     )
+    
+    # Business entity relationships for multi-company support
+    vendors: Mapped[List["app.models.customer_models.Vendor"]] = relationship(
+        "app.models.customer_models.Vendor",
+        back_populates="company"
+    )
+    customers: Mapped[List["app.models.customer_models.Customer"]] = relationship(
+        "app.models.customer_models.Customer",
+        back_populates="company"
+    )
+    products: Mapped[List["app.models.product_models.Product"]] = relationship(
+        "app.models.product_models.Product",
+        back_populates="company"
+    )
 
     __table_args__ = (
         Index('idx_company_org_name', 'organization_id', 'name'),
