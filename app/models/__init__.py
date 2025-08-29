@@ -53,6 +53,11 @@ from .tally_models import (
     TallyConfiguration, TallyLedgerMapping, TallyVoucherMapping, TallySyncLog,
     TallySyncItem, TallyDataCache, TallyErrorLog
 )
+# Import migration models
+from .migration_models import (
+    MigrationJob, MigrationDataMapping, MigrationLog, MigrationTemplate,
+    MigrationConflict, MigrationSourceType, MigrationDataType, MigrationJobStatus
+)
 # Import enhanced inventory models
 from .enhanced_inventory_models import (
     Warehouse, StockLocation, ProductTracking, WarehouseStock, ProductBatch,
@@ -197,5 +202,9 @@ __all__ = [
     
     # Mail management models
     "EmailAccount", "Email", "EmailAttachment", "SentEmail", "EmailAction",
-    "EmailTemplate", "EmailRule", "EmailAccountType", "EmailStatus", "EmailPriority"
+    "EmailTemplate", "EmailRule", "EmailAccountType", "EmailStatus", "EmailPriority",
+    
+    # Migration models
+    "MigrationJob", "MigrationDataMapping", "MigrationLog", "MigrationTemplate",
+    "MigrationConflict", "MigrationSourceType", "MigrationDataType", "MigrationJobStatus"
 ]

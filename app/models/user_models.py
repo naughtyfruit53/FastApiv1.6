@@ -226,6 +226,12 @@ class Organization(Base):
         back_populates="organization"
     )
     
+    # Migration relationships
+    migration_jobs: Mapped[List["app.models.migration_models.MigrationJob"]] = relationship(
+        "app.models.migration_models.MigrationJob",
+        back_populates="organization"
+    )
+    
     # Enhanced inventory relationships
     warehouses: Mapped[List["app.models.enhanced_inventory_models.Warehouse"]] = relationship(
         "app.models.enhanced_inventory_models.Warehouse",
