@@ -186,8 +186,20 @@ def get_current_active_user(current_user: UserInDB = Depends(core_get_current_us
     return current_user
 
 def get_current_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
-    if current_user.role not in ["admin", "org_admin", "super_admin"]:
+    if current_user.role not in ["admin", "org_admin", "company_admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+    return current_user
+
+def get_current_org_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
+    """Check if user is organization admin (excludes company admins)"""
+    if current_user.role not in ["org_admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Organization admin access required")
+    return current_user
+
+def get_current_company_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
+    """Check if user is company admin or higher"""
+    if current_user.role not in ["company_admin", "org_admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Company admin access required")
     return current_user
 
 def get_current_super_admin(current_user: UserInDB = Depends(get_current_active_user)):
