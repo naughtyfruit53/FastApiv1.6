@@ -96,6 +96,21 @@ from .vouchers import (
 from .exhibition_models import (
     ExhibitionEvent, BusinessCardScan, ExhibitionProspect
 )
+# Import task management models
+from .task_management import (
+    Task, TaskProject, TaskProjectMember, TaskComment, TaskAttachment,
+    TaskTimeLog, TaskReminder, TaskStatus, TaskPriority
+)
+# Import calendar management models
+from .calendar_management import (
+    CalendarEvent, EventAttendee, EventReminder, Calendar, CalendarShare,
+    GoogleCalendarIntegration, EventType, RecurrenceType, EventStatus
+)
+# Import mail management models
+from .mail_management import (
+    EmailAccount, Email, EmailAttachment, SentEmail, EmailAction,
+    EmailTemplate, EmailRule, EmailAccountType, EmailStatus, EmailPriority
+)
 
 # No imports from .base as all models have been moved
 
@@ -170,5 +185,17 @@ __all__ = [
     "TrainingEnrollment", "LearningPath", "LearningPathProgram", "EmployeeLearningPath",
     
     # Exhibition models
-    "ExhibitionEvent", "BusinessCardScan", "ExhibitionProspect"
+    "ExhibitionEvent", "BusinessCardScan", "ExhibitionProspect",
+    
+    # Task management models
+    "Task", "TaskProject", "TaskProjectMember", "TaskComment", "TaskAttachment",
+    "TaskTimeLog", "TaskReminder", "TaskStatus", "TaskPriority",
+    
+    # Calendar management models
+    "CalendarEvent", "EventAttendee", "EventReminder", "Calendar", "CalendarShare",
+    "GoogleCalendarIntegration", "EventType", "RecurrenceType", "EventStatus",
+    
+    # Mail management models
+    "EmailAccount", "Email", "EmailAttachment", "SentEmail", "EmailAction",
+    "EmailTemplate", "EmailRule", "EmailAccountType", "EmailStatus", "EmailPriority"
 ]
