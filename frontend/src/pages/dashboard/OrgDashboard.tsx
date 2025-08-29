@@ -21,6 +21,8 @@ import adminService from '../../services/adminService';
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
+import { StickyNotesPanel } from '../../components/StickyNotes';
+import useStickyNotes from '../../hooks/useStickyNotes';
 import '../../styles/modern-theme.css';
 
 interface OrgStatistics {
@@ -39,6 +41,7 @@ const OrgDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { userSettings } = useStickyNotes();
 
   useEffect(() => {
     fetchOrgStatistics();
@@ -194,6 +197,9 @@ const OrgDashboard: React.FC = () => {
       title="Organization Dashboard"
       subtitle="Monitor your organization's key performance metrics"
     >
+      {/* Sticky Notes Panel */}
+      <StickyNotesPanel stickyNotesEnabled={userSettings.sticky_notes_enabled} />
+      
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
         {/* Statistics Cards */}
         {statsCards.map((stat, index) => (

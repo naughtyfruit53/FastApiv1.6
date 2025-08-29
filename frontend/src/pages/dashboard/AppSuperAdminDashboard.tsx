@@ -26,6 +26,8 @@ import adminService from '../../services/adminService';  // Import the new servi
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
+import { StickyNotesPanel } from '../../components/StickyNotes';
+import useStickyNotes from '../../hooks/useStickyNotes';
 import '../../styles/modern-theme.css';
 
 interface AppStatistics {
@@ -52,6 +54,7 @@ const AppSuperAdminDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<AppStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { userSettings } = useStickyNotes();
 
   useEffect(() => {
     fetchAppStatistics();
@@ -220,6 +223,9 @@ const AppSuperAdminDashboard: React.FC = () => {
       title="Super Admin Dashboard"
       subtitle="Monitor platform-wide metrics and system health"
     >
+      {/* Sticky Notes Panel */}
+      <StickyNotesPanel stickyNotesEnabled={userSettings.sticky_notes_enabled} />
+      
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
         {/* Statistics Cards */}
         {statsCards.map((stat, index) => (
