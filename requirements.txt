@@ -14,3 +14,8 @@ python-dotenv==1.0.0
 # UI Audit System Dependencies
 playwright==1.49.0
 pytest-playwright==0.5.1
+sib-api-v3-sdk==7.6.0
+pymupdf==1.26.4
+pandas==2.3.2
+openpyxl==3.1.5
+xlrd==2.0.2
