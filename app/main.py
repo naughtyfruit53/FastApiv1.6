@@ -9,6 +9,7 @@ from app.core.database import create_tables, SessionLocal
 from app.core.tenant import TenantMiddleware
 from app.core.seed_super_admin import seed_super_admin
 from app.api import users, companies, vendors, customers, products, reports, platform, settings, pincode, customer_analytics, notifications
+from app.api import management_reports
 from app.api.v1 import stock as v1_stock
 from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
 from app.api.routes import admin
@@ -311,6 +312,8 @@ app.include_router(v1_vouchers_router, prefix="/api/v1")  # Updated to v1 vouche
 logger.info("Vouchers router included successfully at prefix: /api/v1")
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 logger.info("Reports router included successfully at prefix: /api/v1/reports")
+app.include_router(management_reports.router, prefix="/api/v1/management-reports", tags=["management-reports"])
+logger.info("Management Reports router included successfully at prefix: /api/v1/management-reports")
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
 logger.info("Settings router included successfully at prefix: /api/v1/settings")
 app.include_router(pincode.router, prefix="/api/v1/pincode", tags=["pincode"])

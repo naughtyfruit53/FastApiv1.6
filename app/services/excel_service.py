@@ -1264,3 +1264,190 @@ class CompanyExcelService(ExcelService):
         
         logger.info(f"Companies data exported successfully: {len(companies_data)} records")
         return excel_buffer
+    
+    @staticmethod
+    def export_management_dashboard(dashboard_data: Dict) -> io.BytesIO:
+        """Export management dashboard data to Excel with multiple sheets"""
+        wb = Workbook()
+        
+        # Remove default sheet and create dashboard overview sheet
+        wb.remove(wb.active)
+        overview_ws = wb.create_sheet("Executive Dashboard")
+        
+        # Setup styling
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+        subheader_font = Font(bold=True, size=11)
+        subheader_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+        value_font = Font(size=10)
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        
+        # Title
+        overview_ws['A1'] = f"Executive Dashboard - {dashboard_data.get('period', 'Monthly')} Report"
+        overview_ws['A1'].font = Font(bold=True, size=14)
+        overview_ws.merge_cells('A1:C1')
+        
+        # Date range
+        date_range = dashboard_data.get('date_range', {})
+        overview_ws['A2'] = f"Period: {date_range.get('start_date', '')} to {date_range.get('end_date', '')}"
+        overview_ws['A2'].font = Font(size=10, italic=True)
+        overview_ws.merge_cells('A2:C2')
+        
+        row = 4  # Start data from row 4
+        
+        # Revenue Metrics Section
+        overview_ws[f'A{row}'] = "REVENUE METRICS"
+        overview_ws[f'A{row}'].font = header_font
+        overview_ws[f'A{row}'].fill = header_fill
+        overview_ws.merge_cells(f'A{row}:C{row}')
+        row += 1
+        
+        revenue_metrics = dashboard_data.get('revenue_metrics', {})
+        metrics_data = [
+            ["Total Revenue", revenue_metrics.get('total_revenue', 0)],
+            ["Sales Count", revenue_metrics.get('sales_count', 0)],
+            ["Average Sale Value", revenue_metrics.get('average_sale_value', 0)]
+        ]
+        
+        for metric, value in metrics_data:
+            overview_ws[f'A{row}'] = metric
+            overview_ws[f'B{row}'] = value
+            overview_ws[f'A{row}'].font = subheader_font
+            row += 1
+        
+        row += 1  # Add spacing
+        
+        # Cost Metrics Section
+        overview_ws[f'A{row}'] = "COST METRICS"
+        overview_ws[f'A{row}'].font = header_font
+        overview_ws[f'A{row}'].fill = header_fill
+        overview_ws.merge_cells(f'A{row}:C{row}')
+        row += 1
+        
+        cost_metrics = dashboard_data.get('cost_metrics', {})
+        cost_data = [
+            ["Total Costs", cost_metrics.get('total_costs', 0)],
+            ["Purchase Count", cost_metrics.get('purchase_count', 0)],
+            ["Average Purchase Value", cost_metrics.get('average_purchase_value', 0)]
+        ]
+        
+        for metric, value in cost_data:
+            overview_ws[f'A{row}'] = metric
+            overview_ws[f'B{row}'] = value
+            overview_ws[f'A{row}'].font = subheader_font
+            row += 1
+        
+        row += 1  # Add spacing
+        
+        # Profitability Section
+        overview_ws[f'A{row}'] = "PROFITABILITY"
+        overview_ws[f'A{row}'].font = header_font
+        overview_ws[f'A{row}'].fill = header_fill
+        overview_ws.merge_cells(f'A{row}:C{row}')
+        row += 1
+        
+        profitability = dashboard_data.get('profitability', {})
+        profit_data = [
+            ["Gross Profit", profitability.get('gross_profit', 0)],
+            ["Profit Margin %", profitability.get('profit_margin', 0)]
+        ]
+        
+        for metric, value in profit_data:
+            overview_ws[f'A{row}'] = metric
+            overview_ws[f'B{row}'] = value
+            overview_ws[f'A{row}'].font = subheader_font
+            row += 1
+        
+        row += 1  # Add spacing
+        
+        # Customer Metrics Section
+        overview_ws[f'A{row}'] = "CUSTOMER METRICS"
+        overview_ws[f'A{row}'].font = header_font
+        overview_ws[f'A{row}'].fill = header_fill
+        overview_ws.merge_cells(f'A{row}:C{row}')
+        row += 1
+        
+        customer_metrics = dashboard_data.get('customer_metrics', {})
+        customer_data = [
+            ["Total Active Customers", customer_metrics.get('total_active_customers', 0)],
+            ["New Customers", customer_metrics.get('new_customers', 0)],
+            ["Customer Growth Rate %", customer_metrics.get('customer_growth_rate', 0)]
+        ]
+        
+        for metric, value in customer_data:
+            overview_ws[f'A{row}'] = metric
+            overview_ws[f'B{row}'] = value
+            overview_ws[f'A{row}'].font = subheader_font
+            row += 1
+        
+        row += 1  # Add spacing
+        
+        # Inventory Metrics Section
+        overview_ws[f'A{row}'] = "INVENTORY METRICS"
+        overview_ws[f'A{row}'].font = header_font
+        overview_ws[f'A{row}'].fill = header_fill
+        overview_ws.merge_cells(f'A{row}:C{row}')
+        row += 1
+        
+        inventory_metrics = dashboard_data.get('inventory_metrics', {})
+        inventory_data = [
+            ["Total Products", inventory_metrics.get('total_products', 0)],
+            ["Low Stock Items", inventory_metrics.get('low_stock_items', 0)],
+            ["Stock Health %", inventory_metrics.get('stock_health_percentage', 0)]
+        ]
+        
+        for metric, value in inventory_data:
+            overview_ws[f'A{row}'] = metric
+            overview_ws[f'B{row}'] = value
+            overview_ws[f'A{row}'].font = subheader_font
+            row += 1
+        
+        row += 1  # Add spacing
+        
+        # Cash Flow Section
+        overview_ws[f'A{row}'] = "CASH FLOW"
+        overview_ws[f'A{row}'].font = header_font
+        overview_ws[f'A{row}'].fill = header_fill
+        overview_ws.merge_cells(f'A{row}:C{row}')
+        row += 1
+        
+        cash_flow = dashboard_data.get('cash_flow', {})
+        cash_data = [
+            ["Pending Receivables", cash_flow.get('pending_receivables', 0)],
+            ["Pending Payables", cash_flow.get('pending_payables', 0)],
+            ["Net Outstanding", cash_flow.get('net_outstanding', 0)]
+        ]
+        
+        for metric, value in cash_data:
+            overview_ws[f'A{row}'] = metric
+            overview_ws[f'B{row}'] = value
+            overview_ws[f'A{row}'].font = subheader_font
+            row += 1
+        
+        # Auto-adjust column widths
+        for column in overview_ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            overview_ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Apply borders to all data cells
+        for row_cells in overview_ws.iter_rows(min_row=1, max_row=row):
+            for cell in row_cells:
+                if cell.value:
+                    cell.border = thin_border
+        
+        # Save to BytesIO
+        excel_data = io.BytesIO()
+        wb.save(excel_data)
+        excel_data.seek(0)
+        
+        logger.info("Management dashboard exported successfully")
+        return excel_data
