@@ -13,6 +13,7 @@ class Product(Base):
   
     # Multi-tenant field
     organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_product_organization_id"), nullable=False, index=True)
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("companies.id", name="fk_product_company_id"), nullable=True, index=True)  # Added for multi-company support
   
     # Product details
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
@@ -33,6 +34,7 @@ class Product(Base):
   
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization", back_populates="products")
+    company: Mapped[Optional["Company"]] = relationship("Company", back_populates="products")  # Added for multi-company support
     files: Mapped[List["ProductFile"]] = relationship("ProductFile", back_populates="product", cascade="all, delete-orphan")
     
     # Enhanced inventory relationships
