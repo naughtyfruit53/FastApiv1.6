@@ -216,6 +216,140 @@ Remove a user from the organization.
 - Users cannot delete themselves
 - Cannot delete the last organization administrator
 
+## Multi-Company User Management
+
+### Overview
+
+The multi-company feature allows organizations to create multiple companies and assign users to them. Organization admins can manage user-company assignments and appoint company administrators.
+
+### Get Company Users
+
+**GET** `/api/v1/companies/{company_id}/users`
+
+Get all users assigned to a specific company.
+
+**Parameters:**
+- `company_id` (path, integer): Company ID
+
+**Permissions:** Organization Admin, Company Admin (for their companies), or Super Admin
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "user_id": 124,
+    "company_id": 1,
+    "organization_id": 1,
+    "assigned_by_id": 123,
+    "is_active": true,
+    "is_company_admin": false,
+    "assigned_at": "2024-01-20T12:00:00Z",
+    "created_at": "2024-01-20T12:00:00Z",
+    "updated_at": null,
+    "user_email": "user@example.com",
+    "user_full_name": "John Doe",
+    "company_name": "Acme Corp"
+  }
+]
+```
+
+### Assign User to Company
+
+**POST** `/api/v1/companies/{company_id}/users`
+
+Assign a user to a company with optional company admin rights.
+
+**Parameters:**
+- `company_id` (path, integer): Company ID
+
+**Request Body:**
+```json
+{
+  "user_id": 124,
+  "company_id": 1,
+  "is_company_admin": false
+}
+```
+
+**Permissions:** Organization Admin or Super Admin
+
+**Response:**
+```json
+{
+  "id": 1,
+  "user_id": 124,
+  "company_id": 1,
+  "organization_id": 1,
+  "assigned_by_id": 123,
+  "is_active": true,
+  "is_company_admin": false,
+  "assigned_at": "2024-01-20T12:00:00Z",
+  "created_at": "2024-01-20T12:00:00Z"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: User already assigned to company or company limit reached
+- `404 Not Found`: User or company not found
+
+### Update User Company Assignment
+
+**PUT** `/api/v1/companies/{company_id}/users/{user_id}`
+
+Update user's assignment to a company (e.g., toggle company admin status).
+
+**Parameters:**
+- `company_id` (path, integer): Company ID
+- `user_id` (path, integer): User ID
+
+**Request Body:**
+```json
+{
+  "is_active": true,
+  "is_company_admin": true
+}
+```
+
+**Permissions:** Organization Admin or Super Admin
+
+**Response:**
+```json
+{
+  "id": 1,
+  "user_id": 124,
+  "company_id": 1,
+  "organization_id": 1,
+  "is_active": true,
+  "is_company_admin": true,
+  "updated_at": "2024-01-20T14:00:00Z"
+}
+```
+
+### Remove User from Company
+
+**DELETE** `/api/v1/companies/{company_id}/users/{user_id}`
+
+Remove a user's assignment to a company (soft delete).
+
+**Parameters:**
+- `company_id` (path, integer): Company ID
+- `user_id` (path, integer): User ID
+
+**Permissions:** Organization Admin or Super Admin
+
+**Response:**
+```json
+{
+  "message": "User removed from company successfully"
+}
+```
+
+**Notes:**
+- This performs a soft delete (sets `is_active` to false)
+- User can be reassigned later to reactivate their access
+- Company admins lose their admin privileges when removed
+
 ## Invitation Management
 
 ### List Organization Invitations
