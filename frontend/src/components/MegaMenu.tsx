@@ -21,6 +21,7 @@ import {
   Grid,
   Tooltip
 } from '@mui/material';
+import '../styles/modern-theme.css';
 import {
   Dashboard,
   Receipt,
@@ -955,7 +956,16 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   return (
     <>
-      <AppBar position="static">
+      <AppBar 
+        position="static" 
+        className="modern-nav"
+        sx={{
+          backgroundColor: 'var(--bg-surface)',
+          color: 'var(--text-primary)',
+          boxShadow: 'var(--shadow-sm)',
+          borderBottom: '1px solid var(--border-primary)'
+        }}
+      >
         <Toolbar>
           {/* Enhanced Logo Section */}
           <Box 
