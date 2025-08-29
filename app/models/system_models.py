@@ -37,10 +37,16 @@ class Company(Base):
         "app.models.user_models.Organization", 
         back_populates="companies"
     )
+    
+    # User assignments for multi-company support
+    user_assignments: Mapped[List["app.models.user_models.UserCompany"]] = relationship(
+        "app.models.user_models.UserCompany",
+        back_populates="company"
+    )
 
     __table_args__ = (
         Index('idx_company_org_name', 'organization_id', 'name'),
-        UniqueConstraint('organization_id', name='uq_company_org'),
+        UniqueConstraint('organization_id', 'name', name='uq_company_org_name'),  # Allow multiple companies, but unique names per org
         {'extend_existing': True}
     )
 

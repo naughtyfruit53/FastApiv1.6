@@ -184,3 +184,44 @@ class OrganizationLicenseCreate(BaseModel):
     state_code: Optional[str] = None
     gst_number: Optional[str] = None
     max_users: int = 5
+    max_companies: int = 1  # Add max_companies field for organization license creation
+
+# User-Company Assignment Schemas
+class UserCompanyAssignmentCreate(BaseModel):
+    """Schema for assigning a user to a company"""
+    user_id: int
+    company_id: int
+    is_company_admin: bool = False
+
+class UserCompanyAssignmentUpdate(BaseModel):
+    """Schema for updating user-company assignment"""
+    is_active: Optional[bool] = None
+    is_company_admin: Optional[bool] = None
+
+class UserCompanyAssignmentInDB(BaseModel):
+    """Schema for user-company assignment from database"""
+    id: int
+    user_id: int
+    company_id: int
+    organization_id: int
+    assigned_by_id: Optional[int] = None
+    is_active: bool
+    is_company_admin: bool
+    assigned_at: datetime
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    # Related data
+    user_email: Optional[str] = None
+    user_full_name: Optional[str] = None
+    company_name: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class UserCompanyListResponse(BaseModel):
+    """Response schema for user-company assignments with metadata"""
+    assignments: List[UserCompanyAssignmentInDB]
+    total: int
+    page: int = 1
+    per_page: int = 100

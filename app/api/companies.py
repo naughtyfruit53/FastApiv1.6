@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user, get_current_admin_user
+from app.api.v1.auth import get_current_active_user, get_current_admin_user, get_current_org_admin_user
 from app.core.tenant import TenantQueryMixin, TenantQueryFilter
 from app.core.org_restrictions import require_organization_access, ensure_organization_context
 from app.models import User, Company, Organization
-from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyInDB, CompanyResponse, CompanyErrorResponse
+from app.models.user_models import UserCompany
+from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyInDB, CompanyResponse, CompanyErrorResponse, UserCompanyAssignmentCreate, UserCompanyAssignmentUpdate, UserCompanyAssignmentInDB
 from app.schemas.base import BulkImportResponse
 from app.services.excel_service import CompanyExcelService, ExcelService
 import logging
@@ -109,20 +111,38 @@ async def create_company(
         # Validate and set organization_id in data
         data = TenantQueryFilter.validate_organization_data(company.model_dump(), current_user)
         
-        # Check if company already exists for this organization
-        existing_company = db.query(Company).filter(Company.organization_id == data['organization_id']).first()
+        # Get organization to check limits
+        org = db.query(Organization).filter(Organization.id == data['organization_id']).first()
+        if not org:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
+        
+        # Check company count against max_companies limit
+        existing_companies_count = db.query(Company).filter(Company.organization_id == data['organization_id']).count()
+        if existing_companies_count >= org.max_companies:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Maximum number of companies ({org.max_companies}) already reached for this organization."
+            )
+        
+        # Check if company name already exists for this organization
+        existing_company = db.query(Company).filter(
+            Company.organization_id == data['organization_id'],
+            Company.name == data['name']
+        ).first()
         if existing_company:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Company details already exist for this organization. Use update endpoint instead."
+                detail="Company with this name already exists in your organization."
             )
         
         db_company = Company(**data)
         db.add(db_company)
         
-        # Mark organization as having completed company details
-        org = db.query(Organization).filter(Organization.id == data['organization_id']).first()
-        if org:
+        # Mark organization as having completed company details if first company
+        if existing_companies_count == 0:
             org.company_details_completed = True
         
         db.commit()
@@ -521,5 +541,175 @@ async def get_company_logo(
         media_type="image/png",
         filename=f"logo_{company.name.replace(' ', '_').lower()}.png"
     )
+
+# User-Company Assignment Endpoints
+
+@router.get("/{company_id}/users", response_model=List[UserCompanyAssignmentInDB])
+async def get_company_users(
+    company_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Get users assigned to a specific company"""
+    
+    # Check company exists and user has access
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    if not current_user.is_super_admin:
+        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
+    
+    # Get user assignments for this company
+    assignments = db.query(UserCompany).filter(
+        UserCompany.company_id == company_id,
+        UserCompany.is_active == True
+    ).all()
+    
+    # Enrich with user and company data
+    result = []
+    for assignment in assignments:
+        user = db.query(User).filter(User.id == assignment.user_id).first()
+        assignment_dict = {
+            "id": assignment.id,
+            "user_id": assignment.user_id,
+            "company_id": assignment.company_id,
+            "organization_id": assignment.organization_id,
+            "assigned_by_id": assignment.assigned_by_id,
+            "is_active": assignment.is_active,
+            "is_company_admin": assignment.is_company_admin,
+            "assigned_at": assignment.assigned_at,
+            "created_at": assignment.created_at,
+            "updated_at": assignment.updated_at,
+            "user_email": user.email if user else None,
+            "user_full_name": user.full_name if user else None,
+            "company_name": company.name
+        }
+        result.append(assignment_dict)
+    
+    return result
+
+@router.post("/{company_id}/users", response_model=UserCompanyAssignmentInDB)
+async def assign_user_to_company(
+    company_id: int,
+    assignment: UserCompanyAssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_org_admin_user)
+):
+    """Assign a user to a company (org admin only)"""
+    
+    # Check company exists and belongs to current user's org
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    if not current_user.is_super_admin:
+        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
+    
+    # Check user exists and belongs to same organization
+    user = db.query(User).filter(User.id == assignment.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.organization_id != company.organization_id:
+        raise HTTPException(status_code=400, detail="User and company must be in the same organization")
+    
+    # Check if assignment already exists
+    existing = db.query(UserCompany).filter(
+        UserCompany.user_id == assignment.user_id,
+        UserCompany.company_id == company_id
+    ).first()
+    
+    if existing:
+        if existing.is_active:
+            raise HTTPException(status_code=400, detail="User is already assigned to this company")
+        else:
+            # Reactivate existing assignment
+            existing.is_active = True
+            existing.is_company_admin = assignment.is_company_admin
+            existing.assigned_by_id = current_user.id
+            existing.assigned_at = datetime.utcnow()
+            db.commit()
+            db.refresh(existing)
+            return existing
+    
+    # Create new assignment
+    new_assignment = UserCompany(
+        user_id=assignment.user_id,
+        company_id=company_id,
+        organization_id=company.organization_id,
+        assigned_by_id=current_user.id,
+        is_company_admin=assignment.is_company_admin,
+        is_active=True
+    )
+    
+    db.add(new_assignment)
+    db.commit()
+    db.refresh(new_assignment)
+    
+    logger.info(f"User {user.email} assigned to company {company.name} by {current_user.email}")
+    return new_assignment
+
+@router.put("/{company_id}/users/{user_id}", response_model=UserCompanyAssignmentInDB)
+async def update_user_company_assignment(
+    company_id: int,
+    user_id: int,
+    update_data: UserCompanyAssignmentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_org_admin_user)
+):
+    """Update user-company assignment (org admin only)"""
+    
+    assignment = db.query(UserCompany).filter(
+        UserCompany.company_id == company_id,
+        UserCompany.user_id == user_id
+    ).first()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="User-company assignment not found")
+    
+    # Check access
+    if not current_user.is_super_admin:
+        if assignment.organization_id != current_user.organization_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Update fields
+    if update_data.is_active is not None:
+        assignment.is_active = update_data.is_active
+    if update_data.is_company_admin is not None:
+        assignment.is_company_admin = update_data.is_company_admin
+    
+    db.commit()
+    db.refresh(assignment)
+    
+    return assignment
+
+@router.delete("/{company_id}/users/{user_id}")
+async def remove_user_from_company(
+    company_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_org_admin_user)
+):
+    """Remove user from company (org admin only)"""
+    
+    assignment = db.query(UserCompany).filter(
+        UserCompany.company_id == company_id,
+        UserCompany.user_id == user_id
+    ).first()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="User-company assignment not found")
+    
+    # Check access
+    if not current_user.is_super_admin:
+        if assignment.organization_id != current_user.organization_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Soft delete - deactivate assignment
+    assignment.is_active = False
+    db.commit()
+    
+    return {"message": "User removed from company successfully"}
 
 logger.info("Companies router loaded")

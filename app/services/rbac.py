@@ -485,3 +485,94 @@ class RBACService:
                 created_roles.append(self.create_role(role_create))
         
         return created_roles
+    
+    # Company-scoped permission methods for multi-company support
+    
+    def user_has_company_access(self, user_id: int, company_id: int) -> bool:
+        """Check if user has access to a specific company"""
+        from app.models.user_models import UserCompany
+        
+        # Check if user is assigned to the company
+        assignment = self.db.query(UserCompany).filter(
+            UserCompany.user_id == user_id,
+            UserCompany.company_id == company_id,
+            UserCompany.is_active == True
+        ).first()
+        
+        return assignment is not None
+    
+    def user_is_company_admin(self, user_id: int, company_id: int) -> bool:
+        """Check if user is admin of a specific company"""
+        from app.models.user_models import UserCompany
+        
+        assignment = self.db.query(UserCompany).filter(
+            UserCompany.user_id == user_id,
+            UserCompany.company_id == company_id,
+            UserCompany.is_active == True,
+            UserCompany.is_company_admin == True
+        ).first()
+        
+        return assignment is not None
+    
+    def get_user_companies(self, user_id: int) -> List[int]:
+        """Get list of company IDs that user has access to"""
+        from app.models.user_models import UserCompany
+        
+        assignments = self.db.query(UserCompany).filter(
+            UserCompany.user_id == user_id,
+            UserCompany.is_active == True
+        ).all()
+        
+        return [assignment.company_id for assignment in assignments]
+    
+    def get_user_admin_companies(self, user_id: int) -> List[int]:
+        """Get list of company IDs where user is admin"""
+        from app.models.user_models import UserCompany
+        
+        assignments = self.db.query(UserCompany).filter(
+            UserCompany.user_id == user_id,
+            UserCompany.is_active == True,
+            UserCompany.is_company_admin == True
+        ).all()
+        
+        return [assignment.company_id for assignment in assignments]
+    
+    def user_has_company_permission(self, user_id: int, company_id: int, permission_name: str) -> bool:
+        """Check if user has a specific permission within a company scope"""
+        
+        # First check if user has access to the company
+        if not self.user_has_company_access(user_id, company_id):
+            return False
+        
+        # Check user's role - org admin or super admin have all permissions
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return False
+        
+        if user.role in ["org_admin", "super_admin"] or user.is_super_admin:
+            return True
+        
+        # Check if user is company admin for this company
+        if self.user_is_company_admin(user_id, company_id):
+            # Company admins have most permissions except organization-level ones
+            org_only_permissions = ["create_organization", "delete_organization", "manage_organization_settings"]
+            if permission_name not in org_only_permissions:
+                return True
+        
+        # Check service role permissions
+        return self.user_has_service_permission(user_id, permission_name)
+    
+    def enforce_company_access(self, user_id: int, company_id: int, permission_name: Optional[str] = None):
+        """Enforce company access and optionally permission - raises HTTPException if denied"""
+        
+        if not self.user_has_company_access(user_id, company_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: User does not have access to this company"
+            )
+        
+        if permission_name and not self.user_has_company_permission(user_id, company_id, permission_name):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: Missing permission '{permission_name}' for this company"
+            )

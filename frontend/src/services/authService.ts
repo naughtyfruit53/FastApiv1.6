@@ -586,6 +586,61 @@ export const companyService = {
   getLogoUrl: (companyId: number) => {
     return `/api/v1/companies/${companyId}/logo`;
   },
+  
+  // Multi-company management methods
+  getCompanies: async () => {
+    try {
+      const response = await api.get('/companies/');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to fetch companies');
+    }
+  },
+  
+  getOrganizationInfo: async () => {
+    try {
+      const response = await api.get('/organizations/current');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to fetch organization info');
+    }
+  },
+  
+  getCompanyUsers: async (companyId: number) => {
+    try {
+      const response = await api.get(`/companies/${companyId}/users`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to fetch company users');
+    }
+  },
+  
+  assignUserToCompany: async (companyId: number, data: { user_id: number; company_id: number; is_company_admin: boolean }) => {
+    try {
+      const response = await api.post(`/companies/${companyId}/users`, data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to assign user to company');
+    }
+  },
+  
+  updateUserCompanyAssignment: async (companyId: number, userId: number, updates: any) => {
+    try {
+      const response = await api.put(`/companies/${companyId}/users/${userId}`, updates);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to update user assignment');
+    }
+  },
+  
+  removeUserFromCompany: async (companyId: number, userId: number) => {
+    try {
+      const response = await api.delete(`/companies/${companyId}/users/${userId}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || 'Failed to remove user from company');
+    }
+  },
 };
 
 export const reportsService = {

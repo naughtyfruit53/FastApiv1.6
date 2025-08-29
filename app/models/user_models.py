@@ -78,6 +78,7 @@ class Organization(Base):
     # Subscription details
     plan_type: Mapped[str] = mapped_column(String, default="trial") # trial, basic, premium, enterprise
     max_users: Mapped[int] = mapped_column(Integer, default=5)
+    max_companies: Mapped[int] = mapped_column(Integer, default=1) # Maximum companies allowed for this organization
     storage_limit_gb: Mapped[int] = mapped_column(Integer, default=1)
     features: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # Feature flags
     
@@ -482,6 +483,13 @@ class User(Base):
         "app.models.sticky_notes.StickyNote",
         back_populates="user"
     )
+    
+    # Company assignments for multi-company support
+    company_assignments: Mapped[List["app.models.user_models.UserCompany"]] = relationship(
+        "app.models.user_models.UserCompany",
+        foreign_keys="app.models.user_models.UserCompany.user_id",
+        back_populates="user"
+    )
 
     __table_args__ = (
         # Unique email per organization
@@ -645,5 +653,55 @@ class UserServiceRole(Base):
         Index('idx_user_service_role_user', 'user_id'),
         Index('idx_user_service_role_role', 'role_id'),
         Index('idx_user_service_role_active', 'is_active'),
+        {'extend_existing': True}
+    )
+
+# UserCompany many-to-many relationship for multi-company support
+class UserCompany(Base):
+    """Many-to-many relationship between Users and Companies"""
+    __tablename__ = "user_companies"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Foreign keys
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_company_user_id"), nullable=False)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id", name="fk_user_company_company_id"), nullable=False)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_user_company_organization_id"), nullable=False, index=True)
+    
+    # Assignment details
+    assigned_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_company_assigned_by_id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_company_admin: Mapped[bool] = mapped_column(Boolean, default=False)  # True if user is admin of this company
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user: Mapped["app.models.user_models.User"] = relationship(
+        "app.models.user_models.User", 
+        foreign_keys=[user_id],
+        back_populates="company_assignments"
+    )
+    company: Mapped["app.models.system_models.Company"] = relationship(
+        "app.models.system_models.Company",
+        back_populates="user_assignments"
+    )
+    organization: Mapped["app.models.user_models.Organization"] = relationship(
+        "app.models.user_models.Organization"
+    )
+    assigned_by: Mapped[Optional["app.models.user_models.User"]] = relationship(
+        "app.models.user_models.User", 
+        foreign_keys=[assigned_by_id]
+    )
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'company_id', name='uq_user_company'),
+        Index('idx_user_company_user', 'user_id'),
+        Index('idx_user_company_company', 'company_id'),
+        Index('idx_user_company_org', 'organization_id'),
+        Index('idx_user_company_active', 'is_active'),
+        Index('idx_user_company_admin', 'is_company_admin'),
         {'extend_existing': True}
     )
