@@ -897,9 +897,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             padding: 1
           }
         }}
-        MenuListProps={{
-          sx: { p: 2 }
-        }}
       >
         <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
           {menu.title}
