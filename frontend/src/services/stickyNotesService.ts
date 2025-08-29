@@ -1,6 +1,6 @@
 // frontend/src/services/stickyNotesService.ts
 
-import { apiRequest } from '../utils/api';
+import api from '../lib/api';
 
 export interface StickyNote {
   id: number;
@@ -32,30 +32,65 @@ export interface UserSettingsUpdate {
 }
 
 class StickyNotesService {
-  private baseUrl = '/api/v1/sticky-notes';
+  private baseUrl = '/sticky-notes';
 
   async getNotes(): Promise<StickyNote[]> {
-    return await apiRequest('GET', this.baseUrl);
+    try {
+      const response = await api.get<StickyNote[]>(this.baseUrl);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch sticky notes:', error);
+      throw error;
+    }
   }
 
   async createNote(noteData: StickyNoteCreate): Promise<StickyNote> {
-    return await apiRequest('POST', this.baseUrl, noteData);
+    try {
+      const response = await api.post<StickyNote>(this.baseUrl, noteData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create sticky note:', error);
+      throw error;
+    }
   }
 
   async updateNote(id: number, updateData: StickyNoteUpdate): Promise<StickyNote> {
-    return await apiRequest('PUT', `${this.baseUrl}/${id}`, updateData);
+    try {
+      const response = await api.put<StickyNote>(`${this.baseUrl}/${id}`, updateData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update sticky note:', error);
+      throw error;
+    }
   }
 
   async deleteNote(id: number): Promise<void> {
-    return await apiRequest('DELETE', `${this.baseUrl}/${id}`);
+    try {
+      await api.delete(`${this.baseUrl}/${id}`);
+    } catch (error) {
+      console.error('Failed to delete sticky note:', error);
+      throw error;
+    }
   }
 
   async getUserSettings(): Promise<UserSettings> {
-    return await apiRequest('GET', `${this.baseUrl}/settings/user-settings`);
+    try {
+      const response = await api.get<UserSettings>(`${this.baseUrl}/settings/user-settings`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch user settings:', error);
+      throw error;
+    }
   }
 
   async updateUserSettings(settings: UserSettingsUpdate): Promise<UserSettings> {
-    return await apiRequest('PUT', `${this.baseUrl}/settings/user-settings`, settings);
+    try {
+      const response = await api.put<UserSettings>(`${this.baseUrl}/settings/user-settings`, settings);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update user settings:', error);
+      throw error;
+    }
   }
 }
 

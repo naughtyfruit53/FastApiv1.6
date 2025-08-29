@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import StickyNote from './StickyNote';
 import { useAuth } from '../../context/AuthContext';
+import { stickyNotesService } from '../../services/stickyNotesService';
 
 interface StickyNoteData {
   id: number;
@@ -73,21 +74,9 @@ const StickyNotesPanel: React.FC<StickyNotesPanelProps> = ({ stickyNotesEnabled 
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/sticky-notes/', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setNotes(data);
-        setError(null);
-      } else {
-        throw new Error('Failed to fetch sticky notes');
-      }
+      const data = await stickyNotesService.getNotes();
+      setNotes(data);
+      setError(null);
     } catch (err) {
       console.error('Error fetching notes:', err);
       setError('Failed to load sticky notes');
@@ -103,25 +92,11 @@ const StickyNotesPanel: React.FC<StickyNotesPanelProps> = ({ stickyNotesEnabled 
 
     try {
       setCreating(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/sticky-notes/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newNote)
-      });
-
-      if (response.ok) {
-        const createdNote = await response.json();
-        setNotes(prev => [createdNote, ...prev]);
-        setNewNote({ title: '', content: '', color: 'yellow' });
-        setCreateDialogOpen(false);
-        setError(null);
-      } else {
-        throw new Error('Failed to create sticky note');
-      }
+      const createdNote = await stickyNotesService.createNote(newNote);
+      setNotes(prev => [createdNote, ...prev]);
+      setNewNote({ title: '', content: '', color: 'yellow' });
+      setCreateDialogOpen(false);
+      setError(null);
     } catch (err) {
       console.error('Error creating note:', err);
       setError('Failed to create sticky note');
@@ -132,23 +107,9 @@ const StickyNotesPanel: React.FC<StickyNotesPanelProps> = ({ stickyNotesEnabled 
 
   const updateNote = async (id: number, updateData: { title?: string; content?: string; color?: string }) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/sticky-notes/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updateData)
-      });
-
-      if (response.ok) {
-        const updatedNote = await response.json();
-        setNotes(prev => prev.map(note => note.id === id ? updatedNote : note));
-        setError(null);
-      } else {
-        throw new Error('Failed to update sticky note');
-      }
+      const updatedNote = await stickyNotesService.updateNote(id, updateData);
+      setNotes(prev => prev.map(note => note.id === id ? updatedNote : note));
+      setError(null);
     } catch (err) {
       console.error('Error updating note:', err);
       setError('Failed to update sticky note');
@@ -158,21 +119,9 @@ const StickyNotesPanel: React.FC<StickyNotesPanelProps> = ({ stickyNotesEnabled 
 
   const deleteNote = async (id: number) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/sticky-notes/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        setNotes(prev => prev.filter(note => note.id !== id));
-        setError(null);
-      } else {
-        throw new Error('Failed to delete sticky note');
-      }
+      await stickyNotesService.deleteNote(id);
+      setNotes(prev => prev.filter(note => note.id !== id));
+      setError(null);
     } catch (err) {
       console.error('Error deleting note:', err);
       setError('Failed to delete sticky note');
