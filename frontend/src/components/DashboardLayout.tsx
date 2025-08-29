@@ -19,9 +19,41 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   className = ''
 }) => {
   return (
-    <Box className={`modern-dashboard ${className}`}>
+    <Box 
+      className={`modern-dashboard ${className}`} 
+      sx={{
+        opacity: 0,
+        animation: 'fadeInUp 0.6s ease-out forwards',
+        '@keyframes fadeInUp': {
+          from: {
+            opacity: 0,
+            transform: 'translateY(30px)'
+          },
+          to: {
+            opacity: 1,
+            transform: 'translateY(0)'
+          }
+        }
+      }}
+    >
       <Container maxWidth={maxWidth} className="modern-dashboard-container">
-        <Box className="modern-dashboard-header">
+        <Box 
+          className="modern-dashboard-header"
+          sx={{
+            mb: 4,
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: '-16px',
+              left: 0,
+              width: '60px',
+              height: '3px',
+              background: 'linear-gradient(90deg, primary.main, primary.light)',
+              borderRadius: '2px',
+            }
+          }}
+        >
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -47,7 +79,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </Box>
         </Box>
         
-        <Box sx={{ minHeight: '60vh' }}>
+        <Box sx={{ 
+          minHeight: '60vh',
+          position: 'relative',
+          '& > *': {
+            opacity: 0,
+            animation: 'fadeInUp 0.8s ease-out 0.2s forwards',
+          }
+        }}>
           {children}
         </Box>
       </Container>

@@ -184,10 +184,49 @@ const CalendarDashboard: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box 
+      sx={{ 
+        p: 3,
+        opacity: 0,
+        animation: 'fadeInUp 0.6s ease-out forwards',
+        '@keyframes fadeInUp': {
+          from: { opacity: 0, transform: 'translateY(30px)' },
+          to: { opacity: 1, transform: 'translateY(0)' }
+        }
+      }}
+    >
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 4,
+        pb: 2,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        position: 'relative',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: '-1px',
+          left: 0,
+          width: '60px',
+          height: '3px',
+          background: 'linear-gradient(90deg, primary.main, primary.light)',
+          borderRadius: '2px',
+        }
+      }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            fontWeight: 'bold',
+            color: 'text.primary'
+          }}
+        >
           <Dashboard color="primary" />
           Calendar Dashboard
         </Typography>
@@ -195,58 +234,127 @@ const CalendarDashboard: React.FC = () => {
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleNavigate('/calendar/create')}
+          sx={{
+            borderRadius: 2,
+            px: 3,
+            py: 1.5,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+            }
+          }}
         >
           Create Event
         </Button>
       </Box>
 
       {/* Overview Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Card 
+            sx={{
+              height: '100%',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              cursor: 'pointer',
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+                '& .card-icon': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                }
+              }
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '80px' }}>
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="textSecondary" gutterBottom variant="body2" sx={{ fontWeight: 500 }}>
                     Total Events
                   </Typography>
-                  <Typography variant="h5">
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                     {stats.total_events}
                   </Typography>
                 </Box>
-                <Event color="primary" sx={{ fontSize: 40 }} />
+                <Box
+                  className="card-icon"
+                  sx={{
+                    backgroundColor: 'primary.50',
+                    borderRadius: 2,
+                    p: 1.5,
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <Event color="primary" sx={{ fontSize: 32 }} />
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Card 
+            sx={{
+              height: '100%',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              cursor: 'pointer',
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+                '& .card-icon': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                }
+              }
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '80px' }}>
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="textSecondary" gutterBottom variant="body2" sx={{ fontWeight: 500 }}>
                     Today's Events
                   </Typography>
-                  <Typography variant="h5">
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
                     {stats.today_events}
                   </Typography>
                 </Box>
-                <Today color="info" sx={{ fontSize: 40 }} />
+                <Box
+                  className="card-icon"
+                  sx={{
+                    backgroundColor: 'info.50',
+                    borderRadius: 2,
+                    p: 1.5,
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <Today color="info" sx={{ fontSize: 32 }} />
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Card 
+            sx={{
+              height: '100%',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              cursor: 'pointer',
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+                '& .card-icon': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                }
+              }
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '80px' }}>
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="textSecondary" gutterBottom variant="body2" sx={{ fontWeight: 500 }}>
                     This Week
                   </Typography>
-                  <Typography variant="h5">
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                     {stats.this_week_events}
                   </Typography>
                 </Box>

@@ -499,6 +499,86 @@
   font-weight: 500;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
+  transition: all 0.2s ease-in-out;
+}
+
+.modern-nav-link:hover {
+  color: var(--primary-600);
+  background: var(--primary-50);
+  transform: translateY(-1px);
+}
+
+/* Enhanced Mega Menu Styles */
+.modern-mega-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  min-width: 600px;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-mega-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.modern-mega-menu-item {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.modern-mega-menu-item:hover {
+  background: var(--bg-secondary);
+  transform: translateX(4px);
+}
+
+.modern-mega-menu-item:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+/* Enhanced Button Hover States */
+.modern-menu-button {
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.modern-menu-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.modern-menu-button:hover::before {
+  left: 100%;
+}
+
+.modern-menu-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-menu-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+  border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
 
@@ -544,4 +624,104 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Enhanced Metric Card Styles */
+.modern-metric-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.metric-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.metric-card-icon.primary {
+  background: var(--primary-100);
+  color: var(--primary-600);
+}
+
+.metric-card-icon.success {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+
+.metric-card-icon.warning {
+  background: var(--warning-50);
+  color: var(--warning-600);
+}
+
+.metric-card-icon.error {
+  background: var(--error-50);
+  color: var(--error-600);
+}
+
+.metric-card-icon.info {
+  background: var(--info-50);
+  color: var(--info-600);
+}
+
+.metric-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.metric-card-title {
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+  line-height: var(--leading-tight);
+}
+
+.metric-card-value {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: var(--leading-none);
+  transition: color 0.3s ease;
+}
+
+.metric-card-description {
+  color: var(--text-tertiary);
+  margin-top: var(--space-2);
+  line-height: var(--leading-normal);
+}
+
+.metric-card-trend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.metric-card-trend.up {
+  color: var(--success-600);
+}
+
+.metric-card-trend.down {
+  color: var(--error-600);
+}
+
+.metric-card-trend.neutral {
+  color: var(--text-tertiary);
 }
