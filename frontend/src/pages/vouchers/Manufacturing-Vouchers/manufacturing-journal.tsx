@@ -648,7 +648,6 @@ export default function ManufacturingJournalVoucher() {
           </Card>
         </Grid>
       </Grid>
-    </Box>
     </Container>
   );
 };

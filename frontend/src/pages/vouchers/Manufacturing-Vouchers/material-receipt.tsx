@@ -798,8 +798,8 @@ export default function MaterialReceiptVoucher() {
           </Card>
         </Grid>
       </Grid>
-    </Box>
+    </Container>
   );
 };
 
-export default MaterialReceipt;</Container>
+export default MaterialReceipt;

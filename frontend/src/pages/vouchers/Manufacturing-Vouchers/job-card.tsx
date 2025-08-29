@@ -886,6 +886,8 @@ export default function JobCardVoucher() {
                     </TableContainer>
                   </TabPanel>
                 </Box>
+              </Grid>
+            </Grid>
 
                 {/* Notes  */}
                 <Grid container spacing={2} mt={2}>
