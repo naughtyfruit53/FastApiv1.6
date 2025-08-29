@@ -13,7 +13,10 @@ import {
   Person,
   PersonAdd,
   Settings as SettingsIcon,
-  Security
+  Security,
+  Integration,
+  CloudUpload,
+  Timeline
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import FactoryReset from './FactoryReset';
@@ -86,9 +89,45 @@ const Settings: React.FC = () => {
           </Grid>
         )}
 
+        {/* Integration Management - For Super Admins */}
+        {isOrgAdmin && (
+          <Grid size={{ xs: 12, md: canManage ? 6 : 12 }}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <Integration sx={{ mr: 1 }} />
+                Integration Management
+              </Typography>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Manage external integrations like Tally, Zoho, email services, and data migration.
+                Configure connections and monitor integration health.
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Timeline />}
+                  onClick={() => router.push('/migration/management')}
+                  fullWidth
+                >
+                  Migration & Integrations
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<CloudUpload />}
+                  onClick={() => router.push('/migration/management')}
+                  fullWidth
+                >
+                  Data Import Wizard
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+        )}
+
         {/* Advanced Settings - For authorized users */}
         {isAuthorized && (
-          <Grid size={{ xs: 12, md: isOrgAdmin ? 6 : 12 }}>
+          <Grid size={{ xs: 12, md: isOrgAdmin ? (canManage ? 4 : 6) : 12 }}>
             <Paper sx={{ p: 3, height: '100%' }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
                 <Security sx={{ mr: 1 }} />

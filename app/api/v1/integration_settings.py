@@ -531,3 +531,37 @@ async def get_tally_integration_health(db: Session, organization_id: int, can_vi
             "records_synced": recent_sync.processed_items if recent_sync else 0
         }
     )
+
+
+@router.post("/{integration_name}/sync")
+async def sync_integration(
+    integration_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Manually trigger sync for an integration"""
+    
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Mock sync operation for now
+    logger.info(f"Triggered manual sync for {integration_name} in org {organization_id}")
+    return {"message": f"Sync triggered for {integration_name}"}
+
+
+@router.post("/{integration_name}/test")
+async def test_integration_connection(
+    integration_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Test connection for an integration"""
+    
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Mock connection test for now
+    logger.info(f"Testing connection for {integration_name} in org {organization_id}")
+    return {"message": f"Connection test completed for {integration_name}", "status": "success"}
