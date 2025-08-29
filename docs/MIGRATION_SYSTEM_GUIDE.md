@@ -4,6 +4,13 @@
 
 The Migration & Data Import System provides a comprehensive solution for importing data from various sources into the ERP system. It supports guided migration workflows, data validation, conflict resolution, and rollback capabilities.
 
+**🆕 Recent Enhancements:**
+- **Step-by-step Migration Wizard UI**: User-friendly guided interface for data import
+- **Enhanced Integration Dashboard**: Centralized monitoring of all external integrations 
+- **Super Admin Access Control**: Granular permission management for integration settings
+- **Real-time Job Monitoring**: Live progress tracking with error handling
+- **Rollback Support**: Complete migration undo functionality
+
 ## Features
 
 ### Supported Data Sources
@@ -92,7 +99,7 @@ Comprehensive data validation:
 
 ### 5. Execute Migration
 ```
-POST /api/v1/migration/jobs/{job_id}/start
+POST /api/v1/migration/jobs/{job_id}/execute
 ```
 Start the migration process:
 - Background processing for large datasets
@@ -109,6 +116,35 @@ Track migration progress:
 - Records processed/successful/failed
 - Estimated completion time
 - Recent log entries
+
+### 7. Rollback Migration (New!)
+```
+POST /api/v1/migration/jobs/{job_id}/rollback
+```
+Rollback completed migration:
+- Validates rollback eligibility
+- Reverses all changes made during migration
+- Restores previous data state
+- Provides detailed rollback summary
+
+## 🆕 Migration Wizard UI
+
+The system now includes a comprehensive step-by-step wizard accessible through:
+- **Settings → Integration Management → Migration & Integrations**
+- **Direct URL**: `/migration/management` (Super Admin only)
+
+### Wizard Features:
+- **Guided Workflow**: Step-by-step process with validation
+- **File Upload**: Drag-and-drop interface with progress tracking
+- **Smart Mapping**: AI-powered field mapping suggestions
+- **Real-time Validation**: Pre-import data validation with detailed reports
+- **Progress Monitoring**: Live migration status with error handling
+- **Rollback Controls**: Easy migration undo with confirmation dialogs
+
+### Access Control:
+- **Super Admin Only**: Full migration management access
+- **Granular Permissions**: Delegate specific integration rights
+- **Audit Logging**: Complete tracking of all migration activities
 
 ## API Endpoints
 

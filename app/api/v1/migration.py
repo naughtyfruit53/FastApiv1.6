@@ -647,6 +647,61 @@ async def rollback_migration(
     )
 
 
+@router.post("/jobs/{job_id}/execute")
+async def execute_migration(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Execute migration job"""
+    # Verify job ownership and permissions
+    query = db.query(MigrationJob).filter(
+        and_(
+            MigrationJob.id == job_id,
+            MigrationJob.organization_id == organization_id
+        )
+    )
+    
+    if not current_user.is_super_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Only organization super admins can execute migrations"
+        )
+    
+    job = query.first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Migration job not found")
+    
+    # Check if job can be executed
+    if job.status not in [MigrationJobStatus.APPROVED, MigrationJobStatus.VALIDATION]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot execute job in status: {job.status.value}"
+        )
+    
+    # Update job status to running
+    job.status = MigrationJobStatus.RUNNING
+    job.started_at = datetime.utcnow()
+    db.commit()
+    
+    try:
+        # Execute migration in background
+        migration_service = MigrationService(db)
+        await migration_service._execute_migration(job_id, organization_id, current_user.id)
+        
+        return {"message": "Migration execution started", "job_id": job_id}
+        
+    except Exception as e:
+        # Update job status to failed
+        job.status = MigrationJobStatus.FAILED
+        job.error_message = str(e)
+        db.commit()
+        
+        logger.error(f"Failed to execute migration job {job_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to execute migration: {str(e)}")
+
+
 # Dashboard and Statistics
 @router.get("/statistics", response_model=MigrationStatistics)
 async def get_migration_statistics(

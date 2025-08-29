@@ -4,6 +4,13 @@
 
 The Integration Management System provides a unified interface for managing all third-party integrations within the organization settings. It includes role-based access control, health monitoring, and centralized configuration management.
 
+**🆕 Recent Enhancements:**
+- **Tally Integration moved to Organization Settings**: Centralized configuration panel
+- **Unified Integration Dashboard**: Real-time health monitoring for all integrations
+- **Permission Delegation**: Super admins can grant specific integration rights to other users
+- **Health Status Monitoring**: Live status tracking with performance metrics
+- **Quick Actions**: One-click sync, test, and configuration management
+
 ## Supported Integrations
 
 ### 1. Tally ERP Integration
@@ -273,24 +280,48 @@ Status: GET /api/v1/integrations/calendar/status
 
 ### Setting Up Tally Integration
 
-1. **Access Organization Settings**
-   - Navigate to Organization Settings > Integrations
-   - Locate Tally Integration section
+🆕 **New Location: Organization Settings**
 
-2. **Configure Connection**
+1. **Access Organization Settings**
+   - Navigate to Settings (gear icon in top navigation)
+   - Locate "Integration Management" section (Super Admin only)
+   - Click "Migration & Integrations" to access the management dashboard
+
+2. **Configure Tally Connection**
+   - In the Integration Dashboard, find the Tally integration card
+   - Click the configuration icon (gear)
    - Enter Tally server host and port
    - Specify company name in Tally
    - Test connection to verify settings
 
 3. **Enable Integration**
    - Set sync frequency (manual/automatic)
-   - Configure sync options
+   - Configure sync options (ledgers, vouchers, reports)
    - Save configuration
 
 4. **Monitor Health**
-   - Check integration dashboard
-   - Monitor sync logs
-   - Address any errors promptly
+   - Check integration dashboard for real-time status
+   - Monitor sync logs and performance metrics
+   - Address any errors promptly using the error tracking system
+
+## 🆕 Integration Dashboard Features
+
+### Real-time Health Monitoring
+- **Status Indicators**: Healthy, Warning, Error, Disconnected
+- **Last Sync Information**: Timestamps and frequency
+- **Error Tracking**: Error counts with drill-down details
+- **Performance Metrics**: Response times, sync duration, record counts
+
+### Quick Actions
+- **Sync Now**: Manual trigger for immediate synchronization
+- **Test Connection**: Verify integration connectivity
+- **View History**: Access detailed sync logs and history
+- **Configure**: Direct access to integration settings
+
+### Permission Management
+- **Super Admin Controls**: Full access to all integrations
+- **Granular Delegation**: Grant specific integration permissions
+- **User-level Access**: Configure what each user can see/manage
 
 ### Delegating Integration Permissions
 
