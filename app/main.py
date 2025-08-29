@@ -109,6 +109,21 @@ except Exception as import_error:
     logger.error(f"Failed to import service_desk_router: {str(import_error)}")
     raise
 
+# Import Migration and Integration Settings
+try:
+    from app.api.v1 import migration as v1_migration
+    logger.info("Successfully imported migration_router")
+except Exception as import_error:
+    logger.error(f"Failed to import migration_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import integration_settings as v1_integration_settings
+    logger.info("Successfully imported integration_settings_router")
+except Exception as import_error:
+    logger.error(f"Failed to import integration_settings_router: {str(import_error)}")
+    raise
+
 # Import new Task Management, Calendar, and Mail APIs
 try:
     from app.api.v1 import tasks as v1_tasks
@@ -371,6 +386,13 @@ logger.info("Calendar and Scheduler router included successfully at prefix: /api
 
 app.include_router(v1_mail.router, prefix="/api/v1/mail", tags=["mail-management"])
 logger.info("Mail Management router included successfully at prefix: /api/v1/mail")
+
+# Include Migration and Integration Settings routers
+app.include_router(v1_migration.router, prefix="/api/v1/migration", tags=["migration-data-import"])
+logger.info("Migration and Data Import router included successfully at prefix: /api/v1/migration")
+
+app.include_router(v1_integration_settings.router, prefix="/api/v1/integrations", tags=["integration-settings"])
+logger.info("Integration Settings router included successfully at prefix: /api/v1/integrations")
 
 @app.get("/routes")
 def get_routes():
