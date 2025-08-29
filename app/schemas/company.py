@@ -4,7 +4,7 @@
 Company Pydantic schemas for request/response validation
 """
 from pydantic import BaseModel, EmailStr, validator
-from typing import Optional
+from typing import Optional, List  # Added List import
 from datetime import datetime
 
 class CompanyBase(BaseModel):

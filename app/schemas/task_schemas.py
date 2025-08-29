@@ -37,6 +37,7 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     project_id: Optional[int] = None
     assigned_to: Optional[int] = None
+    company_id: Optional[int] = None  # Added for multi-company support
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -57,6 +58,7 @@ class TaskResponse(TaskBase):
     
     id: int
     organization_id: int
+    company_id: Optional[int]  # Added for multi-company support
     project_id: Optional[int]
     created_by: int
     assigned_to: Optional[int]
@@ -78,21 +80,22 @@ class TaskWithDetails(TaskResponse):
 class TaskProjectBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    color: Optional[str] = Field(None, regex=r'^#[0-9A-Fa-f]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
 
 class TaskProjectCreate(TaskProjectBase):
-    pass
+    company_id: Optional[int] = None  # Added for multi-company support
 
 class TaskProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    color: Optional[str] = Field(None, regex=r'^#[0-9A-Fa-f]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
 
 class TaskProjectResponse(TaskProjectBase):
     model_config = ConfigDict(from_attributes=True)
     
     id: int
     organization_id: int
+    company_id: Optional[int]  # Added for multi-company support
     created_by: int
     created_at: datetime
     updated_at: datetime
@@ -106,13 +109,13 @@ class TaskProjectWithDetails(TaskProjectResponse):
 
 # Task Project Member schemas
 class TaskProjectMemberBase(BaseModel):
-    role: str = Field(default="member", regex=r'^(member|admin|viewer)$')
+    role: str = Field(default="member", pattern=r'^(member|admin|viewer)$')
 
 class TaskProjectMemberCreate(TaskProjectMemberBase):
     user_id: int
 
 class TaskProjectMemberUpdate(BaseModel):
-    role: Optional[str] = Field(None, regex=r'^(member|admin|viewer)$')
+    role: Optional[str] = Field(None, pattern=r'^(member|admin|viewer)$')
 
 class TaskProjectMemberResponse(TaskProjectMemberBase):
     model_config = ConfigDict(from_attributes=True)

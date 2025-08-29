@@ -43,6 +43,16 @@ class Company(Base):
         "app.models.user_models.UserCompany",
         back_populates="company"
     )
+    
+    # Task Management relationships for multi-company support
+    tasks: Mapped[List["app.models.task_management.Task"]] = relationship(
+        "app.models.task_management.Task",
+        back_populates="company"
+    )
+    task_projects: Mapped[List["app.models.task_management.TaskProject"]] = relationship(
+        "app.models.task_management.TaskProject",
+        back_populates="company"
+    )
 
     __table_args__ = (
         Index('idx_company_org_name', 'organization_id', 'name'),

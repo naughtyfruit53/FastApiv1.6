@@ -22,20 +22,58 @@ from app.schemas.task_schemas import (
     TaskReminderCreate, TaskReminderUpdate, TaskReminderResponse, TaskReminderWithDetails
 )
 from app.services.rbac_service import require_permission
+from app.services.rbac import RBACService  # Added for company scoping
 
 router = APIRouter()
 
 # Task endpoints
 @router.get("/dashboard", response_model=TaskDashboardStats)
 async def get_task_dashboard(
+    company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get task dashboard statistics for current user's organization"""
+    """Get task dashboard statistics for current user's accessible companies"""
     org_id = current_user.organization_id
+    rbac = RBACService(db)
     
-    # Base query for user's organization
-    base_query = db.query(Task).filter(Task.organization_id == org_id)
+    # Get user's accessible companies
+    user_companies = rbac.get_user_companies(current_user.id)
+    
+    # Build base query with company filtering
+    if company_id is not None:
+        # User requested specific company - verify access
+        if company_id not in user_companies:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: User does not have access to the specified company"
+            )
+        # Filter by specific company
+        base_query = db.query(Task).filter(
+            and_(
+                Task.organization_id == org_id,
+                Task.company_id == company_id
+            )
+        )
+    elif user_companies:
+        # Filter by user's accessible companies (including org-level tasks with company_id=None)
+        base_query = db.query(Task).filter(
+            and_(
+                Task.organization_id == org_id,
+                or_(
+                    Task.company_id.in_(user_companies),
+                    Task.company_id.is_(None)  # Include org-level tasks
+                )
+            )
+        )
+    else:
+        # User has no company access, only show org-level tasks
+        base_query = db.query(Task).filter(
+            and_(
+                Task.organization_id == org_id,
+                Task.company_id.is_(None)
+            )
+        )
     
     # Total tasks
     total_tasks = base_query.count()
@@ -109,14 +147,54 @@ async def get_tasks(
     search: Optional[str] = Query(None),
     sort_by: str = Query("created_at", regex=r"^(created_at|updated_at|due_date|priority|title)$"),
     sort_order: str = Query("desc", regex=r"^(asc|desc)$"),
+    company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get paginated list of tasks with filtering and sorting"""
     org_id = current_user.organization_id
+    rbac = RBACService(db)
     
-    # Base query with eager loading
-    query = db.query(Task).filter(Task.organization_id == org_id).options(
+    # Get user's accessible companies
+    user_companies = rbac.get_user_companies(current_user.id)
+    
+    # Build base query with company filtering
+    if company_id is not None:
+        # User requested specific company - verify access
+        if company_id not in user_companies:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: User does not have access to the specified company"
+            )
+        # Filter by specific company
+        query = db.query(Task).filter(
+            and_(
+                Task.organization_id == org_id,
+                Task.company_id == company_id
+            )
+        )
+    elif user_companies:
+        # Filter by user's accessible companies (including org-level tasks with company_id=None)
+        query = db.query(Task).filter(
+            and_(
+                Task.organization_id == org_id,
+                or_(
+                    Task.company_id.in_(user_companies),
+                    Task.company_id.is_(None)  # Include org-level tasks
+                )
+            )
+        )
+    else:
+        # User has no company access, only show org-level tasks
+        query = db.query(Task).filter(
+            and_(
+                Task.organization_id == org_id,
+                Task.company_id.is_(None)
+            )
+        )
+    
+    # Add eager loading
+    query = query.options(
         joinedload(Task.creator),
         joinedload(Task.assignee),
         joinedload(Task.project)
@@ -202,6 +280,23 @@ async def create_task(
     db: Session = Depends(get_db)
 ):
     """Create a new task"""
+    rbac = RBACService(db)
+    
+    # If company_id is provided, verify user has access to it
+    if task_data.company_id:
+        rbac.enforce_company_access(current_user.id, task_data.company_id, "task_create")
+    else:
+        # If no company_id provided, auto-assign to user's first company if they have access to only one
+        user_companies = rbac.get_user_companies(current_user.id)
+        if len(user_companies) == 1:
+            task_data.company_id = user_companies[0]
+        elif len(user_companies) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="company_id is required when user has access to multiple companies"
+            )
+        # If user has no companies, allow creating organization-level task (company_id=None)
+    
     # Verify assignee exists in same organization if provided
     if task_data.assigned_to:
         assignee = db.query(User).filter(
@@ -215,19 +310,29 @@ async def create_task(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Assignee not found in your organization"
             )
+        
+        # If company is specified, verify assignee has access to that company
+        if task_data.company_id:
+            if not rbac.user_has_company_access(task_data.assigned_to, task_data.company_id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Assignee does not have access to the specified company"
+                )
     
-    # Verify project exists in same organization if provided
+    # Verify project exists in same organization and company if provided
     if task_data.project_id:
-        project = db.query(TaskProject).filter(
-            and_(
-                TaskProject.id == task_data.project_id,
-                TaskProject.organization_id == current_user.organization_id
-            )
-        ).first()
+        project_filters = [
+            TaskProject.id == task_data.project_id,
+            TaskProject.organization_id == current_user.organization_id
+        ]
+        if task_data.company_id:
+            project_filters.append(TaskProject.company_id == task_data.company_id)
+        
+        project = db.query(TaskProject).filter(and_(*project_filters)).first()
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found in your organization"
+                detail="Project not found in your organization/company"
             )
     
     # Create task
