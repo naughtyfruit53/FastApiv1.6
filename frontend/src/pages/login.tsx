@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -9,20 +9,32 @@ import {
   Checkbox,
   FormControlLabel,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Divider
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, PlayArrow } from '@mui/icons-material';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import UnifiedLoginForm from '../components/UnifiedLoginForm';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
+import DemoModeDialog from '../components/DemoModeDialog';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [demoModeOpen, setDemoModeOpen] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
+
+  // Check if demo mode should be activated after login
+  useEffect(() => {
+    const pendingDemo = localStorage.getItem('pendingDemoMode');
+    if (pendingDemo === 'true') {
+      localStorage.removeItem('pendingDemoMode');
+      localStorage.setItem('demoMode', 'true');
+    }
+  }, []);
 
   const handleLogin = async (token: string, loginResponse?: any) => {
     console.log('[Login] Login successful, processing response:', {
@@ -32,6 +44,7 @@ const LoginPage: React.FC = () => {
       userRole: loginResponse?.user_role,
       mustChangePassword: loginResponse?.must_change_password,
       isSuperAdmin: loginResponse?.user?.is_super_admin,
+      isDemoMode: loginResponse?.demo_mode,
       timestamp: new Date().toISOString()
     });
 
@@ -49,8 +62,16 @@ const LoginPage: React.FC = () => {
       console.log('[Login] Current localStorage state:', {
         hasToken: !!localStorage.getItem('token'),
         hasUserRole: !!localStorage.getItem('user_role'),
-        hasSuperAdminFlag: !!localStorage.getItem('is_super_admin')
+        hasSuperAdminFlag: !!localStorage.getItem('is_super_admin'),
+        isDemoMode: !!localStorage.getItem('demoMode')
       });
+      
+      // Check if this is demo mode
+      if (loginResponse?.demo_mode || localStorage.getItem('demoMode') === 'true') {
+        console.log('[Login] Demo mode activated - redirecting to demo page');
+        window.location.href = '/demo';
+        return;
+      }
       
       // Check if password change is required (not mandatory for OTP login)
       if (loginResponse?.must_change_password && !loginResponse?.otp_login) {
@@ -99,6 +120,38 @@ const LoginPage: React.FC = () => {
             Forgot Password?
           </Button>
         </Box>
+
+        {/* Demo Mode Section */}
+        <Box sx={{ mt: 3, mb: 2 }}>
+          <Divider sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              OR
+            </Typography>
+          </Divider>
+          
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<PlayArrow />}
+            onClick={() => setDemoModeOpen(true)}
+            sx={{
+              borderRadius: 2,
+              py: 1.5,
+              borderColor: 'primary.light',
+              '&:hover': {
+                borderColor: 'primary.main',
+                backgroundColor: 'primary.light',
+                color: 'primary.contrastText'
+              }
+            }}
+          >
+            Try Demo Mode
+          </Button>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+            Experience all features with sample data
+          </Typography>
+        </Box>
       </Box>
 
       {/* Forgot Password Modal */}
@@ -109,6 +162,13 @@ const LoginPage: React.FC = () => {
           setForgotPasswordOpen(false);
           // Show success message or redirect
         }}
+      />
+
+      {/* Demo Mode Dialog */}
+      <DemoModeDialog
+        open={demoModeOpen}
+        onClose={() => setDemoModeOpen(false)}
+        onDemoStart={handleLogin}
       />
     </Container>
   );
