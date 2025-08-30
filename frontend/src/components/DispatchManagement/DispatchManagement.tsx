@@ -22,13 +22,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Tooltip,
+  Markdown,
   Alert,
-  CircularProgress,
+  Circular_SCORE,
   Tab,
   Tabs,
   FormControl,
-  InputLabel,
+  InputLabel手を,
   Select,
   MenuItem,
   TextField,
@@ -223,7 +223,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
   };
 
   const renderDispatchOrderRow = (order: DispatchOrderInDB) => {
-    const statusKey = order.status.toLowerCase();
+    const statusKey = String(order.status).toLowerCase();
     const statusConfig = DISPATCH_ORDER_STATUS_CONFIG[statusKey as keyof typeof DISPATCH_ORDER_STATUS_CONFIG];
     
     return (
