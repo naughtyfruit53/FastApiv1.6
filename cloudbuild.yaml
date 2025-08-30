@@ -1,0 +1,43 @@
+steps:
+  # Build and push backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/tritiq-backend', './']
+    dir: '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/tritiq-backend']
+  # Deploy backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - run
+      - deploy
+      - tritiq-backend
+      - --image=gcr.io/$PROJECT_ID/tritiq-backend
+      - --platform=managed
+      - --region=us-central1
+      - --allow-unauthenticated
+      - --port=8080
+      - --timeout=600
+      - --add-cloudsql-instances=totemic-vine-434711-h2:us-central1:tritiq-erp-db
+      - --set-secrets=DATABASE_URL=tritiq-database-url:latest,SUPABASE_URL=tritiq-supabase-url:latest,SUPABASE_KEY=tritiq-supabase-key:latest,SUPABASE_SERVICE_KEY=tritiq-supabase-service-key:latest,SUPABASE_JWT_SECRET=tritiq-supabase-jwt-secret:latest,SECRET_KEY=tritiq-secret-key:latest,BREVO_API_KEY=tritiq-brevo-api-key:latest
+      - --set-env-vars=ENVIRONMENT=production,DEBUG=false,BACKEND_CORS_ORIGINS=https://tritiq-frontend-abc123-uc.a.run.app,http://localhost:3000,PORT=8080
+  # Build and push frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/tritiq-frontend', './']
+    dir: 'frontend'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/tritiq-frontend']
+  # Deploy frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - run
+      - deploy
+      - tritiq-frontend
+      - --image=gcr.io/$PROJECT_ID/tritiq-frontend
+      - --platform=managed
+      - --region=us-central1
+      - --allow-unauthenticated
+      - --port=3000
+      - --set-env-vars=NEXT_PUBLIC_API_URL=https://tritiq-backend-abc123-uc.a.run.app
+images:
+  - 'gcr.io/$PROJECT_ID/tritiq-backendką
+  - 'gcr.io/$PROJECT_ID/tritiq-frontend'

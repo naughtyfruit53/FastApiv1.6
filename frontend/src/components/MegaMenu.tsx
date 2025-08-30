@@ -696,13 +696,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Task Management menu
-    taskManagement: {
-      title: 'Task Management',
+    // Combined Workspace menu
+    workspace: {
+      title: 'Workspace',
       icon: <Task />,
       sections: [
         {
-          title: 'Tasks & Projects',
+          title: 'Tasks',
           items: [
             { name: 'Task Dashboard', path: '/tasks/dashboard', icon: <Dashboard /> },
             { name: 'My Tasks', path: '/tasks', icon: <Task /> },
@@ -727,14 +727,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Task Reminders', path: '/tasks/reminders', icon: <Alarm /> },
             { name: 'Task Comments', path: '/tasks/comments', icon: <Chat /> }
           ]
-        }
-      ]
-    },
-    // Calendar & Scheduler menu
-    calendar: {
-      title: 'Calendar & Scheduler',
-      icon: <CalendarToday />,
-      sections: [
+        },
         {
           title: 'Calendar Views',
           items: [
@@ -753,22 +746,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Recurring Events', path: '/calendar/recurring', icon: <Timeline /> }
           ]
         },
-        {
-          title: 'Integration',
-          items: [
-            { name: 'Google Calendar', path: '/calendar/google-integration', icon: <CloudUpload /> },
-            { name: 'Calendar Sharing', path: '/calendar/sharing', icon: <Groups /> },
-            { name: 'Task Integration', path: '/calendar/task-integration', icon: <Task /> },
-            { name: 'Calendar Settings', path: '/calendar/settings', icon: <Settings /> }
-          ]
-        }
-      ]
-    },
-    // Mail Management menu
-    mail: {
-      title: 'Mail',
-      icon: <Email />,
-      sections: [
         {
           title: 'Email Management',
           items: [
@@ -870,7 +847,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         onClose={handleMenuClose}
         PaperProps={{
           sx: {
-            width: 800,
+            width: 600,
             maxHeight: 500,
             mt: 1,
             borderRadius: 2,
@@ -904,7 +881,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               size={{
                 xs: 12,
                 sm: 6,
-                md: 3
+                md: 4
               }}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
                 {section.title}
@@ -1175,37 +1152,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   Service Desk
                 </Button>
 
-                {/* Task Management Menu */}
+                {/* Workspace Menu - Combined Tasks, Calendar, Mail */}
                 <Button
                   color="inherit"
                   startIcon={<Task />}
                   endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'taskManagement')}
+                  onClick={(e) => handleMenuClick(e, 'workspace')}
                   sx={modernButtonStyle}
                 >
-                  Tasks
-                </Button>
-
-                {/* Calendar & Scheduler Menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<CalendarToday />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'calendar')}
-                  sx={modernButtonStyle}
-                >
-                  Calendar
-                </Button>
-
-                {/* Mail Management Menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<Email />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'mail')}
-                  sx={modernButtonStyle}
-                >
-                  Mail
+                  Workspace
                 </Button>
 
                 {/* Settings with Administration as submenu */}

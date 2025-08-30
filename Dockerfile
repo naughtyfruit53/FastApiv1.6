@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -17,10 +17,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create uploads directory
-RUN mkdir -p uploads
+RUN mkdir -p /app/uploads
 
-# Expose port
-EXPOSE 8000
+# Set non-root user for security
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose port (Cloud Run sets PORT env variable, default 8080)
+EXPOSE $PORT
+
+# Run the application with dynamic PORT
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]

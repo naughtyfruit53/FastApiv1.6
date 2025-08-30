@@ -3,18 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Typography,
+  Container,
+  Button,
+  Paper,
+  Grid,
+  Tabs,
+  Tab,
+  CircularProgress,
+  Alert,
   Card,
   CardContent,
-  Grid,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Chip,
   TextField,
   InputAdornment,
@@ -26,10 +25,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Tabs,
-  Tab,
   LinearProgress,
-  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,8 +43,8 @@ import {
   Email as EmailIcon,
   Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
-import { useAuth } from '@/context/AuthContext';
-import { marketingService, Campaign, Promotion, MarketingAnalytics } from '../../services';
+import { useAuth } from '../../context/AuthContext';
+import { marketingService, Campaign, Promotion, MarketingAnalytics } from '../../services/marketingService';
 
 const campaignStatusColors: Record<string, string> = {
   draft: 'default',
@@ -60,9 +62,29 @@ const campaignTypeIcons: Record<string, JSX.Element> = {
   digital_ads: <TrendingUpIcon />,
 };
 
+function TabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
 export default function MarketingDashboard() {
   const { user } = useAuth();
-  const [currentTab, setCurrentTab] = useState(0);
+  const [tabValue, setTabValue] = useState(0);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [analytics, setAnalytics] = useState<MarketingAnalytics | null>(null);
@@ -380,7 +402,7 @@ export default function MarketingDashboard() {
       <Card>
         <CardContent>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)}>
+            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
               <Tab label="Campaigns" />
               <Tab label="Promotions" />
             </Tabs>
@@ -402,8 +424,8 @@ export default function MarketingDashboard() {
             />
           </Box>
 
-          {currentTab === 0 && renderCampaignsTable()}
-          {currentTab === 1 && renderPromotionsTable()}
+          {tabValue === 0 && renderCampaignsTable()}
+          {tabValue === 1 && renderPromotionsTable()}
         </CardContent>
       </Card>
 
