@@ -46,7 +46,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { dispatchService, DispatchOrderInDB, InstallationJobInDB } from '../../services/dispatchService';
-import DispatchOrderDialog from './DispatchOrderDialog';
+import { DispatchOrderDialog } from './DispatchOrderDialog';
 import InstallationJobDialog from './InstallationJobDialog';
 import InstallationSchedulePromptModal from './InstallationSchedulePromptModal';
 import {
