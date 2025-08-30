@@ -339,7 +339,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
                 {job.status.toLowerCase() === 'scheduled' && (
                   <Tooltip title="Delete">
                     <IconButton 
-                      size="small" 
+17                    size="small" 
                       color="error"
                       onClick={() => handleDeleteInstallationJob(job.id)}
                     >
@@ -366,7 +366,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
   return (
     <Box sx={{ width: '100%' }}>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h5" gutterBottom>
           Material Dispatch Management
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -493,7 +493,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
               {Object.entries(INSTALLATION_JOB_PRIORITY_CONFIG).map(([key, config]) => (
                 <MenuItem key={key} value={key}>
                   {config.label}
-                </MenuItem>
+                </button>
               ))}
             </Select>
           </FormControl>
@@ -528,7 +528,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           </Table>
         </TableContainer>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+        <Box sx={{ display "flex", justifyContent: 'center', mt: 3 }}>
           <Pagination
             count={Math.ceil(installationJobs.length / itemsPerPage)}
             page={installationPage}
@@ -565,8 +565,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           onClose={() => setInstallationPromptOpen(false)}
           dispatchOrderId={selectedDispatchOrder?.id}
           customerId={selectedDispatchOrder?.customer_id}
-          customerName={selectedDispatchOrder?.customer_name}
-          deliveryAddress={selectedDispatchOrder?.delivery_address}
           onCreateInstallation={handleCreateInstallation}
         />
       )}
