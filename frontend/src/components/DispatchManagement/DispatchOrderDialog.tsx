@@ -68,7 +68,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
     quantity: 1,
     unit: 'PCS',
     description: '',
-    status: 'pending' as typeof DISPATCH_ITEM_STATUSES[keyof typeof DISPATCH_ITEM_STATUSES]
+    status: DISPATCH_ITEM_STATUSES.PENDING
   }]);
 
   const [loading, setLoading] = useState(false);
@@ -93,7 +93,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
         quantity: item.quantity,
         unit: item.unit,
         description: item.description || '',
-        status: item.status as typeof DISPATCH_ITEM_STATUSES[keyof typeof DISPATCH_ITEM_STATUSES]
+        status: item.status
       })));
     }
   }, [dispatchOrder, editMode]);
@@ -111,7 +111,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
       quantity: 1,
       unit: 'PCS',
       description: '',
-      status: 'pending' as typeof DISPATCH_ITEM_STATUSES[keyof typeof DISPATCH_ITEM_STATUSES]
+      status: DISPATCH_ITEM_STATUSES.PENDING
     }]);
   };
 
@@ -408,5 +408,3 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
     </Dialog>
   );
 };
-
-export default DispatchOrderDialog;

@@ -1,59 +1,8 @@
 // frontend/src/services/dispatchService.ts
 
 import api from '../lib/api';
+import { DispatchItemStatus, DispatchOrderStatus, InstallationJobStatus, InstallationJobPriority } from '../types/dispatch.types';
 
-export interface DispatchOrderStatus {
-  PENDING: 'pending';
-  IN_TRANSIT: 'in_transit';
-  DELIVERED: 'delivered';
-  CANCELLED: 'cancelled';
-}
-
-export interface DispatchItemStatus {
-  PENDING: 'pending';
-  PACKED: 'packed';
-  DISPATCHED: 'dispatched';
-  DELIVERED: 'delivered';
-}
-
-export interface InstallationJobStatus {
-  SCHEDULED: 'scheduled';
-  IN_PROGRESS: 'in_progress';
-  COMPLETED: 'completed';
-  CANCELLED: 'cancelled';
-  RESCHEDULED: 'rescheduled';
-}
-
-export interface InstallationJobPriority {
-  LOW: 'low';
-  MEDIUM: 'medium';
-  HIGH: 'high';
-  URGENT: 'urgent';
-}
-
-// DispatchItem interfaces
-export interface DispatchItemBase {
-  product_id: number;
-  quantity: number;
-  unit: string;
-  description?: string | null;
-  serial_numbers?: string | null;
-  batch_numbers?: string | null;
-  status: keyof DispatchItemStatus;
-}
-
-export type DispatchItemCreate = DispatchItemBase;
-
-export type DispatchItemUpdate = Partial<DispatchItemBase>;
-
-export interface DispatchItemInDB extends DispatchItemBase {
-  id: number;
-  dispatch_order_id: number;
-  created_at: string;
-  updated_at?: string | null;
-}
-
-// DispatchOrder interfaces
 export interface DispatchOrderBase {
   customer_id: number;
   ticket_id?: number | null;
@@ -82,6 +31,28 @@ export interface DispatchOrderInDB extends DispatchOrderBase {
   created_by_id?: number | null;
   updated_by_id?: number | null;
   items: DispatchItemInDB[];
+  created_at: string;
+  updated_at?: string | null;
+}
+
+// DispatchItem interfaces
+export interface DispatchItemBase {
+  product_id: number;
+  quantity: number;
+  unit: string;
+  description?: string | null;
+  serial_numbers?: string | null;
+  batch_numbers?: string | null;
+  status: DispatchItemStatus;
+}
+
+export type DispatchItemCreate = DispatchItemBase;
+
+export type DispatchItemUpdate = Partial<DispatchItemBase>;
+
+export interface DispatchItemInDB extends DispatchItemBase {
+  id: number;
+  dispatch_order_id: number;
   created_at: string;
   updated_at?: string | null;
 }
@@ -455,7 +426,8 @@ export const dispatchService = {
       const response = await api.get(`/dispatch/installation-jobs/${jobId}/details`);
       console.log('[DispatchService] Successfully fetched installation job with details');
       return response.data;
-    } catch (error: any) {
+    }_lowercase
+    catch (error: any) {
       console.error('[DispatchService] Error fetching installation job with details:', error);
       throw new Error(error.response?.data?.detail || 'Failed to fetch installation job details');
     }
