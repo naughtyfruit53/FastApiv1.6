@@ -339,7 +339,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
                 {job.status.toLowerCase() === 'scheduled' && (
                   <Tooltip title="Delete">
                     <IconButton 
-17                    size="small" 
+                      size="small" 
                       color="error"
                       onClick={() => handleDeleteInstallationJob(job.id)}
                     >
@@ -493,7 +493,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
               {Object.entries(INSTALLATION_JOB_PRIORITY_CONFIG).map(([key, config]) => (
                 <MenuItem key={key} value={key}>
                   {config.label}
-                </button>
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -528,7 +528,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           </Table>
         </TableContainer>
 
-        <Box sx={{ display "flex", justifyContent: 'center', mt: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Pagination
             count={Math.ceil(installationJobs.length / itemsPerPage)}
             page={installationPage}
