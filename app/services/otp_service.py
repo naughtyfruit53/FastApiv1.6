@@ -10,6 +10,7 @@ import string
 from app.models.system_models import OTPVerification
 from app.core.security import get_password_hash, verify_password
 from app.services.email_service import email_service  # Import for sending email
+from app.services.whatsapp_service import whatsapp_service  # Import for sending WhatsApp
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,8 @@ class OTPService:
     def __init__(self, db: Session):
         self.db = db
     
-    def generate_and_send_otp(self, email: str, purpose: str = "login", organization_id: Optional[int] = None, additional_data: Optional[Dict[str, Any]] = None) -> bool:
-        """Generate OTP and send via email"""
+    def generate_and_send_otp(self, email: str, purpose: str = "login", organization_id: Optional[int] = None, additional_data: Optional[Dict[str, Any]] = None, phone_number: Optional[str] = None, delivery_method: str = "email") -> bool:
+        """Generate OTP and send via specified method (WhatsApp preferred, email fallback)"""
         try:
             # Generate 6-digit OTP
             otp = ''.join(random.choices(string.digits, k=6))
@@ -30,7 +31,7 @@ class OTPService:
             otp_hash = get_password_hash(otp)
             
             # Create OTP verification record
-            expiry = datetime.utcnow() + timedelta(minutes=5)
+            expiry = datetime.utcnow() + timedelta(minutes=10)  # Extended to 10 minutes for WhatsApp
             otp_verification = OTPVerification(
                 email=email,
                 otp_hash=otp_hash,
@@ -42,16 +43,41 @@ class OTPService:
             self.db.add(otp_verification)
             self.db.commit()
             
-            # Send OTP email
-            template = "factory_reset_otp.html" if purpose == "reset_data" else "otp.html"
-            success = email_service.send_otp_email(email, otp, purpose, template=template)
+            # Try WhatsApp first if phone number provided and delivery method allows
+            delivery_success = False
+            delivery_method_used = "none"
             
-            if success:
-                logger.info(f"OTP sent to {email} for {purpose}")
-            else:
-                logger.error(f"Failed to send OTP to {email} for {purpose}")
+            if phone_number and delivery_method in ["whatsapp", "auto"]:
+                if whatsapp_service.is_available():
+                    success, error = whatsapp_service.send_otp(phone_number, otp, purpose)
+                    if success:
+                        delivery_success = True
+                        delivery_method_used = "whatsapp"
+                        logger.info(f"OTP sent via WhatsApp to {phone_number} for {purpose}")
+                    else:
+                        logger.warning(f"WhatsApp delivery failed for {phone_number}: {error}")
+                else:
+                    logger.warning("WhatsApp service not available")
+            
+            # Fallback to email if WhatsApp failed or not requested
+            if not delivery_success:
+                template = "factory_reset_otp.html" if purpose == "reset_data" else "otp.html"
+                success = email_service.send_otp_email(email, otp, purpose, template=template)
+                
+                if success:
+                    delivery_success = True
+                    delivery_method_used = "email"
+                    logger.info(f"OTP sent via email to {email} for {purpose}")
+                else:
+                    logger.error(f"Failed to send OTP via email to {email} for {purpose}")
+            
+            if not delivery_success:
                 self.db.rollback()
                 return False
+            
+            # Update the OTP record for audit purposes (using existing fields)
+            # We'll log the delivery method in the application logs instead of modifying the schema
+            logger.info(f"OTP delivery completed: method={delivery_method_used}, email={email}, phone={phone_number if delivery_method_used == 'whatsapp' else 'N/A'}")
             
             return True
             

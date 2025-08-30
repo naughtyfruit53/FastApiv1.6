@@ -333,6 +333,8 @@ class TemporaryPasswordResponse(BaseModel):
 class OTPRequest(BaseModel):
     email: EmailStr
     purpose: str = "login"  # login, password_reset
+    phone_number: Optional[str] = None  # For WhatsApp OTP
+    delivery_method: str = "auto"  # "auto" (WhatsApp preferred), "email", "whatsapp"
 
 
 class OTPVerifyRequest(BaseModel):
@@ -344,6 +346,7 @@ class OTPVerifyRequest(BaseModel):
 class OTPResponse(BaseModel):
     message: str
     email: str
+    delivery_method: Optional[str] = None  # Which method was actually used
 
 
 # Master password schemas

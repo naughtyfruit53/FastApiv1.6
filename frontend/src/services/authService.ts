@@ -128,9 +128,19 @@ export const authService = {
     localStorage.removeItem('is_super_admin');
     window.location.href = '/';
   },
-  requestOTP: async (email: string, purpose: string = 'login') => {
+  requestOTP: async (email: string, phoneNumber?: string, deliveryMethod: string = 'auto', purpose: string = 'login') => {
     try {
-      const response = await api.post('/auth/otp/request', { email, purpose });
+      const requestData: any = { email, purpose };
+      
+      if (phoneNumber) {
+        requestData.phone_number = phoneNumber;
+      }
+      
+      if (deliveryMethod) {
+        requestData.delivery_method = deliveryMethod;
+      }
+      
+      const response = await api.post('/auth/otp/request', requestData);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to send OTP');

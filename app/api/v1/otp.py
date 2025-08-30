@@ -71,17 +71,30 @@ async def request_otp(
         
         # Generate and send OTP
         otp_service = OTPService(db)
-        success = otp_service.generate_and_send_otp(otp_request.email, otp_request.purpose)
+        success = otp_service.generate_and_send_otp(
+            email=otp_request.email, 
+            purpose=otp_request.purpose,
+            phone_number=otp_request.phone_number,
+            delivery_method=otp_request.delivery_method
+        )
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to generate OTP. Please try again."
             )
         
-        logger.info(f"OTP requested for {otp_request.email} - Purpose: {otp_request.purpose}")
+        # Determine delivery method based on available options
+        delivery_method_used = "email"  # Default fallback
+        if otp_request.phone_number and otp_request.delivery_method in ["whatsapp", "auto"]:
+            from app.services.whatsapp_service import whatsapp_service
+            if whatsapp_service.is_available():
+                delivery_method_used = "whatsapp (preferred)"
+        
+        logger.info(f"OTP requested for {otp_request.email} - Purpose: {otp_request.purpose} - Delivery: {delivery_method_used}")
         return OTPResponse(
-            message="OTP sent successfully to your email address.",
-            email=otp_request.email
+            message="OTP sent successfully. Check your WhatsApp or email." if otp_request.phone_number else "OTP sent successfully to your email address.",
+            email=otp_request.email,
+            delivery_method=delivery_method_used
         )
         
     except HTTPException:

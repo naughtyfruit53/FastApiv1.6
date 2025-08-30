@@ -6,26 +6,23 @@ import {
   Typography, 
   Container,
   Button,
-  Switch,
-  FormControlLabel
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import LoginForm from '../components/LoginForm';
-import OTPLogin from '../components/OTPLogin';
+import UnifiedLoginForm from '../components/UnifiedLoginForm';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
-  const [isOTP, setIsOTP] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
-
-  const handleToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setIsOTP(event.target.checked);
-  };
 
   const handleLogin = async (token: string, loginResponse?: any) => {
     console.log('[Login] Login successful, processing response:', {
@@ -55,8 +52,8 @@ const LoginPage: React.FC = () => {
         hasSuperAdminFlag: !!localStorage.getItem('is_super_admin')
       });
       
-      // Check if password change is required
-      if (loginResponse?.must_change_password) {
+      // Check if password change is required (not mandatory for OTP login)
+      if (loginResponse?.must_change_password && !loginResponse?.otp_login) {
         console.log('[Login] Password change required - redirecting to password reset');
         // Use hard reload to avoid SPA race condition - ensures token is present for AuthProvider's effect
         window.location.href = '/password-reset';
@@ -89,25 +86,8 @@ const LoginPage: React.FC = () => {
           Enterprise Resource Planning System
         </Typography>
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={isOTP}
-              onChange={handleToggle}
-              name="authToggle"
-              color="primary"
-            />
-          }
-          label="Login with OTP"
-          sx={{ mb: 2 }}
-        />
-
         <Box sx={{ p: 3 }}>
-          {isOTP ? (
-            <OTPLogin onLogin={handleLogin} />
-          ) : (
-            <LoginForm onLogin={handleLogin} />
-          )}
+          <UnifiedLoginForm onLogin={handleLogin} />
         </Box>
 
         <Box sx={{ mt: 2 }}>
