@@ -1,3 +1,4 @@
+// src/components/DispatchManagement/InstallationSchedulePromptModal.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -29,13 +30,13 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { dispatchService, InstallationJobCreate } from '../../services/dispatchService';
+import { InstallationJobCreate } from '../../services/dispatchService';
 import { INSTALLATION_JOB_PRIORITIES } from '../../types/dispatch.types';
 
 interface InstallationSchedulePromptModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onCreateInstallation: (installationData: InstallationJobCreate) => Promise<void>;
   dispatchOrderId?: number;
   customerId?: number;
   customerName?: string;
@@ -45,7 +46,7 @@ interface InstallationSchedulePromptModalProps {
 const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalProps> = ({
   open,
   onClose,
-  onSave,
+  onCreateInstallation,
   dispatchOrderId,
   customerId,
   customerName,
@@ -97,13 +98,8 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
         assigned_technician_id: assignedTechnician ? parseInt(assignedTechnician) : null
       };
 
-      const response = await dispatchService.handleInstallationSchedulePrompt({
-        create_installation_schedule: true,
-        installation_job: installationJobData
-      });
-
-      console.log('Installation job created:', response);
-      onSave();
+      await onCreateInstallation(installationJobData);
+      onClose();
     } catch (err: any) {
       console.error('Error creating installation schedule:', err);
       setError(err.message || 'Failed to create installation schedule');
@@ -113,12 +109,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
   };
 
   const handleCancel = () => {
-    if (createSchedule === 'yes') {
-      // User chose to create schedule but clicked cancel, so we skip schedule creation
-      dispatchService.handleInstallationSchedulePrompt({
-        create_installation_schedule: false
-      }).catch(console.error);
-    }
     onClose();
   };
 
@@ -137,7 +127,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
         <DialogContent dividers>
           <Box sx={{ mb: 3 }}>
             <Alert severity="info" sx={{ mb: 2 }}>
-              A delivery challan or service voucher has been created for {customerName}. 
+              A delivery challan or service voucher has been created for {customerName || 'Unknown Customer'}. 
               Would you like to schedule an installation for the delivered items?
             </Alert>
 
