@@ -1,6 +1,7 @@
+// frontend/src/components/AuthProvider.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
-import jwt_decode from 'jwt-decode';
+import jwtDecode from 'jwt-decode'; // Use named default import
 import axios from 'axios';
 
 interface User {
@@ -62,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const decoded: JwtPayload = jwt_decode(token);
+          const decoded: JwtPayload = jwtDecode(token); // Use default export
           if (decoded.exp * 1000 < Date.now()) {
             console.log('Token expired on load, logging out');
             logout();
