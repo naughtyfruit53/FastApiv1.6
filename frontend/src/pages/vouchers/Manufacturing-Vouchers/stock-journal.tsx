@@ -812,8 +812,8 @@ export default function StockJournal() {
           </Card>
         </Grid>
       </Grid>
-    </Box>
+    </Container>
   );
 };
 
-export default StockJournal;</Container>
+export default StockJournal;
