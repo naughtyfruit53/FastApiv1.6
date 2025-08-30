@@ -18,7 +18,9 @@ import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, numberToWords, GST_SLABS, getVoucherStyles } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
+import { dispatchService } from '../../../services/dispatchService';
 import api from '../../../lib/api';  // Import api for direct call
+import { toast } from 'react-toastify';
 
 const DeliveryChallanPage: React.FC = () => {
   const config = getVoucherConfig('delivery-challan');
@@ -171,6 +173,72 @@ const DeliveryChallanPage: React.FC = () => {
     }
   };
 
+  // Handle duplicate delivery challan
+  const handleDuplicate = async (id: number) => {
+    try {
+      const voucher = voucherList?.find(v => v.id === id);
+      if (!voucher) return;
+
+      // Reset form with duplicated data
+      reset({
+        ...voucher,
+        voucher_number: '', // Clear voucher number to generate new one
+        date: new Date().toISOString().split('T')[0],
+        created_at: undefined,
+        updated_at: undefined,
+        id: undefined
+      });
+      setMode('create');
+      toast.success('Delivery challan duplicated successfully');
+    } catch (error) {
+      console.error('Error duplicating delivery challan:', error);
+      toast.error('Failed to duplicate delivery challan');
+    }
+  };
+
+  // Handle create dispatch order from delivery challan
+  const handleCreateDispatch = async (id: number) => {
+    try {
+      const voucher = voucherList?.find(v => v.id === id);
+      if (!voucher) return;
+
+      // Check if delivery challan is delivered
+      if (voucher.status !== 'delivered') {
+        if (!confirm('This delivery challan is not marked as delivered. Create dispatch order anyway?')) {
+          return;
+        }
+      }
+
+      // Create dispatch order with delivery challan data
+      const dispatchData = {
+        customer_id: voucher.customer_id,
+        delivery_address: voucher.shipping_address || voucher.customer?.address || '',
+        delivery_contact_person: voucher.customer?.contact_person || '',
+        delivery_contact_number: voucher.customer?.phone || '',
+        expected_delivery_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+        notes: `Created from Delivery Challan ${voucher.voucher_number}`,
+        items: voucher.items?.map((item: any) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit: item.unit || 'PCS',
+          description: item.description || item.product?.name || '',
+          status: 'pending'
+        })) || []
+      };
+
+      const response = await dispatchService.createDispatchOrder(dispatchData);
+      toast.success(`Dispatch order ${response.order_number} created successfully`);
+      
+      // Ask if user wants to open dispatch management
+      if (confirm('Dispatch order created. Open Dispatch Management?')) {
+        window.open('/service/dispatch', '_blank');
+      }
+    } catch (error) {
+      console.error('Error creating dispatch order:', error);
+      toast.error('Failed to create dispatch order');
+    }
+  };
+
   // Function to get stock color
   const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) return 'error.main';
@@ -274,6 +342,8 @@ const DeliveryChallanPage: React.FC = () => {
                       onEdit={() => handleEditWithData(voucher)}
                       onDelete={() => handleDelete(voucher)}
                       onPrint={() => handleGeneratePDF()}
+                      onDuplicate={() => handleDuplicate(voucher.id)}
+                      onCreateDispatch={() => handleCreateDispatch(voucher.id)}
                       showKebab={true}
                       onClose={() => {}}
                     />
@@ -669,11 +739,14 @@ const DeliveryChallanPage: React.FC = () => {
 
       <VoucherContextMenu
         contextMenu={contextMenu}
+        voucherType="Delivery Challan"
         onClose={handleCloseContextMenu}
         onEdit={handleEditWithData}
         onView={handleViewWithData}
         onDelete={handleDelete}
         onPrint={handleGeneratePDF}
+        onDuplicate={(id: number) => handleDuplicate(id)}
+        onCreateDispatch={(id: number) => handleCreateDispatch(id)}
       />
     </>
   );

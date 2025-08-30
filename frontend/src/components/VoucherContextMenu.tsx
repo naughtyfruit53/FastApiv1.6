@@ -2,7 +2,17 @@
 
 import React, { useState } from 'react';
 import { Menu, MenuItem, IconButton } from '@mui/material';
-import { MoreVert as MoreVertIcon, Visibility, Edit, Delete, Print, SaveAlt, Email } from '@mui/icons-material';
+import { 
+  MoreVert as MoreVertIcon, 
+  Visibility, 
+  Edit, 
+  Delete, 
+  Print, 
+  SaveAlt, 
+  Email, 
+  ContentCopy,
+  LocalShipping 
+} from '@mui/icons-material';
 
 interface VoucherContextMenuProps {
   voucher?: any;
@@ -12,6 +22,8 @@ interface VoucherContextMenuProps {
   onDelete: (id: number) => void;
   onPrint?: (id: number, mode: 'print' | 'download') => void;
   onEmail?: (id: number) => void;
+  onDuplicate?: (id: number) => void;
+  onCreateDispatch?: (id: number) => void;
   showKebab?: boolean;
   contextMenu?: { mouseX: number; mouseY: number; voucher: any } | null;
   onClose: () => void;
@@ -28,6 +40,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   onDelete,
   onPrint,
   onEmail,
+  onDuplicate,
+  onCreateDispatch,
   showKebab = false,
   contextMenu = null,
   onClose,
@@ -102,6 +116,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   };
 
   const hasEmail = !!onEmail && !!getEmailRecipient();
+  const isDeliveryChallan = voucherType.toLowerCase().includes('delivery challan');
+  const isPurchaseOrder = voucherType.toLowerCase().includes('purchase order');
 
   return (
     <>
@@ -117,6 +133,11 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
         <MenuItem onClick={handleAction(onEdit)}>
           <Edit sx={{ mr: 1 }} /> Edit {voucherType}
         </MenuItem>
+        {onDuplicate && (
+          <MenuItem onClick={handleAction(onDuplicate)}>
+            <ContentCopy sx={{ mr: 1 }} /> Duplicate {voucherType}
+          </MenuItem>
+        )}
         <MenuItem onClick={handleAction(onDelete)}>
           <Delete sx={{ mr: 1 }} /> Delete {voucherType}
         </MenuItem>
@@ -133,6 +154,11 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
         {hasEmail && (
           <MenuItem onClick={handleEmailClick}>
             <Email sx={{ mr: 1 }} /> Email {voucherType}
+          </MenuItem>
+        )}
+        {isDeliveryChallan && onCreateDispatch && (
+          <MenuItem onClick={handleAction(onCreateDispatch)}>
+            <LocalShipping sx={{ mr: 1 }} /> Create Dispatch Order
           </MenuItem>
         )}
       </Menu>

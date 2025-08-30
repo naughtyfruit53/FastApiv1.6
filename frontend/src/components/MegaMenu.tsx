@@ -409,6 +409,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
                 { name: 'Finished Goods Receipt', path: '/vouchers/Manufacturing-Vouchers/finished-goods-receipt', icon: <Inventory /> }
               ]
+            },
+            {
+              name: 'Others',
+              subItems: [
+                { name: 'RFQ (Request for Quotation)', path: '/vouchers/Others/rfq', icon: <Assignment /> },
+                { name: 'Dispatch Details', path: '/vouchers/Others/dispatch-details', icon: <LocalShipping /> }
+              ]
             }
           ]
         }
