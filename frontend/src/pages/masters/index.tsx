@@ -32,7 +32,9 @@ import {
   FormControlLabel,
   Checkbox,
   InputLabel,
-  FormControl
+  FormControl,
+  Autocomplete,
+  CircularProgress
 } from '@mui/material';
 import {
   Add,
@@ -247,6 +249,72 @@ const MasterDataManagement: React.FC = () => {
     queryFn: () => masterDataService.getProducts(),
     enabled: tabValue === 2
   });
+
+  // HSN/Product bidirectional search functionality
+  const uniqueHsnCodes = React.useMemo(() => {
+    if (!products || tabValue !== 2) return [];
+    const hsnSet = new Set<string>();
+    products.forEach((product: any) => {
+      if (product.hsn_code && product.hsn_code.trim()) {
+        hsnSet.add(product.hsn_code.trim());
+      }
+    });
+    return Array.from(hsnSet).sort();
+  }, [products, tabValue]);
+
+  const getProductsByHsn = React.useCallback((hsnCode: string) => {
+    if (!products || !hsnCode.trim()) return [];
+    return products.filter((product: any) => 
+      product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
+    );
+  }, [products]);
+
+  const getHsnByProductName = React.useCallback((productName: string) => {
+    if (!products || !productName.trim()) return [];
+    const matchingProducts = products.filter((product: any) =>
+      (product.product_name || product.name || '').toLowerCase().includes(productName.toLowerCase())
+    );
+    const hsnCodes = matchingProducts
+      .map((product: any) => product.hsn_code)
+      .filter((hsn: string) => hsn && hsn.trim())
+      .filter((hsn: string, index: number, array: string[]) => array.indexOf(hsn) === index); // unique
+    return hsnCodes;
+  }, [products]);
+
+  // Auto-population effects for products
+  React.useEffect(() => {
+    if (tabValue !== 2) return;
+    
+    // When product name changes, suggest HSN codes
+    if (formData.name && formData.name.length > 2) {
+      const suggestedHsns = getHsnByProductName(formData.name);
+      if (suggestedHsns.length === 1 && !formData.hsn_code) {
+        // Auto-populate if there's exactly one matching HSN and HSN field is empty
+        setFormData(prev => ({ ...prev, hsn_code: suggestedHsns[0] }));
+      }
+    }
+  }, [formData.name, formData.hsn_code, getHsnByProductName, tabValue]);
+
+  React.useEffect(() => {
+    if (tabValue !== 2) return;
+    
+    // When HSN code changes, suggest product info
+    if (formData.hsn_code && formData.hsn_code.length > 2) {
+      const matchingProducts = getProductsByHsn(formData.hsn_code);
+      if (matchingProducts.length > 0 && !formData.name) {
+        // If there's a strong match and product name is empty, suggest the most common unit/gst_rate
+        const commonUnit = matchingProducts[0].unit;
+        const commonGstRate = matchingProducts[0].gst_rate;
+        
+        if (commonUnit && commonUnit !== formData.unit) {
+          setFormData(prev => ({ ...prev, unit: commonUnit }));
+        }
+        if (commonGstRate && commonGstRate !== formData.gst_rate) {
+          setFormData(prev => ({ ...prev, gst_rate: commonGstRate }));
+        }
+      }
+    }
+  }, [formData.hsn_code, formData.name, formData.unit, formData.gst_rate, getProductsByHsn, tabValue]);
   const { data: company } = useQuery({
     queryKey: ['company'],
     queryFn: () => companyService.getCurrentCompany(),
@@ -864,6 +932,11 @@ const MasterDataManagement: React.FC = () => {
             label="Name"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            helperText={
+              tabValue === 2 && formData.name && formData.name.length > 2 && getHsnByProductName(formData.name).length > 0
+                ? `Suggested HSN: ${getHsnByProductName(formData.name).slice(0, 3).join(', ')}`
+                : undefined
+            }
             sx={{ mb: 2 }}
           />
           {(tabValue === 0 || tabValue === 1) && (
@@ -988,11 +1061,54 @@ const MasterDataManagement: React.FC = () => {
                 onChange={(e) => setFormData(prev => ({ ...prev, part_number: e.target.value }))}
                 sx={{ mb: 2 }}
               />
-              <TextField
-                fullWidth
-                label="HSN Code"
-                value={formData.hsn_code}
-                onChange={(e) => setFormData(prev => ({ ...prev, hsn_code: e.target.value }))}
+              <Autocomplete
+                freeSolo
+                options={uniqueHsnCodes}
+                value={formData.hsn_code || ''}
+                onInputChange={(_, newValue) => {
+                  setFormData(prev => ({ ...prev, hsn_code: newValue || '' }));
+                }}
+                onChange={(_, newValue) => {
+                  setFormData(prev => ({ ...prev, hsn_code: newValue || '' }));
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    label="HSN Code"
+                    placeholder="Search or enter HSN code..."
+                    helperText={
+                      formData.hsn_code && getProductsByHsn(formData.hsn_code).length > 0
+                        ? `Found ${getProductsByHsn(formData.hsn_code).length} product(s) with this HSN`
+                        : undefined
+                    }
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {productsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Box sx={{ width: '100%' }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        {option}
+                      </Typography>
+                      {getProductsByHsn(option).length > 0 && (
+                        <Typography variant="caption" color="text.secondary">
+                          {getProductsByHsn(option).length} product(s): {getProductsByHsn(option).slice(0, 2).map(p => p.product_name || p.name).join(', ')}
+                          {getProductsByHsn(option).length > 2 && '...'}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )}
+                noOptionsText="No HSN codes found"
                 sx={{ mb: 2 }}
               />
               <TextField
