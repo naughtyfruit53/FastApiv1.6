@@ -125,15 +125,30 @@ const mockData = {
 export default function DemoPage() {
   const router = useRouter();
   const [demoMode, setDemoMode] = useState(true);
+  const [isDemoTempUser, setIsDemoTempUser] = useState(false);
 
   useEffect(() => {
     // Set demo mode flag
     localStorage.setItem('demoMode', demoMode.toString());
+    
+    // Check if this is a temporary demo user
+    const tempUser = localStorage.getItem('isDemoTempUser');
+    setIsDemoTempUser(tempUser === 'true');
   }, [demoMode]);
 
   const handleExitDemo = () => {
     localStorage.removeItem('demoMode');
-    router.push('/dashboard');
+    localStorage.removeItem('isDemoTempUser');
+    
+    // If this was a temporary demo user, redirect to login
+    if (isDemoTempUser) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_role');
+      router.push('/login');
+    } else {
+      // Regular user, go back to dashboard
+      router.push('/dashboard');
+    }
   };
 
   const handleToggleDemo = () => {
@@ -170,19 +185,30 @@ export default function DemoPage() {
                 onClick={handleExitDemo}
                 startIcon={<ExitToApp />}
               >
-                Exit Demo
+                {isDemoTempUser ? 'End Demo Session' : 'Exit Demo'}
               </Button>
             </Box>
           }
         >
           <Typography variant="h6" component="div">
-            🎭 Demo Mode Active
+            🎭 Demo Mode Active {isDemoTempUser && '(Temporary User)'}
           </Typography>
           <Typography variant="body2">
             You are viewing the organization dashboard with sample data. This is not real business data. 
             All functionality is simulated for demonstration purposes.
+            {isDemoTempUser && ' Your temporary session will end when you logout or close the browser.'}
           </Typography>
         </Alert>
+
+        {/* Additional alert for temporary demo users */}
+        {isDemoTempUser && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Temporary Demo Account:</strong> You are using a temporary demo account that was created for this session only. 
+              No real user account has been created in the system. When you end this session, all temporary data will be cleared.
+            </Typography>
+          </Alert>
+        )}
 
         <Typography variant="h4" component="h1" gutterBottom>
           Organization Dashboard - Demo Mode
