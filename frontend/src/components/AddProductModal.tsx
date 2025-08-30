@@ -1,5 +1,4 @@
 // frontend/src/components/AddProductModal.tsx
-
 import React from 'react';
 import {
   Dialog,
@@ -13,7 +12,7 @@ import {
   Typography,
   CircularProgress,
   Box,
-  Grid as Grid,
+  Grid,
   Autocomplete,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
@@ -39,6 +38,13 @@ interface ProductFormData {
   reorder_level: number;
   description: string;
   is_manufactured: boolean;
+}
+
+interface Product {
+  product_name: string;
+  hsn_code: string;
+  unit: string;
+  gst_rate: number;
 }
 
 const AddProductModal: React.FC<AddProductModalProps> = ({
@@ -78,7 +84,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   // Create unique HSN codes list from existing products
   const uniqueHsnCodes = React.useMemo(() => {
     const hsnSet = new Set<string>();
-    allProducts.forEach((product: any) => {
+    allProducts.forEach((product: Product) => {
       if (product.hsn_code && product.hsn_code.trim()) {
         hsnSet.add(product.hsn_code.trim());
       }
@@ -87,9 +93,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   }, [allProducts]);
 
   // Create product suggestions based on HSN code
-  const getProductsByHsn = React.useCallback((hsnCode: string) => {
+  const getProductsByHsn = React.useCallback((hsnCode: string): Product[] => {
     if (!hsnCode.trim()) return [];
-    return allProducts.filter((product: any) => 
+    return allProducts.filter((product: Product) => 
       product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
     );
   }, [allProducts]);
@@ -97,11 +103,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   // Create HSN suggestions based on product name
   const getHsnByProductName = React.useCallback((productName: string) => {
     if (!productName.trim()) return [];
-    const matchingProducts = allProducts.filter((product: any) =>
+    const matchingProducts = allProducts.filter((product: Product) =>
       product.product_name.toLowerCase().includes(productName.toLowerCase())
     );
     const hsnCodes = matchingProducts
-      .map((product: any) => product.hsn_code)
+      .map((product: Product) => product.hsn_code)
       .filter((hsn: string) => hsn && hsn.trim())
       .filter((hsn: string, index: number, array: string[]) => array.indexOf(hsn) === index); // unique
     return hsnCodes;
@@ -257,7 +263,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                       </Typography>
                       {getProductsByHsn(option).length > 0 && (
                         <Typography variant="caption" color="text.secondary">
-                          {getProductsByHsn(option).length} product(s): {getProductsByHsn(option).slice(0, 2).map(p => p.product_name).join(', ')}
+                          {getProductsByHsn(option).length} product(s): {getProductsByHsn(option).slice(0, 2).map((p: Product) => p.product_name).join(', ')}
                           {getProductsByHsn(option).length > 2 && '...'}
                         </Typography>
                       )}
@@ -338,7 +344,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               />
             </Grid>
             
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Description"
@@ -349,7 +355,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               />
             </Grid>
             
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <FormControlLabel
                   control={
