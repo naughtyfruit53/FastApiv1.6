@@ -15,9 +15,9 @@ import {
   Typography,
   CircularProgress,
   Box,
-  Grid,
   InputAdornment
 } from '@mui/material';
+import Grid2 from '@mui/material/Unstable_Grid2'; // ✅ New Grid system
 import { useForm, Controller } from 'react-hook-form';
 
 interface AddCommissionModalProps {
@@ -40,28 +40,24 @@ interface CommissionFormData {
   notes?: string;
 }
 
-const commissionTypes = [
-  'percentage',
-  'fixed_amount',
-  'tiered',
-  'bonus'
-];
+const commissionTypes = ['percentage', 'fixed_amount', 'tiered', 'bonus'];
 
-const paymentStatuses = [
-  'pending',
-  'paid',
-  'approved',
-  'rejected',
-  'on_hold'
-];
+const paymentStatuses = ['pending', 'paid', 'approved', 'rejected', 'on_hold'];
 
 const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
   open,
   onClose,
   onAdd,
-  loading = false
+  loading = false,
 }) => {
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<CommissionFormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    watch,
+    formState: { errors },
+  } = useForm<CommissionFormData>({
     defaultValues: {
       sales_person_id: 0,
       opportunity_id: undefined,
@@ -72,8 +68,8 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       base_amount: 0,
       commission_date: new Date().toISOString().split('T')[0],
       payment_status: 'pending',
-      notes: ''
-    }
+      notes: '',
+    },
   });
 
   const commissionType = watch('commission_type');
@@ -92,36 +88,28 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
         base_amount: 0,
         commission_date: new Date().toISOString().split('T')[0],
         payment_status: 'pending',
-        notes: ''
+        notes: '',
       });
     }
   }, [open, reset]);
 
-  // Calculate commission amount automatically for percentage type
-  React.useEffect(() => {
-    if (commissionType === 'percentage' && baseAmount && commissionRate) {
-      const calculatedAmount = (baseAmount * commissionRate) / 100;
-      // Don't use setValue here to avoid infinite loops
-    }
-  }, [commissionType, baseAmount, commissionRate]);
-
   const onSubmit = async (data: CommissionFormData) => {
     try {
-      // Clean and prepare data
       const cleanData = {
         ...data,
-        // Ensure numeric fields are properly typed
         sales_person_id: Number(data.sales_person_id),
         opportunity_id: data.opportunity_id ? Number(data.opportunity_id) : null,
         lead_id: data.lead_id ? Number(data.lead_id) : null,
         commission_rate: data.commission_rate ? Number(data.commission_rate) : null,
         commission_amount: data.commission_amount ? Number(data.commission_amount) : null,
-        base_amount: Number(data.base_amount)
+        base_amount: Number(data.base_amount),
       };
 
-      // Remove undefined/empty fields
-      Object.keys(cleanData).forEach(key => {
-        if (cleanData[key as keyof typeof cleanData] === undefined || cleanData[key as keyof typeof cleanData] === '') {
+      Object.keys(cleanData).forEach((key) => {
+        if (
+          cleanData[key as keyof typeof cleanData] === undefined ||
+          cleanData[key as keyof typeof cleanData] === ''
+        ) {
           delete cleanData[key as keyof typeof cleanData];
         }
       });
@@ -152,19 +140,19 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Box sx={{ mt: 1 }}>
-            <Grid container spacing={3}>
+            <Grid2 container spacing={3}>
               {/* Basic Information */}
-              <Grid size={{ xs: 12 }}>
+              <Grid2 xs={12}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2 }}>
                   Commission Details
                 </Typography>
-              </Grid>
+              </Grid2>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid2 xs={12} sm={6}>
                 <TextField
-                  {...register('sales_person_id', { 
+                  {...register('sales_person_id', {
                     required: 'Sales person ID is required',
-                    min: { value: 1, message: 'Please enter a valid sales person ID' }
+                    min: { value: 1, message: 'Please enter a valid sales person ID' },
                   })}
                   label="Sales Person ID"
                   type="number"
@@ -174,9 +162,9 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   disabled={loading}
                   inputProps={{ min: 1 }}
                 />
-              </Grid>
+              </Grid2>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid2 xs={12} sm={6}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Commission Type</InputLabel>
                   <Controller
@@ -184,11 +172,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     control={control}
                     rules={{ required: 'Commission type is required' }}
                     render={({ field }) => (
-                      <Select
-                        {...field}
-                        label="Commission Type"
-                        error={!!errors.commission_type}
-                      >
+                      <Select {...field} label="Commission Type" error={!!errors.commission_type}>
                         {commissionTypes.map((type) => (
                           <MenuItem key={type} value={type}>
                             {type.replace('_', ' ').toUpperCase()}
@@ -203,13 +187,13 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     </Typography>
                   )}
                 </FormControl>
-              </Grid>
+              </Grid2>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid2 xs={12} sm={6}>
                 <TextField
-                  {...register('base_amount', { 
+                  {...register('base_amount', {
                     required: 'Base amount is required',
-                    min: { value: 0, message: 'Base amount must be positive' }
+                    min: { value: 0, message: 'Base amount must be positive' },
                   })}
                   label="Base Amount"
                   type="number"
@@ -222,14 +206,14 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   }}
                   inputProps={{ min: 0, step: 0.01 }}
                 />
-              </Grid>
+              </Grid2>
 
               {commissionType === 'percentage' && (
-                <Grid size={{ xs: 12, sm: 6 }}>
+                <Grid2 xs={12} sm={6}>
                   <TextField
                     {...register('commission_rate', {
                       min: { value: 0, message: 'Rate must be positive' },
-                      max: { value: 100, message: 'Rate cannot exceed 100%' }
+                      max: { value: 100, message: 'Rate cannot exceed 100%' },
                     })}
                     label="Commission Rate"
                     type="number"
@@ -242,14 +226,14 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     }}
                     inputProps={{ min: 0, max: 100, step: 0.1 }}
                   />
-                </Grid>
+                </Grid2>
               )}
 
               {(commissionType === 'fixed_amount' || commissionType === 'bonus') && (
-                <Grid size={{ xs: 12, sm: 6 }}>
+                <Grid2 xs={12} sm={6}>
                   <TextField
                     {...register('commission_amount', {
-                      min: { value: 0, message: 'Amount must be positive' }
+                      min: { value: 0, message: 'Amount must be positive' },
                     })}
                     label="Commission Amount"
                     type="number"
@@ -262,13 +246,13 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     }}
                     inputProps={{ min: 0, step: 0.01 }}
                   />
-                </Grid>
+                </Grid2>
               )}
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid2 xs={12} sm={6}>
                 <TextField
-                  {...register('commission_date', { 
-                    required: 'Commission date is required' 
+                  {...register('commission_date', {
+                    required: 'Commission date is required',
                   })}
                   label="Commission Date"
                   type="date"
@@ -280,9 +264,9 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     shrink: true,
                   }}
                 />
-              </Grid>
+              </Grid2>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid2 xs={12} sm={6}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Payment Status</InputLabel>
                   <Controller
@@ -290,11 +274,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     control={control}
                     rules={{ required: 'Payment status is required' }}
                     render={({ field }) => (
-                      <Select
-                        {...field}
-                        label="Payment Status"
-                        error={!!errors.payment_status}
-                      >
+                      <Select {...field} label="Payment Status" error={!!errors.payment_status}>
                         {paymentStatuses.map((status) => (
                           <MenuItem key={status} value={status}>
                             {status.replace('_', ' ').toUpperCase()}
@@ -309,16 +289,16 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     </Typography>
                   )}
                 </FormControl>
-              </Grid>
+              </Grid2>
 
               {/* Reference Fields */}
-              <Grid size={{ xs: 12 }}>
+              <Grid2 xs={12}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Reference Information (Optional)
                 </Typography>
-              </Grid>
+              </Grid2>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid2 xs={12} sm={6}>
                 <TextField
                   {...register('opportunity_id')}
                   label="Opportunity ID"
@@ -328,9 +308,9 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   inputProps={{ min: 1 }}
                   helperText="Link to a specific opportunity"
                 />
-              </Grid>
+              </Grid2>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid2 xs={12} sm={6}>
                 <TextField
                   {...register('lead_id')}
                   label="Lead ID"
@@ -340,9 +320,9 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   inputProps={{ min: 1 }}
                   helperText="Link to a specific lead"
                 />
-              </Grid>
+              </Grid2>
 
-              <Grid size={{ xs: 12 }}>
+              <Grid2 xs={12}>
                 <TextField
                   {...register('notes')}
                   label="Notes"
@@ -352,11 +332,11 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   disabled={loading}
                   placeholder="Add any additional notes about this commission..."
                 />
-              </Grid>
+              </Grid2>
 
               {/* Calculation Display */}
               {commissionType === 'percentage' && baseAmount && commissionRate && (
-                <Grid size={{ xs: 12 }}>
+                <Grid2 xs={12}>
                   <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Calculated Commission Amount
@@ -368,23 +348,19 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                       {commissionRate}% of ${baseAmount}
                     </Typography>
                   </Box>
-                </Grid>
+                </Grid2>
               )}
-            </Grid>
+            </Grid2>
           </Box>
         </DialogContent>
 
         <DialogActions>
-          <Button 
-            onClick={handleClose} 
-            disabled={loading}
-            color="inherit"
-          >
+          <Button onClick={handleClose} disabled={loading} color="inherit">
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
+          <Button
+            type="submit"
+            variant="contained"
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
