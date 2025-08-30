@@ -1,3 +1,4 @@
+// src/components/DispatchManagement/DispatchOrderDialog.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -19,9 +20,9 @@ import {
   Divider,
   IconButton,
   Table,
+  TableContainer,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Paper
@@ -32,7 +33,7 @@ import {
   LocalShipping as DispatchIcon
 } from '@mui/icons-material';
 import { dispatchService, DispatchOrderInDB, DispatchOrderCreate, DispatchOrderUpdate, DispatchItemCreate } from '../../services/dispatchService';
-import { DISPATCH_ORDER_STATUSES } from '../../types/dispatch.types';
+import { DISPATCH_ORDER_STATUSES, DISPATCH_ITEM_STATUSES } from '../../types/dispatch.types';
 
 interface DispatchOrderDialogProps {
   open: boolean;
@@ -67,7 +68,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
     quantity: 1,
     unit: 'PCS',
     description: '',
-    status: 'pending'
+    status: DISPATCH_ITEM_STATUSES.PENDING
   }]);
 
   const [loading, setLoading] = useState(false);
@@ -92,7 +93,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
         quantity: item.quantity,
         unit: item.unit,
         description: item.description || '',
-        status: item.status
+        status: item.status as typeof DISPATCH_ITEM_STATUSES[keyof typeof DISPATCH_ITEM_STATUSES]
       })));
     }
   }, [dispatchOrder, editMode]);
@@ -110,7 +111,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
       quantity: 1,
       unit: 'PCS',
       description: '',
-      status: 'pending'
+      status: DISPATCH_ITEM_STATUSES.PENDING
     }]);
   };
 
