@@ -45,6 +45,9 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { dispatchService, DispatchOrderInDB, InstallationJobInDB } from '../../services/dispatchService';
+import DispatchOrderDialog from './DispatchOrderDialog';
+import InstallationJobDialog from './InstallationJobDialog';
+import InstallationSchedulePromptModal from './InstallationSchedulePromptModal';
 import {
   DISPATCH_ORDER_STATUS_CONFIG,
   INSTALLATION_JOB_STATUS_CONFIG,
@@ -166,6 +169,21 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
     setSelectedDispatchOrder(order);
     setEditMode(true);
     setDispatchOrderDialogOpen(true);
+  };
+
+  const handleRefreshData = async () => {
+    await loadData();
+  };
+
+  const handleCreateInstallation = async (installationData: any) => {
+    try {
+      await dispatchService.createInstallationJob(installationData);
+      setInstallationPromptOpen(false);
+      await loadData();
+    } catch (err: any) {
+      console.error('Error creating installation job:', err);
+      setError(err.message || 'Failed to create installation job');
+    }
   };
 
   const handleDeleteDispatchOrder = async (orderId: number) => {
@@ -518,45 +536,36 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
         </Box>
       </TabPanel>
 
-      {/* Note: Dialog components would be implemented separately */}
-      {/* For now, showing placeholder text to indicate missing dialogs */}
+      {/* Dispatch Order Dialog */}
       {dispatchOrderDialogOpen && (
-        <Dialog open={dispatchOrderDialogOpen} maxWidth="lg" fullWidth>
-          <DialogTitle>Dispatch Order {editMode ? 'Edit' : 'Create'}</DialogTitle>
-          <DialogContent>
-            <Typography>Dispatch Order Dialog component would be implemented here</Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDispatchOrderDialogOpen(false)}>Cancel</Button>
-            <Button variant="contained">Save</Button>
-          </DialogActions>
-        </Dialog>
+        <DispatchOrderDialog
+          open={dispatchOrderDialogOpen}
+          onClose={() => setDispatchOrderDialogOpen(false)}
+          dispatchOrder={selectedDispatchOrder}
+          editMode={editMode}
+          onSave={handleRefreshData}
+        />
       )}
 
+      {/* Installation Job Dialog */}
       {installationJobDialogOpen && (
-        <Dialog open={installationJobDialogOpen} maxWidth="lg" fullWidth>
-          <DialogTitle>Installation Job {editMode ? 'Edit' : 'Create'}</DialogTitle>
-          <DialogContent>
-            <Typography>Installation Job Dialog component would be implemented here</Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setInstallationJobDialogOpen(false)}>Cancel</Button>
-            <Button variant="contained">Save</Button>
-          </DialogActions>
-        </Dialog>
+        <InstallationJobDialog
+          open={installationJobDialogOpen}
+          onClose={() => setInstallationJobDialogOpen(false)}
+          installationJob={selectedInstallationJob}
+          editMode={editMode}
+          onSave={handleRefreshData}
+        />
       )}
 
+      {/* Installation Schedule Prompt Modal */}
       {installationPromptOpen && (
-        <Dialog open={installationPromptOpen} maxWidth="md" fullWidth>
-          <DialogTitle>Create Installation Schedule</DialogTitle>
-          <DialogContent>
-            <Typography>Installation Schedule Prompt Modal component would be implemented here</Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setInstallationPromptOpen(false)}>Cancel</Button>
-            <Button variant="contained">Create</Button>
-          </DialogActions>
-        </Dialog>
+        <InstallationSchedulePromptModal
+          open={installationPromptOpen}
+          onClose={() => setInstallationPromptOpen(false)}
+          dispatchOrder={selectedDispatchOrder}
+          onCreateInstallation={handleCreateInstallation}
+        />
       )}
     </Box>
   );

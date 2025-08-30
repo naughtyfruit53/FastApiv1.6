@@ -20,6 +20,7 @@ import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
 import { useAuth } from '../../../context/AuthContext';  // Assume companyState is available here
 import { useRouter } from 'next/router';
+import { toast } from 'react-toastify';
 
 const PurchaseOrderPage: React.FC = () => {
   const { company } = useAuth();  // Fetch company from context (includes state)
@@ -201,6 +202,29 @@ const PurchaseOrderPage: React.FC = () => {
     } catch (error) {
       console.error('Error saving purchase order:', error);
       alert('Failed to save purchase order. Please try again.');
+    }
+  };
+
+  // Handle duplicate purchase order
+  const handleDuplicate = async (id: number) => {
+    try {
+      const voucher = voucherList?.find(v => v.id === id);
+      if (!voucher) return;
+
+      // Reset form with duplicated data
+      reset({
+        ...voucher,
+        voucher_number: '', // Clear voucher number to generate new one
+        date: new Date().toISOString().split('T')[0],
+        created_at: undefined,
+        updated_at: undefined,
+        id: undefined
+      });
+      setMode('create');
+      toast.success('Purchase order duplicated successfully');
+    } catch (error) {
+      console.error('Error duplicating purchase order:', error);
+      toast.error('Failed to duplicate purchase order');
     }
   };
 
@@ -399,6 +423,7 @@ const PurchaseOrderPage: React.FC = () => {
                       onEdit={() => handleEditWithData(voucher)}
                       onDelete={() => handleDelete(voucher)}
                       onPrint={() => handleGeneratePDF()}
+                      onDuplicate={() => handleDuplicate(voucher.id)}
                       showKebab={true}
                       onClose={() => {}}
                     />
@@ -822,11 +847,13 @@ const PurchaseOrderPage: React.FC = () => {
 
       <VoucherContextMenu
         contextMenu={contextMenu}
+        voucherType="Purchase Order"
         onClose={handleCloseContextMenu}
         onEdit={handleEditWithData}
         onView={handleViewWithData}
         onDelete={handleDelete}
         onPrint={handleGeneratePDF}
+        onDuplicate={(id: number) => handleDuplicate(id)}
       />
     </>
   );
