@@ -426,8 +426,7 @@ export const dispatchService = {
       const response = await api.get(`/dispatch/installation-jobs/${jobId}/details`);
       console.log('[DispatchService] Successfully fetched installation job with details');
       return response.data;
-    }_lowercase
-    catch (error: any) {
+    } catch (error: any) {
       console.error('[DispatchService] Error fetching installation job with details:', error);
       throw new Error(error.response?.data?.detail || 'Failed to fetch installation job details');
     }
