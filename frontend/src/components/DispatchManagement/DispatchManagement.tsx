@@ -57,9 +57,6 @@ import {
   hasInstallationManagementPermission,
   hasInstallationViewPermission
 } from '../../types/dispatch.types';
-import DispatchOrderDialog from './DispatchOrderDialog';
-import InstallationJobDialog from './InstallationJobDialog';
-import InstallationSchedulePromptModal from './InstallationSchedulePromptModal';
 
 interface DispatchManagementProps {
   organizationId: number;
