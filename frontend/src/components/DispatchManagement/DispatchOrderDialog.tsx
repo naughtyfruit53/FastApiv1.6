@@ -68,7 +68,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
     quantity: 1,
     unit: 'PCS',
     description: '',
-    status: DISPATCH_ITEM_STATUSES.PENDING
+    status: 'pending' as typeof DISPATCH_ITEM_STATUSES[keyof typeof DISPATCH_ITEM_STATUSES]
   }]);
 
   const [loading, setLoading] = useState(false);
@@ -111,7 +111,7 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
       quantity: 1,
       unit: 'PCS',
       description: '',
-      status: DISPATCH_ITEM_STATUSES.PENDING
+      status: 'pending' as typeof DISPATCH_ITEM_STATUSES[keyof typeof DISPATCH_ITEM_STATUSES]
     }]);
   };
 
