@@ -408,3 +408,6 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
     </Dialog>
   );
 };
+
+// Add default export
+export default DispatchOrderDialog;
