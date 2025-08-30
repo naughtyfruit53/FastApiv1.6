@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -396,7 +396,7 @@ export default function JobCardVoucher() {
                             label={voucher.job_status} 
                             size="small"
                             color={voucher.job_status === 'completed' ? 'success' : 'default'}
-                          />
+                          /> */}
                         </TableCell>
                         <TableCell align="center">
                           {/* <VoucherContextMenu
@@ -406,7 +406,7 @@ export default function JobCardVoucher() {
                             onEdit={() => handleEdit(voucher)}
                             onDelete={() => handleDelete(voucher.id!)}
                             onClose={() => {}}
-                          />
+                          /> */}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -448,7 +448,7 @@ export default function JobCardVoucher() {
                       fullWidth
                       disabled
                       value={watch('voucher_number')}
-                    />
+                    /> */}
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     {/* <TextField
@@ -458,7 +458,7 @@ export default function JobCardVoucher() {
                       fullWidth
                       InputLabelProps={{ shrink: true }}
                       disabled={mode === 'view'}
-                    />
+                    /> */}
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
@@ -887,8 +887,6 @@ export default function JobCardVoucher() {
                     </TableContainer>
                   </TabPanel>
                 </Box>
-              </Grid>
-            </Grid>
 
                 {/* Notes  */}
                 <Grid container spacing={2} mt={2}>

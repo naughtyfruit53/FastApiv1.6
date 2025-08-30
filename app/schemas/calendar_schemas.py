@@ -50,9 +50,9 @@ class CalendarEventBase(BaseModel):
     recurrence_type: RecurrenceType = RecurrenceType.NONE
     recurrence_rule: Optional[Dict[str, Any]] = None
     recurrence_end_date: Optional[date] = None
-    color: Optional[str] = Field(None, regex=r'^#[0-9A-Fa-f]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
     is_private: bool = False
-    priority: str = Field(default="normal", regex=r'^(low|normal|high|urgent)$')
+    priority: str = Field(default="normal", pattern=r'^(low|normal|high|urgent)$')
     notes: Optional[str] = None
     custom_fields: Optional[Dict[str, Any]] = None
 
@@ -76,9 +76,9 @@ class CalendarEventUpdate(BaseModel):
     recurrence_rule: Optional[Dict[str, Any]] = None
     recurrence_end_date: Optional[date] = None
     task_id: Optional[int] = None
-    color: Optional[str] = Field(None, regex=r'^#[0-9A-Fa-f]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
     is_private: Optional[bool] = None
-    priority: Optional[str] = Field(None, regex=r'^(low|normal|high|urgent)$')
+    priority: Optional[str] = Field(None, pattern=r'^(low|normal|high|urgent)$')
     notes: Optional[str] = None
     custom_fields: Optional[Dict[str, Any]] = None
 
@@ -105,7 +105,7 @@ class CalendarEventWithDetails(CalendarEventResponse):
 class EventAttendeeBase(BaseModel):
     external_email: Optional[str] = Field(None, max_length=255)
     external_name: Optional[str] = Field(None, max_length=255)
-    response_status: str = Field(default="pending", regex=r'^(pending|accepted|declined|tentative)$')
+    response_status: str = Field(default="pending", pattern=r'^(pending|accepted|declined|tentative)$')
     is_organizer: bool = False
     is_required: bool = True
     notes: Optional[str] = None
@@ -114,7 +114,7 @@ class EventAttendeeCreate(EventAttendeeBase):
     user_id: Optional[int] = None  # For internal users
 
 class EventAttendeeUpdate(BaseModel):
-    response_status: Optional[str] = Field(None, regex=r'^(pending|accepted|declined|tentative)$')
+    response_status: Optional[str] = Field(None, pattern=r'^(pending|accepted|declined|tentative)$')
     notes: Optional[str] = None
 
 class EventAttendeeResponse(EventAttendeeBase):
@@ -133,7 +133,7 @@ class EventAttendeeWithDetails(EventAttendeeResponse):
 # Event Reminder schemas
 class EventReminderBase(BaseModel):
     remind_before_minutes: int = Field(..., ge=1)
-    reminder_type: str = Field(default="notification", regex=r'^(notification|email|sms)$')
+    reminder_type: str = Field(default="notification", pattern=r'^(notification|email|sms)$')
     message: Optional[str] = Field(None, max_length=500)
 
 class EventReminderCreate(EventReminderBase):
@@ -141,7 +141,7 @@ class EventReminderCreate(EventReminderBase):
 
 class EventReminderUpdate(BaseModel):
     remind_before_minutes: Optional[int] = Field(None, ge=1)
-    reminder_type: Optional[str] = Field(None, regex=r'^(notification|email|sms)$')
+    reminder_type: Optional[str] = Field(None, pattern=r'^(notification|email|sms)$')
     message: Optional[str] = Field(None, max_length=500)
 
 class EventReminderResponse(EventReminderBase):
@@ -162,7 +162,7 @@ class EventReminderWithDetails(EventReminderResponse):
 class CalendarBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    color: Optional[str] = Field(None, regex=r'^#[0-9A-Fa-f]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
     is_default: bool = False
     is_shared: bool = False
     is_visible: bool = True
@@ -173,7 +173,7 @@ class CalendarCreate(CalendarBase):
 class CalendarUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    color: Optional[str] = Field(None, regex=r'^#[0-9A-Fa-f]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
     is_default: Optional[bool] = None
     is_shared: Optional[bool] = None
     is_visible: Optional[bool] = None
@@ -198,7 +198,7 @@ class CalendarWithDetails(CalendarResponse):
 
 # Calendar Share schemas
 class CalendarShareBase(BaseModel):
-    permission: str = Field(default="view", regex=r'^(view|edit|admin)$')
+    permission: str = Field(default="view", pattern=r'^(view|edit|admin)$')
     can_create_events: bool = False
     can_edit_events: bool = False
     can_delete_events: bool = False
@@ -207,7 +207,7 @@ class CalendarShareCreate(CalendarShareBase):
     user_id: int
 
 class CalendarShareUpdate(BaseModel):
-    permission: Optional[str] = Field(None, regex=r'^(view|edit|admin)$')
+    permission: Optional[str] = Field(None, pattern=r'^(view|edit|admin)$')
     can_create_events: Optional[bool] = None
     can_edit_events: Optional[bool] = None
     can_delete_events: Optional[bool] = None
@@ -230,7 +230,7 @@ class CalendarShareWithDetails(CalendarShareResponse):
 class GoogleCalendarIntegrationBase(BaseModel):
     google_email: str = Field(..., max_length=255)
     sync_enabled: bool = True
-    sync_direction: str = Field(default="bidirectional", regex=r'^(import_only|export_only|bidirectional)$')
+    sync_direction: str = Field(default="bidirectional", pattern=r'^(import_only|export_only|bidirectional)$')
     sync_calendar_ids: Optional[List[str]] = None
 
 class GoogleCalendarIntegrationCreate(GoogleCalendarIntegrationBase):
@@ -240,7 +240,7 @@ class GoogleCalendarIntegrationCreate(GoogleCalendarIntegrationBase):
 
 class GoogleCalendarIntegrationUpdate(BaseModel):
     sync_enabled: Optional[bool] = None
-    sync_direction: Optional[str] = Field(None, regex=r'^(import_only|export_only|bidirectional)$')
+    sync_direction: Optional[str] = Field(None, pattern=r'^(import_only|export_only|bidirectional)$')
     sync_calendar_ids: Optional[List[str]] = None
 
 class GoogleCalendarIntegrationResponse(GoogleCalendarIntegrationBase):
@@ -291,7 +291,7 @@ class CalendarViewRequest(BaseModel):
     start_date: datetime
     end_date: datetime
     calendar_ids: Optional[List[int]] = None
-    view_type: str = Field(default="month", regex=r'^(day|week|month|year)$')
+    view_type: str = Field(default="month", pattern=r'^(day|week|month|year)$')
 
 class CalendarViewResponse(BaseModel):
     events: List[CalendarEventWithDetails]

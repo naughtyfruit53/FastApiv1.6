@@ -73,7 +73,7 @@ import {
   Sms,
   Chat,
   SmartToy,
-  Survey,
+  Poll,
   SupportAgent as ServiceDeskIcon,
   // New icons for Task Management, Calendar, and Mail
   Task,
@@ -543,55 +543,45 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Sales CRM',
           items: [
-            {
-              name: 'Sales Management',
-              subItems: [
-                { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
-                { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
-                { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
-                { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> }
-              ]
-            },
-            {
-              name: 'Customer Management',
-              subItems: [
-                { name: 'Customer Database', path: '/sales/customers', icon: <People /> },
-                { name: 'Contact Management', path: '/sales/contacts', icon: <ContactPhone /> },
-                { name: 'Account Management', path: '/sales/accounts', icon: <Business /> },
-                { name: 'Customer Analytics', path: '/sales/customer-analytics', icon: <Analytics /> }
-              ]
-            },
-            {
-              name: 'Sales Operations',
-              subItems: [
-                { name: 'Quotations', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
-                { name: 'Sales Orders', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Receipt /> },
-                { name: 'Commission Tracking', path: '/sales/commissions', icon: <MonetizationOn /> },
-                { name: 'Sales Reports', path: '/sales/reports', icon: <Assessment /> }
-              ]
-            }
+            { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
+            { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
+            { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
+            { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> }
+          ]
+        },
+        {
+          title: 'Customer Management',
+          items: [
+            { name: 'Customer Database', path: '/sales/customers', icon: <People /> },
+            { name: 'Contact Management', path: '/sales/contacts', icon: <ContactPhone /> },
+            { name: 'Account Management', path: '/sales/accounts', icon: <Business /> },
+            { name: 'Customer Analytics', path: '/sales/customer-analytics', icon: <Analytics /> }
+          ]
+        },
+        {
+          title: 'Sales Operations',
+          items: [
+            { name: 'Quotations', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
+            { name: 'Sales Orders', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Receipt /> },
+            { name: 'Commission Tracking', path: '/sales/commissions', icon: <MonetizationOn /> },
+            { name: 'Sales Reports', path: '/sales/reports', icon: <Assessment /> }
           ]
         },
         {
           title: 'Service CRM',
           items: [
-            {
-              name: 'Operations',
-              subItems: [
-                { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-                { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
-                { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-                { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
-              ]
-            },
-            {
-              name: 'Management',
-              subItems: [
-                { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
-                { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
-                { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
-              ]
-            }
+            { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
+          ]
+        },
+        {
+          title: 'Management',
+          items: [
+            { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
+            { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
           ]
         }
       ]
@@ -656,7 +646,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Feedback & Surveys',
           items: [
-            { name: 'Customer Surveys', path: '/service-desk/surveys', icon: <Survey /> },
+            { name: 'Customer Surveys', path: '/service-desk/surveys', icon: <Poll /> },
             { name: 'Survey Templates', path: '/service-desk/survey-templates', icon: <NoteAdd /> },
             { name: 'Feedback Analytics', path: '/service-desk/feedback-analytics', icon: <Analytics /> },
             { name: 'Satisfaction Reports', path: '/service-desk/satisfaction', icon: <Feedback /> }
@@ -1125,17 +1115,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   startIcon={<AccountBalance />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'finance')}
-                  sx={modernButtonStyle}
-                >
-                  Finance
-                </Button>
-
-                {/* Combined Reports & Analytics menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<Assessment />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'reportsAnalytics')}
                   sx={modernButtonStyle}
                 >
                   Finance

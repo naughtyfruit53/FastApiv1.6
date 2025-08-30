@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.api.v1.auth import get_current_active_user as get_current_user
 from app.models import User, Organization, EmailAccount, Email, EmailAttachment, SentEmail, EmailAction, EmailTemplate, EmailRule
 from app.schemas.mail_schemas import (
     EmailAccountCreate, EmailAccountUpdate, EmailAccountResponse, EmailAccountWithDetails,

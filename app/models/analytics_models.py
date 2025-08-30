@@ -6,6 +6,107 @@ from app.core.database import Base
 from typing import List, Optional
 from datetime import datetime, date
 
+class CustomerAnalytics(Base):
+    """
+    Model for storing customer analytics data.
+    Tracks customer-related metrics for reporting.
+    """
+    __tablename__ = "customer_analytics"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_customer_analytics_organization_id"), nullable=False, index=True)
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("customers.id", name="fk_customer_analytics_customer_id"), nullable=False, index=True)
+    total_purchases: Mapped[float] = mapped_column(Float, default=0.0)
+    average_order_value: Mapped[float] = mapped_column(Float, default=0.0)
+    purchase_frequency: Mapped[float] = mapped_column(Float, default=0.0)
+    last_purchase_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    customer: Mapped["Customer"] = relationship("Customer")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'customer_id', name='uq_customer_analytics_org_customer'),
+        Index('idx_customer_analytics_org', 'organization_id'),
+    )
+
+class SalesAnalytics(Base):
+    """
+    Model for storing sales analytics data.
+    Tracks sales-related metrics for reporting.
+    """
+    __tablename__ = "sales_analytics"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_sales_analytics_organization_id"), nullable=False, index=True)
+    period: Mapped[str] = mapped_column(String, nullable=False)  # e.g., 'daily', 'weekly', 'monthly'
+    total_sales: Mapped[float] = mapped_column(Float, default=0.0)
+    total_orders: Mapped[int] = mapped_column(Integer, default=0)
+    average_sale_value: Mapped[float] = mapped_column(Float, default=0.0)
+    summary_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'period', 'summary_date', name='uq_sales_analytics_org_period_date'),
+        Index('idx_sales_analytics_org_date', 'organization_id', 'summary_date'),
+    )
+
+class PurchaseAnalytics(Base):
+    """
+    Model for storing purchase analytics data.
+    Tracks purchase-related metrics for reporting.
+    """
+    __tablename__ = "purchase_analytics"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_purchase_analytics_organization_id"), nullable=False, index=True)
+    period: Mapped[str] = mapped_column(String, nullable=False)  # e.g., 'daily', 'weekly', 'monthly'
+    total_purchases: Mapped[float] = mapped_column(Float, default=0.0)
+    total_orders: Mapped[int] = mapped_column(Integer, default=0)
+    average_purchase_value: Mapped[float] = mapped_column(Float, default=0.0)
+    summary_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'period', 'summary_date', name='uq_purchase_analytics_org_period_date'),
+        Index('idx_purchase_analytics_org_date', 'organization_id', 'summary_date'),
+    )
+
+class ServiceAnalytics(Base):
+    """
+    Model for storing service analytics data.
+    Tracks service-related metrics for reporting.
+    """
+    __tablename__ = "service_analytics"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_service_analytics_organization_id"), nullable=False, index=True)
+    period: Mapped[str] = mapped_column(String, nullable=False)  # e.g., 'daily', 'weekly', 'monthly'
+    total_jobs: Mapped[int] = mapped_column(Integer, default=0)
+    completed_jobs: Mapped[int] = mapped_column(Integer, default=0)
+    average_completion_time: Mapped[float] = mapped_column(Float, default=0.0)
+    summary_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'period', 'summary_date', name='uq_service_analytics_org_period_date'),
+        Index('idx_service_analytics_org_date', 'organization_id', 'summary_date'),
+    )
+
 class ServiceAnalyticsEvent(Base):
     """
     Model for storing individual analytics events for Service CRM.

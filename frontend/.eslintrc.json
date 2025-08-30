@@ -1,3 +1,5 @@
+// frontend/.eslintrc.json
+
 {
   "extends": [
     "next/core-web-vitals",
@@ -19,7 +21,18 @@
     "no-undef": "error",  // Keeps globals check but env above will resolve most
     "react-hooks/exhaustive-deps": "warn",  // Warn for missing deps (fix as needed)
     "no-useless-escape": "error",
-    "no-console": "warn"  // Warn on console logs (remove for production)
+    "no-console": "warn",  // Warn on console logs (remove for production)
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/styles/*.css", "!**/styles/*.module.css"],
+            "message": "Global CSS imports are only allowed in _app.tsx. Use CSS Modules or move to _app.tsx."
+          }
+        ]
+      }
+    ]
   },
   "overrides": [
     {

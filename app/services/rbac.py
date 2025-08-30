@@ -7,7 +7,7 @@ RBAC service layer for Service CRM role-based access control
 from typing import List, Optional, Dict, Set
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 
 from app.models import (
     User, ServiceRole, ServicePermission, ServiceRolePermission, 
@@ -18,6 +18,7 @@ from app.schemas.rbac import (
     UserServiceRoleCreate, ServiceRoleType, ServiceModule, ServiceAction
 )
 from app.core.permissions import Permission
+from app.api.v1.auth import get_current_active_user  # Import for dependency
 import logging
 
 logger = logging.getLogger(__name__)
@@ -576,3 +577,15 @@ class RBACService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied: Missing permission '{permission_name}' for this company"
             )
+
+def require_permission(permission: str):
+    """Dependency to check if current user has a specific permission"""
+    def dependency(current_user: User = Depends(get_current_active_user)):
+        rbac = RBACService(dependency.db)  # Assuming db is available in dependency
+        if not rbac.user_has_service_permission(current_user.id, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions: {permission} required"
+            )
+        return current_user
+    return dependency

@@ -1,13 +1,10 @@
 // frontend/src/pages/dashboard/index.tsx
 
-// Revised: v1/frontend/src/pages/dashboard/index.tsx
-
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
 import AppSuperAdminDashboard from './AppSuperAdminDashboard';
 import OrgDashboard from './OrgDashboard';
-import '../../styles/modern-theme.css';
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -32,10 +29,10 @@ const Dashboard: React.FC = () => {
   if (loading) {
     console.log('[Dashboard] Still loading auth state - showing loader');
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         flexDirection: 'column'
       }}>

@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta, date
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.api.v1.auth import get_current_active_user as get_current_user  # Fixed import to use get_current_active_user as get_current_user
 from app.models import User, Organization, CalendarEvent, EventAttendee, EventReminder, Calendar, CalendarShare, GoogleCalendarIntegration
 from app.schemas.calendar_schemas import (
     CalendarEventCreate, CalendarEventUpdate, CalendarEventResponse, CalendarEventWithDetails,

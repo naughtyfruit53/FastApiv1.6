@@ -12,10 +12,7 @@ from app.models.vouchers import (
     PurchaseVoucher, SalesVoucher, PurchaseOrder, SalesOrder,
     PaymentVoucher, ReceiptVoucher
 )
-from app.models.analytics_models import (
-    CustomerAnalytics, SalesAnalytics, PurchaseAnalytics,
-    ServiceAnalytics, ReportConfiguration
-)
+from app.models.analytics_models import ReportConfiguration
 from app.core.tenant import require_current_organization_id, TenantQueryMixin
 from app.core.permissions import PermissionChecker, Permission
 from app.core.org_restrictions import ensure_organization_context

@@ -28,7 +28,6 @@ import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
 import { StickyNotesPanel } from '../../components/StickyNotes';
 import useStickyNotes from '../../hooks/useStickyNotes';
-import '../../styles/modern-theme.css';
 
 interface AppStatistics {
   total_licenses_issued: number;

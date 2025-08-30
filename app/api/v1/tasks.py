@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.api.v1.auth import get_current_active_user as get_current_user  # Fixed import to use get_current_active_user as get_current_user
 from app.models import User, Organization, Task, TaskProject, TaskProjectMember, TaskComment, TaskAttachment, TaskTimeLog, TaskReminder
 from app.schemas.task_schemas import (
     TaskCreate, TaskUpdate, TaskResponse, TaskWithDetails, TaskList, TaskFilter, TaskDashboardStats,
@@ -21,8 +21,7 @@ from app.schemas.task_schemas import (
     TaskTimeLogCreate, TaskTimeLogUpdate, TaskTimeLogResponse, TaskTimeLogWithDetails,
     TaskReminderCreate, TaskReminderUpdate, TaskReminderResponse, TaskReminderWithDetails
 )
-from app.services.rbac_service import require_permission
-from app.services.rbac import RBACService  # Added for company scoping
+from app.services.rbac import require_permission, RBACService
 
 router = APIRouter()
 

@@ -5,7 +5,7 @@ import os
 import sys
 import importlib
 import pkgutil
-from dotenv import load_dotenv  # Add this import
+from dotenv import load_dotenv
 
 # Explicitly load .env from project root
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -55,7 +55,7 @@ def run_migrations_offline():
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
-        render_as_batch=is_sqlite(url),  # Only batch mode for SQLite
+        render_as_batch=is_sqlite(url),
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -72,7 +72,7 @@ def run_migrations_online():
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
-            render_as_batch=is_sqlite(database_url),  # Only batch mode for SQLite
+            render_as_batch=is_sqlite(database_url),
         )
         with context.begin_transaction():
             context.run_migrations()

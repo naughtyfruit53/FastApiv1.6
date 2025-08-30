@@ -1,3 +1,5 @@
+// frontend/src/pages/dashboard/OrgDashboard.tsx
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -23,7 +25,6 @@ import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
 import { StickyNotesPanel } from '../../components/StickyNotes';
 import useStickyNotes from '../../hooks/useStickyNotes';
-import '../../styles/modern-theme.css';
 
 interface OrgStatistics {
   total_products: number;
@@ -45,7 +46,6 @@ const OrgDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchOrgStatistics();
-     
   }, []);
 
   const fetchOrgStatistics = async () => {
