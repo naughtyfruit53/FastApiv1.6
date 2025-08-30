@@ -1,5 +1,4 @@
 // frontend/src/components/AddEmployeeModal.tsx
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
@@ -85,15 +84,31 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null)
+    useRef<HTMLInputElement>(null),
   ];
-  const [documents, setDocuments] = useState<Array<{ file: File | null; type: string; extractedData?: any; loading: boolean; error?: string }>>(
-    Array.from({ length: 5 }, () => ({ file: null, type: '', extractedData: null, loading: false, error: null }))
+  const [documents, setDocuments] = useState<
+    Array<{ file: File | null; type: string; extractedData?: any; loading: boolean; error?: string }>
+  >(
+    Array.from({ length: 5 }, () => ({
+      file: null,
+      type: '',
+      extractedData: null,
+      loading: false,
+      error: undefined,
+    }))
   );
   const [gstSearchLoading, setGstSearchLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
-  const { register, handleSubmit, reset, formState: { errors }, setValue, watch, control } = useForm<EmployeeFormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+    setValue,
+    watch,
+    control,
+  } = useForm<EmployeeFormData>({
     defaultValues: initialData || {
       full_name: '',
       email: '',
@@ -128,7 +143,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
   const handleDocumentUpload = async (index: number, file: File) => {
     const updatedDocs = [...documents];
-    updatedDocs[index] = { ...updatedDocs[index], loading: true, error: null };
+    updatedDocs[index] = { ...updatedDocs[index], loading: true, error: undefined };
     setDocuments(updatedDocs);
 
     try {
@@ -142,7 +157,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
       if (response.data.success) {
         const extractedData = response.data.extracted_data;
-        // Auto-fill form fields
         Object.entries(extractedData).forEach(([key, value]) => {
           if (value) setValue(key as keyof EmployeeFormData, value as string);
         });
@@ -152,7 +166,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         throw new Error(response.data.detail || 'Extraction failed');
       }
     } catch (error: any) {
-      updatedDocs[index] = { ...updatedDocs[index], loading: false, error: error.message || 'Failed to process document' };
+      updatedDocs[index] = {
+        ...updatedDocs[index],
+        loading: false,
+        error: error.message || 'Failed to process document',
+      };
     }
     setDocuments(updatedDocs);
   };
@@ -172,7 +190,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
   const removeDocument = (index: number) => {
     const updatedDocs = [...documents];
-    updatedDocs[index] = { file: null, type: '', extractedData: null, loading: false, error: null };
+    updatedDocs[index] = { file: null, type: '', extractedData: null, loading: false, error: undefined };
     setDocuments(updatedDocs);
   };
 
@@ -212,7 +230,15 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const handleClose = () => {
     reset();
     clearData();
-    setDocuments(Array.from({ length: 5 }, () => ({ file: null, type: '', extractedData: null, loading: false, error: null })));
+    setDocuments(
+      Array.from({ length: 5 }, () => ({
+        file: null,
+        type: '',
+        extractedData: null,
+        loading: false,
+        error: undefined,
+      }))
+    );
     onClose();
   };
 
@@ -232,7 +258,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
           {tabValue === 0 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Full Name *"
@@ -242,7 +268,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Email *"
@@ -253,7 +279,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Phone Number"
@@ -261,7 +287,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Date of Birth"
@@ -271,7 +297,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Gender</InputLabel>
                   <Controller
@@ -293,7 +319,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
           {tabValue === 1 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Employee Code *"
@@ -303,7 +329,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Employee Type</InputLabel>
                   <Controller
@@ -320,7 +346,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   />
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Hire Date"
@@ -330,7 +356,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Job Title"
@@ -338,7 +364,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Department"
@@ -346,7 +372,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Work Location"
@@ -354,7 +380,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Reporting Manager ID"
@@ -368,7 +394,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
           {tabValue === 2 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="PAN Number"
@@ -376,7 +402,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Aadhaar Number"
@@ -384,7 +410,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Passport Number"
@@ -392,7 +418,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Driving License"
@@ -400,7 +426,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Bank Account Number"
@@ -408,7 +434,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Bank Name"
@@ -416,7 +442,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="IFSC Code"
@@ -424,7 +450,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Bank Branch"
@@ -433,9 +459,10 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 />
               </Grid>
 
-              {/* Document Uploads */}
-              <Grid size={12}>
-                <Typography variant="subtitle1" gutterBottom>Upload Documents (up to 5 PDFs)</Typography>
+              <Grid item size={{ xs: 12 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Upload Documents (up to 5 PDFs)
+                </Typography>
                 {documents.map((doc, index) => (
                   <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                     <Box display="flex" alignItems="center" gap={2}>
@@ -461,17 +488,29 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                       <Button variant="outlined" startIcon={<CloudUpload />} onClick={() => triggerUpload(index)}>
                         Upload PDF
                       </Button>
-                      <input ref={fileInputRefs[index]} type="file" accept=".pdf" style={{ display: 'none' }} onChange={(e) => handleFileChange(index, e)} />
+                      <input
+                        ref={fileInputRefs[index]}
+                        type="file"
+                        accept=".pdf"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileChange(index, e)}
+                      />
                     </Box>
                     {doc.loading && <LinearProgress sx={{ mt: 1 }} />}
                     {doc.file && (
                       <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Description />
                         <Typography>{doc.file.name}</Typography>
-                        <IconButton color="error" onClick={() => removeDocument(index)}><DeleteIcon /></IconButton>
+                        <IconButton color="error" onClick={() => removeDocument(index)}>
+                          <DeleteIcon />
+                        </IconButton>
                       </Box>
                     )}
-                    {doc.error && <Alert severity="error" sx={{ mt: 1 }}>{doc.error}</Alert>}
+                    {doc.error && (
+                      <Alert severity="error" sx={{ mt: 1 }}>
+                        {doc.error}
+                      </Alert>
+                    )}
                     {doc.extractedData && (
                       <Alert severity="success" sx={{ mt: 1 }}>
                         Extracted: {Object.keys(doc.extractedData).join(', ')}
@@ -485,7 +524,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
           {tabValue === 3 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid size={12}>
+              <Grid item size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Address Line 1"
@@ -493,7 +532,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={12}>
+              <Grid item size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Address Line 2"
@@ -501,7 +540,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid item size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   label="PIN Code"
@@ -514,7 +553,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid item size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   label="City"
@@ -523,7 +562,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   InputProps={{ readOnly: !!pincodeData }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid item size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   label="State"
@@ -532,7 +571,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   InputProps={{ readOnly: !!pincodeData }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Country"
@@ -540,7 +579,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Emergency Contact Name"
@@ -548,7 +587,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Emergency Contact Phone"
@@ -556,7 +595,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid item size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Emergency Contact Relation"
@@ -572,7 +611,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? <CircularProgress size={20} /> : (mode === 'create' ? 'Add Employee' : 'Update Employee')}
+            {loading ? <CircularProgress size={20} /> : mode === 'create' ? 'Add Employee' : 'Update Employee'}
           </Button>
         </DialogActions>
       </form>
