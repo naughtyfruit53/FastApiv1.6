@@ -120,7 +120,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     },
   });
 
-  const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError, clearhttp://localhost:3000/employee/addData } = usePincodeLookup();
+  const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError, clearData } = usePincodeLookup();
   const watchedPincode = watch('pin_code');
 
   useEffect(() => {
@@ -329,7 +329,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   label="Employee Code *"
                   {...register('employee_code', { required: 'Employee code is required' })}
                   error={!!errors.employee_code}
-                 /helperText={errors.employee_code?.message}
+                  helperText={errors.employee_code?.message}
                   margin="normal"
                 />
               </Grid>
@@ -394,7 +394,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 />
               </Grid>
             </Grid>
-         )}
+          )}
 
           {tabValue === 2 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
@@ -465,7 +465,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
               <Grid item component="div" size={{ xs: 12 }}>
                 <Typography variant="subtitle1" gutterBottom>
-                  UploadසUpload Documents (up to 5 PDFs)
+                  Upload Documents (up to 5 PDFs)
                 </Typography>
                 {documents.map((doc, index) => (
                   <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
