@@ -154,7 +154,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
           <Box sx={{ mt: 1 }}>
             <Grid container spacing={3}>
               {/* Basic Information */}
-              <Grid size={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2 }}>
                   Commission Details
                 </Typography>
@@ -312,7 +312,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
               </Grid>
 
               {/* Reference Fields */}
-              <Grid size={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Reference Information (Optional)
                 </Typography>
@@ -342,7 +342,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                 />
               </Grid>
 
-              <Grid size={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('notes')}
                   label="Notes"
@@ -356,7 +356,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
 
               {/* Calculation Display */}
               {commissionType === 'percentage' && baseAmount && commissionRate && (
-                <Grid size={12}>
+                <Grid size={{ xs: 12 }}>
                   <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Calculated Commission Amount
