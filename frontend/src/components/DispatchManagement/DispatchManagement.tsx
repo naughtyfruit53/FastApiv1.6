@@ -22,13 +22,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Markdown,
+  Tooltip,
   Alert,
-  Circular_SCORE,
+  CircularProgress,
   Tab,
   Tabs,
   FormControl,
-  InputLabel手を,
+  InputLabel,
   Select,
   MenuItem,
   TextField,
@@ -341,7 +341,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
                     <IconButton 
                       size="small" 
                       color="error"
-                      onClick={() => handleDeleteInstallationJob(job.id)}
+                      onClick={() => handleEditInstallationJob(job)}
                     >
                       <DeleteIcon />
                     </IconButton>
