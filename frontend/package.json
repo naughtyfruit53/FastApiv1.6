@@ -1,3 +1,4 @@
+// package.json
 {
   "name": "tritiq-erp-frontend",
   "version": "1.0.0",
@@ -31,7 +32,6 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "jwt-decode": "^4.0.0",
-    "lodash": "^4.17.21",
     "next": "^15.4.6",
     "react": "19.1.1",
     "react-dom": "19.1.1",
@@ -68,6 +68,7 @@
   },
   "overrides": {
     "rimraf": "^5.0.0",
-    "glob": "^10.0.0"
+    "glob": "^10.0.0",
+    "fstream": "^1.0.12"
   }
 }
