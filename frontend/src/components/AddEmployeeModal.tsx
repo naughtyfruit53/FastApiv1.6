@@ -25,7 +25,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { CloudUpload, Description, CheckCircle, Error, Search, PhotoCamera, Delete as DeleteIcon } from '@mui/icons-material';
+import { CloudUpload, Description, CheckCircle, Error as ErrorIcon, Search, PhotoCamera, Delete as DeleteIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
 import api from '../lib/api';
@@ -151,9 +151,13 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       formData.append('file', file);
       formData.append('document_type', updatedDocs[index].type || 'general');
 
-      const response = await api.post('/pdf-extraction/extract/employee', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response: { data: { success: boolean; extracted_data?: any; detail?: string } } = await api.post(
+        '/pdf-extraction/extract/employee',
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }
+      );
 
       if (response.data.success) {
         const extractedData = response.data.extracted_data;
@@ -163,7 +167,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
         updatedDocs[index] = { ...updatedDocs[index], file, extractedData, loading: false };
       } else {
-        throw new Error(response.data.detail || 'Extraction failed');
+        throw new globalThis.Error(response.data.detail || 'Extraction failed');
       }
     } catch (error: any) {
       updatedDocs[index] = {
