@@ -1,3 +1,4 @@
+// src/components/DispatchManagement/DispatchManagement.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -562,7 +563,10 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
         <InstallationSchedulePromptModal
           open={installationPromptOpen}
           onClose={() => setInstallationPromptOpen(false)}
-          dispatchOrder={selectedDispatchOrder}
+          dispatchOrderId={selectedDispatchOrder?.id}
+          customerId={selectedDispatchOrder?.customer_id}
+          customerName={selectedDispatchOrder?.customer_name}
+          deliveryAddress={selectedDispatchOrder?.delivery_address}
           onCreateInstallation={handleCreateInstallation}
         />
       )}
