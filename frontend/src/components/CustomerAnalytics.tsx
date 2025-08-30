@@ -136,7 +136,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
       {/* Controls */}
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item>
+          <Grid size={{ xs: 12 }}>
             <FormControlLabel
               control={
                 <Switch
@@ -148,7 +148,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             />
           </Grid>
           {includeRecentInteractions && (
-            <Grid item>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 type="number"
                 label="Recent Interactions Limit"
@@ -165,7 +165,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
 
       {/* Summary Cards */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -183,7 +183,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
           </Card>
         </Grid>
         
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -201,7 +201,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -219,7 +219,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -240,7 +240,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
 
       <Grid container spacing={3}>
         {/* Interaction Types Breakdown */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -263,7 +263,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
         </Grid>
 
         {/* Interaction Status */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -286,7 +286,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
         </Grid>
 
         {/* Customer Segments */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -334,7 +334,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
 
         {/* Recent Interactions */}
         {includeRecentInteractions && analytics.recent_interactions.length > 0 && (
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
