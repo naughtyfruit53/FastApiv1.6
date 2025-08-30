@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import jwtDecode from 'jwt-decode'; // Use named default import
+import axios from 'axios';
 
 interface User {
   id: number;
@@ -23,9 +24,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Explicitly type the jwtDecode function
-const decodeJwt: (token: string) => JwtPayload = jwtDecode;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -65,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const decoded: JwtPayload = decodeJwt(token); // Use typed function
+          const decoded = jwtDecode<JwtPayload>(token); // Use generic for return type
           if (decoded.exp * 1000 < Date.now()) {
             console.log('Token expired on load, logging out');
             logout();
