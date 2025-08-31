@@ -1,5 +1,3 @@
-// frontend/src/components/AddCustomerModal.tsx
-
 import React, { useEffect, useState, useRef } from 'react';
 import {
   Dialog,
@@ -10,7 +8,7 @@ import {
   TextField,
   Typography,
   CircularProgress,
-  Grid as Grid,
+  Grid,
   Alert,
   InputAdornment,
   Box,
@@ -20,15 +18,15 @@ import {
   LinearProgress,
   IconButton,
 } from '@mui/material';
-import { CloudUpload, Description, CheckCircle, Error, Search } from '@mui/icons-material';
+import { CloudUpload, Description, CheckCircle, Search } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
-import { usePincodeLookup } from '../hooks/usePincodeLookup';  // Assume this is the correct path; adjust if needed
-import api from '../lib/api';  // Axios instance for API calls
+import { usePincodeLookup } from '../hooks/usePincodeLookup';
+import api from '../lib/api';
 
 interface AddCustomerModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd?: (customerData: any) => Promise<void>;  // Optional
+  onAdd?: (data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
 }
@@ -200,12 +198,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }
   };
 
-  const onSubmit = async (data: CustomerFormData) => {
+  const onSubmit = async (customerData: CustomerFormData) => {
     try {
-      // Remove empty fields and exclude unexpected fields like 'is_active'
+      // Remove empty fields to match backend schema
       const allowedFields = ['name', 'contact_number', 'email', 'address1', 'address2', 'city', 'state', 'pin_code', 'gst_number', 'pan_number', 'state_code'];
       const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => allowedFields.includes(key) && value != null && String(value).trim() !== '')
+        Object.entries(customerData).filter(([key, value]) => allowedFields.includes(key) && value !== null && String(value).trim() !== '')
       );
       
       // Direct API call to save customer
@@ -490,10 +488,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 helperText={errors.city?.message}
                 margin="normal"
                 InputProps={{
-                  readOnly: !!pincodeData, // Make readonly when auto-populated
+                  readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('city') || !!pincodeData || !!gstExtractedData?.city, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('city') || !!pincodeData || !!gstExtractedData?.city,
                 }}
               />
             </Grid>
@@ -507,10 +505,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 helperText={errors.state?.message}
                 margin="normal"
                 InputProps={{
-                  readOnly: !!pincodeData, // Make readonly when auto-populated
+                  readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state') || !!pincodeData || !!gstExtractedData?.state, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('state') || !!pincodeData || !!gstExtractedData?.state,
                 }}
               />
             </Grid>
@@ -524,10 +522,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 helperText={errors.state_code?.message}
                 margin="normal"
                 InputProps={{
-                  readOnly: !!pincodeData, // Make readonly when auto-populated
+                  readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state_code') || !!pincodeData || !!gstExtractedData?.state_code, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('state_code') || !!pincodeData || !!gstExtractedData?.state_code,
                 }}
               />
             </Grid>

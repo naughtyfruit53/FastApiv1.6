@@ -259,13 +259,13 @@ const OrganizationDetailPage: React.FC = () => {
     }
   };
 
-  if (loading) return (
+  if (loading) {return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
       <CircularProgress />
     </Box>
-  );
+  );}
 
-  if (error || !organization) return (
+  if (error || !organization) {return (
     <Box p={3}>
       <Alert severity="error">
         {error || 'Organization not found'}
@@ -278,7 +278,7 @@ const OrganizationDetailPage: React.FC = () => {
         Back to Organizations
       </Button>
     </Box>
-  );
+  );}
 
   const currentOrg = editing ? editedOrg! : organization;
 

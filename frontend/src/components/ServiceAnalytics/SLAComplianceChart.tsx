@@ -33,9 +33,9 @@ interface SLAComplianceChartProps {
 
 const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
   const getComplianceColor = (rate: number) => {
-    if (rate >= 95) return 'success';
-    if (rate >= 85) return 'info';
-    if (rate >= 70) return 'warning';
+    if (rate >= 95) {return 'success';}
+    if (rate >= 85) {return 'info';}
+    if (rate >= 70) {return 'warning';}
     return 'error';
   };
 
@@ -55,9 +55,9 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
   };
 
   const formatTime = (hours?: number) => {
-    if (!hours) return 'N/A';
-    if (hours < 1) return `${(hours * 60).toFixed(0)}m`;
-    if (hours < 24) return `${hours.toFixed(1)}h`;
+    if (!hours) {return 'N/A';}
+    if (hours < 1) {return `${(hours * 60).toFixed(0)}m`;}
+    if (hours < 24) {return `${hours.toFixed(1)}h`;}
     return `${(hours / 24).toFixed(1)}d`;
   };
 

@@ -88,7 +88,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
   }
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Never';
+    if (!dateString) {return 'Never';}
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',

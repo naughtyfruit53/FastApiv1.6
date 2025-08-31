@@ -98,7 +98,7 @@ const ServiceRoleGate: React.FC<ServiceRoleGateProps> = ({
 
   // Check access whenever user, permissions, or requirements change
   useEffect(() => {
-    if (!permissionsLoaded) return;
+    if (!permissionsLoaded) {return;}
 
     const checkAccess = () => {
       if (!user) {

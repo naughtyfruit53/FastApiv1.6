@@ -70,7 +70,7 @@ export const useEntity = (id: number | null, entityType: EntityType | null) => {
   return useQuery({
     queryKey: ['entity', id, entityType],
     queryFn: ({ signal }) => {
-      if (!id || !entityType) return null;
+      if (!id || !entityType) {return null;}
       return getEntityById(id, entityType, { signal });
     },
     enabled: !!id && !!entityType,
@@ -84,7 +84,7 @@ export const useEntityBalance = (id: number | null, entityType: EntityType | nul
   return useQuery({
     queryKey: ['entityBalance', id, entityType],
     queryFn: ({ signal }) => {
-      if (!id || !entityType) return null;
+      if (!id || !entityType) {return null;}
       return getEntityBalance(id, entityType, { signal });
     },
     enabled: !!id && !!entityType && ['Customer', 'Vendor'].includes(entityType),

@@ -294,7 +294,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   // Helper to check if a module is enabled for the organization
   const isModuleEnabled = (module: string): boolean => {
-    if (isSuperAdmin) return true; // Super admins see all
+    if (isSuperAdmin) {return true;} // Super admins see all
     const enabled = organizationData?.enabled_modules?.[module] ?? false;
     console.log(`Module check - ${module}:`, enabled, {
       allModules: organizationData?.enabled_modules,
@@ -804,7 +804,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const renderMegaMenu = () => {
-    if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) return null;
+    if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {return null;}
 
     const menu = menuItems[activeMenu as keyof typeof menuItems];
 
@@ -917,7 +917,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const renderSubMenu = () => {
-    if (!activeSubCategory) return null;
+    if (!activeSubCategory) {return null;}
 
     return (
       <Menu

@@ -82,7 +82,7 @@ class ServiceDeskService {
   async getTickets(skip: number = 0, limit: number = 100, status?: string): Promise<Ticket[]> {
     try {
       const params: any = { skip, limit };
-      if (status) params.status = status;
+      if (status) {params.status = status;}
       
       const response = await api.get(`${this.endpoint}/tickets`, { params });
       return response.data;

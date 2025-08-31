@@ -301,7 +301,7 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
   );
 
   const renderSystemHealth = () => {
-    if (!dashboardData?.system_health) return null;
+    if (!dashboardData?.system_health) {return null;}
 
     const { system_health } = dashboardData;
 

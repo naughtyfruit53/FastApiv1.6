@@ -166,7 +166,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
   };
 
   const confirmDeleteRole = async () => {
-    if (!roleToDelete) return;
+    if (!roleToDelete) {return;}
     
     try {
       await rbacService.deleteRole(roleToDelete.id);
@@ -244,8 +244,8 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
   };
 
   const filteredRoles = roles.filter(role => {
-    if (!showInactiveRoles && !role.is_active) return false;
-    if (filterByRole !== 'all' && role.name !== filterByRole) return false;
+    if (!showInactiveRoles && !role.is_active) {return false;}
+    if (filterByRole !== 'all' && role.name !== filterByRole) {return false;}
     return true;
   });
 

@@ -1,4 +1,3 @@
-// frontend/src/components/AddEmployeeModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
@@ -10,11 +9,8 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  InputAdornment,
   Box,
   Paper,
-  Chip,
-  Tooltip,
   LinearProgress,
   IconButton,
   FormControl,
@@ -25,7 +21,7 @@ import {
   Tab,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { CloudUpload, Description, CheckCircle, Error as ErrorIcon, Search, PhotoCamera, Delete as DeleteIcon } from '@mui/icons-material';
+import { CloudUpload, Description, Delete as DeleteIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
 import api from '../lib/api';
@@ -33,7 +29,7 @@ import api from '../lib/api';
 interface AddEmployeeModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (employeeData: any) => Promise<void>;
+  onAdd: (data: any) => Promise<void>;
   loading?: boolean;
   initialData?: any;
   mode: 'create' | 'edit';
@@ -97,7 +93,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       error: undefined,
     }))
   );
-  const [gstSearchLoading, setGstSearchLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
   const {
@@ -162,7 +157,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       if (response.data.success) {
         const extractedData = response.data.extracted_data;
         Object.entries(extractedData).forEach(([key, value]) => {
-          if (value) setValue(key as keyof EmployeeFormData, value as string);
+          if (value) {setValue(key as keyof EmployeeFormData, value as string);}
         });
 
         updatedDocs[index] = { ...updatedDocs[index], file, extractedData, loading: false };
@@ -182,8 +177,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const handleFileChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type !== 'application/pdf') return alert('Please upload a PDF file');
-      if (file.size > 10 * 1024 * 1024) return alert('File size should be less than 10MB');
+      if (file.type !== 'application/pdf') {return alert('Please upload a PDF file');}
+      if (file.size > 10 * 1024 * 1024) {return alert('File size should be less than 10MB');}
       handleDocumentUpload(index, file);
     }
   };
@@ -202,10 +197,10 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     setTabValue(newValue);
   };
 
-  const onSubmit = async (data: EmployeeFormData) => {
+  const onSubmit = async (employeeData: EmployeeFormData) => {
     try {
       const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
+      Object.entries(employeeData).forEach(([key, value]) => {
         formData.append(key, value as string);
       });
 

@@ -54,7 +54,7 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
   };
 
   const handleExcelExport = async () => {
-    if (!onExportExcel) return;
+    if (!onExportExcel) {return;}
     
     setIsExporting(true);
     try {
@@ -72,7 +72,7 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
   };
 
   const handleCSVExport = async () => {
-    if (!onExportCSV) return;
+    if (!onExportCSV) {return;}
     
     setIsExporting(true);
     try {

@@ -259,7 +259,7 @@ export default function ServiceDeskDashboard() {
   );
 
   const renderAnalyticsCards = () => {
-    if (!analytics) return null;
+    if (!analytics) {return null;}
 
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>

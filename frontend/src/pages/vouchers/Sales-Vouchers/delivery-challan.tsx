@@ -177,7 +177,7 @@ const DeliveryChallanPage: React.FC = () => {
   const handleDuplicate = async (id: number) => {
     try {
       const voucher = voucherList?.find(v => v.id === id);
-      if (!voucher) return;
+      if (!voucher) {return;}
 
       // Reset form with duplicated data
       reset({
@@ -200,7 +200,7 @@ const DeliveryChallanPage: React.FC = () => {
   const handleCreateDispatch = async (id: number) => {
     try {
       const voucher = voucherList?.find(v => v.id === id);
-      if (!voucher) return;
+      if (!voucher) {return;}
 
       // Check if delivery challan is delivered
       if (voucher.status !== 'delivered') {
@@ -241,8 +241,8 @@ const DeliveryChallanPage: React.FC = () => {
 
   // Function to get stock color
   const getStockColor = (stock: number, reorder: number) => {
-    if (stock === 0) return 'error.main';
-    if (stock <= reorder) return 'warning.main';
+    if (stock === 0) {return 'error.main';}
+    if (stock <= reorder) {return 'warning.main';}
     return 'success.main';
   };
 

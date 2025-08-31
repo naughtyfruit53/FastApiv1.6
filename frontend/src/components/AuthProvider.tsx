@@ -1,18 +1,16 @@
 // frontend/src/components/AuthProvider.tsx
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, ReactNode } from 'react';
 import { useRouter } from 'next/router';
-import { jwtDecode } from 'jwt-decode'; // Use named export for the function
+import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 
 interface User {
   id: number;
   email: string;
-  // Add other fields as needed
 }
 
 interface JwtPayload {
   exp: number;
-  // Add other payload fields if needed
 }
 
 interface AuthContextType {
@@ -58,6 +56,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   );
 
+  const refreshToken = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {return logout();}
+    try {
+      const response = await api.post('/auth/refresh-token');
+      localStorage.setItem('token', response.data.access_token);
+      await fetchUser();
+    } catch (refreshError) {
+      console.error('Token refresh failed', refreshError);
+      logout();
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    router.push('/login');
+  };
+
+  const fetchUser = async () => {
+    try {
+      const response = await api.get('/users/me');
+      setUser(response.data);
+    } catch (fetchError) {
+      console.error('Fetch user error', fetchError);
+      throw fetchError;
+    }
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -69,9 +96,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             logout();
             return;
           }
-          await fetchUser(token);
-        } catch (error) {
-          console.error('Auth check failed', error);
+          await fetchUser();
+        } catch (authError) {
+          console.error('Auth check failed', authError);
           logout();
         }
       } else {
@@ -87,39 +114,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await api.post('/auth/login/email', { email, password });
       localStorage.setItem('token', response.data.access_token);
       setUser(response.data.user);
-      router.push('/dashboard'); // Adjust as needed
-    } catch (error) {
-      console.error('Login error', error);
-      throw error;
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    router.push('/login');
-  };
-
-  const refreshToken = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return logout();
-    try {
-      const response = await api.post('/auth/refresh-token');
-      localStorage.setItem('token', response.data.access_token);
-      await fetchUser(response.data.access_token);
-    } catch (error) {
-      console.error('Token refresh failed', error);
-      logout();
-    }
-  };
-
-  const fetchUser = async (token: string) => {
-    try {
-      const response = await api.get('/users/me');
-      setUser(response.data);
-    } catch (error) {
-      console.error('Fetch user error', error);
-      throw error;
+      router.push('/dashboard');
+    } catch (loginError) {
+      console.error('Login error', loginError);
+      throw loginError;
     }
   };
 
@@ -130,8 +128,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = React.useContext(AuthContext);
-  if (undefined === context) throw new Error('useAuth must be used within AuthProvider');
+  if (undefined === context) {throw new Error('useAuth must be used within AuthProvider');}
   return context;
 };

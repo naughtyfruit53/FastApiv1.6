@@ -65,7 +65,7 @@ const UsersPage: React.FC = () => {
     router.push('/demo');
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {return <div>Loading...</div>;}
 
   return (
     <Box sx={{ p: 3 }}>

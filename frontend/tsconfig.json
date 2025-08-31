@@ -18,6 +18,12 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "target": "ES2020",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
     "plugins": [
       {
         "name": "@typescript-eslint"
@@ -33,7 +39,8 @@
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".next/types/*.ts"
   ],
   "exclude": [
     "node_modules"

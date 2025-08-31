@@ -234,7 +234,7 @@ const SLAManagement: React.FC = () => {
 
   // Render summary cards
   const renderSummaryCards = () => {
-    if (!metrics) return null;
+    if (!metrics) {return null;}
 
     return (
       <Grid container spacing={3}>

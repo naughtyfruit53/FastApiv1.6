@@ -217,9 +217,9 @@ export const slaService = {
   ): Promise<SLAMetrics> => {
     try {
       const params = new URLSearchParams();
-      if (startDate) params.append('start_date', startDate);
-      if (endDate) params.append('end_date', endDate);
-      if (days) params.append('days', days.toString());
+      if (startDate) {params.append('start_date', startDate);}
+      if (endDate) {params.append('end_date', endDate);}
+      if (days) {params.append('days', days.toString());}
       
       const response = await api.get(`/api/v1/sla/organizations/${organizationId}/sla/metrics?${params.toString()}`);
       return response.data;

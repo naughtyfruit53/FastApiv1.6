@@ -108,9 +108,9 @@ const GeneralLedger: React.FC = () => {
         limit: '50'
       });
       
-      if (selectedAccount) params.append('account_id', selectedAccount.toString());
-      if (dateFilter.start) params.append('start_date', dateFilter.start.toISOString().split('T')[0]);
-      if (dateFilter.end) params.append('end_date', dateFilter.end.toISOString().split('T')[0]);
+      if (selectedAccount) {params.append('account_id', selectedAccount.toString());}
+      if (dateFilter.start) {params.append('start_date', dateFilter.start.toISOString().split('T')[0]);}
+      if (dateFilter.end) {params.append('end_date', dateFilter.end.toISOString().split('T')[0]);}
 
       const response = await axios.get(`/api/v1/erp/general-ledger?${params}`, {
         headers: { Authorization: `Bearer ${token}` }

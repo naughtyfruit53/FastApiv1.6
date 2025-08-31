@@ -116,7 +116,7 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
         onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         options={options}
         getOptionLabel={(option) => {
-          if (option.isAddOption) return option.name;
+          if (option.isAddOption) {return option.name;}
           return option.name;
         }}
         isOptionEqualToValue={(option, value) => option.id === value?.id}

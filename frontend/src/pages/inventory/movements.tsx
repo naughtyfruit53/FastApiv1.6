@@ -34,7 +34,7 @@ const StockMovements: React.FC = () => {
     enabled: isOrgContextReady,
   });
 
-  if (isLoading) return <Typography>Loading stock movements...</Typography>;
+  if (isLoading) {return <Typography>Loading stock movements...</Typography>;}
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>

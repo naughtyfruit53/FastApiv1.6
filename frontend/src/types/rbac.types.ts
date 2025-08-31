@@ -296,7 +296,7 @@ export const hasServicePermission = (
       const hasPermission = roleWithPermissions.permissions.some(
         p => p.name === requiredPermission && p.is_active
       );
-      if (hasPermission) return true;
+      if (hasPermission) {return true;}
     }
   }
   return false;

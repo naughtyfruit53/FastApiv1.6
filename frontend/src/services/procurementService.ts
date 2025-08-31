@@ -72,10 +72,10 @@ export const procurementService = {
   async getRFQs(params: GetRFQsParams = {}): Promise<RFQ[]> {
     const queryParams = new URLSearchParams();
     
-    if (params.skip !== undefined) queryParams.append('skip', params.skip.toString());
-    if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
-    if (params.status) queryParams.append('status', params.status);
-    if (params.search) queryParams.append('search', params.search);
+    if (params.skip !== undefined) {queryParams.append('skip', params.skip.toString());}
+    if (params.limit !== undefined) {queryParams.append('limit', params.limit.toString());}
+    if (params.status) {queryParams.append('status', params.status);}
+    if (params.search) {queryParams.append('search', params.search);}
 
     const response = await api.get(`/api/v1/procurement/rfqs?${queryParams.toString()}`);
     return response.data;
@@ -119,8 +119,8 @@ export const procurementService = {
   async getQuotations(rfqId?: number, vendorId?: number): Promise<any[]> {
     const queryParams = new URLSearchParams();
     
-    if (rfqId !== undefined) queryParams.append('rfq_id', rfqId.toString());
-    if (vendorId !== undefined) queryParams.append('vendor_id', vendorId.toString());
+    if (rfqId !== undefined) {queryParams.append('rfq_id', rfqId.toString());}
+    if (vendorId !== undefined) {queryParams.append('vendor_id', vendorId.toString());}
 
     const response = await api.get(`/api/v1/procurement/quotations?${queryParams.toString()}`);
     return response.data;

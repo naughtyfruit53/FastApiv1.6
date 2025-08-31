@@ -187,8 +187,8 @@ const CustomerAnalytics: React.FC = () => {
   };
 
   const getSatisfactionIcon = (score: number) => {
-    if (score >= 4.5) return <StarIcon color="success" />;
-    if (score >= 3.5) return <StarIcon color="warning" />;
+    if (score >= 4.5) {return <StarIcon color="success" />;}
+    if (score >= 3.5) {return <StarIcon color="warning" />;}
     return <WarningIcon color="error" />;
   };
 

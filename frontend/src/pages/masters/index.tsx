@@ -252,7 +252,7 @@ const MasterDataManagement: React.FC = () => {
 
   // HSN/Product bidirectional search functionality
   const uniqueHsnCodes = React.useMemo(() => {
-    if (!products || tabValue !== 2) return [];
+    if (!products || tabValue !== 2) {return [];}
     const hsnSet = new Set<string>();
     products.forEach((product: any) => {
       if (product.hsn_code && product.hsn_code.trim()) {
@@ -263,14 +263,14 @@ const MasterDataManagement: React.FC = () => {
   }, [products, tabValue]);
 
   const getProductsByHsn = React.useCallback((hsnCode: string) => {
-    if (!products || !hsnCode.trim()) return [];
+    if (!products || !hsnCode.trim()) {return [];}
     return products.filter((product: any) => 
       product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
     );
   }, [products]);
 
   const getHsnByProductName = React.useCallback((productName: string) => {
-    if (!products || !productName.trim()) return [];
+    if (!products || !productName.trim()) {return [];}
     const matchingProducts = products.filter((product: any) =>
       (product.product_name || product.name || '').toLowerCase().includes(productName.toLowerCase())
     );
@@ -283,7 +283,7 @@ const MasterDataManagement: React.FC = () => {
 
   // Auto-population effects for products
   React.useEffect(() => {
-    if (tabValue !== 2) return;
+    if (tabValue !== 2) {return;}
     
     // When product name changes, suggest HSN codes
     if (formData.name && formData.name.length > 2) {
@@ -296,7 +296,7 @@ const MasterDataManagement: React.FC = () => {
   }, [formData.name, formData.hsn_code, getHsnByProductName, tabValue]);
 
   React.useEffect(() => {
-    if (tabValue !== 2) return;
+    if (tabValue !== 2) {return;}
     
     // When HSN code changes, suggest product info
     if (formData.hsn_code && formData.hsn_code.length > 2) {
@@ -339,9 +339,9 @@ const MasterDataManagement: React.FC = () => {
   const updateItemMutation = useMutation({
     mutationFn: (data: any) => {
       // Replace with actual service call based on entity
-      if (tab === 'vendors') return masterDataService.updateVendor(data.id, data);
-      if (tab === 'customers') return masterDataService.updateCustomer(data.id, data);
-      if (tab === 'products') return masterDataService.updateProduct(data.id, data);
+      if (tab === 'vendors') {return masterDataService.updateVendor(data.id, data);}
+      if (tab === 'customers') {return masterDataService.updateCustomer(data.id, data);}
+      if (tab === 'products') {return masterDataService.updateProduct(data.id, data);}
       return Promise.resolve();
     },
     onSuccess: () => {
@@ -361,9 +361,9 @@ const MasterDataManagement: React.FC = () => {
   const createItemMutation = useMutation({
     mutationFn: (data: any) => {
       // Replace with actual service call based on entity
-      if (tab === 'vendors') return masterDataService.createVendor(data);
-      if (tab === 'customers') return masterDataService.createCustomer(data);
-      if (tab === 'products') return masterDataService.createProduct(data);
+      if (tab === 'vendors') {return masterDataService.createVendor(data);}
+      if (tab === 'customers') {return masterDataService.createCustomer(data);}
+      if (tab === 'products') {return masterDataService.createProduct(data);}
       return Promise.resolve();
     },
     onSuccess: () => {
@@ -440,7 +440,7 @@ const MasterDataManagement: React.FC = () => {
 
   // Handle GST certificate upload
   const handleGstCertificateUpload = async (file: File) => {
-    if (!selectedItem) return;
+    if (!selectedItem) {return;}
     
     setUploadingGstCertificate(true);
     try {

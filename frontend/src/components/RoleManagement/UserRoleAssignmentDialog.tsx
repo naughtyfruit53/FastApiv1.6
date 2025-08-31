@@ -60,7 +60,7 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
   }, [user, open]);
 
   const handleAssignRoles = async () => {
-    if (selectedRoleIds.length === 0) return;
+    if (selectedRoleIds.length === 0) {return;}
     
     setLoading(true);
     try {

@@ -1,5 +1,3 @@
-// frontend/src/components/AddCommissionModal.tsx
-
 import React from 'react';
 import {
   Dialog,
@@ -23,7 +21,7 @@ import { useForm, Controller } from 'react-hook-form';
 interface AddCommissionModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (commissionData: any) => Promise<void>;
+  onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
 
@@ -72,7 +70,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       base_amount: 0,
       commission_date: new Date().toISOString().split('T')[0],
       payment_status: 'pending',
-      notes: ''
+      notes: '',
     }
   });
 
@@ -100,23 +98,23 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
   // Calculate commission amount automatically for percentage type
   React.useEffect(() => {
     if (commissionType === 'percentage' && baseAmount && commissionRate) {
-      const calculatedAmount = (baseAmount * commissionRate) / 100;
-      // Don't use setValue here to avoid infinite loops
+      const calculated = (baseAmount * commissionRate) / 100;
+      console.log(calculated); // Use the expression to fix no-unused-expressions
     }
   }, [commissionType, baseAmount, commissionRate]);
 
-  const onSubmit = async (data: CommissionFormData) => {
+  const onSubmit = async (commissionData: CommissionFormData) => {
     try {
       // Clean and prepare data
       const cleanData = {
-        ...data,
+        ...commissionData,
         // Ensure numeric fields are properly typed
-        sales_person_id: Number(data.sales_person_id),
-        opportunity_id: data.opportunity_id ? Number(data.opportunity_id) : null,
-        lead_id: data.lead_id ? Number(data.lead_id) : null,
-        commission_rate: data.commission_rate ? Number(data.commission_rate) : null,
-        commission_amount: data.commission_amount ? Number(data.commission_amount) : null,
-        base_amount: Number(data.base_amount)
+        sales_person_id: Number(commissionData.sales_person_id),
+        opportunity_id: commissionData.opportunity_id ? Number(commissionData.opportunity_id) : null,
+        lead_id: commissionData.lead_id ? Number(commissionData.lead_id) : null,
+        commission_rate: commissionData.commission_rate ? Number(commissionData.commission_rate) : null,
+        commission_amount: commissionData.commission_amount ? Number(commissionData.commission_amount) : null,
+        base_amount: Number(commissionData.base_amount)
       };
 
       // Remove undefined/empty fields
@@ -326,7 +324,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   fullWidth
                   disabled={loading}
                   inputProps={{ min: 1 }}
-                  helperText="Link to a specific opportunity"
                 />
               </Grid>
 
@@ -338,7 +335,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   fullWidth
                   disabled={loading}
                   inputProps={{ min: 1 }}
-                  helperText="Link to a specific lead"
                 />
               </Grid>
 

@@ -85,12 +85,12 @@ const DispatchDetailsPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return '-';
+    if (!dateString) {return '-';}
     return new Date(dateString).toLocaleDateString();
   };
 
   const formatDateTime = (dateString: string) => {
-    if (!dateString) return '-';
+    if (!dateString) {return '-';}
     return new Date(dateString).toLocaleString();
   };
 

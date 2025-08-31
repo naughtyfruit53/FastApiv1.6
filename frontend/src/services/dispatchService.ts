@@ -6,7 +6,7 @@ import { DispatchItemStatus, DispatchOrderStatus, InstallationJobStatus, Install
 export interface DispatchOrderBase {
   customer_id: number;
   ticket_id?: number | null;
-  status: keyof DispatchOrderStatus;
+  status: DispatchOrderStatus;
   dispatch_date?: string | null;
   expected_delivery_date?: string | null;
   actual_delivery_date?: string | null;
@@ -61,8 +61,8 @@ export interface DispatchItemInDB extends DispatchItemBase {
 export interface InstallationJobBase {
   customer_id: number;
   ticket_id?: number | null;
-  status: keyof InstallationJobStatus;
-  priority: keyof InstallationJobPriority;
+  status: InstallationJobStatus;
+  priority: InstallationJobPriority;
   scheduled_date?: string | null;
   estimated_duration_hours?: number | null;
   installation_address: string;
@@ -108,7 +108,7 @@ export interface InstallationSchedulePromptResponse {
 
 // Filter interfaces
 export interface DispatchOrderFilter {
-  status?: keyof DispatchOrderStatus;
+  status?: DispatchOrderStatus;
   customer_id?: number;
   ticket_id?: number;
   from_date?: string;
@@ -116,8 +116,8 @@ export interface DispatchOrderFilter {
 }
 
 export interface InstallationJobFilter {
-  status?: keyof InstallationJobStatus;
-  priority?: keyof InstallationJobPriority;
+  status?: InstallationJobStatus;
+  priority?: InstallationJobPriority;
   customer_id?: number;
   assigned_technician_id?: number;
   dispatch_order_id?: number;
@@ -260,8 +260,8 @@ export const dispatchService = {
       console.log('[DispatchService] Fetching dispatch orders with params:', params);
       
       const queryParams = new URLSearchParams();
-      if (params.skip) queryParams.append('skip', params.skip.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.skip) {queryParams.append('skip', params.skip.toString());}
+      if (params.limit) {queryParams.append('limit', params.limit.toString());}
       
       // Add filter parameters
       if (params.filter) {
@@ -338,8 +338,8 @@ export const dispatchService = {
       console.log('[DispatchService] Fetching installation jobs with params:', params);
       
       const queryParams = new URLSearchParams();
-      if (params.skip) queryParams.append('skip', params.skip.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.skip) {queryParams.append('skip', params.skip.toString());}
+      if (params.limit) {queryParams.append('limit', params.limit.toString());}
       
       // Add filter parameters
       if (params.filter) {
@@ -442,8 +442,8 @@ export const dispatchService = {
       console.log('[DispatchService] Fetching installation tasks with params:', params);
       
       const queryParams = new URLSearchParams();
-      if (params.skip) queryParams.append('skip', params.skip.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.skip) {queryParams.append('skip', params.skip.toString());}
+      if (params.limit) {queryParams.append('limit', params.limit.toString());}
       
       if (params.filter) {
         Object.entries(params.filter).forEach(([key, value]) => {
@@ -531,8 +531,8 @@ export const dispatchService = {
       console.log('[DispatchService] Fetching completion records with params:', params);
       
       const queryParams = new URLSearchParams();
-      if (params.skip) queryParams.append('skip', params.skip.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.skip) {queryParams.append('skip', params.skip.toString());}
+      if (params.limit) {queryParams.append('limit', params.limit.toString());}
       
       if (params.filter) {
         Object.entries(params.filter).forEach(([key, value]) => {

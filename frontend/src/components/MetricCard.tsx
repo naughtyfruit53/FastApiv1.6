@@ -43,7 +43,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   const getTrendIcon = () => {
-    if (!trend) return null;
+    if (!trend) {return null;}
     
     switch (trend.direction) {
       case 'up':
@@ -57,7 +57,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   const getTrendColor = () => {
-    if (!trend) return 'inherit';
+    if (!trend) {return 'inherit';}
     
     switch (trend.direction) {
       case 'up':

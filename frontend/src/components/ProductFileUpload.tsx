@@ -52,7 +52,7 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
   const { data: files = [], isLoading } = useQuery({
     queryKey: ['product-files', productId],
     queryFn: async () => {
-      if (!productId) return [];
+      if (!productId) {return [];}
       const response = await api.get(`/api/v1/products/${productId}/files`);
       return response.data;
     },
@@ -62,7 +62,7 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      if (!productId) throw new Error('Product ID is required');
+      if (!productId) {throw new Error('Product ID is required');}
       
       const formData = new FormData();
       formData.append('file', file);
@@ -98,7 +98,7 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
   });
 
   const handleFileSelect = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {return;}
     
     const file = files[0];
     
@@ -115,7 +115,7 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
     e.preventDefault();
     setIsDragOver(false);
     
-    if (disabled || !productId) return;
+    if (disabled || !productId) {return;}
     
     handleFileSelect(e.dataTransfer.files);
   };
@@ -159,7 +159,7 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) {return '0 Bytes';}
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -167,10 +167,10 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
   };
 
   const getFileIcon = (contentType: string) => {
-    if (contentType.startsWith('image/')) return '🖼️';
-    if (contentType.includes('pdf')) return '📄';
-    if (contentType.includes('word')) return '📝';
-    if (contentType.includes('excel') || contentType.includes('spreadsheet')) return '📊';
+    if (contentType.startsWith('image/')) {return '🖼️';}
+    if (contentType.includes('pdf')) {return '📄';}
+    if (contentType.includes('word')) {return '📝';}
+    if (contentType.includes('excel') || contentType.includes('spreadsheet')) {return '📊';}
     return '📎';
   };
 

@@ -72,7 +72,7 @@ export const voucherTypes = {
  * This is the centralized implementation used across all voucher types
  */
 export const numberToWordsInteger = (num: number): string => {
-  if (num === 0 || isNaN(num)) return '';
+  if (num === 0 || isNaN(num)) {return '';}
   const belowTwenty = [' ', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = [' ', ' ', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
   const thousands = ['', 'Thousand', 'Million', 'Billion'];
@@ -106,7 +106,7 @@ export const numberToWordsInteger = (num: number): string => {
  * This is the the centralized implementation used across all voucher types
  */
 export const numberToWords = (num: number): string => {
-  if (num === 0 || isNaN(num)) return 'Zero only';
+  if (num === 0 || isNaN(num)) {return 'Zero only';}
   const integer = Math.floor(num);
   const decimal = Math.round((num - integer) * 100);
   let word = numberToWordsInteger(integer);
@@ -555,7 +555,7 @@ export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
  */
 export const getReferenceVoucherOptions = (voucherType: keyof typeof REFERENCE_CONFIGS) => {
   const config = REFERENCE_CONFIGS[voucherType];
-  if (!config) return [{ value: 'new', label: 'New', endpoint: '' }];
+  if (!config) {return [{ value: 'new', label: 'New', endpoint: '' }];}
   
   const options = config.allowedTypes.map(type => ({
     value: type,

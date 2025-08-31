@@ -82,7 +82,7 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
 
   const handleVoucherClick = (voucher: any, event: React.MouseEvent) => {
     // Don't trigger if right-click (context menu)
-    if (event.button === 2) return;
+    if (event.button === 2) {return;}
     
     onVoucherClick(voucher);
     onClose(); // Close modal after selection
@@ -99,7 +99,7 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) {return 'N/A';}
     return new Date(dateString).toLocaleDateString();
   };
 

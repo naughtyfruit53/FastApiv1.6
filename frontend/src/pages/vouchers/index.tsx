@@ -140,7 +140,7 @@ const VoucherManagement: React.FC = () => {
 
   const handleEmailVoucher = async (type: string, id: number) => {
     const voucherType = type === 'Purchase' ? 'purchase-vouchers' : (type === 'Sales' ? 'sales-vouchers' : '');
-    if (!voucherType) return alert('Email not supported for this type');
+    if (!voucherType) {return alert('Email not supported for this type');}
 
     try {
       await voucherService.sendVoucherEmail(voucherType, id);

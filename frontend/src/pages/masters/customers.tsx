@@ -64,7 +64,7 @@ const CustomersPage: React.FC = () => {
 
   // Debounced search and sorting
   const filteredAndSortedCustomers = useMemo(() => {
-    if (!customers) return [];
+    if (!customers) {return [];}
 
     const filtered = customers.filter((customer: any) =>
       customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

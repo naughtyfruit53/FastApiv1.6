@@ -1,4 +1,3 @@
-// frontend/src/components/AddOpportunityModal.tsx
 import React from 'react';
 import {
   Dialog,
@@ -23,7 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 interface AddOpportunityModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (opportunityData: any) => Promise<void>;
+  onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
 
@@ -107,11 +106,11 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
     }
   }, [open, reset]);
 
-  const onSubmit = async (data: OpportunityFormData) => {
+  const onSubmit = async (opportunityData: OpportunityFormData) => {
     try {
       // Remove empty fields to match backend schema
       const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => {
+        Object.entries(opportunityData).filter(([key, value]) => {
           if (key === 'amount' || key === 'probability') {
             return value !== undefined && value !== null;
           }
@@ -343,7 +342,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   label="Next Step"
                   fullWidth
                   disabled={loading}
-                  placeholder="What is the next action required to move this opportunity forward?"
+                  placeholder="What is the next next action required to move this opportunity forward?"
                 />
               </Grid>
 

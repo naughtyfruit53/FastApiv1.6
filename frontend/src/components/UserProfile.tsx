@@ -11,7 +11,7 @@ import { Card, Avatar, Typography, Box } from '@mui/material';
 const UserProfile: React.FC = () => {
   const { user } = useAuth();
 
-  if (!user) return null;
+  if (!user) {return null;}
 
   const displayRole = getDisplayRole(user.role, user.is_super_admin);
 

@@ -199,7 +199,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   };
 
   const getEnabledChannelsCount = (notificationType: string) => {
-    if (!preferences[notificationType]) return 0;
+    if (!preferences[notificationType]) {return 0;}
     return Object.values(preferences[notificationType]).filter(Boolean).length;
   };
 

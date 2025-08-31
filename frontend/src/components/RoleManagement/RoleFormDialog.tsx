@@ -154,7 +154,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
   };
 
   const handleSubmit = () => {
-    if (!validateForm()) return;
+    if (!validateForm()) {return;}
     
     if (role) {
       // Updating existing role
@@ -194,8 +194,8 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       formData.permission_ids.includes(p.id)
     ).length;
     
-    if (selectedCount === 0) return 'none';
-    if (selectedCount === modulePermissions.length) return 'all';
+    if (selectedCount === 0) {return 'none';}
+    if (selectedCount === modulePermissions.length) {return 'all';}
     return 'partial';
   };
 

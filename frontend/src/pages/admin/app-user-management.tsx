@@ -231,7 +231,7 @@ const AppUserManagement: React.FC = () => {
   };
 
   const handleDeleteUser = () => {
-    if (!selectedUser) return;
+    if (!selectedUser) {return;}
     deleteUserMutation.mutate(selectedUser.id);
   };
 

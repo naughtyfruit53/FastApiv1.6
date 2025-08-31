@@ -182,7 +182,7 @@ const FinancialReports: React.FC = () => {
   };
 
   const formatDate = (date: Date | null) => {
-    if (!date) return '';
+    if (!date) {return '';}
     return date.toISOString().split('T')[0];
   };
 
@@ -306,10 +306,10 @@ const FinancialReports: React.FC = () => {
           <Box>
             <IconButton 
               onClick={() => {
-                if (activeTab === 0) fetchTrialBalance();
-                else if (activeTab === 1) fetchProfitLoss();
-                else if (activeTab === 2) fetchBalanceSheet();
-                else if (activeTab === 3) fetchCashFlow();
+                if (activeTab === 0) {fetchTrialBalance();}
+                else if (activeTab === 1) {fetchProfitLoss();}
+                else if (activeTab === 2) {fetchBalanceSheet();}
+                else if (activeTab === 3) {fetchCashFlow();}
               }} 
               color="primary"
             >

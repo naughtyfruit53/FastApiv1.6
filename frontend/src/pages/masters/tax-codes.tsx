@@ -195,7 +195,7 @@ const TaxCodesPage: React.FC = () => {
 
   const getAverageRate = () => {
     const activeTaxCodes = taxCodes.filter(tc => tc.is_active && tc.tax_rate > 0);
-    if (activeTaxCodes.length === 0) return 0;
+    if (activeTaxCodes.length === 0) {return 0;}
     const total = activeTaxCodes.reduce((sum, tc) => sum + tc.tax_rate, 0);
     return (total / activeTaxCodes.length).toFixed(1);
   };

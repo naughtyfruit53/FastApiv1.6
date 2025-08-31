@@ -85,7 +85,7 @@ const ManageOrganizations: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-      if (!response.ok) throw new Error('Failed to fetch available modules');
+      if (!response.ok) {throw new Error('Failed to fetch available modules');}
       return response.json();
     }
   });
@@ -196,7 +196,7 @@ const ManageOrganizations: React.FC = () => {
 
   const updateModulesMutation = useMutation({
     mutationFn: async (modules: {[key: string]: boolean}) => {
-      if (!selectedOrg) throw new Error('No organization selected');
+      if (!selectedOrg) {throw new Error('No organization selected');}
       
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/v1/organizations/${selectedOrg.id}/modules`, {

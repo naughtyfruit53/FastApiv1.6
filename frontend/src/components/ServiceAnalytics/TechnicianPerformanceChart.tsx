@@ -41,15 +41,15 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
   const [expandedTechnician, setExpandedTechnician] = useState<number | null>(null);
 
   const getPerformanceColor = (score: number) => {
-    if (score >= 80) return 'success';
-    if (score >= 60) return 'warning';
+    if (score >= 80) {return 'success';}
+    if (score >= 60) {return 'warning';}
     return 'error';
   };
 
   const getUtilizationColor = (rate: number) => {
-    if (rate >= 80) return 'success';
-    if (rate >= 60) return 'info';
-    if (rate >= 40) return 'warning';
+    if (rate >= 80) {return 'success';}
+    if (rate >= 60) {return 'info';}
+    if (rate >= 40) {return 'warning';}
     return 'error';
   };
 

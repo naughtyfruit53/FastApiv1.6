@@ -156,7 +156,7 @@ const OrganizationsPage: React.FC = () => {
   };
 
   const confirmAction = () => {
-    if (!selectedOrg || !actionType) return;
+    if (!selectedOrg || !actionType) {return;}
 
     // For reset action, require confirmation text
     if (actionType === 'reset' && confirmationText !== 'RESET') {

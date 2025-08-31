@@ -86,7 +86,7 @@ const ProductsPage: React.FC = () => {
 
   // Normalize products to ensure consistent product_name property
   const normalizedProducts = useMemo(() => {
-    if (!products) return [];
+    if (!products) {return [];}
     return products.map((product: any) => ({
       ...product,
       product_name: product.product_name || product.name || '',
@@ -95,7 +95,7 @@ const ProductsPage: React.FC = () => {
 
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
-    if (!normalizedProducts) return [];
+    if (!normalizedProducts) {return [];}
     
     // Filter products based on search term
     const filtered = normalizedProducts.filter((product: any) => {
@@ -190,14 +190,14 @@ const ProductsPage: React.FC = () => {
   }, [normalizedProducts]);
 
   const getProductsByHsn = useCallback((hsnCode: string) => {
-    if (!hsnCode.trim()) return [];
+    if (!hsnCode.trim()) {return [];}
     return normalizedProducts.filter((product: any) => 
       product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
     );
   }, [normalizedProducts]);
 
   const getHsnByProductName = useCallback((productName: string) => {
-    if (!productName.trim()) return [];
+    if (!productName.trim()) {return [];}
     const matchingProducts = normalizedProducts.filter((product: any) =>
       product.product_name.toLowerCase().includes(productName.toLowerCase())
     );
@@ -280,9 +280,9 @@ const ProductsPage: React.FC = () => {
     };
     
     // Convert string numbers to actual numbers
-    if (data.unit_price) (data as any).unit_price = parseFloat(data.unit_price as string);
-    if (data.gst_rate) (data as any).gst_rate = parseFloat(data.gst_rate as string);
-    if (data.reorder_level) (data as any).reorder_level = parseInt(data.reorder_level as string);
+    if (data.unit_price) {(data as any).unit_price = parseFloat(data.unit_price as string);}
+    if (data.gst_rate) {(data as any).gst_rate = parseFloat(data.gst_rate as string);}
+    if (data.reorder_level) {(data as any).reorder_level = parseInt(data.reorder_level as string);}
     
     if (selectedItem) {
       updateItemMutation.mutate({ ...selectedItem, ...data });

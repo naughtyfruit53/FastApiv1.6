@@ -30,13 +30,13 @@ export const useReferenceOptions = (
   const { data: unpaidVouchers } = useQuery({
     queryKey: ['unpaid-vouchers', selectedEntityId, selectedEntityType],
     queryFn: () => {
-      if (!selectedEntityId || !selectedEntityType) return [];
+      if (!selectedEntityId || !selectedEntityType) {return [];}
       
       // Map entity types to voucher endpoints
       const endpoint = selectedEntityType === 'Vendor' ? '/purchase-vouchers' : 
                      selectedEntityType === 'Customer' ? '/sales-vouchers' : null;
       
-      if (!endpoint) return [];
+      if (!endpoint) {return [];}
       
       const params = selectedEntityType === 'Vendor' 
         ? { vendor_id: selectedEntityId }

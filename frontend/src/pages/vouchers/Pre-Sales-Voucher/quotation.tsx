@@ -172,8 +172,8 @@ const QuotationPage: React.FC = () => {
 
   // Function to get stock color
   const getStockColor = (stock: number, reorder: number) => {
-    if (stock === 0) return 'error.main';
-    if (stock <= reorder) return 'warning.main';
+    if (stock === 0) {return 'error.main';}
+    if (stock <= reorder) {return 'warning.main';}
     return 'success.main';
   };
 

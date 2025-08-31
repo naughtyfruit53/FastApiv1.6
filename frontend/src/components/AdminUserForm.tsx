@@ -1,8 +1,9 @@
+// frontend/src/components/AdminUserForm.tsx
 import React, { useState } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, Button } from '@mui/material';
 
 interface AdminUserFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (formData: any) => void;
 }
 
 const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {

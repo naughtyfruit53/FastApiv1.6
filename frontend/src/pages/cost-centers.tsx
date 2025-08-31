@@ -135,13 +135,13 @@ const CostCenters: React.FC = () => {
   };
 
   const calculateVariance = (budget: number, actual: number) => {
-    if (budget === 0) return 0;
+    if (budget === 0) {return 0;}
     return ((actual - budget) / budget) * 100;
   };
 
   const getVarianceColor = (variance: number) => {
-    if (Math.abs(variance) <= 5) return 'success';
-    if (Math.abs(variance) <= 15) return 'warning';
+    if (Math.abs(variance) <= 5) {return 'success';}
+    if (Math.abs(variance) <= 15) {return 'warning';}
     return 'error';
   };
 

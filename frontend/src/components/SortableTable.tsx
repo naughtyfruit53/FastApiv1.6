@@ -47,9 +47,9 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   const bVal = b[orderBy];
   
   // Handle null/undefined values
-  if (bVal == null && aVal == null) return 0;
-  if (bVal == null) return -1;
-  if (aVal == null) return 1;
+  if (bVal == null && aVal == null) {return 0;}
+  if (bVal == null) {return -1;}
+  if (aVal == null) {return 1;}
   
   // Handle different types
   if (typeof aVal === 'number' && typeof bVal === 'number') {
@@ -178,7 +178,7 @@ function SortableTable<T>({
   };
 
   const sortedData = useMemo(() => {
-    if (!data?.length) return [];
+    if (!data?.length) {return [];}
     return stableSort(data, getComparator(order, orderBy));
   }, [data, order, orderBy]);
 

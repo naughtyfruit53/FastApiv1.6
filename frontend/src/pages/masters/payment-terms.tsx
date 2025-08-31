@@ -211,14 +211,14 @@ const PaymentTermsPage: React.FC = () => {
 
   const getAverageDays = () => {
     const netDaysTerms = paymentTerms.filter(term => term.payment_type === 'net_days' && term.is_active);
-    if (netDaysTerms.length === 0) return 0;
+    if (netDaysTerms.length === 0) {return 0;}
     const total = netDaysTerms.reduce((sum, term) => sum + term.due_days, 0);
     return Math.round(total / netDaysTerms.length);
   };
 
   const getTermDisplay = (term: any) => {
-    if (term.payment_type === 'immediate') return 'Immediate';
-    if (term.payment_type === 'advance') return 'Advance';
+    if (term.payment_type === 'immediate') {return 'Immediate';}
+    if (term.payment_type === 'advance') {return 'Advance';}
     if (term.discount_percentage > 0) {
       return `${term.discount_percentage}/${term.discount_days} Net ${term.due_days}`;
     }

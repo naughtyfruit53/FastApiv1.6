@@ -157,7 +157,7 @@ describe('UserManagement Component', () => {
       }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     jest.mocked(require('../context/AuthContext').useAuth).mockReturnValue(standardUserContext);
     
     render(<UserManagement />, { wrapper: createWrapper() });

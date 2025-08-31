@@ -151,7 +151,7 @@ const MultiCompanyManagement: React.FC = () => {
   };
 
   const canCreateCompany = () => {
-    if (!companies || !orgInfo) return false;
+    if (!companies || !orgInfo) {return false;}
     return companies.length < (orgInfo.max_companies || 1);
   };
 

@@ -59,7 +59,7 @@ const VendorsPage: React.FC = () => {
 
   // Debounced search and sorting
   const filteredAndSortedVendors = useMemo(() => {
-    if (!vendors) return [];
+    if (!vendors) {return [];}
 
     const filtered = vendors.filter((vendor: any) =>
       vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

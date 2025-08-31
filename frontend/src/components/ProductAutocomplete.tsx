@@ -119,7 +119,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
         onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         options={options}
         getOptionLabel={(option) => {
-          if (option.isAddOption) return option.product_name;
+          if (option.isAddOption) {return option.product_name;}
           return option.product_name;
         }}
         isOptionEqualToValue={(option, value) => option.id === value?.id}

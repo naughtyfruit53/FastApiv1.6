@@ -134,7 +134,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
   }, [open, jobId]);
 
   const loadWizardState = async () => {
-    if (!jobId) return;
+    if (!jobId) {return;}
     
     setLoading(true);
     try {
@@ -212,7 +212,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
   };
 
   const executeMigration = async () => {
-    if (!currentJob) return;
+    if (!currentJob) {return;}
 
     setLoading(true);
     try {
@@ -227,7 +227,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
   };
 
   const rollbackMigration = async () => {
-    if (!currentJob) return;
+    if (!currentJob) {return;}
 
     setLoading(true);
     try {
@@ -242,7 +242,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
   };
 
   const renderStepContent = () => {
-    if (!wizardState) return null;
+    if (!wizardState) {return null;}
 
     const currentStep = wizardState.current_step;
 
@@ -426,16 +426,16 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
   );
 
   const getStepStatus = (stepIndex: number) => {
-    if (!wizardState) return 'pending';
+    if (!wizardState) {return 'pending';}
     
     const step = wizardState.steps[stepIndex];
-    if (step?.is_completed) return 'completed';
-    if (step?.is_current) return 'active';
+    if (step?.is_completed) {return 'completed';}
+    if (step?.is_current) {return 'active';}
     return 'pending';
   };
 
   const canProceedToNext = () => {
-    if (!wizardState) return false;
+    if (!wizardState) {return false;}
     
     const currentStep = wizardState.current_step;
     
@@ -450,7 +450,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
   };
 
   const handleNext = async () => {
-    if (!wizardState) return;
+    if (!wizardState) {return;}
     
     const currentStep = wizardState.current_step;
     

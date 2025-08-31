@@ -56,7 +56,8 @@ import {
   hasDispatchManagementPermission,
   hasDispatchViewPermission,
   hasInstallationManagementPermission,
-  hasInstallationViewPermission
+  hasInstallationViewPermission,
+  DispatchOrderStatus
 } from '../../types/dispatch.types';
 
 interface DispatchManagementProps {
@@ -135,7 +136,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
         canViewDispatch ? dispatchService.getDispatchOrders({
           skip: (dispatchPage - 1) * itemsPerPage,
           limit: itemsPerPage,
-          filter: dispatchStatusFilter ? { status: dispatchStatusFilter as any } : undefined
+          filter: dispatchStatusFilter ? { status: dispatchStatusFilter as DispatchOrderStatus } : undefined
         }) : Promise.resolve([]),
         canViewInstallation ? dispatchService.getInstallationJobs({
           skip: (installationPage - 1) * itemsPerPage,
@@ -223,7 +224,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
   };
 
   const renderDispatchOrderRow = (order: DispatchOrderInDB) => {
-    const statusKey = String(order.status).toLowerCase();
+    const statusKey = order.status.toLowerCase();
     const statusConfig = DISPATCH_ORDER_STATUS_CONFIG[statusKey as keyof typeof DISPATCH_ORDER_STATUS_CONFIG];
     
     return (
@@ -341,7 +342,7 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
                     <IconButton 
                       size="small" 
                       color="error"
-                      onClick={() => handleEditInstallationJob(job)}
+                      onClick={() => handleDeleteInstallationJob(job.id)}
                     >
                       <DeleteIcon />
                     </IconButton>

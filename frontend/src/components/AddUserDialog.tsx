@@ -1,4 +1,4 @@
-// AddUserDialog component for requirement #7 - Add Organization Users from Settings
+// frontend/src/components/AddUserDialog.tsx
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -149,6 +149,21 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
     }
   };
 
+  const handleClose = () => {
+    setFormData({
+      email: '',
+      full_name: '',
+      password: '',
+      confirm_password: '',
+      role: 'standard_user',
+      phone: '',
+      department: ''
+    });
+    setErrors({});
+    setLoading(false);
+    onClose();
+  };
+
   const handleAddUser = async () => {
     if (!validateForm()) {
       return;
@@ -216,21 +231,6 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    setFormData({
-      email: '',
-      full_name: '',
-      password: '',
-      confirm_password: '',
-      role: 'standard_user',
-      phone: '',
-      department: ''
-    });
-    setErrors({});
-    setLoading(false);
-    onClose();
   };
 
   const isFormValid = formData.email && formData.full_name && formData.password && 

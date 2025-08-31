@@ -128,7 +128,7 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
   };
 
   const getFeedbackStatus = () => {
-    if (!existingFeedback) return null;
+    if (!existingFeedback) {return null;}
     
     const statusConfig = {
       submitted: { label: 'Feedback Submitted', color: 'info', icon: FeedbackIcon },
@@ -141,7 +141,7 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
   };
 
   const getClosureStatus = () => {
-    if (!existingClosure) return null;
+    if (!existingClosure) {return null;}
     
     const statusConfig = {
       pending: { label: 'Closure Pending', color: 'warning', icon: ScheduleIcon },

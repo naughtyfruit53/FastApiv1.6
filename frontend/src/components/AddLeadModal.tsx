@@ -1,4 +1,3 @@
-// frontend/src/components/AddLeadModal.tsx
 import React from 'react';
 import {
   Dialog,
@@ -22,7 +21,7 @@ import { useForm, Controller } from 'react-hook-form';
 interface AddLeadModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (leadData: any) => Promise<void>;
+  onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
 
@@ -125,11 +124,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   }, [open, reset]);
 
-  const onSubmit = async (data: LeadFormData) => {
+  const onSubmit = async (leadData: LeadFormData) => {
     try {
       // Remove empty fields to match backend schema
       const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => {
+        Object.entries(leadData).filter(([key, value]) => {
           if (key === 'score' || key === 'estimated_value') {
             return value !== undefined && value !== null;
           }

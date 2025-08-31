@@ -89,7 +89,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error('Failed to change password');
+      if (!response.ok) {throw new Error('Failed to change password');}
 
       setSuccess(true);
       

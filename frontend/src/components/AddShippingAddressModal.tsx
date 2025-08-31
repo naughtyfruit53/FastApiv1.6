@@ -8,13 +8,13 @@ import {
   TextField,
   Typography,
   CircularProgress,
-  Grid as Grid,
+  Grid,
   Alert,
   InputAdornment,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
-import debounce from 'lodash/debounce'; // Assume lodash is installed, as per package.json
+import debounce from 'lodash/debounce';
 
 interface AddShippingAddressModalProps {
   open: boolean;
@@ -39,7 +39,7 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
   onAdd, 
   loading = false 
 }) => {
-  const { register, handleSubmit, reset, formState: { errors }, setValue, watch, getValues } = useForm<ShippingAddressFormData>({
+  const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<ShippingAddressFormData>({
     defaultValues: {
       address1: '',
       address2: '',
@@ -56,14 +56,12 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
   // Auto-populate address fields when pincode data is available
   useEffect(() => {
     if (pincodeData) {
-      console.log('Auto-populating fields with PIN data:', pincodeData); // Diagnostic log
+      console.log('Auto-populating fields with PIN data:', pincodeData);
       setValue('city', pincodeData.city, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
       setValue('state', pincodeData.state, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
       setValue('state_code', pincodeData.state_code, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-      // Force re-render check
-      console.log('Form values after auto-populate setValue:', getValues());
     }
-  }, [pincodeData, setValue, getValues]);
+  }, [pincodeData, setValue]);
 
   // Debounced lookup function
   const debouncedLookup = useCallback(
@@ -85,10 +83,11 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
     }
   };
 
-  const onSubmit = async (data: ShippingAddressFormData) => {
+  // Handle form submission
+  const onSubmit = async (shippingData: ShippingAddressFormData) => {
     try {
       const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value && value.trim() !== '')
+        Object.entries(shippingData).filter(([key, value]) => value && value.trim() !== '')
       );
       await onAdd(cleanData);
       reset();
@@ -132,7 +131,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
               />
             </Grid>
             
-            {/* PIN Code moved to be first after address lines */}
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
@@ -170,7 +168,7 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                   readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('city') || !!pincodeData, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('city') || !!pincodeData,
                 }}
               />
             </Grid>
@@ -187,11 +185,11 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                   readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state') || !!pincodeData, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('state') || !!pincodeData,
                 }}
                 sx={{
                   '& .MuiInputBase-root': {
-                    height: '40px', // Force consistent height to match other fields (MUI small size default)
+                    height: '40px',
                   },
                 }}
               />
@@ -209,7 +207,7 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                   readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state_code') || !!pincodeData, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('state_code') || !!pincodeData,
                 }}
               />
             </Grid>

@@ -55,8 +55,8 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
   };
 
   const getRatingColor = (rating: number) => {
-    if (rating >= 4) return 'success.main';
-    if (rating >= 3) return 'warning.main';
+    if (rating >= 4) {return 'success.main';}
+    if (rating >= 3) {return 'warning.main';}
     return 'error.main';
   };
 

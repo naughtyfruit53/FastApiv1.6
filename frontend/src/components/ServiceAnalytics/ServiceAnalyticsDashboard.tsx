@@ -101,7 +101,7 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
   };
 
   const handleExport = async () => {
-    if (!organizationId) return;
+    if (!organizationId) {return;}
     
     try {
       const blob = await serviceAnalyticsService.exportAnalyticsData(organizationId, {

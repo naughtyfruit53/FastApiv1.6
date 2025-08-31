@@ -47,95 +47,95 @@ export const getDisplayRole = (role: string, isSuperAdmin?: boolean): string => 
 
 // Permission utility functions using backend-consistent role checking
 export const canManageUsers = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   return user.is_super_admin === true || role === 'super_admin' || role === 'org_admin';
 };
 
 export const canViewUsers = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   return user.is_super_admin === true || role === 'super_admin' || role === 'org_admin' || role === 'admin';
 };
 
 export const canCreateUsers = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   return user.is_super_admin === true || role === 'super_admin' || role === 'org_admin' || role === 'admin';
 };
 
 export const canDeleteUsers = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   return user.is_super_admin === true || role === 'super_admin' || role === 'org_admin';
 };
 
 export const canResetPasswords = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   return user.is_super_admin === true || role === 'super_admin' || role === 'org_admin';
 };
 
 export const canViewOrganizations = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   return user.is_super_admin === true || role === 'super_admin';
 };
 
 export const canManageOrganizations = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   return user.is_super_admin === true || role === 'super_admin';
 };
 
 export const canFactoryReset =(user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   return user.is_super_admin === true || user.role === 'org_admin';
 };
 
 export const canAccessAdvancedSettings = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   return user.is_super_admin === true || ['org_admin', 'admin'].includes(user.role);
 };
 
 export const isAppSuperAdmin = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   return user.is_super_admin === true || user.role === 'super_admin';
 };
 
 export const isOrgSuperAdmin = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   return user.role === 'org_admin';
 };
 
 // New permission functions for role-based interface controls
 export const canAccessOrganizationSettings = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   // Organization Settings should be hidden from App Super Admins
   return !isAppSuperAdmin(user);
 };
 
 export const canShowFactoryResetOnly = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   // App Super Admins should only see Factory Reset option in Data Management
   return isAppSuperAdmin(user);
 };
 
 export const canShowOrgDataResetOnly = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   // Org Superadmins should only see Reset Organization Data option
   return isOrgSuperAdmin(user) && !isAppSuperAdmin(user);
 };
 
 export const canShowUserManagementInMegaMenu = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   // User management should not be in mega menu for Org Superadmins
   // Only App Super Admins can have user management in mega menu
   return isAppSuperAdmin(user);
 };
 
 export const canAccessLedger = (user: User | null): boolean => {
-  if (!user) return false;
+  if (!user) {return false;}
   const role = user.role || localStorage.getItem('user_role');
   // Super Admin, Admin, and authorized Standard Users can access ledger
   return user.is_super_admin === true || 

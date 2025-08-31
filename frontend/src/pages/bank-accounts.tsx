@@ -184,7 +184,7 @@ const BankAccounts: React.FC = () => {
 
   const formatAccountNumber = (accountNumber: string) => {
     // Mask account number for security (show only last 4 digits)
-    if (accountNumber.length <= 4) return accountNumber;
+    if (accountNumber.length <= 4) {return accountNumber;}
     return '*'.repeat(accountNumber.length - 4) + accountNumber.slice(-4);
   };
 

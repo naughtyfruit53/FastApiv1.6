@@ -190,7 +190,7 @@ const FinanceDashboard: React.FC = () => {
     );
   }
 
-  if (!data) return null;
+  if (!data) {return null;}
 
   // Chart data for cash flow
   const cashFlowChartData = {

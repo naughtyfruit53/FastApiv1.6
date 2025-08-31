@@ -1,4 +1,3 @@
-// frontend/src/components/AddProductModal.tsx
 import React from 'react';
 import {
   Dialog,
@@ -22,7 +21,7 @@ import { getProducts } from '../services/masterService';
 interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (productData: any) => Promise<void>;
+  onAdd: (data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
 }
@@ -94,7 +93,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   // Create product suggestions based on HSN code
   const getProductsByHsn = React.useCallback((hsnCode: string): Product[] => {
-    if (!hsnCode.trim()) return [];
+    if (!hsnCode.trim()) {return [];}
     return allProducts.filter((product: Product) => 
       product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
     );
@@ -102,7 +101,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   // Create HSN suggestions based on product name
   const getHsnByProductName = React.useCallback((productName: string) => {
-    if (!productName.trim()) return [];
+    if (!productName.trim()) {return [];}
     const matchingProducts = allProducts.filter((product: Product) =>
       product.product_name.toLowerCase().includes(productName.toLowerCase())
     );
@@ -161,21 +160,21 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   }, [watchedHsnCode, watchedProductName, getProductsByHsn, setValue]);
 
-  const onSubmit = async (data: ProductFormData) => {
+  const onSubmit = async (productData: ProductFormData) => {
     try {
-      // Remove empty fields to match backend schema (consistent with customer modal)
+      // Remove empty fields to match backend schema to match backend schema
       const allowedFields = ['product_name', 'hsn_code', 'part_number', 'unit', 'unit_price', 'gst_rate', 'is_gst_inclusive', 'reorder_level', 'description', 'is_manufactured'];
       const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => {
+        Object.entries(productData).filter(([key, value]) => {
           if (key === 'unit_price' || key === 'gst_rate' || key === 'reorder_level') {
             return true;  // Send 0 values for numbers as they are meaningful defaults
           }
-          return allowedFields.includes(key) && value != null && String(value).trim() !== '';
+          return allowedFields.includes(key) && value !== null && String(value).trim() !== '';
         })
       );
       await onAdd(cleanData);
       reset();
-      onClose();  // Close modal on success (consistent with other modals)
+      onClose();  // Close modal on success
     } catch (error) {
       console.error('Error adding product:', error);
     }

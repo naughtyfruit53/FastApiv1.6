@@ -157,7 +157,7 @@ const GoodsReceiptNotePage: React.FC = () => {
   // Compute used voucher IDs, excluding current GRN in edit mode
   const currentGrnId = mode === 'edit' ? voucherData?.id : null;
   const usedVoucherIds = useMemo(() => {
-    if (!grns) return new Set();
+    if (!grns) {return new Set();}
     return new Set(grns.filter(grn => grn.id !== currentGrnId).map(grn => grn.purchase_order_id));
   }, [grns, currentGrnId]);
 
@@ -176,7 +176,7 @@ const GoodsReceiptNotePage: React.FC = () => {
   const { data: selectedVoucherData } = useQuery({
     queryKey: [selectedVoucherType, selectedVoucherId],
     queryFn: () => {
-      if (!selectedVoucherType || !selectedVoucherId) return null;
+      if (!selectedVoucherType || !selectedVoucherId) {return null;}
       const endpoint = selectedVoucherType === 'purchase-order' ? '/purchase-orders' : '/purchase-vouchers';
       return api.get(`${endpoint}/${selectedVoucherId}`).then(res => res.data);
     },

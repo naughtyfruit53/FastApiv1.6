@@ -1,7 +1,5 @@
-// src/components/AlertsFeed.tsx
-// Real-time alerts and notifications feed component
-
-import React, { useState, useEffect } from 'react';
+// frontend/src/components/AlertsFeed.tsx
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -22,7 +20,6 @@ import {
   MenuItem,
   Grid,
   Badge,
-  Tooltip,
   Collapse
 } from '@mui/material';
 import {
@@ -32,18 +29,13 @@ import {
   Info,
   CheckCircle,
   AccessTime,
-  Person,
-  Work,
   Feedback,
   Assignment,
   Update,
   FilterList,
   Refresh,
-  ExpandMore,
-  ExpandLess,
   MarkEmailRead,
-  Delete,
-  Visibility
+  Delete
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
@@ -53,12 +45,10 @@ import {
   NotificationLog,
   getChannelDisplayName,
   getStatusDisplayName,
-  getStatusColor,
   NOTIFICATION_STATUSES
 } from '../services/notificationService';
 
 interface AlertsFeedProps {
-  userId?: number;
   showFilters?: boolean;
   maxHeight?: string | number;
   autoRefresh?: boolean;
@@ -73,7 +63,6 @@ interface AlertFilters {
 }
 
 const AlertsFeed: React.FC<AlertsFeedProps> = ({
-  userId,
   showFilters = true,
   maxHeight = 600,
   autoRefresh = true,
@@ -245,10 +234,10 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
 
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInDays < 7) return `${diffInDays}d ago`;
+    if (diffInMinutes < 1) {return 'Just now';}
+    if (diffInMinutes < 60) {return `${diffInMinutes}m ago`;}
+    if (diffInHours < 24) {return `${diffInHours}h ago`;}
+    if (diffInDays < 7) {return `${diffInDays}d ago`;}
     return date.toLocaleDateString();
   };
 

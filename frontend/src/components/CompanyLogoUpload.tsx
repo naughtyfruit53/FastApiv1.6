@@ -86,7 +86,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
   };
 
   const handleFileSelect = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {return;}
 
     const file = files[0];
     const validationError = validateFile(file);

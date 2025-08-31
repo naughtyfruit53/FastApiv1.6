@@ -85,7 +85,7 @@ const TaskDashboard: React.FC = () => {
   }, []);
 
   const getCompletionPercentage = (stats: TaskStats) => {
-    if (stats.total_tasks === 0) return 0;
+    if (stats.total_tasks === 0) {return 0;}
     return Math.round((stats.done_tasks / stats.total_tasks) * 100);
   };
 

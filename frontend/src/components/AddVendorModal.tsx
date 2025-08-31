@@ -1,5 +1,4 @@
 // frontend/src/components/AddVendorModal.tsx
-
 import React, { useEffect, useState, useRef } from 'react';
 import {
   Dialog,
@@ -20,15 +19,15 @@ import {
   LinearProgress,
   IconButton,
 } from '@mui/material';
-import { CloudUpload, Description, CheckCircle, Error, Search } from '@mui/icons-material';
+import { CloudUpload, Description, CheckCircle, Search } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
-import { usePincodeLookup } from '../hooks/usePincodeLookup';  // Assume this is the correct path; adjust if needed
-import api from '../lib/api';  // Axios instance for API calls
+import { usePincodeLookup } from '../hooks/usePincodeLookup';
+import api from '../lib/api';
 
 interface AddVendorModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd?: (vendorData: any) => Promise<void>;  // Optional
+  onAdd?: (data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
 }
@@ -205,7 +204,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       // Remove empty fields and exclude unexpected fields like 'is_active'
       const allowedFields = ['name', 'contact_number', 'email', 'address1', 'address2', 'city', 'state', 'pin_code', 'gst_number', 'pan_number', 'state_code'];
       const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => allowedFields.includes(key) && value != null && String(value).trim() !== '')
+        Object.entries(data).filter(([key, value]) => allowedFields.includes(key) && value !== null && String(value).trim() !== '')
       );
       
       // Direct API call to save vendor
@@ -453,7 +452,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
               />
             </Grid>
             
-            {/* PIN Code moved to be first after address lines */}
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -490,10 +488,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 helperText={errors.city?.message}
                 margin="normal"
                 InputProps={{
-                  readOnly: !!pincodeData, // Make readonly when auto-populated
+                  readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('city') || !!pincodeData || !!gstExtractedData?.city, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('city') || !!pincodeData || !!gstExtractedData?.city,
                 }}
               />
             </Grid>
@@ -507,10 +505,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 helperText={errors.state?.message}
                 margin="normal"
                 InputProps={{
-                  readOnly: !!pincodeData, // Make readonly when auto-populated
+                  readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state') || !!pincodeData || !!gstExtractedData?.state, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('state') || !!pincodeData || !!gstExtractedData?.state,
                 }}
               />
             </Grid>
@@ -524,10 +522,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 helperText={errors.state_code?.message}
                 margin="normal"
                 InputProps={{
-                  readOnly: !!pincodeData, // Make readonly when auto-populated
+                  readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state_code') || !!pincodeData || !!gstExtractedData?.state_code, // Force label shrink if value exists or auto-populated
+                  shrink: !!watch('state_code') || !!pincodeData || !!gstExtractedData?.state_code,
                 }}
               />
             </Grid>

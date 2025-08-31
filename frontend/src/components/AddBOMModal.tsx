@@ -1,6 +1,4 @@
-// frontend/src/components/AddBOMModal.tsx
-
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { 
   Dialog,
@@ -80,7 +78,7 @@ const defaultBOM: BOM = {
 interface AddBOMModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (newBOM: BOM) => void;
+  onAdd: (data: BOM) => void;
   initialData?: BOM;
   mode: 'create' | 'edit';
 }
@@ -106,16 +104,16 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
 
   // Mutation for create/edit
   const mutation = useMutation({
-    mutationFn: (data: BOM) => {
+    mutationFn: (bomData: BOM) => {
       // Clean the data
       const cleanData = {
-        ...data,
-        output_item_id: data.output_item_id || null,
-        output_quantity: Number(data.output_quantity) || 1.0,
-        labor_cost: Number(data.labor_cost) || 0.0,
-        overhead_cost: Number(data.overhead_cost) || 0.0,
-        material_cost: Number(data.material_cost) || 0.0,
-        components: data.components.map(comp => ({
+        ...bomData,
+        output_item_id: bomData.output_item_id || null,
+        output_quantity: Number(bomData.output_quantity) || 1.0,
+        labor_cost: Number(bomData.labor_cost) || 0.0,
+        overhead_cost: Number(bomData.overhead_cost) || 0.0,
+        material_cost: Number(bomData.material_cost) || 0.0,
+        components: bomData.components.map(comp => ({
           ...comp,
           component_item_id: Number(comp.component_item_id) || null,
           quantity_required: Number(comp.quantity_required) || 1.0,
@@ -132,9 +130,9 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
         return api.put(`/bom/${initialData?.id}`, cleanData).then(res => res.data);
       }
     },
-    onSuccess: (newBOM) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['boms'] });
-      onAdd(newBOM);
+      onAdd(data);
       onClose();
       reset(defaultBOM);
     },
@@ -145,13 +143,13 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
 
   const onSubmit = (data: BOM) => {
     // Validations
-    if (!data.bom_name?.trim()) return;
-    if (!data.output_item_id || data.output_item_id === 0) return;
-    if (!data.components || data.components.length === 0) return;
+    if (!data.bom_name?.trim()) {return;}
+    if (!data.output_item_id || data.output_item_id === 0) {return;}
+    if (!data.components || data.components.length === 0) {return;}
     const invalidComponents = data.components.filter(comp => 
       !comp.component_item_id || comp.quantity_required <= 0
     );
-    if (invalidComponents.length > 0) return;
+    if (invalidComponents.length > 0) {return;}
 
     mutation.mutate(data);
   };

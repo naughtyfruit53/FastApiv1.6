@@ -247,7 +247,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       console.log('[useVoucherPage] Voucher created successfully:', newVoucher);
       // Optimistically update the voucher list by prepending the new voucher
       queryClient.setQueryData([config.voucherType, currentPage, pageSize], (oldData: any) => {
-        if (!oldData) return [newVoucher];
+        if (!oldData) {return [newVoucher];}
         return [newVoucher, ...oldData];
       });
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });

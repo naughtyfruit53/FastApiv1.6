@@ -44,7 +44,7 @@ const LowStockReport: React.FC = () => {
     enabled: isOrgContextReady,
   });
 
-  if (isLoading) return <Typography>Loading low stock report...</Typography>;
+  if (isLoading) {return <Typography>Loading low stock report...</Typography>;}
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, productId: number) => {
     setMenuAnchorEl(event.currentTarget);
