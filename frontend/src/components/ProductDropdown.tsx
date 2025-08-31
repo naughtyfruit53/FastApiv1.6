@@ -1,4 +1,3 @@
-// ProductDropdown component using name field as specified
 import React, { useState, useEffect } from 'react';
 import {
   FormControl,
@@ -152,7 +151,7 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
         loading={loading}
         disabled={disabled}
         noOptionsText="No products found"
-        isOptionEqualToValue={(option, value) => option.id === value.id}
+        isOptionEqualToValue={(option, selectedValue) => option.id === selectedValue.id}
       />
     );
   }

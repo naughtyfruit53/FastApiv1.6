@@ -1,6 +1,3 @@
-// src/components/DispatchManagement/InstallationJobDialog.tsx
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -24,7 +21,6 @@ import {
   Alert,
   Tabs,
   Tab,
-  Divider,
   FormControlLabel,
   Checkbox,
   Rating
@@ -44,10 +40,8 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { useAuth } from '../../context/AuthContext';
 import { 
   dispatchService,
-  InstallationJobInDB,
   InstallationJobWithDetails,
   InstallationTaskInDB,
-  CompletionRecordInDB,
   INSTALLATION_TASK_STATUSES,
   INSTALLATION_TASK_PRIORITIES,
   COMPLETION_STATUSES
@@ -118,7 +112,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
     sequence_order: 1,
     status: INSTALLATION_TASK_STATUSES.PENDING
   });
-  const [editingTask, setEditingTask] = useState<InstallationTaskInDB | null>(null);
   
   // Completion form state
   const [completionForm, setCompletionForm] = useState({
@@ -314,7 +307,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
               <TabPanel value={currentTab} index={0}>
                 {/* Overview Tab */}
                 <Grid container spacing={3}>
-                  {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
                     <Typography variant="h6" gutterBottom>Job Information</Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
@@ -343,7 +335,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                     </Box>
                   </Grid>
                   
-                  {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
                     <Typography variant="h6" gutterBottom>Progress Summary</Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
@@ -391,7 +382,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       <CardContent>
                         <Typography variant="subtitle2" gutterBottom>Create New Task</Typography>
                         <Grid container spacing={2}>
-                          {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
@@ -401,7 +391,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               size="small"
                             />
                           </Grid>
-                          {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                           <Grid item xs={12} md={3}>
                             <FormControl fullWidth size="small">
                               <InputLabel>Priority</InputLabel>
@@ -415,7 +404,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               </Select>
                             </FormControl>
                           </Grid>
-                          {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                           <Grid item xs={12} md={3}>
                             <TextField
                               fullWidth
@@ -426,7 +414,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               size="small"
                             />
                           </Grid>
-                          {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                           <Grid item xs={12}>
                             <TextField
                               fullWidth
@@ -438,7 +425,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               size="small"
                             />
                           </Grid>
-                          {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                           <Grid item xs={12}>
                             <Button 
                               variant="contained" 
@@ -456,7 +442,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
 
                   {/* Task List */}
                   <Box display="flex" flexDirection="column" gap={2}>
-                    {job.tasks?.map((task, index) => (
+                    {job.tasks?.map((task) => (
                       <Card key={task.id}>
                         <CardContent>
                           <Box display="flex" justifyContent="space-between" alignItems="start">
@@ -517,7 +503,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                   <Typography variant="h6" gutterBottom>Complete Installation Job</Typography>
                   
                   <Grid container spacing={3}>
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12}>
                       <TextField
                         fullWidth
@@ -530,7 +515,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
@@ -542,7 +526,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
@@ -554,7 +537,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <DateTimePicker
                         label="Actual Start Time"
@@ -564,7 +546,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <DateTimePicker
                         label="Actual End Time"
@@ -574,7 +555,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12}>
                       <Box display="flex" flexDirection="column" gap={2}>
                         <FormControlLabel
@@ -609,7 +589,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       </Box>
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
@@ -621,7 +600,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       />
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <Box>
                         <Typography variant="body2" gutterBottom>Customer Rating</Typography>
@@ -641,7 +619,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                   <Typography variant="h6" gutterBottom>Completion Details</Typography>
                   
                   <Grid container spacing={3}>
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <Typography variant="subtitle2" gutterBottom>Work Performed</Typography>
                       <Typography variant="body2" paragraph>
@@ -658,7 +635,6 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       )}
                     </Grid>
                     
-                    {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                     <Grid item xs={12} md={6}>
                       <Typography variant="subtitle2" gutterBottom>Quality & Customer</Typography>
                       <Box display="flex" flexDirection="column" gap={1}>

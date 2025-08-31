@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -40,7 +38,6 @@ import {
   People as PeopleIcon,
   Security as SecurityIcon,
   Settings as SettingsIcon,
-  Visibility as ViewIcon,
   Assignment as AssignmentIcon,
   AdminPanelSettings as AdminIcon
 } from '@mui/icons-material';

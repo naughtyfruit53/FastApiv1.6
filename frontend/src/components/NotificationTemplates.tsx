@@ -1,6 +1,3 @@
-// src/components/NotificationTemplates.tsx
-// Component for managing notification templates
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -43,8 +40,7 @@ import {
   Notifications,
   Email,
   Sms,
-  NotificationImportant,
-  Assignment
+  NotificationImportant
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
@@ -60,8 +56,7 @@ import {
   NOTIFICATION_CHANNELS,
   TEMPLATE_TYPES,
   getChannelDisplayName,
-  getTemplateTypeDisplayName,
-  notificationQueryKeys
+  getTemplateTypeDisplayName
 } from '../services/notificationService';
 
 interface TabPanelProps {
@@ -91,7 +86,6 @@ const NotificationTemplates: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<NotificationTemplate | null>(null);
-  const [testingTemplate, setTestingTemplate] = useState<NotificationTemplate | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -122,7 +116,7 @@ const NotificationTemplates: React.FC = () => {
   // Create template mutation
   const createMutation = useMutation({
     mutationFn: createNotificationTemplate,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
       setIsCreateModalOpen(false);
       resetForm();
@@ -137,7 +131,7 @@ const NotificationTemplates: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: NotificationTemplateUpdate }) =>
       updateNotificationTemplate(id, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
       setEditingTemplate(null);
       resetForm();
@@ -151,7 +145,7 @@ const NotificationTemplates: React.FC = () => {
   // Delete template mutation
   const deleteMutation = useMutation({
     mutationFn: deleteNotificationTemplate,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
       setIsDeleteModalOpen(false);
       setTemplateToDelete(null);

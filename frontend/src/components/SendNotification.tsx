@@ -1,11 +1,6 @@
-// src/components/SendNotification.tsx
-// Component for sending notifications to customers and users
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Grid,
   Button,
@@ -19,11 +14,9 @@ import {
   Alert,
   CircularProgress,
   Paper,
-  List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -46,7 +39,6 @@ import {
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
-  getNotificationTemplates,
   sendNotification,
   sendBulkNotification,
   testNotificationTemplate,
@@ -57,6 +49,7 @@ import {
   RECIPIENT_TYPES,
   BULK_RECIPIENT_TYPES,
   getChannelDisplayName,
+  getChannelIcon,
   getTemplateTypeDisplayName,
   notificationQueryKeys
 } from '../services/notificationService';
@@ -271,23 +264,15 @@ const SendNotification: React.FC = () => {
   const customers = entities.filter(e => e.type === 'Customer');
   const users = entities.filter(e => e.type === 'User');
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case 'email': return <Email />;
-      case 'sms': return <Sms />;
-      case 'push': return <NotificationImportant />;
-      case 'in_app': return <Notifications />;
-      default: return <Notifications />;
-    }
-  };
-
   return (
     <Box>
       <Card>
         <CardContent>
-          <Typography variant="h5" component="h2" mb={3}>
-            Send Notifications
-          </Typography>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h5" component="h2">
+              Send Notifications
+            </Typography>
+          </Box>
 
           <Tabs 
             value={selectedTab} 

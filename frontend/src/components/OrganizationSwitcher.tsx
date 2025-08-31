@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Select,
@@ -27,7 +25,7 @@ const OrganizationSwitcher: React.FC = () => {
   const [currentOrganization, setCurrentOrganization] = useState<number | ''>('');
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUserOrganizations();
@@ -45,7 +43,7 @@ const OrganizationSwitcher: React.FC = () => {
         setCurrentOrganization(current.id);
       }
     } catch (error: any) {
-      setError(error.message);
+      setErr(error.message);
     } finally {
       setLoading(false);
     }
@@ -60,7 +58,7 @@ const OrganizationSwitcher: React.FC = () => {
 
     try {
       setSwitching(true);
-      setError(null);
+      setErr(null);
       
       await organizationService.switchOrganization(organizationId);
       
@@ -73,11 +71,11 @@ const OrganizationSwitcher: React.FC = () => {
         }))
       );
       
-      // Refresh the page to update all components with new organization context
+      // Call the page to update all components with new organization context
       window.location.reload();
       
     } catch (error: any) {
-      setError(error.message);
+      setErr(error.message);
     } finally {
       setSwitching(false);
     }
@@ -116,9 +114,9 @@ const OrganizationSwitcher: React.FC = () => {
 
   return (
     <Box sx={{ minWidth: 200 }}>
-      {error && (
+      {err && (
         <Alert severity="error" sx={{ mb: 1, fontSize: '0.8rem' }}>
-          {error}
+          {err}
         </Alert>
       )}
       

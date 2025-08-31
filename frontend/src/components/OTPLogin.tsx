@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -40,7 +38,7 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
   
   const emailForm = useForm<EmailFormData>();
   const otpForm = useForm<OTPFormData>();
-  const _router = useRouter(); // Prefixed unused router
+  const router = useRouter(); // Removed underscore since it's used
 
   const steps = ['Enter Email', 'Verify OTP'];
 
@@ -66,16 +64,19 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
     setError('');
     
     try {
-      const _response = await authService.verifyOTP(userEmail, data.otp);
+      const response = await authService.verifyOTP(userEmail, data.otp);
       setSuccess('Login successful!');
       
       // Login successful!
-      localStorage.setItem('token', _response.access_token);
-      localStorage.setItem('user_role', _response.user_role);
+      localStorage.setItem('token', response.access_token);
+      localStorage.setItem('user_role', response.user_role);
       // Organization context is managed by backend session only
       
       // Call parent callback with token and response
-      onLogin(_response.access_token, _response);
+      onLogin(response.access_token, response);
+      
+      // Redirect to dashboard
+      router.push('/dashboard');
     } catch (error: any) {
       setError(error.response?.data?.detail || 'Invalid OTP. Please try again.');
     } finally {

@@ -10,9 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
   Typography,
-  Paper,
   Stepper,
   Step,
   StepLabel,
@@ -56,7 +54,6 @@ import {
   CloudUpload,
   Settings,
   PlayArrow,
-  Stop,
   Undo,
   Download,
   Info
@@ -107,7 +104,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
   const [currentJob, setCurrentJob] = useState<MigrationJob | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   
   // Form data for creating new migration job
   const [newJobData, setNewJobData] = useState({
@@ -146,7 +143,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       setCurrentJob(jobResponse.data);
     } catch (error) {
       console.error('Failed to load wizard state:', error);
-      setError('Failed to load migration wizard state');
+      setErr('Failed to load migration wizard state');
     } finally {
       setLoading(false);
     }
@@ -154,7 +151,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
 
   const createMigrationJob = async () => {
     if (!newJobData.job_name || newJobData.data_types.length === 0) {
-      setError('Please provide job name and select at least one data type');
+      setErr('Please provide job name and select at least one data type');
       return;
     }
 
@@ -169,7 +166,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       setWizardState(wizardResponse.data);
     } catch (error) {
       console.error('Failed to create migration job:', error);
-      setError('Failed to create migration job');
+      setErr('Failed to create migration job');
     } finally {
       setLoading(false);
     }
@@ -177,7 +174,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
 
   const uploadFile = async () => {
     if (!selectedFile || !currentJob) {
-      setError('Please select a file to upload');
+      setErr('Please select a file to upload');
       return;
     }
 
@@ -204,7 +201,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       await loadWizardState();
     } catch (error) {
       console.error('Failed to upload file:', error);
-      setError('Failed to upload file');
+      setErr('Failed to upload file');
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -220,7 +217,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       await loadWizardState();
     } catch (error) {
       console.error('Failed to execute migration:', error);
-      setError('Failed to execute migration');
+      setErr('Failed to execute migration');
     } finally {
       setLoading(false);
     }
@@ -235,7 +232,7 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       await loadWizardState();
     } catch (error) {
       console.error('Failed to rollback migration:', error);
-      setError('Failed to rollback migration');
+      setErr('Failed to rollback migration');
     } finally {
       setLoading(false);
     }
@@ -497,9 +494,9 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
           </Box>
         )}
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
+        {err && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErr(null)}>
+            {err}
           </Alert>
         )}
 
@@ -522,8 +519,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="subtitle2">Validation Issues:</Typography>
                 <ul>
-                  {wizardState.validation_errors.map((error, index) => (
-                    <li key={index}>{error}</li>
+                  {wizardState.validation_errors.map((validationError, index) => (
+                    <li key={index}>{validationError}</li>
                   ))}
                 </ul>
               </Alert>

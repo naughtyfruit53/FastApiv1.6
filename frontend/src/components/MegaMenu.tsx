@@ -9,14 +9,12 @@ import {
   Menu,
   MenuItem,
   Box,
-  Paper,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
   Divider,
   IconButton,
-  Avatar,
   ListItemButton,
   Grid,
   Tooltip
@@ -61,7 +59,6 @@ import {
   CorporateFare,
   ChevronRight,
   LockOutlined,
-  // New icons for CRM, Marketing, and Service Desk
   Person,
   ContactPhone,
   PersonAdd,
@@ -75,25 +72,20 @@ import {
   SmartToy,
   Poll,
   SupportAgent as ServiceDeskIcon,
-  // New icons for Task Management, Calendar, and Mail
   Task,
   CalendarToday,
   EventNote,
   Alarm,
   AccessTime,
   CheckBox,
-  PlayArrow,
   Inbox,
   Send,
-  Drafts,
-  Archive,
-  Label,
-  AttachFile
+  Drafts
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
 import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers, canShowUserManagementInMegaMenu } from '../types/user.types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { companyService } from '../services/authService';
 import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
@@ -112,7 +104,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const [activeSubCategory, setActiveSubCategory] = useState<any>(null);
   const [createLicenseModalOpen, setCreateLicenseModalOpen] = useState(false);
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   // Common button style for enhanced UI/UX
   const modernButtonStyle = {
@@ -207,27 +198,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     setActiveMenu(menuName);
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setActiveMenu(null);
-  };
-
   const handleSubClick = (event: React.MouseEvent<HTMLElement>, category: any) => {
     setSubAnchorEl(event.currentTarget);
     setActiveSubCategory(category);
   };
 
-  const handleSubClose = () => {
-    setSubAnchorEl(null);
-    setActiveSubCategory(null);
-  };
-
   const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setUserMenuAnchor(event.currentTarget);
-  };
-
-  const handleUserMenuClose = () => {
-    setUserMenuAnchor(null);
   };
 
   const navigateTo = (path: string) => {
@@ -236,16 +213,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     handleSubClose();
   };
 
-  const _handleCreateOrgLicense = () => {
-    // For now, we'll use a state to control the modal
-    // In a full implementation, this would be managed by parent component
-    setCreateLicenseModalOpen(true);
-    handleMenuClose();
-  };
-
-  const handleDemoMode = () => {
-    // Navigate to demo page
-    router.push('/demo');
+  // Enhanced logo navigation function
+  const navigateToHome = () => {
+    router.push('/dashboard');
     handleMenuClose();
   };
 
@@ -286,12 +256,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
   };
 
-  // Enhanced logo navigation function
-  const navigateToHome = () => {
-    router.push('/dashboard');
-    handleMenuClose();
-  };
-
   // Helper to check if a module is enabled for the organization
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) {return true;} // Super admins see all
@@ -303,10 +267,36 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     return enabled;
   };
 
-  // Function to handle contact support (placeholder - open email or ticket)
+  const handleDemoMode = () => {
+    // Navigate to demo page
+    router.push('/demo');
+    handleMenuClose();
+  };
+
   const handleContactSupport = () => {
     // In production, this could open a support ticket form or email client
     window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
+  };
+
+  const handleSubClose = () => {
+    setSubAnchorEl(null);
+    setActiveSubCategory(null);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setActiveMenu(null);
+  };
+
+  const _handleCreateOrgLicense = () => {
+    // For now, we'll use a state to control the modal
+    // In a full implementation, this would be managed by parent component
+    setCreateLicenseModalOpen(true);
+    handleMenuClose();
   };
 
   const menuItems = {
@@ -623,7 +613,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     // Enhanced Service Desk Module
     serviceDesk: {
       title: 'Service Desk',
-      icon: <ServiceDeskIcon />,
+      icon: <SupportAgent />,
       sections: [
         {
           title: 'Helpdesk & Ticketing',
@@ -878,11 +868,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           {filteredSections.map((section, index) => (
             <Grid
               key={index}
-              size={{
-                xs: 12,
-                sm: 6,
-                md: 4
-              }}>
+              item
+              xs={12}
+              sm={6}
+              md={4}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
                 {section.title}
               </Typography>
@@ -1144,7 +1133,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 {/* Service Desk Menu */}
                 <Button
                   color="inherit"
-                  startIcon={<ServiceDeskIcon />}
+                  startIcon={<SupportAgent />}
                   endIcon={<ExpandMore />}
                   onClick={(e) => handleMenuClick(e, 'serviceDesk')}
                   sx={modernButtonStyle}

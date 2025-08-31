@@ -10,9 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
   Typography,
-  Paper,
   Grid,
   Card,
   CardContent,
@@ -56,7 +54,6 @@ import {
   Cloud,
   Info,
   PlayArrow,
-  Stop,
   History
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
@@ -99,7 +96,7 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<IntegrationDashboardData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
@@ -116,7 +113,7 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       setDashboardData(response.data);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
-      setError('Failed to load integration dashboard data');
+      setErr('Failed to load integration dashboard data');
     } finally {
       setLoading(false);
     }
@@ -129,7 +126,7 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       await loadDashboardData();
     } catch (error) {
       console.error(`Failed to sync ${integrationName}:`, error);
-      setError(`Failed to sync ${integrationName}`);
+      setErr(`Failed to sync ${integrationName}`);
     } finally {
       setLoading(false);
     }
@@ -142,7 +139,7 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       await loadDashboardData();
     } catch (error) {
       console.error(`Failed to test ${integrationName}:`, error);
-      setError(`Failed to test connection for ${integrationName}`);
+      setErr(`Failed to test connection for ${integrationName}`);
     } finally {
       setLoading(false);
     }
@@ -381,9 +378,9 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
           </Box>
         )}
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
+        {err && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErr(null)}>
+            {err}
           </Alert>
         )}
 
