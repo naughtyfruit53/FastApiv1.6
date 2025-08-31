@@ -286,7 +286,7 @@ class PasswordChangeResponse(BaseModel):
 
 # Admin password reset schemas
 class AdminPasswordResetRequest(BaseModel):
-    target_email: EmailStr
+    user_email: EmailStr
 
 
 class AdminPasswordResetResponse(BaseModel):

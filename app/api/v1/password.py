@@ -17,10 +17,8 @@ from app.core.audit import AuditLogger, get_client_ip, get_user_agent
 from app.models import User
 from app.schemas.user import (
     PasswordChangeRequest, ForgotPasswordRequest, PasswordResetRequest, 
-    PasswordChangeResponse, OTPResponse
+    PasswordChangeResponse, OTPResponse, AdminPasswordResetResponse, AdminPasswordResetRequest
 )
-from app.schemas.base import PasswordResetResponse
-from app.schemas.reset import AdminPasswordResetRequest
 from app.services.user_service import UserService
 from app.services.otp_service import OTPService
 from app.services.email_service import email_service
@@ -322,7 +320,7 @@ async def reset_password(
         )
 
 
-@router.post("/admin-reset", response_model=PasswordResetResponse)
+@router.post("/admin-reset", response_model=AdminPasswordResetResponse)
 async def admin_reset_password(
     reset_data: AdminPasswordResetRequest = Body(...),
     request: Request = None,
@@ -343,7 +341,7 @@ async def admin_reset_password(
         # Send email
         success, error = email_service.send_password_reset_email(
             user_email=reset_data.user_email,
-            user_name=user.full_name,
+            user_name=user.full_name or user.username,
             new_password=new_password,
             reset_by=current_user.email
         )
@@ -357,9 +355,9 @@ async def admin_reset_password(
             details=f"Reset password for {user.email}"
         )
         
-        return PasswordResetResponse(
+        return AdminPasswordResetResponse(
             message="Password reset successfully",
-            user_email=user.email,
+            target_email=user.email,
             new_password=new_password,
             email_sent=success,
             email_error=error,
