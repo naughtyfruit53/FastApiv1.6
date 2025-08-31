@@ -7,9 +7,9 @@ WhatsApp OTP service using Brevo API with configuration-based provider support
 import logging
 from typing import Optional, Dict, Any, Tuple
 from app.core.config import settings
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
-from sib_api_v3_sdk.models.send_whatsapp_message import SendWhatsappMessage
+import brevo_python as sib_api_v3_sdk
+from brevo_python.rest import ApiException
+from brevo_python.models.send_whatsapp_message import SendWhatsappMessage
 
 logger = logging.getLogger(__name__)
 
