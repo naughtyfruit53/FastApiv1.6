@@ -15,7 +15,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.get("/", response_model=List[StickyNoteSchema])
+@router.get("", response_model=List[StickyNoteSchema])
 async def get_sticky_notes(
     skip: int = 0,
     limit: int = 100,
@@ -35,7 +35,7 @@ async def get_sticky_notes(
         logger.error(f"Error fetching sticky notes for user {current_user.id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error fetching sticky notes")
 
-@router.post("/", response_model=StickyNoteSchema)
+@router.post("", response_model=StickyNoteSchema)
 async def create_sticky_note(
     note: StickyNoteCreate,
     db: Session = Depends(get_db),

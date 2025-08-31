@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    reactCompiler: true,
+    reactCompiler: false,
   },
   env: {
     NEXT_PUBLIC_API_URL:

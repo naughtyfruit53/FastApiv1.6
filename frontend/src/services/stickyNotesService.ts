@@ -32,7 +32,7 @@ export interface UserSettingsUpdate {
 }
 
 class StickyNotesService {
-  private baseUrl = '/sticky-notes';
+  private baseUrl = '/sticky_notes';
 
   async getNotes(): Promise<StickyNote[]> {
     try {

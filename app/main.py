@@ -158,7 +158,7 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json"
 )
 
-app.router.redirect_slashes = True
+app.router.redirect_slashes = False
 
 # Temporarily disable TenantMiddleware to test if it's causing the 404 (re-enable after testing)
 # app.add_middleware(TenantMiddleware)
@@ -249,14 +249,6 @@ app.include_router(
     tags=["v1-user"]
 )
 logger.info("User router included successfully at prefix: /api/v1/user")
-
-# Sticky Notes API
-app.include_router(
-    v1_sticky_notes.router,
-    prefix="/api/v1/sticky-notes",
-    tags=["sticky-notes"]
-)
-logger.info("Sticky notes router included successfully at prefix: /api/v1/sticky-notes")
 
 # PDF Extraction API
 app.include_router(
@@ -375,12 +367,6 @@ logger.info("Asset Management router included successfully at prefix: /api/v1/as
 app.include_router(v1_transport.router, prefix="/api/v1/transport", tags=["transport-freight"])
 logger.info("Transport and Freight router included successfully at prefix: /api/v1/transport")
 
-# Include dynamic path routers LAST
-app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}
-logger.info("BOM router included successfully at prefix: /api/v1")
-app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])  # Potential dynamic paths
-logger.info("Manufacturing router included successfully at prefix: /api/v1")
-
 # Include new business module routers
 app.include_router(v1_crm.router, prefix="/api/v1", tags=["crm"])
 logger.info("CRM router included successfully at prefix: /api/v1/crm")
@@ -407,6 +393,20 @@ logger.info("Migration and Data Import router included successfully at prefix: /
 
 app.include_router(v1_integration_settings.router, prefix="/api/v1/integrations", tags=["integration-settings"])
 logger.info("Integration Settings router included successfully at prefix: /api/v1/integrations")
+
+# Sticky Notes API
+app.include_router(
+    v1_sticky_notes.router,
+    prefix="/api/v1/sticky_notes",
+    tags=["sticky-notes"]
+)
+logger.info("Sticky notes router included successfully at prefix: /api/v1/sticky_notes")
+
+# Include dynamic path routers LAST
+app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}
+logger.info("BOM router included successfully at prefix: /api/v1")
+app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])  # Potential dynamic paths
+logger.info("Manufacturing router included successfully at prefix: /api/v1")
 
 @app.get("/routes")
 def get_routes():

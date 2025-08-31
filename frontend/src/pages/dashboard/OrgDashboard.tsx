@@ -17,14 +17,13 @@ import {
   Inventory,
   AttachMoney,
   TrendingUp,
-  SettingsApplications
 } from '@mui/icons-material';
 import adminService from '../../services/adminService';
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
-import { StickyNotesPanel } from '../../components/StickyNotes';
-import useStickyNotes from '../../hooks/useStickyNotes';
+import StickyNotesPanel from '../../components/StickyNotes/StickyNotesPanel';
+import { useStickyNotes } from '../../hooks/useStickyNotes';
 
 interface OrgStatistics {
   total_products: number;
@@ -63,7 +62,6 @@ const OrgDashboard: React.FC = () => {
     return (
       <DashboardLayout 
         title="Organization Dashboard"
-        subtitle="Monitor your organization's key performance metrics"
       >
         <ModernLoading 
           type="skeleton" 
@@ -79,7 +77,6 @@ const OrgDashboard: React.FC = () => {
     return (
       <DashboardLayout 
         title="Organization Dashboard"
-        subtitle="Monitor your organization's key performance metrics"
       >
         <Alert 
           severity="error"
@@ -100,7 +97,6 @@ const OrgDashboard: React.FC = () => {
     return (
       <DashboardLayout 
         title="Organization Dashboard"
-        subtitle="Monitor your organization's key performance metrics"
       >
         <Alert 
           severity="info"
@@ -195,13 +191,10 @@ const OrgDashboard: React.FC = () => {
   return (
     <DashboardLayout 
       title="Organization Dashboard"
-      subtitle="Monitor your organization's key performance metrics"
     >
-      {/* Sticky Notes Panel */}
-      <StickyNotesPanel stickyNotesEnabled={userSettings.sticky_notes_enabled} />
+      <StickyNotesPanel />
       
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
-        {/* Statistics Cards */}
         {statsCards.map((stat, index) => (
           <MetricCard
             key={index}
@@ -216,7 +209,6 @@ const OrgDashboard: React.FC = () => {
       </Box>
 
       <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
-        {/* Plan Information */}
         <Paper 
           className="modern-card"
           sx={{ p: 3 }}
@@ -247,7 +239,6 @@ const OrgDashboard: React.FC = () => {
           </Typography>
         </Paper>
 
-        {/* Recent Activity */}
         <Paper 
           className="modern-card"
           sx={{ p: 3 }}
@@ -256,13 +247,11 @@ const OrgDashboard: React.FC = () => {
             Recent Activity
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            {/* Placeholder for recent activity list */}
             No recent activity available
           </Typography>
         </Paper>
       </Box>
 
-      {/* Growth Metrics */}
       <Paper 
         className="modern-card"
         sx={{ p: 4 }}

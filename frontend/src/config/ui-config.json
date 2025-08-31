@@ -35,7 +35,7 @@
       },
       "customers": {
         "name": "Customer business name",
-        "gst_number": "Customer's GSTIN number", 
+        "gst_number": "Customer's GSTIN number",
         "billing_address": "Primary billing address",
         "shipping_address": "Default shipping address if different from billing",
         "credit_limit": "Maximum credit limit for this customer",
@@ -71,7 +71,7 @@
     },
     "products": {
       "file_management": {
-        "title": "Product File Management", 
+        "title": "Product File Management",
         "description": "Store up to 5 files per product including drawings, specifications, datasheets, or certificates.",
         "supported_formats": "All file types supported (PDF, images, documents, CAD files, etc.)",
         "features": [
@@ -108,5 +108,8 @@
       "completed": "PDF data extracted successfully",
       "data_populated": "Form fields have been auto-populated with extracted data"
     }
+  },
+  "features": {
+    "sticky_notes_enabled": false
   }
 }

@@ -1,5 +1,3 @@
-// Enhanced: v1/frontend/src/pages/dashboard/AppSuperAdminDashboard.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -20,14 +18,13 @@ import {
   MonitorHeart,
   Storage,
   Timeline,
-  Lock
 } from '@mui/icons-material';
-import adminService from '../../services/adminService';  // Import the new service
+import adminService from '../../services/adminService';
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
-import { StickyNotesPanel } from '../../components/StickyNotes';
-import useStickyNotes from '../../hooks/useStickyNotes';
+import StickyNotesPanel from '../../components/StickyNotes/StickyNotesPanel';
+import { useStickyNotes } from '../../hooks/useStickyNotes';
 
 interface AppStatistics {
   total_licenses_issued: number;
@@ -42,11 +39,10 @@ interface AppStatistics {
     uptime: string;
   };
   generated_at: string;
-  // Additional parameters (assuming backend provides or calculate)
-  total_storage_used_gb?: number;  // New: Total storage across all orgs
-  average_users_per_org?: number;  // New: Average active users per organization
-  failed_login_attempts?: number;  // New: Platform-wide security metric
-  recent_new_orgs?: number;        // New: Organizations created in last 7 days (example)
+  total_storage_used_gb?: number;
+  average_users_per_org?: number;
+  failed_login_attempts?: number;
+  recent_new_orgs?: number;
 }
 
 const AppSuperAdminDashboard: React.FC = () => {
@@ -62,15 +58,14 @@ const AppSuperAdminDashboard: React.FC = () => {
   const fetchAppStatistics = async () => {
     try {
       const data = await adminService.getAppStatistics();
-      // Calculate additional parameters if not provided by backend
       const totalLicenses = data.total_licenses_issued || 0;
       const totalActiveUsers = data.total_active_users || 0;
       const enhancedData = {
         ...data,
-        total_storage_used_gb: data.total_storage_used_gb || totalLicenses * 0.5,  // Use backend value if available
+        total_storage_used_gb: data.total_storage_used_gb || totalLicenses * 0.5,
         average_users_per_org: data.average_users_per_org || (totalLicenses > 0 ? Math.round(totalActiveUsers / totalLicenses) : 0),
-        failed_login_attempts: data.failed_login_attempts || 0,  // Use actual backend value
-        recent_new_orgs: data.recent_new_orgs || Math.round(data.new_licenses_this_month / 4)  // Use backend value if available
+        failed_login_attempts: data.failed_login_attempts || 0,
+        recent_new_orgs: data.recent_new_orgs || Math.round(data.new_licenses_this_month / 4)
       };
       setStatistics(enhancedData);
     } catch (err) {
@@ -212,7 +207,6 @@ const AppSuperAdminDashboard: React.FC = () => {
     }
   ];
 
-  // Guard for division by zero in activation rate
   const activationRate = statistics.total_licenses_issued > 0 
     ? Math.round((statistics.active_organizations / statistics.total_licenses_issued) * 100)
     : 0;
@@ -222,11 +216,9 @@ const AppSuperAdminDashboard: React.FC = () => {
       title="Super Admin Dashboard"
       subtitle="Monitor platform-wide metrics and system health"
     >
-      {/* Sticky Notes Panel */}
-      <StickyNotesPanel stickyNotesEnabled={userSettings.sticky_notes_enabled} />
+      <StickyNotesPanel />
       
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
-        {/* Statistics Cards */}
         {statsCards.map((stat, index) => (
           <MetricCard
             key={index}
@@ -241,7 +233,6 @@ const AppSuperAdminDashboard: React.FC = () => {
       </Box>
 
       <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
-        {/* Plan Breakdown */}
         <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             License Plan Distribution
@@ -269,7 +260,6 @@ const AppSuperAdminDashboard: React.FC = () => {
           </Box>
         </Paper>
 
-        {/* System Status */}
         <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             System Status
@@ -302,7 +292,6 @@ const AppSuperAdminDashboard: React.FC = () => {
         </Paper>
       </Box>
 
-      {/* Platform Growth Overview */}
       <Paper className="modern-card" sx={{ p: 4 }}>
         <Typography variant="h6" className="modern-card-title" gutterBottom sx={{ mb: 3 }}>
           Platform Growth Overview
