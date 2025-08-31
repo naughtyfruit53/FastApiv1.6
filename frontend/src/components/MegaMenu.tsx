@@ -80,7 +80,8 @@ import {
   CheckBox,
   Inbox,
   Send,
-  Drafts
+  Drafts,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
@@ -103,6 +104,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const [subAnchorEl, setSubAnchorEl] = useState<null | HTMLElement>(null);
   const [activeSubCategory, setActiveSubCategory] = useState<any>(null);
   const [createLicenseModalOpen, setCreateLicenseModalOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const router = useRouter();
 
   // Common button style for enhanced UI/UX
@@ -196,6 +198,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
     setAnchorEl(event.currentTarget);
     setActiveMenu(menuName);
+    setSelectedSection(null);
   };
 
   const handleSubClick = (event: React.MouseEvent<HTMLElement>, category: any) => {
@@ -290,6 +293,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const handleMenuClose = () => {
     setAnchorEl(null);
     setActiveMenu(null);
+    setSelectedSection(null);
   };
 
   const _handleCreateOrgLicense = () => {
@@ -411,27 +415,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Finance & Accounting menu
+    // Finance menu (separated from Accounting)
     finance: {
-      title: 'Finance & Accounting',
+      title: 'Finance',
       icon: <AccountBalance />,
       sections: [
-        {
-          title: 'Chart of Accounts',
-          items: [
-            { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: <AccountBalance /> },
-            { name: 'Account Groups', path: '/account-groups', icon: <Business /> },
-            { name: 'Opening Balances', path: '/opening-balances', icon: <TrendingUp /> }
-          ]
-        },
-        {
-          title: 'Transactions',
-          items: [
-            { name: 'General Ledger', path: '/general-ledger', icon: <ReceiptLong /> },
-            { name: 'Journal Entries', path: '/journal-entries', icon: <NoteAdd /> },
-            { name: 'Bank Reconciliation', path: '/bank-reconciliation', icon: <AccountBalance /> }
-          ]
-        },
         {
           title: 'Accounts Payable',
           items: [
@@ -446,14 +434,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Customer Invoices', path: '/accounts-receivable', icon: <ReceiptLong /> },
             { name: 'Receipt Vouchers', path: '/receipt-vouchers', icon: <MonetizationOn /> },
             { name: 'Customer Aging', path: '/customer-aging', icon: <Schedule /> }
-          ]
-        },
-        {
-          title: 'Cost Management',
-          items: [
-            { name: 'Cost Centers', path: '/cost-centers', icon: <CorporateFare /> },
-            { name: 'Budget Management', path: '/budgets', icon: <TrendingUp /> },
-            { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
           ]
         },
         {
@@ -472,6 +452,37 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
             { name: 'Expense Analysis', path: '/expense-analysis', icon: <BarChart /> },
             { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> }
+          ]
+        }
+      ]
+    },
+    // Accounting menu (separated from Finance)
+    accounting: {
+      title: 'Accounting',
+      icon: <Assessment />,
+      sections: [
+        {
+          title: 'Chart of Accounts',
+          items: [
+            { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: <AccountBalance /> },
+            { name: 'Account Groups', path: '/account-groups', icon: <Business /> },
+            { name: 'Opening Balances', path: '/opening-balances', icon: <TrendingUp /> }
+          ]
+        },
+        {
+          title: 'Transactions',
+          items: [
+            { name: 'General Ledger', path: '/general-ledger', icon: <ReceiptLong /> },
+            { name: 'Journal Entries', path: '/journal-entries', icon: <NoteAdd /> },
+            { name: 'Bank Reconciliation', path: '/bank-reconciliation', icon: <AccountBalance /> }
+          ]
+        },
+        {
+          title: 'Cost Management',
+          items: [
+            { name: 'Cost Centers', path: '/cost-centers', icon: <CorporateFare /> },
+            { name: 'Budget Management', path: '/budgets', icon: <TrendingUp /> },
+            { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
           ]
         }
       ]
@@ -526,8 +537,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    crm: {
-      title: 'CRM',
+    // Sales menu (renamed from CRM, service sections moved out)
+    sales: {
+      title: 'Sales',
       icon: <Person />,
       sections: [
         {
@@ -555,23 +567,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Sales Orders', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Receipt /> },
             { name: 'Commission Tracking', path: '/sales/commissions', icon: <MonetizationOn /> },
             { name: 'Sales Reports', path: '/sales/reports', icon: <Assessment /> }
-          ]
-        },
-        {
-          title: 'Service CRM',
-          items: [
-            { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-            { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
-            { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-            { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
-          ]
-        },
-        {
-          title: 'Management',
-          items: [
-            { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
-            { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
-            { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
           ]
         }
       ]
@@ -610,11 +605,28 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Enhanced Service Desk Module
-    serviceDesk: {
-      title: 'Service Desk',
+    // Service menu (renamed from Service Desk, service sections from CRM moved here)
+    service: {
+      title: 'Service',
       icon: <SupportAgent />,
       sections: [
+        {
+          title: 'Service CRM',
+          items: [
+            { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
+          ]
+        },
+        {
+          title: 'Management',
+          items: [
+            { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
+            { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
+          ]
+        },
         {
           title: 'Helpdesk & Ticketing',
           items: [
@@ -686,9 +698,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Combined Workspace menu
-    workspace: {
-      title: 'Workspace',
+    // Workspace divided into "Calendar & Tasks" and "Email"
+    calendarTasks: {
+      title: 'Calendar & Tasks',
       icon: <Task />,
       sections: [
         {
@@ -735,7 +747,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Event Reminders', path: '/calendar/reminders', icon: <Alarm /> },
             { name: 'Recurring Events', path: '/calendar/recurring', icon: <Timeline /> }
           ]
-        },
+        }
+      ]
+    },
+    email: {
+      title: 'Email',
+      icon: <Inbox />,
+      sections: [
         {
           title: 'Email Management',
           items: [
@@ -793,14 +811,50 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     }
   };
 
+  // Create main menu sections dynamically
+  const mainMenuSections = isSuperAdmin
+    ? [
+        {
+          title: 'Administration',
+          subSections: [
+            {
+              title: 'Administration',
+              items: [
+                { name: 'Dashboard', path: '/dashboard', icon: <Dashboard /> },
+                { name: 'Demo', path: '/demo', icon: <DeveloperMode /> }
+              ]
+            }
+          ]
+        }
+      ]
+    : [
+        { title: 'Master Data', subSections: menuItems.masterData.sections },
+        { title: 'ERP', subSections: menuItems.erp.sections },
+        { title: 'Finance', subSections: menuItems.finance.sections },
+        { title: 'Accounting', subSections: menuItems.accounting.sections },
+        { title: 'Reports & Analytics', subSections: menuItems.reportsAnalytics.sections },
+        { title: 'Sales', subSections: menuItems.sales.sections },
+        { title: 'Marketing', subSections: menuItems.marketing.sections },
+        { title: 'Service', subSections: menuItems.service.sections },
+        { title: 'HR Management', subSections: menuItems.hrManagement.sections },
+        { title: 'Calendar & Tasks', subSections: menuItems.calendarTasks.sections },
+        { title: 'Email', subSections: menuItems.email.sections }
+      ];
+
+  menuItems.menu = {
+    title: 'Menu',
+    icon: <MenuIcon />,
+    sections: mainMenuSections
+  };
+
   const renderMegaMenu = () => {
     if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {return null;}
 
     const menu = menuItems[activeMenu as keyof typeof menuItems];
 
     // Filter menu items based on user permissions
-    const filterMenuItems = (section: any) => {
-      return section.items.filter((item: any) => {
+    const filterMenuItems = (subSection: any) => {
+      return subSection.items.filter((item: any) => {
         // Check role-based permissions
         if (item.role && !canManageUsers(user)) {
           return false;
@@ -822,13 +876,19 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
     const filteredSections = menu.sections.map(section => ({
       ...section,
-      items: filterMenuItems(section)
-    })).filter(section => section.items.length > 0);
+      subSections: (section.subSections || []).map((subSection: any) => ({
+        ...subSection,
+        items: filterMenuItems(subSection)
+      })).filter((subSection: any) => subSection.items.length > 0)
+    })).filter(section => section.subSections.length > 0);
 
     if (filteredSections.length === 0) {
       console.log(`No items in submenu for ${activeMenu} - permissions may be missing`);
       return null;
     }
+
+    const isMenuExpanded = !!selectedSection;
+    const menuWidth = isMenuExpanded ? 'calc(100vw - 40px)' : '250px'; // Small width for left panel only, expand when selected
 
     return (
       <Menu
@@ -837,13 +897,16 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         onClose={handleMenuClose}
         PaperProps={{
           sx: {
-            width: 600,
-            maxHeight: 500,
+            width: menuWidth,
+            maxWidth: menuWidth,
+            maxHeight: 'calc(100vh - 100px)',
             mt: 1,
             borderRadius: 2,
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
             border: '1px solid',
             borderColor: 'divider',
+            left: '20px !important',
+            right: 'auto',
             '& .MuiMenuItem-root': {
               borderRadius: 1,
               margin: '2px 8px',
@@ -860,46 +923,73 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             padding: 1
           }
         }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        disableAutoFocusItem
       >
-        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-          {menu.title}
-        </Typography>
-        <Grid container spacing={2}>
-          {filteredSections.map((section, index) => (
-            <Grid
-              key={index}
-              item
-              xs={12}
-              sm={6}
-              md={4}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                {section.title}
-              </Typography>
-              <List dense>
-                {section.items.map((item: any, itemIndex: number) => (
-                  <ListItemButton
-                    key={itemIndex}
-                    onClick={(e) => item.subItems ? handleSubClick(e, item) : navigateTo(item.path)}
-                    sx={{
-                      borderRadius: 1,
-                      mb: 0.5,
-                      '&:hover': {
-                        backgroundColor: 'primary.light',
-                        color: 'primary.contrastText'
-                      }
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText primary={item.name} />
-                    {item.subItems && <ChevronRight />}
-                  </ListItemButton>
+        {activeMenu !== 'menu' && (
+          <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+            {menu.title}
+          </Typography>
+        )}
+        <Grid container sx={{ height: '100%', overflow: 'hidden' }}>
+          <Grid item xs={isMenuExpanded ? 3 : 12} sx={{ overflowY: 'auto', pr: isMenuExpanded ? 2 : 0 }}>
+            <List>
+              {filteredSections.map((section, index) => (
+                <ListItemButton
+                  key={index}
+                  selected={selectedSection === section.title}
+                  onClick={() => setSelectedSection(section.title)}
+                  sx={{
+                    backgroundColor: selectedSection === section.title ? 'primary.light' : 'transparent',
+                    color: selectedSection === section.title ? 'primary.contrastText' : 'text.primary',
+                    '&:hover': {
+                      backgroundColor: 'primary.main',
+                      color: 'primary.contrastText',
+                    }
+                  }}
+                >
+                  <ListItemText primary={section.title} />
+                  <ChevronRight />
+                </ListItemButton>
+              ))}
+            </List>
+          </Grid>
+          {isMenuExpanded && (
+            <Grid item xs={9} sx={{ pl: 2, overflowY: 'auto' }}>
+              <Grid container spacing={2}>
+                {filteredSections.find(s => s.title === selectedSection)?.subSections.map((subSection: any, subIndex: number) => (
+                  <Grid item xs={12} sm={6} md={4} key={subIndex}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
+                      {subSection.title}
+                    </Typography>
+                    <List dense>
+                      {subSection.items.map((item: any, itemIndex: number) => (
+                        <ListItemButton
+                          key={itemIndex}
+                          onClick={(e) => item.subItems ? handleSubClick(e, item) : navigateTo(item.path)}
+                          sx={{
+                            borderRadius: 1,
+                            mb: 0.5,
+                            '&:hover': {
+                              backgroundColor: 'secondary.light',
+                              color: 'secondary.contrastText'
+                            }
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 36 }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          <ListItemText primary={item.name} />
+                          {item.subItems && <ChevronRight />}
+                        </ListItemButton>
+                      ))}
+                    </List>
+                  </Grid>
                 ))}
-              </List>
-              {index < filteredSections.length - 1 && <Divider sx={{ mt: 1 }} />}
+              </Grid>
             </Grid>
-          ))}
+          )}
         </Grid>
       </Menu>
     );
@@ -1016,154 +1106,26 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            {/* Different menu structures based on user type */}
-            {isSuperAdmin ? (
-              <>
-                {/* App Super Admins: Dashboard, Demo, Settings (with Admin submenu) */}
-                <Button
-                  color="inherit"
-                  startIcon={<Dashboard />}
-                  onClick={() => router.push('/dashboard')}
-                  className="modern-menu-button"
-                  sx={modernButtonStyle}
-                >
-                  Dashboard
-                </Button>
-                <Button
-                  color="inherit"
-                  startIcon={<DeveloperMode />}
-                  onClick={handleDemoMode}
-                  className="modern-menu-button"
-                  sx={modernButtonStyle}
-                >
-                  Demo
-                </Button>
-                <Button
-                  color="inherit"
-                  startIcon={<Settings />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'settings')}
-                  className="modern-menu-button"
-                  sx={modernButtonStyle}
-                >
-                  Settings
-                </Button>
-              </>
-            ) : (
-              <>
-                {/* Organization users: Master Data with direct navigation to individual pages */}
-                
-                {/* Master Data - Top level menu with direct navigation (no hub) */}
-                <Button
-                  color="inherit"
-                  startIcon={<People />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'masterData')}
-                  sx={modernButtonStyle}
-                >
-                  Master Data
-                </Button>
-                
-                {/* ERP Menu - Contains inventory and vouchers */}
-                <Button
-                  color="inherit"
-                  startIcon={<Business />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'erp')}
-                  sx={modernButtonStyle}
-                >
-                  ERP
-                </Button>
-
-                {/* Finance & Accounting Menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<AccountBalance />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'finance')}
-                  sx={modernButtonStyle}
-                >
-                  Finance
-                </Button>
-
-                {/* Combined Reports & Analytics menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<Assessment />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'reportsAnalytics')}
-                  sx={modernButtonStyle}
-                >
-                  Reports & Analytics
-                </Button>
-
-                {/* CRM Menu - Contains both Sales CRM and Service CRM as sub-categories */}
-                <Button
-                  color="inherit"
-                  startIcon={<Person />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'crm')}
-                  sx={modernButtonStyle}
-                >
-                  CRM
-                </Button>
-
-                {/* HR Management Menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<Groups />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'hrManagement')}
-                  sx={modernButtonStyle}
-                >
-                  HR Management
-                </Button>
-
-                {/* Marketing Menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<Campaign />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'marketing')}
-                  sx={modernButtonStyle}
-                >
-                  Marketing
-                </Button>
-
-                {/* Service Desk Menu */}
-                <Button
-                  color="inherit"
-                  startIcon={<SupportAgent />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'serviceDesk')}
-                  sx={modernButtonStyle}
-                >
-                  Service Desk
-                </Button>
-
-                {/* Workspace Menu - Combined Tasks, Calendar, Mail */}
-                <Button
-                  color="inherit"
-                  startIcon={<Task />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'workspace')}
-                  sx={modernButtonStyle}
-                >
-                  Workspace
-                </Button>
-
-                {/* Settings with Administration as submenu */}
-                <Button
-                  color="inherit"
-                  startIcon={<Settings />}
-                  endIcon={<ExpandMore />}
-                  onClick={(e) => handleMenuClick(e, 'settings')}
-                  sx={modernButtonStyle}
-                >
-                  Settings
-                </Button>
-              </>
-            )}
+            <Button
+              color="inherit"
+              startIcon={<MenuIcon />}
+              endIcon={<ExpandMore />}
+              onClick={(e) => handleMenuClick(e, 'menu')}
+              className="modern-menu-button"
+              sx={modernButtonStyle}
+            >
+              Menu
+            </Button>
+            <Button
+              color="inherit"
+              startIcon={<Settings />}
+              endIcon={<ExpandMore />}
+              onClick={(e) => handleMenuClick(e, 'settings')}
+              className="modern-menu-button"
+              sx={modernButtonStyle}
+            >
+              Settings
+            </Button>
           </Box>
 
           <IconButton
