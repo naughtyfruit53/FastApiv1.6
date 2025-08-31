@@ -21,8 +21,8 @@ from app.models.vouchers import PurchaseVoucher, SalesVoucher, PurchaseOrder, Sa
 import logging
 
 # Brevo (Sendinblue) import
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
+import brevo_python as sib_api_v3_sdk
+from brevo_python.rest import ApiException
 
 # SMTP imports for fallback
 import smtplib
