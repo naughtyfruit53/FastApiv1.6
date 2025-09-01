@@ -8,10 +8,12 @@ import Grid from '@mui/material/Grid';
 const CompanyDetails: React.FC = () => {
   const [openModal, setOpenModal] = useState(false);
   const queryClient = useQueryClient();
-const { data, isLoading,isError } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['company'],
     queryFn: companyService.getCurrentCompany,
   });
+  
+  const createCompanyMutation = useMutation({
     mutationFn: companyService.createCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });

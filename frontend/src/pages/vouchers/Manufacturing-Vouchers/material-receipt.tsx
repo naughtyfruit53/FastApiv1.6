@@ -93,15 +93,21 @@ const defaultValues: Partial<MaterialReceiptVoucher> = {
   total_amount: 0,
   items: []
 };
+
+const sourceTypeOptions = [
   { value: 'return', label: 'Material Return' },
   { value: 'purchase', label: 'Purchase Receipt' },
   { value: 'transfer', label: 'Transfer Receipt' }
 ];
+
+const inspectionStatusOptions = [
   { value: 'pending', label: 'Pending' },
   { value: 'passed', label: 'Passed' },
   { value: 'failed', label: 'Failed' },
   { value: 'partial', label: 'Partial' }
 ];
+
+const statusOptions = [
   { value: 'accepted', label: 'Accepted' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'hold', label: 'Hold' }

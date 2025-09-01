@@ -91,12 +91,16 @@ const defaultValues: Partial<StockJournal> = {
   total_amount: 0,
   entries: []
 };
+
+const journalTypeOptions = [
   { value: 'transfer', label: 'Stock Transfer' },
   { value: 'assembly', label: 'Assembly' },
   { value: 'disassembly', label: 'Disassembly' },
   { value: 'adjustment', label: 'Stock Adjustment' },
   { value: 'manufacturing', label: 'Manufacturing' }
 ];
+
+const entryTypeOptions = [
   { value: 'consume', label: 'Consume' },
   { value: 'produce', label: 'Produce' },
   { value: 'byproduct', label: 'Byproduct' },

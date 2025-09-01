@@ -107,6 +107,9 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
       setSelectedProduct(null);
     }
   });
+  
+  // Stock import mutation
+  const importStockMutation = useMutation({
     mutationFn: masterDataService.bulkImportStock,
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['stock']});
