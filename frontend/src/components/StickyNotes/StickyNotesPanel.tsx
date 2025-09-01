@@ -15,7 +15,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction
+  ListItemSecondaryAction,
+  Typography // Added import
 } from '@mui/material';
 import { Add, PushPin, PushPinOutlined } from '@mui/icons-material';
 import StickyNote from './StickyNote';

@@ -33,12 +33,12 @@ class StickyNote(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    user: Mapped["app.models.user_models.User"] = relationship(
-        "app.models.user_models.User",
+    user: Mapped["User"] = relationship(
+        "User",
         back_populates="sticky_notes"
     )
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization"
+    organization: Mapped["Organization"] = relationship(
+        "Organization"
     )
 
     def __repr__(self):

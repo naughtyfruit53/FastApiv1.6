@@ -10,7 +10,7 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  Grid as Grid,
+  Grid,
   InputAdornment,
   Divider,
 } from '@mui/material';
@@ -71,7 +71,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
   useEffect(() => {
     if (mode === 'edit' && companyData) {
       Object.keys(companyData).forEach(key => {
-        if (key in companyData) {
+        if (companyData[key] !== undefined) {
           setValue(key as keyof CompanyFormData, companyData[key]);
         }
       });
@@ -208,7 +208,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
           {!success && (
             <form onSubmit={handleSubmit(onSubmit)}>
               <Grid container spacing={2}>
-                <Grid size={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Company Name"
@@ -221,7 +221,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
 
                 {/* Company Logo Upload */}
                 {mode === 'edit' && companyData?.id && (
-                  <Grid size={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Divider sx={{ my: 2 }} />
                     <CompanyLogoUpload
                       companyId={companyData.id}
@@ -232,7 +232,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                   </Grid>
                 )}
 
-                <Grid size={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Address Line 1"
@@ -243,7 +243,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                   />
                 </Grid>
 
-                <Grid size={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Address Line 2"
@@ -339,7 +339,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                 {/* Removed Alert for pincode auto-population as per request */}
 
                 {pincodeError && (
-                  <Grid size={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Alert severity="warning" sx={{ mt: 1 }}>
                       {pincodeError}
                     </Alert>

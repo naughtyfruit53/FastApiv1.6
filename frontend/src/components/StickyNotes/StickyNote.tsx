@@ -153,130 +153,132 @@ const StickyNote: React.FC<StickyNoteProps> = ({
   };
 
   return (
-    <Draggable
-      bounds="body"
-      defaultPosition={position}
-      onStop={handleDragStop}
-      disabled={isEditing || pinned} // Disable drag if editing or pinned
-    >
-      <Card
-        sx={{
-          width: pinned ? '2in' : '2.5in',
-          minHeight: pinned ? '2in' : '2.5in',
-          backgroundColor: colorConfig.color,
-          border: `2px solid ${colorConfig.border}`,
-          borderRadius: 2,
-          boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-          transition: 'opacity var(--transition-normal)',
-          opacity: 0.9,
-          zIndex: 1400,
-          '&:hover': {
-            opacity: 1,
-            boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
-            transform: 'translateY(-2px)'
-          }
-        }}
+    <>
+      <Draggable
+        bounds="body"
+        defaultPosition={position}
+        onStop={handleDragStop}
+        disabled={isEditing || pinned} // Disable drag if editing or pinned
       >
-        <CardContent sx={{ pb: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+        <Card
+          sx={{
+            width: pinned ? '2in' : '2.5in',
+            minHeight: pinned ? '2in' : '2.5in',
+            backgroundColor: colorConfig.color,
+            border: `2px solid ${colorConfig.border}`,
+            borderRadius: 2,
+            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+            transition: 'opacity var(--transition-normal)',
+            opacity: 0.9,
+            zIndex: 1400,
+            '&:hover': {
+              opacity: 1,
+              boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
+              transform: 'translateY(-2px)'
+            }
+          }}
+        >
+          <CardContent sx={{ pb: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+              {isEditing ? (
+                <TextField
+                  fullWidth
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  variant="standard"
+                  placeholder="Note title..."
+                  InputProps={{
+                    disableUnderline: true,
+                    sx: {
+                      fontSize: '1.1rem',
+                      fontWeight: 600,
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.5
+                    }
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.8)' }}>
+                  {title}
+                </Typography>
+              )}
+              {!isEditing && (
+                <Box>
+                  <IconButton
+                    size="small"
+                    onClick={handleTogglePin}
+                    sx={{ color: 'rgba(0,0,0,0.6)', mr: 1 }}
+                  >
+                    {pinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => setAnchorEl(e.currentTarget)}
+                    sx={{ color: 'rgba(0,0,0,0.6)' }}
+                  >
+                    <MoreVert fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
             {isEditing ? (
               <TextField
                 fullWidth
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                variant="standard"
-                placeholder="Note title..."
-                InputProps={{
-                  disableUnderline: true,
-                  sx: {
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
+                multiline
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                variant="outlined"
+                placeholder="Write your note content here..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
                     backgroundColor: 'rgba(255,255,255,0.3)',
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.5
+                    '& fieldset': { border: 'none' }
                   }
                 }}
-                autoFocus
               />
             ) : (
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.8)' }}>
-                {title}
+              <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.7)', whiteSpace: 'pre-wrap' }}>
+                {content}
               </Typography>
             )}
-            {!isEditing && (
+          </CardContent>
+          <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+            <Chip
+              label={formatDate(created_at)}
+              size="small"
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.4)',
+                color: 'rgba(0,0,0,0.6)',
+                fontSize: '0.7rem'
+              }}
+            />
+            {isEditing && (
               <Box>
                 <IconButton
                   size="small"
-                  onClick={handleTogglePin}
+                  onClick={handleCancel}
+                  disabled={loading}
                   sx={{ color: 'rgba(0,0,0,0.6)', mr: 1 }}
                 >
-                  {pinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
+                  <Cancel fontSize="small" />
                 </IconButton>
                 <IconButton
                   size="small"
-                  onClick={(e) => setAnchorEl(e.currentTarget)}
-                  sx={{ color: 'rgba(0,0,0,0.6)' }}
+                  onClick={handleSave}
+                  disabled={loading || !editTitle.trim() || !editContent.trim()}
+                  sx={{ color: 'green' }}
                 >
-                  <MoreVert fontSize="small" />
+                  <Save fontSize="small" />
                 </IconButton>
               </Box>
             )}
-          </Box>
-          {isEditing ? (
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              variant="outlined"
-              placeholder="Write your note content here..."
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'rgba(255,255,255,0.3)',
-                  '& fieldset': { border: 'none' }
-                }
-              }}
-            />
-          ) : (
-            <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.7)', whiteSpace: 'pre-wrap' }}>
-              {content}
-            </Typography>
-          )}
-        </CardContent>
-        <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-          <Chip
-            label={formatDate(created_at)}
-            size="small"
-            sx={{
-              backgroundColor: 'rgba(255,255,255,0.4)',
-              color: 'rgba(0,0,0,0.6)',
-              fontSize: '0.7rem'
-            }}
-          />
-          {isEditing && (
-            <Box>
-              <IconButton
-                size="small"
-                onClick={handleCancel}
-                disabled={loading}
-                sx={{ color: 'rgba(0,0,0,0.6)', mr: 1 }}
-              >
-                <Cancel fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={handleSave}
-                disabled={loading || !editTitle.trim() || !editContent.trim()}
-                sx={{ color: 'green' }}
-              >
-                <Save fontSize="small" />
-              </IconButton>
-            </Box>
-          )}
-        </CardActions>
-      </Card>
+          </CardActions>
+        </Card>
+      </Draggable>
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -334,7 +336,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
-    </Draggable>
+    </>
   );
 };
 

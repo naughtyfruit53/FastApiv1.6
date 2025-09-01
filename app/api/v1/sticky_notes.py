@@ -6,6 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.user_models import User  # Use db model
+from app.models.sticky_notes import StickyNote
 from app.schemas.sticky_notes import (
     StickyNoteCreate, StickyNoteUpdate, StickyNote as StickyNoteSchema,
     UserSettingsUpdate, UserSettings

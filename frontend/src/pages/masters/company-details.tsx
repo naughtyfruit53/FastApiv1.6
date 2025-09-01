@@ -32,8 +32,8 @@ const CompanyDetails: React.FC = () => {
     return <Typography>Loading...</Typography>;
   }
 
-  if (isError || !data) {
-    console.error('Failed to fetch company details or data is null');
+  if (isError || !data || !data.id) {
+    console.error('Failed to fetch company details or data is invalid');
     return (
       <Box>
         <Typography variant="h6" sx={{ mb: 2 }}>
@@ -70,7 +70,7 @@ const CompanyDetails: React.FC = () => {
         {/* Company Logo and Basic Info */}
         <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 3 }}>
           <Avatar
-            src={data?.logo_path ? companyService.getLogoUrl(data.id) : undefined}
+            src={data?.logo_path && data?.id ? companyService.getLogoUrl(data.id) : undefined}
             sx={{
               width: 80,
               height: 80,
@@ -83,10 +83,10 @@ const CompanyDetails: React.FC = () => {
           </Avatar>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-              {data?.name}
+              {data?.name || 'N/A'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {data?.business_type} - {data?.industry}
+              {data?.business_type || 'N/A'} - {data?.industry || 'N/A'}
             </Typography>
           </Box>
         </Stack>
@@ -94,40 +94,40 @@ const CompanyDetails: React.FC = () => {
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">Business Type</Typography>
-            <Typography>{data?.business_type}</Typography>
+            <Typography>{data?.business_type || 'N/A'}</Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">Industry</Typography>
-            <Typography>{data?.industry}</Typography>
+            <Typography>{data?.industry || 'N/A'}</Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">Website</Typography>
-            <Typography>{data?.website}</Typography>
+            <Typography>{data?.website || 'N/A'}</Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">GST Number</Typography>
-            <Typography>{data?.gst_number}</Typography>
+            <Typography>{data?.gst_number || 'N/A'}</Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">PAN Number</Typography>
-            <Typography>{data?.pan_number}</Typography>
+            <Typography>{data?.pan_number || 'N/A'}</Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">Primary Email</Typography>
-            <Typography>{data?.email}</Typography>
+            <Typography>{data?.email || 'N/A'}</Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">Primary Phone</Typography>
-            <Typography>{data?.contact_number}</Typography>
+            <Typography>{data?.contact_number || 'N/A'}</Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">State</Typography>
-            <Typography>{data?.state} ({data?.state_code})</Typography>
+            <Typography>{data?.state || 'N/A'} ({data?.state_code || 'N/A'})</Typography>
           </Grid>
           <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2">Address</Typography>
             <Typography>
-              {data?.address1}{data?.address2 ? `, ${data?.address2}` : ''}, {data?.city}, {data?.state} - {data?.pin_code}
+              {data?.address1 || ''}{data?.address2 ? `, ${data?.address2}` : ''}, {data?.city || 'N/A'}, {data?.state || 'N/A'} - {data?.pin_code || 'N/A'}
             </Typography>
           </Grid>
         </Grid>
