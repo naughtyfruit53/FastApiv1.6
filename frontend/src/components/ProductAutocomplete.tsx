@@ -1,12 +1,11 @@
 // src/components/ProductAutocomplete.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Autocomplete,
   TextField,
   CircularProgress,
   Box,
-  Typography,
-  Chip
+  Typography
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
@@ -27,7 +26,7 @@ interface Product {
 }
 interface ProductAutocompleteProps {
   value: Product | null;
-  onChange: (product: Product | null) => void;
+  onChange: (_product: Product | null) => void;
   error?: boolean;
   helperText?: string;
   disabled?: boolean;

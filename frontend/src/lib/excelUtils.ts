@@ -2,7 +2,7 @@
 import ExcelJS from 'exceljs';  // New library for creating/reading Excel files
 import saveAs from 'file-saver';  // Library to handle file downloads in the browser
 // Function to export data (array of objects) to an Excel file
-export const exportToExcel = async (data: any[], filename: string) => {
+export const exportToExcel = async (data: any[], filename: string): Promise<void> => {
   // Create a new Excel workbook
   const workbook = new ExcelJS.Workbook();
   // Add a worksheet to it

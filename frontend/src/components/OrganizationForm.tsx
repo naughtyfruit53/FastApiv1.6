@@ -65,7 +65,7 @@ interface FormData {
   max_users?: number;
 }
 interface OrganizationFormProps {
-  onSubmit: (data: FormData) => void;
+  onSubmit: (_data: FormData) => void;
   mode?: 'license' | 'create'; // license = create license, create = direct org creation
   initialData?: Partial<FormData>;
   isEditing?: boolean;

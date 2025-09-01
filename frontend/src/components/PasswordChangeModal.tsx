@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -41,8 +41,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
-    getValues
+    watch
   } = useForm<PasswordFormData>();
   const new_password = watch('new_password');
   const handleClose = () => {
