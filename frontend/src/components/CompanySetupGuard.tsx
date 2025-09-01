@@ -1,3 +1,4 @@
+// frontend/src/components/CompanySetupGuard.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from '@tanstack/react-query';
@@ -5,6 +6,7 @@ import { companyService } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 import CompanyDetailsModal from './CompanyDetailsModal';
 import { toast } from 'react-toastify';
+import StickyNotesPanel from './StickyNotes/StickyNotesPanel';
 
 interface CompanySetupGuardProps {
   children: React.ReactNode;
@@ -102,17 +104,28 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
 
   // Don't render guard for super admins or exempt routes
   if (authLoading || !user || user.is_super_admin || isExemptRoute) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <StickyNotesPanel />
+      </>
+    );
   }
 
   // Show loading state while checking company
   if (companyLoading) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <StickyNotesPanel />
+      </>
+    );
   }
 
   return (
     <>
       {children}
+      <StickyNotesPanel />
       
       {/* Company setup modal - required if no company exists */}
       <CompanyDetailsModal

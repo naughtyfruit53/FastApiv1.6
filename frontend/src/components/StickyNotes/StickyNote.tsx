@@ -1,6 +1,6 @@
 // frontend/src/components/StickyNotes/StickyNote.tsx
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Draggable from 'react-draggable';
 import {
   Card,
   CardContent,
@@ -24,7 +24,9 @@ import {
   Save,
   Cancel,
   MoreVert,
-  Palette
+  Palette,
+  PushPin,
+  PushPinOutlined
 } from '@mui/icons-material';
 
 interface StickyNoteProps {
@@ -33,7 +35,9 @@ interface StickyNoteProps {
   content: string;
   color: string;
   created_at: string;
-  onUpdate: (id: number, data: { title?: string; content?: string; color?: string }) => Promise<void>;
+  position?: { x: number; y: number };
+  pinned?: boolean;
+  onUpdate: (id: number, data: { title?: string; content?: string; color?: string; position?: { x: number; y: number }; pinned?: boolean }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }
 
@@ -52,6 +56,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({
   content,
   color,
   created_at,
+  position = { x: 0, y: 0 },
+  pinned = false,
   onUpdate,
   onDelete
 }) => {
@@ -74,7 +80,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     if (!editTitle.trim() || !editContent.trim()) {
       return;
     }
-
     setLoading(true);
     try {
       await onUpdate(id, {
@@ -107,6 +112,17 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     }
   };
 
+  const handleTogglePin = async () => {
+    setLoading(true);
+    try {
+      await onUpdate(id, { pinned: !pinned });
+    } catch (error) {
+      console.error('Error toggling pin:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     setLoading(true);
     try {
@@ -117,6 +133,13 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDragStop = (e: any, data: any) => {
+    const newPosition = { x: data.x, y: data.y };
+    onUpdate(id, { position: newPosition }).catch(error => {
+      console.error('Error saving note position:', error);
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -130,17 +153,25 @@ const StickyNote: React.FC<StickyNoteProps> = ({
   };
 
   return (
-    <>
+    <Draggable
+      bounds="body"
+      defaultPosition={position}
+      onStop={handleDragStop}
+      disabled={isEditing || pinned} // Disable drag if editing or pinned
+    >
       <Card
         sx={{
-          width: 280,
-          minHeight: 200,
+          width: pinned ? '2in' : '2.5in',
+          minHeight: pinned ? '2in' : '2.5in',
           backgroundColor: colorConfig.color,
           border: `2px solid ${colorConfig.border}`,
           borderRadius: 2,
           boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-          transition: 'all 0.2s ease',
+          transition: 'opacity var(--transition-normal)',
+          opacity: 0.9,
+          zIndex: 1400,
           '&:hover': {
+            opacity: 1,
             boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
             transform: 'translateY(-2px)'
           }
@@ -173,18 +204,25 @@ const StickyNote: React.FC<StickyNoteProps> = ({
                 {title}
               </Typography>
             )}
-            
             {!isEditing && (
-              <IconButton
-                size="small"
-                onClick={(e) => setAnchorEl(e.currentTarget)}
-                sx={{ color: 'rgba(0,0,0,0.6)' }}
-              >
-                <MoreVert fontSize="small" />
-              </IconButton>
+              <Box>
+                <IconButton
+                  size="small"
+                  onClick={handleTogglePin}
+                  sx={{ color: 'rgba(0,0,0,0.6)', mr: 1 }}
+                >
+                  {pinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setAnchorEl(e.currentTarget)}
+                  sx={{ color: 'rgba(0,0,0,0.6)' }}
+                >
+                  <MoreVert fontSize="small" />
+                </IconButton>
+              </Box>
             )}
           </Box>
-
           {isEditing ? (
             <TextField
               fullWidth
@@ -197,9 +235,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({
               sx={{
                 '& .MuiOutlinedInput-root': {
                   backgroundColor: 'rgba(255,255,255,0.3)',
-                  '& fieldset': {
-                    border: 'none'
-                  }
+                  '& fieldset': { border: 'none' }
                 }
               }}
             />
@@ -209,7 +245,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
             </Typography>
           )}
         </CardContent>
-
         <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
           <Chip
             label={formatDate(created_at)}
@@ -220,7 +255,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
               fontSize: '0.7rem'
             }}
           />
-
           {isEditing && (
             <Box>
               <IconButton
@@ -243,8 +277,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
           )}
         </CardActions>
       </Card>
-
-      {/* Options Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -263,8 +295,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
           Delete
         </MenuItem>
       </Menu>
-
-      {/* Color Menu */}
       <Menu
         anchorEl={colorMenuAnchor}
         open={Boolean(colorMenuAnchor)}
@@ -290,8 +320,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
           </MenuItem>
         ))}
       </Menu>
-
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Note</DialogTitle>
         <DialogContent>
@@ -306,7 +334,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Draggable>
   );
 };
 

@@ -15,7 +15,20 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    // Skip adding token for auth-related endpoints
+    const publicEndpoints = [
+      '/auth/login',
+      '/auth/login/email',
+      '/auth/otp/request',
+      '/auth/otp/verify',
+      '/auth/refresh-token',
+      '/password/forgot',
+      '/password/reset'
+    ];
+    
+    const isPublic = publicEndpoints.some(endpoint => config.url?.includes(endpoint));
+    
+    if (token && !isPublic) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     // Organization context is derived from backend session, not headers
@@ -30,9 +43,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Skip automatic logout/redirect for public auth endpoints
+    const publicEndpoints = [
+      '/auth/login',
+      '/auth/login/email',
+      '/auth/otp/request',
+      '/auth/otp/verify',
+      '/auth/refresh-token',
+      '/password/forgot',
+      '/password/reset'
+    ];
+    
+    const isPublic = publicEndpoints.some(endpoint => error.config?.url?.includes(endpoint));
+    
+    if (error.response?.status === 401 && !isPublic) {
       localStorage.removeItem('token');
-      localStorage.removeItem('is_super_admin');
       window.location.href = '/login';
     }
     return Promise.reject(error);

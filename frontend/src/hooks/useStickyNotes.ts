@@ -1,11 +1,13 @@
 // frontend/src/hooks/useStickyNotes.ts
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { stickyNotesService, StickyNote, UserSettings } from '../services/stickyNotesService';
 
 export const useStickyNotes = () => {
+  const { user } = useAuth();
   const [notes, setNotes] = useState<StickyNote[]>([]);
-  const [userSettings, setUserSettings] = useState<UserSettings>({ sticky_notes_enabled: true });
+  const [userSettings, setUserSettings] = useState<UserSettings>({ sticky_notes_enabled: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,8 +17,8 @@ export const useStickyNotes = () => {
       setUserSettings(settings);
     } catch (err) {
       console.error('Error fetching user settings:', err);
-      // Use default settings if fetch fails
-      setUserSettings({ sticky_notes_enabled: true });
+      // Use disabled settings if fetch fails to prevent unauthorized fetches
+      setUserSettings({ sticky_notes_enabled: false });
     }
   };
 
@@ -48,14 +50,18 @@ export const useStickyNotes = () => {
   };
 
   useEffect(() => {
-    fetchUserSettings();
-  }, []);
+    if (user) {
+      fetchUserSettings();
+    } else {
+      setUserSettings({ sticky_notes_enabled: false });
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (userSettings.sticky_notes_enabled) {
+    if (userSettings.sticky_notes_enabled && user) {
       fetchNotes();
     }
-  }, [userSettings.sticky_notes_enabled]);
+  }, [userSettings.sticky_notes_enabled, user]);
 
   return {
     notes,

@@ -1,7 +1,6 @@
+// frontend/src/components/DashboardLayout.tsx
 import React from 'react';
-import { Box, Typography, Container, Button } from '@mui/material';
-import { Add } from '@mui/icons-material';
-import { useStickyNotes } from '../hooks/useStickyNotes';
+import { Box, Typography, Container } from '@mui/material';
 
 export interface DashboardLayoutProps {
   title: string;
@@ -20,8 +19,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   maxWidth = 'lg',
   className = ''
 }) => {
-  const { userSettings, toggleStickyNotes } = useStickyNotes();
-
   return (
     <Box 
       className={`modern-dashboard ${className}`} 
@@ -53,7 +50,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               left: 0,
               width: '60px',
               height: '3px',
-              background: 'linear-gradient(90deg, primary.main, primary.light)',
+              background: 'linear-gradient(90deg, var(--primary-500), var(--primary-100))',
               borderRadius: '2px',
             }
           }}
@@ -77,23 +74,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               {actions}
-              {!userSettings.sticky_notes_enabled && (
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => toggleStickyNotes(true)}
-                  sx={{
-                    backgroundColor: '#ffa726',
-                    '&:hover': { backgroundColor: '#ff9800' }
-                  }}
-                >
-                  Add Sticky Notes
-                </Button>
-              )}
             </Box>
           </Box>
         </Box>
-        
         <Box sx={{ 
           minHeight: '60vh',
           position: 'relative',

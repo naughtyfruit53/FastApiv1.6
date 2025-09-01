@@ -1,3 +1,4 @@
+// frontend/src/components/UnifiedLoginForm.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -114,12 +115,17 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
         }
       } else {
         // Standard email/password login
+        // Clear any existing invalid token before login attempt
+        localStorage.removeItem('token');
+        
         const response = await authService.loginWithEmail(data.email, data.password);
         onLogin(response.access_token, response);
       }
     } catch (error: any) {
       const errorMessage = error.message || error.response?.data?.detail || 'Login failed. Please check your credentials.';
       setError(errorMessage);
+      // Clear potentially invalid token on failure
+      localStorage.removeItem('token');
     } finally {
       setLoading(false);
     }

@@ -55,7 +55,15 @@ export const authService = {
     try {
       console.log('[AuthService] Starting email login process for:', email);
       
-      const response = await api.post('/auth/login/email', { email, password });
+      const formData = new FormData();
+      formData.append('username', email);
+      formData.append('password', password);
+      
+      const response = await api.post('/auth/login', formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
       
       console.log('[AuthService] Email login API response received:', {
         hasToken: !!response.data.access_token,
@@ -128,12 +136,12 @@ export const authService = {
     localStorage.removeItem('is_super_admin');
     window.location.href = '/';
   },
-  requestOTP: async (email: string, phoneNumber?: string, deliveryMethod: string = 'auto', purpose: string = 'login') => {
+  requestOTP: async (email: string, phone: string, deliveryMethod: string = 'auto', purpose: string = 'login') => {
     try {
       const requestData: any = { email, purpose };
       
-      if (phoneNumber) {
-        requestData.phone_number = phoneNumber;
+      if (phone) {
+        requestData.phone_number = phone;
       }
       
       if (deliveryMethod) {

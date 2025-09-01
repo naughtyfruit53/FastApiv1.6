@@ -1,5 +1,4 @@
 // frontend/src/pages/dashboard/OrgDashboard.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -22,8 +21,6 @@ import adminService from '../../services/adminService';
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
-import StickyNotesPanel from '../../components/StickyNotes/StickyNotesPanel';
-import { useStickyNotes } from '../../hooks/useStickyNotes';
 
 interface OrgStatistics {
   total_products: number;
@@ -41,7 +38,6 @@ const OrgDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { userSettings } = useStickyNotes();
 
   useEffect(() => {
     fetchOrgStatistics();
@@ -192,8 +188,6 @@ const OrgDashboard: React.FC = () => {
     <DashboardLayout 
       title="Organization Dashboard"
     >
-      <StickyNotesPanel />
-      
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
         {statsCards.map((stat, index) => (
           <MetricCard
