@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getStockMovements } from '../../services/stockService';
 import {
-  Box,
   Container,
   Typography,
   Paper,
@@ -16,7 +15,6 @@ import {
   TextField,
   FormControlLabel,
   Checkbox,
-  Button,
   Grid,
 } from '@mui/material';
 import { Search } from '@mui/icons-material';

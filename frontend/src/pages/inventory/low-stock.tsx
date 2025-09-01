@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getLowStockReport, getProductMovements, getLastVendorForProduct } from '../../services/stockService';
 import {
-  Box,
   Container,
   Typography,
   Paper,
