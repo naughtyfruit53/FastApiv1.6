@@ -22,7 +22,7 @@ import { useForm } from 'react-hook-form';
 interface DemoModeDialogProps {
   open: boolean;
   onClose: () => void;
-  onDemoStart: (token: string, loginResponse?: any) => void;
+  onDemoStart: (_token: string, _loginResponse?: any) => void;
 }
 interface NewUserFormData {
   fullName: string;
@@ -39,6 +39,16 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
   const [success, setSuccess] = useState('');
   const [tempEmail, setTempEmail] = useState('');
   const { register, handleSubmit, formState: { errors }, reset } = useForm<NewUserFormData>();
+  
+  const handleReset = () => {
+    setUserType('');
+    setStep(0);
+    setError('');
+    setSuccess('');
+    setTempEmail('');
+    reset();
+  };
+  
   const steps = ['User Type', 'Details', 'Verification'];
   const handleUserTypeNext = () => {
     if (!userType) {
@@ -66,7 +76,7 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
       setTempEmail(data.email);
       setSuccess(`Demo OTP sent to ${data.email}. Please check your email.`);
       setStep(2);
-    } catch (error: any) {
+    } catch (_sendError: any) {
       setError('Failed to send demo OTP. Please try again.');
     } finally {
       setLoading(false);
@@ -105,10 +115,9 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
       setTimeout(() => {
         onDemoStart(demoToken, demoResponse);
         onClose();
-// handleReset is defined later in this file
         handleReset();
       }, 1500);
-    } catch (error: any) {
+    } catch (_otpError: any) {
       setError('Demo OTP verification failed. Please try again.');
     } finally {
       setLoading(false);
@@ -120,14 +129,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
       setError('');
       setSuccess('');
     }
-  };
-  const handleReset = () => {
-    setUserType('');
-    setStep(0);
-    setError('');
-    setSuccess('');
-    setTempEmail('');
-    reset();
   };
   const handleClose = () => {
     handleReset();

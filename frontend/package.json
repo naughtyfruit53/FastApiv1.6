@@ -7,8 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src/**/*.{ts,tsx} .next/types/*.ts --fix",
-    "lint:check": "eslint src/**/*.{ts,tsx} .next/types/*.ts",
+    "lint": "eslint src/**/*.{ts,tsx} --fix",
+    "lint:check": "eslint src/**/*.{ts,tsx}",
     "test": "jest",
     "test:watch": "jest --watch"
   },
