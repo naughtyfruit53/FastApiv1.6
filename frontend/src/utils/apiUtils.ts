@@ -26,16 +26,19 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-export const handleApiError = (error: any): string => {
-  if (error.response) {
-    return error.response.data?.message || error.response.data?.detail || 'An error occurred';
-  } else if (error.request) {
+export const handleApiError = (error: unknown): string => {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const apiError = error as { response?: { data?: { message?: string; detail?: string } } };
+    return apiError.response?.data?.message || apiError.response?.data?.detail || 'An error occurred';
+  } else if (typeof error === 'object' && error !== null && 'request' in error) {
     return 'No response received from server';
-  } else {
+  } else if (error instanceof Error) {
     return error.message || 'Unknown error';
+  } else {
+    return 'Unknown error';
   }
 };
-export const getApiParams = (params: any): URLSearchParams => {
+export const getApiParams = (params: Record<string, unknown>): URLSearchParams => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {

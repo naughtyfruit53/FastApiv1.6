@@ -5,7 +5,35 @@ import { masterDataService, companyService } from '../../services/authService'; 
 import { getProductMovements, getLastVendorForProduct } from '../../services/stockService';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
-import { from '@mui/material';
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  InputAdornment,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  CircularProgress
+} from '@mui/material';
 import {
   Add,
   Edit,
