@@ -91,12 +91,16 @@ const defaultValues: Partial<StockJournal> = {
   total_amount: 0,
   entries: []
 };
+
+const journalTypeOptions = [
   { value: 'transfer', label: 'Stock Transfer' },
   { value: 'assembly', label: 'Assembly' },
   { value: 'disassembly', label: 'Disassembly' },
   { value: 'adjustment', label: 'Stock Adjustment' },
   { value: 'manufacturing', label: 'Manufacturing' }
 ];
+
+const entryTypeOptions = [
   { value: 'consume', label: 'Consume' },
   { value: 'produce', label: 'Produce' },
   { value: 'byproduct', label: 'Byproduct' },
@@ -106,7 +110,7 @@ export default function StockJournal() {
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<StockJournal>({
+  const { control, handleSubmit, watch, setValue, reset, formState } = useForm<StockJournal>({
     defaultValues
   });
   const {
@@ -180,7 +184,7 @@ const { data: journalData} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating stock journal:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -193,7 +197,7 @@ const { data: journalData} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating stock journal:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({

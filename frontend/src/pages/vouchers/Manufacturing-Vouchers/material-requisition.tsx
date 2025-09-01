@@ -105,7 +105,7 @@ const MaterialRequisition: React.FC = () => {
     queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
   });
   // Fetch specific material issue
-const { data: issueData, isLoading:} = useQuery({
+  const { data: issueData, isLoading } = useQuery({
     queryKey: ['material-issue', selectedId],
     queryFn: () => api.get(`/material-issues/${selectedId}`).then(res => res.data),
     enabled: !!selectedId
@@ -148,7 +148,7 @@ const { data: issueData, isLoading:} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating material issue:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -161,7 +161,7 @@ const { data: issueData, isLoading:} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating material issue:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({
@@ -170,7 +170,7 @@ const { data: issueData, isLoading:} = useQuery({
       queryClient.invalidateQueries({ queryKey: ['material-issues'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting material issue:', error);
+      console.error(msg, err);
     }
   });
   const onSubmit = (data: MaterialIssue) => {

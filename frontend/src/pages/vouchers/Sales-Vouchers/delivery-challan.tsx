@@ -146,8 +146,8 @@ const DeliveryChallanPage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-    } catch (error) {
-      console.error('Error saving delivery challan:', error);
+    } catch (err) {
+      console.error(msg, err);
       alert('Failed to save delivery challan. Please try again.');
     }
   };
@@ -167,8 +167,8 @@ const DeliveryChallanPage: React.FC = () => {
       });
       setMode('create');
       toast.success('Delivery challan duplicated successfully');
-    } catch (error) {
-      console.error('Error duplicating delivery challan:', error);
+    } catch (err) {
+      console.error(msg, err);
       toast.error('Failed to duplicate delivery challan');
     }
   };
@@ -205,8 +205,8 @@ const DeliveryChallanPage: React.FC = () => {
       if (confirm('Dispatch order created. Open Dispatch Management?')) {
         window.open('/service/dispatch', '_blank');
       }
-    } catch (error) {
-      console.error('Error creating dispatch order:', error);
+    } catch (err) {
+      console.error(msg, err);
       toast.error('Failed to create dispatch order');
     }
   };

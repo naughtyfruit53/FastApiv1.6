@@ -158,8 +158,8 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
           handleGeneratePDF(response);
         }
       }
-    } catch (error) {
-      console.error('Error saving purchase voucher:', error);
+    } catch (err) {
+      console.error(msg, err);
       alert('Failed to save purchase voucher. Please try again.');
     }
   };

@@ -113,8 +113,8 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
       await onAdd(cleanData);
       reset();
       onClose();
-    } catch (error) {
-      console.error('Error adding opportunity:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const handleClose = () => {

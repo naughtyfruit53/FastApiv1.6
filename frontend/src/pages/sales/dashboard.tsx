@@ -60,8 +60,8 @@ const SalesDashboard: React.FC = () => {
           newLeads,
           conversionRate
         });
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+      } catch (err) {
+        console.error(msg, err);
       } finally {
         setLoading(false);
       }

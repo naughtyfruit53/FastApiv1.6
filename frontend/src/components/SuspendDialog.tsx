@@ -82,8 +82,8 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
       }
 // handleClose is defined later in this file
       handleClose();
-    } catch (error) {
-      console.error(`${action} error:`, error);
+    } catch (err) {
+      console.error(msg, err);
       toast.error(error instanceof Error ? error.message : `Failed to ${action} organization`);
     } finally {
       setLoading(false);

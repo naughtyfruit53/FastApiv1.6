@@ -50,7 +50,7 @@ const BOMManagement: React.FC = () => {
       setSelectedBOM(null);
     },
     onError: (error: any) => {
-      console.error('Error deleting BOM:', error);
+      console.error(msg, err);
     }
   });
   const handleView = (bom: any) => {

@@ -108,8 +108,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       // Also load job details
       const jobResponse = await axios.get(`/api/v1/migration/jobs/${jobId}`);
       setCurrentJob(jobResponse.data);
-    } catch (error) {
-      console.error('Failed to load wizard state:', error);
+    } catch (err) {
+      console.error(msg, err);
       setErr('Failed to load migration wizard state');
     } finally {
       setLoading(false);
@@ -128,8 +128,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       // Load wizard state for the new job
       const wizardResponse = await axios.get(`/api/v1/migration/jobs/${newJob.id}/wizard`);
       setWizardState(wizardResponse.data);
-    } catch (error) {
-      console.error('Failed to create migration job:', error);
+    } catch (err) {
+      console.error(msg, err);
       setErr('Failed to create migration job');
     } finally {
       setLoading(false);
@@ -158,8 +158,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       });
       // Reload wizard state
       await loadWizardState();
-    } catch (error) {
-      console.error('Failed to upload file:', error);
+    } catch (err) {
+      console.error(msg, err);
       setErr('Failed to upload file');
     } finally {
       setLoading(false);
@@ -172,8 +172,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
     try {
       await axios.post(`/api/v1/migration/jobs/${currentJob.id}/execute`);
       await loadWizardState();
-    } catch (error) {
-      console.error('Failed to execute migration:', error);
+    } catch (err) {
+      console.error(msg, err);
       setErr('Failed to execute migration');
     } finally {
       setLoading(false);
@@ -185,8 +185,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
     try {
       await axios.post(`/api/v1/migration/jobs/${currentJob.id}/rollback`);
       await loadWizardState();
-    } catch (error) {
-      console.error('Failed to rollback migration:', error);
+    } catch (err) {
+      console.error(msg, err);
       setErr('Failed to rollback migration');
     } finally {
       setLoading(false);

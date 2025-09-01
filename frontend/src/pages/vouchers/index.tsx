@@ -1,7 +1,28 @@
 // revised fastapi_migration/frontend/src/pages/vouchers/index.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Chip,
+  Grid,
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { voucherService, reportsService } from '../../services/authService';
 import { voucherService as voucherApi } from '../../services/vouchersService';
@@ -97,7 +118,7 @@ const VoucherManagement: React.FC = () => {
       const pdfConfig = getVoucherPdfConfig(voucherType);
       await generateVoucherPDF(voucherData, pdfConfig);
     } catch (error: any) {
-      console.error('Error generating PDF:', error);
+      console.error(msg, err);
       alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
     }
   };
@@ -131,7 +152,7 @@ const VoucherManagement: React.FC = () => {
         }
         alert('Voucher deleted successfully');
       } catch (error: any) {
-        console.error('Error deleting voucher:', error);
+        console.error(msg, err);
         alert(`Error deleting voucher: ${error.response?.data?.detail || error.message || 'Unknown error'}`);
       }
     }
@@ -164,7 +185,7 @@ const VoucherManagement: React.FC = () => {
     enabled: tabValue === 1
   });
   // Financial vouchers queries
-const { data: financialVouchers, isLoading:refetch: refetchFinancialVouchers } = useQuery({
+  const { data: financialVouchers, isLoading, refetch: refetchFinancialVouchers } = useQuery({
     queryKey: ['financialVouchers'],
     queryFn: async () => {
       const [payments, receipts, journals, contras] = await Promise.all([

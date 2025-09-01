@@ -146,8 +146,8 @@ const ProformaInvoicePage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-    } catch (error) {
-      console.error('Error saving proforma invoice:', error);
+    } catch (err) {
+      console.error(msg, err);
       alert('Failed to save proforma invoice. Please try again.');
     }
   };
@@ -201,8 +201,8 @@ const ProformaInvoicePage: React.FC = () => {
       // Load the complete voucher data into the form
       setMode('view');
       reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
+    } catch (err) {
+      console.error(msg, err);
       // Fallback to available data
       setMode('view');
       reset(voucher);
@@ -215,8 +215,8 @@ const ProformaInvoicePage: React.FC = () => {
       const fullVoucherData = response.data;
       setMode('edit');
       reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
+    } catch (err) {
+      console.error(msg, err);
       handleEdit(voucher);
     }
   };
@@ -227,8 +227,8 @@ const ProformaInvoicePage: React.FC = () => {
       const fullVoucherData = response.data;
       setMode('view');
       reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
+    } catch (err) {
+      console.error(msg, err);
       handleView(voucher);
     }
   };

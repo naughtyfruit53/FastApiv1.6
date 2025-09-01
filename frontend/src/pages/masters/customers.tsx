@@ -51,7 +51,7 @@ const CustomersPage: React.FC = () => {
     customerName?: string;
   }>({ open: false });
   const queryClient = useQueryClient();
-const { data: customers, isLoading:} = useQuery({
+  const { data: customers, isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: () => masterDataService.getCustomers(),
     enabled: isOrgContextReady,
@@ -92,7 +92,7 @@ const { data: customers, isLoading:} = useQuery({
       setShowAddCustomerModal(false);
       alert('Customer added successfully!');
     } catch (error: any) {
-      console.error('Error adding customer:', error);
+      console.error(msg, err);
       let errorMsg = 'Error adding customer';
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
@@ -113,7 +113,7 @@ const { data: customers, isLoading:} = useQuery({
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting customer:', error);
+      console.error(msg, err);
       setErrorMessage(error.response?.data?.detail || 'Failed to delete customer');
     }
   });

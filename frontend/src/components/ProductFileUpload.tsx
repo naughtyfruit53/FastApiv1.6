@@ -131,8 +131,8 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download failed:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const formatFileSize = (bytes: number): string => {

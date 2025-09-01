@@ -93,15 +93,21 @@ const defaultValues: Partial<MaterialReceiptVoucher> = {
   total_amount: 0,
   items: []
 };
+
+const sourceTypeOptions = [
   { value: 'return', label: 'Material Return' },
   { value: 'purchase', label: 'Purchase Receipt' },
   { value: 'transfer', label: 'Transfer Receipt' }
 ];
+
+const inspectionStatusOptions = [
   { value: 'pending', label: 'Pending' },
   { value: 'passed', label: 'Passed' },
   { value: 'failed', label: 'Failed' },
   { value: 'partial', label: 'Partial' }
 ];
+
+const statusOptions = [
   { value: 'accepted', label: 'Accepted' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'hold', label: 'Hold' }
@@ -110,7 +116,7 @@ export default function MaterialReceiptVoucher() {
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<MaterialReceiptVoucher>({
+  const { control, handleSubmit, watch, setValue, reset, formState } = useForm<MaterialReceiptVoucher>({
     defaultValues
   });
   const {
@@ -178,7 +184,7 @@ const { data: voucherData} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating material receipt voucher:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -191,7 +197,7 @@ const { data: voucherData} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating material receipt voucher:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({
@@ -255,8 +261,8 @@ const { data: voucherData} = useQuery({
     try {
       const dataToUse = voucherData || watch();
       await generateStandalonePDF(dataToUse, 'material-receipt');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   if (isLoading) {

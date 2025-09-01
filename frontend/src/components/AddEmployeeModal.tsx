@@ -201,7 +201,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       reset();
       onClose();
     } catch (error: any) {
-      console.error('Error saving employee:', error);
+      console.error(msg, err);
       alert(error.response?.data?.detail || 'Failed to save employee');
     }
   };

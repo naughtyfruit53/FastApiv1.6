@@ -152,8 +152,8 @@ const SalesReports: React.FC = () => {
 // exportToPDF is defined later in this file
         await exportToPDF();
       }
-    } catch (error) {
-      console.error(`Error exporting as ${format}:`, error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const exportToExcel = async () => {

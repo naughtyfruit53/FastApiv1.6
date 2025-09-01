@@ -1,0 +1,2043 @@
+
+> tritiq-erp-frontend@1.0.0 lint:check
+> eslint src/**/*.{ts,tsx}
+
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddBOMModal.tsx
+  77:11  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddCommissionModal.tsx
+  23:11  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddCustomerModal.tsx
+  28:12  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddEmployeeModal.tsx
+  31:11  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddLeadModal.tsx
+  23:11  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddOpportunityModal.tsx
+  24:11  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddProductModal.tsx
+  23:11  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddShippingAddressModal.tsx
+  21:11  error  '_data' is defined but never used  no-unused-vars
+  82:47  error  '_key' is defined but never used   no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AddVendorModal.tsx
+  29:12  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AdminUserForm.tsx
+  5:14  error  '_formData' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/AuthProvider.tsx
+  16:11  error  '_email' is defined but never used     no-unused-vars
+  16:27  error  '_password' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/CompanyLogoUpload.tsx
+  26:19  error  '_logoPath' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/CreateOrganizationLicenseModal.tsx
+  30:16  error  '_result' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/CustomerAutocomplete.tsx
+  30:14  error  '_customer' is defined but never used  no-unused-vars
+  38:10  error  '_value' is defined but never used     no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/DemoModeDialog.tsx
+  25:17  error  '_token' is defined but never used          no-unused-vars
+  25:33  error  '_loginResponse' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/DispatchManagement/InstallationSchedulePromptModal.tsx
+  36:26  error  '_installationData' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/EmailTemplateEditor.tsx
+  56:12  error  '_templateData' is defined but never used  no-unused-vars
+  57:13  error  '_templateData' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/EntitySelector.tsx
+  30:22  error  '_entity' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ExcelImportExport.tsx
+  9:14  error  '_importedData' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/FeedbackWorkflow/CustomerFeedbackModal.tsx
+  38:14  error  '_feedbackData' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/FeedbackWorkflow/FeedbackStatusList.tsx
+  47:23  error  '_feedback' is defined but never used                  no-unused-vars
+  48:22  error  '_closure' is defined but never used                   no-unused-vars
+  95:10  error  '_selectedClosure' is assigned a value but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/FeedbackWorkflow/ServiceClosureDialog.tsx
+  43:14  error  '_closureData' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/IntegrationDashboard.tsx
+  79:17  error  '_user' is assigned a value but never used          no-unused-vars
+  87:7   error  'loadDashboardData' was used before it was defined  no-use-before-define
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/LoginForm.tsx
+  17:13  error  '_token' is defined but never used          no-unused-vars
+  17:29  error  '_loginResponse' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/MegaMenu.tsx
+  1259:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/MigrationWizard.tsx
+   99:7   error  'loadWizardState' was used before it was defined       no-use-before-define
+  200:16  error  'renderCreateJobStep' was used before it was defined   no-use-before-define
+  202:16  error  'renderUploadStep' was used before it was defined      no-use-before-define
+  204:16  error  'renderMappingStep' was used before it was defined     no-use-before-define
+  206:16  error  'renderValidationStep' was used before it was defined  no-use-before-define
+  208:16  error  'renderExecutionStep' was used before it was defined   no-use-before-define
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ModernChart.tsx
+  35:9  error  '_options' is assigned a value but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/NotificationBell.tsx
+  79:15  error  '_error' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/NotificationLogs.tsx
+  105:16  error  '_analyticsLoading' is assigned a value but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/NotificationSettingsModal.tsx
+  121:15  error  '_error' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/NotificationTemplates.tsx
+  131:17  error  '_data' is defined but never used  no-unused-vars
+  145:17  error  '_data' is defined but never used  no-unused-vars
+  158:17  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/OTPLogin.tsx
+  20:13  error  '_token' is defined but never used          no-unused-vars
+  20:29  error  '_loginResponse' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/OrganizationForm.tsx
+  68:14  error  '_data' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/OrganizationSwitcher.tsx
+  28:5  error  'fetchUserOrganizations' was used before it was defined  no-use-before-define
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ProductAutocomplete.tsx
+  29:14  error  '_product' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ProductDropdown.tsx
+   31:14  error  'productId' is defined but never used                               no-unused-vars
+   31:33  error  'product' is defined but never used                                 no-unused-vars
+   58:5   error  'fetchProducts' was used before it was defined                      no-use-before-define
+   79:14  error  'error' is already declared in the upper scope on line 47 column 3  no-shadow
+   79:14  error  'error' is already declared in the upper scope on line 47 column 3  @typescript-eslint/no-shadow
+  156:23  error  'SelectChangeEvent' is not defined                                  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/RoleManagement/PermissionMatrixDialog.tsx
+  38:3  error  '_ServiceRole' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/RoleManagement/RoleFormDialog.tsx
+  30:3   error  '_ServiceRole' is defined but never used  no-unused-vars
+  46:14  error  '_data' is defined but never used         no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/RoleManagement/RoleManagement.tsx
+   52:3   error  'MODULE_DISPLAY_NAMES' is defined but never used                    no-unused-vars
+   53:3   error  'PERMISSION_DISPLAY_NAMES' is defined but never used                no-unused-vars
+  108:5   error  'loadData' was used before it was defined                           no-use-before-define
+  172:33  error  'user' is already declared in the upper scope on line 82 column 11  no-shadow
+  172:33  error  'user' is already declared in the upper scope on line 82 column 11  @typescript-eslint/no-shadow
+  304:18  error  'CardContent' is not defined                                        react/jsx-no-undef
+  304:18  error  'CardContent' is not defined                                        no-undef
+  327:22  error  'Tooltip' is not defined                                            react/jsx-no-undef
+  327:22  error  'Tooltip' is not defined                                            no-undef
+  335:23  error  'Tooltip' is not defined                                            no-undef
+  336:22  error  'Tooltip' is not defined                                            react/jsx-no-undef
+  336:22  error  'Tooltip' is not defined                                            no-undef
+  345:23  error  'Tooltip' is not defined                                            no-undef
+  347:19  error  'CardContent' is not defined                                        no-undef
+  394:28  error  'user' is already declared in the upper scope on line 82 column 11  no-shadow
+  394:28  error  'user' is already declared in the upper scope on line 82 column 11  @typescript-eslint/no-shadow
+  452:18  error  'CardContent' is not defined                                        react/jsx-no-undef
+  452:18  error  'CardContent' is not defined                                        no-undef
+  474:19  error  'CardContent' is not defined                                        no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/RoleManagement/UserRoleAssignmentDialog.tsx
+  41:14  error  '_userId' is defined but never used   no-unused-vars
+  41:31  error  '_roleIds' is defined but never used  no-unused-vars
+  42:14  error  '_userId' is defined but never used   no-unused-vars
+  42:31  error  '_roleId' is defined but never used   no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/SearchableDropdown.tsx
+  20:14  error  '_value' is defined but never used   no-unused-vars
+  22:20  error  '_option' is defined but never used  no-unused-vars
+  23:20  error  '_option' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/SendNotification.tsx
+   27:3   error  '_Email' is defined but never used                      no-unused-vars
+   28:3   error  '_Sms' is defined but never used                        no-unused-vars
+   29:3   error  '_NotificationImportant' is defined but never used      no-unused-vars
+   30:3   error  '_Notifications' is defined but never used              no-unused-vars
+   32:3   error  '_CheckCircle' is defined but never used                no-unused-vars
+   33:3   error  'Error' is defined but never used                       no-unused-vars
+   41:3   error  'NotificationTemplate' is defined but never used        no-unused-vars
+   45:3   error  'RECIPIENT_TYPES' is defined but never used             no-unused-vars
+   46:3   error  'BULK_RECIPIENT_TYPES' is defined but never used        no-unused-vars
+   49:3   error  'getTemplateTypeDisplayName' is defined but never used  no-unused-vars
+  100:16  error  'templatesLoading' is assigned a value but never used   no-unused-vars
+  103:20  error  'getNotificationTemplates' is not defined               no-undef
+  108:16  error  'entitiesLoading' is assigned a value but never used    no-unused-vars
+  116:17  error  'data' is defined but never used                        no-unused-vars
+  118:7   error  'resetSingleForm' was used before it was defined        no-use-before-define
+  132:7   error  'resetBulkForm' was used before it was defined          no-use-before-define
+  146:15  error  'error' is defined but never used                       no-unused-vars
+  318:18  error  'Autocomplete' is not defined                           react/jsx-no-undef
+  318:18  error  'Autocomplete' is not defined                           no-undef
+  470:20  error  'Autocomplete' is not defined                           react/jsx-no-undef
+  470:20  error  'Autocomplete' is not defined                           no-undef
+  514:20  error  'Autocomplete' is not defined                           react/jsx-no-undef
+  514:20  error  'Autocomplete' is not defined                           no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ServiceAnalytics/AnalyticsFilters.tsx
+  26:21  error  '_filters' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ServiceAnalytics/CustomerSatisfactionChart.tsx
+  21:17  error  '_TrendIcon' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ServiceAnalytics/SLAComplianceChart.tsx
+  316:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ServiceAnalytics/ServiceAnalyticsDashboard.tsx
+   12:3   error  '_Select' is defined but never used                                 no-unused-vars
+   13:3   error  '_MenuItem' is defined but never used                               no-unused-vars
+   14:3   error  '_FormControl' is defined but never used                            no-unused-vars
+   15:3   error  '_InputLabel' is defined but never used                             no-unused-vars
+   17:3   error  '_TextField' is defined but never used                              no-unused-vars
+   32:3   error  '_AnalyticsDashboard' is defined but never used                     no-unused-vars
+   34:3   error  'TechnicianOption' is defined but never used                        no-unused-vars
+   35:3   error  'CustomerOption' is defined but never used                          no-unused-vars
+  108:14  error  'error' is already declared in the upper scope on line 63 column 5  no-shadow
+  108:14  error  'error' is already declared in the upper scope on line 63 column 5  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ServiceAnalytics/TechnicianPerformanceChart.tsx
+  31:11  error  '_RatingIcon' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/SortableTable.tsx
+   25:13  error  '_value' is defined but never used     no-unused-vars
+   25:26  error  '_row' is defined but never used       no-unused-vars
+   33:17  error  '_row' is defined but never used       no-unused-vars
+   39:14  error  '_row' is defined but never used       no-unused-vars
+   46:12  error  Expected '===' and instead saw '=='    eqeqeq
+   47:12  error  Expected '===' and instead saw '=='    eqeqeq
+   70:61  error  '_a' is defined but never used         no-unused-vars
+   70:68  error  '_b' is defined but never used         no-unused-vars
+   75:58  error  '_a' is defined but never used         no-unused-vars
+   75:65  error  '_b' is defined but never used         no-unused-vars
+   90:19  error  '_property' is defined but never used  no-unused-vars
+  140:1   error  Missing return type on function        @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/StickyNotes/StickyNote.tsx
+   2:27  error  'useEffect' is defined but never used  no-unused-vars
+  39:14  error  'id' is defined but never used         no-unused-vars
+  39:26  error  'data' is defined but never used       no-unused-vars
+  40:14  error  'id' is defined but never used         no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/StickyNotes/StickyNotesPanel.tsx
+   35:11  error  'user' is assigned a value but never used    no-unused-vars
+   52:7   error  'fetchNotes' was used before it was defined  no-use-before-define
+  191:10  error  'DialogTitle' is not defined                 react/jsx-no-undef
+  191:10  error  'DialogTitle' is not defined                 no-undef
+  191:36  error  'DialogTitle' is not defined                 no-undef
+  192:10  error  'DialogContent' is not defined               react/jsx-no-undef
+  192:10  error  'DialogContent' is not defined               no-undef
+  194:14  error  'CircularProgress' is not defined            react/jsx-no-undef
+  194:14  error  'CircularProgress' is not defined            no-undef
+  196:14  error  'Alert' is not defined                       react/jsx-no-undef
+  196:14  error  'Alert' is not defined                       no-undef
+  196:46  error  'Alert' is not defined                       no-undef
+  200:14  error  'List' is not defined                        react/jsx-no-undef
+  200:14  error  'List' is not defined                        no-undef
+  202:18  error  'ListItem' is not defined                    react/jsx-no-undef
+  202:18  error  'ListItem' is not defined                    no-undef
+  203:20  error  'ListItemText' is not defined                react/jsx-no-undef
+  203:20  error  'ListItemText' is not defined                no-undef
+  204:20  error  'ListItemSecondaryAction' is not defined     react/jsx-no-undef
+  204:20  error  'ListItemSecondaryAction' is not defined     no-undef
+  208:21  error  'ListItemSecondaryAction' is not defined     no-undef
+  209:19  error  'ListItem' is not defined                    no-undef
+  211:15  error  'List' is not defined                        no-undef
+  213:11  error  'DialogContent' is not defined               no-undef
+  214:10  error  'DialogActions' is not defined               react/jsx-no-undef
+  214:10  error  'DialogActions' is not defined               no-undef
+  217:11  error  'DialogActions' is not defined               no-undef
+  226:10  error  'DialogTitle' is not defined                 react/jsx-no-undef
+  226:10  error  'DialogTitle' is not defined                 no-undef
+  226:46  error  'DialogTitle' is not defined                 no-undef
+  227:10  error  'DialogContent' is not defined               react/jsx-no-undef
+  227:10  error  'DialogContent' is not defined               no-undef
+  256:16  error  'MenuItem' is not defined                    react/jsx-no-undef
+  256:16  error  'MenuItem' is not defined                    no-undef
+  258:17  error  'MenuItem' is not defined                    no-undef
+  261:11  error  'DialogContent' is not defined               no-undef
+  262:10  error  'DialogActions' is not defined               react/jsx-no-undef
+  262:10  error  'DialogActions' is not defined               no-undef
+  269:26  error  'CircularProgress' is not defined            react/jsx-no-undef
+  269:26  error  'CircularProgress' is not defined            no-undef
+  271:11  error  'DialogActions' is not defined               no-undef
+  274:10  error  'Alert' is not defined                       react/jsx-no-undef
+  274:10  error  'Alert' is not defined                       no-undef
+  276:11  error  'Alert' is not defined                       no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/UnifiedLoginForm.tsx
+   25:13  error  '_token' is defined but never used                                   no-unused-vars
+   25:29  error  '_loginResponse' is defined but never used                           no-unused-vars
+   64:29  error  'email' is already declared in the upper scope on line 49 column 9   no-shadow
+   64:29  error  'email' is already declared in the upper scope on line 49 column 9   @typescript-eslint/no-shadow
+   76:14  error  'error' is already declared in the upper scope on line 35 column 10  no-shadow
+   76:14  error  'error' is already declared in the upper scope on line 35 column 10  @typescript-eslint/no-shadow
+  108:14  error  'error' is already declared in the upper scope on line 35 column 10  no-shadow
+  108:14  error  'error' is already declared in the upper scope on line 35 column 10  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherContextMenu.tsx
+  156:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherHeaderActions.tsx
+  16:19  error  '_mode' is defined but never used          no-unused-vars
+  19:13  error  '_voucher' is defined but never used       no-unused-vars
+  31:17  error  '_onModeChange' is defined but never used  no-unused-vars
+  32:16  error  '_onModalOpen' is defined but never used   no-unused-vars
+  33:16  error  '_voucherList' is defined but never used   no-unused-vars
+  34:11  error  '_onView' is defined but never used        no-unused-vars
+  35:3   error  'isLoading' is defined but never used      no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherLayout.tsx
+  17:20  error  '_page' is defined but never used                    no-unused-vars
+  29:17  error  '_voucherTitle' is defined but never used            no-unused-vars
+  35:14  error  '_showModal' is assigned a value but never used      no-unused-vars
+  36:17  error  '_onCloseModal' is defined but never used            no-unused-vars
+  38:18  error  '_centerAligned' is assigned a value but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherListModal.tsx
+   28:20  error  'voucher' is defined but never used  no-unused-vars
+   29:13  error  'id' is defined but never used       no-unused-vars
+   30:13  error  'id' is defined but never used       no-unused-vars
+   31:15  error  'id' is defined but never used       no-unused-vars
+   32:20  error  'voucher' is defined but never used  no-unused-vars
+  233:36  error  Unexpected empty arrow function      @typescript-eslint/no-empty-function
+  234:36  error  Unexpected empty arrow function      @typescript-eslint/no-empty-function
+  235:40  error  Unexpected empty arrow function      @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherReferenceDropdown.tsx
+   14:14  error  'reference' is defined but never used                               no-unused-vars
+   20:26  error  'referenceData' is defined but never used                           no-unused-vars
+   37:7   error  'fetchReferenceDocuments' was used before it was defined            no-use-before-define
+   97:8   error  'Grid' is not defined                                               react/jsx-no-undef
+   97:8   error  'Grid' is not defined                                               no-undef
+   99:10  error  'Grid' is not defined                                               react/jsx-no-undef
+   99:10  error  'Grid' is not defined                                               no-undef
+  129:11  error  'Grid' is not defined                                               no-undef
+  132:12  error  'Grid' is not defined                                               react/jsx-no-undef
+  132:12  error  'Grid' is not defined                                               no-undef
+  133:14  error  'Autocomplete' is not defined                                       react/jsx-no-undef
+  133:14  error  'Autocomplete' is not defined                                       no-undef
+  141:46  error  'value' is already declared in the upper scope on line 24 column 3  no-shadow
+  141:46  error  'value' is already declared in the upper scope on line 24 column 3  @typescript-eslint/no-shadow
+  143:18  error  'TextField' is not defined                                          react/jsx-no-undef
+  143:18  error  'TextField' is not defined                                          no-undef
+  156:47  error  'CircularProgress' is not defined                                   react/jsx-no-undef
+  156:47  error  'CircularProgress' is not defined                                   no-undef
+  175:44  error  'Popper' is not defined                                             react/jsx-no-undef
+  175:44  error  'Popper' is not defined                                             no-undef
+  177:13  error  'Grid' is not defined                                               no-undef
+  179:9   error  'Grid' is not defined                                               no-undef
+  182:10  error  'Alert' is not defined                                              react/jsx-no-undef
+  182:10  error  'Alert' is not defined                                              no-undef
+  184:11  error  'Alert' is not defined                                              no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/__tests__/ExportPrintToolbar.test.tsx
+  90:80  error  Unexpected empty arrow function  @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/AuthContext.tsx
+   12:11  error  'loginResponse' is defined but never used                 no-unused-vars
+   15:16  error  'updatedData' is defined but never used                   no-unused-vars
+   71:9   error  'handlePostLoginRedirect' was used before it was defined  no-use-before-define
+  142:11  error  'restoreFormData' was used before it was defined          no-use-before-define
+  163:44  error  'formKey' is defined but never used                       no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/CompanyContext.tsx
+  33:9  error  'toast' is not defined  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/ErrorContext.tsx
+   9:15  error  'message' is defined but never used         no-unused-vars
+   9:32  error  'type' is defined but never used            no-unused-vars
+  10:15  error  'id' is defined but never used              no-unused-vars
+  32:7   error  'hideError' was used before it was defined  no-use-before-define
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/VoucherContext.tsx
+  6:16  error  'voucher' is defined but never used         no-unused-vars
+  7:19  error  'id' is defined but never used              no-unused-vars
+  7:31  error  'updatedVoucher' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/__tests__/AuthContext.test.tsx
+  124:81  error  Unexpected empty arrow function      @typescript-eslint/no-empty-function
+  142:7   error  'resolveAuthService' is not defined  no-undef
+  157:7   error  'resolveAuthService' is not defined  no-undef
+  174:73  error  Unexpected empty arrow function      @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/__tests__/usePincodeLookup.test.ts
+  13:6  error  'global' is not defined  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/usePincodeLookup.ts
+  9:19  error  'pincode' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/useUIConfig.ts
+  10:16  error  'path' is defined but never used  no-unused-vars
+  11:17  error  'path' is defined but never used  no-unused-vars
+  12:21  error  'path' is defined but never used  no-unused-vars
+  13:23  error  'path' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/useVoucherNumbering.ts
+   8:14  error  'name' is defined but never used   no-unused-vars
+   8:28  error  'value' is defined but never used  no-unused-vars
+  16:30  error  Missing return type on function    @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/useVoucherPage.ts
+   22:59  error  Missing return type on function                     @typescript-eslint/explicit-module-boundary-types
+  341:11  error  'totalVouchers' is assigned a value but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/lib/api.ts
+  47:3  error  'resetAuthReady' was used before it was defined  no-use-before-define
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/_error.tsx
+  20:22  error  'ctx' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/app-user-management.tsx
+   22:3  error  'FormControl' is defined but never used       no-unused-vars
+   23:3  error  'InputLabel' is defined but never used        no-unused-vars
+   24:3  error  'Select' is defined but never used            no-unused-vars
+   25:3  error  'MenuItem' is defined but never used          no-unused-vars
+   26:3  error  'Switch' is defined but never used            no-unused-vars
+   27:3  error  'FormControlLabel' is defined but never used  no-unused-vars
+   34:3  error  'Edit' is defined but never used              no-unused-vars
+  229:7  error  'loading' is not defined                      no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/license-management.tsx
+  317:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/manage-organizations.tsx
+   22:3   error  'TextField' is defined but never used                  no-unused-vars
+   23:3   error  'MenuItem' is defined but never used                   no-unused-vars
+   24:3   error  'FormControl' is defined but never used                no-unused-vars
+   25:3   error  'InputLabel' is defined but never used                 no-unused-vars
+   26:3   error  'Select' is defined but never used                     no-unused-vars
+   34:3   error  'Edit' is defined but never used                       no-unused-vars
+   40:3   error  'Security' is defined but never used                   no-unused-vars
+   41:3   error  'Delete' is defined but never used                     no-unused-vars
+   70:8   error  'availableModules' is assigned a value but never used  no-unused-vars
+   92:41  error  'data' is defined but never used                       no-unused-vars
+  113:24  error  'orgId' is defined but never used                      no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/organizations/[id].tsx
+   68:7   error  'fetchOrganization' was used before it was defined                   no-use-before-define
+  106:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  106:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  140:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  140:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  161:18  error  'jsonError' is defined but never used                                no-unused-vars
+  170:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  170:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  195:16  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  195:16  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  223:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  223:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/organizations/create.tsx
+  4:10  error  'useRouter' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/organizations/index.tsx
+   32:3   error  'Pause' is defined but never used                                    no-unused-vars
+   40:3   error  'Email' is defined but never used                                    no-unused-vars
+  127:15  error  'error' is already declared in the upper scope on line 65 column 10  no-shadow
+  127:15  error  'error' is already declared in the upper scope on line 65 column 10  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/users/index.tsx
+  35:33  error  'isSuccess' is assigned a value but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/assets.tsx
+    3:27  error  'useEffect' is defined but never used       no-unused-vars
+   24:3   error  'Dialog' is defined but never used          no-unused-vars
+   25:3   error  'DialogTitle' is defined but never used     no-unused-vars
+   26:3   error  'DialogContent' is defined but never used   no-unused-vars
+   27:3   error  'DialogActions' is defined but never used   no-unused-vars
+   28:3   error  'TextField' is defined but never used       no-unused-vars
+   29:3   error  'FormControl' is defined but never used     no-unused-vars
+   30:3   error  'InputLabel' is defined but never used      no-unused-vars
+   31:3   error  'Select' is defined but never used          no-unused-vars
+   32:3   error  'MenuItem' is defined but never used        no-unused-vars
+   40:13  error  'DeleteIcon' is defined but never used      no-unused-vars
+   49:19  error  'useQueryClient' is defined but never used  no-unused-vars
+  258:28  error  'setOpenDialog' is not defined              no-undef
+  314:29  error  'setSelectedAsset' is not defined           no-undef
+  316:29  error  'setOpenDialog' is not defined              no-undef
+  327:29  error  'setSelectedAsset' is not defined           no-undef
+  329:29  error  'setOpenDialog' is not defined              no-undef
+  351:28  error  'setOpenDialog' is not defined              no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/bank-accounts.tsx
+  381:29  error  'setSelectedAccount' is not defined  no-undef
+  383:29  error  'setEditDialogOpen' is not defined   no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/cost-centers.tsx
+  134:32  error  'costCenters' is already declared in the upper scope on line 70 column 10  no-shadow
+  134:32  error  'costCenters' is already declared in the upper scope on line 70 column 10  @typescript-eslint/no-shadow
+  142:33  error  'costCenters' is already declared in the upper scope on line 70 column 10  no-shadow
+  142:33  error  'costCenters' is already declared in the upper scope on line 70 column 10  @typescript-eslint/no-shadow
+  354:35  error  'setSelectedCostCenter' is not defined                                     no-undef
+  356:35  error  'setEditDialogOpen' is not defined                                         no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/crm/index.tsx
+   30:16  error  Missing return type on function               @typescript-eslint/explicit-module-boundary-types
+   31:11  error  'user' is assigned a value but never used     no-unused-vars
+   41:5   error  'loadCRMData' was used before it was defined  no-use-before-define
+   44:5   error  'setLoading' is not defined                   no-undef
+   74:7   error  'setLoading' is not defined                   no-undef
+  165:6   error  'TableContainer' is not defined               react/jsx-no-undef
+  165:6   error  'TableContainer' is not defined               no-undef
+  165:32  error  'Paper' is not defined                        no-undef
+  166:8   error  'Table' is not defined                        react/jsx-no-undef
+  166:8   error  'Table' is not defined                        no-undef
+  167:10  error  'TableHead' is not defined                    react/jsx-no-undef
+  167:10  error  'TableHead' is not defined                    no-undef
+  168:12  error  'TableRow' is not defined                     react/jsx-no-undef
+  168:12  error  'TableRow' is not defined                     no-undef
+  169:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  169:14  error  'TableCell' is not defined                    no-undef
+  169:32  error  'TableCell' is not defined                    no-undef
+  170:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  170:14  error  'TableCell' is not defined                    no-undef
+  170:30  error  'TableCell' is not defined                    no-undef
+  171:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  171:14  error  'TableCell' is not defined                    no-undef
+  171:33  error  'TableCell' is not defined                    no-undef
+  172:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  172:14  error  'TableCell' is not defined                    no-undef
+  172:31  error  'TableCell' is not defined                    no-undef
+  173:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  173:14  error  'TableCell' is not defined                    no-undef
+  173:32  error  'TableCell' is not defined                    no-undef
+  174:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  174:14  error  'TableCell' is not defined                    no-undef
+  174:31  error  'TableCell' is not defined                    no-undef
+  175:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  175:14  error  'TableCell' is not defined                    no-undef
+  175:36  error  'TableCell' is not defined                    no-undef
+  176:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  176:14  error  'TableCell' is not defined                    no-undef
+  176:33  error  'TableCell' is not defined                    no-undef
+  177:13  error  'TableRow' is not defined                     no-undef
+  178:11  error  'TableHead' is not defined                    no-undef
+  179:10  error  'TableBody' is not defined                    react/jsx-no-undef
+  179:10  error  'TableBody' is not defined                    no-undef
+  181:14  error  'TableRow' is not defined                     react/jsx-no-undef
+  181:14  error  'TableRow' is not defined                     no-undef
+  182:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  182:16  error  'TableCell' is not defined                    no-undef
+  182:46  error  'TableCell' is not defined                    no-undef
+  183:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  183:16  error  'TableCell' is not defined                    no-undef
+  185:17  error  'TableCell' is not defined                    no-undef
+  186:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  186:16  error  'TableCell' is not defined                    no-undef
+  186:49  error  'TableCell' is not defined                    no-undef
+  187:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  187:16  error  'TableCell' is not defined                    no-undef
+  187:40  error  'TableCell' is not defined                    no-undef
+  188:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  188:16  error  'TableCell' is not defined                    no-undef
+  189:18  error  'Chip' is not defined                         react/jsx-no-undef
+  189:18  error  'Chip' is not defined                         no-undef
+  194:17  error  'TableCell' is not defined                    no-undef
+  195:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  195:16  error  'TableCell' is not defined                    no-undef
+  195:40  error  'TableCell' is not defined                    no-undef
+  196:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  196:16  error  'TableCell' is not defined                    no-undef
+  198:17  error  'TableCell' is not defined                    no-undef
+  199:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  199:16  error  'TableCell' is not defined                    no-undef
+  201:17  error  'TableCell' is not defined                    no-undef
+  202:15  error  'TableRow' is not defined                     no-undef
+  204:11  error  'TableBody' is not defined                    no-undef
+  205:9   error  'Table' is not defined                        no-undef
+  206:7   error  'TableContainer' is not defined               no-undef
+  209:6   error  'TableContainer' is not defined               react/jsx-no-undef
+  209:6   error  'TableContainer' is not defined               no-undef
+  209:32  error  'Paper' is not defined                        no-undef
+  210:8   error  'Table' is not defined                        react/jsx-no-undef
+  210:8   error  'Table' is not defined                        no-undef
+  211:10  error  'TableHead' is not defined                    react/jsx-no-undef
+  211:10  error  'TableHead' is not defined                    no-undef
+  212:12  error  'TableRow' is not defined                     react/jsx-no-undef
+  212:12  error  'TableRow' is not defined                     no-undef
+  213:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  213:14  error  'TableCell' is not defined                    no-undef
+  213:39  error  'TableCell' is not defined                    no-undef
+  214:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  214:14  error  'TableCell' is not defined                    no-undef
+  214:30  error  'TableCell' is not defined                    no-undef
+  215:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  215:14  error  'TableCell' is not defined                    no-undef
+  215:31  error  'TableCell' is not defined                    no-undef
+  216:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  216:14  error  'TableCell' is not defined                    no-undef
+  216:32  error  'TableCell' is not defined                    no-undef
+  217:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  217:14  error  'TableCell' is not defined                    no-undef
+  217:37  error  'TableCell' is not defined                    no-undef
+  218:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  218:14  error  'TableCell' is not defined                    no-undef
+  218:42  error  'TableCell' is not defined                    no-undef
+  219:14  error  'TableCell' is not defined                    react/jsx-no-undef
+  219:14  error  'TableCell' is not defined                    no-undef
+  219:36  error  'TableCell' is not defined                    no-undef
+  220:13  error  'TableRow' is not defined                     no-undef
+  221:11  error  'TableHead' is not defined                    no-undef
+  222:10  error  'TableBody' is not defined                    react/jsx-no-undef
+  222:10  error  'TableBody' is not defined                    no-undef
+  224:14  error  'TableRow' is not defined                     react/jsx-no-undef
+  224:14  error  'TableRow' is not defined                     no-undef
+  225:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  225:16  error  'TableCell' is not defined                    no-undef
+  225:60  error  'TableCell' is not defined                    no-undef
+  226:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  226:16  error  'TableCell' is not defined                    no-undef
+  226:46  error  'TableCell' is not defined                    no-undef
+  227:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  227:16  error  'TableCell' is not defined                    no-undef
+  228:18  error  'Chip' is not defined                         react/jsx-no-undef
+  228:18  error  'Chip' is not defined                         no-undef
+  233:17  error  'TableCell' is not defined                    no-undef
+  234:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  234:16  error  'TableCell' is not defined                    no-undef
+  234:66  error  'TableCell' is not defined                    no-undef
+  235:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  235:16  error  'TableCell' is not defined                    no-undef
+  235:54  error  'TableCell' is not defined                    no-undef
+  236:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  236:16  error  'TableCell' is not defined                    no-undef
+  236:76  error  'TableCell' is not defined                    no-undef
+  237:16  error  'TableCell' is not defined                    react/jsx-no-undef
+  237:16  error  'TableCell' is not defined                    no-undef
+  239:17  error  'TableCell' is not defined                    no-undef
+  240:15  error  'TableRow' is not defined                     no-undef
+  242:11  error  'TableBody' is not defined                    no-undef
+  243:9   error  'Table' is not defined                        no-undef
+  244:7   error  'TableContainer' is not defined               no-undef
+  271:10  error  'Alert' is not defined                        react/jsx-no-undef
+  271:10  error  'Alert' is not defined                        no-undef
+  276:11  error  'Alert' is not defined                        no-undef
+  294:20  error  'InputAdornment' is not defined               react/jsx-no-undef
+  294:20  error  'InputAdornment' is not defined               no-undef
+  296:21  error  'InputAdornment' is not defined               no-undef
+  307:8   error  'Dialog' is not defined                       react/jsx-no-undef
+  307:8   error  'Dialog' is not defined                       no-undef
+  313:10  error  'DialogTitle' is not defined                  react/jsx-no-undef
+  313:10  error  'DialogTitle' is not defined                  no-undef
+  313:36  error  'DialogTitle' is not defined                  no-undef
+  314:10  error  'DialogContent' is not defined                react/jsx-no-undef
+  314:10  error  'DialogContent' is not defined                no-undef
+  352:18  error  'FormControl' is not defined                  react/jsx-no-undef
+  352:18  error  'FormControl' is not defined                  no-undef
+  353:20  error  'InputLabel' is not defined                   react/jsx-no-undef
+  353:20  error  'InputLabel' is not defined                   no-undef
+  353:39  error  'InputLabel' is not defined                   no-undef
+  354:20  error  'Select' is not defined                       react/jsx-no-undef
+  354:20  error  'Select' is not defined                       no-undef
+  355:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  355:22  error  'MenuItem' is not defined                     no-undef
+  355:56  error  'MenuItem' is not defined                     no-undef
+  356:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  356:22  error  'MenuItem' is not defined                     no-undef
+  356:58  error  'MenuItem' is not defined                     no-undef
+  357:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  357:22  error  'MenuItem' is not defined                     no-undef
+  357:66  error  'MenuItem' is not defined                     no-undef
+  358:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  358:22  error  'MenuItem' is not defined                     no-undef
+  358:70  error  'MenuItem' is not defined                     no-undef
+  359:21  error  'Select' is not defined                       no-undef
+  360:19  error  'FormControl' is not defined                  no-undef
+  371:11  error  'DialogContent' is not defined                no-undef
+  372:10  error  'DialogActions' is not defined                react/jsx-no-undef
+  372:10  error  'DialogActions' is not defined                no-undef
+  377:11  error  'DialogActions' is not defined                no-undef
+  378:9   error  'Dialog' is not defined                       no-undef
+  380:8   error  'Dialog' is not defined                       react/jsx-no-undef
+  380:8   error  'Dialog' is not defined                       no-undef
+  386:10  error  'DialogTitle' is not defined                  react/jsx-no-undef
+  386:10  error  'DialogTitle' is not defined                  no-undef
+  386:43  error  'DialogTitle' is not defined                  no-undef
+  387:10  error  'DialogContent' is not defined                react/jsx-no-undef
+  387:10  error  'DialogContent' is not defined                no-undef
+  406:18  error  'FormControl' is not defined                  react/jsx-no-undef
+  406:18  error  'FormControl' is not defined                  no-undef
+  407:20  error  'InputLabel' is not defined                   react/jsx-no-undef
+  407:20  error  'InputLabel' is not defined                   no-undef
+  407:38  error  'InputLabel' is not defined                   no-undef
+  408:20  error  'Select' is not defined                       react/jsx-no-undef
+  408:20  error  'Select' is not defined                       no-undef
+  409:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  409:22  error  'MenuItem' is not defined                     no-undef
+  409:64  error  'MenuItem' is not defined                     no-undef
+  410:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  410:22  error  'MenuItem' is not defined                     no-undef
+  410:68  error  'MenuItem' is not defined                     no-undef
+  411:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  411:22  error  'MenuItem' is not defined                     no-undef
+  411:58  error  'MenuItem' is not defined                     no-undef
+  412:22  error  'MenuItem' is not defined                     react/jsx-no-undef
+  412:22  error  'MenuItem' is not defined                     no-undef
+  412:64  error  'MenuItem' is not defined                     no-undef
+  413:21  error  'Select' is not defined                       no-undef
+  414:19  error  'FormControl' is not defined                  no-undef
+  441:11  error  'DialogContent' is not defined                no-undef
+  442:10  error  'DialogActions' is not defined                react/jsx-no-undef
+  442:10  error  'DialogActions' is not defined                no-undef
+  447:11  error  'DialogActions' is not defined                no-undef
+  448:9   error  'Dialog' is not defined                       no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/dashboard/AppSuperAdminDashboard.tsx
+    2:27  error  'Grid' is defined but never used                     no-unused-vars
+    2:33  error  'Card' is defined but never used                     no-unused-vars
+    2:39  error  'CardContent' is defined but never used              no-unused-vars
+    2:58  error  'IconButton' is defined but never used               no-unused-vars
+    2:70  error  'Divider' is defined but never used                  no-unused-vars
+   41:11  error  '_stickyNotes' is assigned a value but never used    no-unused-vars
+   43:5   error  'fetchAppStatistics' was used before it was defined  no-use-before-define
+  215:10  error  'Paper' is not defined                               react/jsx-no-undef
+  215:10  error  'Paper' is not defined                               no-undef
+  240:11  error  'Paper' is not defined                               no-undef
+  241:10  error  'Paper' is not defined                               react/jsx-no-undef
+  241:10  error  'Paper' is not defined                               no-undef
+  270:11  error  'Paper' is not defined                               no-undef
+  272:8   error  'Paper' is not defined                               react/jsx-no-undef
+  272:8   error  'Paper' is not defined                               no-undef
+  323:9   error  'Paper' is not defined                               no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/dashboard/OrgDashboard.tsx
+    3:27  error  'Grid' is defined but never used                     no-unused-vars
+    3:33  error  'Card' is defined but never used                     no-unused-vars
+    3:39  error  'CardContent' is defined but never used              no-unused-vars
+    3:58  error  'IconButton' is defined but never used               no-unused-vars
+    3:70  error  'Divider' is defined but never used                  no-unused-vars
+   31:5   error  'fetchOrgStatistics' was used before it was defined  no-use-before-define
+  187:10  error  'Paper' is not defined                               react/jsx-no-undef
+  187:10  error  'Paper' is not defined                               no-undef
+  215:11  error  'Paper' is not defined                               no-undef
+  216:10  error  'Paper' is not defined                               react/jsx-no-undef
+  216:10  error  'Paper' is not defined                               no-undef
+  226:11  error  'Paper' is not defined                               no-undef
+  228:8   error  'Paper' is not defined                               react/jsx-no-undef
+  228:8   error  'Paper' is not defined                               no-undef
+  285:9   error  'Paper' is not defined                               no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/demo.tsx
+  121:16  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/exhibition-mode.tsx
+    4:3   error  'Paper' is defined but never used        no-unused-vars
+   12:3   error  'Tooltip' is defined but never used      no-unused-vars
+   17:3   error  'TextField' is defined but never used    no-unused-vars
+   18:3   error  'FormControl' is defined but never used  no-unused-vars
+   19:3   error  'InputLabel' is defined but never used   no-unused-vars
+   20:3   error  'Select' is defined but never used       no-unused-vars
+   21:3   error  'MenuItem' is defined but never used     no-unused-vars
+   36:3   error  'Delete' is defined but never used       no-unused-vars
+   40:3   error  'Analytics' is defined but never used    no-unused-vars
+   41:3   error  'FileUpload' is defined but never used   no-unused-vars
+  220:24  error  'file' is defined but never used         no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/finance-dashboard.tsx
+  26:3  error  'TrendingDown' is defined but never used  no-unused-vars
+  29:3  error  'Receipt' is defined but never used       no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/financial-reports.tsx
+  22:3  error  'FormControl' is defined but never used     no-unused-vars
+  23:3  error  'InputLabel' is defined but never used      no-unused-vars
+  24:3  error  'Select' is defined but never used          no-unused-vars
+  25:3  error  'MenuItem' is defined but never used        no-unused-vars
+  33:3  error  'TrendingUp' is defined but never used      no-unused-vars
+  34:3  error  'TrendingDown' is defined but never used    no-unused-vars
+  35:3  error  'AccountBalance' is defined but never used  no-unused-vars
+  36:3  error  'Assessment' is defined but never used      no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/hr/dashboard.tsx
+   50:9   error  '_user' is assigned a value but never used           no-unused-vars
+   58:5   error  'fetchDashboardData' was used before it was defined  no-use-before-define
+  121:6   error  'Container' is not defined                           react/jsx-no-undef
+  121:6   error  'Container' is not defined                           no-undef
+  146:10  error  'Alert' is not defined                               react/jsx-no-undef
+  146:10  error  'Alert' is not defined                               no-undef
+  151:11  error  'Alert' is not defined                               no-undef
+  164:33  error  'CircularProgress' is not defined                    react/jsx-no-undef
+  164:33  error  'CircularProgress' is not defined                    no-undef
+  181:33  error  'CircularProgress' is not defined                    react/jsx-no-undef
+  181:33  error  'CircularProgress' is not defined                    no-undef
+  198:33  error  'CircularProgress' is not defined                    react/jsx-no-undef
+  198:33  error  'CircularProgress' is not defined                    no-undef
+  215:33  error  'CircularProgress' is not defined                    react/jsx-no-undef
+  215:33  error  'CircularProgress' is not defined                    no-undef
+  426:10  error  'Alert' is not defined                               react/jsx-no-undef
+  426:10  error  'Alert' is not defined                               no-undef
+  428:11  error  'Alert' is not defined                               no-undef
+  430:12  error  'Alert' is not defined                               react/jsx-no-undef
+  430:12  error  'Alert' is not defined                               no-undef
+  433:13  error  'Alert' is not defined                               no-undef
+  436:7   error  'Container' is not defined                           no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/hr/employees-directory.tsx
+  16:3   error  'Paper' is defined but never used          no-unused-vars
+  37:16  error  'PersonAddIcon' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/hr/employees.tsx
+  500:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/inventory/index.tsx
+  111:13  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/inventory/stock.tsx
+   35:3   error  'CircularProgress' is defined but never used                               no-unused-vars
+   54:17  error  'options' is defined but never used                                        no-unused-vars
+  159:14  error  'error' is defined but never used                                          no-unused-vars
+  164:5   error  'generateStockReport' was used before it was defined                       no-use-before-define
+  166:50  error  'companyData' is already declared in the upper scope on line 91 column 17  no-shadow
+  166:50  error  'companyData' is already declared in the upper scope on line 91 column 17  @typescript-eslint/no-shadow
+  194:9   error  'resetForm' is assigned a value but never used                             no-unused-vars
+  286:20  error  'Stack' is not defined                                                     react/jsx-no-undef
+  286:20  error  'Stack' is not defined                                                     no-undef
+  326:21  error  'Stack' is not defined                                                     no-undef
+  384:10  error  'MuiMenuItem' is not defined                                               react/jsx-no-undef
+  384:10  error  'MuiMenuItem' is not defined                                               no-undef
+  385:12  error  'ListItemIcon' is not defined                                              react/jsx-no-undef
+  385:12  error  'ListItemIcon' is not defined                                              no-undef
+  385:42  error  'ListItemIcon' is not defined                                              no-undef
+  386:12  error  'ListItemText' is not defined                                              react/jsx-no-undef
+  386:12  error  'ListItemText' is not defined                                              no-undef
+  386:40  error  'ListItemText' is not defined                                              no-undef
+  387:11  error  'MuiMenuItem' is not defined                                               no-undef
+  388:10  error  'MuiMenuItem' is not defined                                               react/jsx-no-undef
+  388:10  error  'MuiMenuItem' is not defined                                               no-undef
+  389:12  error  'ListItemIcon' is not defined                                              react/jsx-no-undef
+  389:12  error  'ListItemIcon' is not defined                                              no-undef
+  389:43  error  'ListItemIcon' is not defined                                              no-undef
+  390:12  error  'ListItemText' is not defined                                              react/jsx-no-undef
+  390:12  error  'ListItemText' is not defined                                              no-undef
+  390:48  error  'ListItemText' is not defined                                              no-undef
+  391:11  error  'MuiMenuItem' is not defined                                               no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/login.tsx
+   8:3   error  'Checkbox' is defined but never used          no-unused-vars
+   9:3   error  'FormControlLabel' is defined but never used  no-unused-vars
+  10:3   error  'IconButton' is defined but never used        no-unused-vars
+  11:3   error  'InputAdornment' is defined but never used    no-unused-vars
+  20:10  error  'useRouter' is defined but never used         no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/mail/dashboard.tsx
+   31:3   error  'DateRange' is defined but never used  no-unused-vars
+   39:3   error  'Delete' is defined but never used     no-unused-vars
+  152:16  error  'err' is defined but never used        no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/management/dashboard.tsx
+    2:27  error  'useEffect' is defined but never used                                no-unused-vars
+   17:3   error  'Divider' is defined but never used                                  no-unused-vars
+   24:3   error  'Paper' is defined but never used                                    no-unused-vars
+   28:3   error  'TrendingDown' is defined but never used                             no-unused-vars
+  121:14  error  'error' is already declared in the upper scope on line 79 column 43  no-shadow
+  121:14  error  'error' is already declared in the upper scope on line 79 column 43  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/marketing/index.tsx
+   12:3   error  'IconButton' is defined but never used              no-unused-vars
+   45:41  error  'JSX' is not defined                                no-undef
+   51:10  error  'TabPanel' is defined but never used                no-unused-vars
+   69:16  error  Missing return type on function                     @typescript-eslint/explicit-module-boundary-types
+   70:9   error  '_user' is assigned a value but never used          no-unused-vars
+   80:5   error  'loadMarketingData' was used before it was defined  no-use-before-define
+   83:5   error  'setLoading' is not defined                         no-undef
+  115:7   error  'setLoading' is not defined                         no-undef
+  259:22  error  'LinearProgress' is not defined                     react/jsx-no-undef
+  259:22  error  'LinearProgress' is not defined                     no-undef
+  361:10  error  'Alert' is not defined                              react/jsx-no-undef
+  361:10  error  'Alert' is not defined                              no-undef
+  366:11  error  'Alert' is not defined                              no-undef
+  372:14  error  'Tabs' is not defined                               react/jsx-no-undef
+  372:14  error  'Tabs' is not defined                               no-undef
+  373:16  error  'Tab' is not defined                                react/jsx-no-undef
+  373:16  error  'Tab' is not defined                                no-undef
+  374:16  error  'Tab' is not defined                                react/jsx-no-undef
+  374:16  error  'Tab' is not defined                                no-undef
+  375:15  error  'Tabs' is not defined                               no-undef
+  384:20  error  'InputAdornment' is not defined                     react/jsx-no-undef
+  384:20  error  'InputAdornment' is not defined                     no-undef
+  386:21  error  'InputAdornment' is not defined                     no-undef
+  415:18  error  'FormControl' is not defined                        react/jsx-no-undef
+  415:18  error  'FormControl' is not defined                        no-undef
+  416:20  error  'InputLabel' is not defined                         react/jsx-no-undef
+  416:20  error  'InputLabel' is not defined                         no-undef
+  416:46  error  'InputLabel' is not defined                         no-undef
+  417:20  error  'Select' is not defined                             react/jsx-no-undef
+  417:20  error  'Select' is not defined                             no-undef
+  418:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  418:22  error  'MenuItem' is not defined                           no-undef
+  418:52  error  'MenuItem' is not defined                           no-undef
+  419:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  419:22  error  'MenuItem' is not defined                           no-undef
+  419:48  error  'MenuItem' is not defined                           no-undef
+  420:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  420:22  error  'MenuItem' is not defined                           no-undef
+  420:66  error  'MenuItem' is not defined                           no-undef
+  421:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  421:22  error  'MenuItem' is not defined                           no-undef
+  421:64  error  'MenuItem' is not defined                           no-undef
+  422:21  error  'Select' is not defined                             no-undef
+  423:19  error  'FormControl' is not defined                        no-undef
+  492:18  error  'FormControl' is not defined                        react/jsx-no-undef
+  492:18  error  'FormControl' is not defined                        no-undef
+  493:20  error  'InputLabel' is not defined                         react/jsx-no-undef
+  493:20  error  'InputLabel' is not defined                         no-undef
+  493:47  error  'InputLabel' is not defined                         no-undef
+  494:20  error  'Select' is not defined                             react/jsx-no-undef
+  494:20  error  'Select' is not defined                             no-undef
+  495:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  495:22  error  'MenuItem' is not defined                           no-undef
+  495:80  error  'MenuItem' is not defined                           no-undef
+  496:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  496:22  error  'MenuItem' is not defined                           no-undef
+  496:84  error  'MenuItem' is not defined                           no-undef
+  497:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  497:22  error  'MenuItem' is not defined                           no-undef
+  497:64  error  'MenuItem' is not defined                           no-undef
+  498:22  error  'MenuItem' is not defined                           react/jsx-no-undef
+  498:22  error  'MenuItem' is not defined                           no-undef
+  498:68  error  'MenuItem' is not defined                           no-undef
+  499:21  error  'Select' is not defined                             no-undef
+  500:19  error  'FormControl' is not defined                        no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/bom.tsx
+  168:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/categories.tsx
+  2:10  error  'useRouter' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/chart-of-accounts.tsx
+  2:10  error  'useRouter' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/company-details.tsx
+  16:13  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/customers.tsx
+  54:35  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/employees.tsx
+    2:10  error  'useRouter' is defined but never used       no-unused-vars
+    6:3   error  'Card' is defined but never used            no-unused-vars
+    7:3   error  'CardContent' is defined but never used     no-unused-vars
+   67:7   error  'resetForm' was used before it was defined  no-use-before-define
+  130:6   error  'Container' is not defined                  react/jsx-no-undef
+  130:6   error  'Container' is not defined                  no-undef
+  192:28  error  'Avatar' is not defined                     react/jsx-no-undef
+  192:28  error  'Avatar' is not defined                     no-undef
+  194:29  error  'Avatar' is not defined                     no-undef
+  352:7   error  'Container' is not defined                  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/index.tsx
+    43:8   error  'Grid' is already defined                                                no-redeclare
+   180:7   error  'resetForm' was used before it was defined                               no-use-before-define
+   201:9   error  'handleLogout' is assigned a value but never used                        no-unused-vars
+   313:7   error  'resetForm' was used before it was defined                               no-use-before-define
+   334:7   error  'resetForm' was used before it was defined                               no-use-before-define
+   362:5   error  'setCompanyEditDialog' is not defined                                    no-undef
+   364:9   error  'closeCompanyEditDialog' is assigned a value but never used              no-unused-vars
+   365:5   error  'setCompanyEditDialog' is not defined                                    no-undef
+   400:13  error  'formData' is already declared in the upper scope on line 117 column 10  no-shadow
+   400:13  error  'formData' is already declared in the upper scope on line 117 column 10  @typescript-eslint/no-shadow
+   561:26  error  'Avatar' is not defined                                                  react/jsx-no-undef
+   561:26  error  'Avatar' is not defined                                                  no-undef
+   563:27  error  'Avatar' is not defined                                                  no-undef
+   709:12  error  'Alert' is not defined                                                   react/jsx-no-undef
+   709:12  error  'Alert' is not defined                                                   no-undef
+   711:13  error  'Alert' is not defined                                                   no-undef
+   718:8   error  'Container' is not defined                                               react/jsx-no-undef
+   718:8   error  'Container' is not defined                                               no-undef
+   766:14  error  'Tabs' is not defined                                                    react/jsx-no-undef
+   766:14  error  'Tabs' is not defined                                                    no-undef
+   767:16  error  'Tab' is not defined                                                     react/jsx-no-undef
+   767:16  error  'Tab' is not defined                                                     no-undef
+   768:16  error  'Tab' is not defined                                                     react/jsx-no-undef
+   768:16  error  'Tab' is not defined                                                     no-undef
+   769:16  error  'Tab' is not defined                                                     react/jsx-no-undef
+   769:16  error  'Tab' is not defined                                                     no-undef
+   770:16  error  'Tab' is not defined                                                     react/jsx-no-undef
+   770:16  error  'Tab' is not defined                                                     no-undef
+   771:16  error  'Tab' is not defined                                                     react/jsx-no-undef
+   771:16  error  'Tab' is not defined                                                     no-undef
+   772:16  error  'Tab' is not defined                                                     react/jsx-no-undef
+   772:16  error  'Tab' is not defined                                                     no-undef
+   773:15  error  'Tabs' is not defined                                                    no-undef
+   847:9   error  'Container' is not defined                                               no-undef
+   853:14  error  'Alert' is not defined                                                   react/jsx-no-undef
+   853:14  error  'Alert' is not defined                                                   no-undef
+   855:15  error  'Alert' is not defined                                                   no-undef
+   900:16  error  'FormControl' is not defined                                             react/jsx-no-undef
+   900:16  error  'FormControl' is not defined                                             no-undef
+   901:18  error  'InputLabel' is not defined                                              react/jsx-no-undef
+   901:18  error  'InputLabel' is not defined                                              no-undef
+   901:53  error  'InputLabel' is not defined                                              no-undef
+   902:18  error  'Select' is not defined                                                  react/jsx-no-undef
+   902:18  error  'Select' is not defined                                                  no-undef
+   909:22  error  'MenuItem' is not defined                                                react/jsx-no-undef
+   909:22  error  'MenuItem' is not defined                                                no-undef
+   911:23  error  'MenuItem' is not defined                                                no-undef
+   913:19  error  'Select' is not defined                                                  no-undef
+   914:17  error  'FormControl' is not defined                                             no-undef
+   991:16  error  'Autocomplete' is not defined                                            react/jsx-no-undef
+   991:16  error  'Autocomplete' is not defined                                            no-undef
+  1016:47  error  'CircularProgress' is not defined                                        react/jsx-no-undef
+  1016:47  error  'CircularProgress' is not defined                                        no-undef
+  1056:16  error  'FormControl' is not defined                                             react/jsx-no-undef
+  1056:16  error  'FormControl' is not defined                                             no-undef
+  1057:18  error  'InputLabel' is not defined                                              react/jsx-no-undef
+  1057:18  error  'InputLabel' is not defined                                              no-undef
+  1057:63  error  'InputLabel' is not defined                                              no-undef
+  1058:18  error  'Select' is not defined                                                  react/jsx-no-undef
+  1058:18  error  'Select' is not defined                                                  no-undef
+  1064:20  error  'MenuItem' is not defined                                                react/jsx-no-undef
+  1064:20  error  'MenuItem' is not defined                                                no-undef
+  1064:44  error  'MenuItem' is not defined                                                no-undef
+  1065:20  error  'MenuItem' is not defined                                                react/jsx-no-undef
+  1065:20  error  'MenuItem' is not defined                                                no-undef
+  1065:44  error  'MenuItem' is not defined                                                no-undef
+  1066:20  error  'MenuItem' is not defined                                                react/jsx-no-undef
+  1066:20  error  'MenuItem' is not defined                                                no-undef
+  1066:46  error  'MenuItem' is not defined                                                no-undef
+  1067:20  error  'MenuItem' is not defined                                                react/jsx-no-undef
+  1067:20  error  'MenuItem' is not defined                                                no-undef
+  1067:46  error  'MenuItem' is not defined                                                no-undef
+  1068:20  error  'MenuItem' is not defined                                                react/jsx-no-undef
+  1068:20  error  'MenuItem' is not defined                                                no-undef
+  1068:46  error  'MenuItem' is not defined                                                no-undef
+  1069:19  error  'Select' is not defined                                                  no-undef
+  1070:17  error  'FormControl' is not defined                                             no-undef
+  1071:16  error  'FormControlLabel' is not defined                                        react/jsx-no-undef
+  1071:16  error  'FormControlLabel' is not defined                                        no-undef
+  1073:20  error  'Checkbox' is not defined                                                react/jsx-no-undef
+  1073:20  error  'Checkbox' is not defined                                                no-undef
+  1095:16  error  'FormControlLabel' is not defined                                        react/jsx-no-undef
+  1095:16  error  'FormControlLabel' is not defined                                        no-undef
+  1097:20  error  'Checkbox' is not defined                                                react/jsx-no-undef
+  1097:20  error  'Checkbox' is not defined                                                no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/multi-company.tsx
+  82:13  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/payment-terms.tsx
+  2:10  error  'useRouter' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/products.tsx
+  25:3  error  'Select' is defined but never used       no-unused-vars
+  26:3  error  'MenuItem' is defined but never used     no-unused-vars
+  29:3  error  'InputLabel' is defined but never used   no-unused-vars
+  30:3  error  'FormControl' is defined but never used  no-unused-vars
+  40:3  error  'Inventory' is defined but never used    no-unused-vars
+  41:3  error  'Visibility' is defined but never used   no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/units.tsx
+  2:10  error  'useRouter' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/vendors.tsx
+  49:33  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/migration/management.tsx
+   39:3   error  'Settings' is defined but never used                                 no-unused-vars
+   44:3   error  'Stop' is defined but never used                                     no-unused-vars
+   46:3   error  'History' is defined but never used                                  no-unused-vars
+   86:5   error  'loadMigrationJobs' was used before it was defined                   no-use-before-define
+   93:14  error  'error' is already declared in the upper scope on line 72 column 10  no-shadow
+   93:14  error  'error' is already declared in the upper scope on line 72 column 10  @typescript-eslint/no-shadow
+  106:14  error  'error' is already declared in the upper scope on line 72 column 10  no-shadow
+  106:14  error  'error' is already declared in the upper scope on line 72 column 10  @typescript-eslint/no-shadow
+  115:14  error  'error' is already declared in the upper scope on line 72 column 10  no-shadow
+  115:14  error  'error' is already declared in the upper scope on line 72 column 10  @typescript-eslint/no-shadow
+  124:14  error  'error' is already declared in the upper scope on line 72 column 10  no-shadow
+  124:14  error  'error' is already declared in the upper scope on line 72 column 10  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/notification-demo.tsx
+  13:3  error  'Divider' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/reports.tsx
+   32:3   error  'Assessment' is defined but never used             no-unused-vars
+   35:3   error  'Download' is defined but never used               no-unused-vars
+   36:3   error  'Print' is defined but never used                  no-unused-vars
+   42:3   error  'AccountBalance' is defined but never used         no-unused-vars
+  114:67  error  'refetchStats' is assigned a value but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/accounts.tsx
+  45:15  error  'BusinessIcon' is defined but never used    no-unused-vars
+  46:17  error  'LocationIcon' is defined but never used    no-unused-vars
+  49:13  error  'PersonIcon' is defined but never used      no-unused-vars
+  50:17  error  'TrendingUpIcon' is defined but never used  no-unused-vars
+  51:21  error  'MoneyIcon' is defined but never used       no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/commissions.tsx
+  102:27  error  'filterStatus' is not defined  no-undef
+  102:83  error  'filterStatus' is not defined  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/contacts.tsx
+  42:19  error  'ContactPhoneIcon' is defined but never used  no-unused-vars
+  45:15  error  'BusinessIcon' is defined but never used      no-unused-vars
+  46:13  error  'PersonIcon' is defined but never used        no-unused-vars
+  47:17  error  'LocationIcon' is defined but never used      no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/customer-analytics.tsx
+  35:19  error  'TrendingDownIcon' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/leads.tsx
+  16:3   error  'Paper' is defined but never used          no-unused-vars
+  34:16  error  'PersonAddIcon' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/opportunities.tsx
+  295:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/pipeline.tsx
+   13:3   error  'Chip' is defined but never used                     no-unused-vars
+   19:3   error  'List' is defined but never used                     no-unused-vars
+   20:3   error  'ListItem' is defined but never used                 no-unused-vars
+   21:3   error  'ListItemText' is defined but never used             no-unused-vars
+   22:3   error  'ListItemSecondaryAction' is defined but never used  no-unused-vars
+   32:15  error  'TimelineIcon' is defined but never used             no-unused-vars
+   33:17  error  'TrendingUpIcon' is defined but never used           no-unused-vars
+   34:21  error  'MoneyIcon' is defined but never used                no-unused-vars
+  162:9   error  'setPipelines' is not defined                        no-undef
+  374:51  error  'index' is defined but never used                    no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/reports.tsx
+   27:3   error  'List' is defined but never used                                     no-unused-vars
+   28:3   error  'ListItem' is defined but never used                                 no-unused-vars
+   29:3   error  'ListItemText' is defined but never used                             no-unused-vars
+   30:3   error  'ListItemIcon' is defined but never used                             no-unused-vars
+   31:3   error  'Divider' is defined but never used                                  no-unused-vars
+   43:15  error  'PieChartIcon' is defined but never used                             no-unused-vars
+   44:15  error  'DownloadIcon' is defined but never used                             no-unused-vars
+   46:12  error  'ShareIcon' is defined but never used                                no-unused-vars
+  150:15  error  'exportToExcel' was used before it was defined                       no-use-before-define
+  153:15  error  'exportToPDF' was used before it was defined                         no-use-before-define
+  155:14  error  'error' is already declared in the upper scope on line 85 column 10  no-shadow
+  155:14  error  'error' is already declared in the upper scope on line 85 column 10  @typescript-eslint/no-shadow
+  167:48  error  'avgGrowth' is not defined                                           no-undef
+  169:49  error  'avgConversion' is not defined                                       no-undef
+  171:42  error  'totalLeads' is not defined                                          no-undef
+  218:33  error  'avgGrowth' is not defined                                           no-undef
+  220:34  error  'avgConversion' is not defined                                       no-undef
+  222:30  error  'totalLeads' is not defined                                          no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/service-desk/index.tsx
+   12:3   error  'IconButton' is defined but never used                no-unused-vars
+   94:16  error  Missing return type on function                       @typescript-eslint/explicit-module-boundary-types
+   95:9   error  '_user' is assigned a value but never used            no-unused-vars
+  105:5   error  'loadServiceDeskData' was used before it was defined  no-use-before-define
+  108:5   error  'setLoading' is not defined                           no-undef
+  214:7   error  'setLoading' is not defined                           no-undef
+  382:8   error  'List' is not defined                                 react/jsx-no-undef
+  382:8   error  'List' is not defined                                 no-undef
+  385:14  error  'ListItem' is not defined                             react/jsx-no-undef
+  385:14  error  'ListItem' is not defined                             no-undef
+  386:16  error  'ListItemAvatar' is not defined                       react/jsx-no-undef
+  386:16  error  'ListItemAvatar' is not defined                       no-undef
+  387:18  error  'Avatar' is not defined                               react/jsx-no-undef
+  387:18  error  'Avatar' is not defined                               no-undef
+  389:19  error  'Avatar' is not defined                               no-undef
+  390:17  error  'ListItemAvatar' is not defined                       no-undef
+  391:16  error  'ListItemText' is not defined                         react/jsx-no-undef
+  391:16  error  'ListItemText' is not defined                         no-undef
+  426:15  error  'ListItem' is not defined                             no-undef
+  427:59  error  'Divider' is not defined                              react/jsx-no-undef
+  427:59  error  'Divider' is not defined                              no-undef
+  430:9   error  'List' is not defined                                 no-undef
+  459:14  error  'Tabs' is not defined                                 react/jsx-no-undef
+  459:14  error  'Tabs' is not defined                                 no-undef
+  460:16  error  'Tab' is not defined                                  react/jsx-no-undef
+  460:16  error  'Tab' is not defined                                  no-undef
+  461:16  error  'Tab' is not defined                                  react/jsx-no-undef
+  461:16  error  'Tab' is not defined                                  no-undef
+  462:15  error  'Tabs' is not defined                                 no-undef
+  471:20  error  'InputAdornment' is not defined                       react/jsx-no-undef
+  471:20  error  'InputAdornment' is not defined                       no-undef
+  473:21  error  'InputAdornment' is not defined                       no-undef
+  480:18  error  'FormControl' is not defined                          react/jsx-no-undef
+  480:18  error  'FormControl' is not defined                          no-undef
+  481:20  error  'InputLabel' is not defined                           react/jsx-no-undef
+  481:20  error  'InputLabel' is not defined                           no-undef
+  481:41  error  'InputLabel' is not defined                           no-undef
+  482:20  error  'Select' is not defined                               react/jsx-no-undef
+  482:20  error  'Select' is not defined                               no-undef
+  486:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  486:22  error  'MenuItem' is not defined                             no-undef
+  486:45  error  'MenuItem' is not defined                             no-undef
+  487:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  487:22  error  'MenuItem' is not defined                             no-undef
+  487:48  error  'MenuItem' is not defined                             no-undef
+  488:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  488:22  error  'MenuItem' is not defined                             no-undef
+  488:54  error  'MenuItem' is not defined                             no-undef
+  489:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  489:22  error  'MenuItem' is not defined                             no-undef
+  489:50  error  'MenuItem' is not defined                             no-undef
+  490:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  490:22  error  'MenuItem' is not defined                             no-undef
+  490:54  error  'MenuItem' is not defined                             no-undef
+  491:21  error  'Select' is not defined                               no-undef
+  492:19  error  'FormControl' is not defined                          no-undef
+  493:18  error  'FormControl' is not defined                          react/jsx-no-undef
+  493:18  error  'FormControl' is not defined                          no-undef
+  494:20  error  'InputLabel' is not defined                           react/jsx-no-undef
+  494:20  error  'InputLabel' is not defined                           no-undef
+  494:39  error  'InputLabel' is not defined                           no-undef
+  495:20  error  'Select' is not defined                               react/jsx-no-undef
+  495:20  error  'Select' is not defined                               no-undef
+  499:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  499:22  error  'MenuItem' is not defined                             no-undef
+  499:45  error  'MenuItem' is not defined                             no-undef
+  500:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  500:22  error  'MenuItem' is not defined                             no-undef
+  500:50  error  'MenuItem' is not defined                             no-undef
+  501:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  501:22  error  'MenuItem' is not defined                             no-undef
+  501:64  error  'MenuItem' is not defined                             no-undef
+  502:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  502:22  error  'MenuItem' is not defined                             no-undef
+  502:58  error  'MenuItem' is not defined                             no-undef
+  503:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  503:22  error  'MenuItem' is not defined                             no-undef
+  503:54  error  'MenuItem' is not defined                             no-undef
+  504:21  error  'Select' is not defined                               no-undef
+  505:19  error  'FormControl' is not defined                          no-undef
+  532:18  error  'FormControl' is not defined                          react/jsx-no-undef
+  532:18  error  'FormControl' is not defined                          no-undef
+  533:20  error  'InputLabel' is not defined                           react/jsx-no-undef
+  533:20  error  'InputLabel' is not defined                           no-undef
+  533:41  error  'InputLabel' is not defined                           no-undef
+  534:20  error  'Select' is not defined                               react/jsx-no-undef
+  534:20  error  'Select' is not defined                               no-undef
+  535:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  535:22  error  'MenuItem' is not defined                             no-undef
+  535:51  error  'MenuItem' is not defined                             no-undef
+  536:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  536:22  error  'MenuItem' is not defined                             no-undef
+  536:50  error  'MenuItem' is not defined                             no-undef
+  537:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  537:22  error  'MenuItem' is not defined                             no-undef
+  537:57  error  'MenuItem' is not defined                             no-undef
+  538:21  error  'Select' is not defined                               no-undef
+  539:19  error  'FormControl' is not defined                          no-undef
+  542:18  error  'FormControl' is not defined                          react/jsx-no-undef
+  542:18  error  'FormControl' is not defined                          no-undef
+  543:20  error  'InputLabel' is not defined                           react/jsx-no-undef
+  543:20  error  'InputLabel' is not defined                           no-undef
+  543:41  error  'InputLabel' is not defined                           no-undef
+  544:20  error  'Select' is not defined                               react/jsx-no-undef
+  544:20  error  'Select' is not defined                               no-undef
+  545:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  545:22  error  'MenuItem' is not defined                             no-undef
+  545:48  error  'MenuItem' is not defined                             no-undef
+  546:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  546:22  error  'MenuItem' is not defined                             no-undef
+  546:54  error  'MenuItem' is not defined                             no-undef
+  547:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  547:22  error  'MenuItem' is not defined                             no-undef
+  547:50  error  'MenuItem' is not defined                             no-undef
+  548:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  548:22  error  'MenuItem' is not defined                             no-undef
+  548:54  error  'MenuItem' is not defined                             no-undef
+  549:21  error  'Select' is not defined                               no-undef
+  550:19  error  'FormControl' is not defined                          no-undef
+  553:18  error  'FormControl' is not defined                          react/jsx-no-undef
+  553:18  error  'FormControl' is not defined                          no-undef
+  554:20  error  'InputLabel' is not defined                           react/jsx-no-undef
+  554:20  error  'InputLabel' is not defined                           no-undef
+  554:37  error  'InputLabel' is not defined                           no-undef
+  555:20  error  'Select' is not defined                               react/jsx-no-undef
+  555:20  error  'Select' is not defined                               no-undef
+  556:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  556:22  error  'MenuItem' is not defined                             no-undef
+  556:56  error  'MenuItem' is not defined                             no-undef
+  557:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  557:22  error  'MenuItem' is not defined                             no-undef
+  557:64  error  'MenuItem' is not defined                             no-undef
+  558:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  558:22  error  'MenuItem' is not defined                             no-undef
+  558:66  error  'MenuItem' is not defined                             no-undef
+  559:22  error  'MenuItem' is not defined                             react/jsx-no-undef
+  559:22  error  'MenuItem' is not defined                             no-undef
+  559:60  error  'MenuItem' is not defined                             no-undef
+  560:21  error  'Select' is not defined                               no-undef
+  561:19  error  'FormControl' is not defined                          no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings.tsx
+  59:16  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/FactoryReset.tsx
+  15:3   error  'Divider' is defined but never used          no-unused-vars
+  24:10  error  'requestResetOTP' is defined but never used  no-unused-vars
+  24:27  error  'confirmReset' is defined but never used     no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/Settings.tsx
+   9:3  error  'Divider' is defined but never used      no-unused-vars
+  19:3  error  'StickyNote2' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/UserPreferences.tsx
+  2:27  error  'useEffect' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/add-user.tsx
+  13:3   error  'FormControlLabel' is defined but never used                         no-unused-vars
+  14:3   error  'Checkbox' is defined but never used                                 no-unused-vars
+  15:3   error  'FormGroup' is defined but never used                                no-unused-vars
+  61:17  error  'data' is defined but never used                                     no-unused-vars
+  69:15  error  'error' is already declared in the upper scope on line 30 column 10  no-shadow
+  69:15  error  'error' is already declared in the upper scope on line 30 column 10  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/user-management.tsx
+    5:3   error  'Card' is defined but never used                no-unused-vars
+    6:3   error  'CardContent' is defined but never used         no-unused-vars
+   35:3   error  'Visibility' is defined but never used          no-unused-vars
+   37:3   error  'Security' is defined but never used            no-unused-vars
+   38:3   error  'AdminPanelSettings' is defined but never used  no-unused-vars
+   42:10  error  'useRouter' is defined but never used           no-unused-vars
+   98:7   error  'resetForm' was used before it was defined      no-use-before-define
+  108:7   error  'resetForm' was used before it was defined      no-use-before-define
+  130:8   error  'Container' is not defined                      react/jsx-no-undef
+  130:8   error  'Container' is not defined                      no-undef
+  134:9   error  'Container' is not defined                      no-undef
+  140:8   error  'Container' is not defined                      react/jsx-no-undef
+  140:8   error  'Container' is not defined                      no-undef
+  141:10  error  'Alert' is not defined                          react/jsx-no-undef
+  141:10  error  'Alert' is not defined                          no-undef
+  143:11  error  'Alert' is not defined                          no-undef
+  144:9   error  'Container' is not defined                      no-undef
+  150:8   error  'Container' is not defined                      react/jsx-no-undef
+  150:8   error  'Container' is not defined                      no-undef
+  151:10  error  'Alert' is not defined                          react/jsx-no-undef
+  151:10  error  'Alert' is not defined                          no-undef
+  153:11  error  'Alert' is not defined                          no-undef
+  154:9   error  'Container' is not defined                      no-undef
+  263:6   error  'Container' is not defined                      react/jsx-no-undef
+  263:6   error  'Container' is not defined                      no-undef
+  287:10  error  'Divider' is not defined                        react/jsx-no-undef
+  287:10  error  'Divider' is not defined                        no-undef
+  516:16  error  'FormGroup' is not defined                      react/jsx-no-undef
+  516:16  error  'FormGroup' is not defined                      no-undef
+  518:20  error  'FormControlLabel' is not defined               react/jsx-no-undef
+  518:20  error  'FormControlLabel' is not defined               no-undef
+  521:24  error  'Checkbox' is not defined                       react/jsx-no-undef
+  521:24  error  'Checkbox' is not defined                       no-undef
+  533:17  error  'FormGroup' is not defined                      no-undef
+  619:16  error  'FormGroup' is not defined                      react/jsx-no-undef
+  619:16  error  'FormGroup' is not defined                      no-undef
+  621:20  error  'FormControlLabel' is not defined               react/jsx-no-undef
+  621:20  error  'FormControlLabel' is not defined               no-undef
+  624:24  error  'Checkbox' is not defined                       react/jsx-no-undef
+  624:24  error  'Checkbox' is not defined                       no-undef
+  636:17  error  'FormGroup' is not defined                      no-undef
+  664:14  error  'Alert' is not defined                          react/jsx-no-undef
+  664:14  error  'Alert' is not defined                          no-undef
+  666:15  error  'Alert' is not defined                          no-undef
+  669:14  error  'Alert' is not defined                          react/jsx-no-undef
+  669:14  error  'Alert' is not defined                          no-undef
+  671:15  error  'Alert' is not defined                          no-undef
+  686:7   error  'Container' is not defined                      no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sla/index.tsx
+    2:27  error  'useEffect' is defined but never used                 no-unused-vars
+   35:3   error  'CheckCircle' is defined but never used               no-unused-vars
+   36:3   error  'Schedule' is defined but never used                  no-unused-vars
+   37:3   error  'TrendingUp' is defined but never used                no-unused-vars
+   40:3   error  'Timeline' is defined but never used                  no-unused-vars
+   91:16  error  'policiesLoading' is assigned a value but never used  no-unused-vars
+   99:16  error  'metricsLoading' is assigned a value but never used   no-unused-vars
+  106:16  error  'breachedLoading' is assigned a value but never used  no-unused-vars
+  117:7   error  'resetForm' was used before it was defined            no-use-before-define
+  126:7   error  'resetForm' was used before it was defined            no-use-before-define
+  143:5   error  'resetForm' was used before it was defined            no-use-before-define
+  273:6   error  'Container' is not defined                            react/jsx-no-undef
+  273:6   error  'Container' is not defined                            no-undef
+  302:12  error  'Tabs' is not defined                                 react/jsx-no-undef
+  302:12  error  'Tabs' is not defined                                 no-undef
+  303:14  error  'Tab' is not defined                                  react/jsx-no-undef
+  303:14  error  'Tab' is not defined                                  no-undef
+  304:14  error  'Tab' is not defined                                  react/jsx-no-undef
+  304:14  error  'Tab' is not defined                                  no-undef
+  305:14  error  'Tab' is not defined                                  react/jsx-no-undef
+  305:14  error  'Tab' is not defined                                  no-undef
+  306:13  error  'Tabs' is not defined                                 no-undef
+  419:14  error  'Alert' is not defined                                react/jsx-no-undef
+  419:14  error  'Alert' is not defined                                no-undef
+  421:15  error  'Alert' is not defined                                no-undef
+  527:34  error  'InputAdornment' is not defined                       react/jsx-no-undef
+  527:34  error  'InputAdornment' is not defined                       no-undef
+  527:71  error  'InputAdornment' is not defined                       no-undef
+  540:34  error  'InputAdornment' is not defined                       react/jsx-no-undef
+  540:34  error  'InputAdornment' is not defined                       no-undef
+  540:71  error  'InputAdornment' is not defined                       no-undef
+  553:34  error  'InputAdornment' is not defined                       react/jsx-no-undef
+  553:34  error  'InputAdornment' is not defined                       no-undef
+  553:67  error  'InputAdornment' is not defined                       no-undef
+  558:16  error  'Stack' is not defined                                react/jsx-no-undef
+  558:16  error  'Stack' is not defined                                no-undef
+  559:18  error  'FormControlLabel' is not defined                     react/jsx-no-undef
+  559:18  error  'FormControlLabel' is not defined                     no-undef
+  561:22  error  'Switch' is not defined                               react/jsx-no-undef
+  561:22  error  'Switch' is not defined                               no-undef
+  568:18  error  'FormControlLabel' is not defined                     react/jsx-no-undef
+  568:18  error  'FormControlLabel' is not defined                     no-undef
+  570:22  error  'Switch' is not defined                               react/jsx-no-undef
+  570:22  error  'Switch' is not defined                               no-undef
+  577:18  error  'FormControlLabel' is not defined                     react/jsx-no-undef
+  577:18  error  'FormControlLabel' is not defined                     no-undef
+  579:22  error  'Switch' is not defined                               react/jsx-no-undef
+  579:22  error  'Switch' is not defined                               no-undef
+  586:17  error  'Stack' is not defined                                no-undef
+  622:7   error  'Container' is not defined                            no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/transport.tsx
+    3:27  error  'useEffect' is defined but never used         no-unused-vars
+   24:3   error  'Dialog' is defined but never used            no-unused-vars
+   25:3   error  'DialogTitle' is defined but never used       no-unused-vars
+   26:3   error  'DialogContent' is defined but never used     no-unused-vars
+   27:3   error  'DialogActions' is defined but never used     no-unused-vars
+   29:3   error  'FormControl' is defined but never used       no-unused-vars
+   30:3   error  'InputLabel' is defined but never used        no-unused-vars
+   31:3   error  'Select' is defined but never used            no-unused-vars
+   32:3   error  'MenuItem' is defined but never used          no-unused-vars
+   36:3   error  'Accordion' is defined but never used         no-unused-vars
+   37:3   error  'AccordionSummary' is defined but never used  no-unused-vars
+   38:3   error  'AccordionDetails' is defined but never used  no-unused-vars
+   43:13  error  'DeleteIcon' is defined but never used        no-unused-vars
+   45:12  error  'RouteIcon' is defined but never used         no-unused-vars
+   48:17  error  'AssessmentIcon' is defined but never used    no-unused-vars
+   50:17  error  'ExpandMoreIcon' is defined but never used    no-unused-vars
+   52:12  error  'ErrorIcon' is defined but never used         no-unused-vars
+   53:14  error  'WarningIcon' is defined but never used       no-unused-vars
+   56:19  error  'useQueryClient' is defined but never used    no-unused-vars
+  263:28  error  'setOpenDialog' is not defined                no-undef
+  332:29  error  'setSelectedItem' is not defined              no-undef
+  334:29  error  'setOpenDialog' is not defined                no-undef
+  356:28  error  'setOpenDialog' is not defined                no-undef
+  411:29  error  'setSelectedItem' is not defined              no-undef
+  413:29  error  'setOpenDialog' is not defined                no-undef
+  435:28  error  'setOpenDialog' is not defined                no-undef
+  496:29  error  'setSelectedItem' is not defined              no-undef
+  498:29  error  'setOpenDialog' is not defined                no-undef
+  520:28  error  'setOpenDialog' is not defined                no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/contra-voucher.tsx
+   16:5   error  'setMode' is assigned a value but never used            no-unused-vars
+   20:5   error  'searchTerm' is assigned a value but never used         no-unused-vars
+   21:5   error  'setSearchTerm' is assigned a value but never used      no-unused-vars
+   22:5   error  'fromDate' is assigned a value but never used           no-unused-vars
+   23:5   error  'setFromDate' is assigned a value but never used        no-unused-vars
+   24:5   error  'toDate' is assigned a value but never used             no-unused-vars
+   25:5   error  'setToDate' is assigned a value but never used          no-unused-vars
+   26:5   error  'filteredVouchers' is assigned a value but never used   no-unused-vars
+   35:5   error  'voucherList' is assigned a value but never used        no-unused-vars
+   49:5   error  'handleSearch' is assigned a value but never used       no-unused-vars
+   54:5   error  'refreshMasterData' is assigned a value but never used  no-unused-vars
+  135:36  error  Unexpected empty arrow function                         @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/credit-note.tsx
+   3:101  error  'createFilterOptions' is defined but never used             no-unused-vars
+  21:5    error  'setAddCustomerLoading' is assigned a value but never used  no-unused-vars
+  24:5    error  'searchTerm' is assigned a value but never used             no-unused-vars
+  25:5    error  'setSearchTerm' is assigned a value but never used          no-unused-vars
+  26:5    error  'fromDate' is assigned a value but never used               no-unused-vars
+  27:5    error  'setFromDate' is assigned a value but never used            no-unused-vars
+  28:5    error  'toDate' is assigned a value but never used                 no-unused-vars
+  29:5    error  'setToDate' is assigned a value but never used              no-unused-vars
+  39:5    error  'voucherList' is assigned a value but never used            no-unused-vars
+  46:5    error  'handleCreate' is assigned a value but never used           no-unused-vars
+  52:5    error  'handleSearch' is assigned a value but never used           no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/debit-note.tsx
+   3:101  error  'createFilterOptions' is defined but never used             no-unused-vars
+  22:5    error  'setAddCustomerLoading' is assigned a value but never used  no-unused-vars
+  25:5    error  'searchTerm' is assigned a value but never used             no-unused-vars
+  26:5    error  'setSearchTerm' is assigned a value but never used          no-unused-vars
+  27:5    error  'fromDate' is assigned a value but never used               no-unused-vars
+  28:5    error  'setFromDate' is assigned a value but never used            no-unused-vars
+  29:5    error  'toDate' is assigned a value but never used                 no-unused-vars
+  30:5    error  'setToDate' is assigned a value but never used              no-unused-vars
+  40:5    error  'voucherList' is assigned a value but never used            no-unused-vars
+  47:5    error  'handleCreate' is assigned a value but never used           no-unused-vars
+  53:5    error  'handleSearch' is assigned a value but never used           no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/journal-voucher.tsx
+   20:5   error  'searchTerm' is assigned a value but never used         no-unused-vars
+   21:5   error  'setSearchTerm' is assigned a value but never used      no-unused-vars
+   22:5   error  'fromDate' is assigned a value but never used           no-unused-vars
+   23:5   error  'setFromDate' is assigned a value but never used        no-unused-vars
+   24:5   error  'toDate' is assigned a value but never used             no-unused-vars
+   25:5   error  'setToDate' is assigned a value but never used          no-unused-vars
+   26:5   error  'filteredVouchers' is assigned a value but never used   no-unused-vars
+   35:5   error  'voucherList' is assigned a value but never used        no-unused-vars
+   49:5   error  'handleSearch' is assigned a value but never used       no-unused-vars
+   54:5   error  'refreshMasterData' is assigned a value but never used  no-unused-vars
+  116:36  error  Unexpected empty arrow function                         @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/non-sales-credit-note.tsx
+   22:5   error  'setAddCustomerLoading' is assigned a value but never used  no-unused-vars
+   25:5   error  'searchTerm' is assigned a value but never used             no-unused-vars
+   26:5   error  'setSearchTerm' is assigned a value but never used          no-unused-vars
+   27:5   error  'fromDate' is assigned a value but never used               no-unused-vars
+   28:5   error  'setFromDate' is assigned a value but never used            no-unused-vars
+   29:5   error  'toDate' is assigned a value but never used                 no-unused-vars
+   30:5   error  'setToDate' is assigned a value but never used              no-unused-vars
+   31:5   error  'filteredVouchers' is assigned a value but never used       no-unused-vars
+   40:5   error  'voucherList' is assigned a value but never used            no-unused-vars
+   54:5   error  'handleSearch' is assigned a value but never used           no-unused-vars
+   60:5   error  'refreshMasterData' is assigned a value but never used      no-unused-vars
+  157:36  error  Unexpected empty arrow function                             @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/payment-voucher.tsx
+  442:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/receipt-voucher.tsx
+  71:4  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/finished-good-receipt.tsx
+  178:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/job-card-temp.tsx
+  144:67  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/job-card.tsx
+  144:67  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/manufacturing-journal.tsx
+  120:67  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/material-receipt.tsx
+  96:26  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/material-requisition.tsx
+  108:35  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/production-order.tsx
+  113:35  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/stock-journal.tsx
+  94:28  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Others/dispatch-details.tsx
+   3:27  error  'useEffect' is defined but never used   no-unused-vars
+  10:3   error  'IconButton' is defined but never used  no-unused-vars
+  33:3   error  'Tooltip' is defined but never used     no-unused-vars
+  39:3   error  'Edit' is defined but never used        no-unused-vars
+  41:3   error  'FilterList' is defined but never used  no-unused-vars
+  43:3   error  'Assignment' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Others/rfq.tsx
+    3:27  error  'useEffect' is defined but never used                                no-unused-vars
+   31:3   error  'Delete' is defined but never used                                   no-unused-vars
+   32:3   error  'Send' is defined but never used                                     no-unused-vars
+   35:3   error  'FilterList' is defined but never used                               no-unused-vars
+   36:3   error  'Download' is defined but never used                                 no-unused-vars
+   37:3   error  'Upload' is defined but never used                                   no-unused-vars
+  101:7   error  'handleDialogClose' was used before it was defined                   no-use-before-define
+  103:15  error  'error' is already declared in the upper scope on line 88 column 39  no-shadow
+  103:15  error  'error' is already declared in the upper scope on line 88 column 39  @typescript-eslint/no-shadow
+  114:7   error  'handleDialogClose' was used before it was defined                   no-use-before-define
+  116:15  error  'error' is already declared in the upper scope on line 88 column 39  no-shadow
+  116:15  error  'error' is already declared in the upper scope on line 88 column 39  @typescript-eslint/no-shadow
+  233:8   error  'Container' is not defined                                           react/jsx-no-undef
+  233:8   error  'Container' is not defined                                           no-undef
+  246:14  error  'FormControl' is not defined                                         react/jsx-no-undef
+  246:14  error  'FormControl' is not defined                                         no-undef
+  247:16  error  'InputLabel' is not defined                                          react/jsx-no-undef
+  247:16  error  'InputLabel' is not defined                                          no-undef
+  247:35  error  'InputLabel' is not defined                                          no-undef
+  248:16  error  'Select' is not defined                                              react/jsx-no-undef
+  248:16  error  'Select' is not defined                                              no-undef
+  253:18  error  'MenuItem' is not defined                                            react/jsx-no-undef
+  253:18  error  'MenuItem' is not defined                                            no-undef
+  253:41  error  'MenuItem' is not defined                                            no-undef
+  254:18  error  'MenuItem' is not defined                                            react/jsx-no-undef
+  254:18  error  'MenuItem' is not defined                                            no-undef
+  254:48  error  'MenuItem' is not defined                                            no-undef
+  255:18  error  'MenuItem' is not defined                                            react/jsx-no-undef
+  255:18  error  'MenuItem' is not defined                                            no-undef
+  255:46  error  'MenuItem' is not defined                                            no-undef
+  256:18  error  'MenuItem' is not defined                                            react/jsx-no-undef
+  256:18  error  'MenuItem' is not defined                                            no-undef
+  256:56  error  'MenuItem' is not defined                                            no-undef
+  257:18  error  'MenuItem' is not defined                                            react/jsx-no-undef
+  257:18  error  'MenuItem' is not defined                                            no-undef
+  257:56  error  'MenuItem' is not defined                                            no-undef
+  258:18  error  'MenuItem' is not defined                                            react/jsx-no-undef
+  258:18  error  'MenuItem' is not defined                                            no-undef
+  258:52  error  'MenuItem' is not defined                                            no-undef
+  259:18  error  'MenuItem' is not defined                                            react/jsx-no-undef
+  259:18  error  'MenuItem' is not defined                                            no-undef
+  259:56  error  'MenuItem' is not defined                                            no-undef
+  260:17  error  'Select' is not defined                                              no-undef
+  261:15  error  'FormControl' is not defined                                         no-undef
+  273:12  error  'Alert' is not defined                                               react/jsx-no-undef
+  273:12  error  'Alert' is not defined                                               no-undef
+  275:13  error  'Alert' is not defined                                               no-undef
+  280:14  error  'CircularProgress' is not defined                                    react/jsx-no-undef
+  280:14  error  'CircularProgress' is not defined                                    no-undef
+  315:18  error  'CardActions' is not defined                                         react/jsx-no-undef
+  315:18  error  'CardActions' is not defined                                         no-undef
+  330:19  error  'CardActions' is not defined                                         no-undef
+  524:9   error  'Container' is not defined                                           no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Pre-Sales-Voucher/proforma-invoice.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used  no-unused-vars
+   72:5   error  'voucherList' is assigned a value but never used              no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used             no-unused-vars
+   90:23  error  '_handleSubmitForm' is assigned a value but never used        no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used               no-unused-vars
+  279:38  error  Unexpected empty arrow function                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Pre-Sales-Voucher/quotation.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used  no-unused-vars
+   72:5   error  'voucherList' is assigned a value but never used              no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used             no-unused-vars
+   90:23  error  '_handleSubmitForm' is assigned a value but never used        no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used               no-unused-vars
+  279:38  error  Unexpected empty arrow function                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Pre-Sales-Voucher/sales-order.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used  no-unused-vars
+   72:5   error  'voucherList' is assigned a value but never used              no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used             no-unused-vars
+   90:23  error  '_handleSubmitForm' is assigned a value but never used        no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used               no-unused-vars
+  279:38  error  Unexpected empty arrow function                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/grn.tsx
+  121:42  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
+   46:5   error  'setAddingItemIndex' is assigned a value but never used                  no-unused-vars
+   47:5   error  'showFullModal' is assigned a value but never used                       no-unused-vars
+   49:5   error  'useDifferentShipping' is assigned a value but never used                no-unused-vars
+   50:5   error  'setUseDifferentShipping' is assigned a value but never used             no-unused-vars
+   51:5   error  'searchTerm' is assigned a value but never used                          no-unused-vars
+   52:5   error  'setSearchTerm' is assigned a value but never used                       no-unused-vars
+   53:5   error  'fromDate' is assigned a value but never used                            no-unused-vars
+   54:5   error  'setFromDate' is assigned a value but never used                         no-unused-vars
+   55:5   error  'toDate' is assigned a value but never used                              no-unused-vars
+   56:5   error  'setToDate' is assigned a value but never used                           no-unused-vars
+   57:5   error  'filteredVouchers' is assigned a value but never used                    no-unused-vars
+   59:5   error  'currentPage' is assigned a value but never used                         no-unused-vars
+   60:5   error  'pageSize' is assigned a value but never used                            no-unused-vars
+   61:5   error  'paginationData' is assigned a value but never used                      no-unused-vars
+   62:5   error  'handlePageChange' is assigned a value but never used                    no-unused-vars
+   64:5   error  'referenceDocument' is assigned a value but never used                   no-unused-vars
+   65:5   error  'handleReferenceSelected' is assigned a value but never used             no-unused-vars
+   96:23  error  '_handleSubmitForm' is assigned a value but never used                   no-unused-vars
+   99:5   error  'handleSearch' is assigned a value but never used                        no-unused-vars
+  100:5   error  'handleModalOpen' is assigned a value but never used                     no-unused-vars
+  101:5   error  'handleModalClose' is assigned a value but never used                    no-unused-vars
+  107:5   error  'isViewMode' is assigned a value but never used                          no-unused-vars
+  167:38  error  'original_unit_price' is defined but never used                          no-unused-vars
+  215:13  error  'productId' is already declared in the upper scope on line 26 column 11  no-shadow
+  215:13  error  'productId' is already declared in the upper scope on line 26 column 11  @typescript-eslint/no-shadow
+  222:13  error  'productId' is already declared in the upper scope on line 26 column 11  no-shadow
+  222:13  error  'productId' is already declared in the upper scope on line 26 column 11  @typescript-eslint/no-shadow
+  392:38  error  Unexpected empty arrow function                                          @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/purchase-return.tsx
+   39:5   error  'addingItemIndex' is assigned a value but never used          no-unused-vars
+   40:5   error  'setAddingItemIndex' is assigned a value but never used       no-unused-vars
+   41:5   error  'showFullModal' is assigned a value but never used            no-unused-vars
+   43:5   error  'useDifferentShipping' is assigned a value but never used     no-unused-vars
+   44:5   error  'setUseDifferentShipping' is assigned a value but never used  no-unused-vars
+   45:5   error  'searchTerm' is assigned a value but never used               no-unused-vars
+   46:5   error  'setSearchTerm' is assigned a value but never used            no-unused-vars
+   47:5   error  'fromDate' is assigned a value but never used                 no-unused-vars
+   48:5   error  'setFromDate' is assigned a value but never used              no-unused-vars
+   49:5   error  'toDate' is assigned a value but never used                   no-unused-vars
+   50:5   error  'setToDate' is assigned a value but never used                no-unused-vars
+   51:5   error  'filteredVouchers' is assigned a value but never used         no-unused-vars
+   53:5   error  'currentPage' is assigned a value but never used              no-unused-vars
+   54:5   error  'pageSize' is assigned a value but never used                 no-unused-vars
+   55:5   error  'paginationData' is assigned a value but never used           no-unused-vars
+   56:5   error  'handlePageChange' is assigned a value but never used         no-unused-vars
+   58:5   error  'referenceDocument' is assigned a value but never used        no-unused-vars
+   59:5   error  'handleReferenceSelected' is assigned a value but never used  no-unused-vars
+   71:5   error  'voucherList' is assigned a value but never used              no-unused-vars
+   86:5   error  'handleCreate' is assigned a value but never used             no-unused-vars
+   89:23  error  '_handleSubmitForm' is assigned a value but never used        no-unused-vars
+   92:5   error  'handleSearch' is assigned a value but never used             no-unused-vars
+   93:5   error  'handleModalOpen' is assigned a value but never used          no-unused-vars
+   94:5   error  'handleModalClose' is assigned a value but never used         no-unused-vars
+  100:5   error  'isViewMode' is assigned a value but never used               no-unused-vars
+  278:38  error  Unexpected empty arrow function                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/purchase-voucher.tsx
+  721:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Sales-Vouchers/delivery-challan.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used  no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used             no-unused-vars
+   90:23  error  '_handleSubmitForm' is assigned a value but never used        no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used               no-unused-vars
+  312:38  error  Unexpected empty arrow function                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Sales-Vouchers/sales-return.tsx
+   24:5   error  'setMode' is assigned a value but never used                  no-unused-vars
+   38:5   error  'addingItemIndex' is assigned a value but never used          no-unused-vars
+   39:5   error  'setAddingItemIndex' is assigned a value but never used       no-unused-vars
+   40:5   error  'showFullModal' is assigned a value but never used            no-unused-vars
+   42:5   error  'useDifferentShipping' is assigned a value but never used     no-unused-vars
+   43:5   error  'setUseDifferentShipping' is assigned a value but never used  no-unused-vars
+   44:5   error  'searchTerm' is assigned a value but never used               no-unused-vars
+   45:5   error  'setSearchTerm' is assigned a value but never used            no-unused-vars
+   46:5   error  'fromDate' is assigned a value but never used                 no-unused-vars
+   47:5   error  'setFromDate' is assigned a value but never used              no-unused-vars
+   48:5   error  'toDate' is assigned a value but never used                   no-unused-vars
+   49:5   error  'setToDate' is assigned a value but never used                no-unused-vars
+   50:5   error  'filteredVouchers' is assigned a value but never used         no-unused-vars
+   52:5   error  'currentPage' is assigned a value but never used              no-unused-vars
+   53:5   error  'pageSize' is assigned a value but never used                 no-unused-vars
+   54:5   error  'paginationData' is assigned a value but never used           no-unused-vars
+   55:5   error  'handlePageChange' is assigned a value but never used         no-unused-vars
+   57:5   error  'referenceDocument' is assigned a value but never used        no-unused-vars
+   58:5   error  'handleReferenceSelected' is assigned a value but never used  no-unused-vars
+   68:5   error  'reset' is assigned a value but never used                    no-unused-vars
+   70:5   error  'voucherList' is assigned a value but never used              no-unused-vars
+   85:5   error  'handleCreate' is assigned a value but never used             no-unused-vars
+   88:23  error  '_handleSubmitForm' is assigned a value but never used        no-unused-vars
+   91:5   error  'handleSearch' is assigned a value but never used             no-unused-vars
+   92:5   error  'handleModalOpen' is assigned a value but never used          no-unused-vars
+   93:5   error  'handleModalClose' is assigned a value but never used         no-unused-vars
+   99:5   error  'isViewMode' is assigned a value but never used               no-unused-vars
+  249:38  error  Unexpected empty arrow function                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Sales-Vouchers/sales-voucher.tsx
+  680:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/index.tsx
+  188:50  error  Parsing error: ',' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/analyticsService.ts
+  103:3  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/authService.ts
+  112:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  171:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  196:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  196:37  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  204:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  204:39  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  212:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  220:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  220:51  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  228:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  236:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  248:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  248:28  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  252:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  252:29  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  255:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  258:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  258:31  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  261:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  261:43  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  265:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  265:19  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  268:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  271:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  271:21  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  274:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  274:33  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  278:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  278:22  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  279:12  error  'masterDataService' was used before it was defined      no-use-before-define
+  281:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  281:23  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  282:12  error  'masterDataService' was used before it was defined      no-use-before-define
+  284:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  284:24  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  285:12  error  'masterDataService' was used before it was defined      no-use-before-define
+  289:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  298:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  298:24  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  306:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  306:36  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  314:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  322:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  331:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  331:26  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  339:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  339:38  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  347:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  355:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  364:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  364:25  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  372:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  372:37  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  380:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  388:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  397:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  406:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  406:42  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  414:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  424:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  451:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  471:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  471:23  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  498:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  521:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  525:14  error  'error' is defined but never used                       no-unused-vars
+  530:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  530:25  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  538:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  538:37  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  546:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  560:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  568:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  572:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  580:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  588:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  596:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  604:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  604:74  error  Argument 'updates' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+  612:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  622:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  630:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  630:26  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  638:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  638:29  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  646:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  656:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  666:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  666:29  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  674:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  674:32  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  683:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  683:34  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  694:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  694:37  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  705:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  705:38  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  716:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  716:36  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  727:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  727:37  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  738:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  738:40  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  751:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  751:25  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  759:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  767:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  767:30  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  776:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  784:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  792:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  792:46  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  802:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  824:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  832:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  852:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  852:32  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  860:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  860:22  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  868:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  868:34  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  876:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  884:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  892:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/entityService.ts
+   12:108  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  167:81   error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  169:83   error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/masterService.ts
+   12:68  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   17:70  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   22:69  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   27:70  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   32:83  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   45:82  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  124:54  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  128:56  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  132:55  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  136:52  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  141:76  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/organizationService.ts
+    4:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+    4:25  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   13:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   22:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   22:30  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   31:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   39:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   47:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   47:46  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   56:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   56:30  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   64:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   73:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   81:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   81:60  error  Argument 'userData' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+   90:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   98:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  107:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  116:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  116:56  error  Argument 'params' should be typed with a non-any type    @typescript-eslint/explicit-module-boundary-types
+  124:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  124:60  error  Argument 'userData' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+  132:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  132:76  error  Argument 'userData' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+  140:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  149:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  149:62  error  Argument 'params' should be typed with a non-any type    @typescript-eslint/explicit-module-boundary-types
+  157:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  165:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/rbacService.ts
+  11:3  error  'ServicePermissionCreate' is defined but never used  no-unused-vars
+  16:3  error  'UserServiceRole' is defined but never used          no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/serviceAnalyticsService.ts
+   5:3  error  'TODAY' is defined but never used                   no-unused-vars
+   6:3  error  'WEEK' is defined but never used                    no-unused-vars
+   7:3  error  'MONTH' is defined but never used                   no-unused-vars
+   8:3  error  'QUARTER' is defined but never used                 no-unused-vars
+   9:3  error  'YEAR' is defined but never used                    no-unused-vars
+  10:3  error  'CUSTOM' is defined but never used                  no-unused-vars
+  13:3  error  'JOB_COMPLETION' is defined but never used          no-unused-vars
+  14:3  error  'TECHNICIAN_PERFORMANCE' is defined but never used  no-unused-vars
+  15:3  error  'CUSTOMER_SATISFACTION' is defined but never used   no-unused-vars
+  16:3  error  'JOB_VOLUME' is defined but never used              no-unused-vars
+  17:3  error  'SLA_COMPLIANCE' is defined but never used          no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/slaService.ts
+  147:73  error  Argument 'update' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/stockService.ts
+  80:12  error  '_error' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/types/rbac.types.ts
+   10:3   error  'ADMIN' is defined but never used             no-unused-vars
+   11:3   error  'MANAGER' is defined but never used           no-unused-vars
+   12:3   error  'SUPPORT' is defined but never used           no-unused-vars
+   13:3   error  'VIEWER' is defined but never used            no-unused-vars
+   16:3   error  'SERVICE' is defined but never used           no-unused-vars
+   17:3   error  'TECHNICIAN' is defined but never used        no-unused-vars
+   18:3   error  'APPOINTMENT' is defined but never used       no-unused-vars
+   19:3   error  'CUSTOMER_SERVICE' is defined but never used  no-unused-vars
+   20:3   error  'WORK_ORDER' is defined but never used        no-unused-vars
+   21:3   error  'SERVICE_REPORTS' is defined but never used   no-unused-vars
+   22:3   error  'CRM_ADMIN' is defined but never used         no-unused-vars
+   25:3   error  'CREATE' is defined but never used            no-unused-vars
+   26:3   error  'READ' is defined but never used              no-unused-vars
+   27:3   error  'UPDATE' is defined but never used            no-unused-vars
+   28:3   error  'DELETE' is defined but never used            no-unused-vars
+   29:3   error  'EXPORT' is defined but never used            no-unused-vars
+   30:3   error  'ADMIN' is defined but never used             no-unused-vars
+  157:14  error  '_data' is defined but never used             no-unused-vars
+  167:14  error  '_roleIds' is defined but never used          no-unused-vars
+  168:14  error  '_roleId' is defined but never used           no-unused-vars
+  174:24  error  '_roleId' is defined but never used           no-unused-vars
+  174:41  error  '_permissionId' is defined but never used     no-unused-vars
+  174:64  error  '_granted' is defined but never used          no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/types/voucher.types.ts
+  111:12  error  '_id' is defined but never used       no-unused-vars
+  112:12  error  '_id' is defined but never used       no-unused-vars
+  113:14  error  '_voucher' is defined but never used  no-unused-vars
+  114:19  error  '_voucher' is defined but never used  no-unused-vars
+
+✖ 1704 problems (1704 errors, 0 warnings)
+

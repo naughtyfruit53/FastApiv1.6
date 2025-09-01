@@ -118,8 +118,8 @@ const ManagementDashboard: React.FC = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Export failed:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const formatCurrency = (value: number): string => {

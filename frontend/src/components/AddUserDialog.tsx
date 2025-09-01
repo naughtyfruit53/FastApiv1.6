@@ -226,7 +226,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       }
       
       handleClose();
-    } catch (error) {
+    } catch (err) {
       toast.error(error instanceof Error ? error.message : 'Failed to add user');
     } finally {
       setLoading(false);

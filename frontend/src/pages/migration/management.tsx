@@ -90,8 +90,8 @@ const MigrationManagement: React.FC = () => {
     try {
       const response = await axios.get('/api/v1/migration/jobs');
       setMigrationJobs(response.data);
-    } catch (error) {
-      console.error('Failed to load migration jobs:', error);
+    } catch (err) {
+      console.error(msg, err);
       setError('Failed to load migration jobs');
     } finally {
       setLoading(false);
@@ -103,8 +103,8 @@ const MigrationManagement: React.FC = () => {
       await loadMigrationJobs();
       setDeleteDialogOpen(false);
       setJobToDelete(null);
-    } catch (error) {
-      console.error('Failed to delete job:', error);
+    } catch (err) {
+      console.error(msg, err);
       setError('Failed to delete migration job');
     }
   };
@@ -112,8 +112,8 @@ const MigrationManagement: React.FC = () => {
     try {
       await axios.post(`/api/v1/migration/jobs/${jobId}/execute`);
       await loadMigrationJobs();
-    } catch (error) {
-      console.error('Failed to execute job:', error);
+    } catch (err) {
+      console.error(msg, err);
       setError('Failed to execute migration job');
     }
   };
@@ -121,8 +121,8 @@ const MigrationManagement: React.FC = () => {
     try {
       await axios.post(`/api/v1/migration/jobs/${jobId}/rollback`);
       await loadMigrationJobs();
-    } catch (error) {
-      console.error('Failed to rollback job:', error);
+    } catch (err) {
+      console.error(msg, err);
       setError('Failed to rollback migration job');
     }
   };

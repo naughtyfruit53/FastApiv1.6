@@ -82,30 +82,32 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
   const [err, setErr] = useState<string | null>(null);
   const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  useEffect(() => {
-    if (open) {
-      loadDashboardData();
-    }
-  }, [open]);
+  
   const loadDashboardData = async () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/v1/integrations/dashboard');
       setDashboardData(response.data);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+    } catch (err) {
+      console.error(msg, err);
       setErr('Failed to load integration dashboard data');
     } finally {
       setLoading(false);
     }
   };
+  
+  useEffect(() => {
+    if (open) {
+      loadDashboardData();
+    }
+  }, [open]);
   const syncIntegration = async (integrationName: string) => {
     setLoading(true);
     try {
       await axios.post(`/api/v1/integrations/${integrationName}/sync`);
       await loadDashboardData();
-    } catch (error) {
-      console.error(`Failed to sync ${integrationName}:`, error);
+    } catch (err) {
+      console.error(msg, err);
       setErr(`Failed to sync ${integrationName}`);
     } finally {
       setLoading(false);
@@ -116,8 +118,8 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
     try {
       await axios.post(`/api/v1/integrations/${integrationName}/test`);
       await loadDashboardData();
-    } catch (error) {
-      console.error(`Failed to test ${integrationName}:`, error);
+    } catch (err) {
+      console.error(msg, err);
       setErr(`Failed to test connection for ${integrationName}`);
     } finally {
       setLoading(false);

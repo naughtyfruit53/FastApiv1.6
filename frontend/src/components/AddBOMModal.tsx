@@ -127,7 +127,7 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
       reset(defaultBOM);
     },
     onError: (error: any) => {
-      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} BOM:`, error);
+      console.error(msg, err);
     }
   });
   const onSubmit = (data: BOM) => {

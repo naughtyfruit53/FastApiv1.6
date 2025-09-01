@@ -174,8 +174,8 @@ const [availableModules,] = useState<{[key: string]: any}>();
           "Finance": true
         });
       }
-    } catch (error) {
-      console.error('Failed to fetch organization modules:', error);
+    } catch (err) {
+      console.error(msg, err);
       setOrgModules({
         "CRM": true,
         "ERP": true,
@@ -212,7 +212,7 @@ const [availableModules,] = useState<{[key: string]: any}>();
       console.log('Organization modules updated successfully');
     },
     onError: (error) => {
-      console.error('Failed to update organization modules:', error);
+      console.error(msg, err);
     }
   });
   const handleModuleChange = (module: string, enabled: boolean) => {

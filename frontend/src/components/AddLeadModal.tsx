@@ -131,8 +131,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       await onAdd(cleanData);
       reset();
       onClose();
-    } catch (error) {
-      console.error('Error adding lead:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const handleClose = () => {

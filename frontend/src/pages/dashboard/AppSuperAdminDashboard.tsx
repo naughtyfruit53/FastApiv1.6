@@ -38,7 +38,7 @@ const AppSuperAdminDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<AppStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-const  = useStickyNotes();
+  const { _stickyNotes } = useStickyNotes();
   useEffect(() => {
     fetchAppStatistics();
   }, []);

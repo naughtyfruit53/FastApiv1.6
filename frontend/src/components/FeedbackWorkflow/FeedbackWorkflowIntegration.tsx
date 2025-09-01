@@ -67,8 +67,8 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
       ]);
       setExistingFeedback(feedback);
       setExistingClosure(closure);
-    } catch (error) {
-      console.error('Error loading existing data:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }
@@ -91,8 +91,8 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
       await feedbackService.submitFeedback(feedbackData);
       onWorkflowUpdate?.();
       setFeedbackModalOpen(false);
-    } catch (error) {
-      console.error('Error submitting feedback:', error);
+    } catch (err) {
+      console.error(msg, err);
       throw error;
     }
   };
@@ -121,8 +121,8 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
       
       onWorkflowUpdate?.();
       setClosureDialogOpen(false);
-    } catch (error) {
-      console.error('Error processing service closure:', error);
+    } catch (err) {
+      console.error(msg, err);
       throw error;
     }
   };

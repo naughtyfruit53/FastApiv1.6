@@ -110,7 +110,7 @@ const ProductionOrder: React.FC = () => {
     { id: null, bom_name: 'Create New BOM...', version: '' }
   ];
   // Fetch specific manufacturing order
-const { data: orderData, isLoading:} = useQuery({
+  const { data: orderData, isLoading } = useQuery({
     queryKey: ['manufacturing-order', selectedId],
     queryFn: () => api.get(`/manufacturing-orders/${selectedId}`).then(res => res.data),
     enabled: !!selectedId
@@ -164,7 +164,7 @@ const { data: orderData, isLoading:} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating manufacturing order:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -177,7 +177,7 @@ const { data: orderData, isLoading:} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating manufacturing order:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({
@@ -186,7 +186,7 @@ const { data: orderData, isLoading:} = useQuery({
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting manufacturing order:', error);
+      console.error(msg, err);
     }
   });
   const onSubmit = (data: ManufacturingOrder) => {

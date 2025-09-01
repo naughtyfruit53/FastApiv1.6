@@ -81,8 +81,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({
         content: editContent.trim()
       });
       setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating note:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }
@@ -97,8 +97,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     try {
       await onUpdate(id, { color: newColor });
       setColorMenuAnchor(null);
-    } catch (error) {
-      console.error('Error updating note color:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }
@@ -107,8 +107,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     setLoading(true);
     try {
       await onUpdate(id, { pinned: !pinned });
-    } catch (error) {
-      console.error('Error toggling pin:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }
@@ -118,8 +118,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     try {
       await onDelete(id);
       setDeleteDialogOpen(false);
-    } catch (error) {
-      console.error('Error deleting note:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }
@@ -127,7 +127,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({
   const handleDragStop = (e: any, data: any) => {
     const newPosition = { x: data.x, y: data.y };
     onUpdate(id, { position: newPosition }).catch(error => {
-      console.error('Error saving note position:', error);
+      console.error(msg, err);
     });
   };
   const formatDate = (dateString: string) => {

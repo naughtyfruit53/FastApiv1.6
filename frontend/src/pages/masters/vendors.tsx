@@ -46,7 +46,7 @@ const VendorsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const queryClient = useQueryClient();
-const { data: vendors, isLoading:} = useQuery({
+  const { data: vendors, isLoading } = useQuery({
     queryKey: ['vendors'],
     queryFn: () => masterDataService.getVendors(),
     enabled: isOrgContextReady,
@@ -87,7 +87,7 @@ const { data: vendors, isLoading:} = useQuery({
       setShowAddVendorModal(false);
       alert('Vendor added successfully!');
     } catch (error: any) {
-      console.error('Error adding vendor:', error);
+      console.error(msg, err);
       let errorMsg = 'Error adding vendor';
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
@@ -108,7 +108,7 @@ const { data: vendors, isLoading:} = useQuery({
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting vendor:', error);
+      console.error(msg, err);
       setErrorMessage(error.response?.data?.detail || 'Failed to delete vendor');
     }
   });

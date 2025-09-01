@@ -78,12 +78,18 @@ const MultiCompanyManagement: React.FC = () => {
     queryFn: () => selectedCompanyId ? companyService.getCompanyUsers(selectedCompanyId) : Promise.resolve([]),
     enabled: !!selectedCompanyId,
   });
+  
+  // Create company mutation
+  const createCompanyMutation = useMutation({
     mutationFn: companyService.createCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       setOpenCompanyModal(false);
     },
   });
+  
+  // Assign user to company mutation
+  const assignUserMutation = useMutation({
     mutationFn: ({ companyId, userId, isAdmin }: { companyId: number; userId: number; isAdmin: boolean }) =>
       companyService.assignUserToCompany(companyId, { user_id: userId, company_id: companyId, is_company_admin: isAdmin }),
     onSuccess: () => {
