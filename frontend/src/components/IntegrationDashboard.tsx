@@ -22,17 +22,8 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Switch,
-  FormControlLabel,
   Divider,
-  LinearProgress,
-  Badge
+  Paper
 } from '@mui/material';
 import {
   Settings,
@@ -40,7 +31,6 @@ import {
   Error,
   Warning,
   Refresh,
-  Edit,
   Add,
   Sync,
   Timeline,
@@ -51,7 +41,6 @@ import {
   AccountBalance,
   Cloud,
   Info,
-  PlayArrow,
   History
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
@@ -87,7 +76,7 @@ interface IntegrationDashboardProps {
   onClose: () => void;
 }
 const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClose }) => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<IntegrationDashboardData | null>(null);
   const [err, setErr] = useState<string | null>(null);

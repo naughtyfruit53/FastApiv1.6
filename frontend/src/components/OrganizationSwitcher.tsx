@@ -6,6 +6,7 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  SelectChangeEvent,
   Typography
 } from '@mui/material';
 import { organizationService } from '../services/organizationService';

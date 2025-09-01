@@ -28,20 +28,7 @@ import {
   Select,
   MenuItem,
   TextField,
-  Grid,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Checkbox,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Tooltip
+  Grid
 } from '@mui/material';
 import {
   Upload,
@@ -91,7 +78,7 @@ interface MigrationWizardProps {
   jobId?: number;
 }
 const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId }) => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [wizardState, setWizardState] = useState<MigrationWizardState | null>(null);
   const [currentJob, setCurrentJob] = useState<MigrationJob | null>(null);
