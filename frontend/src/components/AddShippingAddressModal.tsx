@@ -18,7 +18,7 @@ import debounce from 'lodash/debounce';
 interface AddShippingAddressModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (data: any) => Promise<void>;
+  onAdd: (_data: any) => Promise<void>;
   loading?: boolean;
 }
 interface ShippingAddressFormData {
@@ -79,7 +79,7 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
   const onSubmit = async (shippingData: ShippingAddressFormData) => {
     try {
       const cleanData = Object.fromEntries(
-        Object.entries(shippingData).filter(([key, value]) => value && value.trim() !== '')
+        Object.entries(shippingData).filter(([_key, value]) => value && value.trim() !== '')
       );
       await onAdd(cleanData);
       reset();

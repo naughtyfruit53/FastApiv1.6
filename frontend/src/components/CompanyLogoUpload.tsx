@@ -23,7 +23,7 @@ interface CompanyLogoUploadProps {
   companyId: number;
   currentLogoPath?: string | null;
   disabled?: boolean;
-  onLogoChange?: (logoPath: string | null) => void;
+  onLogoChange?: (_logoPath: string | null) => void;
 }
 const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
   companyId,

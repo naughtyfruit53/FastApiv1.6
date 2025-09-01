@@ -17,13 +17,9 @@ import {
   Select,
   MenuItem,
   Grid as Grid,
-  Divider,
   Checkbox,
   FormControlLabel,
-  FormGroup,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
+  FormGroup
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { organizationService } from '../services/organizationService'; // Adjust if needed
@@ -31,7 +27,7 @@ import { usePincodeLookup } from '../hooks/usePincodeLookup';
 interface CreateOrganizationLicenseModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess?: (result: any) => void;
+  onSuccess?: (_result: any) => void;
 }
 interface LicenseFormData {
   organization_name: string;

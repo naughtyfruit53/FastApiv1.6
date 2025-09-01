@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, Button } from '@mui/material';
 interface AdminUserFormProps {
-  onSubmit: (formData: any) => void;
+  onSubmit: (_formData: any) => void;
 }
 const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({

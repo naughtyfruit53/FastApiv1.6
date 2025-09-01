@@ -13,7 +13,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   CircularProgress,
   Alert,
   FormControlLabel,
@@ -22,7 +21,6 @@ import {
 } from '@mui/material';
 import {
   TrendingUp,
-  Person,
   DateRange,
   Category,
   Assessment,
@@ -43,8 +41,7 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
   const { 
     data: analytics, 
     isLoading, 
-    error,
-    refetch 
+    error
   } = useQuery({
     queryKey: ['customerAnalytics', customerId, includeRecentInteractions, recentInteractionsLimit],
     queryFn: () => analyticsService.getCustomerAnalytics(

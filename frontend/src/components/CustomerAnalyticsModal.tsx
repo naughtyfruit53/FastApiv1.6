@@ -6,8 +6,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  IconButton,
-  Box
+  IconButton
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import CustomerAnalytics from './CustomerAnalytics';

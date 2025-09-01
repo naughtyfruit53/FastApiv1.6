@@ -74,7 +74,7 @@ const defaultBOM: BOM = {
 interface AddBOMModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (data: BOM) => void;
+  onAdd: (_data: BOM) => void;
   initialData?: BOM;
   mode: 'create' | 'edit';
 }
