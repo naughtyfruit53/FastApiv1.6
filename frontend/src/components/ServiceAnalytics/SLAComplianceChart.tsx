@@ -314,4 +314,5 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
     </Card>
   );
 };
+
 export default SLAComplianceChart;

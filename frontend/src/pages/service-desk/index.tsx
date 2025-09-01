@@ -1,6 +1,27 @@
 // frontend/src/pages/service-desk/index.tsx
 import React, { useState, useEffect } from 'react';
-import { from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Chip,
+  Grid,
+} from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -71,7 +92,7 @@ const conversationStatusColors: Record<string, string> = {
   closed: 'default',
 };
 export default function ServiceDeskDashboard() {
-const  = useAuth();
+const { _user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [conversations, setConversations] = useState<ChatbotConversation[]>([]);

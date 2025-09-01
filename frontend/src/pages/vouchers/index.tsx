@@ -1,7 +1,28 @@
 // revised fastapi_migration/frontend/src/pages/vouchers/index.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Chip,
+  Grid,
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { voucherService, reportsService } from '../../services/authService';
 import { voucherService as voucherApi } from '../../services/vouchersService';

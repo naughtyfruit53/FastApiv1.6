@@ -1257,4 +1257,5 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     </>
   );
 };
+
 export default MegaMenu;

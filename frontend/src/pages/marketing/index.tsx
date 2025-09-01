@@ -1,6 +1,27 @@
 // frontend/src/pages/marketing/index.tsx
 import React, { useState, useEffect } from 'react';
-import { from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Chip,
+  Grid,
+} from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -46,7 +67,7 @@ function TabPanel(props: { children?: React.ReactNode; index: number; value: num
   );
 }
 export default function MarketingDashboard() {
-const  = useAuth();
+const { _user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);

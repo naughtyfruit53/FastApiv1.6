@@ -47,7 +47,7 @@ function a11yProps(index: number) {
 }
 const HRDashboard: NextPage = () => {
   const router = useRouter();
-const  = useAuth();
+const { _user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [dashboardData, setDashboardData] = useState<HRDashboardData | null>(null);
   const [recentActivities, setRecentActivities] = useState<HRActivity[]>([]);

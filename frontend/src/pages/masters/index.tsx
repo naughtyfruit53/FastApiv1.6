@@ -1,7 +1,28 @@
 // Revised masters.index.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Chip,
+  Grid,
+} from '@mui/material';
 import {
   Add,
   Edit,
