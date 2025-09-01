@@ -7,27 +7,27 @@
  */
 // Enums matching backend
 export enum ServiceRoleType {
-  ADMIN = 'admin',
-  MANAGER = 'manager',
-  SUPPORT = 'support',
-  VIEWER = 'viewer'
+  ADMIN = 'admin',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  MANAGER = 'manager',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  SUPPORT = 'support',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  VIEWER = 'viewer'  // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 export enum ServiceModule {
-  SERVICE = 'service',
-  TECHNICIAN = 'technician',
-  APPOINTMENT = 'appointment',
-  CUSTOMER_SERVICE = 'customer_service',
-  WORK_ORDER = 'work_order',
-  SERVICE_REPORTS = 'service_reports',
-  CRM_ADMIN = 'crm_admin'
+  SERVICE = 'service',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  TECHNICIAN = 'technician',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  APPOINTMENT = 'appointment',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  CUSTOMER_SERVICE = 'customer_service',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  WORK_ORDER = 'work_order',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  SERVICE_REPORTS = 'service_reports',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  CRM_ADMIN = 'crm_admin'  // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 export enum ServiceAction {
-  CREATE = 'create',
-  READ = 'read',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  EXPORT = 'export',
-  ADMIN = 'admin'
+  CREATE = 'create',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  READ = 'read',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  UPDATE = 'update',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  DELETE = 'delete',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  EXPORT = 'export',  // eslint-disable-line @typescript-eslint/no-unused-vars
+  ADMIN = 'admin'  // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 // Service Permission Types
 export interface ServicePermission {
@@ -154,7 +154,7 @@ export interface RoleFormProps {
   role?: ServiceRoleWithPermissions;
   permissions: ServicePermission[];
   organizationId: number;
-  onSubmit: (data: ServiceRoleCreate | ServiceRoleUpdate) => void;
+  onSubmit: (_data: ServiceRoleCreate | ServiceRoleUpdate) => void;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -164,14 +164,14 @@ export interface UserRoleAssignmentProps {
   userFullName?: string;
   currentRoles: ServiceRole[];
   availableRoles: ServiceRole[];
-  onAssign: (roleIds: number[]) => void;
-  onRemove: (roleId: number) => void;
+  onAssign: (_roleIds: number[]) => void;
+  onRemove: (_roleId: number) => void;
   loading?: boolean;
 }
 export interface RolePermissionMatrixProps {
   roles: ServiceRoleWithPermissions[];
   permissions: ServicePermission[];
-  onPermissionToggle: (roleId: number, permissionId: number, granted: boolean) => void;
+  onPermissionToggle: (_roleId: number, _permissionId: number, _granted: boolean) => void;
   loading?: boolean;
 }
 // Service Role Defaults

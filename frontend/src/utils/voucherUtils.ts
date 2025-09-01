@@ -1,5 +1,24 @@
 // frontend/src/utils/voucherUtils.ts
 import { UI_CONSTANTS } from '../constants/ui';
+
+// Type definitions for voucher calculations
+interface VoucherItem {
+  quantity?: number;
+  unit_price?: number;
+  discount_percentage?: number;
+  gst_rate?: number;
+  [key: string]: any;
+}
+
+interface CalculatedVoucherItem extends VoucherItem {
+  discount_amount: number;
+  taxable_amount: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  total_amount: number;
+}
+
 export const GST_SLABS = [0, 5, 12, 18, 28];
 // State to GST state code mapping for GST calculations
 export const STATE_TO_CODE_MAP: { [key: string]: string } = {
@@ -118,7 +137,7 @@ export const isIntrastateTransaction = (companyStateCode: string, customerVendor
   return companyStateCode === customerVendorStateCode;
 };
 // Common voucher item calculation utilities with enhanced GST logic
-export const calculateItemTotals = (item: any, isIntrastate: boolean = true): any => {
+export const calculateItemTotals = (item: VoucherItem, isIntrastate: boolean = true): CalculatedVoucherItem => {
   const subtotal = (item.quantity || 0) * (item.unit_price || 0);
   const discountAmount = subtotal * ((item.discount_percentage || 0) / 100);
   const taxableAmount = subtotal - discountAmount;

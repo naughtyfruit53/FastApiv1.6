@@ -46,7 +46,7 @@ export default [
     },
     rules: {
       // JavaScript rules (equivalent to @eslint/js recommended)
-      'no-unused-vars': 'error',
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-undef': 'error',
       'eqeqeq': ['error', 'always'],
       'curly': ['error', 'all'],
