@@ -185,7 +185,7 @@ const VoucherManagement: React.FC = () => {
     enabled: tabValue === 1
   });
   // Financial vouchers queries
-const { data: financialVouchers, isLoading:refetch: refetchFinancialVouchers } = useQuery({
+  const { data: financialVouchers, isLoading, refetch: refetchFinancialVouchers } = useQuery({
     queryKey: ['financialVouchers'],
     queryFn: async () => {
       const [payments, receipts, journals, contras] = await Promise.all([

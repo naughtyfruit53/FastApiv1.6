@@ -117,7 +117,7 @@ export default function ManufacturingJournalVoucher() {
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<ManufacturingJournalVoucher>({
+  const { control, handleSubmit, watch, setValue, reset, formState } = useForm<ManufacturingJournalVoucher>({
     defaultValues
   });
   const {

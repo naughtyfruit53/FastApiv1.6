@@ -116,7 +116,7 @@ export default function MaterialReceiptVoucher() {
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<MaterialReceiptVoucher>({
+  const { control, handleSubmit, watch, setValue, reset, formState } = useForm<MaterialReceiptVoucher>({
     defaultValues
   });
   const {

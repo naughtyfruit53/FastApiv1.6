@@ -141,7 +141,7 @@ export default function JobCardVoucher() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const queryClient = useQueryClient();
-const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<JobCardVoucher>({
+  const { control, handleSubmit, watch, setValue, reset, formState } = useForm<JobCardVoucher>({
     defaultValues
   });
   const {

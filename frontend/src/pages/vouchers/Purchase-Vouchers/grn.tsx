@@ -118,7 +118,7 @@ const GoodsReceiptNotePage: React.FC = () => {
   const [selectedVoucherType, setSelectedVoucherType] = useState<'purchase-voucher' | 'purchase-order' | null>(null);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
   // Fetch purchase orders
-const { data: purchaseOrdersData, refetch:} = useQuery({
+  const { data: purchaseOrdersData, refetch } = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: () => api.get('/purchase-orders').then(res => res.data),
     enabled: isOrgContextReady,

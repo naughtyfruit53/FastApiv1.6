@@ -105,7 +105,7 @@ const MaterialRequisition: React.FC = () => {
     queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
   });
   // Fetch specific material issue
-const { data: issueData, isLoading:} = useQuery({
+  const { data: issueData, isLoading } = useQuery({
     queryKey: ['material-issue', selectedId],
     queryFn: () => api.get(`/material-issues/${selectedId}`).then(res => res.data),
     enabled: !!selectedId

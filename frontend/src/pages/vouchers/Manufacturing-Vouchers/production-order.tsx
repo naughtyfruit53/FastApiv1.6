@@ -110,7 +110,7 @@ const ProductionOrder: React.FC = () => {
     { id: null, bom_name: 'Create New BOM...', version: '' }
   ];
   // Fetch specific manufacturing order
-const { data: orderData, isLoading:} = useQuery({
+  const { data: orderData, isLoading } = useQuery({
     queryKey: ['manufacturing-order', selectedId],
     queryFn: () => api.get(`/manufacturing-orders/${selectedId}`).then(res => res.data),
     enabled: !!selectedId

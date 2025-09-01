@@ -46,7 +46,7 @@ const VendorsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const queryClient = useQueryClient();
-const { data: vendors, isLoading:} = useQuery({
+  const { data: vendors, isLoading } = useQuery({
     queryKey: ['vendors'],
     queryFn: () => masterDataService.getVendors(),
     enabled: isOrgContextReady,

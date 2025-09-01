@@ -51,7 +51,7 @@ const CustomersPage: React.FC = () => {
     customerName?: string;
   }>({ open: false });
   const queryClient = useQueryClient();
-const { data: customers, isLoading:} = useQuery({
+  const { data: customers, isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: () => masterDataService.getCustomers(),
     enabled: isOrgContextReady,
