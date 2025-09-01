@@ -84,8 +84,8 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
       await onAdd(cleanData);
       reset();
       onClose();
-    } catch (error) {
-      console.error('Error adding shipping address:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const handleClose = () => {

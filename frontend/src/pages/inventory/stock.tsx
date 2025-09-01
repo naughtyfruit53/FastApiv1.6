@@ -108,7 +108,7 @@ const { data: stockData,error: stockError } = useQuery({
       alert('Stock import completed successfully.');
     },
     onError: (error: any) => {
-      console.error('Bulk import error:', error);
+      console.error(msg, err);
       alert(`Import failed: ${error.userMessage || 'Please check the file format and required columns.'}`);
     }
   });
@@ -156,7 +156,7 @@ const { data: stockData,error: stockError } = useQuery({
   const handleExport = async () => {
     try {
       await masterDataService.exportStock({ search: searchText, show_zero: showZero });
-    } catch (error) {
+    } catch (err) {
       alert('Failed to export stock data. Please try again.');
     }
   };

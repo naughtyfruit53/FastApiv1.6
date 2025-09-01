@@ -145,8 +145,8 @@ const PurchaseReturnPage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-    } catch (error) {
-      console.error('Error saving purchase return:', error);
+    } catch (err) {
+      console.error(msg, err);
       alert('Failed to save purchase return. Please try again.');
     }
   };
@@ -200,8 +200,8 @@ const PurchaseReturnPage: React.FC = () => {
       // Load the complete voucher data into the form
       setMode('view');
       reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
+    } catch (err) {
+      console.error(msg, err);
       // Fallback to available data
       setMode('view');
       reset(voucher);
@@ -214,8 +214,8 @@ const PurchaseReturnPage: React.FC = () => {
       const fullVoucherData = response.data;
       setMode('edit');
       reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
+    } catch (err) {
+      console.error(msg, err);
       handleEdit(voucher);
     }
   };
@@ -226,8 +226,8 @@ const PurchaseReturnPage: React.FC = () => {
       const fullVoucherData = response.data;
       setMode('view');
       reset(fullVoucherData);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
+    } catch (err) {
+      console.error(msg, err);
       handleView(voucher);
     }
   };

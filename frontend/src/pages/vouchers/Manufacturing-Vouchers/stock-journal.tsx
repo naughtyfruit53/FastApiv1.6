@@ -184,7 +184,7 @@ const { data: journalData} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating stock journal:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -197,7 +197,7 @@ const { data: journalData} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating stock journal:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({

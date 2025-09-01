@@ -87,7 +87,7 @@ const VendorsPage: React.FC = () => {
       setShowAddVendorModal(false);
       alert('Vendor added successfully!');
     } catch (error: any) {
-      console.error('Error adding vendor:', error);
+      console.error(msg, err);
       let errorMsg = 'Error adding vendor';
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
@@ -108,7 +108,7 @@ const VendorsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting vendor:', error);
+      console.error(msg, err);
       setErrorMessage(error.response?.data?.detail || 'Failed to delete vendor');
     }
   });

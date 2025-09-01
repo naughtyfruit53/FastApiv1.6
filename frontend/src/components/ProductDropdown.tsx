@@ -77,8 +77,8 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
       }
       const data = await response.json();
       setProducts(data);
-    } catch (error) {
-      console.error('Error fetching products:', error);
+    } catch (err) {
+      console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
     }

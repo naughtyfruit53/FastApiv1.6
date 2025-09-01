@@ -208,8 +208,8 @@ const { _user } = useAuth();
       setTickets(mockTickets);
       setConversations(mockConversations);
       setAnalytics(mockAnalytics);
-    } catch (error) {
-      console.error('Error loading service desk data:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }

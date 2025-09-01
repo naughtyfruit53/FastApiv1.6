@@ -314,7 +314,7 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
       setErrorMessage('');
     },
     onError: (error: any) => {
-      console.error('Update error:', error);
+      console.error(msg, err);
       setErrorMessage(error.message || 'Failed to update item. Please check your input.');
     }
   });
@@ -340,7 +340,7 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
       }
     },
     onError: (error: any) => {
-      console.error('Create error:', error);
+      console.error(msg, err);
       setErrorMessage(error.message || 'Failed to create item. Please check your input.');
     }
   });
@@ -414,8 +414,8 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
       } else {
         console.error('Failed to upload GST certificate');
       }
-    } catch (error) {
-      console.error('Error uploading GST certificate:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setUploadingGstCertificate(false);
       setGstCertificateFile(null);
@@ -459,7 +459,7 @@ const {...rest } = data;
             state_code: data.state_code
           }));
         }
-      } catch (error) {
+      } catch (err) {
         console.log('Pincode lookup failed:', error);
         // Fail silently, user can enter manually
       }

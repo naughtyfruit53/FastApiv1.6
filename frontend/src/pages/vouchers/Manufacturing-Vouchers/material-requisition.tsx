@@ -148,7 +148,7 @@ const MaterialRequisition: React.FC = () => {
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating material issue:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -161,7 +161,7 @@ const MaterialRequisition: React.FC = () => {
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating material issue:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({
@@ -170,7 +170,7 @@ const MaterialRequisition: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['material-issues'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting material issue:', error);
+      console.error(msg, err);
     }
   });
   const onSubmit = (data: MaterialIssue) => {

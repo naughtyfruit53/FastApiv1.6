@@ -62,8 +62,8 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
     try {
       await onAssign(user.id, selectedRoleIds);
       setSelectedRoleIds([]);
-    } catch (error) {
-      console.error('Failed to assign roles:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }
@@ -72,8 +72,8 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
     setLoading(true);
     try {
       await onRemove(user.id, roleId);
-    } catch (error) {
-      console.error('Failed to remove role:', error);
+    } catch (err) {
+      console.error(msg, err);
     } finally {
       setLoading(false);
     }

@@ -224,8 +224,8 @@ const { data: purchaseVouchersData, refetch:} = useQuery({
           handleGeneratePDF(response);
         }
       }
-    } catch (error) {
-      console.error('Error saving goods receipt note:', error);
+    } catch (err) {
+      console.error(msg, err);
       alert('Failed to save goods receipt note. Please try again.');
     }
   };

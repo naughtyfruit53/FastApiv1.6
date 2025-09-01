@@ -135,7 +135,7 @@ const ProductsPage: React.FC = () => {
       });
     },
     onError: (error: any) => {
-      console.error('Error creating product:', error);
+      console.error(msg, err);
       setErrorMessage(error.response?.data?.detail || 'Failed to create product');
     }
   });
@@ -160,7 +160,7 @@ const ProductsPage: React.FC = () => {
       });
     },
     onError: (error: any) => {
-      console.error('Error updating product:', error);
+      console.error(msg, err);
       setErrorMessage(error.response?.data?.detail || 'Failed to update product');
     }
   });
@@ -225,7 +225,7 @@ const ProductsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting product:', error);
+      console.error(msg, err);
       setErrorMessage(error.response?.data?.detail || 'Failed to delete product');
     }
   });

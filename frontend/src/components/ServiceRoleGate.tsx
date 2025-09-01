@@ -85,7 +85,7 @@ const ServiceRoleGate: React.FC<ServiceRoleGateProps> = ({
       try {
         const permissions = await rbacService.getCurrentUserPermissions();
         setUserPermissions(permissions);
-      } catch (error) {
+      } catch (err) {
         console.warn('Failed to load user service permissions:', error);
         setUserPermissions([]);
       } finally {

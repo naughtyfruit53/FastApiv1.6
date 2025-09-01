@@ -45,8 +45,8 @@ const FactoryReset: React.FC = () => {
     try {
       // Success message would be handled by the service
       setIsModalVisible(true);
-    } catch (error) {
-      console.error('Failed to request OTP:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
     setLoading(false);
   };
@@ -56,8 +56,8 @@ const FactoryReset: React.FC = () => {
       // Success would be handled by the service
       setIsModalVisible(false);
       setOtp('');
-    } catch (error) {
-      console.error('Invalid OTP or reset failed:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
     setLoading(false);
   };

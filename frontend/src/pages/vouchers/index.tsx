@@ -118,7 +118,7 @@ const VoucherManagement: React.FC = () => {
       const pdfConfig = getVoucherPdfConfig(voucherType);
       await generateVoucherPDF(voucherData, pdfConfig);
     } catch (error: any) {
-      console.error('Error generating PDF:', error);
+      console.error(msg, err);
       alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
     }
   };
@@ -152,7 +152,7 @@ const VoucherManagement: React.FC = () => {
         }
         alert('Voucher deleted successfully');
       } catch (error: any) {
-        console.error('Error deleting voucher:', error);
+        console.error(msg, err);
         alert(`Error deleting voucher: ${error.response?.data?.detail || error.message || 'Unknown error'}`);
       }
     }

@@ -103,8 +103,8 @@ const OrganizationDetailPage: React.FC = () => {
       setOrganization(data);
       setEditedOrg(data);
       setError(null);
-    } catch (error) {
-      console.error('Error fetching organization:', error);
+    } catch (err) {
+      console.error(msg, err);
       setError(error instanceof Error ? error.message : 'Failed to load organization details');
     } finally {
       setLoading(false);
@@ -137,9 +137,9 @@ const OrganizationDetailPage: React.FC = () => {
       setOrganization(updatedOrg);
       setEditing(false);
       toast.success('Organization updated successfully');
-    } catch (error) {
+    } catch (err) {
       toast.error('Failed to update organization');
-      console.error('Error updating organization:', error);
+      console.error(msg, err);
     } finally {
       setSaving(false);
     }
@@ -169,7 +169,7 @@ const OrganizationDetailPage: React.FC = () => {
       router.push('/admin/license-management');
     } catch (error: any) {
       toast.error(error.message);
-      console.error('Error deleting organization:', error);
+      console.error(msg, err);
     } finally {
       setOpenDeleteDialog(false);
     }
@@ -192,8 +192,8 @@ const OrganizationDetailPage: React.FC = () => {
         handleInputChange('city', city);
         handleInputChange('state', state);
         handleInputChange('state_code', state_code);
-      } catch (error) {
-        console.error('Failed to lookup pincode:', error);
+      } catch (err) {
+        console.error(msg, err);
         toast.error('Failed to autofill city and state from PIN code');
       } finally {
         setPincodeLoading(false);
@@ -220,9 +220,9 @@ const OrganizationDetailPage: React.FC = () => {
       setOpenResetDialog(false);
       setResetSnackbarOpen(true);
       toast.success('Password reset successfully');
-    } catch (error) {
+    } catch (err) {
       toast.error(error instanceof Error ? error.message : 'Failed to reset password');
-      console.error('Error resetting password:', error);
+      console.error(msg, err);
     }
   };
   const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'default' => {

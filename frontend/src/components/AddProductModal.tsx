@@ -161,8 +161,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       await onAdd(cleanData);
       reset();
       onClose();  // Close modal on success
-    } catch (error) {
-      console.error('Error adding product:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const handleClose = () => {

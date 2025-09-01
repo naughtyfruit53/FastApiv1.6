@@ -73,8 +73,8 @@ const LoginPage: React.FC = () => {
         // Use hard reload to avoid SPA race condition - ensures token is present for AuthProvider's effect
         window.location.href = '/dashboard';
       }
-    } catch (error) {
-      console.error('[Login] Failed to establish session:', error);
+    } catch (err) {
+      console.error(msg, err);
       toast.error('Failed to establish secure session. Please try again.', {
         position: "top-right",
         autoClose: 5000,

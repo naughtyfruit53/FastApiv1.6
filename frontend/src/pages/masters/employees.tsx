@@ -67,7 +67,7 @@ const EmployeesPage: React.FC = () => {
       resetForm();
     },
     onError: (error: any) => {
-      console.error('Error creating employee:', error);
+      console.error(msg, err);
     }
   });
   const resetForm = () => {

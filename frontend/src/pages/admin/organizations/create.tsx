@@ -20,8 +20,8 @@ const CreateOrganizationPage: React.FC = () => {
       const response = await api.post('/organizations/license/create', data);
       setTempPassword(response.data.temp_password);  // Capture and display temp_password from response
       setSnackbarOpen(true);
-    } catch (error) {
-      console.error('Failed to create organization', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const handleSnackbarClose = () => {

@@ -232,7 +232,7 @@ const { data: voucherData} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating job card voucher:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -245,7 +245,7 @@ const { data: voucherData} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating job card voucher:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({

@@ -122,8 +122,8 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           state,
           state_code
         }));
-      } catch (error) {
-        console.error('Failed to lookup pincode:', error);
+      } catch (err) {
+        console.error(msg, err);
       } finally {
         setPincodeLoading(false);
       }

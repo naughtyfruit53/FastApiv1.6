@@ -146,8 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       // Default redirect to dashboard
       console.log('[AuthProvider] No return URL found, redirecting to dashboard');
       router.push('/dashboard');
-    } catch (error) {
-      console.error('[AuthProvider] Error during post-login redirect:', error);
+    } catch (err) {
+      console.error(msg, err);
       // Fallback to dashboard
       router.push('/dashboard');
     }
@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           autoClose: 5000,
         });
       }
-    } catch (error) {
+    } catch (err) {
       console.warn('[AuthProvider] Could not restore form data:', error);
     }
   };

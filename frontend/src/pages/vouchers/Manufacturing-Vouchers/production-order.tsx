@@ -164,7 +164,7 @@ const ProductionOrder: React.FC = () => {
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating manufacturing order:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -177,7 +177,7 @@ const ProductionOrder: React.FC = () => {
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating manufacturing order:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({
@@ -186,7 +186,7 @@ const ProductionOrder: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting manufacturing order:', error);
+      console.error(msg, err);
     }
   });
   const onSubmit = (data: ManufacturingOrder) => {

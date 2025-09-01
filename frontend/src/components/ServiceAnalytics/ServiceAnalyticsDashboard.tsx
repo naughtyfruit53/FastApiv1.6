@@ -105,8 +105,8 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to export analytics data:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   if (!organizationId) {

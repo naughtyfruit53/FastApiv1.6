@@ -184,7 +184,7 @@ const { data: voucherData} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating material receipt voucher:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -197,7 +197,7 @@ const { data: voucherData} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating material receipt voucher:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({
@@ -261,8 +261,8 @@ const { data: voucherData} = useQuery({
     try {
       const dataToUse = voucherData || watch();
       await generateStandalonePDF(dataToUse, 'material-receipt');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   if (isLoading) {

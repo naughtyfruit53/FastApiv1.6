@@ -54,8 +54,8 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       if (blob) {
         saveAs(blob, `${filename}.xlsx`);
       }
-    } catch (error) {
-      console.error('Error exporting Excel:', error);
+    } catch (err) {
+      console.error(msg, err);
       // You might want to show a toast notification here
     } finally {
       setIsExporting(false);
@@ -70,8 +70,8 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       if (blob) {
         saveAs(blob, `${filename}.csv`);
       }
-    } catch (error) {
-      console.error('Error exporting CSV:', error);
+    } catch (err) {
+      console.error(msg, err);
       // You might want to show a toast notification here
     } finally {
       setIsExporting(false);

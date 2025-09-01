@@ -122,7 +122,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         throw new globalThis.Error(errorMessage);
       }
     } catch (error: any) {
-      console.error('Error processing GST certificate:', error);
+      console.error(msg, err);
       setGstUploadError(error.response?.data?.detail || 'Failed to process GST certificate. Please try again.');
     } finally {
       setGstUploadLoading(false);
@@ -192,7 +192,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       reset();
       onClose();  // Close modal on success
     } catch (error: any) {
-      console.error('Error adding vendor:', error);
+      console.error(msg, err);
       // Set more specific error message
       const errorMessage = error.response?.data?.detail || 'Failed to add vendor. Please try again.';
       setGstUploadError(errorMessage);

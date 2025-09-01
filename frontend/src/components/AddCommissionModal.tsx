@@ -116,8 +116,8 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       await onAdd(cleanData);
       reset();
       onClose();
-    } catch (error) {
-      console.error('Error adding commission:', error);
+    } catch (err) {
+      console.error(msg, err);
     }
   };
   const handleClose = () => {

@@ -151,7 +151,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       });
     },
     onError: (error) => {
-      console.error('Failed to fetch organization data:', error);
+      console.error(msg, err);
     }
   });
   // Query for current user's service permissions

@@ -144,8 +144,8 @@ const SalesReturnPage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-    } catch (error) {
-      console.error('Error saving sales return:', error);
+    } catch (err) {
+      console.error(msg, err);
       alert('Failed to save sales return. Please try again.');
     }
   };

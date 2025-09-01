@@ -207,7 +207,7 @@ const { data: voucherData} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error('Error creating manufacturing journal voucher:', error);
+      console.error(msg, err);
     }
   });
   const updateMutation = useMutation({
@@ -220,7 +220,7 @@ const { data: voucherData} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error('Error updating manufacturing journal voucher:', error);
+      console.error(msg, err);
     }
   });
   const deleteMutation = useMutation({
