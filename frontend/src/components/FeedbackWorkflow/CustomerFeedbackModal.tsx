@@ -35,7 +35,7 @@ interface CustomerFeedbackModalProps {
   installationJobId: number;
   customerId: number;
   completionRecordId?: number;
-  onSubmit: (feedbackData: any) => Promise<void>;
+  onSubmit: (_feedbackData: any) => Promise<void>;
 }
 const SATISFACTION_LEVELS = [
   { value: 'very_satisfied', label: 'Very Satisfied', color: '#4caf50' },
@@ -141,10 +141,6 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
     onClose();
   };
   
-  const getSatisfactionColor = (level: string) => {
-    const satisfaction = SATISFACTION_LEVELS.find(s => s.value === level);
-    return satisfaction?.color || '#757575';
-  };
   return (
     <Dialog
       open={open}
