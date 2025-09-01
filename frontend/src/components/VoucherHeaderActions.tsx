@@ -13,10 +13,10 @@ interface VoucherHeaderActionsProps {
   onCreate?: () => void;
   onCancel?: () => void;
   // Additional props for compatibility
-  onModeChange?: (mode: 'create' | 'edit' | 'view') => void;
+  onModeChange?: (_mode: 'create' | 'edit' | 'view') => void;
   onModalOpen?: () => void;
   voucherList?: any[];
-  onView?: (voucher: any) => void;
+  onView?: (_voucher: any) => void;
   isLoading?: boolean;
 }
 const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
@@ -28,10 +28,10 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
   onCreate,
   onCancel,
   // Additional props for compatibility (ignored for now)
-  onModeChange,
-  onModalOpen,
-  voucherList,
-  onView,
+  onModeChange: _onModeChange,
+  onModalOpen: _onModalOpen,
+  voucherList: _voucherList,
+  onView: _onView,
   isLoading,
 }) => {
   const router = useRouter();

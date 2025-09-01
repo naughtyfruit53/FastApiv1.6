@@ -45,7 +45,7 @@ const adminService = {
     }
   },
   // Add more admin-related API calls as needed, e.g., manage licenses, organizations, etc.
-  createLicense: async (licenseData: any) => {
+  createLicense: async (licenseData: Record<string, any>): Promise<any> => {
     try {
       const response = await api.post('/organizations/license/create', licenseData);
       return response.data;
@@ -54,7 +54,7 @@ const adminService = {
       throw error;
     }
   },
-  resetOrganizationData: async () => {
+  resetOrganizationData: async (): Promise<any> => {
     try {
       const response = await api.post('/organizations/reset-data');
       return response.data;
@@ -63,7 +63,7 @@ const adminService = {
       throw error;
     }
   },
-  resetUserPassword: async (email: string) => {
+  resetUserPassword: async (email: string): Promise<any> => {
     try {
       const response = await api.post('/password/admin-reset', { user_email: email });
       return response.data;
