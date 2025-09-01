@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
 import { 
+  Alert,
   Box,
   Button,
   Card,
+  CardContent,
   Chip,
+  CircularProgress,
   Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
+  Switch,
   Tab,
   Table,
   TableBody,
@@ -45,7 +57,8 @@ import {
   NOTIFICATION_CHANNELS,
   TEMPLATE_TYPES,
   getChannelDisplayName,
-  getTemplateTypeDisplayName
+  getTemplateTypeDisplayName,
+  notificationQueryKeys
 } from '../services/notificationService';
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -86,6 +99,23 @@ const NotificationTemplates: React.FC = () => {
     variables: [],
     is_active: true
   });
+  
+  // Reset form function
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      template_type: 'appointment_reminder',
+      channel: 'email',
+      subject: '',
+      body: '',
+      html_body: '',
+      trigger_event: '',
+      variables: [],
+      is_active: true
+    });
+  };
+  
   // Get templates data
   const { 
     data: templates = [], 
@@ -104,8 +134,8 @@ const NotificationTemplates: React.FC = () => {
       resetForm();
       toast.success('Template created successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to create template');
+    onError: (createError: any) => {
+      toast.error(createError.response?.data?.detail || 'Failed to create template');
     }
   });
   // Update template mutation
@@ -118,8 +148,8 @@ const NotificationTemplates: React.FC = () => {
       resetForm();
       toast.success('Template updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to update template');
+    onError: (updateError: any) => {
+      toast.error(updateError.response?.data?.detail || 'Failed to update template');
     }
   });
   // Delete template mutation
@@ -131,8 +161,8 @@ const NotificationTemplates: React.FC = () => {
       setTemplateToDelete(null);
       toast.success('Template deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to delete template');
+    onError: (deleteError: any) => {
+      toast.error(deleteError.response?.data?.detail || 'Failed to delete template');
     }
   });
   // Test template mutation
@@ -143,24 +173,10 @@ const NotificationTemplates: React.FC = () => {
       toast.success('Template test completed successfully');
       console.log('Test result:', data);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to test template');
+    onError: (testError: any) => {
+      toast.error(testError.response?.data?.detail || 'Failed to test template');
     }
   });
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      template_type: 'appointment_reminder',
-      channel: 'email',
-      subject: '',
-      body: '',
-      html_body: '',
-      trigger_event: '',
-      variables: [],
-      is_active: true
-    });
-  };
   const handleEdit = (template: NotificationTemplate) => {
     setEditingTemplate(template);
     setFormData({
@@ -224,7 +240,7 @@ const NotificationTemplates: React.FC = () => {
   const smsTemplates = templates.filter(t => t.channel === 'sms');
   const pushTemplates = templates.filter(t => t.channel === 'push');
   const inAppTemplates = templates.filter(t => t.channel === 'in_app');
-  const TemplateTable: React.FC<{ templates: NotificationTemplate[] }> = ({ templates }) => (
+  const TemplateTable: React.FC<{ templates: NotificationTemplate[] }> = ({ templateList }) => (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
@@ -238,7 +254,7 @@ const NotificationTemplates: React.FC = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {templates.map((template) => (
+          {templateList.map((template) => (
             <TableRow key={template.id}>
               <TableCell>
                 <Box>
