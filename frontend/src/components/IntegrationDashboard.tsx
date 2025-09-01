@@ -87,7 +87,7 @@ interface IntegrationDashboardProps {
   onClose: () => void;
 }
 const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClose }) => {
-const  = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<IntegrationDashboardData | null>(null);
   const [err, setErr] = useState<string | null>(null);

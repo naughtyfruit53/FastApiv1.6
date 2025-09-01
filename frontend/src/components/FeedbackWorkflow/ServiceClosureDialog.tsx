@@ -210,6 +210,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
     }
   };
   const renderWorkflowStepper = () => {
+    const steps = [
       'Closure Requested',
       'Manager Review',
       'Service Closed'

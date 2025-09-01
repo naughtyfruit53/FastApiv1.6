@@ -91,7 +91,7 @@ interface MigrationWizardProps {
   jobId?: number;
 }
 const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId }) => {
-const  = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [wizardState, setWizardState] = useState<MigrationWizardState | null>(null);
   const [currentJob, setCurrentJob] = useState<MigrationJob | null>(null);

@@ -505,6 +505,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
   }, [queryClient, setAddProductLoading, setShowAddProductModal]);
   // Shipping address add handler
+  const handleAddShipping = useCallback(async () => {
     setAddShippingLoading(true);
     try {
       // Add shipping logic here
