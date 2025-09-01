@@ -502,4 +502,5 @@ Best regards,
     </Dialog>
   );
 };
+
 export default EmailTemplateEditor;

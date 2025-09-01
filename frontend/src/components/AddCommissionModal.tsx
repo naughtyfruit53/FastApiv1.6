@@ -20,7 +20,7 @@ import { useForm, Controller } from 'react-hook-form';
 interface AddCommissionModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (data: any) => Promise<void>;
+  onAdd: (_data: any) => Promise<void>;
   loading?: boolean;
 }
 interface CommissionFormData {

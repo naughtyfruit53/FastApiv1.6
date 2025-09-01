@@ -44,7 +44,7 @@ export interface VoucherPdfData {
 /**
  * Generate PDF for any voucher type using standardized configuration
  */
-export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: VoucherPdfConfig) => {
+export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: VoucherPdfConfig): Promise<void> => {
   try {
     // Check authorization before generating PDF
     const token = localStorage.getItem('token');
@@ -295,10 +295,10 @@ export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
  * Can be used in any voucher component without requiring useVoucherPage hook
  */
 export const generateStandalonePDF = async (
-  voucherData: any, 
+  voucherData: VoucherPdfData, 
   voucherType: string, 
   entityData?: { vendor?: any; customer?: any; employee?: any }
-): any =>  {
+): Promise<void> =>  {
   try {
     console.log('[PDF] Generating standalone PDF for:', voucherType, voucherData);
     // Check authorization

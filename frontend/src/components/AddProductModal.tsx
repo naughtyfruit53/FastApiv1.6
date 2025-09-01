@@ -20,7 +20,7 @@ import { getProducts } from '../services/masterService';
 interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (data: any) => Promise<void>;
+  onAdd: (_data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
 }

@@ -13,7 +13,7 @@ interface JwtPayload {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (_email: string, _password: string) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
 }
@@ -25,6 +25,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const api = axios.create({
     baseURL: '/api/v1',
   });
+  // Define functions first to avoid use-before-define issues
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    router.push('/login');
+  };
+  
+  const fetchUser = async () => {
+    try {
+      const response = await api.get('/users/me');
+      setUser(response.data);
+    } catch (fetchError) {
+      console.error('Fetch user error', fetchError);
+      throw fetchError;
+    }
+  };
+  
+  const refreshToken = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {return logout();}
+    try {
+      const response = await api.post('/auth/refresh-token');
+      localStorage.setItem('token', response.data.access_token);
+      await fetchUser();
+    } catch (refreshError) {
+      console.error('Token refresh failed', refreshError);
+      logout();
+    }
+  };
+  
   api.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('token');
@@ -41,42 +71,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const originalRequest = error.config;
       if (error.response.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
-// refreshToken is defined later in this file
         await refreshToken();
         return api(originalRequest);
       }
       return Promise.reject(error);
     }
   );
-  const refreshToken = async () => {
-    const token = localStorage.getItem('token');
-// logout is defined later in this file
-    if (!token) {return logout();}
-    try {
-      const response = await api.post('/auth/refresh-token');
-      localStorage.setItem('token', response.data.access_token);
-// fetchUser is defined later in this file
-      await fetchUser();
-    } catch (refreshError) {
-      console.error('Token refresh failed', refreshError);
-// logout is defined later in this file
-      logout();
-    }
-  };
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    router.push('/login');
-  };
-  const fetchUser = async () => {
-    try {
-      const response = await api.get('/users/me');
-      setUser(response.data);
-    } catch (fetchError) {
-      console.error('Fetch user error', fetchError);
-      throw fetchError;
-    }
-  };
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');

@@ -7,13 +7,11 @@ import {
   Box,
   Chip,
   Typography,
-  Button,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   InputAdornment,
-  Tooltip,
   CircularProgress
 } from '@mui/material';
 import { Add, Person, Business, Badge, AccountBalance } from '@mui/icons-material';
@@ -29,7 +27,7 @@ interface EntitySelectorProps {
   required?: boolean;
   entityTypes?: EntityType[];
   allowTypeSelection?: boolean;
-  onEntityCreated?: (entity: any) => void;
+  onEntityCreated?: (_entity: any) => void;
   disabled?: boolean;
   error?: boolean;
   helperText?: string;

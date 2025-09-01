@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Autocomplete,
   TextField,
@@ -27,7 +27,7 @@ interface Customer {
 }
 interface CustomerAutocompleteProps {
   value?: string | number | null;
-  onChange: (customer: Customer | null) => void;
+  onChange: (_customer: Customer | null) => void;
   error?: boolean;
   helperText?: string;
   disabled?: boolean;
@@ -35,7 +35,7 @@ interface CustomerAutocompleteProps {
   placeholder?: string;
 }
 const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
-  value,
+  value: _value,
   onChange,
   error = false,
   helperText = '',
@@ -67,8 +67,8 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       onChange(newCustomer);
       setAddModalOpen(false);
     },
-    onError: (error: any) => {
-      console.error('Failed to create customer:', error);
+    onError: (createError: any) => {
+      console.error('Failed to create customer:', createError);
     }
   });
   // Create options array with "Add Customer" option
@@ -107,7 +107,7 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
           if (option.isAddOption) {return option.name;}
           return option.name;
         }}
-        isOptionEqualToValue={(option, value) => option.id === value?.id}
+        isOptionEqualToValue={(option, selectedValue) => option.id === selectedValue?.id}
         loading={isLoading}
         disabled={disabled}
         filterOptions={(x) => x} // Disable default default filtering since we use backend search

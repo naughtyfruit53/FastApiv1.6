@@ -26,7 +26,7 @@ import api from '../lib/api';
 interface AddVendorModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd?: (data: any) => Promise<void>;
+  onAdd?: (_data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
 }
