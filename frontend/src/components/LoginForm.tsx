@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Box,
   Card,
@@ -11,10 +11,10 @@ import {
   CircularProgress
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
+
 import { authService } from '../services/authService';
 interface LoginFormProps {
-  onLogin: (token: string, loginResponse?: any) => void;
+  onLogin: (_token: string, _loginResponse?: any) => void;
 }
 interface LoginFormData {
   email: string;

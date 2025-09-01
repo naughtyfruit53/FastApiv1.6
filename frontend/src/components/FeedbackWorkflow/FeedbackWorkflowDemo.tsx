@@ -14,8 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
-  Divider
+  ListItemIcon
 } from '@mui/material';
 import {
   Feedback as FeedbackIcon,
@@ -28,8 +27,7 @@ import {
 } from '@mui/icons-material';
 import {
   CustomerFeedbackModal,
-  ServiceClosureDialog,
-  FeedbackStatusList
+  ServiceClosureDialog
 } from '../FeedbackWorkflow';
 interface FeedbackWorkflowDemoProps {
   userRole?: 'customer' | 'manager' | 'support';

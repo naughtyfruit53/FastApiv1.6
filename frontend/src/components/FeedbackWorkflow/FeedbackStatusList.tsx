@@ -40,13 +40,12 @@ import {
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
-  FilterList as FilterIcon,
   Assignment as AssignmentIcon
 } from '@mui/icons-material';
 interface FeedbackStatusListProps {
   organizationId: number;
-  onFeedbackSelect?: (feedback: any) => void;
-  onClosureSelect?: (closure: any) => void;
+  onFeedbackSelect?: (_feedback: any) => void;
+  onClosureSelect?: (_closure: any) => void;
 }
 const FEEDBACK_STATUS_CONFIG = {
   submitted: { label: 'Submitted', color: 'info', icon: FeedbackIcon },
