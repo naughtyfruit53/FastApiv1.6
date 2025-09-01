@@ -5,8 +5,6 @@ import { toast } from 'react-toastify';
 import { authService } from '../services/authService';
 import { User, getDisplayRole } from '../types/user.types';
 import { markAuthReady, resetAuthReady } from '../lib/api';
-declare function restoreFormData(...args: any[]): any;
-declare function handlePostLoginRedirect(...args: any[]): any;
 interface AuthContextType {
   user: User | null;
   loading: boolean;

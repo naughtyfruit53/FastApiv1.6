@@ -1,41 +1,6 @@
 // frontend/src/pages/sla/index.tsx
 import React, { useState, useEffect } from 'react';
-import {
-declare function resetForm(...args: any[]): any;
-  Box,
-  Container,
-  Typography,
-  Tab,
-  Tabs,
-  Paper,
-  Chip,
-  IconButton,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControlLabel,
-  Switch,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputAdornment,
-  Stack,
-  Grid,
-  Alert,
-  Card,
-  CardContent,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tooltip,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Edit,

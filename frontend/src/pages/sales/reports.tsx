@@ -1,5 +1,3 @@
-declare function exportToPDF(...args: any[]): any;
-declare function exportToExcel(...args: any[]): any;
 'use client';
 import React, { useState, useEffect } from 'react';
 import {

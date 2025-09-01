@@ -1,6 +1,3 @@
-declare function handleUserMenuClose(...args: any[]): any;
-declare function handleSubClose(...args: any[]): any;
-declare function handleMenuClose(...args: any[]): any;
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import {

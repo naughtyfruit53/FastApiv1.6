@@ -1,40 +1,7 @@
 // frontend/src/pages/vouchers/Others/rfq.tsx
 // Request for Quotation (RFQ) Page
 import React, { useState, useEffect } from 'react';
-import {
-declare function handleDialogClose(...args: any[]): any;
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Grid,
-  IconButton,
-  CircularProgress,
-  Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Autocomplete,
-  Chip,
-  Card,
-  CardContent,
-  CardActions,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  Fab,
-  Tooltip
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Remove,

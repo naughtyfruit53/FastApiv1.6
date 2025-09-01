@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-declare function loadJobDetails(...args: any[]): any;
   Dialog,
   DialogTitle,
   DialogContent,
@@ -172,6 +171,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
   const handleCreateTask = async () => {
     if (!job || !newTask.title.trim()) {return;}
     try {
+      await dispatchService.createInstallationTask({
         installation_job_id: job.id,
         title: newTask.title,
         description: newTask.description,

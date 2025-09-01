@@ -1,4 +1,3 @@
-declare function loadMigrationJobs(...args: any[]): any;
 'use client';
 /**
  * Migration Management Page

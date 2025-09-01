@@ -1,28 +1,7 @@
 // revised fastapi_migration/frontend/src/pages/vouchers/index.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import {
-declare function refetchFinancialVouchers(...args: any[]): any;
-declare function refetchInternalVouchers(...args: any[]): any;
-declare function refetchSalesVouchers(...args: any[]): any;
-declare function refetchPurchaseVouchers(...args: any[]): any;
-  Box,
-  Container,
-  Typography,
-  Tab,
-  Tabs,
-  Paper,
-  Card,
-  CardContent,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip
-} from '@mui/material';
+import { from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { voucherService, reportsService } from '../../services/authService';
 import { voucherService as voucherApi } from '../../services/vouchersService';

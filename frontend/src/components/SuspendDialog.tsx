@@ -1,4 +1,3 @@
-declare function handleClose(...args: any[]): any;
 'use client';
 // SuspendDialog component for requirement #5 - Account Suspension & License Pause
 import React, { useState } from 'react';

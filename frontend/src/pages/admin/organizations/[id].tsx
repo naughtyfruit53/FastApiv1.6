@@ -19,7 +19,6 @@ import Snackbar from '@mui/material/Snackbar';
 import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-declare function fetchOrganization(...args: any[]): any;
 interface Organization {
   id: number;
   name: string;

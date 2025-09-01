@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Alert, Snackbar } from '@mui/material';
-declare function hideError(...args: any[]): any;
 interface ErrorMessage {
   id: string;
   message: string;

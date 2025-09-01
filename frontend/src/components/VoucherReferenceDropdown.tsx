@@ -1,21 +1,7 @@
 // frontend/src/components/VoucherReferenceDropdown.tsx
 // Reference column dropdown component for voucher types
 import React, { useState, useEffect } from 'react';
-import {
-declare function fetchReferenceDocuments(...args: any[]): any;
-  Box,
-  TextField,
-  Autocomplete,
-  Typography,
-  Grid,
-  CircularProgress,
-  Alert,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Popper
-} from '@mui/material';
+import { from '@mui/material';
 import { getReferenceVoucherOptions, getVoucherConfig } from '../utils/voucherUtils';
 import api from '../lib/api';
 interface VoucherReferenceDropdownProps {

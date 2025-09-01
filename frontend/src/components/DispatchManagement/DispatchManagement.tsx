@@ -84,6 +84,8 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
+
+const DispatchManagement: React.FC<DispatchManagementProps> = () => {
   const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [dispatchOrders, setDispatchOrders] = useState<DispatchOrderInDB[]>([]);

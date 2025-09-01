@@ -1,38 +1,5 @@
 import React, { useState } from 'react';
-import {
-declare function resetForm(...args: any[]): any;
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  Alert,
-  Chip,
-  IconButton,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
-  Switch,
-  FormControlLabel,
-  Tabs,
-  Tab
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Edit,

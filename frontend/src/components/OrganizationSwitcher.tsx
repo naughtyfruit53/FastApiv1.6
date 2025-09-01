@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-declare function fetchUserOrganizations(...args: any[]): any;
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Box,
-  Typography,
-  Alert,
-  CircularProgress,
-  SelectChangeEvent
-} from '@mui/material';
+import { from '@mui/material';
 import { organizationService } from '../services/organizationService';
 interface Organization {
   id: number;

@@ -1,16 +1,6 @@
 // frontend/src/pages/dashboard/OrgDashboard.tsx
 import React, { useState, useEffect } from 'react';
-import {
-declare function fetchOrgStatistics(...args: any[]): any;
-  Box,
-  Typography,
-  Container,
-  Chip,
-  CircularProgress,
-  Alert,
-  Paper,
-  Grid as MuiGrid,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Business,
   People,

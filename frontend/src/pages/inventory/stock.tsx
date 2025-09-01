@@ -5,39 +5,7 @@ import { masterDataService, companyService } from '../../services/authService'; 
 import { getProductMovements, getLastVendorForProduct } from '../../services/stockService';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
-import {
-declare function generateStockReport(...args: any[]): any;
-  Box,
-  Container,
-  Typography,
-  Paper,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Checkbox,
-  FormControlLabel,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputAdornment,
-  Stack,
-  Grid,
-  Menu,
-  ListItemIcon,
-  ListItemText,
-  MenuItem as MuiMenuItem,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Edit,

@@ -1,40 +1,6 @@
 // frontend/src/pages/service-desk/index.tsx
 import React, { useState, useEffect } from 'react';
-import {
-declare function loadServiceDeskData(...args: any[]): any;
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  TextField,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Divider,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,

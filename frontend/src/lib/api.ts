@@ -1,7 +1,6 @@
 // Revised: frontend/src/lib/api.ts
 import axios from 'axios';
 import { toast } from 'react-toastify';
-declare function resetAuthReady(...args: any[]): any;
 // API base URL from environment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 // Token expiry handling with state preservation

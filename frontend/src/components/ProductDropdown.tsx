@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-declare function fetchProducts(...args: any[]): any;
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
-  CircularProgress,
-  Box,
-  TextField,
-  Autocomplete
-} from '@mui/material';
+import { from '@mui/material';
 export interface Product {
   id: number;
   product_name: string;  // Using product_name field for frontend consistency as per requirements

@@ -1,9 +1,3 @@
-declare function renderCreateJobStep(...args: any[]): any;
-declare function renderValidationStep(...args: any[]): any;
-declare function renderMappingStep(...args: any[]): any;
-declare function renderExecutionStep(...args: any[]): any;
-declare function renderUploadStep(...args: any[]): any;
-declare function loadWizardState(...args: any[]): any;
 'use client';
 /**
  * Migration Wizard Component

@@ -58,7 +58,7 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
   // Create customer mutation
   const createCustomerMutation = useMutation({
     mutationFn: createCustomer,
-    onSuccess: (newCustomer) => {
+    onSuccess: (newCustomer: Customer) => {
       // Invalidate search queries
       queryClient.invalidateQueries({queryKey: ['customerSearch']});
       queryClient.invalidateQueries({queryKey: ['customers']});

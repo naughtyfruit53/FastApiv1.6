@@ -1,38 +1,6 @@
 // frontend/src/pages/marketing/index.tsx
 import React, { useState, useEffect } from 'react';
-import {
-declare function loadMarketingData(...args: any[]): any;
-  Box,
-  Typography,
-  Container,
-  Button,
-  Paper,
-  Grid,
-  Tabs,
-  Tab,
-  CircularProgress,
-  Alert,
-  Card,
-  CardContent,
-  Chip,
-  TextField,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  LinearProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,

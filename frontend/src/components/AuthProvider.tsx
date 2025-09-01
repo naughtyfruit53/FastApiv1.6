@@ -3,9 +3,6 @@ import React, {ReactNode, createContext, useEffect, useState} from 'react';
 import { useRouter } from 'next/router';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
-declare function fetchUser(...args: any[]): any;
-declare function refreshToken(...args: any[]): any;
-declare function logout(...args: any[]): any;
 interface User {
   id: number;
   email: string;

@@ -1,33 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import {
-declare function resetForm(...args: any[]): any;
-  Box,
-  Container,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  IconButton,
-  Avatar,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Edit,

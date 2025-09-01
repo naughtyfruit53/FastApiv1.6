@@ -1,41 +1,7 @@
 // Revised masters.index.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import {
-declare function resetForm(...args: any[]): any;
-  Box,
-  Container,
-  Typography,
-  Tab,
-  Tabs,
-  Paper,
-  Card,
-  CardContent,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
-  Avatar,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Checkbox,
-  InputLabel,
-  FormControl,
-  Autocomplete,
-  CircularProgress
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Edit,

@@ -1,4 +1,3 @@
-declare function handleClose(...args: any[]): any;
 'use client';
 // ResetDialog component for requirement #2 - Add Reset Option for Superadmins
 import React, { useState } from 'react';

@@ -2,7 +2,6 @@
 // Revised: frontend/src/services/authService.ts
 // frontend/src/services/authService.ts (Revised for detailed error handling in companyService)
 import api from '../lib/api';  // Use the api client
-declare function masterDataService(...args: any[]): any;
 export const authService = {
   login: async (username: string, password: string) => {
     try {
@@ -283,7 +282,7 @@ export const voucherService = {
     return masterDataService.getProducts(params);
   },
   getCustomers: async (params?: any) => {
-return masterDataService.getCustomers(params: Record<string, any>);
+    return masterDataService.getCustomers(params);
   },
 };
 export const masterDataService = {

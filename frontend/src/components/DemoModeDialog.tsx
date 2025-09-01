@@ -1,4 +1,3 @@
-declare function handleReset(...args: any[]): any;
 'use client';
 import React, { useState } from 'react';
 import {

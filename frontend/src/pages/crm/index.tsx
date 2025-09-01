@@ -1,35 +1,6 @@
 // frontend/src/pages/crm/index.tsx
 import React, { useState, useEffect } from 'react';
-import {
-declare function loadCRMData(...args: any[]): any;
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  TextField,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
-  Alert,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,

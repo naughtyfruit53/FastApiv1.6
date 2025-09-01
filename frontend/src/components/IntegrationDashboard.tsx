@@ -1,4 +1,3 @@
-declare function loadDashboardData(...args: any[]): any;
 'use client';
 /**
  * Integration Dashboard Component

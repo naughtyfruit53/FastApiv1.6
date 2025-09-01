@@ -1,37 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-declare function loadData(...args: any[]): any;
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Grid,
-  Chip,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Tooltip,
-  Alert,
-  CircularProgress,
-  Tab,
-  Tabs,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Switch,
-  FormControlLabel
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,

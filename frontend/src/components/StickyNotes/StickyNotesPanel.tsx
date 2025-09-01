@@ -1,24 +1,6 @@
 // frontend/src/components/StickyNotes/StickyNotesPanel.tsx
 import React, { useState, useEffect } from 'react';
-import {
-declare function fetchNotes(...args: any[]): any;
-  Box,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  CircularProgress,
-  Alert,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Typography // Added import
-} from '@mui/material';
+import { from '@mui/material';
 import {PushPin, PushPinOutlined} from '@mui/icons-material';
 import StickyNote from './StickyNote';
 import { useAuth } from '../../context/AuthContext';

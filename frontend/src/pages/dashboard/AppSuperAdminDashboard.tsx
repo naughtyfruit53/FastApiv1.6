@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-declare function fetchAppStatistics(...args: any[]): any;
-  Box,
-  Typography,
-  Container,
-  Chip,
-  CircularProgress,
-  Alert,
-  Paper,
-  Grid as Grid,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Business,
   People,
