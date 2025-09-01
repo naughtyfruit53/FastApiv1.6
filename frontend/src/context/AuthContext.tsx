@@ -18,7 +18,7 @@ interface AuthContextType {
   isOrgContextReady: boolean;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }): any {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthProvider] Auth context marked as ready');
       // If on login page after successful fetch, redirect to dashboard
       if (router.pathname === '/login') {
+// handlePostLoginRedirect is defined later in this file
         handlePostLoginRedirect();
       }
     } catch (error: any) {
@@ -139,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.replace(returnUrl);
         // Attempt to restore form data after a short delay
         setTimeout(() => {
+// restoreFormData is defined later in this file
           restoreFormData();
         }, 500);
         return;
@@ -362,14 +364,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-export const useAuth = () => {
+export const useAuth = (): any => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
 };
-export const useAuthWithOrgContext = () => {
+export const useAuthWithOrgContext = (): any => {
   const auth = useAuth();
   return {
     ...auth,

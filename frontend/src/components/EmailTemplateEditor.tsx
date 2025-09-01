@@ -179,7 +179,6 @@ Best regards,
       variables: prev.variables?.filter(v => v !== variable) || []
     }));
   };
-  const insertVariable = (variable: string, field: 'subject' | 'body' | 'html_body') => {
     const variableText = `{{${variable}}}`;
     const currentValue = formData[field] || '';
     // For simplicity, just append the variable. In a real implementation,
@@ -364,6 +363,7 @@ Best regards,
             Template Variables
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+// TODO: Define or import variable_name
             Variables allow you to personalize emails with dynamic content. Use {{variable_name}} in your template.
           </Typography>
           <Grid container spacing={3}>

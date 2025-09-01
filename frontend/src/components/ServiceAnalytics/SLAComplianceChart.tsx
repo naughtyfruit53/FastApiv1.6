@@ -35,7 +35,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
     if (rate >= 70) {return 'warning';}
     return 'error';
   };
-  const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case 'urgent':
         return 'error';

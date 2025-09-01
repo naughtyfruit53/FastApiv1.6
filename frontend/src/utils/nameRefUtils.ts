@@ -7,7 +7,7 @@ import { EntityType } from '../types/entity.types';
  * Legacy hook for name options - now uses Entity abstraction
  * @deprecated Use useEntityOptions from useEntity hook instead
  */
-export const useNameOptions = () => {
+export const useNameOptions = (): any => {
   const { options } = useEntityOptions(['Vendor', 'Customer']);
   // Convert to legacy format for backward compatibility
   return options.map(option => ({
@@ -21,7 +21,7 @@ export const useNameOptions = () => {
 export const useReferenceOptions = (
   selectedEntityId: number | null, 
   selectedEntityType: EntityType | null
-) => {
+): any =>  {
   const { data: unpaidVouchers } = useQuery({
     queryKey: ['unpaid-vouchers', selectedEntityId, selectedEntityType],
     queryFn: () => {

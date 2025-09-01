@@ -67,7 +67,7 @@ export const createCustomer = async (customerData: {
   state_code: string;
   gst_number?: string;
   pan_number?: string;
-}) => {
+}): any =>  {
   const response = await api.post('/customers', customerData);
   return response.data;
 };
@@ -84,7 +84,7 @@ export const createVendor = async (vendorData: {
   state_code: string;
   gst_number?: string;
   pan_number?: string;
-}) => {
+}): any =>  {
   const response = await api.post('/vendors', vendorData);
   return response.data;
 };
@@ -100,7 +100,7 @@ export const createProduct = async (productData: {
   reorder_level?: number;
   description?: string;
   is_manufactured?: boolean;
-}) => {
+}): any =>  {
   const response = await api.post('/products', productData);
   return response.data;
 };
@@ -117,7 +117,7 @@ export const createEmployee = async (employeeData: {
   department?: string;
   designation?: string;
   salary?: number;
-}) => {
+}): any =>  {
   const response = await api.post('/employees', employeeData);
   return response.data;
 };

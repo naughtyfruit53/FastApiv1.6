@@ -43,7 +43,6 @@ const FactoryReset: React.FC = () => {
     setResetType(type);
     setLoading(true);
     try {
-      const scope = type === 'organization_data' ? 'organization' : 'all_organizations';
       // Success message would be handled by the service
       setIsModalVisible(true);
     } catch (error) {

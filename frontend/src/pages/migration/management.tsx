@@ -83,6 +83,7 @@ const MigrationManagement: React.FC = () => {
       router.push('/settings'); // Redirect if not super admin
       return;
     }
+// loadMigrationJobs is defined later in this file
     loadMigrationJobs();
   }, [isSuperAdmin, router]);
   const loadMigrationJobs = async () => {

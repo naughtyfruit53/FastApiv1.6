@@ -200,6 +200,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
     onFeedbackSelect?.(feedback);
   };
   const handleViewClosure = (closure: any) => {
+// TODO: Define or import setSelectedClosure
     setSelectedClosure(closure);
     onClosureSelect?.(closure);
   };

@@ -237,7 +237,7 @@ export class NotificationWorkflow {
   }
 }
 // React hooks for workflow integration
-export const useNotificationWorkflow = () => {
+export const useNotificationWorkflow = (): any => {
   return {
     triggerJobAssignment: NotificationWorkflow.triggerJobAssignment,
     triggerJobUpdate: NotificationWorkflow.triggerJobUpdate,
@@ -252,7 +252,7 @@ export const useNotificationWorkflow = () => {
   };
 };
 // Integration helper for existing modules
-export const integrateNotificationsWithModule = (moduleName: string) => {
+export const integrateNotificationsWithModule = (moduleName: string): any => {
   console.log(`Notification integration available for ${moduleName} module`);
   return {
     // Generic trigger method for module-specific events

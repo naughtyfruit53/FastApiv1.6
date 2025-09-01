@@ -138,6 +138,7 @@ describe('AuthProvider Race Condition Fix', () => {
     // Mock localStorage to have a token
     (window.localStorage.getItem as jest.Mock).mockReturnValue('fake-token');
     const authPromise = new Promise(resolve => {
+// TODO: Define or import resolveAuthService
       resolveAuthService = resolve;
     });
     mockedAuthService.getCurrentUser.mockReturnValue(authPromise);
@@ -152,6 +153,7 @@ describe('AuthProvider Race Condition Fix', () => {
     expect(screen.getByTestId('loading')).toBeInTheDocument();
     // Resolve the auth service
     act(() => {
+// TODO: Define or import resolveAuthService
       resolveAuthService!({
         id: 1,
         email: 'test@example.com',

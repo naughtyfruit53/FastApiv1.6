@@ -9,7 +9,7 @@ interface ApiError {
     };
   };
 }
-export const handleApiError = (error: ApiError, defaultMessage?: string) => {
+export const handleApiError = (error: ApiError, defaultMessage?: string): any => {
   let message = defaultMessage || 'An error occurred';
   // Check for user-friendly message first
   if (error.userMessage) {
@@ -60,7 +60,7 @@ export const handleApiError = (error: ApiError, defaultMessage?: string) => {
     autoClose: 5000,
   });
 };
-export const showCompanySetupRequiredMessage = () => {
+export const showCompanySetupRequiredMessage = (): any => {
   toast.warning('Please complete your company setup before accessing this feature.', {
     autoClose: 8000,
     toastId: 'company-setup-required-action'

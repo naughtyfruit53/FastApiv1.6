@@ -140,7 +140,6 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
     resetForm();
     onClose();
   };
-  const getSatisfactionColor = (level: string) => {
     const satisfaction = SATISFACTION_LEVELS.find(s => s.value === level);
     return satisfaction?.color || '#757575';
   };

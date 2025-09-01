@@ -91,18 +91,20 @@ const OpportunityTracking: React.FC = () => {
     (opportunity.contact_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
   const handleViewOpportunity = (opportunity: Opportunity) => {
+// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(opportunity);
     // Add view functionality if needed
   };
   const handleEditOpportunity = (opportunity: Opportunity) => {
+// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(opportunity);
     // Add edit functionality if needed
   };
   const handleCreateOpportunity = () => {
     setDialogOpen(true);
   };
-  const handleCloseDialog = () => {
     setDialogOpen(false);
+// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(null);
   };
   const getStageColor = (stage: string) => {

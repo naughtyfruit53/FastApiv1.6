@@ -71,6 +71,7 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
       if (onSuccess) {
         onSuccess();
       }
+// handleClose is defined later in this file
       handleClose();
     } catch (error) {
       console.error('Reset error:', error);

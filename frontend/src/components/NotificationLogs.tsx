@@ -104,7 +104,9 @@ const NotificationLogs: React.FC = () => {
     data: analytics,
     isLoading: analyticsLoading 
   } = useQuery({
+// TODO: Define or import analyticsDays
     queryKey: notificationQueryKeys.analytics(analyticsDays),
+// TODO: Define or import analyticsDays
     queryFn: () => getNotificationAnalytics(analyticsDays),
   });
   // Get detailed log when modal opens

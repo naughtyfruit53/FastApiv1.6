@@ -44,6 +44,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const originalRequest = error.config;
       if (error.response.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
+// refreshToken is defined later in this file
         await refreshToken();
         return api(originalRequest);
       }
@@ -52,13 +53,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
   const refreshToken = async () => {
     const token = localStorage.getItem('token');
+// logout is defined later in this file
     if (!token) {return logout();}
     try {
       const response = await api.post('/auth/refresh-token');
       localStorage.setItem('token', response.data.access_token);
+// fetchUser is defined later in this file
       await fetchUser();
     } catch (refreshError) {
       console.error('Token refresh failed', refreshError);
+// logout is defined later in this file
       logout();
     }
   };

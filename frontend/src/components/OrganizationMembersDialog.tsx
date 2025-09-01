@@ -58,6 +58,7 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
   const [inviting, setInviting] = useState(false);
   useEffect(() => {
     if (open && organizationId) {
+// fetchMembers is defined later in this file
       fetchMembers();
     }
   }, [open, organizationId]);

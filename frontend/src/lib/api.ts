@@ -65,7 +65,7 @@ const initializeAuthPromise = () => {
 };
 initializeAuthPromise();
 // Mark auth as ready (called from AuthContext)
-export const markAuthReady = () => {
+export const markAuthReady = (): any => {
   console.log('[API] Auth context marked as ready');
   isAuthReady = true;
   if (authReadyResolve) {
@@ -74,7 +74,7 @@ export const markAuthReady = () => {
   }
 };
 // Reset auth ready state (called on logout)
-export const resetAuthReady = () => {
+export const resetAuthReady = (): any => {
   console.log('[API] Auth context reset');
   isAuthReady = false;
   initializeAuthPromise();

@@ -158,6 +158,7 @@ const SalesPipeline: React.FC = () => {
             }
           ]
         };
+// TODO: Define or import setPipelines
         setPipelines([mockPipeline]);
         setSelectedPipeline(mockPipeline);
         setOpportunities(mockOpportunities);

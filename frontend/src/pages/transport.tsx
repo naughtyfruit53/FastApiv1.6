@@ -259,6 +259,7 @@ const TransportManagementPage: NextPage = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+// TODO: Define or import setOpenDialog
             onClick={() => setOpenDialog('carrier')}
           >
             Add Carrier
@@ -327,7 +328,9 @@ const TransportManagementPage: NextPage = () => {
                         <IconButton
                           size="small"
                           onClick={() => {
+// TODO: Define or import setSelectedItem
                             setSelectedItem(carrier);
+// TODO: Define or import setOpenDialog
                             setOpenDialog('carrier');
                           }}
                         >
@@ -349,6 +352,7 @@ const TransportManagementPage: NextPage = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+// TODO: Define or import setOpenDialog
             onClick={() => setOpenDialog('route')}
           >
             Add Route
@@ -403,7 +407,9 @@ const TransportManagementPage: NextPage = () => {
                         <IconButton
                           size="small"
                           onClick={() => {
+// TODO: Define or import setSelectedItem
                             setSelectedItem(route);
+// TODO: Define or import setOpenDialog
                             setOpenDialog('route');
                           }}
                         >
@@ -425,6 +431,7 @@ const TransportManagementPage: NextPage = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+// TODO: Define or import setOpenDialog
             onClick={() => setOpenDialog('rate')}
           >
             Add Rate
@@ -485,7 +492,9 @@ const TransportManagementPage: NextPage = () => {
                         <IconButton
                           size="small"
                           onClick={() => {
+// TODO: Define or import setSelectedItem
                             setSelectedItem(rate);
+// TODO: Define or import setOpenDialog
                             setOpenDialog('rate');
                           }}
                         >
@@ -507,6 +516,7 @@ const TransportManagementPage: NextPage = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+// TODO: Define or import setOpenDialog
             onClick={() => setOpenDialog('shipment')}
           >
             Create Shipment

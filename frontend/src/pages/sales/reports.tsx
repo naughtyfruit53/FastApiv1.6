@@ -148,8 +148,10 @@ const SalesReports: React.FC = () => {
   const handleExport = async (format: 'excel' | 'pdf') => {
     try {
       if (format === 'excel') {
+// exportToExcel is defined later in this file
         await exportToExcel();
       } else if (format === 'pdf') {
+// exportToPDF is defined later in this file
         await exportToPDF();
       }
     } catch (error) {
@@ -163,8 +165,11 @@ const SalesReports: React.FC = () => {
     // Add headers
     overviewSheet.addRow(['Metric', 'Value']);
     overviewSheet.addRow(['Total Revenue', `$${totalRevenue.toLocaleString()}`]);
+// TODO: Define or import avgGrowth
     overviewSheet.addRow(['Revenue Growth', `${avgGrowth.toFixed(1)}%`]);
+// TODO: Define or import avgConversion
     overviewSheet.addRow(['Conversion Rate', `${avgConversion.toFixed(1)}%`]);
+// TODO: Define or import totalLeads
     overviewSheet.addRow(['Total Leads', totalLeads]);
     overviewSheet.addRow(['Export Date', new Date().toLocaleDateString()]);
     overviewSheet.addRow(['Time Range', timeRange.replace('_', ' ').toUpperCase()]);
@@ -211,8 +216,11 @@ const SalesReports: React.FC = () => {
     doc.text('Summary Metrics:', 20, 65);
     doc.setFontSize(11);
     doc.text(`Total Revenue: $${totalRevenue.toLocaleString()}`, 20, 75);
+// TODO: Define or import avgGrowth
     doc.text(`Revenue Growth: ${avgGrowth.toFixed(1)}%`, 20, 85);
+// TODO: Define or import avgConversion
     doc.text(`Conversion Rate: ${avgConversion.toFixed(1)}%`, 20, 95);
+// TODO: Define or import totalLeads
     doc.text(`Total Leads: ${totalLeads}`, 20, 105);
     // Add sales data table
     const tableData = salesData.map(data => [

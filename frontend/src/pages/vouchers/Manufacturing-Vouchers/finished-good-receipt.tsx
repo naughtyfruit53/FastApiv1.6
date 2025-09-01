@@ -35,7 +35,6 @@ const FinishedGoodsReceipt: React.FC = () => {
       default: return 'default';
     }
   };
-  const getCompletionPercentage = (produced: number, planned: number) => {
     return Math.min((produced / planned) * 100, 100);
   };
   return (

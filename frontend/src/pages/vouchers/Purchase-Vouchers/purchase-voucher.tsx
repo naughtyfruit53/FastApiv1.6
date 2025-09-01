@@ -164,7 +164,6 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
     }
   };
   // Function to get stock color
-  const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {return 'error.main';}
     if (stock <= reorder) {return 'warning.main';}
     return 'success.main';

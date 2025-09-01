@@ -298,7 +298,7 @@ export const generateStandalonePDF = async (
   voucherData: any, 
   voucherType: string, 
   entityData?: { vendor?: any; customer?: any; employee?: any }
-) => {
+): any =>  {
   try {
     console.log('[PDF] Generating standalone PDF for:', voucherType, voucherData);
     // Check authorization

@@ -86,7 +86,7 @@ export const voucherService = {
     return response.data;
   },
   // Enhanced service methods for voucher actions
-  getEmailRecipient: (voucher: any, voucherType: string) => {
+getEmailRecipient: (voucher: any, voucherType: string): any => {
     const type = voucherType.toLowerCase();
     if (type === 'purchase' && voucher.vendor) {
       return {
@@ -122,7 +122,7 @@ export const voucherService = {
       throw error;
     }
   },
-  getVoucherActions: (voucher: any, voucherType: string) => {
+getVoucherActions: (voucher: any, voucherType: string): any => {
     const recipient = voucherService.getEmailRecipient(voucher, voucherType);
     return {
       canView: true,

@@ -65,6 +65,7 @@ const OrganizationDetailPage: React.FC = () => {
   const [pincodeLoading, setPincodeLoading] = useState(false);
   useEffect(() => {
     if (id) {
+// fetchOrganization is defined later in this file
       fetchOrganization();
     }
   }, [id]);

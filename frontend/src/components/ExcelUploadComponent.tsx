@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { Button, Typography, CircularProgress, Alert, Box } from '@mui/material';
 import axios from 'axios';
-const ExcelUploadComponent = ({ endpoint = '/api/v1/stock/import/excel' }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+const ExcelUploadComponent = ({ endpoint = '/api/v1/stock/import/excel' }): void => {  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<{ message: string; total_processed: number; errors: any[] } | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -17,7 +17,7 @@ import { Entity, EntityType, EntityOption } from '../types/entity.types';
 /**
  * Hook to get all entities with unified interface
  */
-export const useEntities = (entityTypes: EntityType[] = ['Customer', 'Vendor']) => {
+export const useEntities = (entityTypes: EntityType[] = ['Customer', 'Vendor']): any => {
   return useQuery({
     queryKey: ['entities', entityTypes],
     queryFn: ({ signal }) => {
@@ -32,7 +32,7 @@ export const useEntities = (entityTypes: EntityType[] = ['Customer', 'Vendor']) 
 /**
  * Hook to get entity options for form dropdowns
  */
-export const useEntityOptions = (entityTypes: EntityType[] = ['Customer', 'Vendor']) => {
+export const useEntityOptions = (entityTypes: EntityType[] = ['Customer', 'Vendor']): any => {
   const { data: entities, ...queryProps } = useEntities(entityTypes);
   const options: EntityOption[] = entities ? entitiesToOptions(entities) : [];
   return {
@@ -48,7 +48,7 @@ export const useEntitySearch = (
   searchTerm: string,
   entityTypes: EntityType[] = ['Customer', 'Vendor'],
   enabled: boolean = true
-) => {
+): any =>  {
   return useQuery({
     queryKey: ['entitySearch', searchTerm, entityTypes],
     queryFn: ({ signal }) => searchEntities(searchTerm, entityTypes, { signal }),
@@ -59,7 +59,7 @@ export const useEntitySearch = (
 /**
  * Hook to get specific entity by ID and type
  */
-export const useEntity = (id: number | null, entityType: EntityType | null) => {
+export const useEntity = (id: number | null, entityType: EntityType | null): any => {
   return useQuery({
     queryKey: ['entity', id, entityType],
     queryFn: ({ signal }) => {
@@ -72,7 +72,7 @@ export const useEntity = (id: number | null, entityType: EntityType | null) => {
 /**
  * Hook for entity balance/outstanding amount
  */
-export const useEntityBalance = (id: number | null, entityType: EntityType | null) => {
+export const useEntityBalance = (id: number | null, entityType: EntityType | null): any => {
   return useQuery({
     queryKey: ['entityBalance', id, entityType],
     queryFn: ({ signal }) => {
@@ -86,7 +86,7 @@ export const useEntityBalance = (id: number | null, entityType: EntityType | nul
 /**
  * Hook for entity mutations (create, update, delete)
  */
-export const useEntityMutations = () => {
+export const useEntityMutations = (): any => {
   const queryClient = useQueryClient();
   const createMutation = useMutation({
     mutationFn: ({ entityType, data }: { entityType: EntityType; data: Partial<Entity> }) =>
@@ -121,7 +121,7 @@ export const useEntityMutations = () => {
 /**
  * Hook for entity form state management
  */
-export const useEntityForm = (initialEntityType: EntityType = 'Customer') => {
+export const useEntityForm = (initialEntityType: EntityType = 'Customer'): any => {
   const [selectedEntityType, setSelectedEntityType] = useState<EntityType>(initialEntityType);
   const [selectedEntityId, setSelectedEntityId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -166,5 +166,5 @@ export const useEntityForm = (initialEntityType: EntityType = 'Customer') => {
 /**
  * Legacy compatibility hooks
  */
-export const useVendors = () => useEntities(['Vendor']);
-export const useCustomers = () => useEntities(['Customer']);
+export const useVendors = (): any => useEntities(['Vendor']);
+export const useCustomers = (): any => useEntities(['Customer']);

@@ -106,6 +106,7 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
       setTimeout(() => {
         onDemoStart(demoToken, demoResponse);
         onClose();
+// handleReset is defined later in this file
         handleReset();
       }, 1500);
     } catch (error: any) {

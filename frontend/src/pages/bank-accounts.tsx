@@ -377,7 +377,9 @@ const BankAccounts: React.FC = () => {
                         <IconButton 
                           size="small"
                           onClick={() => {
+// TODO: Define or import setSelectedAccount
                             setSelectedAccount(account);
+// TODO: Define or import setEditDialogOpen
                             setEditDialogOpen(true);
                           }}
                         >

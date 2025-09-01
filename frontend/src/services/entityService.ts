@@ -146,7 +146,7 @@ export const getEntityBalance = async (
   id: number,
   entityType: EntityType,
   { signal }: { signal?: AbortSignal } = {}
-) => {
+): any =>  {
   try {
     const params = entityType === 'Customer' ? { customer_id: id } : { vendor_id: id };
     const response = await api.get('/reports/outstanding-ledger', {

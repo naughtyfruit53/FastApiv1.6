@@ -57,7 +57,6 @@ const JournalVoucher: React.FC = () => {
     isViewMode,
   } = useVoucherPage(config);
   // Watch form values
-  const watchedValues = watch();
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form

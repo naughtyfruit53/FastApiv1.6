@@ -254,6 +254,7 @@ const AssetManagementPage: NextPage = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+// TODO: Define or import setOpenDialog
             onClick={() => setOpenDialog('create')}
           >
             Add Asset
@@ -309,7 +310,9 @@ const AssetManagementPage: NextPage = () => {
                         <IconButton
                           size="small"
                           onClick={() => {
+// TODO: Define or import setSelectedAsset
                             setSelectedAsset(asset);
+// TODO: Define or import setOpenDialog
                             setOpenDialog('edit');
                           }}
                         >
@@ -320,7 +323,9 @@ const AssetManagementPage: NextPage = () => {
                         <IconButton
                           size="small"
                           onClick={() => {
+// TODO: Define or import setSelectedAsset
                             setSelectedAsset(asset);
+// TODO: Define or import setOpenDialog
                             setOpenDialog('maintenance');
                           }}
                         >
@@ -342,6 +347,7 @@ const AssetManagementPage: NextPage = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+// TODO: Define or import setOpenDialog
             onClick={() => setOpenDialog('create')}
           >
             Add Schedule

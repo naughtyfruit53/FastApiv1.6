@@ -154,7 +154,6 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
     }
   };
   // Function to get stock color
-  const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {return 'error.main';}
     if (stock <= reorder) {return 'warning.main';}
     return 'success.main';
@@ -453,6 +452,7 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
                             type="number"
                             {...control.register(`items.${index}.unit_price`, { 
                               valueAsNumber: true,
+// TODO: Define or import enhancedRateUtils
                               setValueAs: (value) => enhancedRateUtils.parseRate(value)
                             })}
                             disabled={mode === 'view'}
@@ -467,6 +467,7 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
                               style: { textAlign: 'center' }
                             }}
                             onChange={(e) => {
+// TODO: Define or import enhancedRateUtils
                               const value = enhancedRateUtils.parseRate(e.target.value);
                               setValue(`items.${index}.unit_price`, value);
                             }}

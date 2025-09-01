@@ -118,7 +118,7 @@ export const isIntrastateTransaction = (companyStateCode: string, customerVendor
   return companyStateCode === customerVendorStateCode;
 };
 // Common voucher item calculation utilities with enhanced GST logic
-export const calculateItemTotals = (item: any, isIntrastate: boolean = true) => {
+export const calculateItemTotals = (item: any, isIntrastate: boolean = true): any => {
   const subtotal = (item.quantity || 0) * (item.unit_price || 0);
   const discountAmount = subtotal * ((item.discount_percentage || 0) / 100);
   const taxableAmount = subtotal - discountAmount;
@@ -149,7 +149,7 @@ export const calculateItemTotals = (item: any, isIntrastate: boolean = true) => 
     total_amount: parseFloat(totalAmount.toFixed(2)),
   };
 };
-export const calculateVoucherTotals = (items: any[], isIntrastate: boolean = true) => {
+export const calculateVoucherTotals = (items: any[], isIntrastate: boolean = true): any => {
   const computedItems = items.map(item => calculateItemTotals(item, isIntrastate));
   const totalAmount = computedItems.reduce((sum, item) => sum + item.total_amount, 0);
   const totalSubtotal = computedItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0);
@@ -170,7 +170,7 @@ export const calculateVoucherTotals = (items: any[], isIntrastate: boolean = tru
 /**
  * Get GST breakdown labels based on transaction type
  */
-export const getGstLabels = (isIntrastate: boolean) => {
+export const getGstLabels = (isIntrastate: boolean): any => {
   if (isIntrastate) {
     return {
       tax1Label: 'CGST',
@@ -186,7 +186,7 @@ export const getGstLabels = (isIntrastate: boolean) => {
   }
 };
 // Common default values for voucher forms
-export const getDefaultVoucherValues = (type: 'purchase' | 'sales') => {
+export const getDefaultVoucherValues = (type: 'purchase' | 'sales'): any => {
   const baseValues = {
     voucher_number: '',
     date: new Date().toISOString().slice(0, 10),
@@ -240,7 +240,7 @@ export const parseRateField = (value: string): number => {
 /**
  * Get financial voucher default values (no items array)
  */
-export const getFinancialVoucherDefaults = () => ({
+export const getFinancialVoucherDefaults = (): any => ({
   voucher_number: '',
   date: new Date().toISOString().slice(0, 10),
   reference: '',
@@ -510,7 +510,7 @@ export const VOUCHER_PAGINATION_DEFAULTS = {
 /**
  * Get voucher configuration by type
  */
-export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
+export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS): any => {
   const baseConfig = VOUCHER_CONFIGS[voucherType];
   const referenceConfig = REFERENCE_CONFIGS[voucherType as keyof typeof REFERENCE_CONFIGS];
   const hasGstSection = !NO_GST_VOUCHER_TYPES.includes(voucherType as any);
@@ -524,7 +524,7 @@ export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
 /**
  * Get reference voucher options for a given voucher type
  */
-export const getReferenceVoucherOptions = (voucherType: keyof typeof REFERENCE_CONFIGS) => {
+export const getReferenceVoucherOptions = (voucherType: keyof typeof REFERENCE_CONFIGS): any => {
   const config = REFERENCE_CONFIGS[voucherType];
   if (!config) {return [{ value: 'new', label: 'New', endpoint: '' }];}
   const options = config.allowedTypes.map(type => ({
@@ -574,7 +574,7 @@ export const voucherListUtils = {
   /**
    * Sort vouchers with latest first
    */
-  sortLatestFirst: (vouchers: any[]) => {
+sortLatestFirst: (vouchers: any[]): any => {
     return [...vouchers].sort((a, b) => {
       const dateA = new Date(a.created_at || a.date);
       const dateB = new Date(b.created_at || b.date);
@@ -584,7 +584,7 @@ export const voucherListUtils = {
   /**
    * Paginate vouchers with default 5 per page
    */
-  paginate: (vouchers: any[], page: number = 1, pageSize: number = 5) => {
+paginate: (vouchers: any[], page: number = 1, pageSize: number = 5): any => {
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return {
@@ -599,14 +599,14 @@ export const voucherListUtils = {
   /**
    * Get latest vouchers for dashboard display
    */
-  getLatestVouchers: (vouchers: any[], count: number = 7) => {
+getLatestVouchers: (vouchers: any[], count: number = 7): any => {
     return voucherListUtils.sortLatestFirst(vouchers).slice(0, count);
   }
 };
 /**
  * Common styling utilities for voucher forms and tables with minimal gaps
  */
-export const getVoucherStyles = () => ({
+export const getVoucherStyles = (): any => ({
   // Center alignment for all text elements
   centerText: {
     textAlign: 'center' as const,

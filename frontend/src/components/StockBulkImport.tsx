@@ -4,8 +4,7 @@ import { masterDataService } from '../services/authService'; // Import the servi
 import { handleApiError } from '../utils/errorHandling';
 import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
-const StockBulkImport = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+const StockBulkImport = (): void => {  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);

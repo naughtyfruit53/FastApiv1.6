@@ -86,7 +86,6 @@ const PaymentVoucher: React.FC = () => {
     'Net Banking'
   ];
   // Handle entity creation success
-  const handleEntityCreated = (newEntity: any) => {
     setValue('entity', {
       id: newEntity.id,
       name: newEntity.name,

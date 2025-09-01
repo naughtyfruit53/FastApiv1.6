@@ -98,6 +98,7 @@ const CommissionTracking: React.FC = () => {
     const matchesSearch = 
       (commission.sales_person_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (commission.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
+// TODO: Define or import filterStatus
     const matchesStatus = filterStatus === 'all' || commission.payment_status === filterStatus;
     return matchesSearch && matchesStatus;
   });

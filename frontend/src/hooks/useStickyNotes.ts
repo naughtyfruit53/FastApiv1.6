@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { stickyNotesService, StickyNote, UserSettings } from '../services/stickyNotesService';
-export const useStickyNotes = () => {
+export const useStickyNotes = (): any => {
   const { user } = useAuth();
   const [notes, setNotes] = useState<StickyNote[]>([]);
   const [userSettings, setUserSettings] = useState<UserSettings>({ sticky_notes_enabled: false });

@@ -9,6 +9,7 @@ describe('usePincodeLookup', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Clear the cache before each test
+// TODO: Define or import global
     (global as any).pincodeCache?.clear();
   });
   it('should successfully lookup and cache pincode data', async () => {

@@ -350,7 +350,9 @@ const CostCenters: React.FC = () => {
                               <IconButton 
                                 size="small"
                                 onClick={() => {
+// TODO: Define or import setSelectedCostCenter
                                   setSelectedCostCenter(cc);
+// TODO: Define or import setEditDialogOpen
                                   setEditDialogOpen(true);
                                 }}
                               >

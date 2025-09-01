@@ -11,7 +11,7 @@ interface ErrorContextType {
   hideError: (id: string) => void;
 }
 const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
-export const useError = () => {
+export const useError = (): any => {
   const context = useContext(ErrorContext);
   if (!context) {
     throw new Error('useError must be used within an ErrorProvider');
@@ -29,6 +29,7 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
     setErrors(prev => [...prev, newError]);
     // Auto-hide after 6 seconds
     setTimeout(() => {
+// hideError is defined later in this file
       hideError(id);
     }, 6000);
   };

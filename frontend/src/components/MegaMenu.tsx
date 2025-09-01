@@ -173,12 +173,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (anchorEl) {
+// handleMenuClose is defined later in this file
           handleMenuClose();
         }
         if (userMenuAnchor) {
+// handleUserMenuClose is defined later in this file
           handleUserMenuClose();
         }
         if (subAnchorEl) {
+// handleSubClose is defined later in this file
           handleSubClose();
         }
       }
@@ -219,12 +222,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
   const navigateTo = (path: string) => {
     router.push(path);
+// handleMenuClose is defined later in this file
     handleMenuClose();
+// handleSubClose is defined later in this file
     handleSubClose();
   };
   // Enhanced logo navigation function
   const navigateToHome = () => {
     router.push('/dashboard');
+// handleMenuClose is defined later in this file
     handleMenuClose();
   };
   // Check user roles using proper utility functions
@@ -236,7 +242,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const hasAnyServicePermission = (permissions: string[]): boolean => {
     return permissions.some(permission => userPermissions.includes(permission));
   };
-  const canAccessServiceFeatures = (): boolean => {
     const hasAccess = hasAnyServicePermission([
       SERVICE_PERMISSIONS.SERVICE_READ,
       SERVICE_PERMISSIONS.APPOINTMENT_READ,
@@ -249,14 +254,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return hasAccess;
   };
-  const canAccessServiceAnalytics = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.SERVICE_REPORTS_READ);
   };
-  const canManageServiceRoles = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
   };
   // Helper to check if a module is enabled for the organization
-  const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) {return true;} // Super admins see all
     const enabled = organizationData?.enabled_modules?.[module] ?? false;
     console.log(`Module check - ${module}:`, enabled, {
@@ -265,12 +267,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return enabled;
   };
-  const handleDemoMode = () => {
     // Navigate to demo page
     router.push('/demo');
+// handleMenuClose is defined later in this file
     handleMenuClose();
   };
-  const handleContactSupport = () => {
     // In production, this could open a support ticket form or email client
     window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
   };
@@ -286,7 +287,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     setActiveMenu(null);
     setSelectedSection(null);
   };
-  const _handleCreateOrgLicense = () => {
     // For now, we'll use a state to control the modal
     // In a full implementation, this would be managed by parent component
     setCreateLicenseModalOpen(true);

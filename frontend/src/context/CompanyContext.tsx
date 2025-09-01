@@ -29,6 +29,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.log('[CompanyContext] Company setup needed due to 404/missing company');
       } else {
         console.error('[CompanyContext] Unexpected error fetching company:', err);
+// toast functionality would be imported from react-toastify
         toast.error(`Error fetching company details: ${err.message}`);
       }
     },
@@ -40,7 +41,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     </CompanyContext.Provider>
   );
 };
-export const useCompany = () => {
+export const useCompany = (): any => {
   const context = useContext(CompanyContext);
   if (undefined === context) {
     throw new Error('useCompany must be used within a CompanyProvider');

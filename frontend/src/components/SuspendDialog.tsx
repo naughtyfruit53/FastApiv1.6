@@ -73,6 +73,7 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
       if (onSuccess) {
         onSuccess();
       }
+// handleClose is defined later in this file
       handleClose();
     } catch (error) {
       console.error(`${action} error:`, error);
