@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  Alert,
   Box,
   Button,
   Card,
@@ -10,12 +11,14 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputLabel,
   MenuItem,
   Paper,
   Select,
+  Switch,
   Tab,
   Table,
   TableBody,
@@ -34,7 +37,8 @@ import {
   Security as SecurityIcon,
   Settings as SettingsIcon,
   Assignment as AssignmentIcon,
-  AdminPanelSettings as AdminIcon
+  AdminPanelSettings as AdminIcon,
+  Visibility as ViewIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { rbacService } from '../../services/rbacService';
