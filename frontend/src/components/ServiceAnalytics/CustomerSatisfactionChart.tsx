@@ -18,7 +18,7 @@ import {
   SentimentNeutral as NeutralIcon,
   SentimentDissatisfied as UnhappyIcon,
   ThumbUp as RecommendIcon,
-  TrendingUp as TrendIcon
+  TrendingUp as _TrendIcon
 } from '@mui/icons-material';
 import { CustomerSatisfactionMetrics } from '../../services/serviceAnalyticsService';
 interface CustomerSatisfactionChartProps {

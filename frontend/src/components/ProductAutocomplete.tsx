@@ -64,8 +64,8 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
       onChange(newProduct);
       setAddModalOpen(false);
     },
-    onError: (error: any) => {
-      console.error('Failed to create product:', error);
+    onError: (err: any) => {
+      console.error('Failed to create product:', err);
     }
   });
   // Filtered options based on input
@@ -108,7 +108,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
           if (option.isAddOption) {return option.product_name;}
           return option.product_name;
         }}
-        isOptionEqualToValue={(option, value) => option.id === value?.id}
+        isOptionEqualToValue={(option, selectedValue) => option.id === selectedValue?.id}
         loading={isLoading}
         disabled={disabled}
         renderInput={(params) => (

@@ -38,8 +38,8 @@ interface UserRoleAssignmentDialogProps {
   onClose: () => void;
   user: UserWithServiceRoles;
   availableRoles: ServiceRole[];
-  onAssign: (userId: number, roleIds: number[]) => void;
-  onRemove: (userId: number, roleId: number) => void;
+  onAssign: (_userId: number, _roleIds: number[]) => void;
+  onRemove: (_userId: number, _roleId: number) => void;
 }
 const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
   open,

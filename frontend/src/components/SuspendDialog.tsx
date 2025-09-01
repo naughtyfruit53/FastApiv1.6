@@ -38,6 +38,14 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const isCurrentlySuspended = currentStatus === 'suspended';
   const action = isCurrentlySuspended ? 'activate' : 'suspend';
+
+  const handleClose = () => {
+    setReason('');
+    setConfirmChecked(false);
+    setLoading(false);
+    onClose();
+  };
+
   const handleAction = async () => {
     if (!isCurrentlySuspended && !reason.trim()) {
       toast.error('Please provide a reason for suspension');
@@ -80,12 +88,6 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-  const handleClose = () => {
-    setReason('');
-    setConfirmChecked(false);
-    setLoading(false);
-    onClose();
   };
   const isValid = isCurrentlySuspended ? confirmChecked : (reason.trim().length > 0 && confirmChecked);
   return (

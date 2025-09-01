@@ -1,7 +1,28 @@
 import React, { useState } from 'react';
-import { from '@mui/material';
+import { 
+  Box,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  Grid,
+  IconButton,
+  Paper,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography
+} from '@mui/material';
 import {
   Add,
+  Assignment,
   Edit,
   Delete,
   PlayArrow,
@@ -77,7 +98,7 @@ const NotificationTemplates: React.FC = () => {
   // Create template mutation
   const createMutation = useMutation({
     mutationFn: createNotificationTemplate,
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
       setIsCreateModalOpen(false);
       resetForm();
@@ -91,7 +112,7 @@ const NotificationTemplates: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: NotificationTemplateUpdate }) =>
       updateNotificationTemplate(id, data),
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
       setEditingTemplate(null);
       resetForm();
@@ -104,7 +125,7 @@ const NotificationTemplates: React.FC = () => {
   // Delete template mutation
   const deleteMutation = useMutation({
     mutationFn: deleteNotificationTemplate,
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
       setIsDeleteModalOpen(false);
       setTemplateToDelete(null);

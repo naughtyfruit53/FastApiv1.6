@@ -35,7 +35,7 @@ import {
   Security as SecurityIcon
 } from '@mui/icons-material';
 import {
-  ServiceRole,
+  _ServiceRole,
   ServiceRoleWithPermissions,
   ServicePermission,
   ServiceModule,

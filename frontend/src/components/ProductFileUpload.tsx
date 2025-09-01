@@ -86,9 +86,9 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
       queryClient.invalidateQueries({ queryKey: ['product-files', productId] });
     }
   });
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files || files.length === 0) {return;}
-    const file = files[0];
+  const handleFileSelect = (selectedFiles: FileList | null) => {
+    if (!selectedFiles || selectedFiles.length === 0) {return;}
+    const file = selectedFiles[0];
     // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       setUploadError('File size must be less than 10MB');

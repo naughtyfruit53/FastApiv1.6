@@ -53,24 +53,26 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
     role: 'standard_user'
   });
   const [inviting, setInviting] = useState(false);
-  useEffect(() => {
-    if (open && organizationId) {
-// fetchMembers is defined later in this file
-      fetchMembers();
-    }
-  }, [open, organizationId]);
+
   const fetchMembers = async () => {
     try {
       setLoading(true);
       setError(null);
       const membersData = await organizationService.getOrganizationMembers(organizationId);
       setMembers(membersData);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (open && organizationId) {
+// fetchMembers is defined later in this file
+      fetchMembers();
+    }
+  }, [open, organizationId]);
   const handleInviteSubmit = async () => {
     try {
       setInviting(true);
@@ -86,8 +88,8 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
       });
       setShowInviteForm(false);
       await fetchMembers();
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setInviting(false);
     }

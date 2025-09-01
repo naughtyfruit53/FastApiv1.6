@@ -28,7 +28,7 @@ import {
   Schedule as TimeIcon,
   Assignment as JobIcon,
   Speed as EfficiencyIcon,
-  Star as RatingIcon
+  Star as _RatingIcon
 } from '@mui/icons-material';
 import { TechnicianPerformanceMetrics } from '../../services/serviceAnalyticsService';
 interface TechnicianPerformanceChartProps {

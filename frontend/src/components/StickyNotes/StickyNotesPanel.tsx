@@ -1,6 +1,13 @@
 // frontend/src/components/StickyNotes/StickyNotesPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { from '@mui/material';
+import { 
+  Box,
+  Button,
+  Dialog,
+  IconButton,
+  TextField,
+  Typography
+} from '@mui/material';
 import {PushPin, PushPinOutlined} from '@mui/icons-material';
 import StickyNote from './StickyNote';
 import { useAuth } from '../../context/AuthContext';

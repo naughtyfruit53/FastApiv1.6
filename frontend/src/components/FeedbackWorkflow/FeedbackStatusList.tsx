@@ -92,6 +92,7 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
     total: 0
   });
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+  const [selectedClosure, setSelectedClosure] = useState<any>(null);
   // Mock data - replace with actual API calls
   const loadFeedback = async () => {
     setLoading(true);

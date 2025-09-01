@@ -31,6 +31,8 @@ const ModernChart: React.FC<ModernChartProps> = ({
         return ['var(--primary-500)', 'var(--primary-600)', 'var(--primary-700)'];
     }
   };
+
+  const _options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
