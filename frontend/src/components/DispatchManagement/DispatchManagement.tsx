@@ -5,15 +5,8 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Grid,
   Chip,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Table,
   TableBody,
   TableCell,
@@ -37,10 +30,8 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  LocalShipping as DispatchIcon,
   Build as InstallationIcon,
   Visibility as ViewIcon,
-  FilterList as FilterIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
@@ -113,11 +104,8 @@ const DispatchManagement: React.FC<DispatchManagementProps> = () => {
   const canViewDispatch = user?.role ? hasDispatchViewPermission(user.role) : false;
   const canManageInstallation = user?.role ? hasInstallationManagementPermission(user.role) : false;
   const canViewInstallation = user?.role ? hasInstallationViewPermission(user.role) : false;
-  // Load data
-  useEffect(() => {
-    loadData();
-  }, [dispatchPage, installationPage, dispatchStatusFilter, installationStatusFilter, installationPriorityFilter]);
-  const loadData = async () => {
+  
+  const loadData = async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -145,6 +133,11 @@ const DispatchManagement: React.FC<DispatchManagementProps> = () => {
       setLoading(false);
     }
   };
+
+  // Load data
+  useEffect(() => {
+    loadData();
+  }, [dispatchPage, installationPage, dispatchStatusFilter, installationStatusFilter, installationPriorityFilter]);
   const handleCreateDispatchOrder = () => {
     setSelectedDispatchOrder(null);
     setEditMode(false);

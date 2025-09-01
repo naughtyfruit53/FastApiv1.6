@@ -28,11 +28,8 @@ import {
 import {
   Close as CloseIcon,
   Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   PlayArrow as StartIcon,
-  Check as CompleteIcon,
-  Schedule as ScheduleIcon
+  Check as CompleteIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -41,14 +38,12 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   dispatchService,
   InstallationJobWithDetails,
-  InstallationTaskInDB,
   INSTALLATION_TASK_STATUSES,
   INSTALLATION_TASK_PRIORITIES,
   COMPLETION_STATUSES
 } from '../../services/dispatchService';
 import {
   INSTALLATION_JOB_STATUSES,
-  INSTALLATION_JOB_PRIORITIES,
   InstallationJobPriority
 } from '../../types/dispatch.types';
 interface InstallationJobDialogProps {
@@ -126,13 +121,8 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
     actual_start_time: new Date(),
     actual_end_time: new Date()
   });
-  // Load job details
-  useEffect(() => {
-    if (open && jobId) {
-      loadJobDetails();
-    }
-  }, [open, jobId]);
-  const loadJobDetails = async () => {
+
+  const loadJobDetails = async (): Promise<void> => {
     if (!jobId) {return;}
     try {
       setLoading(true);
@@ -168,6 +158,13 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
       setLoading(false);
     }
   };
+
+  // Load job details
+  useEffect(() => {
+    if (open && jobId) {
+      loadJobDetails();
+    }
+  }, [open, jobId]);
   const handleCreateTask = async () => {
     if (!job || !newTask.title.trim()) {return;}
     try {
@@ -205,16 +202,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
       console.error('Error updating task status:', err);
     }
   };
-  const handleAssignTask = async (taskId: number, technicianId: number) => {
-    try {
-      await dispatchService.updateInstallationTask(taskId, { assigned_technician_id: technicianId });
-      await loadJobDetails();
-    } catch (err) {
-      setError('Failed to assign task');
-      console.error('Error assigning task:', err);
-    }
-  };
-  const handleCompleteJob = async () => {
+  const handleCompleteJob = async (): Promise<void> => {
     if (!job) {return;}
     try {
       setLoading(true);

@@ -23,8 +23,7 @@ import {
 } from '@mui/material';
 import {
   Build as InstallationIcon,
-  Schedule as ScheduleIcon,
-  Person as PersonIcon
+  Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -34,7 +33,7 @@ import { INSTALLATION_JOB_PRIORITIES, InstallationJobPriority } from '../../type
 interface InstallationSchedulePromptModalProps {
   open: boolean;
   onClose: () => void;
-  onCreateInstallation: (installationData: InstallationJobCreate) => Promise<void>;
+  onCreateInstallation: (_installationData: InstallationJobCreate) => Promise<void>;
   dispatchOrderId?: number;
   customerId?: number;
   customerName?: string;

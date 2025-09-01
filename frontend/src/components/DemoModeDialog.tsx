@@ -76,7 +76,7 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
       setTempEmail(data.email);
       setSuccess(`Demo OTP sent to ${data.email}. Please check your email.`);
       setStep(2);
-    } catch (_sendError: any) {
+    } catch {
       setError('Failed to send demo OTP. Please try again.');
     } finally {
       setLoading(false);
@@ -117,7 +117,7 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
         onClose();
         handleReset();
       }, 1500);
-    } catch (_otpError: any) {
+    } catch {
       setError('Demo OTP verification failed. Please try again.');
     } finally {
       setLoading(false);

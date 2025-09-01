@@ -12,7 +12,6 @@ import {
 import {
   Download,
   Print,
-  GetApp,
   TableChart,
   Description
 } from '@mui/icons-material';
