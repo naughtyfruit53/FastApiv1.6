@@ -106,7 +106,7 @@ const CalendarDashboard: React.FC = () => {
         ];
         setStats(mockStats);
         setUpcomingEvents(mockEvents);
-      } catch (err) {
+      } catch {
         setError('Failed to load calendar dashboard data');
       } finally {
         setLoading(false);

@@ -15,7 +15,6 @@ import {
   Security,
   Business,
   AdminPanelSettings,
-  Settings,
   Dashboard
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
