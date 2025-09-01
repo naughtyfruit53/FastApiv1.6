@@ -13,7 +13,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Button,
   IconButton,
   Chip,
@@ -34,7 +33,6 @@ import {
   Search as SearchIcon,
   Edit as EditIcon,
   Visibility as ViewIcon,
-  PersonAdd as PersonAddIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
   Business as BusinessIcon

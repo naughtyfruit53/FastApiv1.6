@@ -7,7 +7,8 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  TextField
+  TextField,
+  SelectChangeEvent,
 } from '@mui/material';
 export interface Product {
   id: number;
