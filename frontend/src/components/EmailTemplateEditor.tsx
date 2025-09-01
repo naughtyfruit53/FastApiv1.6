@@ -102,7 +102,7 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     is_active: template?.is_active ?? true
   });
   const [newVariable, setNewVariable] = useState('');
-const [previewData,] = useState<{ [key: string]: string }>({
+  const [previewData] = useState<{ [key: string]: string }>({
     prospect_name: 'John Smith',
     company_name: 'TechCorp Solutions',
     exhibition_name: 'Tech Expo 2024',
@@ -179,6 +179,8 @@ Best regards,
       variables: prev.variables?.filter(v => v !== variable) || []
     }));
   };
+  
+  const handleInsertVariable = (variable: string, field: keyof EmailTemplate) => {
     const variableText = `{{${variable}}}`;
     const currentValue = formData[field] || '';
     // For simplicity, just append the variable. In a real implementation,
@@ -504,3 +506,4 @@ Best regards,
 };
 
 export default EmailTemplateEditor;
+
