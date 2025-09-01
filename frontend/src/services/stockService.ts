@@ -7,7 +7,7 @@ interface QueryFunctionContext {
   signal?: AbortSignal;
 }
 // Fetch stock quantity for a specific product
-export const getProductStock = async ({ queryKey, signal }: QueryFunctionContext) => {
+export const getProductStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
   const [, productId] = queryKey; // Expect queryKey = ['productStock', productId]
   if (!productId) {
     return null;
@@ -24,7 +24,7 @@ export const getProductStock = async ({ queryKey, signal }: QueryFunctionContext
   }
 };
 // Fetch outstanding balance for a specific customer or vendor
-export const getAccountBalance = async ({ queryKey, signal }: QueryFunctionContext) => {
+export const getAccountBalance = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
   const [, accountType, accountId] = queryKey; // Expect queryKey = ['accountBalance', accountType, accountId]
   if (!accountType || !accountId) {
     return null;
@@ -52,7 +52,7 @@ export const getAccountBalance = async ({ queryKey, signal }: QueryFunctionConte
   }
 };
 // Fetch stock movements
-export const getStockMovements = async ({ queryKey, signal }: QueryFunctionContext) => {
+export const getStockMovements = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
   const [, params] = queryKey; // Expect queryKey = ['stockMovements', { search, recent }]
   const response = await api.get('/stock/movements', {
     params,
@@ -61,23 +61,23 @@ export const getStockMovements = async ({ queryKey, signal }: QueryFunctionConte
   return response.data;
 };
 // Fetch low stock report
-export const getLowStockReport = async ({ signal }: QueryFunctionContext) => {
+export const getLowStockReport = async ({ signal }: QueryFunctionContext): Promise<any> => {
   const response = await api.get('/stock/low-stock', { signal });
   return response.data;
 };
 // Fetch movements for specific product
-export const getProductMovements = async (productId: number) => {
+export const getProductMovements = async (productId: number): Promise<any> => {
   const response = await api.get('/stock/movements', {
     params: { product_id: productId }
   });
   return response.data;
 };
 // Fetch last vendor for product
-export const getLastVendorForProduct = async (productId: number) => {
+export const getLastVendorForProduct = async (productId: number): Promise<any> => {
   try {
     const response = await api.get(`/stock/product/${productId}/last-vendor`);
     return response.data;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 };

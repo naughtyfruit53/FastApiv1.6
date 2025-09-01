@@ -12,9 +12,7 @@ import {
   Switch,
   FormControlLabel,
   Card,
-  CardContent,
   Grid,
-  Divider,
   Alert,
   CircularProgress,
   Chip,
@@ -36,15 +34,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
-  getNotificationTemplates,
-  createNotificationTemplate,
-  updateNotificationTemplate,
-  notificationQueryKeys,
-  NotificationTemplate,
   NOTIFICATION_CHANNELS,
-  TEMPLATE_TYPES,
-  getChannelDisplayName,
-  getTemplateTypeDisplayName
+  getChannelDisplayName
 } from '../services/notificationService';
 interface NotificationSettingsModalProps {
   open: boolean;
@@ -127,7 +118,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
       setHasChanges(false);
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Failed to save notification preferences');
     }
   });
