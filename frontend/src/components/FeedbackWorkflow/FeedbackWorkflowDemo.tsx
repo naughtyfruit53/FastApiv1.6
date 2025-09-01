@@ -270,21 +270,27 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
               <Stack direction="row" spacing={1}>
                 <Button
                   variant={userRole === 'customer' ? 'contained' : 'outlined'}
-                  onClick={() => {}}
+                  onClick={() => {
+                    // TODO: Implement customer view toggle
+                  }}
                   size="small"
                 >
                   Customer View
                 </Button>
                 <Button
                   variant={userRole === 'manager' ? 'contained' : 'outlined'}
-                  onClick={() => {}}
+                  onClick={() => {
+                    // TODO: Implement manager view toggle
+                  }}
                   size="small"
                 >
                   Manager View
                 </Button>
                 <Button
                   variant={userRole === 'support' ? 'contained' : 'outlined'}
-                  onClick={() => {}}
+                  onClick={() => {
+                    // TODO: Implement support view toggle
+                  }}
                   size="small"
                 >
                   Support View

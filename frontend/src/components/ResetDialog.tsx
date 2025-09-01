@@ -40,6 +40,14 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
   const expectedConfirmText = resetType === 'organization' 
     ? 'RESET ORGANIZATION' 
     : 'RESET ENTITY';
+
+  const handleClose = () => {
+    setConfirmText('');
+    setConfirmChecked(false);
+    setLoading(false);
+    onClose();
+  };
+
   const handleReset = async () => {
     if (confirmText !== expectedConfirmText || !confirmChecked) {
       toast.error('Please confirm the reset action properly');
@@ -78,12 +86,6 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-  const handleClose = () => {
-    setConfirmText('');
-    setConfirmChecked(false);
-    setLoading(false);
-    onClose();
   };
   const isConfirmValid = confirmText === expectedConfirmText && confirmChecked;
   return (
