@@ -1076,7 +1076,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     );
   };
   const renderSearchResults = () => {
-    if (filteredMenuItems.length === 0) return null;
+    if (filteredMenuItems.length === 0) {return null;}
     return (
       <Menu
         open={filteredMenuItems.length > 0}
