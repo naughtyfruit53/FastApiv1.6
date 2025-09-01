@@ -1,18 +1,15 @@
 // Contra Voucher Page - Refactored using VoucherLayout
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, InputAdornment, Tooltip, Modal, Autocomplete, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { Visibility, Edit } from '@mui/icons-material';
+import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem} from '@mui/material';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
-
+import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
 const ContraVoucher: React.FC = () => {
   const config = getVoucherConfig('contra-voucher');
   const voucherStyles = getVoucherStyles();
-  
   const {
     // State
     mode,
@@ -27,7 +24,6 @@ const ContraVoucher: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Form
     control,
     handleSubmit,
@@ -35,17 +31,14 @@ const ContraVoucher: React.FC = () => {
     setValue,
     reset,
     errors,
-
     // Data
     voucherList,
     vendorList,
     customerList,
     sortedVouchers,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -60,15 +53,12 @@ const ContraVoucher: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Watch form values
   const watchedValues = watch();
   const totalAmount = watchedValues?.amount || 0;
-
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
@@ -78,7 +68,6 @@ const ContraVoucher: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
-
   // Bank account options (these would typically come from a master data service)
   const bankAccounts = [
     'Bank Account 1',
@@ -89,7 +78,6 @@ const ContraVoucher: React.FC = () => {
     'Savings Account - HDFC',
     'Fixed Deposit Account'
   ];
-
   // Transfer types for contra vouchers
   const transferTypes = [
     'Bank to Bank',
@@ -97,7 +85,6 @@ const ContraVoucher: React.FC = () => {
     'Cash to Bank',
     'Cash to Cash'
   ];
-
   // Index Content - Left Panel (40%)
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -155,7 +142,6 @@ const ContraVoucher: React.FC = () => {
       </Table>
     </TableContainer>
   );
-
   // Form Content - Right Panel (60%)
   const formContent = (
     <Box>
@@ -171,13 +157,11 @@ const ContraVoucher: React.FC = () => {
           currentId={watch('id')}
         />
       </Box>
-
       {(createMutation.isPending || updateMutation.isPending) && (
         <Box display="flex" justifyContent="center" my={2}>
           <CircularProgress />
         </Box>
       )}
-
       <Box 
         component="form" 
         onSubmit={handleSubmit(handleSubmitForm)} 
@@ -216,7 +200,6 @@ const ContraVoucher: React.FC = () => {
               helperText={errors.date?.message?.toString()}
             />
           </Grid>
-
           <Grid size={6}>
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>Transfer Type</InputLabel>
@@ -235,7 +218,6 @@ const ContraVoucher: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-
           <Grid size={6}>
             <TextField
               {...control.register('amount', {
@@ -265,7 +247,6 @@ const ContraVoucher: React.FC = () => {
               }}
             />
           </Grid>
-
           <Grid size={6}>
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>From Account</InputLabel>
@@ -284,7 +265,6 @@ const ContraVoucher: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-
           <Grid size={6}>
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>To Account</InputLabel>
@@ -303,7 +283,6 @@ const ContraVoucher: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-
           <Grid size={12}>
             <TextField
               {...control.register('reference')}
@@ -315,7 +294,6 @@ const ContraVoucher: React.FC = () => {
               placeholder="Enter reference number or details..."
             />
           </Grid>
-
           <Grid size={12}>
             <TextField
               {...control.register('description')}
@@ -329,7 +307,6 @@ const ContraVoucher: React.FC = () => {
               placeholder="Enter transaction description..."
             />
           </Grid>
-
           {totalAmount > 0 && (
             <Grid size={12}>
               <TextField
@@ -343,7 +320,6 @@ const ContraVoucher: React.FC = () => {
               />
             </Grid>
           )}
-
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
@@ -371,7 +347,6 @@ const ContraVoucher: React.FC = () => {
       </Box>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -381,7 +356,6 @@ const ContraVoucher: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -408,7 +382,6 @@ const ContraVoucher: React.FC = () => {
           />
         }
       />
-      
       {/* Keep context menu for right-click functionality */}
       <VoucherContextMenu
         voucherType="Contra Voucher"
@@ -430,5 +403,4 @@ const ContraVoucher: React.FC = () => {
     </>
   );
 };
-
 export default ContraVoucher;

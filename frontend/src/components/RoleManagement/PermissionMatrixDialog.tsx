@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useMemo } from 'react';
 import {
   Dialog,
@@ -43,14 +42,12 @@ import {
   MODULE_DISPLAY_NAMES,
   ROLE_BADGE_COLORS
 } from '../../types/rbac.types';
-
 interface PermissionMatrixDialogProps {
   open: boolean;
   onClose: () => void;
   roles: ServiceRoleWithPermissions[];
   permissions: ServicePermission[];
 }
-
 const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
   open,
   onClose,
@@ -61,7 +58,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
   const [selectedModule, setSelectedModule] = useState<ServiceModule | 'all'>('all');
   const [showMatrixView, setShowMatrixView] = useState(true);
   const [expandedRole, setExpandedRole] = useState<string | false>(false);
-
   // Group permissions by module
   const permissionsByModule = useMemo(() => {
     return permissions.reduce((acc, permission) => {
@@ -72,15 +68,12 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
       return acc;
     }, {} as Record<string, ServicePermission[]>);
   }, [permissions]);
-
   // Filter permissions based on search and module selection
   const filteredPermissions = useMemo(() => {
     let filtered = permissions;
-    
     if (selectedModule !== 'all') {
       filtered = filtered.filter(p => p.module === selectedModule);
     }
-    
     if (searchTerm) {
       filtered = filtered.filter(p => 
         p.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,37 +81,30 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
         p.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
     return filtered;
   }, [permissions, selectedModule, searchTerm]);
-
   // Check if a role has a specific permission
   const roleHasPermission = (role: ServiceRoleWithPermissions, permissionId: number) => {
     return role.permissions.some(p => p.id === permissionId);
   };
-
   // Get permission statistics for a role
   const getRoleStats = (role: ServiceRoleWithPermissions) => {
     const total = permissions.length;
     const granted = role.permissions.length;
     const percentage = total > 0 ? Math.round((granted / total) * 100) : 0;
-    
     return { total, granted, percentage };
   };
-
   // Get module statistics for a role
   const getModuleStats = (role: ServiceRoleWithPermissions, module: ServiceModule) => {
     const modulePermissions = permissionsByModule[module] || [];
     const grantedInModule = role.permissions.filter(p => p.module === module).length;
     const totalInModule = modulePermissions.length;
-    
     return {
       granted: grantedInModule,
       total: totalInModule,
       percentage: totalInModule > 0 ? Math.round((grantedInModule / totalInModule) * 100) : 0
     };
   };
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
       <DialogTitle>
@@ -127,7 +113,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
           <Typography variant="h6">Permission Matrix</Typography>
         </Box>
       </DialogTitle>
-      
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
           {/* Filters and Controls */}
@@ -146,7 +131,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
               }}
               sx={{ minWidth: 250 }}
             />
-            
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <InputLabel>Filter by Module</InputLabel>
               <Select
@@ -162,7 +146,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
                 ))}
               </Select>
             </FormControl>
-            
             <FormControlLabel
               control={
                 <Switch
@@ -173,7 +156,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
               label="Matrix View"
             />
           </Box>
-          
           {showMatrixView ? (
             /* Matrix View */
             <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
@@ -236,7 +218,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
             <Box>
               {roles.map((role) => {
                 const stats = getRoleStats(role);
-                
                 return (
                   <Accordion
                     key={role.id}
@@ -258,7 +239,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
                         </Typography>
                       </Box>
                     </AccordionSummary>
-                    
                     <AccordionDetails>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {/* Module breakdown */}
@@ -281,7 +261,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
                             })}
                           </Box>
                         </Box>
-                        
                         {/* Detailed permissions */}
                         <Box>
                           <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -311,7 +290,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
               })}
             </Box>
           )}
-          
           {filteredPermissions.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" color="text.secondary">
@@ -324,7 +302,6 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
           )}
         </Box>
       </DialogContent>
-      
       <DialogActions>
         <Button onClick={onClose}>
           Close
@@ -333,5 +310,4 @@ const PermissionMatrixDialog: React.FC<PermissionMatrixDialogProps> = ({
     </Dialog>
   );
 };
-
 export default PermissionMatrixDialog;

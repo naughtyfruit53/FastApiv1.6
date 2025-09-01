@@ -1,6 +1,5 @@
 // src/components/EntitySelector.tsx
 // Unified Entity selection component for Customer + Vendor + Employee + ExpenseAccount
-
 import React, { useState } from 'react';
 import {
   Autocomplete,
@@ -19,11 +18,10 @@ import {
 } from '@mui/material';
 import { Add, Person, Business, Badge, AccountBalance } from '@mui/icons-material';
 import { Controller, Control } from 'react-hook-form';
-import { useEntityOptions, useEntityForm } from '../hooks/useEntity';
+import {useEntityOptions} from '../hooks/useEntity';
 import { EntityType, EntityOption, ENTITY_CONFIGS } from '../types/entity.types';
 import AddVendorModal from './AddVendorModal';
 import AddCustomerModal from './AddCustomerModal';
-
 interface EntitySelectorProps {
   name: string;
   control: Control<any>;
@@ -36,7 +34,6 @@ interface EntitySelectorProps {
   error?: boolean;
   helperText?: string;
 }
-
 const getEntityIcon = (entityType: EntityType) => {
   switch (entityType) {
     case 'Customer':
@@ -51,7 +48,6 @@ const getEntityIcon = (entityType: EntityType) => {
       return <Person fontSize="small" />;
   }
 };
-
 const EntitySelector: React.FC<EntitySelectorProps> = ({
   name,
   control,
@@ -67,11 +63,9 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
   const [selectedEntityType, setSelectedEntityType] = useState<EntityType>(entityTypes[0]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalType, setAddModalType] = useState<'Customer' | 'Vendor'>('Customer');
-
   const { options, isLoading } = useEntityOptions(
     allowTypeSelection ? [selectedEntityType] : entityTypes
   );
-
   const handleAddNew = () => {
     if (selectedEntityType === 'Customer' || selectedEntityType === 'Vendor') {
       setAddModalType(selectedEntityType);
@@ -81,14 +75,12 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
       alert(`Create ${selectedEntityType} functionality will be implemented soon`);
     }
   };
-
   const handleEntityCreated = async (newEntity: any) => {
     setShowAddModal(false);
     if (onEntityCreated) {
       onEntityCreated(newEntity);
     }
   };
-
   // Enhanced options with "Add New" option
   const enhancedOptions = [
     ...options,
@@ -101,7 +93,6 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
       originalData: null
     } as EntityOption
   ];
-
   return (
     <Box>
       <Box display="flex" gap={1} alignItems="flex-start">
@@ -126,7 +117,6 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
             </Select>
           </FormControl>
         )}
-
         {/* Entity Selector */}
         <Box flex={1}>
           <Controller
@@ -215,7 +205,6 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
           />
         </Box>
       </Box>
-
       {/* Add Entity Modals */}
       {addModalType === 'Customer' && (
         <AddCustomerModal
@@ -224,7 +213,6 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
           onAdd={handleEntityCreated}
         />
       )}
-      
       {addModalType === 'Vendor' && (
         <AddVendorModal
           open={showAddModal}
@@ -235,5 +223,4 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
     </Box>
   );
 };
-
 export default EntitySelector;

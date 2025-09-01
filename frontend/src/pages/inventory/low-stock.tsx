@@ -1,5 +1,4 @@
 // frontend/src/pages/inventory/low-stock.tsx
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getLowStockReport, getProductMovements, getLastVendorForProduct } from '../../services/stockService';
@@ -29,7 +28,6 @@ import {
 import { MoreVert, History as HistoryIcon, ShoppingCart as PurchaseIcon } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
-
 const LowStockReport: React.FC = () => {
   const router = useRouter();
   const { isOrgContextReady } = useAuth();
@@ -37,25 +35,20 @@ const LowStockReport: React.FC = () => {
   const [selectedMovements, setSelectedMovements] = useState<any[]>([]);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuProductId, setMenuProductId] = useState<number | null>(null);
-
   const { data: lowStockItems, isLoading } = useQuery({
     queryKey: ['lowStock'],
     queryFn: getLowStockReport,
     enabled: isOrgContextReady,
   });
-
   if (isLoading) {return <Typography>Loading low stock report...</Typography>;}
-
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, productId: number) => {
     setMenuAnchorEl(event.currentTarget);
     setMenuProductId(productId);
   };
-
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
     setMenuProductId(null);
   };
-
   const handleShowMovement = async () => {
     if (menuProductId) {
       const movements = await getProductMovements(menuProductId);
@@ -64,7 +57,6 @@ const LowStockReport: React.FC = () => {
     }
     handleMenuClose();
   };
-
   const handleCreatePurchaseOrder = async () => {
     if (menuProductId) {
       const lastVendor = await getLastVendorForProduct(menuProductId);
@@ -72,7 +64,6 @@ const LowStockReport: React.FC = () => {
     }
     handleMenuClose();
   };
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
@@ -114,7 +105,6 @@ const LowStockReport: React.FC = () => {
           </Table>
         </TableContainer>
       )}
-
       {/* Kebab Menu */}
       <Menu
         anchorEl={menuAnchorEl}
@@ -130,7 +120,6 @@ const LowStockReport: React.FC = () => {
           <ListItemText>Create Purchase Order</ListItemText>
         </MenuItem>
       </Menu>
-
       {/* Movements Dialog */}
       <Dialog open={movementsDialogOpen} onClose={() => setMovementsDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Stock Movements</DialogTitle>
@@ -172,5 +161,4 @@ const LowStockReport: React.FC = () => {
     </Container>
   );
 };
-
 export default LowStockReport;

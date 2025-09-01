@@ -1,7 +1,5 @@
 // New: v1/frontend/src/services/adminService.ts
-
 import api from '../lib/api';  // Changed import to use the correct api instance with /api/v1 baseURL
-
 interface AppStatistics {
   total_licenses_issued: number;
   active_organizations: number;
@@ -16,7 +14,6 @@ interface AppStatistics {
   };
   generated_at: string;
 }
-
 interface OrgStatistics {
   total_products: number;
   total_customers: number;
@@ -28,7 +25,6 @@ interface OrgStatistics {
   storage_used_gb: number;
   generated_at: string;
 }
-
 const adminService = {
   getAppStatistics: async (): Promise<AppStatistics> => {
     try {
@@ -39,7 +35,6 @@ const adminService = {
       throw error;
     }
   },
-
   getOrgStatistics: async (): Promise<OrgStatistics> => {
     try {
       const response = await api.get<OrgStatistics>('/organizations/org-statistics');  // Assuming this endpoint exists in backend
@@ -49,7 +44,6 @@ const adminService = {
       throw error;
     }
   },
-
   // Add more admin-related API calls as needed, e.g., manage licenses, organizations, etc.
   createLicense: async (licenseData: any) => {
     try {
@@ -60,7 +54,6 @@ const adminService = {
       throw error;
     }
   },
-
   resetOrganizationData: async () => {
     try {
       const response = await api.post('/organizations/reset-data');
@@ -70,7 +63,6 @@ const adminService = {
       throw error;
     }
   },
-
   resetUserPassword: async (email: string) => {
     try {
       const response = await api.post('/password/admin-reset', { user_email: email });
@@ -81,5 +73,4 @@ const adminService = {
     }
   }
 };
-
 export default adminService;

@@ -1,14 +1,12 @@
 // lib/excelUtils.ts
 import ExcelJS from 'exceljs';  // New library for creating/reading Excel files
 import saveAs from 'file-saver';  // Library to handle file downloads in the browser
-
 // Function to export data (array of objects) to an Excel file
 export const exportToExcel = async (data: any[], filename: string) => {
   // Create a new Excel workbook
   const workbook = new ExcelJS.Workbook();
   // Add a worksheet to it
   const worksheet = workbook.addWorksheet('Sheet1');
-
   // If there's data, add headers (column names) as the first row
   if (data.length > 0) {
     worksheet.addRow(Object.keys(data[0]));  // e.g., ['id', 'name', 'price']
@@ -17,7 +15,6 @@ export const exportToExcel = async (data: any[], filename: string) => {
       worksheet.addRow(Object.values(item));  // e.g., [1, 'Product A', 10.99]
     });
   }
-
   // Generate the Excel file as a buffer (binary data)
   const buffer = await workbook.xlsx.writeBuffer();
   // Create a Blob (file-like object) from the buffer
@@ -25,7 +22,6 @@ export const exportToExcel = async (data: any[], filename: string) => {
   // Trigger download with the given filename
   saveAs(blob, `${filename}.xlsx`);
 };
-
 // Function to import data from an uploaded Excel file
 export const importFromExcel = async (file: File): Promise<any[]> => {
   // Create a new workbook
@@ -37,14 +33,11 @@ export const importFromExcel = async (file: File): Promise<any[]> => {
   // Get the first worksheet
   const worksheet = workbook.getWorksheet(1);
   const json: any[] = [];
-  
   if (!worksheet) {
     throw new Error('No worksheet found in the Excel file');
   }
-  
   // Get headers from the first row
   const headers = worksheet.getRow(1).values as string[];
-
   // Loop through each row (skip header row)
   worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     if (rowNumber > 1) {
@@ -58,6 +51,5 @@ export const importFromExcel = async (file: File): Promise<any[]> => {
       json.push(rowData);  // Add the row object to the result array
     }
   });
-
   return json;  // Return array of objects (e.g., [{id:1, name:'Product A'}, ...])
 };

@@ -1,3 +1,6 @@
+declare function handleUserMenuClose(...args: any[]): any;
+declare function handleSubClose(...args: any[]): any;
+declare function handleMenuClose(...args: any[]): any;
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -226,9 +229,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
   // Check user roles using proper utility functions
   const isSuperAdmin = isAppSuperAdmin(user);
-  const _isOrgAdmin = isOrgSuperAdmin(user);
-  const _canManage = canManageUsers(user);
-  const _canShowUserMgmtInMenu = canShowUserManagementInMegaMenu(user);
   // Service permission helper functions
   const hasServicePermission = (permission: string): boolean => {
     return userPermissions.includes(permission);
@@ -874,17 +874,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         if (item.role && !canManageUsers(user)) {
           return false;
         }
-       
         // Check super admin only items
         if (item.superAdminOnly && !isSuperAdmin) {
           return false;
         }
-       
         // Check service permissions
         if (item.servicePermission && !hasServicePermission(item.servicePermission)) {
           return false;
         }
-       
         return true;
       });
     };

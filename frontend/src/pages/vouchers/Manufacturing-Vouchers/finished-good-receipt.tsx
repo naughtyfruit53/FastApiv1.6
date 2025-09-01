@@ -1,7 +1,6 @@
 import React from 'react';
-import { Typography, Container, Box, Alert, Grid, Card, CardContent, Chip, LinearProgress } from '@mui/material';
+import {Typography, Container, Box, Alert, Grid, Card, CardContent, Chip} from '@mui/material';
 import { CheckCircle, Schedule, Build, Inventory } from '@mui/icons-material';
-
 const FinishedGoodsReceipt: React.FC = () => {
   // Mock data for demonstration
   const recentProduction = [
@@ -28,7 +27,6 @@ const FinishedGoodsReceipt: React.FC = () => {
       completionDate: null
     }
   ];
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'success';
@@ -37,11 +35,9 @@ const FinishedGoodsReceipt: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getCompletionPercentage = (produced: number, planned: number) => {
     return Math.min((produced / planned) * 100, 100);
   };
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -51,18 +47,15 @@ const FinishedGoodsReceipt: React.FC = () => {
         <Typography variant="body1" color="text.secondary" paragraph>
           Track and receive finished goods from production orders.
         </Typography>
-
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2">
             This module shows completed production orders ready for finished goods receipt.
             Integrate with your production workflow to automatically update inventory.
           </Typography>
         </Alert>
-
         <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
           Recent Production Orders
         </Typography>
-
         <Grid container spacing={3}>
           {recentProduction.map((order) => (
             <Grid size={{ xs: 12, md: 6 }} key={order.id}>
@@ -83,7 +76,6 @@ const FinishedGoodsReceipt: React.FC = () => {
                       size="small"
                     />
                   </Box>
-
                   {/* <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="body2">
@@ -99,7 +91,6 @@ const FinishedGoodsReceipt: React.FC = () => {
                       sx={{ height: 8, borderRadius: 4 }}
                     />
                   </Box> */}
-
                   <Grid container spacing={2}>
                     <Grid size={6}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -118,7 +109,6 @@ const FinishedGoodsReceipt: React.FC = () => {
                       </Box>
                     </Grid>
                   </Grid>
-
                   {order.completionDate && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="caption" color="text.secondary">
@@ -131,7 +121,6 @@ const FinishedGoodsReceipt: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6" gutterBottom>
             Integration Points
@@ -188,5 +177,4 @@ const FinishedGoodsReceipt: React.FC = () => {
     </Container>
   );
 };
-
 export default FinishedGoodsReceipt;

@@ -1,6 +1,5 @@
 // frontend/src/types/voucher.types.ts
 // TypeScript types for voucher system
-
 export interface VoucherPageConfig {
   voucherType: string;
   entityType: 'purchase' | 'sales' | 'financial';
@@ -10,7 +9,6 @@ export interface VoucherPageConfig {
   voucherTitle: string;
   apiEndpoint?: string;
 }
-
 export interface VoucherItem {
   id?: number;
   product_id: number | null;
@@ -30,7 +28,6 @@ export interface VoucherItem {
   total_amount: number;
   reorder_level?: number;
 }
-
 export interface VoucherBase {
   id?: number;
   voucher_number: string;
@@ -47,7 +44,6 @@ export interface VoucherBase {
   reference_id?: number | null;
   reference_number?: string;
 }
-
 export interface PurchaseVoucher extends VoucherBase {
   vendor_id: number | null;
   vendor?: {
@@ -59,7 +55,6 @@ export interface PurchaseVoucher extends VoucherBase {
   payment_terms?: string;
   items: VoucherItem[];
 }
-
 export interface SalesVoucher extends VoucherBase {
   customer_id: number | null;
   customer?: {
@@ -71,7 +66,6 @@ export interface SalesVoucher extends VoucherBase {
   payment_terms?: string;
   items: VoucherItem[];
 }
-
 export interface FinancialVoucher extends VoucherBase {
   from_account: string;
   to_account: string;
@@ -80,7 +74,6 @@ export interface FinancialVoucher extends VoucherBase {
   name_id?: number | null;
   name_type?: 'Vendor' | 'Customer';
 }
-
 export interface VoucherFormData extends VoucherBase {
   items?: VoucherItem[];
   vendor_id?: number | null;
@@ -93,7 +86,6 @@ export interface VoucherFormData extends VoucherBase {
   name_id?: number | null;
   name_type?: 'Vendor' | 'Customer';
 }
-
 export interface VoucherListResponse {
   items: VoucherBase[];
   total: number;
@@ -101,7 +93,6 @@ export interface VoucherListResponse {
   pageSize: number;
   totalPages: number;
 }
-
 export interface ReferenceDocumentData {
   id: number;
   voucher_number: string;
@@ -112,7 +103,6 @@ export interface ReferenceDocumentData {
   vendor_id?: number;
   type: string;
 }
-
 export interface VoucherContextMenuProps {
   anchorEl: null | HTMLElement;
   open: boolean;

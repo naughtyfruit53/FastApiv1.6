@@ -1,8 +1,8 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
 // Purchase Order Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
-import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description } from '@mui/icons-material';
+import {Box, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Fab} from '@mui/material';
+import {Add, Remove} from '@mui/icons-material';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -10,18 +10,15 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
-import BalanceDisplay from '../../../components/BalanceDisplay';
-import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS, getVoucherStyles } from '../../../utils/voucherUtils';
+import {getVoucherConfig, GST_SLABS, getVoucherStyles} from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
 import { useAuth } from '../../../context/AuthContext';  // Assume companyState is available here
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
-
 const PurchaseOrderPage: React.FC = () => {
   const { company } = useAuth();  // Fetch company from context (includes state)
   const companyState = company?.state_code;  // Use company.state_code for comparison
@@ -58,17 +55,14 @@ const PurchaseOrderPage: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Enhanced pagination
     currentPage,
     pageSize,
     paginationData,
     handlePageChange,
-
     // Reference document handling
     referenceDocument,
     handleReferenceSelected,
-
     // Form
     control,
     handleSubmit,
@@ -79,7 +73,6 @@ const PurchaseOrderPage: React.FC = () => {
     append,
     remove,
     reset,
-
     // Data
     voucherList,
     vendorList,
@@ -88,17 +81,14 @@ const PurchaseOrderPage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-
     // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
     totalGst,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -113,27 +103,21 @@ const PurchaseOrderPage: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Additional state for voucher list modal
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
-
   // Purchase Order specific state
   const selectedVendorId = watch('vendor_id');
   const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
-
   // Enhanced vendor options with "Add New"
   const enhancedVendorOptions = [
     ...(vendorList || []),
     { id: null, name: 'Add New Vendor...' }
   ];
-
   // Stock data state for items
   const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
-
   // Purchase Order specific handlers
   const handleAddItem = () => {
     append({
@@ -150,7 +134,6 @@ const PurchaseOrderPage: React.FC = () => {
       reorder_level: 0
     });
   };
-
   const handleCancel = () => {
     setMode('view');
     // Reset form to original voucherData
@@ -158,7 +141,6 @@ const PurchaseOrderPage: React.FC = () => {
       reset(voucherData);
     }
   };
-
   // Custom submit handler to prompt for PDF after save
   const onSubmit = async (data: any) => {
     try {
@@ -166,7 +148,6 @@ const PurchaseOrderPage: React.FC = () => {
         data.items = computedItems;
         data.total_amount = totalAmount;
       }
-
       // Check for price updates and prompt
       const itemsToUpdate = data.items.filter(
         (item: any) => item.unit_price !== item.original_unit_price && item.product_id
@@ -182,10 +163,8 @@ const PurchaseOrderPage: React.FC = () => {
           refreshMasterData();
         }
       }
-
       // Remove original_unit_price from items before saving
       data.items = data.items.map(({ original_unit_price, ...item }: any) => item);
-
       let response;
       if (mode === 'create') {
         response = await createMutation.mutateAsync(data);
@@ -198,19 +177,16 @@ const PurchaseOrderPage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-      
     } catch (error) {
       console.error('Error saving purchase order:', error);
       alert('Failed to save purchase order. Please try again.');
     }
   };
-
   // Handle duplicate purchase order
   const handleDuplicate = async (id: number) => {
     try {
       const voucher = voucherList?.find(v => v.id === id);
       if (!voucher) {return;}
-
       // Reset form with duplicated data
       reset({
         ...voucher,
@@ -227,14 +203,12 @@ const PurchaseOrderPage: React.FC = () => {
       toast.error('Failed to duplicate purchase order');
     }
   };
-
   // Function to get stock color
   const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {return 'error.main';}
     if (stock <= reorder) {return 'warning.main';}
     return 'success.main';
   };
-
   // Memoize all selected products
   const selectedProducts = useMemo(() => {
     return fields.map((_, index) => {
@@ -242,7 +216,6 @@ const PurchaseOrderPage: React.FC = () => {
       return productList?.find((p: any) => p.id === productId) || null;
     });
   }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
-
   // Effect to fetch stock when product changes
   useEffect(() => {
     fields.forEach((_, index) => {
@@ -264,7 +237,6 @@ const PurchaseOrderPage: React.FC = () => {
       }
     });
   }, [fields.map(f => watch(`items.${fields.indexOf(f)}.product_id`)).join(','), setValue, fields.length]);
-
   // Manual fetch for voucher number if not loaded
   useEffect(() => {
     if (mode === 'create' && !nextVoucherNumber && !isLoading) {
@@ -273,7 +245,6 @@ const PurchaseOrderPage: React.FC = () => {
         .catch(err => console.error('Failed to fetch voucher number:', err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
-
   // Prefill vendor and product from query params
   useEffect(() => {
     if (mode === 'create' && productId && productList) {
@@ -295,7 +266,6 @@ const PurchaseOrderPage: React.FC = () => {
       }
     }
   }, [mode, productId, productList, append]);
-
   useEffect(() => {
     if (mode === 'create' && vendorId && vendorList) {
       const vendor = vendorList.find(v => v.id === Number(vendorId));
@@ -304,13 +274,11 @@ const PurchaseOrderPage: React.FC = () => {
       }
     }
   }, [mode, vendorId, vendorList, setValue]);
-
   const handleVoucherClick = async (voucher: any) => {
     try {
       // Fetch complete voucher data including items
       const response = await api.get(`/purchase-orders/${voucher.id}`);
       const fullVoucherData = response.data;
-      
       // Load the complete voucher data into the form
       setMode('view');
       reset(fullVoucherData);
@@ -321,7 +289,6 @@ const PurchaseOrderPage: React.FC = () => {
       reset(voucher);
     }
   };
-  
   // Enhanced handleEdit to fetch complete data
   const handleEditWithData = async (voucher: any) => {
     if (!voucher || !voucher.id) {return;}
@@ -335,7 +302,6 @@ const PurchaseOrderPage: React.FC = () => {
       handleEdit(voucher);
     }
   };
-  
   // Enhanced handleView to fetch complete data
   const handleViewWithData = async (voucher: any) => {
     if (!voucher || !voucher.id) {return;}
@@ -349,7 +315,6 @@ const PurchaseOrderPage: React.FC = () => {
       handleView(voucher);
     }
   };
-
   // Handle data population for view and edit modes
   useEffect(() => {
     if (voucherData && (mode === 'view' || mode === 'edit')) {
@@ -379,7 +344,6 @@ const PurchaseOrderPage: React.FC = () => {
       }
     }
   }, [voucherData, mode, reset, append, remove]);
-
   const indexContent = (
     <>
       {/* Voucher list table */}
@@ -436,7 +400,6 @@ const PurchaseOrderPage: React.FC = () => {
       </TableContainer>
     </>
   );
-
   const formContent = (
     <Box>
       {/* Header Actions */}
@@ -454,7 +417,6 @@ const PurchaseOrderPage: React.FC = () => {
           onCancel={handleCancel}
         />
       </Box>
-
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
@@ -470,7 +432,6 @@ const PurchaseOrderPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Date */}
           <Grid size={6}>
             <TextField
@@ -485,7 +446,6 @@ const PurchaseOrderPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Vendor, Reference, Payment Terms in one row */}
           <Grid size={4}>
             <Autocomplete
@@ -527,7 +487,6 @@ const PurchaseOrderPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           <Grid size={4}>
             <TextField
               fullWidth
@@ -540,7 +499,6 @@ const PurchaseOrderPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           <Grid size={12}>
             <TextField
               fullWidth
@@ -554,12 +512,10 @@ const PurchaseOrderPage: React.FC = () => {
               size="small"
             />
           </Grid>
-
           {/* Items section */}
           <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 27 }}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold' }}>Items</Typography>
           </Grid>
-
           {/* Items Table */}
           <Grid size={12}>
             <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
@@ -683,7 +639,6 @@ const PurchaseOrderPage: React.FC = () => {
               </Box>
             )}
           </Grid>
-
           {/* Totals */}
           <Grid size={12}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
@@ -750,7 +705,6 @@ const PurchaseOrderPage: React.FC = () => {
               </Box>
             </Box>
           </Grid>
-
           {/* Amount in Words */}
           <Grid size={12}>
             <TextField
@@ -767,7 +721,6 @@ const PurchaseOrderPage: React.FC = () => {
       </form>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -777,7 +730,6 @@ const PurchaseOrderPage: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -808,7 +760,6 @@ const PurchaseOrderPage: React.FC = () => {
           />
         }
       />
-
       {/* Modals */}
       <AddVendorModal 
         open={showAddVendorModal}
@@ -820,7 +771,6 @@ const PurchaseOrderPage: React.FC = () => {
         loading={addVendorLoading}
         setLoading={setAddVendorLoading}
       />
-
       <AddProductModal 
         open={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
@@ -837,14 +787,12 @@ const PurchaseOrderPage: React.FC = () => {
         loading={addProductLoading}
         setLoading={setAddProductLoading}
       />
-
       <AddShippingAddressModal 
         open={showShippingModal}
         onClose={() => setShowShippingModal(false)}
         loading={addShippingLoading}
         setLoading={setAddShippingLoading}
       />
-
       <VoucherContextMenu
         contextMenu={contextMenu}
         voucherType="Purchase Order"
@@ -858,5 +806,4 @@ const PurchaseOrderPage: React.FC = () => {
     </>
   );
 };
-
 export default PurchaseOrderPage;

@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
+import {useState} from 'react';
 import axios from 'axios';
-
 interface PincodeData {
   city: string;
   state: string;
   state_code: string;
 }
-
 interface UsePincodeLookupReturn {
   lookupPincode: (pincode: string) => Promise<void>;
   pincodeData: PincodeData | null;
@@ -14,56 +12,45 @@ interface UsePincodeLookupReturn {
   error: string | null;
   clearData: () => void;
 }
-
 // Session-based cache for pincode lookups
 const pincodeCache = new Map<string, PincodeData>();
-
 // Retry utility with exponential backoff
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 const retryWithBackoff = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
   baseDelay: number = 1000
 ): Promise<T> => {
   let lastError: Error;
-  
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error: any) {
       lastError = error;
-      
       // Don't retry for client errors (4xx) or if it's the last attempt
       if (error.response?.status >= 400 && error.response?.status < 500) {
         throw error;
       }
-      
       if (attempt === maxRetries) {
         throw error;
       }
-      
       // Exponential backoff: 1s, 2s, 4s
       const delay = baseDelay * Math.pow(2, attempt);
       await sleep(delay);
     }
   }
-  
   throw lastError!;
 };
-
 export const usePincodeLookup = (): UsePincodeLookupReturn => {
   const [pincodeData, setPincodeData] = useState<PincodeData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const lookupPincode = async (pincode: string): Promise<void> => {
     // Validate pincode format
     if (!pincode || !/^\d{6}$/.test(pincode)) {
       setError('Please enter a valid 6-digit PIN code');
       return;
     }
-
     // Check cache first
     const cachedData = pincodeCache.get(pincode);
     if (cachedData) {
@@ -71,10 +58,8 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
       setError(null);
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
       // Use retry logic for better reliability
       const response = await retryWithBackoff(
@@ -82,10 +67,8 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
         3, // 3 retries
         1000 // 1 second base delay
       );
-      
       const data = response.data;
       setPincodeData(data);
-      
       // Cache successful lookup for the session
       pincodeCache.set(pincode, data);
     } catch (err: any) {
@@ -101,13 +84,11 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
       setLoading(false);
     }
   };
-
   const clearData = () => {
     setPincodeData(null);
     setError(null);
     setLoading(false);
   };
-
   return {
     lookupPincode,
     pincodeData,

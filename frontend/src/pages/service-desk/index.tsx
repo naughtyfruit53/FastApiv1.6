@@ -1,7 +1,7 @@
 // frontend/src/pages/service-desk/index.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
+declare function loadServiceDeskData(...args: any[]): any;
   Box,
   Card,
   CardContent,
@@ -48,7 +48,6 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
-
 interface Ticket {
   id: number;
   ticket_number: string;
@@ -64,7 +63,6 @@ interface Ticket {
   created_at: string;
   due_date?: string;
 }
-
 interface ChatbotConversation {
   id: number;
   conversation_id: string;
@@ -76,7 +74,6 @@ interface ChatbotConversation {
   started_at: string;
   last_message_at?: string;
 }
-
 interface ServiceDeskAnalytics {
   total_tickets: number;
   open_tickets: number;
@@ -88,7 +85,6 @@ interface ServiceDeskAnalytics {
   customer_satisfaction_score: number;
   first_contact_resolution_rate: number;
 }
-
 const ticketStatusColors: Record<string, string> = {
   open: 'error',
   in_progress: 'warning',
@@ -96,37 +92,31 @@ const ticketStatusColors: Record<string, string> = {
   closed: 'primary',
   cancelled: 'default',
 };
-
 const priorityColors: Record<string, string> = {
   low: 'success',
   medium: 'info',
   high: 'warning',
   urgent: 'error',
 };
-
 const conversationStatusColors: Record<string, string> = {
   active: 'info',
   escalated: 'warning',
   resolved: 'success',
   closed: 'default',
 };
-
 export default function ServiceDeskDashboard() {
-  const { user } = useAuth();
+const  = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [conversations, setConversations] = useState<ChatbotConversation[]>([]);
   const [analytics, setAnalytics] = useState<ServiceDeskAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [openTicketDialog, setOpenTicketDialog] = useState(false);
   const [selectedPriority, setSelectedPriority] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-
   useEffect(() => {
     loadServiceDeskData();
   }, []);
-
   const loadServiceDeskData = async () => {
     setLoading(true);
     try {
@@ -177,7 +167,6 @@ export default function ServiceDeskDashboard() {
           created_at: '2024-08-25T10:15:00Z',
         },
       ];
-
       const mockConversations: ChatbotConversation[] = [
         {
           id: 1,
@@ -213,7 +202,6 @@ export default function ServiceDeskDashboard() {
           last_message_at: '2024-08-27T08:15:00Z',
         },
       ];
-
       const mockAnalytics: ServiceDeskAnalytics = {
         total_tickets: 25,
         open_tickets: 8,
@@ -230,7 +218,6 @@ export default function ServiceDeskDashboard() {
         customer_satisfaction_score: 4.3,
         first_contact_resolution_rate: 68.5,
       };
-
       setTickets(mockTickets);
       setConversations(mockConversations);
       setAnalytics(mockAnalytics);
@@ -240,27 +227,21 @@ export default function ServiceDeskDashboard() {
       setLoading(false);
     }
   };
-
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesPriority = !selectedPriority || ticket.priority === selectedPriority;
     const matchesStatus = !selectedStatus || ticket.status === selectedStatus;
-    
     return matchesSearch && matchesPriority && matchesStatus;
   });
-
   const filteredConversations = conversations.filter((conv) =>
     conv.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     conv.conversation_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const renderAnalyticsCards = () => {
     if (!analytics) {return null;}
-
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -346,7 +327,6 @@ export default function ServiceDeskDashboard() {
       </Grid>
     );
   };
-
   const renderTicketsTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -410,7 +390,6 @@ export default function ServiceDeskDashboard() {
       </Table>
     </TableContainer>
   );
-
   const renderConversationsList = () => (
     <Paper>
       <List>
@@ -464,7 +443,6 @@ export default function ServiceDeskDashboard() {
       </List>
     </Paper>
   );
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -487,9 +465,7 @@ export default function ServiceDeskDashboard() {
           </Button>
         </Box>
       </Box>
-
       {renderAnalyticsCards()}
-
       <Card>
         <CardContent>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -498,7 +474,6 @@ export default function ServiceDeskDashboard() {
               <Tab label="Chatbot Conversations" />
             </Tabs>
           </Box>
-
           <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
             <TextField
               placeholder="Search..."
@@ -544,12 +519,10 @@ export default function ServiceDeskDashboard() {
               </>
             )}
           </Box>
-
           {currentTab === 0 && renderTicketsTable()}
           {currentTab === 1 && renderConversationsList()}
         </CardContent>
       </Card>
-
       {/* Create Ticket Dialog - Placeholder */}
       <Dialog
         open={openTicketDialog}

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -38,7 +37,6 @@ import {
   MODULE_DISPLAY_NAMES,
   ServiceModule
 } from '../../types/rbac.types';
-
 interface RoleFormDialogProps {
   open: boolean;
   onClose: () => void;
@@ -47,7 +45,6 @@ interface RoleFormDialogProps {
   organizationId: number;
   onSubmit: (data: ServiceRoleCreate | ServiceRoleUpdate) => void;
 }
-
 const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
   open,
   onClose,
@@ -63,10 +60,8 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     is_active: true,
     permission_ids: [] as number[]
   });
-  
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [expandedModule, setExpandedModule] = useState<string | false>(false);
-
   useEffect(() => {
     if (role) {
       // Editing existing role
@@ -89,7 +84,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     }
     setErrors({});
   }, [role, open]);
-
   const handleRoleTypeChange = (roleType: ServiceRoleType) => {
     const defaults = SERVICE_ROLE_DEFAULTS[roleType];
     setFormData(prev => ({
@@ -99,7 +93,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       description: defaults.description || ''
     }));
   };
-
   const handlePermissionToggle = (permissionId: number) => {
     setFormData(prev => ({
       ...prev,
@@ -108,16 +101,13 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
         : [...prev.permission_ids, permissionId]
     }));
   };
-
   const handleModuleToggle = (module: ServiceModule) => {
     const modulePermissions = permissions
       .filter(p => p.module === module)
       .map(p => p.id);
-    
     const allSelected = modulePermissions.every(id => 
       formData.permission_ids.includes(id)
     );
-    
     if (allSelected) {
       // Deselect all module permissions
       setFormData(prev => ({
@@ -137,25 +127,19 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       }));
     }
   };
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
     if (!formData.display_name.trim()) {
       newErrors.display_name = 'Display name is required';
     }
-    
     if (formData.permission_ids.length === 0) {
       newErrors.permissions = 'At least one permission must be selected';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = () => {
     if (!validateForm()) {return;}
-    
     if (role) {
       // Updating existing role
       const updateData: ServiceRoleUpdate = {
@@ -178,7 +162,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       onSubmit(createData);
     }
   };
-
   // Group permissions by module
   const permissionsByModule = permissions.reduce((acc, permission) => {
     if (!acc[permission.module]) {
@@ -187,24 +170,20 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     acc[permission.module].push(permission);
     return acc;
   }, {} as Record<string, ServicePermission[]>);
-
   const getModuleSelectionStatus = (module: ServiceModule) => {
     const modulePermissions = permissionsByModule[module] || [];
     const selectedCount = modulePermissions.filter(p => 
       formData.permission_ids.includes(p.id)
     ).length;
-    
     if (selectedCount === 0) {return 'none';}
     if (selectedCount === modulePermissions.length) {return 'all';}
     return 'partial';
   };
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         {role ? 'Edit Service Role' : 'Create Service Role'}
       </DialogTitle>
-      
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
           {/* Basic Information */}
@@ -212,7 +191,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
             <Typography variant="h6" sx={{ mb: 2 }}>
               Basic Information
             </Typography>
-            
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <FormControl fullWidth disabled={!!role}>
                 <InputLabel>Role Type</InputLabel>
@@ -228,7 +206,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                   ))}
                 </Select>
               </FormControl>
-              
               <TextField
                 fullWidth
                 label="Display Name"
@@ -238,7 +215,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                 helperText={errors.display_name}
                 required
               />
-              
               <TextField
                 fullWidth
                 label="Description"
@@ -247,7 +223,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                 multiline
                 rows={2}
               />
-              
               <FormControlLabel
                 control={
                   <Switch
@@ -259,28 +234,23 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
               />
             </Box>
           </Box>
-          
           {/* Permissions */}
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Permissions ({formData.permission_ids.length} selected)
             </Typography>
-            
             {errors.permissions && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {errors.permissions}
               </Alert>
             )}
-            
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 Select permissions for this role. Permissions are organized by module.
               </Typography>
             </Box>
-            
             {Object.entries(permissionsByModule).map(([module, modulePermissions]) => {
               const selectionStatus = getModuleSelectionStatus(module as ServiceModule);
-              
               return (
                 <Accordion
                   key={module}
@@ -311,7 +281,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                       />
                     </Box>
                   </AccordionSummary>
-                  
                   <AccordionDetails>
                     <FormGroup>
                       {modulePermissions.map((permission) => (
@@ -345,7 +314,6 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
           </Box>
         </Box>
       </DialogContent>
-      
       <DialogActions>
         <Button onClick={onClose}>
           Cancel
@@ -357,5 +325,4 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     </Dialog>
   );
 };
-
 export default RoleFormDialog;

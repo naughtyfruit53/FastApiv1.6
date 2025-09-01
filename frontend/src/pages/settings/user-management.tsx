@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+declare function resetForm(...args: any[]): any;
   Box,
   Container,
   Typography,
@@ -44,11 +45,9 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
-import { userService } from '../../services/authService';
 import { organizationService } from '../../services/organizationService';
 import { useAuthWithOrgContext } from '../../context/AuthContext';
 import { getDisplayRole, canManageUsers, canResetPasswords } from '../../types/user.types';
-
 interface User {
   id: number;
   email: string;
@@ -62,9 +61,7 @@ interface User {
   created_at: string;
   last_login?: string;
 }
-
 const UserManagement: React.FC = () => {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { user: currentUser, isReady: authReady } = useAuthWithOrgContext();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -87,21 +84,17 @@ const UserManagement: React.FC = () => {
       reports: false
     }
   });
-
   // Permission checks
   const canManage = canManageUsers(currentUser);
   const canReset = canResetPasswords(currentUser);
-
   // Get current organization ID from auth context only (no localStorage fallback)
   const currentOrgId = currentUser?.organization_id;
-
   // Real API calls using organization-scoped endpoints - all hooks must be at the top
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ['organization-users', currentOrgId],
     queryFn: () => organizationService.getOrganizationUsers(currentOrgId!),
     enabled: canManage && !!currentOrgId && authReady // Only fetch if user has permission and org ID exists
   });
-
   const createUserMutation = useMutation({
     mutationFn: (userData: any) => organizationService.createUserInOrganization(currentOrgId!, userData),
     onSuccess: () => {
@@ -110,7 +103,6 @@ const UserManagement: React.FC = () => {
       resetForm();
     }
   });
-
   const updateUserMutation = useMutation({
     mutationFn: ({ userId, userData }: { userId: number; userData: any }) => 
       organizationService.updateUserInOrganization(currentOrgId!, userId, userData),
@@ -121,7 +113,6 @@ const UserManagement: React.FC = () => {
       resetForm();
     }
   });
-
   const userActionMutation = useMutation({
     mutationFn: ({ userId, action }: { userId: number; action: string }) => {
       switch (action) {
@@ -138,7 +129,6 @@ const UserManagement: React.FC = () => {
       setActionType(null);
     }
   });
-
   // Wait for authentication and organization context to be ready
   if (!authReady) {
     return (
@@ -149,7 +139,6 @@ const UserManagement: React.FC = () => {
       </Container>
     );
   }
-
   // Ensure we have a valid organization ID
   if (!currentOrgId) {
     return (
@@ -160,7 +149,6 @@ const UserManagement: React.FC = () => {
       </Container>
     );
   }
-
   // If user doesn't have permission to manage users, redirect or show message
   if (!canManage) {
     return (
@@ -171,7 +159,6 @@ const UserManagement: React.FC = () => {
       </Container>
     );
   }
-
   const resetForm = () => {
     setFormData({
       email: '',
@@ -189,7 +176,6 @@ const UserManagement: React.FC = () => {
       }
     });
   };
-
   const handleCreateUser = () => {
     const userData = {
       email: formData.email,
@@ -202,7 +188,6 @@ const UserManagement: React.FC = () => {
     };
     createUserMutation.mutate(userData);
   };
-
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setFormData({
@@ -222,7 +207,6 @@ const UserManagement: React.FC = () => {
     });
     setEditDialogOpen(true);
   };
-
   const handleUpdateUser = () => {
     if (selectedUser) {
       const userData: any = {
@@ -243,13 +227,11 @@ const UserManagement: React.FC = () => {
       });
     }
   };
-
   const handleAction = (user: User, action: 'reset' | 'activate' | 'deactivate' | 'delete') => {
     setSelectedUser(user);
     setActionType(action);
     setActionDialogOpen(true);
   };
-
   const confirmAction = () => {
     if (selectedUser && actionType) {
       userActionMutation.mutate({
@@ -258,13 +240,10 @@ const UserManagement: React.FC = () => {
       });
     }
   };
-
   const getRoleChip = (role: string, is_super_admin?: boolean) => {
     const displayRole = getDisplayRole(role, is_super_admin);
-    
     // Color mapping based on actual role levels
     let color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' = 'default';
-    
     if (is_super_admin || role === 'super_admin') {
       color = 'error'; // Red for highest privilege
     } else if (role === 'org_admin') {
@@ -274,10 +253,8 @@ const UserManagement: React.FC = () => {
     } else {
       color = 'default'; // Gray for standard users
     }
-    
     return <Chip label={displayRole} color={color} size="small" />;
   };
-
   const getStatusChip = (isActive: boolean) => {
     return (
       <Chip 
@@ -287,7 +264,6 @@ const UserManagement: React.FC = () => {
       />
     );
   };
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -314,7 +290,6 @@ const UserManagement: React.FC = () => {
           Users Overview
         </Typography>
         <Divider sx={{ mb: 2 }} />
-        
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Box sx={{ textAlign: 'center' }}>
@@ -716,5 +691,4 @@ const UserManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default UserManagement;

@@ -1,5 +1,4 @@
 // frontend/src/components/ServiceAnalytics/SLAComplianceChart.tsx
-
 import React from 'react';
 import {
   Card,
@@ -26,11 +25,9 @@ import {
   Schedule as TimeIcon
 } from '@mui/icons-material';
 import { SLAComplianceMetrics } from '../../services/serviceAnalyticsService';
-
 interface SLAComplianceChartProps {
   data: SLAComplianceMetrics;
 }
-
 const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
   const getComplianceColor = (rate: number) => {
     if (rate >= 95) {return 'success';}
@@ -38,7 +35,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
     if (rate >= 70) {return 'warning';}
     return 'error';
   };
-
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case 'urgent':
@@ -53,21 +49,18 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
         return 'default';
     }
   };
-
   const formatTime = (hours?: number) => {
     if (!hours) {return 'N/A';}
     if (hours < 1) {return `${(hours * 60).toFixed(0)}m`;}
     if (hours < 24) {return `${hours.toFixed(1)}h`;}
     return `${(hours / 24).toFixed(1)}d`;
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
     });
   };
-
   return (
     <Card>
       <CardHeader 
@@ -101,7 +94,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 color={getComplianceColor(data.overall_compliance_rate)}
               />
             </Box>
-
             {/* Key Metrics Summary */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={6} sm={3}>
@@ -114,7 +106,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                   </Typography>
                 </Paper>
               </Grid>
-              
               <Grid item xs={6} sm={3}>
                 <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
                   <Typography variant="h5" color="error.main">
@@ -125,7 +116,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                   </Typography>
                 </Paper>
               </Grid>
-              
               <Grid item xs={6} sm={3}>
                 <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
                   <Typography variant="h5" color="primary.main">
@@ -136,7 +126,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                   </Typography>
                 </Paper>
               </Grid>
-              
               <Grid item xs={6} sm={3}>
                 <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
                   <Typography variant="h5" color="info.main">
@@ -148,7 +137,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </Paper>
               </Grid>
             </Grid>
-
             {/* Compliance by Priority */}
             {Object.keys(data.compliance_by_priority).length > 0 && (
               <Box sx={{ mb: 3 }}>
@@ -187,7 +175,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </Grid>
               </Box>
             )}
-
             {/* SLA Breach Reasons */}
             {Object.keys(data.breach_reasons).length > 0 && (
               <Box sx={{ mb: 3 }}>
@@ -238,7 +225,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </TableContainer>
               </Box>
             )}
-
             {/* Compliance Trend Preview */}
             {data.compliance_trend.length > 0 && (
               <Box sx={{ mb: 3 }}>
@@ -261,7 +247,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                       />
                     ))}
                   </Box>
-                  
                   {/* Trend Analysis */}
                   <Box mt={2}>
                     <Typography variant="body2" color="text.secondary">
@@ -272,7 +257,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                       const avgRecent = recentTrend.reduce((sum, point) => sum + point.value, 0) / recentTrend.length;
                       const trendDirection = avgRecent > data.overall_compliance_rate ? 'improving' : 'declining';
                       const trendColor = avgRecent > data.overall_compliance_rate ? 'success.main' : 'warning.main';
-                      
                       return (
                         <Typography variant="body2" sx={{ color: trendColor }}>
                           Recent 7-day average ({avgRecent.toFixed(1)}%) shows {trendDirection} trend
@@ -283,7 +267,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                 </Paper>
               </Box>
             )}
-
             {/* Performance Indicators */}
             <Box>
               <Typography variant="h6" gutterBottom>
@@ -307,7 +290,6 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
                     </Box>
                   </Paper>
                 </Grid>
-                
                 <Grid item xs={12} sm={6}>
                   <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
                     <Box display="flex" alignItems="center" gap={2}>
@@ -333,5 +315,4 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
     </Card>
   );
 };
-
 export default SLAComplianceChart;

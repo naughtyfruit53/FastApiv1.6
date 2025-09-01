@@ -1,6 +1,5 @@
 // src/components/NotificationDashboard.tsx
 // Main dashboard component for notification management
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -21,13 +20,11 @@ import {
 import NotificationTemplates from './NotificationTemplates';
 import SendNotification from './SendNotification';
 import NotificationLogs from './NotificationLogs';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -42,14 +39,11 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const NotificationDashboard: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);
   };
-
   return (
     <Container maxWidth="xl">
       <Box sx={{ mb: 3 }}>
@@ -60,7 +54,6 @@ const NotificationDashboard: React.FC = () => {
           Manage notification templates, send messages, and view delivery logs
         </Typography>
       </Box>
-
       <Paper sx={{ width: '100%' }}>
         <AppBar position="static" color="default" elevation={0}>
           <Tabs
@@ -91,15 +84,12 @@ const NotificationDashboard: React.FC = () => {
             />
           </Tabs>
         </AppBar>
-
         <TabPanel value={selectedTab} index={0}>
           <NotificationTemplates />
         </TabPanel>
-
         <TabPanel value={selectedTab} index={1}>
           <SendNotification />
         </TabPanel>
-
         <TabPanel value={selectedTab} index={2}>
           <NotificationLogs />
         </TabPanel>
@@ -107,5 +97,4 @@ const NotificationDashboard: React.FC = () => {
     </Container>
   );
 };
-
 export default NotificationDashboard;

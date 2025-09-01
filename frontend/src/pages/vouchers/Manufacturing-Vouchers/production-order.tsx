@@ -1,8 +1,7 @@
 // frontend/src/pages/vouchers/Manufacturing-Vouchers/production-order.tsx
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useForm, useFieldArray } from 'react-hook-form';
+import {useForm} from 'react-hook-form';
 import { 
   Box, 
   Button, 
@@ -51,7 +50,6 @@ import api from '../../../lib/api';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import AddBOMModal from '../../../components/AddBOMModal';
-
 interface ManufacturingOrder {
   id?: number;
   voucher_number?: string;
@@ -71,7 +69,6 @@ interface ManufacturingOrder {
   notes?: string;
   total_amount: number;
 }
-
 const defaultValues: ManufacturingOrder = {
   date: new Date().toISOString().slice(0, 10),
   bom_id: 0,
@@ -82,75 +79,58 @@ const defaultValues: ManufacturingOrder = {
   priority: 'medium',
   total_amount: 0
 };
-
 const ProductionOrder: React.FC = () => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>((queryMode as 'create' | 'edit' | 'view') || 'create');
   const [selectedId, setSelectedId] = useState<number | null>(id ? Number(id) : null);
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; voucher: any } | null>(null);
-  const [showFullModal, setShowFullModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [filteredVouchers, setFilteredVouchers] = useState<any[]>([]);
   const [selectedBOM, setSelectedBOM] = useState<any>(null);
   const [bomCostBreakdown, setBomCostBreakdown] = useState<any>(null);
   const [showAddBOMModal, setShowAddBOMModal] = useState(false);
   const queryClient = useQueryClient();
-
   const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ManufacturingOrder>({
     defaultValues
   });
-
   const watchedBomId = watch('bom_id');
   const watchedQuantity = watch('planned_quantity');
-
   // Fetch manufacturing orders
   const { data: orderList, isLoading: isLoadingList } = useQuery({
     queryKey: ['manufacturing-orders'],
     queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
   });
-
   // Fetch BOMs
   const { data: bomList } = useQuery({
     queryKey: ['boms'],
     queryFn: () => api.get('/bom').then(res => res.data),
   });
-
   // Enhanced BOM options with "Create New"
   const enhancedBOMOptions = [
     ...(bomList || []),
     { id: null, bom_name: 'Create New BOM...', version: '' }
   ];
-
   // Fetch specific manufacturing order
-  const { data: orderData, isLoading: isFetching } = useQuery({
+const { data: orderData, isLoading:} = useQuery({
     queryKey: ['manufacturing-order', selectedId],
     queryFn: () => api.get(`/manufacturing-orders/${selectedId}`).then(res => res.data),
     enabled: !!selectedId
   });
-
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ['nextManufacturingOrderNumber'],
     queryFn: () => api.get('/manufacturing-orders/next-number').then(res => res.data),
     enabled: mode === 'create',
   });
-
   // Fetch BOM cost breakdown
   const { data: costBreakdown } = useQuery({
     queryKey: ['bom-cost-breakdown', watchedBomId, watchedQuantity],
     queryFn: () => api.get(`/bom/${watchedBomId}/cost-breakdown?production_quantity=${watchedQuantity}`).then(res => res.data),
     enabled: !!watchedBomId && watchedQuantity > 0,
   });
-
   const sortedOrders = orderList ? [...orderList].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   ) : [];
-
   const latestOrders = sortedOrders.slice(0, 10);
-
   useEffect(() => {
     if (mode === 'create' && nextVoucherNumber) {
       setValue('voucher_number', nextVoucherNumber);
@@ -160,21 +140,18 @@ const ProductionOrder: React.FC = () => {
       reset(defaultValues);
     }
   }, [orderData, mode, reset, nextVoucherNumber, setValue]);
-
   useEffect(() => {
     if (watchedBomId && bomList) {
       const bom = bomList.find((b: any) => b.id === watchedBomId);
       setSelectedBOM(bom);
     }
   }, [watchedBomId, bomList]);
-
   useEffect(() => {
     if (costBreakdown) {
       setBomCostBreakdown(costBreakdown);
       setValue('total_amount', costBreakdown.cost_breakdown.total_cost);
     }
   }, [costBreakdown, setValue]);
-
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: ManufacturingOrder) => api.post('/manufacturing-orders', data),
@@ -190,7 +167,6 @@ const ProductionOrder: React.FC = () => {
       console.error('Error creating manufacturing order:', error);
     }
   });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: ManufacturingOrder }) => 
       api.put(`/manufacturing-orders/${id}`, data),
@@ -204,7 +180,6 @@ const ProductionOrder: React.FC = () => {
       console.error('Error updating manufacturing order:', error);
     }
   });
-
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/manufacturing-orders/${id}`),
     onSuccess: () => {
@@ -214,7 +189,6 @@ const ProductionOrder: React.FC = () => {
       console.error('Error deleting manufacturing order:', error);
     }
   });
-
   const onSubmit = (data: ManufacturingOrder) => {
     if (mode === 'create') {
       createMutation.mutate(data);
@@ -222,27 +196,22 @@ const ProductionOrder: React.FC = () => {
       updateMutation.mutate({ id: selectedId, data });
     }
   };
-
   const handleEdit = (order: any) => {
     setSelectedId(order.id);
     setMode('edit');
   };
-
   const handleView = (order: any) => {
     setSelectedId(order.id);
     setMode('view');
   };
-
   const handleContextMenuClose = () => {
     setContextMenu(null);
   };
-
   const handleDeleteOrder = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this manufacturing order?')) {
       deleteMutation.mutate(id);
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'planned': return 'default';
@@ -252,7 +221,6 @@ const ProductionOrder: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'low': return 'success';
@@ -262,12 +230,10 @@ const ProductionOrder: React.FC = () => {
       default: return 'default';
     }
   };
-
   const handleAddBOM = (newBOM: any) => {
     setValue('bom_id', newBOM.id);
     setShowAddBOMModal(false);
   };
-
   return (
     <Container maxWidth="xl">
       <Grid container spacing={3}>
@@ -286,7 +252,6 @@ const ProductionOrder: React.FC = () => {
               onView={handleView}
               isLoading={isLoadingList}
             />
-            
             <Box sx={{ mt: 2 }}>
               <Typography variant="h6" gutterBottom>Recent Orders</Typography>
               <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
@@ -341,7 +306,6 @@ const ProductionOrder: React.FC = () => {
             </Box>
           </Box>
         </Grid>
-
         {/* Right Panel - Form */}
         <Grid size={7}>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -350,7 +314,6 @@ const ProductionOrder: React.FC = () => {
                 {mode === 'create' ? 'Create Production Order' : 
                  mode === 'edit' ? 'Edit Production Order' : 'View Production Order'}
               </Typography>
-
               <Grid container spacing={2}>
                 {/* Basic Information */}
                 <Grid size={4}>
@@ -363,7 +326,6 @@ const ProductionOrder: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={4}>
                   <TextField
                     {...control.register('date', { required: true })}
@@ -377,7 +339,6 @@ const ProductionOrder: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Priority</InputLabel>
@@ -395,7 +356,6 @@ const ProductionOrder: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-
                 {/* BOM Selection */}
                 <Grid size={6}>
                   <Autocomplete
@@ -421,7 +381,6 @@ const ProductionOrder: React.FC = () => {
                     )}
                   />
                 </Grid>
-
                 <Grid size={3}>
                   <TextField
                     {...control.register('planned_quantity', { required: true, min: 0.01 })}
@@ -435,7 +394,6 @@ const ProductionOrder: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={3}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Status</InputLabel>
@@ -453,7 +411,6 @@ const ProductionOrder: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-
                 {/* Planning Dates */}
                 <Grid size={6}>
                   <TextField
@@ -467,7 +424,6 @@ const ProductionOrder: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     {...control.register('planned_end_date')}
@@ -480,7 +436,6 @@ const ProductionOrder: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 {/* Location Information */}
                 <Grid size={6}>
                   <TextField
@@ -492,7 +447,6 @@ const ProductionOrder: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     {...control.register('production_location')}
@@ -503,7 +457,6 @@ const ProductionOrder: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={12}>
                   <TextField
                     {...control.register('notes')}
@@ -515,7 +468,6 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                   />
                 </Grid>
-
                 {/* BOM Details */}
                 {selectedBOM && (
                   <Grid size={12}>
@@ -546,7 +498,6 @@ const ProductionOrder: React.FC = () => {
                     </Card>
                   </Grid>
                 )}
-
                 {/* Action Buttons */}
                 {mode !== 'view' && (
                   <Grid size={12}>
@@ -580,7 +531,6 @@ const ProductionOrder: React.FC = () => {
           </form>
         </Grid>
       </Grid>
-
       {/* Context Menu */}
       <VoucherContextMenu
         voucherType="Production Order"
@@ -605,7 +555,6 @@ const ProductionOrder: React.FC = () => {
           setContextMenu(null);
         }}
       />
-
       {/* Add BOM Modal */}
       <AddBOMModal
         open={showAddBOMModal}
@@ -616,5 +565,4 @@ const ProductionOrder: React.FC = () => {
     </Container>
   );
 };
-
 export default ProductionOrder;

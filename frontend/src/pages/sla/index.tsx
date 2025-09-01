@@ -1,7 +1,7 @@
 // frontend/src/pages/sla/index.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
+declare function resetForm(...args: any[]): any;
   Box,
   Container,
   Typography,
@@ -50,17 +50,14 @@ import {
   Timeline,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { slaService, SLAPolicy, SLAPolicyCreate, SLAPolicyUpdate, SLAMetrics } from '../../services/slaService';
-
+import {slaService, SLAPolicy, SLAPolicyCreate, SLAPolicyUpdate} from '../../services/slaService';
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -77,17 +74,14 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const SLAManagement: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [policyDialog, setPolicyDialog] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<SLAPolicy | null>(null);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const queryClient = useQueryClient();
-
   // Get organization ID from context/auth
   const organizationId = 1; // This should come from auth context
-
   // Form state for policy dialog
   const [policyForm, setPolicyForm] = useState<SLAPolicyCreate>({
     name: '',
@@ -101,7 +95,6 @@ const SLAManagement: React.FC = () => {
     is_active: true,
     is_default: false,
   });
-
   // API calls
   const {
     data: policies = [],
@@ -111,7 +104,6 @@ const SLAManagement: React.FC = () => {
     queryKey: ['sla-policies', organizationId],
     queryFn: () => slaService.getPolicies(organizationId),
   });
-
   const {
     data: metrics,
     isLoading: metricsLoading,
@@ -119,7 +111,6 @@ const SLAManagement: React.FC = () => {
     queryKey: ['sla-metrics', organizationId],
     queryFn: () => slaService.getSLAMetrics(organizationId, undefined, undefined, 30),
   });
-
   const {
     data: breachedSLAs = [],
     isLoading: breachedLoading,
@@ -127,7 +118,6 @@ const SLAManagement: React.FC = () => {
     queryKey: ['breached-slas', organizationId],
     queryFn: () => slaService.getBreachedSLAs(organizationId, 20),
   });
-
   // Mutations
   const createPolicyMutation = useMutation({
     mutationFn: (policy: SLAPolicyCreate) => slaService.createPolicy(organizationId, policy),
@@ -137,7 +127,6 @@ const SLAManagement: React.FC = () => {
       resetForm();
     },
   });
-
   const updatePolicyMutation = useMutation({
     mutationFn: ({ id, policy }: { id: number; policy: SLAPolicyUpdate }) =>
       slaService.updatePolicy(organizationId, id, policy),
@@ -147,7 +136,6 @@ const SLAManagement: React.FC = () => {
       resetForm();
     },
   });
-
   const deletePolicyMutation = useMutation({
     mutationFn: (id: number) => slaService.deletePolicy(organizationId, id),
     onSuccess: () => {
@@ -156,18 +144,15 @@ const SLAManagement: React.FC = () => {
       setSelectedPolicy(null);
     },
   });
-
   // Event handlers
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const handleCreatePolicy = () => {
     setSelectedPolicy(null);
     resetForm();
     setPolicyDialog(true);
   };
-
   const handleEditPolicy = (policy: SLAPolicy) => {
     setSelectedPolicy(policy);
     setPolicyForm({
@@ -184,12 +169,10 @@ const SLAManagement: React.FC = () => {
     });
     setPolicyDialog(true);
   };
-
   const handleDeletePolicy = (policy: SLAPolicy) => {
     setSelectedPolicy(policy);
     setDeleteDialog(true);
   };
-
   const handleSubmitPolicy = () => {
     if (selectedPolicy) {
       updatePolicyMutation.mutate({ id: selectedPolicy.id, policy: policyForm });
@@ -197,7 +180,6 @@ const SLAManagement: React.FC = () => {
       createPolicyMutation.mutate(policyForm);
     }
   };
-
   const resetForm = () => {
     setPolicyForm({
       name: '',
@@ -212,7 +194,6 @@ const SLAManagement: React.FC = () => {
       is_default: false,
     });
   };
-
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
       case 'urgent': return 'error';
@@ -222,7 +203,6 @@ const SLAManagement: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'met': return 'success';
@@ -231,11 +211,9 @@ const SLAManagement: React.FC = () => {
       default: return 'default';
     }
   };
-
   // Render summary cards
   const renderSummaryCards = () => {
     if (!metrics) {return null;}
-
     return (
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
@@ -301,7 +279,6 @@ const SLAManagement: React.FC = () => {
       </Grid>
     );
   };
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
@@ -325,12 +302,10 @@ const SLAManagement: React.FC = () => {
           Refresh
         </Button>
       </Box>
-
       {/* Summary Cards */}
       <Box sx={{ mb: 4 }}>
         {renderSummaryCards()}
       </Box>
-
       {/* SLA Tabs */}
       <Paper sx={{ mb: 4 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -340,7 +315,6 @@ const SLAManagement: React.FC = () => {
             <Tab label="Breached SLAs" icon={<Warning />} />
           </Tabs>
         </Box>
-
         <TabPanel value={tabValue} index={0}>
           {/* SLA Policies Tab */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -353,7 +327,6 @@ const SLAManagement: React.FC = () => {
               Create Policy
             </Button>
           </Box>
-
           <TableContainer>
             <Table>
               <TableHead>
@@ -413,7 +386,6 @@ const SLAManagement: React.FC = () => {
             </Table>
           </TableContainer>
         </TabPanel>
-
         <TabPanel value={tabValue} index={1}>
           {/* Performance Dashboard Tab */}
           <Typography variant="h6" gutterBottom>
@@ -448,7 +420,6 @@ const SLAManagement: React.FC = () => {
             </Grid>
           )}
         </TabPanel>
-
         <TabPanel value={tabValue} index={2}>
           {/* Breached SLAs Tab */}
           <Typography variant="h6" gutterBottom>
@@ -514,7 +485,6 @@ const SLAManagement: React.FC = () => {
           )}
         </TabPanel>
       </Paper>
-
       {/* Policy Create/Edit Dialog */}
       <Dialog open={policyDialog} onClose={() => setPolicyDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>
@@ -638,7 +608,6 @@ const SLAManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}>
         <DialogTitle>Delete SLA Policy</DialogTitle>
@@ -663,5 +632,4 @@ const SLAManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default SLAManagement;

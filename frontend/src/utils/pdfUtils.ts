@@ -1,8 +1,6 @@
 // Unified PDF generation utility for all voucher types
 // frontend/src/utils/pdfUtils.ts
-
 import pdfService from '../services/pdfService';
-
 export interface VoucherPdfConfig {
   voucherType: string;
   voucherTitle: string;
@@ -10,7 +8,6 @@ export interface VoucherPdfConfig {
   showTaxDetails?: boolean;
   entityType?: 'vendor' | 'customer';
 }
-
 export interface VoucherPdfData {
   voucher_number: string;
   date: string;
@@ -44,7 +41,6 @@ export interface VoucherPdfData {
   // Additional fields for different voucher types
   [key: string]: any;
 }
-
 /**
  * Generate PDF for any voucher type using standardized configuration
  */
@@ -56,7 +52,6 @@ export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: Vo
       alert('You must be logged in to generate PDFs');
       return;
     }
-
     // Prepare standardized voucher data for the PDF service
     const pdfVoucherData = {
       voucher_number: voucherData.voucher_number,
@@ -91,7 +86,6 @@ export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: Vo
         )
       )
     };
-
     const pdfOptions = {
       voucherType: config.voucherType,
       voucherTitle: config.voucherTitle,
@@ -99,14 +93,12 @@ export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: Vo
       showItems: config.showItems || false,
       showTaxDetails: config.showTaxDetails || false
     };
-
     await pdfService.generateVoucherPDF(pdfVoucherData, pdfOptions);
   } catch (error) {
     console.error('Error generating PDF:', error);
     alert('Failed to generate PDF. Please try again.');
   }
 };
-
 /**
  * Voucher type configurations for PDF generation
  */
@@ -138,7 +130,6 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
     showItems: false,
     showTaxDetails: false
   },
-  
   // Purchase Vouchers
   'purchase-voucher': {
     voucherType: 'purchase-voucher',
@@ -168,7 +159,6 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
     showTaxDetails: true,
     entityType: 'vendor'
   },
-  
   // Sales Vouchers
   'sales-voucher': {
     voucherType: 'sales-voucher',
@@ -233,7 +223,6 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
     showTaxDetails: true,
     entityType: 'customer'
   },
-  
   // Manufacturing Vouchers
   'job-card': {
     voucherType: 'job-card',
@@ -285,7 +274,6 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
     showTaxDetails: false
   }
 };
-
 /**
  * Get PDF configuration for a voucher type
  */
@@ -302,7 +290,6 @@ export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
   }
   return config;
 };
-
 /**
  * Standalone PDF generation function for individual vouchers
  * Can be used in any voucher component without requiring useVoucherPage hook
@@ -314,17 +301,14 @@ export const generateStandalonePDF = async (
 ) => {
   try {
     console.log('[PDF] Generating standalone PDF for:', voucherType, voucherData);
-    
     // Check authorization
     const token = localStorage.getItem('token');
     if (!token) {
       alert('You must be logged in to generate PDFs');
       return;
     }
-
     // Get PDF configuration
     const pdfConfig = getVoucherPdfConfig(voucherType);
-    
     // Prepare PDF data with entity information
     const pdfData: VoucherPdfData = {
       voucher_number: voucherData.voucher_number || voucherData.job_number || 'Unknown',
@@ -350,10 +334,8 @@ export const generateStandalonePDF = async (
       materials_supplied_by: voucherData.materials_supplied_by,
       quality_specifications: voucherData.quality_specifications
     };
-
     // Generate PDF
     await generateVoucherPDF(pdfData, pdfConfig);
-    
     console.log('[PDF] PDF generated successfully for:', voucherType);
   } catch (error) {
     console.error('[PDF] Error generating standalone PDF:', error);

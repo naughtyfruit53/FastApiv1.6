@@ -1,6 +1,5 @@
 // pages/transport.tsx
 // Transport and Freight Management page
-
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import {
@@ -54,18 +53,15 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {useQuery, useQueryClient} from '@tanstack/react-query';
 import { transportService } from '../services/transportService';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -82,59 +78,48 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const TransportManagementPage: NextPage = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [tabValue, setTabValue] = useState(0);
-  const [openDialog, setOpenDialog] = useState<'carrier' | 'route' | 'rate' | 'shipment' | null>(null);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [rateComparisonData, setRateComparisonData] = useState({
     origin_city: '',
     destination_city: '',
     weight_kg: 0,
     volume_cbm: 0,
   });
-
   // Fetch dashboard summary
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
     queryKey: ['transportDashboard'],
     queryFn: transportService.getDashboardSummary,
     enabled: !!user,
   });
-
   // Fetch carriers
   const { data: carriers, isLoading: carriersLoading } = useQuery({
     queryKey: ['carriers'],
     queryFn: () => transportService.getCarriers(),
     enabled: !!user,
   });
-
   // Fetch routes
   const { data: routes, isLoading: routesLoading } = useQuery({
     queryKey: ['routes'],
     queryFn: () => transportService.getRoutes(),
     enabled: !!user,
   });
-
   // Fetch freight rates
   const { data: freightRates, isLoading: ratesLoading } = useQuery({
     queryKey: ['freightRates'],
     queryFn: () => transportService.getFreightRates(),
     enabled: !!user,
   });
-
   // Fetch shipments
   const { data: shipments, isLoading: shipmentsLoading } = useQuery({
     queryKey: ['shipments'],
     queryFn: () => transportService.getShipments(),
     enabled: !!user,
   });
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active': return 'success';
@@ -146,7 +131,6 @@ const TransportManagementPage: NextPage = () => {
       default: return 'default';
     }
   };
-
   const getCarrierTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'road': return '🚛';
@@ -157,7 +141,6 @@ const TransportManagementPage: NextPage = () => {
       default: return '🚚';
     }
   };
-
   if (!user) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -167,7 +150,6 @@ const TransportManagementPage: NextPage = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
@@ -180,7 +162,6 @@ const TransportManagementPage: NextPage = () => {
           Manage carriers, routes, freight rates, shipments, and logistics operations
         </Typography>
       </Box>
-
       {/* Dashboard Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -253,7 +234,6 @@ const TransportManagementPage: NextPage = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Tabs */}
       <Paper sx={{ mb: 3 }}>
         <Tabs
@@ -271,7 +251,6 @@ const TransportManagementPage: NextPage = () => {
           <Tab label="Analytics" />
         </Tabs>
       </Paper>
-
       {/* Tab Panels */}
       <TabPanel value={tabValue} index={0}>
         {/* Carriers */}
@@ -285,7 +264,6 @@ const TransportManagementPage: NextPage = () => {
             Add Carrier
           </Button>
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -364,7 +342,6 @@ const TransportManagementPage: NextPage = () => {
           </Table>
         </TableContainer>
       </TabPanel>
-
       <TabPanel value={tabValue} index={1}>
         {/* Routes */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -377,7 +354,6 @@ const TransportManagementPage: NextPage = () => {
             Add Route
           </Button>
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -442,7 +418,6 @@ const TransportManagementPage: NextPage = () => {
           </Table>
         </TableContainer>
       </TabPanel>
-
       <TabPanel value={tabValue} index={2}>
         {/* Freight Rates */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -455,7 +430,6 @@ const TransportManagementPage: NextPage = () => {
             Add Rate
           </Button>
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -526,7 +500,6 @@ const TransportManagementPage: NextPage = () => {
           </Table>
         </TableContainer>
       </TabPanel>
-
       <TabPanel value={tabValue} index={3}>
         {/* Shipments */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -539,7 +512,6 @@ const TransportManagementPage: NextPage = () => {
             Create Shipment
           </Button>
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -601,11 +573,9 @@ const TransportManagementPage: NextPage = () => {
           </Table>
         </TableContainer>
       </TabPanel>
-
       <TabPanel value={tabValue} index={4}>
         {/* Rate Comparison */}
         <Typography variant="h6" sx={{ mb: 3 }}>Freight Rate Comparison</Typography>
-        
         <Paper sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={3}>
@@ -666,16 +636,13 @@ const TransportManagementPage: NextPage = () => {
             </Grid>
           </Grid>
         </Paper>
-
         <Typography variant="body2" color="text.secondary">
           Enter shipment details above to compare freight rates across carriers and routes.
         </Typography>
       </TabPanel>
-
       <TabPanel value={tabValue} index={5}>
         {/* Analytics */}
         <Typography variant="h6" sx={{ mb: 3 }}>Transport Analytics</Typography>
-        
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Card>
@@ -708,5 +675,4 @@ const TransportManagementPage: NextPage = () => {
     </Container>
   );
 };
-
 export default TransportManagementPage;

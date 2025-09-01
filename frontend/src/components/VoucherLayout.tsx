@@ -3,7 +3,6 @@
 import React from 'react';
 import { Container, Grid, Paper, Box, Typography, Button, Pagination } from '@mui/material';
 import { getVoucherStyles } from '../utils/voucherUtils';
-
 interface VoucherLayoutProps {
   voucherType: string;
   voucherTitle?: string;
@@ -25,7 +24,6 @@ interface VoucherLayoutProps {
   // Center alignment control
   centerAligned?: boolean;
 }
-
 const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   voucherType,
   voucherTitle,
@@ -40,7 +38,6 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   centerAligned = true
 }) => {
   const voucherStyles = getVoucherStyles();
-  
   return (
     <>
       <Box sx={{ 
@@ -62,7 +59,6 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
           }}
         >
           {/* Remove redundant top-level title per requirements */}
-          
           <Grid container spacing={0} sx={{ 
             minHeight: '100vh',
             width: '100%',
@@ -115,12 +111,10 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
                     </Button>
                   )}
                 </Box>
-                
                 {/* Index Content */}
                 <Box sx={{ width: '100%' }}>
                   {indexContent}
                 </Box>
-                
                 {/* Pagination for index if provided */}
                 {pagination && (
                   <Box sx={voucherStyles.paginationContainer}>
@@ -143,7 +137,6 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
                 )}
               </Paper>
             </Grid>
-
             {/* Form Panel - approximately 60% */}
             <Grid size={{ xs: 12, md: 7, lg: 8 }} sx={{
               maxWidth: { xs: '100%', md: '60%', lg: '66.667%' }
@@ -163,11 +156,9 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
           </Grid>
         </Container>
       </Box>
-      
       {/* Modal Content */}
       {modalContent}
     </>
   );
 };
-
 export default VoucherLayout;

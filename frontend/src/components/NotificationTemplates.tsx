@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+declare function resetForm(...args: any[]): any;
   Box,
   Card,
   CardContent,
@@ -58,13 +59,11 @@ import {
   getChannelDisplayName,
   getTemplateTypeDisplayName
 } from '../services/notificationService';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -79,16 +78,13 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const NotificationTemplates: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<NotificationTemplate | null>(null);
-  
   const queryClient = useQueryClient();
-
   // Form state for create/edit
   const [formData, setFormData] = useState<NotificationTemplateCreate>({
     name: '',
@@ -102,7 +98,6 @@ const NotificationTemplates: React.FC = () => {
     variables: [],
     is_active: true
   });
-
   // Get templates data
   const { 
     data: templates = [], 
@@ -112,7 +107,6 @@ const NotificationTemplates: React.FC = () => {
     queryKey: notificationQueryKeys.templates(),
     queryFn: () => getNotificationTemplates(),
   });
-
   // Create template mutation
   const createMutation = useMutation({
     mutationFn: createNotificationTemplate,
@@ -126,7 +120,6 @@ const NotificationTemplates: React.FC = () => {
       toast.error(error.response?.data?.detail || 'Failed to create template');
     }
   });
-
   // Update template mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: NotificationTemplateUpdate }) =>
@@ -141,7 +134,6 @@ const NotificationTemplates: React.FC = () => {
       toast.error(error.response?.data?.detail || 'Failed to update template');
     }
   });
-
   // Delete template mutation
   const deleteMutation = useMutation({
     mutationFn: deleteNotificationTemplate,
@@ -155,7 +147,6 @@ const NotificationTemplates: React.FC = () => {
       toast.error(error.response?.data?.detail || 'Failed to delete template');
     }
   });
-
   // Test template mutation
   const testMutation = useMutation({
     mutationFn: ({ id, testData }: { id: number; testData: any }) =>
@@ -168,7 +159,6 @@ const NotificationTemplates: React.FC = () => {
       toast.error(error.response?.data?.detail || 'Failed to test template');
     }
   });
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -183,7 +173,6 @@ const NotificationTemplates: React.FC = () => {
       is_active: true
     });
   };
-
   const handleEdit = (template: NotificationTemplate) => {
     setEditingTemplate(template);
     setFormData({
@@ -200,7 +189,6 @@ const NotificationTemplates: React.FC = () => {
     });
     setIsCreateModalOpen(true);
   };
-
   const handleSubmit = () => {
     if (editingTemplate) {
       updateMutation.mutate({ id: editingTemplate.id, data: formData });
@@ -208,18 +196,15 @@ const NotificationTemplates: React.FC = () => {
       createMutation.mutate(formData);
     }
   };
-
   const handleDelete = (template: NotificationTemplate) => {
     setTemplateToDelete(template);
     setIsDeleteModalOpen(true);
   };
-
   const confirmDelete = () => {
     if (templateToDelete) {
       deleteMutation.mutate(templateToDelete.id);
     }
   };
-
   const handleTest = (template: NotificationTemplate) => {
     testMutation.mutate({
       id: template.id,
@@ -232,7 +217,6 @@ const NotificationTemplates: React.FC = () => {
       }
     });
   };
-
   const getChannelIcon = (channel: string) => {
     switch (channel) {
       case 'email':
@@ -247,13 +231,11 @@ const NotificationTemplates: React.FC = () => {
         return <Assignment />;
     }
   };
-
   // Filter templates by channel for tabs
   const emailTemplates = templates.filter(t => t.channel === 'email');
   const smsTemplates = templates.filter(t => t.channel === 'sms');
   const pushTemplates = templates.filter(t => t.channel === 'push');
   const inAppTemplates = templates.filter(t => t.channel === 'in_app');
-
   const TemplateTable: React.FC<{ templates: NotificationTemplate[] }> = ({ templates }) => (
     <TableContainer component={Paper}>
       <Table>
@@ -353,7 +335,6 @@ const NotificationTemplates: React.FC = () => {
       </Table>
     </TableContainer>
   );
-
   if (error) {
     return (
       <Alert severity="error">
@@ -361,7 +342,6 @@ const NotificationTemplates: React.FC = () => {
       </Alert>
     );
   }
-
   return (
     <Box>
       <Card>
@@ -378,7 +358,6 @@ const NotificationTemplates: React.FC = () => {
               Create Template
             </Button>
           </Box>
-
           {isLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
@@ -411,7 +390,6 @@ const NotificationTemplates: React.FC = () => {
                   iconPosition="start"
                 />
               </Tabs>
-
               <TabPanel value={selectedTab} index={0}>
                 <TemplateTable templates={emailTemplates} />
               </TabPanel>
@@ -428,7 +406,6 @@ const NotificationTemplates: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
       {/* Create/Edit Template Modal */}
       <Dialog 
         open={isCreateModalOpen} 
@@ -560,7 +537,6 @@ const NotificationTemplates: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>
@@ -585,5 +561,4 @@ const NotificationTemplates: React.FC = () => {
     </Box>
   );
 };
-
 export default NotificationTemplates;

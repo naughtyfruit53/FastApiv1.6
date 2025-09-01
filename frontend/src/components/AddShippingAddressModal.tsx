@@ -15,14 +15,12 @@ import {
 import { useForm } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
 import debounce from 'lodash/debounce';
-
 interface AddShippingAddressModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
-
 interface ShippingAddressFormData {
   address1: string;
   address2?: string;
@@ -32,7 +30,6 @@ interface ShippingAddressFormData {
   state_code: string;
   country: string;
 }
-
 const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({ 
   open, 
   onClose, 
@@ -50,9 +47,7 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
       country: 'India',
     }
   });
-
   const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError, clearData } = usePincodeLookup();
-
   // Auto-populate address fields when pincode data is available
   useEffect(() => {
     if (pincodeData) {
@@ -62,7 +57,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
       setValue('state_code', pincodeData.state_code, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
     }
   }, [pincodeData, setValue]);
-
   // Debounced lookup function
   const debouncedLookup = useCallback(
     debounce((pin: string) => {
@@ -71,7 +65,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
     }, 500),
     [lookupPincode]
   );
-
   // Handle PIN change
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const pin = e.target.value;
@@ -82,7 +75,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
       clearData();
     }
   };
-
   // Handle form submission
   const onSubmit = async (shippingData: ShippingAddressFormData) => {
     try {
@@ -96,13 +88,11 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
       console.error('Error adding shipping address:', error);
     }
   };
-
   const handleClose = () => {
     reset();
     clearData();
     onClose();
   };
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -121,7 +111,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 margin="normal"
               />
             </Grid>
-            
             <Grid size={12}>
               <TextField
                 fullWidth
@@ -130,7 +119,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 margin="normal"
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
@@ -155,7 +143,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 onChange={handlePinChange}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
@@ -172,7 +159,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
@@ -194,7 +180,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
@@ -211,7 +196,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
@@ -222,7 +206,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 margin="normal"
               />
             </Grid>
-
             {pincodeError && (
               <Grid size={12}>
                 <Alert severity="warning" sx={{ mt: 1 }}>
@@ -232,7 +215,6 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
             )}
           </Grid>
         </DialogContent>
-        
         <DialogActions>
           <Button onClick={handleClose} disabled={loading}>
             Cancel
@@ -250,5 +232,4 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
     </Dialog>
   );
 };
-
 export default AddShippingAddressModal;

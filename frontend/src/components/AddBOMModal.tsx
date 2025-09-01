@@ -21,7 +21,6 @@ import { Add, Remove } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { getProducts } from '../services/masterService';
-
 interface BOMComponent {
   component_item_id: number;
   quantity_required: number;
@@ -32,7 +31,6 @@ interface BOMComponent {
   sequence: number;
   notes?: string;
 }
-
 interface BOM {
   id?: number;
   bom_name: string;
@@ -49,7 +47,6 @@ interface BOM {
   is_active: boolean;
   components: BOMComponent[];
 }
-
 const defaultBOM: BOM = {
   bom_name: '',
   output_item_id: 0,
@@ -74,7 +71,6 @@ const defaultBOM: BOM = {
     }
   ]
 };
-
 interface AddBOMModalProps {
   open: boolean;
   onClose: () => void;
@@ -82,26 +78,21 @@ interface AddBOMModalProps {
   initialData?: BOM;
   mode: 'create' | 'edit';
 }
-
 const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initialData, mode }) => {
   const queryClient = useQueryClient();
   const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<BOM>({
     defaultValues: initialData || defaultBOM
   });
-
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'components'
   });
-
   // Fetch products
   const { data: productList, isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products'],
     queryFn: getProducts
   });
-
   const productOptions = productList || [];
-
   // Mutation for create/edit
   const mutation = useMutation({
     mutationFn: (bomData: BOM) => {
@@ -123,7 +114,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
           is_optional: Boolean(comp.is_optional)
         })).filter(comp => comp.component_item_id)
       };
-
       if (mode === 'create') {
         return api.post('/bom', cleanData).then(res => res.data);
       } else {
@@ -140,7 +130,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
       console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} BOM:`, error);
     }
   });
-
   const onSubmit = (data: BOM) => {
     // Validations
     if (!data.bom_name?.trim()) {return;}
@@ -150,10 +139,8 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
       !comp.component_item_id || comp.quantity_required <= 0
     );
     if (invalidComponents.length > 0) {return;}
-
     mutation.mutate(data);
   };
-
   const addComponent = () => {
     append({
       component_item_id: 0,
@@ -166,30 +153,24 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
       notes: ''
     });
   };
-
   const removeComponent = (index: number) => {
     if (fields.length > 1) {
       remove(index);
     }
   };
-
   const calculateTotalCost = () => {
     const components = watch('components') || [];
     const materialCost = components.reduce((sum, comp) => {
       const totalQty = comp.quantity_required * (1 + comp.wastage_percentage / 100);
       return sum + (totalQty * comp.unit_cost);
     }, 0);
-    
     const laborCost = watch('labor_cost') || 0;
     const overheadCost = watch('overhead_cost') || 0;
-    
     return materialCost + laborCost + overheadCost;
   };
-
   if (isLoadingProducts) {
     return <CircularProgress />;
   }
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>{mode === 'create' ? 'Create BOM' : 'Edit BOM'}</DialogTitle>
@@ -200,7 +181,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
             <Grid size={12}>
               <Typography variant="h6" gutterBottom>Basic Information</Typography>
             </Grid>
-            
             <Grid size={6}>
               <TextField
                 {...control.register('bom_name', { required: 'BOM name is required' })}
@@ -210,7 +190,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 helperText={errors.bom_name?.message}
               />
             </Grid>
-            
             <Grid size={3}>
               <TextField
                 {...control.register('version', { required: 'Version is required' })}
@@ -220,7 +199,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 helperText={errors.version?.message}
               />
             </Grid>
-
             <Grid size={3}>
               <TextField
                 {...control.register('output_quantity', { required: 'Output quantity is required', min: 0.01 })}
@@ -232,7 +210,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 InputProps={{ inputProps: { step: 0.01 } }}
               />
             </Grid>
-
             <Grid size={6}>
               <Autocomplete
                 options={productOptions}
@@ -250,7 +227,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 )}
               />
             </Grid>
-
             <Grid size={6}>
               <FormControlLabel
                 control={
@@ -262,7 +238,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 label="Active"
               />
             </Grid>
-
             <Grid size={6}>
               <TextField
                 {...control.register('validity_start')}
@@ -272,7 +247,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-
             <Grid size={6}>
               <TextField
                 {...control.register('validity_end')}
@@ -282,7 +256,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-
             <Grid size={12}>
               <TextField
                 {...control.register('description')}
@@ -292,7 +265,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 rows={2}
               />
             </Grid>
-
             <Grid size={12}>
               <TextField
                 {...control.register('notes')}
@@ -302,7 +274,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 rows={2}
               />
             </Grid>
-
             {/* Components */}
             <Grid size={12}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 2 }}>
@@ -316,7 +287,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 </Button>
               </Box>
             </Grid>
-
             {fields.map((field, index) => (
               <Grid size={12} key={field.id}>
                 <Paper sx={{ p: 2, mb: 2 }}>
@@ -339,7 +309,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                         )}
                       />
                     </Grid>
-                    
                     <Grid size={2}>
                       <TextField
                         {...control.register(`components.${index}.quantity_required` as const, { 
@@ -355,7 +324,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                         InputProps={{ inputProps: { step: 0.01, min: 0.01 } }}
                       />
                     </Grid>
-
                     <Grid size={1}>
                       <TextField
                         {...control.register(`components.${index}.unit` as const)}
@@ -364,7 +332,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                         size="small"
                       />
                     </Grid>
-
                     <Grid size={2}>
                       <TextField
                         {...control.register(`components.${index}.unit_cost` as const, { min: 0 })}
@@ -375,7 +342,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                         InputProps={{ inputProps: { step: 0.01 } }}
                       />
                     </Grid>
-
                     <Grid size={2}>
                       <TextField
                         {...control.register(`components.${index}.wastage_percentage` as const, { min: 0, max: 100 })}
@@ -386,7 +352,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                         InputProps={{ inputProps: { step: 0.1 } }}
                       />
                     </Grid>
-
                     <Grid size={1}>
                       <IconButton
                         onClick={() => removeComponent(index)}
@@ -396,7 +361,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                         <Remove />
                       </IconButton>
                     </Grid>
-
                     <Grid size={12}>
                       <TextField
                         {...control.register(`components.${index}.notes` as const)}
@@ -409,12 +373,10 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 </Paper>
               </Grid>
             ))}
-
             {/* Costing */}
             <Grid size={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Costing</Typography>
             </Grid>
-
             <Grid size={4}>
               <TextField
                 {...control.register('labor_cost', { min: 0 })}
@@ -424,7 +386,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 InputProps={{ inputProps: { step: 0.01 } }}
               />
             </Grid>
-
             <Grid size={4}>
               <TextField
                 {...control.register('overhead_cost', { min: 0 })}
@@ -434,7 +395,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
                 InputProps={{ inputProps: { step: 0.01 } }}
               />
             </Grid>
-
             <Grid size={4}>
               <TextField
                 label="Total Cost"
@@ -464,5 +424,4 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({ open, onClose, onAdd, initial
     </Dialog>
   );
 };
-
 export default AddBOMModal;

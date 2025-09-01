@@ -17,7 +17,6 @@ import {
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts } from '../services/masterService';
-
 interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
@@ -25,7 +24,6 @@ interface AddProductModalProps {
   loading?: boolean;
   initialName?: string;
 }
-
 interface ProductFormData {
   product_name: string;
   hsn_code: string;
@@ -38,14 +36,12 @@ interface ProductFormData {
   description: string;
   is_manufactured: boolean;
 }
-
 interface Product {
   product_name: string;
   hsn_code: string;
   unit: string;
   gst_rate: number;
 }
-
 const AddProductModal: React.FC<AddProductModalProps> = ({
   open,
   onClose,
@@ -67,11 +63,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       is_manufactured: false,
     }
   });
-
   // Watch form values for bidirectional updates
   const watchedProductName = watch('product_name');
   const watchedHsnCode = watch('hsn_code');
-
   // Fetch all products for autocomplete functionality
   const { data: allProducts = [], isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
@@ -79,7 +73,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     enabled: open, // Only fetch when modal is open
     staleTime: 300000, // 5 minutes cache
   });
-
   // Create unique HSN codes list from existing products
   const uniqueHsnCodes = React.useMemo(() => {
     const hsnSet = new Set<string>();
@@ -90,7 +83,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     });
     return Array.from(hsnSet).sort();
   }, [allProducts]);
-
   // Create product suggestions based on HSN code
   const getProductsByHsn = React.useCallback((hsnCode: string): Product[] => {
     if (!hsnCode.trim()) {return [];}
@@ -98,7 +90,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
     );
   }, [allProducts]);
-
   // Create HSN suggestions based on product name
   const getHsnByProductName = React.useCallback((productName: string) => {
     if (!productName.trim()) {return [];}
@@ -111,7 +102,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       .filter((hsn: string, index: number, array: string[]) => array.indexOf(hsn) === index); // unique
     return hsnCodes;
   }, [allProducts]);
-
   React.useEffect(() => {
     if (open && initialName) {
       reset({ 
@@ -128,7 +118,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       });
     }
   }, [open, initialName, reset]);
-
   // Bidirectional auto-population logic
   React.useEffect(() => {
     // When product name changes, suggest HSN codes
@@ -140,7 +129,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       }
     }
   }, [watchedProductName, watchedHsnCode, getHsnByProductName, setValue]);
-
   React.useEffect(() => {
     // When HSN code changes, suggest product info
     if (watchedHsnCode && watchedHsnCode.length > 2) {
@@ -149,7 +137,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         // If there's a strong match and product name is empty, suggest the most common unit/gst_rate
         const commonUnit = matchingProducts[0].unit;
         const commonGstRate = matchingProducts[0].gst_rate;
-        
         if (commonUnit && commonUnit !== 'PCS') {
           setValue('unit', commonUnit);
         }
@@ -159,7 +146,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       }
     }
   }, [watchedHsnCode, watchedProductName, getProductsByHsn, setValue]);
-
   const onSubmit = async (productData: ProductFormData) => {
     try {
       // Remove empty fields to match backend schema to match backend schema
@@ -179,12 +165,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       console.error('Error adding product:', error);
     }
   };
-
   const handleClose = () => {
     reset();
     onClose();
   };
-
   return (
     <Dialog 
       open={open} 
@@ -200,7 +184,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           Add New Product
         </Typography>
       </DialogTitle>
-      
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Grid container spacing={2}>
@@ -219,7 +202,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={loading}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <Autocomplete
                 freeSolo
@@ -272,7 +254,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 noOptionsText="No HSN codes found"
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -281,7 +262,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={loading}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -293,7 +273,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 placeholder="e.g., PCS, KG, METER"
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -310,7 +289,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={loading}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -327,7 +305,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={loading}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -342,7 +319,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={loading}
               />
             </Grid>
-            
             <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
@@ -353,7 +329,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={loading}
               />
             </Grid>
-            
             <Grid size={{ xs: 12 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <FormControlLabel
@@ -365,7 +340,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   }
                   label="GST Inclusive"
                 />
-                
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -379,7 +353,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             </Grid>
           </Grid>
         </DialogContent>
-        
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button 
             onClick={handleClose}
@@ -401,5 +374,4 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     </Dialog>
   );
 };
-
 export default AddProductModal;

@@ -1,6 +1,5 @@
 // src/components/DispatchManagement/DispatchManagement.tsx
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -59,17 +58,14 @@ import {
   hasInstallationViewPermission,
   DispatchOrderStatus
 } from '../../types/dispatch.types';
-
 interface DispatchManagementProps {
   organizationId: number;
 }
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -88,26 +84,21 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
-const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId }) => {
   const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [dispatchOrders, setDispatchOrders] = useState<DispatchOrderInDB[]>([]);
   const [installationJobs, setInstallationJobs] = useState<InstallationJobInDB[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
   // Pagination
   const [dispatchPage, setDispatchPage] = useState(1);
   const [installationPage, setInstallationPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  
   // Filters
   const [dispatchStatusFilter, setDispatchStatusFilter] = useState('');
   const [installationStatusFilter, setInstallationStatusFilter] = useState('');
   const [installationPriorityFilter, setInstallationPriorityFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  
   // Dialog states
   const [dispatchOrderDialogOpen, setDispatchOrderDialogOpen] = useState(false);
   const [installationJobDialogOpen, setInstallationJobDialogOpen] = useState(false);
@@ -115,23 +106,19 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
   const [selectedDispatchOrder, setSelectedDispatchOrder] = useState<DispatchOrderInDB | null>(null);
   const [selectedInstallationJob, setSelectedInstallationJob] = useState<InstallationJobInDB | null>(null);
   const [editMode, setEditMode] = useState(false);
-
   // Check permissions
   const canManageDispatch = user?.role ? hasDispatchManagementPermission(user.role) : false;
   const canViewDispatch = user?.role ? hasDispatchViewPermission(user.role) : false;
   const canManageInstallation = user?.role ? hasInstallationManagementPermission(user.role) : false;
   const canViewInstallation = user?.role ? hasInstallationViewPermission(user.role) : false;
-
   // Load data
   useEffect(() => {
     loadData();
   }, [dispatchPage, installationPage, dispatchStatusFilter, installationStatusFilter, installationPriorityFilter]);
-
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-
       const [dispatchResponse, installationResponse] = await Promise.all([
         canViewDispatch ? dispatchService.getDispatchOrders({
           skip: (dispatchPage - 1) * itemsPerPage,
@@ -147,7 +134,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           }
         }) : Promise.resolve([])
       ]);
-
       setDispatchOrders(dispatchResponse);
       setInstallationJobs(installationResponse);
     } catch (err: any) {
@@ -157,23 +143,19 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
       setLoading(false);
     }
   };
-
   const handleCreateDispatchOrder = () => {
     setSelectedDispatchOrder(null);
     setEditMode(false);
     setDispatchOrderDialogOpen(true);
   };
-
   const handleEditDispatchOrder = (order: DispatchOrderInDB) => {
     setSelectedDispatchOrder(order);
     setEditMode(true);
     setDispatchOrderDialogOpen(true);
   };
-
   const handleRefreshData = async () => {
     await loadData();
   };
-
   const handleCreateInstallation = async (installationData: any) => {
     try {
       await dispatchService.createInstallationJob(installationData);
@@ -184,12 +166,10 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
       setError(err.message || 'Failed to create installation job');
     }
   };
-
   const handleDeleteDispatchOrder = async (orderId: number) => {
     if (!window.confirm('Are you sure you want to delete this dispatch order?')) {
       return;
     }
-
     try {
       await dispatchService.deleteDispatchOrder(orderId);
       await loadData();
@@ -197,24 +177,20 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
       setError(err.message || 'Failed to delete dispatch order');
     }
   };
-
   const handleCreateInstallationJob = () => {
     setSelectedInstallationJob(null);
     setEditMode(false);
     setInstallationJobDialogOpen(true);
   };
-
   const handleEditInstallationJob = (job: InstallationJobInDB) => {
     setSelectedInstallationJob(job);
     setEditMode(true);
     setInstallationJobDialogOpen(true);
   };
-
   const handleDeleteInstallationJob = async (jobId: number) => {
     if (!window.confirm('Are you sure you want to delete this installation job?')) {
       return;
     }
-
     try {
       await dispatchService.deleteInstallationJob(jobId);
       await loadData();
@@ -222,11 +198,9 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
       setError(err.message || 'Failed to delete installation job');
     }
   };
-
   const renderDispatchOrderRow = (order: DispatchOrderInDB) => {
     const statusKey = order.status.toLowerCase();
     const statusConfig = DISPATCH_ORDER_STATUS_CONFIG[statusKey as keyof typeof DISPATCH_ORDER_STATUS_CONFIG];
-    
     return (
       <TableRow key={order.id}>
         <TableCell>{order.order_number}</TableCell>
@@ -284,13 +258,11 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
       </TableRow>
     );
   };
-
   const renderInstallationJobRow = (job: InstallationJobInDB) => {
     const statusKey = job.status.toLowerCase();
     const priorityKey = job.priority.toLowerCase();
     const statusConfig = INSTALLATION_JOB_STATUS_CONFIG[statusKey as keyof typeof INSTALLATION_JOB_STATUS_CONFIG];
     const priorityConfig = INSTALLATION_JOB_PRIORITY_CONFIG[priorityKey as keyof typeof INSTALLATION_JOB_PRIORITY_CONFIG];
-    
     return (
       <TableRow key={job.id}>
         <TableCell>{job.job_number}</TableCell>
@@ -355,7 +327,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
       </TableRow>
     );
   };
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -363,7 +334,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
       </Box>
     );
   }
-
   return (
     <Box sx={{ width: '100%' }}>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -392,20 +362,17 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           )}
         </Box>
       </Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
-
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)}>
           <Tab label="Dispatch Orders" />
           <Tab label="Installation Jobs" />
         </Tabs>
       </Box>
-
       <TabPanel value={currentTab} index={0}>
         {/* Dispatch Orders Tab */}
         <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -424,7 +391,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
               ))}
             </Select>
           </FormControl>
-          
           <TextField
             size="small"
             placeholder="Search orders..."
@@ -435,7 +401,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
             }}
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -454,7 +419,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
             </TableBody>
           </Table>
         </TableContainer>
-
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Pagination
             count={Math.ceil(dispatchOrders.length / itemsPerPage)}
@@ -463,7 +427,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           />
         </Box>
       </TabPanel>
-
       <TabPanel value={currentTab} index={1}>
         {/* Installation Jobs Tab */}
         <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -482,7 +445,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
               ))}
             </Select>
           </FormControl>
-
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Priority Filter</InputLabel>
             <Select
@@ -498,7 +460,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
               ))}
             </Select>
           </FormControl>
-          
           <TextField
             size="small"
             placeholder="Search jobs..."
@@ -509,7 +470,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
             }}
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -528,7 +488,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
             </TableBody>
           </Table>
         </TableContainer>
-
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Pagination
             count={Math.ceil(installationJobs.length / itemsPerPage)}
@@ -537,7 +496,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           />
         </Box>
       </TabPanel>
-
       {/* Dispatch Order Dialog */}
       {dispatchOrderDialogOpen && (
         <DispatchOrderDialog
@@ -548,7 +506,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           onSave={handleRefreshData}
         />
       )}
-
       {/* Installation Job Dialog */}
       {installationJobDialogOpen && (
         <InstallationJobDialog
@@ -558,7 +515,6 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
           onJobUpdated={handleRefreshData}
         />
       )}
-
       {/* Installation Schedule Prompt Modal */}
       {installationPromptOpen && (
         <InstallationSchedulePromptModal
@@ -572,5 +528,4 @@ const DispatchManagement: React.FC<DispatchManagementProps> = ({ organizationId 
     </Box>
   );
 };
-
 export default DispatchManagement;

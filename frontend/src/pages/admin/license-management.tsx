@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -40,7 +39,6 @@ import { useRouter } from 'next/navigation';
 import { organizationService } from '../../services/authService';
 import adminService from '../../services/adminService';
 import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
-
 interface Organization {
   id: number;
   name: string;
@@ -53,19 +51,16 @@ interface Organization {
   created_at: string;
   company_details_completed: boolean;
 }
-
 const LicenseManagement: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
   // API calls using real service
   const { data: organizations, isLoading } = useQuery({
     queryKey: ['organizations'],
     queryFn: organizationService.getAllOrganizations
   });
-
   const createLicenseMutation = useMutation({
     mutationFn: organizationService.createLicense,
     onSuccess: () => {
@@ -73,12 +68,9 @@ const LicenseManagement: React.FC = () => {
       setCreateDialogOpen(false);
     }
   });
-
-  const handleCreateLicense = (result: any) => {
     // License creation is handled by the modal
     queryClient.invalidateQueries({ queryKey: ['organizations'] });
   };
-
   const handleResetPassword = async (primary_email: string, orgName: string) => {
     try {
       // Add confirmation dialog for reset action
@@ -86,13 +78,10 @@ const LicenseManagement: React.FC = () => {
         `Are you sure you want to reset the password for the organization admin of "${orgName}"?\n\n` +
         `This will generate a new temporary password for: ${primary_email}`
       );
-      
       if (!confirmed) {
         return;
       }
-
       const response = await adminService.resetUserPassword(primary_email);
-      
       // Better user feedback with success dialog
       alert(
         `✅ Password Reset Successful\n\n` +
@@ -112,7 +101,6 @@ const LicenseManagement: React.FC = () => {
       );
     }
   };
-
   const getStatusChip = (status: string) => {
     const statusConfig = {
       active: { label: 'Active', color: 'success' as const },
@@ -120,19 +108,15 @@ const LicenseManagement: React.FC = () => {
       suspended: { label: 'Suspended', color: 'error' as const },
       hold: { label: 'On Hold', color: 'warning' as const }
     };
-    
     const config = statusConfig[status as keyof typeof statusConfig] || 
                    { label: status, color: 'default' as const };
-    
     return <Chip label={config.label} color={config.color} size="small" />;
   };
-
   const filteredOrganizations = organizations?.filter((org: Organization) =>
     org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     org.primary_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     org.subdomain.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -153,7 +137,6 @@ const LicenseManagement: React.FC = () => {
           License Creation Overview
         </Typography>
         <Divider sx={{ mb: 2 }} />
-        
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Box sx={{ textAlign: 'center' }}>
@@ -197,7 +180,6 @@ const LicenseManagement: React.FC = () => {
           </Grid>
         </Grid>
       </Paper>
-
       {/* Search Bar */}
       <Box sx={{ mb: 3 }}>
         <Grid container justifyContent="flex-start">
@@ -212,7 +194,6 @@ const LicenseManagement: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -334,5 +315,4 @@ const LicenseManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default LicenseManagement;

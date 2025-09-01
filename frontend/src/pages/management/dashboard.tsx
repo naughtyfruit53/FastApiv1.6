@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -37,7 +36,6 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-
 interface DashboardData {
   period: string;
   date_range: {
@@ -74,11 +72,9 @@ interface DashboardData {
     net_outstanding: number;
   };
 }
-
 const ManagementDashboard: React.FC = () => {
   const [period, setPeriod] = useState<string>('month');
   const [refreshKey, setRefreshKey] = useState<number>(0);
-
   // Fetch dashboard data
   const { data: dashboardData, isLoading, error, refetch } = useQuery<DashboardData>({
     queryKey: ['management-dashboard', period, refreshKey],
@@ -95,16 +91,13 @@ const ManagementDashboard: React.FC = () => {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
-
   const handlePeriodChange = (event: any) => {
     setPeriod(event.target.value);
   };
-
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
     refetch();
   };
-
   const handleExportExcel = async () => {
     try {
       const response = await axios.get(
@@ -116,7 +109,6 @@ const ManagementDashboard: React.FC = () => {
           responseType: 'blob',
         }
       );
-      
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -130,7 +122,6 @@ const ManagementDashboard: React.FC = () => {
       console.error('Export failed:', error);
     }
   };
-
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -139,11 +130,9 @@ const ManagementDashboard: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(value);
   };
-
   const formatPercentage = (value: number): string => {
     return `${value.toFixed(1)}%`;
   };
-
   const MetricCard: React.FC<{
     title: string;
     value: string | number;
@@ -174,7 +163,6 @@ const ManagementDashboard: React.FC = () => {
       </CardContent>
     </Card>
   );
-
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -182,7 +170,6 @@ const ManagementDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (error) {
     return (
       <Alert severity="error">
@@ -190,7 +177,6 @@ const ManagementDashboard: React.FC = () => {
       </Alert>
     );
   }
-
   if (!dashboardData) {
     return (
       <Alert severity="info">
@@ -198,7 +184,6 @@ const ManagementDashboard: React.FC = () => {
       </Alert>
     );
   }
-
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       {/* Header */}
@@ -235,12 +220,10 @@ const ManagementDashboard: React.FC = () => {
           </Button>
         </Box>
       </Box>
-
       {/* Date Range */}
       <Typography variant="body2" color="textSecondary" mb={3}>
         Reporting Period: {dashboardData.date_range.start_date} to {dashboardData.date_range.end_date}
       </Typography>
-
       {/* Revenue Metrics */}
       <Typography variant="h6" gutterBottom>
         Revenue & Sales Performance
@@ -273,7 +256,6 @@ const ManagementDashboard: React.FC = () => {
           />
         </Grid>
       </Grid>
-
       {/* Customer & Growth Metrics */}
       <Typography variant="h6" gutterBottom>
         Customer & Growth Metrics
@@ -306,7 +288,6 @@ const ManagementDashboard: React.FC = () => {
           />
         </Grid>
       </Grid>
-
       {/* Cash Flow Analysis */}
       <Typography variant="h6" gutterBottom>
         Cash Flow Analysis
@@ -411,7 +392,6 @@ const ManagementDashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Summary Statistics */}
       <Card>
         <CardContent>
@@ -465,5 +445,4 @@ const ManagementDashboard: React.FC = () => {
     </Box>
   );
 };
-
 export default ManagementDashboard;

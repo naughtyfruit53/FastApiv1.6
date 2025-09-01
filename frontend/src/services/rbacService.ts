@@ -1,12 +1,10 @@
 // frontend/src/services/rbacService.ts
-
 /**
  * Service CRM RBAC Service
  * 
  * Client-side service for managing Service CRM role-based access control.
  * Provides methods for managing roles, permissions, and user assignments.
  */
-
 import api from '../lib/api';
 import {
   ServicePermission,
@@ -27,7 +25,6 @@ import {
   ServiceModule,
   ServiceAction
 } from '../types/rbac.types';
-
 export const rbacService = {
   // Permission Management
   getPermissions: async (params?: { 
@@ -41,7 +38,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to fetch service permissions');
     }
   },
-
   initializeDefaultPermissions: async (): Promise<{ message: string; permissions: ServicePermission[] }> => {
     try {
       const response = await api.post('/rbac/permissions/initialize');
@@ -50,7 +46,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to initialize default permissions');
     }
   },
-
   // Role Management
   getOrganizationRoles: async (
     organizationId: number, 
@@ -64,7 +59,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to fetch organization roles');
     }
   },
-
   createRole: async (
     organizationId: number, 
     roleData: ServiceRoleCreate
@@ -79,7 +73,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to create service role');
     }
   },
-
   getRole: async (roleId: number): Promise<ServiceRoleWithPermissions> => {
     try {
       const response = await api.get(`/rbac/roles/${roleId}`);
@@ -88,7 +81,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to fetch service role');
     }
   },
-
   updateRole: async (roleId: number, updates: ServiceRoleUpdate): Promise<ServiceRole> => {
     try {
       const response = await api.put(`/rbac/roles/${roleId}`, updates);
@@ -97,7 +89,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to update service role');
     }
   },
-
   deleteRole: async (roleId: number): Promise<{ message: string }> => {
     try {
       const response = await api.delete(`/rbac/roles/${roleId}`);
@@ -106,7 +97,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to delete service role');
     }
   },
-
   initializeDefaultRoles: async (organizationId: number): Promise<{ message: string; roles: ServiceRole[] }> => {
     try {
       const response = await api.post(`/rbac/organizations/${organizationId}/roles/initialize`);
@@ -115,7 +105,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to initialize default roles');
     }
   },
-
   // User Role Assignment
   assignRolesToUser: async (
     userId: number, 
@@ -131,7 +120,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to assign roles to user');
     }
   },
-
   removeRoleFromUser: async (userId: number, roleId: number): Promise<{ message: string }> => {
     try {
       const response = await api.delete(`/rbac/users/${userId}/roles/${roleId}`);
@@ -140,7 +128,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to remove role from user');
     }
   },
-
   removeAllRolesFromUser: async (userId: number): Promise<{ message: string }> => {
     try {
       const response = await api.delete(`/rbac/users/${userId}/roles`);
@@ -149,7 +136,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to remove all roles from user');
     }
   },
-
   getUserServiceRoles: async (userId: number): Promise<ServiceRole[]> => {
     try {
       const response = await api.get(`/rbac/users/${userId}/roles`);
@@ -158,7 +144,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to fetch user service roles');
     }
   },
-
   getUsersWithRole: async (roleId: number): Promise<UserWithServiceRoles[]> => {
     try {
       const response = await api.get(`/rbac/roles/${roleId}/users`);
@@ -167,7 +152,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to fetch users with role');
     }
   },
-
   // Permission Checking
   checkUserPermission: async (
     request: PermissionCheckRequest
@@ -179,7 +163,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to check user permission');
     }
   },
-
   getUserPermissions: async (userId: number): Promise<UserPermissions> => {
     try {
       const response = await api.get(`/rbac/users/${userId}/permissions`);
@@ -188,7 +171,6 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to fetch user permissions');
     }
   },
-
   // Bulk Operations
   bulkAssignRoles: async (
     request: BulkRoleAssignmentRequest
@@ -200,14 +182,12 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to bulk assign roles');
     }
   },
-
   // Utility Functions
   getCurrentUserPermissions: async (): Promise<string[]> => {
     try {
       // Get current user first to get user ID
       const userResponse = await api.get('/users/me');
       const userId = userResponse.data.id;
-      
       // Get user's service permissions
       const permissions = await rbacService.getUserPermissions(userId);
       return permissions.permissions;
@@ -216,13 +196,11 @@ export const rbacService = {
       return [];
     }
   },
-
   getCurrentUserServiceRoles: async (): Promise<ServiceRole[]> => {
     try {
       // Get current user first to get user ID
       const userResponse = await api.get('/users/me');
       const userId = userResponse.data.id;
-      
       // Get user's service roles
       return await rbacService.getUserServiceRoles(userId);
     } catch (error: any) {
@@ -230,7 +208,6 @@ export const rbacService = {
       return [];
     }
   },
-
   // Check if current user has specific service permission
   hasCurrentUserPermission: async (permission: string): Promise<boolean> => {
     try {
@@ -241,7 +218,6 @@ export const rbacService = {
       return false;
     }
   },
-
   // Get roles available for assignment in organization
   getAvailableRoles: async (organizationId: number): Promise<ServiceRole[]> => {
     try {
@@ -250,12 +226,10 @@ export const rbacService = {
       throw new Error(error.userMessage || 'Failed to fetch available roles');
     }
   },
-
   // Get comprehensive role data with permissions
   getRolesWithPermissions: async (organizationId: number): Promise<ServiceRoleWithPermissions[]> => {
     try {
       const roles = await rbacService.getOrganizationRoles(organizationId);
-      
       // Fetch permissions for each role
       const rolesWithPermissions = await Promise.all(
         roles.map(async (role) => {
@@ -267,32 +241,27 @@ export const rbacService = {
           }
         })
       );
-      
       return rolesWithPermissions;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to fetch roles with permissions');
     }
   },
-
   // Get permissions grouped by module
   getPermissionsByModule: async (): Promise<Record<string, ServicePermission[]>> => {
     try {
       const permissions = await rbacService.getPermissions();
       const grouped: Record<string, ServicePermission[]> = {};
-      
       permissions.forEach(permission => {
         if (!grouped[permission.module]) {
           grouped[permission.module] = [];
         }
         grouped[permission.module].push(permission);
       });
-      
       return grouped;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to fetch permissions by module');
     }
   },
-
   // Validate role assignment (client-side checks)
   validateRoleAssignment: (
     userOrgId: number, 
@@ -304,7 +273,6 @@ export const rbacService = {
     if (isCurrentUserSuperAdmin) {
       return { valid: true };
     }
-
     // Regular users can only assign roles within their organization
     if (userOrgId !== roleOrgId) {
       return { 
@@ -312,7 +280,6 @@ export const rbacService = {
         error: 'Cannot assign roles across different organizations' 
       };
     }
-
     // Check if current user has permission to manage roles
     const canManageRoles = ['org_admin', 'admin'].includes(currentUserRole);
     if (!canManageRoles) {
@@ -321,13 +288,10 @@ export const rbacService = {
         error: 'Insufficient permissions to assign roles' 
       };
     }
-
     return { valid: true };
   }
 };
-
 // Export permission constants for easy import
 export * from '../types/rbac.types';
 export { SERVICE_PERMISSIONS } from '../types/rbac.types';
-
 export default rbacService;

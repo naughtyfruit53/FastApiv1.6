@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Dialog, DialogTitle, DialogContent, IconButton } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import PushPinIcon from '@mui/icons-material/PushPin';
+import {Box, Button, TextField, Typography, Dialog, DialogTitle, DialogContent} from '@mui/material';
 import { useForm } from 'react-hook-form';
 import adminService from '../../../services/adminService';
 

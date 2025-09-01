@@ -1,5 +1,5 @@
+declare function handleReset(...args: any[]): any;
 'use client';
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -20,14 +20,11 @@ import {
   StepLabel
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import { authService } from '../services/authService';
-
 interface DemoModeDialogProps {
   open: boolean;
   onClose: () => void;
   onDemoStart: (token: string, loginResponse?: any) => void;
 }
-
 interface NewUserFormData {
   fullName: string;
   email: string;
@@ -35,7 +32,6 @@ interface NewUserFormData {
   companyName: string;
   otp: string;
 }
-
 const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoStart }) => {
   const [userType, setUserType] = useState<'current' | 'new' | ''>('');
   const [step, setStep] = useState(0); // 0: selection, 1: form/login, 2: OTP (for new users)
@@ -43,11 +39,8 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [tempEmail, setTempEmail] = useState('');
-
   const { register, handleSubmit, formState: { errors }, reset } = useForm<NewUserFormData>();
-
   const steps = ['User Type', 'Details', 'Verification'];
-
   const handleUserTypeNext = () => {
     if (!userType) {
       setError('Please select whether you are a current or new user');
@@ -56,7 +49,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
     setError('');
     setStep(1);
   };
-
   const handleCurrentUserLogin = () => {
     // For current users, close this dialog and let them use regular login
     // Then they'll enter demo mode after login
@@ -64,17 +56,14 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
     // Set a flag to indicate demo mode should be activated after login
     localStorage.setItem('pendingDemoMode', 'true');
   };
-
   const handleNewUserSubmit = async (data: NewUserFormData) => {
     setLoading(true);
     setError('');
     setSuccess('');
-
     try {
       // For demo purposes, simulate sending OTP to the email
       // In a real implementation, this would call an API endpoint
       console.log('[Demo] Simulating OTP send to:', data.email);
-      
       setTempEmail(data.email);
       setSuccess(`Demo OTP sent to ${data.email}. Please check your email.`);
       setStep(2);
@@ -84,20 +73,16 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
       setLoading(false);
     }
   };
-
   const handleOTPSubmit = async () => {
     // Get the OTP value directly from the input
     const otpInput = document.querySelector('input[name="otp"]') as HTMLInputElement;
     const otp = otpInput?.value || '';
-
     if (!otp || otp.length !== 6) {
       setError('Please enter a valid 6-digit OTP');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       // For demo purposes, accept any 6-digit OTP
       // Create a temporary demo token
@@ -113,27 +98,22 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
         },
         demo_mode: true
       };
-
       // Set demo mode flag
       localStorage.setItem('demoMode', 'true');
       localStorage.setItem('isDemoTempUser', 'true');
-      
       setSuccess('Demo login successful! Welcome to TRITIQ ERP Demo.');
-      
       // Close dialog and start demo
       setTimeout(() => {
         onDemoStart(demoToken, demoResponse);
         onClose();
         handleReset();
       }, 1500);
-
     } catch (error: any) {
       setError('Demo OTP verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
   const handleBack = () => {
     if (step > 0) {
       setStep(step - 1);
@@ -141,7 +121,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
       setSuccess('');
     }
   };
-
   const handleReset = () => {
     setUserType('');
     setStep(0);
@@ -150,12 +129,10 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
     setTempEmail('');
     reset();
   };
-
   const handleClose = () => {
     handleReset();
     onClose();
   };
-
   return (
     <Dialog 
       open={open} 
@@ -174,7 +151,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
           Experience TRITIQ ERP with sample data
         </Typography>
       </DialogTitle>
-
       <DialogContent sx={{ pt: 2 }}>
         {/* Stepper */}
         <Stepper activeStep={step} sx={{ mb: 3 }}>
@@ -184,19 +160,16 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             </Step>
           ))}
         </Stepper>
-
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-
         {success && (
           <Alert severity="success" sx={{ mb: 2 }}>
             {success}
           </Alert>
         )}
-
         {/* Step 0: User Type Selection */}
         {step === 0 && (
           <Box>
@@ -206,7 +179,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Please select your user type to continue with the demo experience.
             </Typography>
-
             <RadioGroup
               value={userType}
               onChange={(e) => setUserType(e.target.value as 'current' | 'new')}
@@ -243,7 +215,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             </RadioGroup>
           </Box>
         )}
-
         {/* Step 1: Current User Login or New User Form */}
         {step === 1 && userType === 'current' && (
           <Box textAlign="center">
@@ -263,7 +234,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             </Alert>
           </Box>
         )}
-
         {step === 1 && userType === 'new' && (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -272,7 +242,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Fill in your details to create a temporary demo account. This account will be valid until you logout or close your browser.
             </Typography>
-
             <form onSubmit={handleSubmit(handleNewUserSubmit)}>
               <TextField
                 fullWidth
@@ -282,7 +251,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
                 error={!!errors.fullName}
                 helperText={errors.fullName?.message}
               />
-
               <TextField
                 fullWidth
                 label="Email Address"
@@ -298,7 +266,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
                 error={!!errors.email}
                 helperText={errors.email?.message}
               />
-
               <TextField
                 fullWidth
                 label="Phone Number"
@@ -307,7 +274,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
                 error={!!errors.phoneNumber}
                 helperText={errors.phoneNumber?.message}
               />
-
               <TextField
                 fullWidth
                 label="Company Name"
@@ -316,7 +282,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
                 error={!!errors.companyName}
                 helperText={errors.companyName?.message}
               />
-
               <Alert severity="warning" sx={{ mt: 2 }}>
                 <Typography variant="body2">
                   This is a temporary demo account. No real user will be created in the database.
@@ -325,7 +290,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             </form>
           </Box>
         )}
-
         {/* Step 2: OTP Verification for New Users */}
         {step === 2 && userType === 'new' && (
           <Box>
@@ -335,7 +299,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Enter the 6-digit demo OTP sent to: <strong>{tempEmail}</strong>
             </Typography>
-
             <TextField
               fullWidth
               label="Demo OTP"
@@ -346,7 +309,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
               placeholder="123456"
               helperText="For demo purposes, enter any 6-digit number"
             />
-
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
                 <strong>Demo Mode:</strong> Enter any 6-digit number to continue. In a real environment, this would be sent to your email.
@@ -355,18 +317,15 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
           </Box>
         )}
       </DialogContent>
-
       <DialogActions sx={{ p: 3, pt: 1 }}>
         {step > 0 && (
           <Button onClick={handleBack} disabled={loading}>
             Back
           </Button>
         )}
-        
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
-
         {step === 0 && (
           <Button 
             variant="contained" 
@@ -376,7 +335,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             Continue
           </Button>
         )}
-
         {step === 1 && userType === 'current' && (
           <Button 
             variant="contained" 
@@ -386,7 +344,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             Proceed to Login
           </Button>
         )}
-
         {step === 1 && userType === 'new' && (
           <Button 
             variant="contained" 
@@ -396,7 +353,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
             {loading ? <CircularProgress size={20} /> : 'Send Demo OTP'}
           </Button>
         )}
-
         {step === 2 && userType === 'new' && (
           <Button 
             variant="contained" 
@@ -410,5 +366,4 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({ open, onClose, onDemoSt
     </Dialog>
   );
 };
-
 export default DemoModeDialog;

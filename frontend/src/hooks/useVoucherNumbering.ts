@@ -2,14 +2,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import api from '../lib/api';
-
 interface UseVoucherNumberingProps {
   apiEndpoint: string;
   mode: 'create' | 'edit' | 'view';
   setValue: (name: string, value: any) => void;
   voucherData?: any;
 }
-
 export const useVoucherNumbering = ({ 
   apiEndpoint, 
   mode, 
@@ -22,7 +20,6 @@ export const useVoucherNumbering = ({
     queryFn: () => api.get(`/${apiEndpoint}/next-number`).then(res => res.data),
     enabled: mode === 'create',
   });
-
   // Auto-set voucher number based on mode
   useEffect(() => {
     if (mode === 'create' && nextVoucherNumber) {
@@ -31,7 +28,6 @@ export const useVoucherNumbering = ({
       setValue('voucher_number', voucherData.voucher_number);
     }
   }, [mode, nextVoucherNumber, voucherData, setValue]);
-
   // Return refetch function for post-save increment
   const refreshVoucherNumber = async () => {
     if (mode === 'create') {
@@ -40,13 +36,11 @@ export const useVoucherNumbering = ({
       return newNextNumber;
     }
   };
-
   return {
     nextVoucherNumber,
     refreshVoucherNumber
   };
 };
-
 // Get API endpoint from voucher config
 export const getVoucherApiEndpoint = (voucherType: string): string => {
   const endpointMap: Record<string, string> = {
@@ -68,6 +62,5 @@ export const getVoucherApiEndpoint = (voucherType: string): string => {
     'debit-note': 'debit-notes',
     'non-sales-credit-note': 'non-sales-credit-notes'
   };
-  
   return endpointMap[voucherType] || voucherType;
 };

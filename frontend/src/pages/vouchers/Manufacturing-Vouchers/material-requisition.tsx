@@ -41,7 +41,6 @@ import api from '../../../lib/api';
 import { getProducts } from '../../../services/masterService';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-
 interface MaterialIssueItem {
   product_id: number;
   quantity: number;
@@ -50,7 +49,6 @@ interface MaterialIssueItem {
   total_amount: number;
   notes?: string;
 }
-
 interface MaterialIssue {
   id?: number;
   voucher_number?: string;
@@ -63,7 +61,6 @@ interface MaterialIssue {
   notes?: string;
   items: MaterialIssueItem[];
 }
-
 const defaultValues: MaterialIssue = {
   date: new Date().toISOString().slice(0, 10),
   purpose: 'production',
@@ -78,65 +75,52 @@ const defaultValues: MaterialIssue = {
     }
   ]
 };
-
 const MaterialRequisition: React.FC = () => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>((queryMode as 'create' | 'edit' | 'view') || 'create');
   const [selectedId, setSelectedId] = useState<number | null>(id ? Number(id) : null);
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; voucher: any } | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredVouchers, setFilteredVouchers] = useState<any[]>([]);
   const queryClient = useQueryClient();
-
   const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<MaterialIssue>({
     defaultValues
   });
-
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'items'
   });
-
   // Fetch material issues
   const { data: issueList, isLoading: isLoadingList } = useQuery({
     queryKey: ['material-issues'],
     queryFn: () => api.get('/material-issues').then(res => res.data),
   });
-
   // Fetch products
   const { data: productList } = useQuery({
     queryKey: ['products'],
     queryFn: getProducts
   });
-
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ['manufacturing-orders'],
     queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
   });
-
   // Fetch specific material issue
-  const { data: issueData, isLoading: isFetching } = useQuery({
+const { data: issueData, isLoading:} = useQuery({
     queryKey: ['material-issue', selectedId],
     queryFn: () => api.get(`/material-issues/${selectedId}`).then(res => res.data),
     enabled: !!selectedId
   });
-
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ['nextMaterialIssueNumber'],
     queryFn: () => api.get('/material-issues/next-number').then(res => res.data),
     enabled: mode === 'create',
   });
-
   const sortedIssues = issueList ? [...issueList].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   ) : [];
-
   const latestIssues = sortedIssues.slice(0, 10);
   const productOptions = productList || [];
-
   useEffect(() => {
     if (mode === 'create' && nextVoucherNumber) {
       setValue('voucher_number', nextVoucherNumber);
@@ -146,14 +130,12 @@ const MaterialRequisition: React.FC = () => {
       reset(defaultValues);
     }
   }, [issueData, mode, reset, nextVoucherNumber, setValue]);
-
   // Calculate totals
   useEffect(() => {
     const items = watch('items') || [];
     const total = items.reduce((sum, item) => sum + (item.total_amount || 0), 0);
     setValue('total_amount', total);
   }, [watch('items'), setValue]);
-
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: MaterialIssue) => api.post('/material-issues', data),
@@ -169,7 +151,6 @@ const MaterialRequisition: React.FC = () => {
       console.error('Error creating material issue:', error);
     }
   });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: MaterialIssue }) => 
       api.put(`/material-issues/${id}`, data),
@@ -183,7 +164,6 @@ const MaterialRequisition: React.FC = () => {
       console.error('Error updating material issue:', error);
     }
   });
-
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/material-issues/${id}`),
     onSuccess: () => {
@@ -193,7 +173,6 @@ const MaterialRequisition: React.FC = () => {
       console.error('Error deleting material issue:', error);
     }
   });
-
   const onSubmit = (data: MaterialIssue) => {
     if (mode === 'create') {
       createMutation.mutate(data);
@@ -201,27 +180,22 @@ const MaterialRequisition: React.FC = () => {
       updateMutation.mutate({ id: selectedId, data });
     }
   };
-
   const handleEdit = (issue: any) => {
     setSelectedId(issue.id);
     setMode('edit');
   };
-
   const handleView = (issue: any) => {
     setSelectedId(issue.id);
     setMode('view');
   };
-
   const handleContextMenuClose = () => {
     setContextMenu(null);
   };
-
   const handleDeleteIssue = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this material issue?')) {
       deleteMutation.mutate(id);
     }
   };
-
   const addItem = () => {
     append({
       product_id: 0,
@@ -231,20 +205,17 @@ const MaterialRequisition: React.FC = () => {
       total_amount: 0
     });
   };
-
   const removeItem = (index: number) => {
     if (fields.length > 1) {
       remove(index);
     }
   };
-
   const updateItemTotal = (index: number) => {
     const quantity = watch(`items.${index}.quantity`) || 0;
     const unitPrice = watch(`items.${index}.unit_price`) || 0;
     const total = quantity * unitPrice;
     setValue(`items.${index}.total_amount`, total);
   };
-
   return (
     <Container maxWidth="xl">
       <Grid container spacing={3}>
@@ -263,7 +234,6 @@ const MaterialRequisition: React.FC = () => {
               onView={handleView}
               isLoading={isLoadingList}
             />
-            
             <Box sx={{ mt: 2 }}>
               <Typography variant="h6" gutterBottom>Recent Requisitions</Typography>
               <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
@@ -306,7 +276,6 @@ const MaterialRequisition: React.FC = () => {
             </Box>
           </Box>
         </Grid>
-
         {/* Right Panel - Form */}
         <Grid size={7}>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -315,7 +284,6 @@ const MaterialRequisition: React.FC = () => {
                 {mode === 'create' ? 'Create Material Requisition' : 
                  mode === 'edit' ? 'Edit Material Requisition' : 'View Material Requisition'}
               </Typography>
-
               <Grid container spacing={2}>
                 {/* Header Information */}
                 <Grid size={4}>
@@ -328,7 +296,6 @@ const MaterialRequisition: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={4}>
                   <TextField
                     {...control.register('date', { required: true })}
@@ -342,7 +309,6 @@ const MaterialRequisition: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={4}>
                   <TextField
                     {...control.register('purpose')}
@@ -353,7 +319,6 @@ const MaterialRequisition: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <Autocomplete
                     options={manufacturingOrders || []}
@@ -371,7 +336,6 @@ const MaterialRequisition: React.FC = () => {
                     )}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     {...control.register('issued_to_department')}
@@ -382,7 +346,6 @@ const MaterialRequisition: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                  />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     {...control.register('issued_to_employee')}
@@ -393,7 +356,6 @@ const MaterialRequisition: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                  />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     label="Total Amount"
@@ -404,7 +366,6 @@ const MaterialRequisition: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                  />
                 </Grid>
-
                 {/* Items Section */}
                 <Grid size={12}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 1 }}>
@@ -421,7 +382,6 @@ const MaterialRequisition: React.FC = () => {
                     )}
                   </Box>
                 </Grid>
-
                 {fields.map((field, index) => (
                   <Grid size={12} key={field.id}>
                     <Paper variant="outlined" sx={{ p: 2, mb: 1 }}>
@@ -449,7 +409,6 @@ const MaterialRequisition: React.FC = () => {
                             )}
                          />
                         </Grid>
-
                         <Grid size={2}>
                           <TextField
                             {...control.register(`items.${index}.quantity` as const, { 
@@ -465,7 +424,6 @@ const MaterialRequisition: React.FC = () => {
                             InputProps={{ inputProps: { step: 0.01 } }}
                          />
                         </Grid>
-
                         <Grid size={1}>
                           <TextField
                             {...control.register(`items.${index}.unit` as const)}
@@ -475,7 +433,6 @@ const MaterialRequisition: React.FC = () => {
                             disabled={mode === 'view'}
                          />
                         </Grid>
-
                         <Grid size={2}>
                           <TextField
                             {...control.register(`items.${index}.unit_price` as const, { 
@@ -490,7 +447,6 @@ const MaterialRequisition: React.FC = () => {
                             InputProps={{ inputProps: { step: 0.01 } }}
                          />
                         </Grid>
-
                         <Grid size={2}>
                           <TextField
                             label="Total"
@@ -500,7 +456,6 @@ const MaterialRequisition: React.FC = () => {
                             disabled
                          />
                         </Grid>
-
                         <Grid size={1}>
                           {mode !== 'view' && (
                             <IconButton
@@ -513,7 +468,6 @@ const MaterialRequisition: React.FC = () => {
                             </IconButton>
                           )}
                         </Grid>
-
                         <Grid size={12}>
                           <TextField
                             {...control.register(`items.${index}.notes` as const)}
@@ -527,7 +481,6 @@ const MaterialRequisition: React.FC = () => {
                     </Paper>
                   </Grid>
                 ))}
-
                 <Grid size={12}>
                   <TextField
                     {...control.register('notes')}
@@ -539,7 +492,6 @@ const MaterialRequisition: React.FC = () => {
                     size="small"
                  />
                 </Grid>
-
                 {/* Action Buttons */}
                 {mode !== 'view' && (
                   <Grid size={12}>
@@ -573,7 +525,6 @@ const MaterialRequisition: React.FC = () => {
           </form>
         </Grid>
       </Grid>
-
       {/* Context Menu */}
       <VoucherContextMenu
         voucherType="Material Requisition"
@@ -601,5 +552,4 @@ const MaterialRequisition: React.FC = () => {
     </Container>
   );
 };
-
 export default MaterialRequisition;

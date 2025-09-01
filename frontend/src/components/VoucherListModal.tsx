@@ -1,6 +1,5 @@
 // frontend/src/components/VoucherListModal.tsx
 // Reusable modal component for displaying voucher lists with clickable functionality
-
 import React, { useState } from 'react';
 import {
   Modal,
@@ -21,7 +20,6 @@ import {
 } from '@mui/material';
 import { Close, Search } from '@mui/icons-material';
 import VoucherContextMenu from './VoucherContextMenu';
-
 interface VoucherListModalProps {
   open: boolean;
   onClose: () => void;
@@ -35,7 +33,6 @@ interface VoucherListModalProps {
   customerList?: any[];
   vendorList?: any[];
 }
-
 const VoucherListModal: React.FC<VoucherListModalProps> = ({
   open,
   onClose,
@@ -53,20 +50,16 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; voucher: any } | null>(null);
-
   // Filter vouchers based on search criteria
   const filteredVouchers = vouchers.filter((voucher) => {
     const matchesSearch = searchTerm === '' || 
       voucher.voucher_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       voucher.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       voucher.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesFromDate = fromDate === '' || new Date(voucher.date) >= new Date(fromDate);
     const matchesToDate = toDate === '' || new Date(voucher.date) <= new Date(toDate);
-    
     return matchesSearch && matchesFromDate && matchesToDate;
   });
-
   const handleContextMenu = (event: React.MouseEvent, voucher: any) => {
     event.preventDefault();
     setContextMenu(
@@ -75,19 +68,15 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
         : null,
     );
   };
-
   const handleCloseContextMenu = () => {
     setContextMenu(null);
   };
-
   const handleVoucherClick = (voucher: any, event: React.MouseEvent) => {
     // Don't trigger if right-click (context menu)
     if (event.button === 2) {return;}
-    
     onVoucherClick(voucher);
     onClose(); // Close modal after selection
   };
-
   const getEntityName = (voucher: any) => {
     if (voucher.customer_id && customerList.length > 0) {
       return customerList.find((c: any) => c.id === voucher.customer_id)?.name || 'N/A';
@@ -97,12 +86,10 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
     }
     return 'N/A';
   };
-
   const formatDate = (dateString: string) => {
     if (!dateString) {return 'N/A';}
     return new Date(dateString).toLocaleDateString();
   };
-
   const modalStyle = {
     position: 'absolute' as const,
     top: '50%',
@@ -117,7 +104,6 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
     maxHeight: '90vh',
     overflow: 'auto',
   };
-
   return (
     <>
       <Modal open={open} onClose={onClose}>
@@ -131,7 +117,6 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
               <Close />
             </IconButton>
           </Box>
-
           {/* Search Filters */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid size={{ xs: 12, md: 4 }}>
@@ -181,7 +166,6 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
               </Button>
             </Grid>
           </Grid>
-
           {/* Results Summary */}
           <Box sx={{ mb: 2 }}>
             <Chip
@@ -190,7 +174,6 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
               variant="outlined"
             />
           </Box>
-
           {/* Voucher Table */}
           <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
             <Table stickyHeader size="small">
@@ -242,7 +225,6 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
           </TableContainer>
         </Box>
       </Modal>
-
       {/* Context Menu */}
       {contextMenu && (
         <VoucherContextMenu
@@ -261,5 +243,4 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
     </>
   );
 };
-
 export default VoucherListModal;

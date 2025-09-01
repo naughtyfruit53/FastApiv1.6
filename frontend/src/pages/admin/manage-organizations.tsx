@@ -67,13 +67,12 @@ const ManageOrganizations: React.FC = () => {
   const [moduleControlDialogOpen, setModuleControlDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'hold' | 'activate' | 'reset' | 'delete' | null>(null);
   const [orgModules, setOrgModules] = useState<{[key: string]: boolean}>({});
-  const [availableModules, setAvailableModules] = useState<{[key: string]: any}>({});
+const [availableModules,] = useState<{[key: string]: any}>();
   // API calls using real service
   const { data: organizations, isLoading } = useQuery({
     queryKey: ['organizations'],
     queryFn: organizationService.getAllOrganizations
   });
-
   // Fetch available modules
   const { data: availableModulesData } = useQuery({
     queryKey: ['available-modules'],
@@ -141,10 +140,8 @@ const ManageOrganizations: React.FC = () => {
     setSelectedOrg(org);
     setResetDataDialogOpen(true);
   };
-
   const handleModuleControl = async (org: Organization) => {
     setSelectedOrg(org);
-    
     // Fetch current organization modules
     try {
       const token = localStorage.getItem('token');
@@ -154,7 +151,6 @@ const ManageOrganizations: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-      
       if (response.ok) {
         const data = await response.json();
         setOrgModules(data.enabled_modules || {
@@ -190,14 +186,11 @@ const ManageOrganizations: React.FC = () => {
         "Finance": true
       });
     }
-    
     setModuleControlDialogOpen(true);
   };
-
   const updateModulesMutation = useMutation({
     mutationFn: async (modules: {[key: string]: boolean}) => {
       if (!selectedOrg) {throw new Error('No organization selected');}
-      
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/v1/organizations/${selectedOrg.id}/modules`, {
         method: 'PUT',
@@ -207,11 +200,9 @@ const ManageOrganizations: React.FC = () => {
         },
         body: JSON.stringify({ enabled_modules: modules })
       });
-      
       if (!response.ok) {
         throw new Error('Failed to update organization modules');
       }
-      
       return response.json();
     },
     onSuccess: () => {
@@ -224,14 +215,12 @@ const ManageOrganizations: React.FC = () => {
       console.error('Failed to update organization modules:', error);
     }
   });
-
   const handleModuleChange = (module: string, enabled: boolean) => {
     setOrgModules(prev => ({
       ...prev,
       [module]: enabled
     }));
   };
-
   const confirmModuleUpdate = () => {
     updateModulesMutation.mutate(orgModules);
   };
@@ -255,10 +244,8 @@ const ManageOrganizations: React.FC = () => {
       suspended: { label: 'Suspended', color: 'error' as const },
       hold: { label: 'On Hold', color: 'warning' as const }
     };
-   
     const config = statusConfig[status as keyof typeof statusConfig] ||
                    { label: status, color: 'default' as const };
-   
     return <Chip label={config.label} color={config.color} size="small" />;
   };
   return (
@@ -281,7 +268,6 @@ const ManageOrganizations: React.FC = () => {
           Organization Management Overview
         </Typography>
         <Divider sx={{ mb: 2 }} />
-       
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Box sx={{ textAlign: 'center' }}>
@@ -518,7 +504,6 @@ const ManageOrganizations: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Module Control Dialog */}
       <Dialog 
         open={moduleControlDialogOpen} 

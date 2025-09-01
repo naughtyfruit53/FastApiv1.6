@@ -1,6 +1,5 @@
 // pages/assets.tsx
 // Asset Management page with comprehensive asset lifecycle management
-
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import {
@@ -47,18 +46,15 @@ import {
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {useQuery, useQueryClient} from '@tanstack/react-query';
 import { assetService } from '../services/assetService';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -75,46 +71,36 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const AssetManagementPage: NextPage = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [tabValue, setTabValue] = useState(0);
-  const [openDialog, setOpenDialog] = useState<'create' | 'edit' | 'maintenance' | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState<any>(null);
-
   // Fetch dashboard summary
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
     queryKey: ['assetDashboard'],
     queryFn: assetService.getDashboardSummary,
     enabled: !!user,
   });
-
   // Fetch assets
   const { data: assets, isLoading: assetsLoading } = useQuery({
     queryKey: ['assets'],
     queryFn: () => assetService.getAssets(),
     enabled: !!user,
   });
-
   // Fetch maintenance schedules
   const { data: maintenanceSchedules, isLoading: schedulesLoading } = useQuery({
     queryKey: ['maintenanceSchedules'],
     queryFn: () => assetService.getMaintenanceSchedules(),
     enabled: !!user,
   });
-
   // Fetch due maintenance
   const { data: dueMaintenance, isLoading: dueMaintenanceLoading } = useQuery({
     queryKey: ['dueMaintenance'],
     queryFn: () => assetService.getDueMaintenance(),
     enabled: !!user,
   });
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active': return 'success';
@@ -124,7 +110,6 @@ const AssetManagementPage: NextPage = () => {
       default: return 'default';
     }
   };
-
   const getConditionColor = (condition: string) => {
     switch (condition.toLowerCase()) {
       case 'excellent': return 'success';
@@ -135,7 +120,6 @@ const AssetManagementPage: NextPage = () => {
       default: return 'default';
     }
   };
-
   if (!user) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -145,7 +129,6 @@ const AssetManagementPage: NextPage = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
@@ -158,7 +141,6 @@ const AssetManagementPage: NextPage = () => {
           Comprehensive asset lifecycle management, maintenance scheduling, and depreciation tracking
         </Typography>
       </Box>
-
       {/* Dashboard Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={2.4}>
@@ -248,7 +230,6 @@ const AssetManagementPage: NextPage = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Tabs */}
       <Paper sx={{ mb: 3 }}>
         <Tabs
@@ -265,7 +246,6 @@ const AssetManagementPage: NextPage = () => {
           <Tab label="Reports" />
         </Tabs>
       </Paper>
-
       {/* Tab Panels */}
       <TabPanel value={tabValue} index={0}>
         {/* Assets List */}
@@ -279,7 +259,6 @@ const AssetManagementPage: NextPage = () => {
             Add Asset
           </Button>
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -356,7 +335,6 @@ const AssetManagementPage: NextPage = () => {
           </Table>
         </TableContainer>
       </TabPanel>
-
       <TabPanel value={tabValue} index={1}>
         {/* Maintenance Schedules */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -369,7 +347,6 @@ const AssetManagementPage: NextPage = () => {
             Add Schedule
           </Button>
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -437,7 +414,6 @@ const AssetManagementPage: NextPage = () => {
           </Table>
         </TableContainer>
       </TabPanel>
-
       <TabPanel value={tabValue} index={2}>
         {/* Maintenance Records */}
         <Typography variant="h6" sx={{ mb: 2 }}>Maintenance Records</Typography>
@@ -445,11 +421,9 @@ const AssetManagementPage: NextPage = () => {
           Historical maintenance work orders and records
         </Typography>
       </TabPanel>
-
       <TabPanel value={tabValue} index={3}>
         {/* Due Maintenance */}
         <Typography variant="h6" sx={{ mb: 2 }}>Due Maintenance</Typography>
-        
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -516,7 +490,6 @@ const AssetManagementPage: NextPage = () => {
           </Table>
         </TableContainer>
       </TabPanel>
-
       <TabPanel value={tabValue} index={4}>
         {/* Reports */}
         <Typography variant="h6" sx={{ mb: 2 }}>Asset Reports</Typography>
@@ -552,5 +525,4 @@ const AssetManagementPage: NextPage = () => {
     </Container>
   );
 };
-
 export default AssetManagementPage;

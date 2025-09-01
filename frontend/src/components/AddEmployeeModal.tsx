@@ -25,7 +25,6 @@ import { CloudUpload, Description, Delete as DeleteIcon } from '@mui/icons-mater
 import { useForm, Controller } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
 import api from '../lib/api';
-
 interface AddEmployeeModalProps {
   open: boolean;
   onClose: () => void;
@@ -34,7 +33,6 @@ interface AddEmployeeModalProps {
   initialData?: any;
   mode: 'create' | 'edit';
 }
-
 interface EmployeeFormData {
   full_name: string;
   email: string;
@@ -66,7 +64,6 @@ interface EmployeeFormData {
   emergency_contact_phone?: string;
   emergency_contact_relation?: string;
 }
-
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   open,
   onClose,
@@ -94,7 +91,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     }))
   );
   const [tabValue, setTabValue] = useState(0);
-
   const {
     register,
     handleSubmit,
@@ -114,17 +110,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       country: 'India',
     },
   });
-
   const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError, clearData } = usePincodeLookup();
   const watchedPincode = watch('pin_code');
-
   useEffect(() => {
     if (pincodeData) {
       setValue('city', pincodeData.city);
       setValue('state', pincodeData.state);
     }
   }, [pincodeData, setValue]);
-
   useEffect(() => {
     if (watchedPincode && /^\d{6}$/.test(watchedPincode)) {
       const timeoutId = setTimeout(() => {
@@ -135,17 +128,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       clearData();
     }
   }, [watchedPincode, lookupPincode, clearData]);
-
   const handleDocumentUpload = async (index: number, file: File) => {
     const updatedDocs = [...documents];
     updatedDocs[index] = { ...updatedDocs[index], loading: true, error: undefined };
     setDocuments(updatedDocs);
-
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('document_type', updatedDocs[index].type || 'general');
-
       const response: { data: { success: boolean; extracted_data?: any; detail?: string } } = await api.post(
         '/pdf-extraction/extract/employee',
         formData,
@@ -153,13 +143,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           headers: { 'Content-Type': 'multipart/form-data' },
         }
       );
-
       if (response.data.success) {
         const extractedData = response.data.extracted_data;
         Object.entries(extractedData).forEach(([key, value]) => {
           if (value) {setValue(key as keyof EmployeeFormData, value as string);}
         });
-
         updatedDocs[index] = { ...updatedDocs[index], file, extractedData, loading: false };
       } else {
         throw new globalThis.Error(response.data.detail || 'Extraction failed');
@@ -173,7 +161,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     }
     setDocuments(updatedDocs);
   };
-
   const handleFileChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -182,41 +169,34 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       handleDocumentUpload(index, file);
     }
   };
-
   const triggerUpload = (index: number) => {
     fileInputRefs[index].current?.click();
   };
-
   const removeDocument = (index: number) => {
     const updatedDocs = [...documents];
     updatedDocs[index] = { file: null, type: '', extractedData: null, loading: false, error: undefined };
     setDocuments(updatedDocs);
   };
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const onSubmit = async (employeeData: EmployeeFormData) => {
     try {
       const formData = new FormData();
       Object.entries(employeeData).forEach(([key, value]) => {
         formData.append(key, value as string);
       });
-
       documents.forEach((doc, index) => {
         if (doc.file) {
           formData.append(`documents_${index}`, doc.file);
           formData.append(`document_types_${index}`, doc.type);
         }
       });
-
       const endpoint = mode === 'create' ? '/hr/employees' : `/hr/employees/${initialData?.id}`;
       const method = mode === 'create' ? 'post' : 'put';
       const response = await api[method](endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-
       await onAdd(response.data);
       reset();
       onClose();
@@ -225,7 +205,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       alert(error.response?.data?.detail || 'Failed to save employee');
     }
   };
-
   const handleClose = () => {
     reset();
     clearData();
@@ -240,7 +219,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     );
     onClose();
   };
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -254,7 +232,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             <Tab label="KYC & Bank" />
             <Tab label="Address & Emergency" />
           </Tabs>
-
           {tabValue === 0 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -315,7 +292,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               </Grid>
             </Grid>
           )}
-
           {tabValue === 1 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -390,7 +366,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               </Grid>
             </Grid>
           )}
-
           {tabValue === 2 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -457,7 +432,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   margin="normal"
                 />
               </Grid>
-
               <Grid size={12}>
                 <Typography variant="subtitle1" gutterBottom>
                   Upload Documents (up to 5 PDFs)
@@ -520,7 +494,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               </Grid>
             </Grid>
           )}
-
           {tabValue === 3 && (
             <Grid container spacing={2} sx={{ mt: 2 }}>
               <Grid size={12}>
@@ -617,5 +590,4 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     </Dialog>
   );
 };
-
 export default AddEmployeeModal;

@@ -1,7 +1,7 @@
 // frontend/src/pages/marketing/index.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
+declare function loadMarketingData(...args: any[]): any;
   Box,
   Typography,
   Container,
@@ -45,7 +45,6 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { marketingService, Campaign, Promotion, MarketingAnalytics } from '../../services/marketingService';
-
 const campaignStatusColors: Record<string, string> = {
   draft: 'default',
   scheduled: 'info',
@@ -54,17 +53,14 @@ const campaignStatusColors: Record<string, string> = {
   completed: 'primary',
   cancelled: 'error',
 };
-
 const campaignTypeIcons: Record<string, JSX.Element> = {
   email: <EmailIcon />,
   sms: <CampaignIcon />,
   social_media: <AnalyticsIcon />,
   digital_ads: <TrendingUpIcon />,
 };
-
 function TabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -81,23 +77,19 @@ function TabPanel(props: { children?: React.ReactNode; index: number; value: num
     </div>
   );
 }
-
 export default function MarketingDashboard() {
-  const { user } = useAuth();
+const  = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [analytics, setAnalytics] = useState<MarketingAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openCampaignDialog, setOpenCampaignDialog] = useState(false);
   const [openPromotionDialog, setOpenPromotionDialog] = useState(false);
-
   useEffect(() => {
     loadMarketingData();
   }, []);
-
   const loadMarketingData = async () => {
     setLoading(true);
     setError(null);
@@ -107,15 +99,12 @@ export default function MarketingDashboard() {
         marketingService.getPromotions(),
         marketingService.getAnalytics()
       ]);
-
       setCampaigns(campaignsData);
       setPromotions(promotionsData);
       setAnalytics(analyticsData);
-
     } catch (err: any) {
       console.error('Error loading marketing data:', err);
       setError(err.userMessage || 'Failed to load marketing data');
-      
       // Fallback to empty data to prevent crashes
       setCampaigns([]);
       setPromotions([]);
@@ -137,22 +126,18 @@ export default function MarketingDashboard() {
       setLoading(false);
     }
   };
-
   const filteredCampaigns = campaigns.filter(
     (campaign) =>
       campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.campaign_number.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const filteredPromotions = promotions.filter(
     (promotion) =>
       promotion.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       promotion.promotion_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const renderAnalyticsCards = () => {
     if (!analytics) {return null;}
-
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -238,7 +223,6 @@ export default function MarketingDashboard() {
       </Grid>
     );
   };
-
   const renderCampaignsTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -259,7 +243,6 @@ export default function MarketingDashboard() {
             const openRate = campaign.delivered_count > 0 ? (campaign.opened_count / campaign.delivered_count) * 100 : 0;
             const conversionRate = campaign.delivered_count > 0 ? (campaign.converted_count / campaign.delivered_count) * 100 : 0;
             const roi = campaign.budget ? ((campaign.revenue_generated - campaign.budget) / campaign.budget) * 100 : 0;
-
             return (
               <TableRow key={campaign.id} hover>
                 <TableCell>{campaign.campaign_number}</TableCell>
@@ -307,7 +290,6 @@ export default function MarketingDashboard() {
       </Table>
     </TableContainer>
   );
-
   const renderPromotionsTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -362,7 +344,6 @@ export default function MarketingDashboard() {
       </Table>
     </TableContainer>
   );
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -386,7 +367,6 @@ export default function MarketingDashboard() {
           </Button>
         </Box>
       </Box>
-
       {/* Error Alert */}
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -396,9 +376,7 @@ export default function MarketingDashboard() {
           </Button>
         </Alert>
       )}
-
       {renderAnalyticsCards()}
-
       <Card>
         <CardContent>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -407,7 +385,6 @@ export default function MarketingDashboard() {
               <Tab label="Promotions" />
             </Tabs>
           </Box>
-
           <Box sx={{ mb: 2 }}>
             <TextField
               placeholder="Search..."
@@ -423,12 +400,10 @@ export default function MarketingDashboard() {
               sx={{ maxWidth: 300 }}
             />
           </Box>
-
           {tabValue === 0 && renderCampaignsTable()}
           {tabValue === 1 && renderPromotionsTable()}
         </CardContent>
       </Card>
-
       {/* Create Campaign Dialog - Placeholder */}
       <Dialog
         open={openCampaignDialog}
@@ -499,7 +474,6 @@ export default function MarketingDashboard() {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Add Promotion Dialog - Placeholder */}
       <Dialog
         open={openPromotionDialog}

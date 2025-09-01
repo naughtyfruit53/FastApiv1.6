@@ -1,7 +1,6 @@
 // Non-Sales Credit Note Page - Refactored using VoucherLayout
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { Visibility, Edit, Add } from '@mui/icons-material';
+import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem} from '@mui/material';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
@@ -9,12 +8,10 @@ import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
 import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
-
+import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
 const NonSalesCreditNote: React.FC = () => {
   const config = getVoucherConfig('non-sales-credit-note');
   const voucherStyles = getVoucherStyles();
-  
   const {
     // State
     mode,
@@ -32,7 +29,6 @@ const NonSalesCreditNote: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Form
     control,
     handleSubmit,
@@ -40,17 +36,14 @@ const NonSalesCreditNote: React.FC = () => {
     setValue,
     reset,
     errors,
-
     // Data
     voucherList,
     vendorList,
     customerList,
     sortedVouchers,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -66,15 +59,12 @@ const NonSalesCreditNote: React.FC = () => {
     handleAddCustomer,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Watch form values
   const watchedValues = watch();
   const totalAmount = watchedValues?.total_amount || 0;
-
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
@@ -84,7 +74,6 @@ const NonSalesCreditNote: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
-
   // Combined list of all parties (customers + vendors) for unified dropdown
   const allParties = [
     ...(customerList || []).map((customer: any) => ({
@@ -104,7 +93,6 @@ const NonSalesCreditNote: React.FC = () => {
       label: `${vendor.name} (Vendor)`
     }))
   ];
-
   // Credit note reasons
   const creditNoteReasons = [
     'Product Return',
@@ -117,10 +105,8 @@ const NonSalesCreditNote: React.FC = () => {
     'Settlement Discount',
     'Other'
   ];
-
   // Get selected entity from form
   const selectedEntity = watch('entity');
-
   // Index Content - Left Panel (40%)
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -178,7 +164,6 @@ const NonSalesCreditNote: React.FC = () => {
       </Table>
     </TableContainer>
   );
-
   // Form Content - Right Panel (60%)
   const formContent = (
     <Box>
@@ -194,13 +179,11 @@ const NonSalesCreditNote: React.FC = () => {
           currentId={selectedEntity?.id}
         />
       </Box>
-
       {(createMutation.isPending || updateMutation.isPending) && (
         <Box display="flex" justifyContent="center" my={2}>
           <CircularProgress />
         </Box>
       )}
-
       <Box 
         component="form" 
         onSubmit={handleSubmit(handleSubmitForm)} 
@@ -239,7 +222,6 @@ const NonSalesCreditNote: React.FC = () => {
               helperText={errors.date?.message as string}
             />
           </Grid>
-
           <Grid size={6}>
             <SearchableDropdown
               label="Party Name"
@@ -268,7 +250,6 @@ const NonSalesCreditNote: React.FC = () => {
               helperText={errors.entity?.message as string}
             />
           </Grid>
-
           <Grid size={6}>
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>Reason</InputLabel>
@@ -287,7 +268,6 @@ const NonSalesCreditNote: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-
           <Grid size={6}>
             <TextField
               {...control.register('reference_number')}
@@ -299,7 +279,6 @@ const NonSalesCreditNote: React.FC = () => {
               placeholder="Enter reference invoice/bill number..."
             />
           </Grid>
-
           <Grid size={6}>
             <TextField
               {...control.register('total_amount', {
@@ -329,7 +308,6 @@ const NonSalesCreditNote: React.FC = () => {
               }}
             />
           </Grid>
-
           <Grid size={12}>
             <TextField
               {...control.register('description')}
@@ -343,7 +321,6 @@ const NonSalesCreditNote: React.FC = () => {
               placeholder="Enter detailed description of the credit note..."
             />
           </Grid>
-
           {totalAmount > 0 && (
             <Grid size={12}>
               <TextField
@@ -357,7 +334,6 @@ const NonSalesCreditNote: React.FC = () => {
               />
             </Grid>
           )}
-
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
@@ -385,7 +361,6 @@ const NonSalesCreditNote: React.FC = () => {
       </Box>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -395,7 +370,6 @@ const NonSalesCreditNote: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -422,7 +396,6 @@ const NonSalesCreditNote: React.FC = () => {
           />
         }
       />
-      
       {/* Add Customer Modal */}
       <AddCustomerModal
         open={showAddCustomerModal}
@@ -430,7 +403,6 @@ const NonSalesCreditNote: React.FC = () => {
         onAdd={handleAddCustomer}
         loading={addCustomerLoading}
       />
-      
       {/* Keep context menu for right-click functionality */}
       <VoucherContextMenu
         voucherType="Non Sales Credit Note"
@@ -452,5 +424,4 @@ const NonSalesCreditNote: React.FC = () => {
     </>
   );
 };
-
 export default NonSalesCreditNote;

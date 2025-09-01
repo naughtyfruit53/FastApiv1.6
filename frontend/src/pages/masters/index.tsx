@@ -1,8 +1,8 @@
 // Revised masters.index.tsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import {
+declare function resetForm(...args: any[]): any;
   Box,
   Container,
   Typography,
@@ -54,16 +54,13 @@ import ExcelImportExport from '../../components/ExcelImportExport';
 import { bulkImportVendors, bulkImportCustomers, bulkImportProducts } from '../../services/masterService';
 import ProductFileUpload from '../../components/ProductFileUpload';
 import Grid from '@mui/material/Grid';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -80,7 +77,6 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const STATE_CODES: { [key: string]: string } = {
   'Jammu & Kashmir': '01',
   'Himachal Pradesh': '02',
@@ -123,12 +119,11 @@ const STATE_CODES: { [key: string]: string } = {
   'Others Territory': '97',
   'Center Jurisdiction': '99'
 };
-
 const MasterDataManagement: React.FC = () => {
   const router = useRouter();
   const { tab, action } = router.query;
   const [tabValue, setTabValue] = useState(0);
-  const [user] = useState({ email: 'demo@example.com', role: 'admin' });
+const [] = useState({ email: 'demo@example.com', role: 'admin' });
   const [itemDialog, setItemDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -155,22 +150,16 @@ const MasterDataManagement: React.FC = () => {
     is_manufactured: false, 
     contact_number: ''  // Added to match backend schema
   });
-
   // Company dialog state
-  const [companyEditDialog, setCompanyEditDialog] = useState(false);
-  
   // GST certificate upload state
   const [gstCertificateFile, setGstCertificateFile] = useState<File | null>(null);
   const [uploadingGstCertificate, setUploadingGstCertificate] = useState(false);
-
   const queryClient = useQueryClient();
-
   const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     const tabNames = ['vendors', 'customers', 'products', 'accounts', 'company'];
     router.replace(`/masters?tab=${tabNames[newValue]}`, undefined, { shallow: true });
   }, [router]);
-
   const openItemDialog = useCallback((item: any = null, targetTab?: number) => {
     if (targetTab !== undefined && targetTab !== tabValue) {
       handleTabChange({} as React.SyntheticEvent, targetTab);
@@ -206,7 +195,6 @@ const MasterDataManagement: React.FC = () => {
     setErrorMessage(''); // Clear any previous error messages
     setItemDialog(true);
   }, [tabValue, handleTabChange]);
-
   // Update tab from URL and handle auto-open add dialog
   useEffect(() => {
     switch (tab) {
@@ -218,17 +206,14 @@ const MasterDataManagement: React.FC = () => {
       case 'company': setTabValue(5); break;
       default: setTabValue(0);
     }
-    
     // Auto-open add dialog if action=add in URL
     if (action === 'add') {
       openItemDialog(null);
     }
   }, [tab, action, openItemDialog]);
-
   const handleLogout = () => {
     // Handle logout
   };
-
   // Fetch data from APIs
   const { data: dashboardStats } = useQuery({
     queryKey: ['dashboardStats'],
@@ -249,7 +234,6 @@ const MasterDataManagement: React.FC = () => {
     queryFn: () => masterDataService.getProducts(),
     enabled: tabValue === 2
   });
-
   // HSN/Product bidirectional search functionality
   const uniqueHsnCodes = React.useMemo(() => {
     if (!products || tabValue !== 2) {return [];}
@@ -261,14 +245,12 @@ const MasterDataManagement: React.FC = () => {
     });
     return Array.from(hsnSet).sort();
   }, [products, tabValue]);
-
   const getProductsByHsn = React.useCallback((hsnCode: string) => {
     if (!products || !hsnCode.trim()) {return [];}
     return products.filter((product: any) => 
       product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
     );
   }, [products]);
-
   const getHsnByProductName = React.useCallback((productName: string) => {
     if (!products || !productName.trim()) {return [];}
     const matchingProducts = products.filter((product: any) =>
@@ -280,11 +262,9 @@ const MasterDataManagement: React.FC = () => {
       .filter((hsn: string, index: number, array: string[]) => array.indexOf(hsn) === index); // unique
     return hsnCodes;
   }, [products]);
-
   // Auto-population effects for products
   React.useEffect(() => {
     if (tabValue !== 2) {return;}
-    
     // When product name changes, suggest HSN codes
     if (formData.name && formData.name.length > 2) {
       const suggestedHsns = getHsnByProductName(formData.name);
@@ -294,10 +274,8 @@ const MasterDataManagement: React.FC = () => {
       }
     }
   }, [formData.name, formData.hsn_code, getHsnByProductName, tabValue]);
-
   React.useEffect(() => {
     if (tabValue !== 2) {return;}
-    
     // When HSN code changes, suggest product info
     if (formData.hsn_code && formData.hsn_code.length > 2) {
       const matchingProducts = getProductsByHsn(formData.hsn_code);
@@ -305,7 +283,6 @@ const MasterDataManagement: React.FC = () => {
         // If there's a strong match and product name is empty, suggest the most common unit/gst_rate
         const commonUnit = matchingProducts[0].unit;
         const commonGstRate = matchingProducts[0].gst_rate;
-        
         if (commonUnit && commonUnit !== formData.unit) {
           setFormData(prev => ({ ...prev, unit: commonUnit }));
         }
@@ -320,7 +297,6 @@ const MasterDataManagement: React.FC = () => {
     queryFn: () => companyService.getCurrentCompany(),
     enabled: tabValue === 4
   });
-
   // Mutations for bulk import
   const importVendorsMutation = useMutation({
     mutationFn: bulkImportVendors,
@@ -334,7 +310,6 @@ const MasterDataManagement: React.FC = () => {
     mutationFn: bulkImportProducts,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
-
   // Mutation for updating item
   const updateItemMutation = useMutation({
     mutationFn: (data: any) => {
@@ -356,7 +331,6 @@ const MasterDataManagement: React.FC = () => {
       setErrorMessage(error.message || 'Failed to update item. Please check your input.');
     }
   });
-
   // Mutation for creating item
   const createItemMutation = useMutation({
     mutationFn: (data: any) => {
@@ -372,7 +346,6 @@ const MasterDataManagement: React.FC = () => {
       setSelectedItem(null);
       resetForm();
       setErrorMessage('');
-      
       // Trigger refresh in parent window if opened from voucher
       if (window.opener) {
         window.opener.localStorage.setItem('refreshMasterData', 'true');
@@ -384,7 +357,6 @@ const MasterDataManagement: React.FC = () => {
       setErrorMessage(error.message || 'Failed to create item. Please check your input.');
     }
   });
-
   const handleImport = (entity: string) => (importedData: any[]) => {
     switch (entity) {
       case 'Vendors':
@@ -398,16 +370,13 @@ const MasterDataManagement: React.FC = () => {
         break;
     }
   };
-
   // Company edit dialog functions
   const openCompanyEditDialog = () => {
     setCompanyEditDialog(true);
   };
-
   const closeCompanyEditDialog = () => {
     setCompanyEditDialog(false);
   };
-
   const resetForm = () => {
     setFormData({
       name: '', 
@@ -433,30 +402,24 @@ const MasterDataManagement: React.FC = () => {
       contact_number: ''
     });
   };
-
   const handleAddClick = () => {
     openItemDialog(null);
   };
-
   // Handle GST certificate upload
   const handleGstCertificateUpload = async (file: File) => {
     if (!selectedItem) {return;}
-    
     setUploadingGstCertificate(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('file_type', 'gst_certificate');
-      
       const endpoint = tabValue === 0 
         ? `/api/v1/vendors/${selectedItem.id}/files`
         : `/api/v1/customers/${selectedItem.id}/files`;
-      
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData
       });
-      
       if (response.ok) {
         // Success - show notification or update UI
         console.log('GST certificate uploaded successfully');
@@ -471,37 +434,31 @@ const MasterDataManagement: React.FC = () => {
       setGstCertificateFile(null);
     }
   };
-
   const handleSubmit = () => {
     const data = { ...formData };
-    
     // Map frontend field names to backend schema
     if (tabValue === 0 || tabValue === 1) { // Vendors or Customers
       data.contact_number = data.contact || data.contact_number; // Map contact to contact_number if needed
       // Remove old field name if present
       if ('contact' in data) {
-        const { contact, ...rest } = data;
+const {...rest } = data;
         Object.assign(data, rest);
       }
     }
-    
     if (selectedItem) {
       updateItemMutation.mutate({ ...selectedItem, ...data });
     } else {
       createItemMutation.mutate(data);
     }
   };
-
   const handleStateChange = (e: any) => {
     const state = e.target.value;
     const state_code = STATE_CODES[state] || '';
     setFormData(prev => ({ ...prev, state, state_code }));
   };
-
   const handlePincodeChange = async (e: any) => {
     const pinCode = e.target.value;
     setFormData(prev => ({ ...prev, pin_code: pinCode }));
-    
     // Auto-fill city/state/state_code if pinCode is 6 digits
     if (pinCode.length === 6 && /^\d{6}$/.test(pinCode)) {
       try {
@@ -521,7 +478,6 @@ const MasterDataManagement: React.FC = () => {
       }
     }
   };
-
   // Master data summary with real data
   const masterDataTypes = [
     {
@@ -565,16 +521,13 @@ const MasterDataManagement: React.FC = () => {
       tabIndex: 4
     }
   ];
-
   const renderTable = (data: any[], type: string, isLoading: boolean = false) => {
     if (isLoading) {
       return <Typography>Loading {type}...</Typography>;
     }
-    
     if (!data || data.length === 0) {
       return <Typography>No {type} found. Click &quot;Add&quot; to create your first entry.</Typography>;
     }
-
     return (
       <TableContainer component={Paper}>
         <Table>
@@ -708,7 +661,6 @@ const MasterDataManagement: React.FC = () => {
       </TableContainer>
     );
   };
-
   const renderCompanyDetails = () => {
     return (
       <Box>
@@ -774,10 +726,8 @@ const MasterDataManagement: React.FC = () => {
       </Box>
     );
   };
-
   return (
     <Box sx={{ flexGrow: 1 }}>
-
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Master Data Management
@@ -785,7 +735,6 @@ const MasterDataManagement: React.FC = () => {
         <Typography variant="body1" color="textSecondary" sx={{ mb: 4 }}>
           Centralized management of all master data in your ERP system
         </Typography>
-
         {/* Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {masterDataTypes.map((dataType, index) => (
@@ -824,7 +773,6 @@ const MasterDataManagement: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-
         {/* Master Data Tabs */}
         <Paper sx={{ mb: 4 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -837,7 +785,6 @@ const MasterDataManagement: React.FC = () => {
               <Tab label="Company" />
             </Tabs>
           </Box>
-
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Vendor Management</Typography>
@@ -848,7 +795,6 @@ const MasterDataManagement: React.FC = () => {
             <ExcelImportExport data={vendors || []} entity="Vendors" onImport={handleImport('Vendors')} />
             {renderTable(vendors || [], 'vendors', vendorsLoading)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={1}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Customer Management</Typography>
@@ -859,7 +805,6 @@ const MasterDataManagement: React.FC = () => {
             <ExcelImportExport data={customers || []} entity="Customers" onImport={handleImport('Customers')} />
             {renderTable(customers || [], 'customers', customersLoading)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Product Catalog</Typography>
@@ -870,7 +815,6 @@ const MasterDataManagement: React.FC = () => {
             <ExcelImportExport data={products || []} entity="Products" onImport={handleImport('Products')} />
             {renderTable(products || [], 'products', productsLoading)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={3}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Bill of Materials (BOM)</Typography>
@@ -900,7 +844,6 @@ const MasterDataManagement: React.FC = () => {
               </Button>
             </Paper>
           </TabPanel>
-
           <TabPanel value={tabValue} index={4}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Chart of Accounts</Typography>
@@ -910,14 +853,11 @@ const MasterDataManagement: React.FC = () => {
             </Box>
             {renderTable([], 'accounts', false)} {/* TODO: Implement accounts API */}
           </TabPanel>
-
           <TabPanel value={tabValue} index={5}>
             {renderCompanyDetails()}
           </TabPanel>
         </Paper>
-
       </Container>
-
       {/* Add/Edit Dialog */}
       <Dialog open={itemDialog} onClose={() => setItemDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{selectedItem ? 'Edit' : 'Add'} {tabValue === 0 ? 'Vendor' : tabValue === 1 ? 'Customer' : tabValue === 2 ? 'Product' : tabValue === 3 ? 'BOM' : tabValue === 4 ? 'Account' : 'Item'}</DialogTitle>
@@ -1174,7 +1114,6 @@ const MasterDataManagement: React.FC = () => {
                 }
                 label="Is Manufactured"
               />
-              
               {/* File Upload Section for Products */}
               {selectedItem?.id && (
                 <Box sx={{ mt: 3 }}>
@@ -1195,5 +1134,4 @@ const MasterDataManagement: React.FC = () => {
     </Box>
   );
 };
-
 export default MasterDataManagement;

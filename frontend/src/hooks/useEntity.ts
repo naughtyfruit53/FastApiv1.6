@@ -1,6 +1,5 @@
 // src/hooks/useEntity.ts
 // React hooks for Entity abstraction system
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
@@ -15,7 +14,6 @@ import {
   entitiesToOptions
 } from '../services/entityService';
 import { Entity, EntityType, EntityOption } from '../types/entity.types';
-
 /**
  * Hook to get all entities with unified interface
  */
@@ -31,22 +29,18 @@ export const useEntities = (entityTypes: EntityType[] = ['Customer', 'Vendor']) 
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
-
 /**
  * Hook to get entity options for form dropdowns
  */
 export const useEntityOptions = (entityTypes: EntityType[] = ['Customer', 'Vendor']) => {
   const { data: entities, ...queryProps } = useEntities(entityTypes);
-  
   const options: EntityOption[] = entities ? entitiesToOptions(entities) : [];
-  
   return {
     options,
     entities,
     ...queryProps
   };
 };
-
 /**
  * Hook for entity search with debouncing
  */
@@ -62,7 +56,6 @@ export const useEntitySearch = (
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
-
 /**
  * Hook to get specific entity by ID and type
  */
@@ -76,7 +69,6 @@ export const useEntity = (id: number | null, entityType: EntityType | null) => {
     enabled: !!id && !!entityType,
   });
 };
-
 /**
  * Hook for entity balance/outstanding amount
  */
@@ -91,13 +83,11 @@ export const useEntityBalance = (id: number | null, entityType: EntityType | nul
     staleTime: 1 * 60 * 1000, // 1 minute
   });
 };
-
 /**
  * Hook for entity mutations (create, update, delete)
  */
 export const useEntityMutations = () => {
   const queryClient = useQueryClient();
-
   const createMutation = useMutation({
     mutationFn: ({ entityType, data }: { entityType: EntityType; data: Partial<Entity> }) =>
       createEntity(entityType, data),
@@ -106,7 +96,6 @@ export const useEntityMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['entities', [entityType]] });
     },
   });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, entityType, data }: { id: number; entityType: EntityType; data: Partial<Entity> }) =>
       updateEntity(id, entityType, data),
@@ -115,7 +104,6 @@ export const useEntityMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['entities', [entityType]] });
     },
   });
-
   const deleteMutation = useMutation({
     mutationFn: ({ id, entityType }: { id: number; entityType: EntityType }) =>
       deleteEntity(id, entityType),
@@ -124,14 +112,12 @@ export const useEntityMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['entities', [entityType]] });
     },
   });
-
   return {
     createEntity: createMutation,
     updateEntity: updateMutation,
     deleteEntity: deleteMutation,
   };
 };
-
 /**
  * Hook for entity form state management
  */
@@ -140,16 +126,13 @@ export const useEntityForm = (initialEntityType: EntityType = 'Customer') => {
   const [selectedEntityId, setSelectedEntityId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
   const { options, isLoading } = useEntityOptions([selectedEntityType]);
   const { data: searchResults, isLoading: searchLoading } = useEntitySearch(
     searchTerm,
     [selectedEntityType],
     searchTerm.length >= 2
   );
-
   const displayOptions = searchTerm.length >= 2 ? (searchResults || []) : options;
-
   const handleEntitySelect = (entityOption: EntityOption | null) => {
     if (entityOption) {
       setSelectedEntityId(entityOption.id);
@@ -158,24 +141,20 @@ export const useEntityForm = (initialEntityType: EntityType = 'Customer') => {
       setSelectedEntityId(null);
     }
   };
-
   const handleEntityTypeChange = (newType: EntityType) => {
     setSelectedEntityType(newType);
     setSelectedEntityId(null); // Reset selection when type changes
     setSearchTerm(''); // Reset search
   };
-
   return {
     // State
     selectedEntityType,
     selectedEntityId,
     showCreateModal,
     searchTerm,
-
     // Options
     options: displayOptions,
     isLoading: isLoading || searchLoading,
-
     // Handlers
     setSelectedEntityType: handleEntityTypeChange,
     setSelectedEntityId,
@@ -184,7 +163,6 @@ export const useEntityForm = (initialEntityType: EntityType = 'Customer') => {
     handleEntitySelect,
   };
 };
-
 /**
  * Legacy compatibility hooks
  */

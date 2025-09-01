@@ -1,8 +1,8 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/grn.tsx
 // Goods Receipt Note Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
-import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description, PictureAsPdf as PdfIcon } from '@mui/icons-material';
+import {Box, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete} from '@mui/material';
+import {PictureAsPdf as PdfIcon} from '@mui/icons-material';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -10,15 +10,12 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
-import BalanceDisplay from '../../../components/BalanceDisplay';
-import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField, getVoucherStyles } from '../../../utils/voucherUtils';
+import {getVoucherConfig, getVoucherStyles} from '../../../utils/voucherUtils';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
 import { useAuth } from '../../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const config = getVoucherConfig('grn');
@@ -53,17 +50,14 @@ const GoodsReceiptNotePage: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Enhanced pagination
     currentPage,
     pageSize,
     paginationData,
     handlePageChange,
-
     // Reference document handling
     referenceDocument,
     handleReferenceSelected,
-
     // Form
     control,
     handleSubmit,
@@ -74,7 +68,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     append,
     remove,
     reset,
-
     // Data
     voucherList,
     vendorList,
@@ -83,17 +76,14 @@ const GoodsReceiptNotePage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-
     // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
     totalGst,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -108,59 +98,49 @@ const GoodsReceiptNotePage: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Additional state for voucher list modal
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
-
   // Goods Receipt Note specific state
   const selectedVendorId = watch('vendor_id');
   const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
   const vendorValue = useMemo(() => {
     return selectedVendor || null;
   }, [selectedVendor]);
-
   // Enhanced vendor options with "Add New"
   const enhancedVendorOptions = [
     ...(vendorList || []),
     { id: null, name: 'Add New Vendor...' }
   ];
-
   // GRN specific states
   const [selectedVoucherType, setSelectedVoucherType] = useState<'purchase-voucher' | 'purchase-order' | null>(null);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
-
   // Fetch purchase orders
-  const { data: purchaseOrdersData, refetch: refetchPurchaseOrders } = useQuery({
+const { data: purchaseOrdersData, refetch:} = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: () => api.get('/purchase-orders').then(res => res.data),
     enabled: isOrgContextReady,
   });
-
   // Fetch purchase vouchers
-  const { data: purchaseVouchersData, refetch: refetchPurchaseVouchers } = useQuery({
+const { data: purchaseVouchersData, refetch:} = useQuery({
     queryKey: ['purchase-vouchers'],
     queryFn: () => api.get('/purchase-vouchers').then(res => res.data),
     enabled: isOrgContextReady,
   });
-
   // Fetch all GRNs to get used PO/PV IDs
   const { data: grns } = useQuery({
     queryKey: ['goods-receipt-notes'],
     queryFn: () => api.get('/goods-receipt-notes').then(res => res.data),
     enabled: isOrgContextReady,
   });
-
   // Compute used voucher IDs, excluding current GRN in edit mode
   const currentGrnId = mode === 'edit' ? voucherData?.id : null;
   const usedVoucherIds = useMemo(() => {
     if (!grns) {return new Set();}
     return new Set(grns.filter(grn => grn.id !== currentGrnId).map(grn => grn.purchase_order_id));
   }, [grns, currentGrnId]);
-
   // Filter voucher options to exclude used ones
   const voucherOptions = useMemo(() => {
     let options = [];
@@ -171,7 +151,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     }
     return options.filter(option => !usedVoucherIds.has(option.id));
   }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, usedVoucherIds]);
-
   // Fetch selected voucher details
   const { data: selectedVoucherData } = useQuery({
     queryKey: [selectedVoucherType, selectedVoucherId],
@@ -182,7 +161,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     },
     enabled: !!selectedVoucherType && !!selectedVoucherId,
   });
-
   // Populate form with selected voucher data
   useEffect(() => {
     if (selectedVoucherData) {
@@ -204,12 +182,10 @@ const GoodsReceiptNotePage: React.FC = () => {
       });
     }
   }, [selectedVoucherData, setValue, append, remove]);
-
   // Goods Receipt Note specific handlers
   const handleAddItem = () => {
     // No add item for GRN, as items come from voucher
   };
-
   const handleCancel = () => {
     setMode('view');
     // Optionally refresh or reset form to original voucherData
@@ -217,7 +193,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       reset(voucherData);
     }
   };
-
   // Custom submit handler to prompt for PDF after save
   const onSubmit = async (data: any) => {
     try {
@@ -235,10 +210,8 @@ const GoodsReceiptNotePage: React.FC = () => {
           total_cost: field.accepted_quantity * field.unit_price,
         }));
       }
-
       data.purchase_order_id = selectedVoucherId;
       data.grn_date = data.date + 'T00:00:00Z';
-
       let response;
       if (mode === 'create') {
         response = await createMutation.mutateAsync(data);
@@ -251,13 +224,11 @@ const GoodsReceiptNotePage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-      
     } catch (error) {
       console.error('Error saving goods receipt note:', error);
       alert('Failed to save goods receipt note. Please try again.');
     }
   };
-
   // Validation for quantities
   const validateQuantities = () => {
     let valid = true;
@@ -272,14 +243,12 @@ const GoodsReceiptNotePage: React.FC = () => {
     });
     return valid;
   };
-
   // Wrap submit to include validation
   const handleFormSubmit = (data: any) => {
     if (validateQuantities()) {
       _handleSubmitForm(data);
     }
   };
-
   // Manual fetch for voucher number if not loaded
   useEffect(() => {
     if (mode === 'create' && !nextVoucherNumber && !isLoading) {
@@ -288,12 +257,10 @@ const GoodsReceiptNotePage: React.FC = () => {
         .catch(err => console.error('Failed to fetch voucher number:', err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
-
   // Handle voucher click for modal
   const handleVoucherClick = async (voucher: any) => {
     handleView(voucher.id);
   };
-
   // Use hook's handleEdit and handleView, mapping handled in effect below
   useEffect(() => {
     if (voucherData && (mode === 'view' || mode === 'edit')) {
@@ -311,11 +278,9 @@ const GoodsReceiptNotePage: React.FC = () => {
         reference_voucher_type: 'purchase-order',
         reference_voucher_number: voucherData.purchase_order?.voucher_number || voucherData.purchase_order_id
       };
-      
       reset(mappedData);
       setSelectedVoucherType('purchase-order');
       setSelectedVoucherId(voucherData.purchase_order_id);
-      
       if (mode === 'edit') {
         remove();
         mappedData.items.forEach((item) => {
@@ -333,7 +298,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       }
     }
   }, [voucherData, mode, reset, setValue, append, remove]);
-
   const indexContent = (
     <>
       {/* Voucher list table */}
@@ -387,7 +351,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       </TableContainer>
     </>
   );
-
   const formContent = (
     <Box>
       {/* Header Actions */}
@@ -405,7 +368,6 @@ const GoodsReceiptNotePage: React.FC = () => {
           onCancel={handleCancel}
         />
       </Box>
-
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={0.5}>
           {/* Voucher Number */}
@@ -421,7 +383,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Date */}
           <Grid size={6}>
             <TextField
@@ -436,7 +397,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Voucher Type */}
           <Grid size={3}>
             {mode === 'view' ? (
@@ -474,7 +434,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               />
             )}
           </Grid>
-
           {/* Voucher Number */}
           <Grid size={3}>
             {mode === 'view' ? (
@@ -511,7 +470,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               />
             )}
           </Grid>
-
           {/* Vendor - Switch to TextField when voucher selected for auto-populate */}
           <Grid size={6}>
             {!!selectedVoucherId ? (
@@ -554,7 +512,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               />
             )}
           </Grid>
-
           <Grid size={12}>
             <TextField
               fullWidth
@@ -568,12 +525,10 @@ const GoodsReceiptNotePage: React.FC = () => {
               size="small"
             />
           </Grid>
-
           {/* Items section */}
           <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 27 }}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Items</Typography>
           </Grid>
-
           {/* Items Table */}
           <Grid size={12}>
             <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable, ...voucherStyles.optimizedTableContainer }}>
@@ -676,14 +631,11 @@ const GoodsReceiptNotePage: React.FC = () => {
               </Table>
             </TableContainer>
           </Grid>
-
           {/* GRN does not have totals section - removed as per requirements */}
-
         </Grid>
       </form>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -693,7 +645,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -724,7 +675,6 @@ const GoodsReceiptNotePage: React.FC = () => {
           />
         }
       />
-
       {/* Modals */}
       <AddVendorModal 
         open={showAddVendorModal}
@@ -733,7 +683,6 @@ const GoodsReceiptNotePage: React.FC = () => {
         loading={addVendorLoading}
         setLoading={setAddVendorLoading}
       />
-
       <AddProductModal 
         open={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
@@ -741,14 +690,12 @@ const GoodsReceiptNotePage: React.FC = () => {
         loading={addProductLoading}
         setLoading={setAddProductLoading}
       />
-
       <AddShippingAddressModal 
         open={showShippingModal}
         onClose={() => setShowShippingModal(false)}
         loading={addShippingLoading}
         setLoading={setAddShippingLoading}
       />
-
       <VoucherContextMenu
         contextMenu={contextMenu}
         onClose={handleCloseContextMenu}
@@ -760,5 +707,4 @@ const GoodsReceiptNotePage: React.FC = () => {
     </>
   );
 };
-
 export default GoodsReceiptNotePage;

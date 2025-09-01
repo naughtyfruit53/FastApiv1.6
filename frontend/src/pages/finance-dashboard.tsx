@@ -31,7 +31,7 @@ import {
   Refresh,
   Download
 } from '@mui/icons-material';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import {Doughnut, Bar} from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -45,7 +45,6 @@ import {
   BarElement
 } from 'chart.js';
 import axios from 'axios';
-
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -58,7 +57,6 @@ ChartJS.register(
   ArcElement,
   BarElement
 );
-
 interface FinancialRatios {
   current_ratio: number;
   debt_to_equity: number;
@@ -67,20 +65,17 @@ interface FinancialRatios {
   total_liabilities: number;
   total_equity: number;
 }
-
 interface CashFlow {
   inflow: number;
   outflow: number;
   net_flow: number;
 }
-
 interface CostCenter {
   name: string;
   budget: number;
   actual: number;
   variance_percent: number;
 }
-
 interface KPI {
   code: string;
   name: string;
@@ -90,7 +85,6 @@ interface KPI {
   variance?: number;
   period_end: string;
 }
-
 interface DashboardData {
   period: {
     start_date: string;
@@ -105,13 +99,11 @@ interface DashboardData {
   cost_centers: CostCenter[];
   recent_kpis: KPI[];
 }
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -126,13 +118,11 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const FinanceDashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -148,15 +138,12 @@ const FinanceDashboard: React.FC = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -165,11 +152,9 @@ const FinanceDashboard: React.FC = () => {
       maximumFractionDigits: 0
     }).format(amount);
   };
-
   const formatPercentage = (value: number) => {
     return `${value.toFixed(2)}%`;
   };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -177,7 +162,6 @@ const FinanceDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (error) {
     return (
       <Alert severity="error" action={
@@ -189,9 +173,7 @@ const FinanceDashboard: React.FC = () => {
       </Alert>
     );
   }
-
   if (!data) {return null;}
-
   // Chart data for cash flow
   const cashFlowChartData = {
     labels: ['Inflow', 'Outflow'],
@@ -203,7 +185,6 @@ const FinanceDashboard: React.FC = () => {
       }
     ]
   };
-
   // Chart data for cost center performance
   const costCenterChartData = {
     labels: data.cost_centers.map(cc => cc.name),
@@ -222,7 +203,6 @@ const FinanceDashboard: React.FC = () => {
       }
     ]
   };
-
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -239,7 +219,6 @@ const FinanceDashboard: React.FC = () => {
           </Button>
         </Box>
       </Box>
-
       {/* Key Metrics Cards */}
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} sm={6} md={3}>
@@ -259,7 +238,6 @@ const FinanceDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -277,7 +255,6 @@ const FinanceDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -295,7 +272,6 @@ const FinanceDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -314,7 +290,6 @@ const FinanceDashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Tabs for detailed views */}
       <Paper sx={{ width: '100%' }}>
         <Tabs value={activeTab} onChange={handleTabChange} aria-label="finance dashboard tabs">
@@ -323,7 +298,6 @@ const FinanceDashboard: React.FC = () => {
           <Tab label="KPIs" />
           <Tab label="Aging" />
         </Tabs>
-
         {/* Cash Flow Tab */}
         <TabPanel value={activeTab} index={0}>
           <Grid container spacing={3}>
@@ -373,7 +347,6 @@ const FinanceDashboard: React.FC = () => {
             </Grid>
           </Grid>
         </TabPanel>
-
         {/* Cost Centers Tab */}
         <TabPanel value={activeTab} index={1}>
           <Card>
@@ -417,7 +390,6 @@ const FinanceDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </TabPanel>
-
         {/* KPIs Tab */}
         <TabPanel value={activeTab} index={2}>
           <Card>
@@ -464,7 +436,6 @@ const FinanceDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </TabPanel>
-
         {/* Aging Tab */}
         <TabPanel value={activeTab} index={3}>
           <Grid container spacing={3}>
@@ -504,5 +475,4 @@ const FinanceDashboard: React.FC = () => {
     </Box>
   );
 };
-
 export default FinanceDashboard;

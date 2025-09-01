@@ -1,5 +1,4 @@
 // frontend/src/components/ServiceAnalytics/AnalyticsFilters.tsx
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -22,14 +21,12 @@ import {
   TechnicianOption,
   CustomerOption
 } from '../../services/serviceAnalyticsService';
-
 interface AnalyticsFiltersProps {
   filters: AnalyticsRequest;
   onFiltersChange: (filters: AnalyticsRequest) => void;
   technicians: TechnicianOption[];
   customers: CustomerOption[];
 }
-
 const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   filters,
   onFiltersChange,
@@ -37,11 +34,9 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   customers
 }) => {
   const [localFilters, setLocalFilters] = useState<AnalyticsRequest>(filters);
-
   const handleApplyFilters = () => {
     onFiltersChange(localFilters);
   };
-
   const handleResetFilters = () => {
     const resetFilters: AnalyticsRequest = {
       period: ReportPeriod.MONTH
@@ -49,7 +44,6 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     setLocalFilters(resetFilters);
     onFiltersChange(resetFilters);
   };
-
   const handlePeriodChange = (period: ReportPeriod) => {
     const updatedFilters = {
       ...localFilters,
@@ -60,31 +54,26 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     };
     setLocalFilters(updatedFilters);
   };
-
   const handleTechnicianChange = (technicianId: number | null) => {
     setLocalFilters({
       ...localFilters,
       technician_id: technicianId || undefined
     });
   };
-
   const handleCustomerChange = (customerId: number | null) => {
     setLocalFilters({
       ...localFilters,
       customer_id: customerId || undefined
     });
   };
-
   const selectedTechnician = technicians.find(t => t.id === localFilters.technician_id) || null;
   const selectedCustomer = customers.find(c => c.id === localFilters.customer_id) || null;
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box>
         <Typography variant="h6" gutterBottom>
           Analytics Filters
         </Typography>
-        
         <Grid container spacing={3}>
           {/* Period Selection */}
           <Grid item xs={12} sm={6} md={3}>
@@ -104,7 +93,6 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
               </Select>
             </FormControl>
           </Grid>
-
           {/* Custom Date Range - Only show when Custom is selected */}
           {localFilters.period === ReportPeriod.CUSTOM && (
             <>
@@ -121,7 +109,6 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
                   renderInput={(params) => <TextField {...params} fullWidth />}
                 />
               </Grid>
-              
               <Grid item xs={12} sm={6} md={3}>
                 <DatePicker
                   label="End Date"
@@ -138,7 +125,6 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
               </Grid>
             </>
           )}
-
           {/* Technician Filter */}
           <Grid item xs={12} sm={6} md={3}>
             <Autocomplete
@@ -165,7 +151,6 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
               )}
             />
           </Grid>
-
           {/* Customer Filter */}
           <Grid item xs={12} sm={6} md={3}>
             <Autocomplete
@@ -192,7 +177,6 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
               )}
             />
           </Grid>
-
           {/* Action Buttons */}
           <Grid item xs={12}>
             <Box display="flex" gap={2} justifyContent="flex-end">
@@ -211,7 +195,6 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
             </Box>
           </Grid>
         </Grid>
-
         {/* Active Filters Summary */}
         {(localFilters.technician_id || localFilters.customer_id || localFilters.period === ReportPeriod.CUSTOM) && (
           <Box mt={2}>
@@ -247,5 +230,4 @@ const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     </LocalizationProvider>
   );
 };
-
 export default AnalyticsFilters;

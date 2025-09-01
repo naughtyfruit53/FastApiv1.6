@@ -19,14 +19,12 @@ import {
 } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '../services/authService';
-
 interface CompanyLogoUploadProps {
   companyId: number;
   currentLogoPath?: string | null;
   disabled?: boolean;
   onLogoChange?: (logoPath: string | null) => void;
 }
-
 const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
   companyId,
   currentLogoPath,
@@ -38,7 +36,6 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentLogoPath || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: (file: File) => companyService.uploadLogo(companyId, file),
@@ -54,7 +51,6 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
       setUploadError(error.message || 'Failed to upload logo');
     },
   });
-
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: () => companyService.deleteLogo(companyId),
@@ -70,40 +66,31 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
       setUploadError(error.message || 'Failed to delete logo');
     },
   });
-
   const validateFile = (file: File): string | null => {
     // Check file type
     if (!file.type.startsWith('image/')) {
       return 'Please select an image file (PNG, JPG, JPEG, GIF, etc.)';
     }
-
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       return 'Logo file size must be less than 5MB';
     }
-
     return null;
   };
-
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) {return;}
-
     const file = files[0];
     const validationError = validateFile(file);
-
     if (validationError) {
       setUploadError(validationError);
       return;
     }
-
     // Create preview URL
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
-
     // Upload file
     uploadMutation.mutate(file);
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
@@ -111,47 +98,38 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
       handleFileSelect(e.dataTransfer.files);
     }
   };
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     if (!disabled) {
       setIsDragOver(true);
     }
   };
-
   const handleDragLeave = () => {
     setIsDragOver(false);
   };
-
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelect(e.target.files);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
-
   const handleDeleteLogo = () => {
     deleteMutation.mutate();
   };
-
   const isLoading = uploadMutation.isPending || deleteMutation.isPending;
-
   return (
     <Box>
       <Typography variant="subtitle2" gutterBottom>
         Company Logo
       </Typography>
-
       {uploadError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {uploadError}
         </Alert>
       )}
-
       <Stack direction="row" spacing={2} alignItems="center">
         {/* Logo Preview */}
         <Avatar
@@ -166,7 +144,6 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
         >
           {!previewUrl && <Business sx={{ fontSize: 40, color: 'grey.500' }} />}
         </Avatar>
-
         {/* Upload Area */}
         <Box sx={{ flex: 1 }}>
           {!previewUrl ? (
@@ -235,7 +212,6 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
           )}
         </Box>
       </Stack>
-
       {/* Hidden file input */}
       <input
         type="file"
@@ -248,5 +224,4 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
     </Box>
   );
 };
-
 export default CompanyLogoUpload;

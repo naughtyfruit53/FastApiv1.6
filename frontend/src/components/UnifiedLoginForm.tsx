@@ -1,6 +1,5 @@
 // frontend/src/components/UnifiedLoginForm.tsx
 'use client';
-
 import React, { useState } from 'react';
 import { 
   Box,
@@ -22,18 +21,15 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { authService } from '../services/authService';
-
 interface UnifiedLoginFormProps {
   onLogin: (token: string, loginResponse?: any) => void;
 }
-
 interface LoginFormData {
   email: string;
   password: string;
   phoneNumber: string;
   otp: string;
 }
-
 const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,8 +38,7 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
   const [useOTP, setUseOTP] = useState(false);
   const [otpStep, setOtpStep] = useState(0); // 0: credentials, 1: OTP entry
   const [otpSent, setOtpSent] = useState(false);
-
-  const { control, handleSubmit, formState: { errors }, watch, setValue, reset } = useForm<LoginFormData>({
+const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm<LoginFormData>({
     defaultValues: {
       email: '',
       password: '',
@@ -51,13 +46,10 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
       otp: ''
     }
   });
-
   const email = watch('email');
-
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-
   const handleOTPToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
     setUseOTP(event.target.checked);
     setError('');
@@ -69,15 +61,12 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
       setValue('phoneNumber', '');
     }
   };
-
   const requestOTP = async (email: string, phoneNumber: string) => {
     try {
       setLoading(true);
       setError('');
-      
       // Determine delivery method based on phone number
       const deliveryMethod = phoneNumber ? 'auto' : 'email';
-      
       const response = await authService.requestOTP(email, phoneNumber, deliveryMethod);
       setSuccess(response.delivery_method 
         ? `OTP sent via ${response.delivery_method}. Please check your messages.`
@@ -90,12 +79,10 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
       setLoading(false);
     }
   };
-
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     setError('');
     setSuccess('');
-    
     try {
       if (useOTP) {
         if (!otpSent) {
@@ -106,10 +93,8 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
           // Step 2: Verify OTP and login
           const response = await authService.verifyOTP(data.email, data.otp);
           setSuccess('Login successful!');
-          
           // Add flag to indicate OTP login (so password change is not mandatory)
           response.otp_login = true;
-          
           // Call parent callback with token and response
           onLogin(response.access_token, response);
         }
@@ -117,7 +102,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
         // Standard email/password login
         // Clear any existing invalid token before login attempt
         localStorage.removeItem('token');
-        
         const response = await authService.loginWithEmail(data.email, data.password);
         onLogin(response.access_token, response);
       }
@@ -130,7 +114,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
       setLoading(false);
     }
   };
-
   const handleBackToCredentials = () => {
     setOtpStep(0);
     setOtpSent(false);
@@ -138,21 +121,17 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
     setSuccess('');
     setValue('otp', '');
   };
-
   const handleResendOTP = async () => {
     const phoneNumber = watch('phoneNumber');
     await requestOTP(email, phoneNumber);
   };
-
   const steps = ['Login Details', 'Verify OTP'];
-
   return (
     <Card>
       <CardContent sx={{ p: 4 }}>
         <Typography variant="h5" component="h2" gutterBottom align="center">
           {useOTP ? 'OTP Login' : 'Login'}
         </Typography>
-
         {useOTP && (
           <Stepper activeStep={otpStep} sx={{ mt: 2, mb: 3 }}>
             {steps.map((label) => (
@@ -162,19 +141,16 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
             ))}
           </Stepper>
         )}
-
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-
         {success && (
           <Alert severity="success" sx={{ mb: 2 }}>
             {success}
           </Alert>
         )}
-
         <Box component="form" onSubmit={handleSubmit(onSubmit)}>
           {/* Email field - always visible */}
           <Controller
@@ -208,7 +184,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
               />
             )}
           />
-
           {/* Password field - hidden when OTP is active and step > 0 */}
           {!useOTP && (
             <Controller
@@ -250,7 +225,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
               )}
             />
           )}
-
           {/* Phone number field - shown when OTP is enabled and not yet sent */}
           {useOTP && !otpSent && (
             <Controller
@@ -283,7 +257,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
               )}
             />
           )}
-
           {/* OTP field - shown when OTP step is active */}
           {useOTP && otpSent && (
             <Controller
@@ -317,7 +290,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
               )}
             />
           )}
-
           {/* Login with OTP checkbox */}
           <FormControlLabel
             control={
@@ -332,7 +304,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
             label="Login with OTP"
             sx={{ mt: 2, mb: 1 }}
           />
-
           {/* Action buttons */}
           {!useOTP || !otpSent ? (
             <Button
@@ -368,7 +339,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
               </Button>
             </Box>
           )}
-
           {/* Resend OTP button */}
           {useOTP && otpSent && (
             <Button
@@ -382,7 +352,6 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
             </Button>
           )}
         </Box>
-
         <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 2 }}>
           {useOTP 
             ? "Enter your email and optional phone number to receive an OTP for secure login."
@@ -393,5 +362,4 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
     </Card>
   );
 };
-
 export default UnifiedLoginForm;

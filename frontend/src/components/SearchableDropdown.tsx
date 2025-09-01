@@ -15,7 +15,6 @@ import {
   ListItemButton
 } from '@mui/material';
 import { Add, Search } from '@mui/icons-material';
-
 interface SearchableDropdownProps {
   options: any[];
   value: any;
@@ -34,7 +33,6 @@ interface SearchableDropdownProps {
   searchFields?: string[]; // Fields to search in (e.g., ['name', 'email'])
   fullWidth?: boolean;
 }
-
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   options = [],
   value,
@@ -56,7 +54,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [filteredOptions, setFilteredOptions] = useState(options);
   const [showAddNew, setShowAddNew] = useState(false);
-
   // Filter options based on input value
   useEffect(() => {
     if (!inputValue.trim()) {
@@ -64,7 +61,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       setShowAddNew(false);
       return;
     }
-
     const filtered = options.filter(option => {
       const searchTerm = inputValue.toLowerCase();
       return searchFields.some(field => {
@@ -72,24 +68,19 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         return fieldValue.includes(searchTerm);
       });
     });
-
     setFilteredOptions(filtered);
-    
     // Show "Add New" option if no results found and onAddNew is provided
     setShowAddNew(filtered.length === 0 && !!onAddNew && inputValue.trim().length > 0);
   }, [inputValue, options, searchFields, onAddNew]);
-
   const handleOptionSelect = (option: any) => {
     onChange(getOptionValue(option));
     setInputValue(getOptionLabel(option));
   };
-
   const handleAddNew = () => {
     if (onAddNew) {
       onAddNew();
     }
   };
-
   const CustomPopper = (props: any) => {
     return (
       <Popper {...props} style={{ width: props.anchorEl?.clientWidth || 'auto' }} placement="bottom-start">
@@ -111,7 +102,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                 />
               </ListItemButton>
             ))}
-            
             {filteredOptions.length === 0 && !showAddNew && (
               <ListItemButton disabled>
                 <ListItemText
@@ -120,7 +110,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                 />
               </ListItemButton>
             )}
-            
             {showAddNew && (
               <>
                 {filteredOptions.length > 0 && <Divider />}
@@ -149,7 +138,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       </Popper>
     );
   };
-
   return (
     <Autocomplete
       fullWidth={fullWidth}
@@ -228,5 +216,4 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     />
   );
 };
-
 export default SearchableDropdown;

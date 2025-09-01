@@ -1,12 +1,11 @@
+declare function loadDashboardData(...args: any[]): any;
 'use client';
-
 /**
  * Integration Dashboard Component
  * 
  * Centralized dashboard for managing all external integrations (Tally, email, calendar, payment, Zoho, etc.)
  * with health status, sync info, and access control.
  */
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -58,7 +57,6 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-
 export interface IntegrationHealthStatus {
   integration_name: string;
   status: 'healthy' | 'warning' | 'error' | 'disconnected';
@@ -72,7 +70,6 @@ export interface IntegrationHealthStatus {
     avg_response_time?: string;
   };
 }
-
 export interface IntegrationDashboardData {
   tally_integration: IntegrationHealthStatus;
   email_integration: IntegrationHealthStatus;
@@ -86,26 +83,22 @@ export interface IntegrationDashboardData {
     storage_usage: string;
   };
 }
-
 interface IntegrationDashboardProps {
   open: boolean;
   onClose: () => void;
 }
-
 const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClose }) => {
-  const { user } = useAuth();
+const  = useAuth();
   const [loading, setLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<IntegrationDashboardData | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
-
   useEffect(() => {
     if (open) {
       loadDashboardData();
     }
   }, [open]);
-
   const loadDashboardData = async () => {
     setLoading(true);
     try {
@@ -118,7 +111,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       setLoading(false);
     }
   };
-
   const syncIntegration = async (integrationName: string) => {
     setLoading(true);
     try {
@@ -131,7 +123,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       setLoading(false);
     }
   };
-
   const testConnection = async (integrationName: string) => {
     setLoading(true);
     try {
@@ -144,7 +135,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       setLoading(false);
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'healthy':
@@ -159,7 +149,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
         return 'default';
     }
   };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'healthy':
@@ -174,7 +163,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
         return <Info />;
     }
   };
-
   const getIntegrationIcon = (name: string) => {
     switch (name.toLowerCase()) {
       case 'tally':
@@ -191,7 +179,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
         return <Settings />;
     }
   };
-
   const renderIntegrationCard = (integration: IntegrationHealthStatus) => (
     <Card key={integration.integration_name} sx={{ height: '100%' }}>
       <CardContent>
@@ -211,9 +198,7 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
             />
           </Box>
         </Box>
-
         <Divider sx={{ mb: 2 }} />
-
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Last Sync: {integration.last_sync_at 
@@ -228,7 +213,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
             Errors: {integration.error_count}
           </Typography>
         </Box>
-
         {integration.performance_metrics && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
@@ -251,7 +235,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
             )}
           </Box>
         )}
-
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Tooltip title="Test Connection">
             <IconButton 
@@ -296,19 +279,15 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       </CardContent>
     </Card>
   );
-
   const renderSystemHealth = () => {
     if (!dashboardData?.system_health) {return null;}
-
     const { system_health } = dashboardData;
-
     return (
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Timeline />
           System Health
         </Typography>
-        
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: 'center' }}>
@@ -346,7 +325,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
       </Paper>
     );
   };
-
   return (
     <Dialog 
       open={open} 
@@ -370,29 +348,24 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
           </Button>
         </Box>
       </DialogTitle>
-      
       <DialogContent>
         {loading && !dashboardData && (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
         )}
-
         {err && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErr(null)}>
             {err}
           </Alert>
         )}
-
         {dashboardData && (
           <>
             {renderSystemHealth()}
-            
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Settings />
               Active Integrations
             </Typography>
-
             <Grid container spacing={3}>
               <Grid item xs={12} md={6} lg={4}>
                 {renderIntegrationCard(dashboardData.tally_integration)}
@@ -410,7 +383,6 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
                 {renderIntegrationCard(dashboardData.zoho_integration)}
               </Grid>
             </Grid>
-
             <Box sx={{ mt: 4 }}>
               <Typography variant="h6" gutterBottom>Quick Actions</Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -428,11 +400,9 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
           </>
         )}
       </DialogContent>
-
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
-
       {/* Configuration Dialog */}
       <Dialog
         open={configDialogOpen}
@@ -456,5 +426,4 @@ const IntegrationDashboard: React.FC<IntegrationDashboardProps> = ({ open, onClo
     </Dialog>
   );
 };
-
 export default IntegrationDashboard;

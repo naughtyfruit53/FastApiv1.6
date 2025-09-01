@@ -48,16 +48,13 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -74,37 +71,30 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const InventoryManagement: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
-  const [user] = useState({ email: 'demo@example.com', role: 'admin' });
+const [] = useState({ email: 'demo@example.com', role: 'admin' });
   const [adjustmentDialog, setAdjustmentDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adjustment, setAdjustment] = useState({ quantity: '', reason: '' });
-
   const queryClient = useQueryClient();
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const handleLogout = () => {
     // Handle logout
   };
-
   // Fetch data from APIs
   const { data: stock, isLoading: stockLoading, refetch: refetchStock } = useQuery({
     queryKey: ['stock'],
     queryFn: () => masterDataService.getStock(),
     refetchInterval: 30000 // Refresh every 30 seconds
   });
-
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
     queryKey: ['lowStock'],
     queryFn: masterDataService.getLowStock,
     enabled: tabValue === 1
   });
-
   // Stock adjustment mutation
   const adjustStockMutation = useMutation({
     mutationFn: ({ productId, quantityChange, reason }: { productId: number, quantityChange: number, reason: string }) =>
@@ -117,15 +107,12 @@ const InventoryManagement: React.FC = () => {
       setSelectedProduct(null);
     }
   });
-
-  const importStockMutation = useMutation({
     mutationFn: masterDataService.bulkImportStock,
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['stock']});
       queryClient.invalidateQueries({queryKey: ['lowStock']});
     }
   });
-
   const handleImportStock = (importedData: any[]) => {
     // Convert imported data back to a format the API expects
     // This is a temporary workaround for the type mismatch
@@ -133,7 +120,6 @@ const InventoryManagement: React.FC = () => {
     // For now, just refetch stock data instead of sending to API
     refetchStock();
   };
-
   const handleAdjustStock = () => {
     if (selectedProduct && adjustment.quantity && adjustment.reason) {
       adjustStockMutation.mutate({
@@ -143,25 +129,20 @@ const InventoryManagement: React.FC = () => {
       });
     }
   };
-
   const openAdjustmentDialog = (product: any) => {
     setSelectedProduct(product);
     setAdjustmentDialog(true);
   };
-
   const renderStockTable = (stockItems: any[], showLowStockOnly = false, isLoading = false) => {
     if (isLoading) {
       return <Typography>Loading stock data...</Typography>;
     }
-    
     if (!stockItems || stockItems.length === 0) {
       return <Typography>No stock data available.</Typography>;
     }
-
     const filteredItems = showLowStockOnly 
       ? stockItems.filter(item => item.is_low_stock || (item.quantity <= (item.reorder_level || 0)))
       : stockItems;
-
     return (
       <TableContainer component={Paper}>
         <Table>
@@ -228,12 +209,10 @@ const InventoryManagement: React.FC = () => {
       </TableContainer>
     );
   };
-
   const renderSummaryCards = () => {
     if (stockLoading || !stock) {
       return <Typography>Loading inventory summary...</Typography>;
     }
-
     const totalItems = stock.length;
     const totalValue = stock.reduce((sum: number, item: any) => 
       sum + (item.total_value || (item.quantity * (item.unit_price || 0))), 0
@@ -242,7 +221,6 @@ const InventoryManagement: React.FC = () => {
       item.quantity <= (item.reorder_level || 0)
     ).length;
     const outOfStockItems = stock.filter((item: any) => item.quantity === 0).length;
-
     const cards = [
       {
         title: 'Total Items',
@@ -269,7 +247,6 @@ const InventoryManagement: React.FC = () => {
         icon: <TrendingDown />
       }
     ];
-
     return (
       <Grid container spacing={3}>
         {cards.map((card, index) => (
@@ -296,7 +273,6 @@ const InventoryManagement: React.FC = () => {
       </Grid>
     );
   };
-
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -317,12 +293,10 @@ const InventoryManagement: React.FC = () => {
             Refresh Stock
           </Button>
         </Box>
-
         {/* Summary Cards */}
         <Box sx={{ mb: 4 }}>
           {renderSummaryCards()}
         </Box>
-
         {/* Inventory Tabs */}
         <Paper sx={{ mb: 4 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -333,7 +307,6 @@ const InventoryManagement: React.FC = () => {
               <Tab label="Stock Valuation" />
             </Tabs>
           </Box>
-
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Current Stock Levels</Typography>
@@ -344,7 +317,6 @@ const InventoryManagement: React.FC = () => {
             <ExcelImportExport data={stock || []} entity="Stock" onImport={handleImportStock} />
             {renderStockTable(stock || [], false, stockLoading)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={1}>
             <Box sx={{ mb: 3 }}>
               <Alert severity="warning" sx={{ mb: 2 }}>
@@ -354,7 +326,6 @@ const InventoryManagement: React.FC = () => {
             </Box>
             {renderStockTable(lowStock || stock || [], true, lowStockLoading || stockLoading)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Stock Movements</Typography>
@@ -364,7 +335,6 @@ const InventoryManagement: React.FC = () => {
             </Box>
             <Typography>Stock movement tracking coming soon...</Typography>
           </TabPanel>
-
           <TabPanel value={tabValue} index={3}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Stock Valuation Report</Typography>
@@ -376,7 +346,6 @@ const InventoryManagement: React.FC = () => {
           </TabPanel>
         </Paper>
       </Container>
-
       {/* Stock Adjustment Dialog */}
       <Dialog open={adjustmentDialog} onClose={() => setAdjustmentDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Adjust Stock: {selectedProduct?.product_name}</DialogTitle>
@@ -418,5 +387,4 @@ const InventoryManagement: React.FC = () => {
     </Box>
   );
 };
-
 export default InventoryManagement; 

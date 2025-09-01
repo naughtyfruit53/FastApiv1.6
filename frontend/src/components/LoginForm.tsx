@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { 
   Box,
@@ -14,35 +13,27 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { authService } from '../services/authService';
-
 interface LoginFormProps {
   onLogin: (token: string, loginResponse?: any) => void;
 }
-
 interface LoginFormData {
   email: string;
   password: string;
 }
-
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     defaultValues: {
       email: '',
       password: ''
     }
   });
-  const _router = useRouter(); // Prefixed unused router
-
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     setError('');
-    
     try {
       const response = await authService.loginWithEmail(data.email, data.password);
-      
       // Store user info - removed redundant localStorage sets since AuthContext handles it
       onLogin(response.access_token, response);
     } catch (error: any) {
@@ -53,20 +44,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       setLoading(false);
     }
   };
-
   return (
     <Card>
       <CardContent sx={{ p: 4 }}>
         <Typography variant="h5" component="h2" gutterBottom align="center">
           Standard Login
         </Typography>
-
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-
         <Box component="form" onSubmit={handleSubmit(onSubmit)}>
           <Controller
             name="email"
@@ -98,7 +86,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               />
             )}
           />
-
           <Controller
             name="password"
             control={control}
@@ -124,7 +111,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               />
             )}
           />
-
           <Button
             type="submit"
             fullWidth
@@ -135,7 +121,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             {loading ? <CircularProgress size={24} /> : 'Login'}
           </Button>
         </Box>
-
         <Typography variant="body2" color="textSecondary" align="center">
           Use your email and password to login, or try OTP authentication for enhanced security.
         </Typography>
@@ -143,5 +128,4 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     </Card>
   );
 };
-
 export default LoginForm;

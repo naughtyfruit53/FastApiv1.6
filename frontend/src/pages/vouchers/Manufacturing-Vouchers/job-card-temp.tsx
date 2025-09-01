@@ -1,4 +1,3 @@
- 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -48,9 +47,6 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import { getProducts, getVendors } from '../../../services/masterService';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-
 interface JobCardSuppliedMaterial {
   product_id: number;
   quantity_supplied: number;
@@ -60,7 +56,6 @@ interface JobCardSuppliedMaterial {
   lot_number?: string;
   supply_date?: string;
 }
-
 interface JobCardReceivedOutput {
   product_id: number;
   quantity_received: number;
@@ -72,7 +67,6 @@ interface JobCardReceivedOutput {
   batch_number?: string;
   receipt_date?: string;
 }
-
 interface JobCardVoucher {
   id?: number;
   voucher_number: string;
@@ -96,7 +90,6 @@ interface JobCardVoucher {
   supplied_materials: JobCardSuppliedMaterial[];
   received_outputs: JobCardReceivedOutput[];
 }
-
 const defaultValues: Partial<JobCardVoucher> = {
   voucher_number: '',
   date: new Date().toISOString().split('T')[0],
@@ -109,32 +102,27 @@ const defaultValues: Partial<JobCardVoucher> = {
   supplied_materials: [],
   received_outputs: []
 };
-
 const jobTypeOptions = [
   { value: 'outsourcing', label: 'Outsourcing' },
   { value: 'subcontracting', label: 'Subcontracting' },
   { value: 'processing', label: 'Processing' }
 ];
-
 const jobStatusOptions = [
   { value: 'planned', label: 'Planned' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' }
 ];
-
 const materialsSuppliedByOptions = [
   { value: 'company', label: 'Company' },
   { value: 'vendor', label: 'Vendor' },
   { value: 'mixed', label: 'Mixed' }
 ];
-
 const qualityStatusOptions = [
   { value: 'accepted', label: 'Accepted' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'rework', label: 'Rework Required' }
 ];
-
 function TabPanel({ children, value, index, ...other }: any) {
   return (
     <div
@@ -148,18 +136,14 @@ function TabPanel({ children, value, index, ...other }: any) {
     </div>
   );
 }
-
 export default function JobCardVoucher() {
-  const router = useRouter();
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const queryClient = useQueryClient();
-
-  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<JobCardVoucher>({
+const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<JobCardVoucher>({
     defaultValues
   });
-
   const {
     fields: materialFields,
     append: appendMaterial,
@@ -168,7 +152,6 @@ export default function JobCardVoucher() {
     control,
     name: 'supplied_materials'
   });
-
   const {
     fields: outputFields,
     append: appendOutput,
@@ -177,54 +160,45 @@ export default function JobCardVoucher() {
     control,
     name: 'received_outputs'
   });
-
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
     queryKey: ['job-card-vouchers'],
     queryFn: () => api.get('/job-card-vouchers').then(res => res.data),
   });
-
   // Fetch vendors
   const { data: vendorList } = useQuery({
     queryKey: ['vendors'],
     queryFn: getVendors
   });
-
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ['manufacturing-orders'],
     queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
   });
-
   // Fetch products
   const { data: productList } = useQuery({
     queryKey: ['products'],
     queryFn: getProducts
   });
-
   // Fetch specific voucher
-  const { data: voucherData, isFetching } = useQuery({
+const { data: voucherData} = useQuery({
     queryKey: ['job-card-voucher', selectedId],
     queryFn: () => api.get(`/job-card-vouchers/${selectedId}`).then(res => res.data),
     enabled: !!selectedId
   });
-
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ['nextJobCardNumber'],
     queryFn: () => api.get('/job-card-vouchers/next-number').then(res => res.data),
     enabled: mode === 'create',
   });
-
   const sortedVouchers = voucherList ? [...voucherList].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   ) : [];
-
   const latestVouchers = sortedVouchers.slice(0, 10);
   const productOptions = productList || [];
   const vendorOptions = vendorList || [];
   const manufacturingOrderOptions = manufacturingOrders || [];
-
   useEffect(() => {
     if (mode === 'create' && nextVoucherNumber) {
       setValue('voucher_number', nextVoucherNumber);
@@ -234,22 +208,18 @@ export default function JobCardVoucher() {
       reset(defaultValues);
     }
   }, [voucherData, mode, reset, nextVoucherNumber, setValue]);
-
   // Calculate totals
   useEffect(() => {
     const suppliedMaterials = watch('supplied_materials') || [];
     const receivedOutputs = watch('received_outputs') || [];
-    
     const suppliedValue = suppliedMaterials.reduce((sum, item) => 
       sum + (item.quantity_supplied * item.unit_rate), 0);
     const outputValue = receivedOutputs.reduce((sum, item) => 
       sum + (item.quantity_received * item.unit_rate), 0);
-    
     // Net job work value
     const total = outputValue - suppliedValue;
     setValue('total_amount', total);
   }, [watch('supplied_materials'), watch('received_outputs'), setValue]);
-
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: JobCardVoucher) => api.post('/job-card-vouchers', data),
@@ -265,7 +235,6 @@ export default function JobCardVoucher() {
       console.error('Error creating job card voucher:', error);
     }
   });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: JobCardVoucher }) => 
       api.put(`/job-card-vouchers/${id}`, data),
@@ -279,7 +248,6 @@ export default function JobCardVoucher() {
       console.error('Error updating job card voucher:', error);
     }
   });
-
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/job-card-vouchers/${id}`),
     onSuccess: () => {
@@ -291,7 +259,6 @@ export default function JobCardVoucher() {
       }
     }
   });
-
   const onSubmit = (data: JobCardVoucher) => {
     if (mode === 'edit' && selectedId) {
       updateMutation.mutate({ id: selectedId, data });
@@ -299,29 +266,24 @@ export default function JobCardVoucher() {
       createMutation.mutate(data);
     }
   };
-
   const handleEdit = (voucher: JobCardVoucher) => {
     setSelectedId(voucher.id!);
     setMode('edit');
   };
-
   const handleView = (voucher: JobCardVoucher) => {
     setSelectedId(voucher.id!);
     setMode('view');
   };
-
   const handleDelete = (voucherId: number) => {
     if (window.confirm('Are you sure you want to delete this voucher?')) {
       deleteMutation.mutate(voucherId);
     }
   };
-
   const handleCancel = () => {
     setMode('create');
     setSelectedId(null);
     reset(defaultValues);
   };
-
   const addMaterial = () => {
     appendMaterial({
       product_id: 0,
@@ -330,7 +292,6 @@ export default function JobCardVoucher() {
       unit_rate: 0
     });
   };
-
   const addOutput = () => {
     appendOutput({
       product_id: 0,
@@ -339,7 +300,6 @@ export default function JobCardVoucher() {
       unit_rate: 0
     });
   };
-
   if (isLoading) {
     return (
       <Container>
@@ -349,13 +309,11 @@ export default function JobCardVoucher() {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl">
       <Typography variant="h4" component="h1" gutterBottom>
         Job Card Vouchers
       </Typography>
-
       <Grid container spacing={3}>
         {/* Voucher List - Left Side  */}
         <Grid size={{ xs: 12, md: 5 }}>
@@ -365,7 +323,6 @@ export default function JobCardVoucher() {
                 <Typography variant="h6">Recent Vouchers</Typography>
                 {/* VoucherHeaderActions commented out  */}
               </Box>
-              
               <TableContainer component={Paper}>
                 <Table size="small">
                   <TableHead>
@@ -416,7 +373,6 @@ export default function JobCardVoucher() {
             </CardContent>
           </Card>
         </Grid>
-
         {/* Voucher Form - Right Side  */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Card>
@@ -437,7 +393,6 @@ export default function JobCardVoucher() {
                   </Button>
                 )}
               </Box>
-
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Basic Details  */}
                 <Grid container spacing={2} mb={3}>
@@ -517,7 +472,6 @@ export default function JobCardVoucher() {
                     </FormControl>
                   </Grid>
                 </Grid>
-
                 {/* Job Details  */}
                 <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMore />}>
@@ -602,7 +556,6 @@ export default function JobCardVoucher() {
                     </Grid>
                   </AccordionDetails>
                 </Accordion>
-
                 {/* Quality Requirements  */}
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMore />}>
@@ -635,14 +588,12 @@ export default function JobCardVoucher() {
                     </Grid>
                   </AccordionDetails>
                 </Accordion>
-
                 {/* Materials and Outputs Tabs  */}
                 <Box mt={3}>
                   <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
                     <Tab label="Supplied Materials" />
                     <Tab label="Received Outputs" />
                   </Tabs>
-
                   {/* Supplied Materials Tab  */}
                   <TabPanel value={activeTab} index={0}>
                     {mode !== 'view' && (
@@ -656,7 +607,6 @@ export default function JobCardVoucher() {
                         </Button>
                       </Box>
                     )}
-
                     <TableContainer component={Paper}>
                       <Table size="small">
                         <TableHead>
@@ -761,7 +711,6 @@ export default function JobCardVoucher() {
                       </Table>
                     </TableContainer>
                   </TabPanel>
-
                   {/* Received Outputs Tab  */}
                   <TabPanel value={activeTab} index={1}>
                     {mode !== 'view' && (
@@ -775,7 +724,6 @@ export default function JobCardVoucher() {
                         </Button>
                       </Box>
                     )}
-
                     <TableContainer component={Paper}>
                       <Table size="small">
                         <TableHead>
@@ -887,7 +835,6 @@ export default function JobCardVoucher() {
                     </TableContainer>
                   </TabPanel>
                 </Box>
-
                 {/* Notes  */}
                 <Grid container spacing={2} mt={2}>
                   <Grid size={12}>
@@ -901,14 +848,12 @@ export default function JobCardVoucher() {
                     />
                   </Grid>
                 </Grid>
-
                 {/* Total Amount  */}
                 <Box display="flex" justifyContent="flex-end" mt={2}>
                   <Typography variant="h6">
                     Net Job Work Value: ₹{(watch('total_amount') || 0).toFixed(2)}
                   </Typography>
                 </Box>
-
                 {/* Action Buttons  */}
                 {mode !== 'view' && (
                   <Box mt={3} display="flex" gap={2}>

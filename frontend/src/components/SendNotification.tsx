@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+declare function resetSingleForm(...args: any[]): any;
+declare function resetBulkForm(...args: any[]): any;
   Box,
   Typography,
   Grid,
@@ -54,13 +56,11 @@ import {
   notificationQueryKeys
 } from '../services/notificationService';
 import { getAllEntities } from '../services/entityService';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -75,12 +75,10 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const SendNotification: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState<any>(null);
-  
   // Single notification form state
   const [singleForm, setSingleForm] = useState({
     template_id: '',
@@ -91,7 +89,6 @@ const SendNotification: React.FC = () => {
     override_subject: '',
     override_content: ''
   });
-
   // Bulk notification form state
   const [bulkForm, setBulkForm] = useState({
     template_id: '',
@@ -103,7 +100,6 @@ const SendNotification: React.FC = () => {
     segment_name: '',
     variables: {} as Record<string, string>
   });
-
   // Get templates
   const { 
     data: templates = [], 
@@ -112,7 +108,6 @@ const SendNotification: React.FC = () => {
     queryKey: notificationQueryKeys.templates(),
     queryFn: () => getNotificationTemplates({ is_active: true }),
   });
-
   // Get entities (customers/users)
   const { 
     data: entities = [], 
@@ -121,7 +116,6 @@ const SendNotification: React.FC = () => {
     queryKey: ['entities'],
     queryFn: getAllEntities,
   });
-
   // Send single notification mutation
   const sendSingleMutation = useMutation({
     mutationFn: sendNotification,
@@ -133,7 +127,6 @@ const SendNotification: React.FC = () => {
       toast.error(error.response?.data?.detail || 'Failed to send notification');
     }
   });
-
   // Send bulk notification mutation
   const sendBulkMutation = useMutation({
     mutationFn: sendBulkNotification,
@@ -148,7 +141,6 @@ const SendNotification: React.FC = () => {
       toast.error(error.response?.data?.detail || 'Failed to send bulk notification');
     }
   });
-
   // Preview mutation
   const previewMutation = useMutation({
     mutationFn: ({ id, testData }: { id: number; testData: any }) =>
@@ -161,7 +153,6 @@ const SendNotification: React.FC = () => {
       toast.error('Failed to generate preview');
     }
   });
-
   const resetSingleForm = () => {
     setSingleForm({
       template_id: '',
@@ -173,7 +164,6 @@ const SendNotification: React.FC = () => {
       override_content: ''
     });
   };
-
   const resetBulkForm = () => {
     setBulkForm({
       template_id: '',
@@ -186,18 +176,15 @@ const SendNotification: React.FC = () => {
       variables: {}
     });
   };
-
   const handleSendSingle = () => {
     if (!singleForm.recipient_id) {
       toast.error('Please select a recipient');
       return;
     }
-
     if (!singleForm.template_id && !singleForm.override_content) {
       toast.error('Please select a template or provide custom content');
       return;
     }
-
     const request: NotificationSendRequest = {
       template_id: singleForm.template_id ? parseInt(singleForm.template_id) : undefined,
       recipient_type: singleForm.recipient_type,
@@ -207,26 +194,21 @@ const SendNotification: React.FC = () => {
       override_subject: singleForm.override_subject || undefined,
       override_content: singleForm.override_content || undefined
     };
-
     sendSingleMutation.mutate(request);
   };
-
   const handleSendBulk = () => {
     if (bulkForm.recipient_type === 'customers' && bulkForm.recipient_ids.length === 0) {
       toast.error('Please select customers');
       return;
     }
-
     if (bulkForm.recipient_type === 'segment' && !bulkForm.segment_name) {
       toast.error('Please enter segment name');
       return;
     }
-
     if (!bulkForm.template_id && !bulkForm.content) {
       toast.error('Please select a template or provide custom content');
       return;
     }
-
     const request: BulkNotificationRequest = {
       template_id: bulkForm.template_id ? parseInt(bulkForm.template_id) : undefined,
       subject: bulkForm.subject || undefined,
@@ -237,33 +219,26 @@ const SendNotification: React.FC = () => {
       segment_name: bulkForm.segment_name || undefined,
       variables: Object.keys(bulkForm.variables).length > 0 ? bulkForm.variables : undefined
     };
-
     sendBulkMutation.mutate(request);
   };
-
   const handlePreview = (isForBulk: boolean = false) => {
     const templateId = isForBulk ? bulkForm.template_id : singleForm.template_id;
     const variables = isForBulk ? bulkForm.variables : singleForm.variables;
-
     if (!templateId) {
       toast.error('Please select a template to preview');
       return;
     }
-
     previewMutation.mutate({
       id: parseInt(templateId),
       testData: { variables }
     });
   };
-
   const selectedTemplate = templates.find(t => 
     t.id === parseInt(selectedTab === 0 ? singleForm.template_id : bulkForm.template_id)
   );
-
   // Filter entities based on recipient type
   const customers = entities.filter(e => e.type === 'Customer');
   const users = entities.filter(e => e.type === 'User');
-
   return (
     <Box>
       <Card>
@@ -273,7 +248,6 @@ const SendNotification: React.FC = () => {
               Send Notifications
             </Typography>
           </Box>
-
           <Tabs 
             value={selectedTab} 
             onChange={(_, newValue) => setSelectedTab(newValue)}
@@ -290,7 +264,6 @@ const SendNotification: React.FC = () => {
               iconPosition="start"
             />
           </Tabs>
-
           {/* Single Notification Tab */}
           <TabPanel value={selectedTab} index={0}>
             <Grid container spacing={3}>
@@ -311,7 +284,6 @@ const SendNotification: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Channel</InputLabel>
@@ -331,7 +303,6 @@ const SendNotification: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Recipient Type</InputLabel>
@@ -349,7 +320,6 @@ const SendNotification: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-
               <Grid item xs={12} md={6}>
                 <Autocomplete
                   options={singleForm.recipient_type === 'customer' ? customers : users}
@@ -369,7 +339,6 @@ const SendNotification: React.FC = () => {
                   )}
                 />
               </Grid>
-
               {!singleForm.template_id && (
                 <>
                   <Grid item xs={12}>
@@ -395,7 +364,6 @@ const SendNotification: React.FC = () => {
                   </Grid>
                 </>
               )}
-
               {selectedTemplate && selectedTemplate.variables && (
                 <Grid item xs={12}>
                   <Typography variant="h6" gutterBottom>
@@ -421,7 +389,6 @@ const SendNotification: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-
               <Grid item xs={12}>
                 <Box display="flex" gap={2}>
                   <Button
@@ -446,7 +413,6 @@ const SendNotification: React.FC = () => {
               </Grid>
             </Grid>
           </TabPanel>
-
           {/* Bulk Notification Tab */}
           <TabPanel value={selectedTab} index={1}>
             <Grid container spacing={3}>
@@ -467,7 +433,6 @@ const SendNotification: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Channel</InputLabel>
@@ -487,7 +452,6 @@ const SendNotification: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-
               <Grid item xs={12}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Recipient Type</InputLabel>
@@ -507,7 +471,6 @@ const SendNotification: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-
               {bulkForm.recipient_type === 'customers' && (
                 <Grid item xs={12}>
                   <Autocomplete
@@ -540,7 +503,6 @@ const SendNotification: React.FC = () => {
                   />
                 </Grid>
               )}
-
               {bulkForm.recipient_type === 'segment' && (
                 <Grid item xs={12}>
                   <TextField
@@ -553,7 +515,6 @@ const SendNotification: React.FC = () => {
                   />
                 </Grid>
               )}
-
               {bulkForm.recipient_type === 'users' && (
                 <Grid item xs={12}>
                   <Autocomplete
@@ -586,7 +547,6 @@ const SendNotification: React.FC = () => {
                   />
                 </Grid>
               )}
-
               {!bulkForm.template_id && (
                 <>
                   <Grid item xs={12}>
@@ -612,7 +572,6 @@ const SendNotification: React.FC = () => {
                   </Grid>
                 </>
               )}
-
               <Grid item xs={12}>
                 <Box display="flex" gap={2}>
                   <Button
@@ -639,7 +598,6 @@ const SendNotification: React.FC = () => {
           </TabPanel>
         </CardContent>
       </Card>
-
       {/* Preview Modal */}
       <Dialog open={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Template Preview</DialogTitle>
@@ -686,5 +644,4 @@ const SendNotification: React.FC = () => {
     </Box>
   );
 };
-
 export default SendNotification;

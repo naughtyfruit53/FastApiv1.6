@@ -42,7 +42,6 @@ import {
 } from '@mui/icons-material';
 import { TreeView, TreeItem } from '@mui/x-tree-view';
 import axios from 'axios';
-
 interface CostCenter {
   id: number;
   cost_center_code: string;
@@ -58,7 +57,6 @@ interface CostCenter {
   created_at: string;
   updated_at: string;
 }
-
 interface CreateCostCenterData {
   cost_center_code: string;
   cost_center_name: string;
@@ -68,15 +66,11 @@ interface CreateCostCenterData {
   manager_id?: number;
   description?: string;
 }
-
 const CostCenters: React.FC = () => {
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedCostCenter, setSelectedCostCenter] = useState<CostCenter | null>(null);
-
   // Create cost center form state
   const [createData, setCreateData] = useState<CreateCostCenterData>({
     cost_center_code: '',
@@ -84,7 +78,6 @@ const CostCenters: React.FC = () => {
     budget_amount: 0,
     description: ''
   });
-
   const fetchCostCenters = async () => {
     try {
       setLoading(true);
@@ -100,18 +93,15 @@ const CostCenters: React.FC = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchCostCenters();
   }, []);
-
   const handleCreateCostCenter = async () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post('/api/v1/erp/cost-centers', createData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       setCreateDialogOpen(false);
       setCreateData({
         cost_center_code: '',
@@ -124,7 +114,6 @@ const CostCenters: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to create cost center');
     }
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -133,18 +122,15 @@ const CostCenters: React.FC = () => {
       maximumFractionDigits: 0
     }).format(amount);
   };
-
   const calculateVariance = (budget: number, actual: number) => {
     if (budget === 0) {return 0;}
     return ((actual - budget) / budget) * 100;
   };
-
   const getVarianceColor = (variance: number) => {
     if (Math.abs(variance) <= 5) {return 'success';}
     if (Math.abs(variance) <= 15) {return 'warning';}
     return 'error';
   };
-
   const buildCostCenterTree = (costCenters: CostCenter[], parentId: number | null = null): CostCenter[] => {
     return costCenters
       .filter(cc => cc.parent_cost_center_id === parentId)
@@ -153,7 +139,6 @@ const CostCenters: React.FC = () => {
         children: buildCostCenterTree(costCenters, cc.id)
       }));
   };
-
   const renderCostCenterTree = (costCenters: any[]) => {
     return costCenters.map((cc) => (
       <TreeItem
@@ -178,14 +163,11 @@ const CostCenters: React.FC = () => {
       </TreeItem>
     ));
   };
-
   // Calculate totals
   const totalBudget = costCenters.reduce((sum, cc) => sum + cc.budget_amount, 0);
   const totalActual = costCenters.reduce((sum, cc) => sum + cc.actual_amount, 0);
   const totalVariance = calculateVariance(totalBudget, totalActual);
-
   const costCenterTree = buildCostCenterTree(costCenters);
-
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -207,7 +189,6 @@ const CostCenters: React.FC = () => {
           </IconButton>
         </Box>
       </Box>
-
       {/* Summary Cards */}
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} sm={4}>
@@ -227,7 +208,6 @@ const CostCenters: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={4}>
           <Card>
             <CardContent>
@@ -245,7 +225,6 @@ const CostCenters: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={4}>
           <Card>
             <CardContent>
@@ -264,13 +243,11 @@ const CostCenters: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-
       <Grid container spacing={3}>
         {/* Cost Center Hierarchy */}
         <Grid item xs={12} md={4}>
@@ -287,7 +264,6 @@ const CostCenters: React.FC = () => {
             )}
           </Paper>
         </Grid>
-
         {/* Cost Centers Table */}
         <Grid item xs={12} md={8}>
           <Paper>
@@ -323,7 +299,6 @@ const CostCenters: React.FC = () => {
                     costCenters.map((cc) => {
                       const variance = calculateVariance(cc.budget_amount, cc.actual_amount);
                       const utilization = cc.budget_amount > 0 ? (cc.actual_amount / cc.budget_amount) * 100 : 0;
-                      
                       return (
                         <TableRow key={cc.id}>
                           <TableCell>{cc.cost_center_code}</TableCell>
@@ -398,7 +373,6 @@ const CostCenters: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
-
       {/* Create Cost Center Dialog */}
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Create Cost Center</DialogTitle>
@@ -478,5 +452,4 @@ const CostCenters: React.FC = () => {
     </Box>
   );
 };
-
 export default CostCenters;

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import '../styles/print.css';
 import {
@@ -47,16 +46,13 @@ import { reportsService } from '../services/authService';
 import MegaMenu from '../components/MegaMenu';
 import ExportPrintToolbar from '../components/ExportPrintToolbar';
 import { canAccessLedger } from '../types/user.types';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -73,7 +69,6 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const ReportsPage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [user] = useState({ id: 1, email: 'demo@example.com', role: 'admin' });
@@ -81,7 +76,6 @@ const ReportsPage: React.FC = () => {
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0], // First day of current month
     end: new Date().toISOString().split('T')[0]
   });
-
   const [salesFilters, setSalesFilters] = useState({
     customer_id: '',
     search: ''
@@ -98,7 +92,6 @@ const ReportsPage: React.FC = () => {
     order_type: 'all',
     search: ''
   });
-
   // Ledger specific state
   const [ledgerType, setLedgerType] = useState<'complete' | 'outstanding'>('complete');
   const [ledgerFilters, setLedgerFilters] = useState({
@@ -108,27 +101,22 @@ const ReportsPage: React.FC = () => {
     account_id: '',
     voucher_type: 'all'
   });
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const handleLogout = () => {
     // Handle logout
   };
-
   const handleDateChange = (field: 'start' | 'end', value: string) => {
     setDateRange(prev => ({ ...prev, [field]: value }));
   };
-
   // Fetch dashboard statistics
-  const { data: dashboardStats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
+const { data: dashboardStats, isLoading: statsLoading, refetch:} = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: reportsService.getDashboardStats,
     enabled: true,
     refetchInterval: 30000 // Refresh every 30 seconds
   });
-
   // Fetch sales report
   const { data: salesReport, isLoading: salesLoading, refetch: refetchSales } = useQuery({
     queryKey: ['salesReport', dateRange.start, dateRange.end, salesFilters],
@@ -140,7 +128,6 @@ const ReportsPage: React.FC = () => {
     }),
     enabled: tabValue === 1
   });
-
   // Fetch purchase report
   const { data: purchaseReport, isLoading: purchaseLoading, refetch: refetchPurchase } = useQuery({
     queryKey: ['purchaseReport', dateRange.start, dateRange.end, purchaseFilters],
@@ -152,48 +139,40 @@ const ReportsPage: React.FC = () => {
     }),
     enabled: tabValue === 2
   });
-
   // Fetch inventory report
   const { data: inventoryReport, isLoading: inventoryLoading, refetch: refetchInventory } = useQuery({
     queryKey: ['inventoryReport', inventoryFilters],
     queryFn: () => reportsService.getInventoryReport(inventoryFilters.include_zero_stock),
     enabled: tabValue === 3
   });
-
   // Fetch pending orders
   const { data: pendingOrders, isLoading: ordersLoading, refetch: refetchOrders } = useQuery({
     queryKey: ['pendingOrders', pendingOrdersFilters],
     queryFn: () => reportsService.getPendingOrders(pendingOrdersFilters.order_type),
     enabled: tabValue === 4
   });
-
   // Fetch complete ledger
   const { data: completeLedger, isLoading: completeLedgerLoading, refetch: refetchCompleteLedger } = useQuery({
     queryKey: ['completeLedger', ledgerFilters],
     queryFn: () => reportsService.getCompleteLedger(ledgerFilters),
     enabled: tabValue === 5 && ledgerType === 'complete' && canAccessLedger(user)
   });
-
   // Fetch outstanding ledger  
   const { data: outstandingLedger, isLoading: outstandingLedgerLoading, refetch: refetchOutstandingLedger } = useQuery({
     queryKey: ['outstandingLedger', ledgerFilters],
     queryFn: () => reportsService.getOutstandingLedger(ledgerFilters),
     enabled: tabValue === 5 && ledgerType === 'outstanding' && canAccessLedger(user)
   });
-
   const handleLedgerFilterChange = (field: string, value: string) => {
     setLedgerFilters(prev => ({ ...prev, [field]: value }));
   };
-
   const handleLedgerTypeChange = (type: 'complete' | 'outstanding') => {
     setLedgerType(type);
   };
-
   const renderSummaryCards = () => {
     if (statsLoading || !dashboardStats) {
       return <Typography>Loading statistics...</Typography>;
     }
-
     const cards = [
       {
         title: 'Vendors',
@@ -220,7 +199,6 @@ const ReportsPage: React.FC = () => {
         icon: <Warning />
       }
     ];
-
     return (
       <Grid container spacing={3}>
         {cards.map((card, index) => (
@@ -253,7 +231,6 @@ const ReportsPage: React.FC = () => {
       </Grid>
     );
   };
-
   const renderVoucherTable = (vouchers: any[], title: string, reportType: string, filters?: any) => {
     const getExportHandler = () => {
       switch (reportType) {
@@ -275,7 +252,6 @@ const ReportsPage: React.FC = () => {
           return undefined;
       }
     };
-
     return (
       <TableContainer component={Paper}>
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -320,7 +296,6 @@ const ReportsPage: React.FC = () => {
       </TableContainer>
     );
   };
-
   return (
     <Box sx={{ flexGrow: 1 }}>
       <MegaMenu user={user} onLogout={handleLogout} />
@@ -331,12 +306,10 @@ const ReportsPage: React.FC = () => {
         <Typography variant="body1" color="textSecondary" sx={{ mb: 4 }}>
           Comprehensive business reports and data analytics
         </Typography>
-
         {/* Summary Cards */}
         <Box sx={{ mb: 4 }}>
           {renderSummaryCards()}
         </Box>
-
         {/* Reports Tabs */}
         <Paper sx={{ mb: 4 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -349,7 +322,6 @@ const ReportsPage: React.FC = () => {
               <Tab label="Ledger" />
             </Tabs>
           </Box>
-
           <TabPanel value={tabValue} index={0}>
             <Typography variant="h6" gutterBottom>
               Business Overview
@@ -395,7 +367,6 @@ const ReportsPage: React.FC = () => {
               </Grid>
             </Grid>
           </TabPanel>
-
           <TabPanel value={tabValue} index={1}>
             <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <TextField
@@ -426,7 +397,6 @@ const ReportsPage: React.FC = () => {
                 Refresh
               </Button>
             </Box>
-            
             {salesLoading ? (
               <Typography>Loading sales report...</Typography>
             ) : salesReport ? (
@@ -446,7 +416,6 @@ const ReportsPage: React.FC = () => {
               <Typography>No sales data available</Typography>
             )}
           </TabPanel>
-
           <TabPanel value={tabValue} index={2}>
             <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <TextField
@@ -477,7 +446,6 @@ const ReportsPage: React.FC = () => {
                 Refresh
               </Button>
             </Box>
-            
             {purchaseLoading ? (
               <Typography>Loading purchase report...</Typography>
             ) : purchaseReport ? (
@@ -497,7 +465,6 @@ const ReportsPage: React.FC = () => {
               <Typography>No purchase data available</Typography>
             )}
           </TabPanel>
-
           <TabPanel value={tabValue} index={3}>
             <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <Typography variant="h6">Inventory Status</Typography>
@@ -522,7 +489,6 @@ const ReportsPage: React.FC = () => {
                 Refresh
               </Button>
             </Box>
-            
             {inventoryLoading ? (
               <Typography>Loading inventory report...</Typography>
             ) : inventoryReport ? (
@@ -580,7 +546,6 @@ const ReportsPage: React.FC = () => {
               <Typography>No inventory data available</Typography>
             )}
           </TabPanel>
-
           <TabPanel value={tabValue} index={4}>
             <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <Typography variant="h6">Pending Orders</Typography>
@@ -608,7 +573,6 @@ const ReportsPage: React.FC = () => {
                 Refresh
               </Button>
             </Box>
-            
             {ordersLoading ? (
               <Typography>Loading pending orders...</Typography>
             ) : pendingOrders ? (
@@ -665,7 +629,6 @@ const ReportsPage: React.FC = () => {
               <Typography>No pending orders</Typography>
             )}
           </TabPanel>
-
           <TabPanel value={tabValue} index={5}>
             {!canAccessLedger(user) ? (
               <Alert severity="warning">
@@ -677,7 +640,6 @@ const ReportsPage: React.FC = () => {
                   <Typography variant="h6" sx={{ mr: 2 }}>
                     Ledger Report
                   </Typography>
-                  
                   {/* Ledger Type Toggle */}
                   <FormControlLabel
                     control={
@@ -690,7 +652,6 @@ const ReportsPage: React.FC = () => {
                     label={ledgerType === 'complete' ? 'Complete Ledger' : 'Outstanding Ledger'}
                     sx={{ mr: 2 }}
                   />
-
                   {/* Date Range Filters */}
                   <TextField
                     label="Start Date"
@@ -710,7 +671,6 @@ const ReportsPage: React.FC = () => {
                     size="small"
                     sx={{ minWidth: 140 }}
                   />
-
                   {/* Account Type Filter */}
                   <FormControl size="small" sx={{ minWidth: 120 }}>
                     <InputLabel>Account Type</InputLabel>
@@ -724,7 +684,6 @@ const ReportsPage: React.FC = () => {
                       <MenuItem value="customer">Customers</MenuItem>
                     </Select>
                   </FormControl>
-
                   {/* Voucher Type Filter */}
                   <FormControl size="small" sx={{ minWidth: 140 }}>
                     <InputLabel>Voucher Type</InputLabel>
@@ -742,7 +701,6 @@ const ReportsPage: React.FC = () => {
                       <MenuItem value="credit_note">Credit Note</MenuItem>
                     </Select>
                   </FormControl>
-
                   <Button 
                     variant="contained" 
                     startIcon={<Refresh />} 
@@ -751,7 +709,6 @@ const ReportsPage: React.FC = () => {
                     Refresh
                   </Button>
                 </Box>
-
                 {/* Complete Ledger View */}
                 {ledgerType === 'complete' && (
                   <>
@@ -817,7 +774,6 @@ const ReportsPage: React.FC = () => {
                     )}
                   </>
                 )}
-
                 {/* Outstanding Ledger View */}
                 {ledgerType === 'outstanding' && (
                   <>
@@ -909,5 +865,4 @@ const ReportsPage: React.FC = () => {
     </Box>
   );
 };
-
 export default ReportsPage;

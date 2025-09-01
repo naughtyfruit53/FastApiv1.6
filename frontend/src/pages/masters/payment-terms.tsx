@@ -38,9 +38,7 @@ import {
   Payment,
   AccessTime
 } from '@mui/icons-material';
-
 const PaymentTermsPage: React.FC = () => {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
@@ -56,7 +54,6 @@ const PaymentTermsPage: React.FC = () => {
     is_default: false,
     is_active: true
   });
-
   // Mock data for demonstration
   const paymentTerms = [
     {
@@ -138,7 +135,6 @@ const PaymentTermsPage: React.FC = () => {
       usage_count: 5
     }
   ];
-
   const paymentTypes = [
     { value: 'immediate', label: 'Immediate Payment' },
     { value: 'advance', label: 'Advance Payment' },
@@ -146,7 +142,6 @@ const PaymentTermsPage: React.FC = () => {
     { value: 'eom', label: 'End of Month' },
     { value: 'custom', label: 'Custom Terms' }
   ];
-
   const resetForm = () => {
     setFormData({
       term_name: '',
@@ -160,12 +155,10 @@ const PaymentTermsPage: React.FC = () => {
       is_active: true
     });
   };
-
   const handleAddClick = () => {
     resetForm();
     setAddDialog(true);
   };
-
   const handleEditClick = (term: any) => {
     setSelectedTerm(term);
     setFormData({
@@ -181,7 +174,6 @@ const PaymentTermsPage: React.FC = () => {
     });
     setEditDialog(true);
   };
-
   const handleSubmit = () => {
     if (selectedTerm) {
       // TODO: Implement update functionality
@@ -193,29 +185,24 @@ const PaymentTermsPage: React.FC = () => {
     setAddDialog(false);
     setEditDialog(false);
   };
-
   const handleDeleteClick = (term: any) => {
     // TODO: Implement delete functionality
     console.log('Delete payment term:', term.id);
   };
-
   const filteredTerms = paymentTerms.filter((term: any) =>
     term.term_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     term.term_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     term.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const getTotalUsage = () => {
     return paymentTerms.reduce((sum, term) => sum + term.usage_count, 0);
   };
-
   const getAverageDays = () => {
     const netDaysTerms = paymentTerms.filter(term => term.payment_type === 'net_days' && term.is_active);
     if (netDaysTerms.length === 0) {return 0;}
     const total = netDaysTerms.reduce((sum, term) => sum + term.due_days, 0);
     return Math.round(total / netDaysTerms.length);
   };
-
   const getTermDisplay = (term: any) => {
     if (term.payment_type === 'immediate') {return 'Immediate';}
     if (term.payment_type === 'advance') {return 'Advance';}
@@ -224,7 +211,6 @@ const PaymentTermsPage: React.FC = () => {
     }
     return `Net ${term.due_days} days`;
   };
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -240,13 +226,11 @@ const PaymentTermsPage: React.FC = () => {
             Add Payment Term
           </Button>
         </Box>
-
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 3 }}>
           Configure payment terms to automatically set payment due dates and discount conditions 
           in your invoices and purchase orders.
         </Alert>
-
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -318,7 +302,6 @@ const PaymentTermsPage: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
-
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
@@ -330,7 +313,6 @@ const PaymentTermsPage: React.FC = () => {
             }}
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -436,7 +418,6 @@ const PaymentTermsPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Add/Edit Payment Term Dialog */}
         <Dialog 
           open={addDialog || editDialog} 
@@ -493,7 +474,6 @@ const PaymentTermsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 />
               </Grid>
-              
               {formData.payment_type === 'net_days' && (
                 <>
                   <Grid item xs={12} sm={6}>
@@ -528,7 +508,6 @@ const PaymentTermsPage: React.FC = () => {
                   </Grid>
                 </>
               )}
-              
               <Grid item xs={12}>
                 <FormControlLabel
                   control={
@@ -555,5 +534,4 @@ const PaymentTermsPage: React.FC = () => {
     </Container>
   );
 };
-
 export default PaymentTermsPage;

@@ -1,18 +1,18 @@
 // frontend/src/components/AuthProvider.tsx
-import React, { createContext, useState, ReactNode } from 'react';
+import React, {ReactNode, createContext, useEffect, useState} from 'react';
 import { useRouter } from 'next/router';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
-
+declare function fetchUser(...args: any[]): any;
+declare function refreshToken(...args: any[]): any;
+declare function logout(...args: any[]): any;
 interface User {
   id: number;
   email: string;
 }
-
 interface JwtPayload {
   exp: number;
 }
-
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -20,18 +20,14 @@ interface AuthContextType {
   logout: () => void;
   refreshToken: () => Promise<void>;
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-
   const api = axios.create({
     baseURL: '/api/v1',
   });
-
   api.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('token');
@@ -42,7 +38,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     },
     (error) => Promise.reject(error)
   );
-
   api.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -55,7 +50,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return Promise.reject(error);
     }
   );
-
   const refreshToken = async () => {
     const token = localStorage.getItem('token');
     if (!token) {return logout();}
@@ -68,13 +62,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logout();
     }
   };
-
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
     router.push('/login');
   };
-
   const fetchUser = async () => {
     try {
       const response = await api.get('/users/me');
@@ -84,7 +76,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw fetchError;
     }
   };
-
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -108,7 +99,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     checkAuth();
   }, []);
-
   const login = async (email: string, password: string) => {
     try {
       const response = await api.post('/auth/login/email', { email, password });
@@ -120,14 +110,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw loginError;
     }
   };
-
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, refreshToken }}>
       {!loading && children}
     </AuthContext.Provider>
   );
 };
-
 export const useAuth = (): AuthContextType => {
   const context = React.useContext(AuthContext);
   if (undefined === context) {throw new Error('useAuth must be used within AuthProvider');}

@@ -1,5 +1,4 @@
 // frontend/src/pages/masters/products.tsx
-
 // Standalone Products Page - Extract from masters/index.tsx
 import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
@@ -48,12 +47,10 @@ import ExcelImportExport from '../../components/ExcelImportExport';
 import { bulkImportProducts } from '../../services/masterService';
 import Grid from '@mui/material/Grid';
 import { useAuth } from '../../context/AuthContext';
-
 // Utility function to get product display name
 const getProductDisplayName = (product: any): string => {
   return product.product_name || product.name || '';
 };
-
 const ProductsPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
@@ -77,13 +74,11 @@ const ProductsPage: React.FC = () => {
     is_active: true
   });
   const queryClient = useQueryClient();
-
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => masterDataService.getProducts(),
     enabled: isOrgContextReady,
   });
-
   // Normalize products to ensure consistent product_name property
   const normalizedProducts = useMemo(() => {
     if (!products) {return [];}
@@ -92,11 +87,9 @@ const ProductsPage: React.FC = () => {
       product_name: product.product_name || product.name || '',
     }));
   }, [products]);
-
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
     if (!normalizedProducts) {return [];}
-    
     // Filter products based on search term
     const filtered = normalizedProducts.filter((product: any) => {
       const searchLower = searchTerm.toLowerCase();
@@ -106,26 +99,21 @@ const ProductsPage: React.FC = () => {
         (product.part_number || '').toLowerCase().includes(searchLower)
       );
     });
-    
     // Sort products by name
     filtered.sort((a: any, b: any) => {
       const nameA = (a.product_name || '').toLowerCase();
       const nameB = (b.product_name || '').toLowerCase();
-      
       if (sortOrder === 'asc') {
         return nameA.localeCompare(nameB);
       } else {
         return nameB.localeCompare(nameA);
       }
     });
-    
     return filtered;
   }, [normalizedProducts, searchTerm, sortOrder]);
-
   const handleSortToggle = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
-
   const createItemMutation = useMutation({
     mutationFn: (data: any) => masterDataService.createProduct(data),
     onSuccess: () => {
@@ -151,7 +139,6 @@ const ProductsPage: React.FC = () => {
       setErrorMessage(error.response?.data?.detail || 'Failed to create product');
     }
   });
-
   const updateItemMutation = useMutation({
     mutationFn: (data: any) => masterDataService.updateProduct(data.id, data),
     onSuccess: () => {
@@ -177,7 +164,6 @@ const ProductsPage: React.FC = () => {
       setErrorMessage(error.response?.data?.detail || 'Failed to update product');
     }
   });
-
   // HSN/Product bidirectional search functionality
   const uniqueHsnCodes = useMemo(() => {
     const hsnSet = new Set<string>();
@@ -188,14 +174,12 @@ const ProductsPage: React.FC = () => {
     });
     return Array.from(hsnSet).sort();
   }, [normalizedProducts]);
-
   const getProductsByHsn = useCallback((hsnCode: string) => {
     if (!hsnCode.trim()) {return [];}
     return normalizedProducts.filter((product: any) => 
       product.hsn_code && product.hsn_code.toLowerCase().includes(hsnCode.toLowerCase())
     );
   }, [normalizedProducts]);
-
   const getHsnByProductName = useCallback((productName: string) => {
     if (!productName.trim()) {return [];}
     const matchingProducts = normalizedProducts.filter((product: any) =>
@@ -207,7 +191,6 @@ const ProductsPage: React.FC = () => {
       .filter((hsn: string, index: number, array: string[]) => array.indexOf(hsn) === index); // unique
     return hsnCodes;
   }, [normalizedProducts]);
-
   // Auto-population effects
   React.useEffect(() => {
     // When product name changes, suggest HSN codes
@@ -219,7 +202,6 @@ const ProductsPage: React.FC = () => {
       }
     }
   }, [formData.product_name, formData.hsn_code, getHsnByProductName]);
-
   React.useEffect(() => {
     // When HSN code changes, suggest product info
     if (formData.hsn_code && formData.hsn_code.length > 2) {
@@ -228,7 +210,6 @@ const ProductsPage: React.FC = () => {
         // If there's a strong match and product name is empty, suggest the most common unit/gst_rate
         const commonUnit = matchingProducts[0].unit;
         const commonGstRate = matchingProducts[0].gst_rate;
-        
         if (commonUnit && commonUnit !== formData.unit) {
           setFormData(prev => ({ ...prev, unit: commonUnit }));
         }
@@ -238,7 +219,6 @@ const ProductsPage: React.FC = () => {
       }
     }
   }, [formData.hsn_code, formData.product_name, formData.unit, formData.gst_rate, getProductsByHsn]);
-
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteProduct(id),
     onSuccess: () => {
@@ -249,7 +229,6 @@ const ProductsPage: React.FC = () => {
       setErrorMessage(error.response?.data?.detail || 'Failed to delete product');
     }
   });
-
   const openItemDialog = useCallback((item: any = null) => {
     setSelectedItem(item);
     if (item) {
@@ -272,36 +251,30 @@ const ProductsPage: React.FC = () => {
     setErrorMessage('');
     setItemDialog(true);
   }, []);
-
   const handleSubmit = () => {
     const data = { 
       ...formData, 
       name: formData.product_name // Map back to 'name' for backend compatibility
     };
-    
     // Convert string numbers to actual numbers
     if (data.unit_price) {(data as any).unit_price = parseFloat(data.unit_price as string);}
     if (data.gst_rate) {(data as any).gst_rate = parseFloat(data.gst_rate as string);}
     if (data.reorder_level) {(data as any).reorder_level = parseInt(data.reorder_level as string);}
-    
     if (selectedItem) {
       updateItemMutation.mutate({ ...selectedItem, ...data });
     } else {
       createItemMutation.mutate(data);
     }
   };
-
   // Auto-open add dialog if action=add in URL
   React.useEffect(() => {
     if (action === 'add') {
       openItemDialog(null);
     }
   }, [action, openItemDialog]);
-
   if (!isOrgContextReady) {
     return <div>Loading...</div>;
   }
-
   return (
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -319,7 +292,6 @@ const ProductsPage: React.FC = () => {
             Add Product
           </Button>
         </Box>
-
         {/* Products Table */}
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -330,7 +302,6 @@ const ProductsPage: React.FC = () => {
               onImport={bulkImportProducts}
             />
           </Box>
-          
           {/* Search Bar */}
           <Box sx={{ mb: 2 }}>
             <TextField
@@ -348,7 +319,6 @@ const ProductsPage: React.FC = () => {
               sx={{ maxWidth: 500 }}
             />
           </Box>
-          
           <TableContainer>
             <Table>
               <TableHead>
@@ -418,7 +388,6 @@ const ProductsPage: React.FC = () => {
             </Table>
           </TableContainer>
         </Paper>
-
         {/* Add/Edit Dialog */}
         <Dialog open={itemDialog} onClose={() => setItemDialog(false)} maxWidth="md" fullWidth>
           <DialogTitle>{selectedItem ? 'Edit Product' : 'Add New Product'}</DialogTitle>
@@ -589,5 +558,4 @@ const ProductsPage: React.FC = () => {
     </Container>
   );
 };
-
 export default ProductsPage;

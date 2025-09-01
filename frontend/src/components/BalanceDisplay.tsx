@@ -1,17 +1,14 @@
 // components/BalanceDisplay.tsx
 // Component to display current balance for selected customers/vendors
-
 import React from 'react';
 import { Typography, Box } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { getAccountBalance } from '../services/stockService';
-
 interface BalanceDisplayProps {
   accountType: 'customer' | 'vendor' | null;
   accountId: number | null;
   disabled?: boolean;
 }
-
 const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ 
   accountType, 
   accountId, 
@@ -26,15 +23,11 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
     refetchOnWindowFocus: false,
     retry: false, // Don't retry on permission errors
   });
-
   // Don't show anything if disabled, no account selected, loading, or error
   if (disabled || !accountType || !accountId || isLoading || isError || !balanceData) {
     return null;
   }
-
   const outstandingAmount = balanceData.outstanding_amount || 0;
-  const accountName = balanceData.account_name || '';
-  
   // Format the balance with proper sign convention
   const formatBalance = (amount: number, type: string) => {
     const absAmount = Math.abs(amount);
@@ -50,7 +43,6 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
         : `₹${absAmount.toLocaleString()} advance`;
     }
   };
-
   return (
     <Box sx={{ mt: 0.5 }}>
       <Typography
@@ -67,5 +59,4 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
     </Box>
   );
 };
-
 export default BalanceDisplay;

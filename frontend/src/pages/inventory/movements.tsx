@@ -1,5 +1,4 @@
 // frontend/src/pages/inventory/movements.tsx
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getStockMovements } from '../../services/stockService';
@@ -22,20 +21,16 @@ import {
 } from '@mui/material';
 import { Search } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-
 const StockMovements: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const [searchText, setSearchText] = useState('');
   const [showOnlyRecent, setShowOnlyRecent] = useState(true);
-
   const { data: movements, isLoading } = useQuery({
     queryKey: ['stockMovements', { search: searchText, recent: showOnlyRecent }],
     queryFn: ({ queryKey }) => getStockMovements(queryKey[1]),
     enabled: isOrgContextReady,
   });
-
   if (isLoading) {return <Typography>Loading stock movements...</Typography>;}
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
@@ -96,5 +91,4 @@ const StockMovements: React.FC = () => {
     </Container>
   );
 };
-
 export default StockMovements;

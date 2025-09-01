@@ -1,5 +1,4 @@
 // frontend/src/components/CustomerAnalytics.tsx
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -30,20 +29,17 @@ import {
   Timeline
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { analyticsService, CustomerAnalyticsData } from '../services/analyticsService';
-
+import {analyticsService} from '../services/analyticsService';
 interface CustomerAnalyticsProps {
   customerId: number;
   customerName?: string;
 }
-
 const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ 
   customerId, 
   customerName 
 }) => {
   const [includeRecentInteractions, setIncludeRecentInteractions] = useState(true);
   const [recentInteractionsLimit, setRecentInteractionsLimit] = useState(5);
-
   const { 
     data: analytics, 
     isLoading, 
@@ -59,7 +55,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
     enabled: !!customerId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
-
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -70,7 +65,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
       </Box>
     );
   }
-
   if (error) {
     return (
       <Alert severity="error" sx={{ m: 2 }}>
@@ -78,7 +72,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
       </Alert>
     );
   }
-
   if (!analytics) {
     return (
       <Alert severity="info" sx={{ m: 2 }}>
@@ -86,7 +79,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
       </Alert>
     );
   }
-
   const formatDate = (dateString?: string) => {
     if (!dateString) {return 'Never';}
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -95,7 +87,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
       day: 'numeric'
     });
   };
-
   const getInteractionTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       call: 'primary',
@@ -107,7 +98,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
     };
     return colors[type] || 'default';
   };
-
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'warning',
@@ -117,7 +107,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
     };
     return colors[status] || 'default';
   };
-
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -132,7 +121,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
           </Typography>
         </Box>
       </Box>
-
       {/* Controls */}
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
@@ -162,7 +150,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
           )}
         </Grid>
       </Box>
-
       {/* Summary Cards */}
       <Grid container spacing={3} mb={4}>
         <Grid size={{ xs: 12, md: 3 }}>
@@ -182,7 +169,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid size={{ xs: 12, md: 3 }}>
           <Card>
             <CardContent>
@@ -200,7 +186,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             </CardContent>
           </Card>
         </Grid>
-
         <Grid size={{ xs: 12, md: 3 }}>
           <Card>
             <CardContent>
@@ -218,7 +203,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             </CardContent>
           </Card>
         </Grid>
-
         <Grid size={{ xs: 12, md: 3 }}>
           <Card>
             <CardContent>
@@ -237,7 +221,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
           </Card>
         </Grid>
       </Grid>
-
       <Grid container spacing={3}>
         {/* Interaction Types Breakdown */}
         <Grid size={{ xs: 12, md: 6 }}>
@@ -261,7 +244,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             </CardContent>
           </Card>
         </Grid>
-
         {/* Interaction Status */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Card>
@@ -284,7 +266,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             </CardContent>
           </Card>
         </Grid>
-
         {/* Customer Segments */}
         <Grid size={{ xs: 12 }}>
           <Card>
@@ -331,7 +312,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
             </CardContent>
           </Card>
         </Grid>
-
         {/* Recent Interactions */}
         {includeRecentInteractions && analytics.recent_interactions.length > 0 && (
           <Grid size={{ xs: 12 }}>
@@ -379,7 +359,6 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
           </Grid>
         )}
       </Grid>
-
       {/* Footer */}
       <Box mt={3}>
         <Typography variant="caption" color="textSecondary">
@@ -389,5 +368,4 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({
     </Box>
   );
 };
-
 export default CustomerAnalytics;

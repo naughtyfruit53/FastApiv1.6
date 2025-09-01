@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -38,7 +37,6 @@ import {
 } from '@mui/icons-material';
 import AddLeadModal from '../../components/AddLeadModal';
 import { crmService } from '../../services/crmService';
-
 interface Lead {
   id: number;
   first_name: string;
@@ -54,7 +52,6 @@ interface Lead {
   estimated_value?: number;
   expected_close_date?: string;
 }
-
 const LeadManagement: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,7 +60,6 @@ const LeadManagement: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   // Fetch leads from API
   const fetchLeads = async () => {
     try {
@@ -78,11 +74,9 @@ const LeadManagement: React.FC = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchLeads();
   }, []);
-
   const handleAddLead = async (leadData: any) => {
     try {
       setAddLoading(true);
@@ -96,7 +90,6 @@ const LeadManagement: React.FC = () => {
       setAddLoading(false);
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'new': return 'primary';
@@ -110,7 +103,6 @@ const LeadManagement: React.FC = () => {
       default: return 'default';
     }
   };
-
   const filteredLeads = leads.filter(lead => {
     const fullName = `${lead.first_name || ''} ${lead.last_name || ''}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
@@ -119,7 +111,6 @@ const LeadManagement: React.FC = () => {
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -135,7 +126,6 @@ const LeadManagement: React.FC = () => {
             Add Lead
           </Button>
         </Box>
-
         {/* Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -187,7 +177,6 @@ const LeadManagement: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
-
         {/* Filters */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           <TextField
@@ -224,21 +213,18 @@ const LeadManagement: React.FC = () => {
             </Select>
           </FormControl>
         </Box>
-
         {/* Error Display */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
-
         {/* Loading Display */}
         {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
             <CircularProgress />
           </Box>
         )}
-
         {/* Leads Table */}
         {!loading && (
           <Card>
@@ -331,7 +317,6 @@ const LeadManagement: React.FC = () => {
             </TableContainer>
           </Card>
         )}
-
         {/* Add Lead Modal */}
         <AddLeadModal
           open={openDialog}
@@ -343,5 +328,4 @@ const LeadManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default LeadManagement;

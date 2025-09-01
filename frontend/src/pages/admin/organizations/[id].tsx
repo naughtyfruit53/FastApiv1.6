@@ -1,5 +1,4 @@
 // Revised: frontend/src/pages/admin/organizations/[id].tsx
-
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Box from '@mui/material/Box';
@@ -9,13 +8,9 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
-import Switch from '@mui/material/Switch';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
-import Paper from '@mui/material/Paper';
-import Divider from '@mui/material/Divider';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -24,7 +19,7 @@ import Snackbar from '@mui/material/Snackbar';
 import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-
+declare function fetchOrganization(...args: any[]): any;
 interface Organization {
   id: number;
   name: string;
@@ -54,7 +49,6 @@ interface Organization {
   created_at: string;
   updated_at?: string;
 }
-
 const OrganizationDetailPage: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -69,13 +63,11 @@ const OrganizationDetailPage: React.FC = () => {
   const [resetPassword, setResetPassword] = useState<string | null>(null);
   const [resetSnackbarOpen, setResetSnackbarOpen] = useState(false);
   const [pincodeLoading, setPincodeLoading] = useState(false);
-
   useEffect(() => {
     if (id) {
       fetchOrganization();
     }
   }, [id]);
-
   useEffect(() => {
     /**
      * @deprecated Organization context should be accessed via React user context instead of localStorage instead
@@ -86,7 +78,6 @@ const OrganizationDetailPage: React.FC = () => {
       // Organization context is managed by backend session only
     }
   }, [organization]);
-
   const fetchOrganization = async () => {
     try {
       setLoading(true);
@@ -96,7 +87,6 @@ const OrganizationDetailPage: React.FC = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
       if (!response.ok) {
         if (response.status === 401) {
           // Handle unauthorized - perhaps redirect to login
@@ -109,7 +99,6 @@ const OrganizationDetailPage: React.FC = () => {
         }
         throw new Error(`Failed to fetch organization: ${response.statusText}`);
       }
-      
       const data = await response.json();
       setOrganization(data);
       setEditedOrg(data);
@@ -121,17 +110,14 @@ const OrganizationDetailPage: React.FC = () => {
       setLoading(false);
     }
   };
-
   const handleEdit = () => {
     setEditing(true);
     setEditedOrg({ ...organization! });
   };
-
   const handleCancel = () => {
     setEditing(false);
     setEditedOrg({ ...organization! });
   };
-
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -144,11 +130,9 @@ const OrganizationDetailPage: React.FC = () => {
         },
         body: JSON.stringify(editedOrg),
       });
-
       if (!response.ok) {
         throw new Error('Failed to update organization');
       }
-
       const updatedOrg = await response.json();
       setOrganization(updatedOrg);
       setEditing(false);
@@ -160,7 +144,6 @@ const OrganizationDetailPage: React.FC = () => {
       setSaving(false);
     }
   };
-
   const handleDelete = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -170,7 +153,6 @@ const OrganizationDetailPage: React.FC = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-
       if (!response.ok) {
         let errorMessage = 'Failed to delete organization';
         try {
@@ -183,7 +165,6 @@ const OrganizationDetailPage: React.FC = () => {
         toast.error(errorMessage);
         return;
       }
-
       toast.success('Organization deleted successfully');
       router.push('/admin/license-management');
     } catch (error: any) {
@@ -193,7 +174,6 @@ const OrganizationDetailPage: React.FC = () => {
       setOpenDeleteDialog(false);
     }
   };
-
   const handleInputChange = (field: keyof Organization, value: string | number) => {
     if (editedOrg) {
       setEditedOrg({
@@ -202,7 +182,6 @@ const OrganizationDetailPage: React.FC = () => {
       });
     }
   };
-
   const handlePincodeChange = async (value: string) => {
     handleInputChange('pin_code', value);
     if (value.length === 6 && editing) {
@@ -221,7 +200,6 @@ const OrganizationDetailPage: React.FC = () => {
       }
     }
   };
-
   const handleResetPassword = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -233,12 +211,10 @@ const OrganizationDetailPage: React.FC = () => {
         },
         body: JSON.stringify({ user_email: organization?.primary_email }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to reset password');
       }
-
       const data = await response.json();
       setResetPassword(data.new_password);
       setOpenResetDialog(false);
@@ -249,7 +225,6 @@ const OrganizationDetailPage: React.FC = () => {
       console.error('Error resetting password:', error);
     }
   };
-
   const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'default' => {
     switch (status) {
       case 'active': return 'success';
@@ -258,13 +233,11 @@ const OrganizationDetailPage: React.FC = () => {
       default: return 'default';
     }
   };
-
   if (loading) {return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
       <CircularProgress />
     </Box>
   );}
-
   if (error || !organization) {return (
     <Box p={3}>
       <Alert severity="error">
@@ -279,9 +252,7 @@ const OrganizationDetailPage: React.FC = () => {
       </Button>
     </Box>
   );}
-
   const currentOrg = editing ? editedOrg! : organization;
-
   return (
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -419,7 +390,6 @@ const OrganizationDetailPage: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         {/* Contact Information */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Card>
@@ -507,7 +477,6 @@ const OrganizationDetailPage: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         {/* Legal & Subscription Information */}
         <Grid size={{ xs: 12 }}>
           <Card>
@@ -646,5 +615,4 @@ const OrganizationDetailPage: React.FC = () => {
     </Box>
   );
 };
-
 export default OrganizationDetailPage;

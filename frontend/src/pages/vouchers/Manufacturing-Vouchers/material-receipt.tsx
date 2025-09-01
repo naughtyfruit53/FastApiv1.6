@@ -42,10 +42,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import { getProducts } from '../../../services/masterService';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import { generateStandalonePDF } from '../../../utils/pdfUtils';
-
 interface MaterialReceiptItem {
   product_id: number;
   quantity: number;
@@ -64,7 +61,6 @@ interface MaterialReceiptItem {
   notes?: string;
   total_amount: number;
 }
-
 interface MaterialReceiptVoucher {
   id?: number;
   voucher_number: string;
@@ -87,7 +83,6 @@ interface MaterialReceiptVoucher {
   total_amount: number;
   items: MaterialReceiptItem[];
 }
-
 const defaultValues: Partial<MaterialReceiptVoucher> = {
   voucher_number: '',
   date: new Date().toISOString().split('T')[0],
@@ -98,36 +93,26 @@ const defaultValues: Partial<MaterialReceiptVoucher> = {
   total_amount: 0,
   items: []
 };
-
-const sourceTypeOptions = [
   { value: 'return', label: 'Material Return' },
   { value: 'purchase', label: 'Purchase Receipt' },
   { value: 'transfer', label: 'Transfer Receipt' }
 ];
-
-const inspectionStatusOptions = [
   { value: 'pending', label: 'Pending' },
   { value: 'passed', label: 'Passed' },
   { value: 'failed', label: 'Failed' },
   { value: 'partial', label: 'Partial' }
 ];
-
-const qualityStatusOptions = [
   { value: 'accepted', label: 'Accepted' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'hold', label: 'Hold' }
 ];
-
 export default function MaterialReceiptVoucher() {
-  const router = useRouter();
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-
-  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<MaterialReceiptVoucher>({
+const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<MaterialReceiptVoucher>({
     defaultValues
   });
-
   const {
     fields: itemFields,
     append: appendItem,
@@ -136,47 +121,36 @@ export default function MaterialReceiptVoucher() {
     control,
     name: 'items'
   });
-
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
     queryKey: ['material-receipt-vouchers'],
     queryFn: () => api.get('/material-receipt-vouchers').then(res => res.data),
   });
-
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ['manufacturing-orders'],
     queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
   });
-
   // Fetch products
   const { data: productList } = useQuery({
     queryKey: ['products'],
     queryFn: getProducts
   });
-
   // Fetch specific voucher
-  const { data: voucherData, isFetching } = useQuery({
+const { data: voucherData} = useQuery({
     queryKey: ['material-receipt-voucher', selectedId],
     queryFn: () => api.get(`/material-receipt-vouchers/${selectedId}`).then(res => res.data),
     enabled: !!selectedId
   });
-
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ['nextMaterialReceiptNumber'],
     queryFn: () => api.get('/material-receipt-vouchers/next-number').then(res => res.data),
     enabled: mode === 'create',
   });
-
   const sortedVouchers = voucherList ? [...voucherList].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   ) : [];
-
-  const latestVouchers = sortedVouchers.slice(0, 10);
-  const productOptions = productList || [];
-  const manufacturingOrderOptions = manufacturingOrders || [];
-
   useEffect(() => {
     if (mode === 'create' && nextVoucherNumber) {
       setValue('voucher_number', nextVoucherNumber);
@@ -186,14 +160,12 @@ export default function MaterialReceiptVoucher() {
       reset(defaultValues);
     }
   }, [voucherData, mode, reset, nextVoucherNumber, setValue]);
-
   // Calculate totals
   useEffect(() => {
     const items = watch('items') || [];
     const total = items.reduce((sum, item) => sum + (item.total_amount || 0), 0);
     setValue('total_amount', total);
   }, [watch('items'), setValue]);
-
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: MaterialReceiptVoucher) => api.post('/material-receipt-vouchers', data),
@@ -209,7 +181,6 @@ export default function MaterialReceiptVoucher() {
       console.error('Error creating material receipt voucher:', error);
     }
   });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: MaterialReceiptVoucher }) => 
       api.put(`/material-receipt-vouchers/${id}`, data),
@@ -223,7 +194,6 @@ export default function MaterialReceiptVoucher() {
       console.error('Error updating material receipt voucher:', error);
     }
   });
-
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/material-receipt-vouchers/${id}`),
     onSuccess: () => {
@@ -235,7 +205,6 @@ export default function MaterialReceiptVoucher() {
       }
     }
   });
-
   const onSubmit = (data: MaterialReceiptVoucher) => {
     if (mode === 'edit' && selectedId) {
       updateMutation.mutate({ id: selectedId, data });
@@ -243,29 +212,24 @@ export default function MaterialReceiptVoucher() {
       createMutation.mutate(data);
     }
   };
-
   const handleEdit = (voucher: MaterialReceiptVoucher) => {
     setSelectedId(voucher.id!);
     setMode('edit');
   };
-
   const handleView = (voucher: MaterialReceiptVoucher) => {
     setSelectedId(voucher.id!);
     setMode('view');
   };
-
   const handleDelete = (voucherId: number) => {
     if (window.confirm('Are you sure you want to delete this voucher?')) {
       deleteMutation.mutate(voucherId);
     }
   };
-
   const handleCancel = () => {
     setMode('create');
     setSelectedId(null);
     reset(defaultValues);
   };
-
   const addItem = () => {
     appendItem({
       product_id: 0,
@@ -278,7 +242,6 @@ export default function MaterialReceiptVoucher() {
       total_amount: 0
     });
   };
-
   const updateItemTotal = (index: number) => {
     const items = watch('items');
     const item = items[index];
@@ -287,7 +250,6 @@ export default function MaterialReceiptVoucher() {
       setValue(`items.${index}.total_amount`, total);
     }
   };
-
   // PDF Generation Function
   const handleGeneratePDF = async (voucherData?: MaterialReceiptVoucher) => {
     try {
@@ -297,7 +259,6 @@ export default function MaterialReceiptVoucher() {
       console.error('Error generating PDF:', error);
     }
   };
-
   if (isLoading) {
     return (
       <Container>
@@ -307,13 +268,11 @@ export default function MaterialReceiptVoucher() {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl">
       <Typography variant="h4" component="h1" gutterBottom>
         Material Receipt Vouchers
       </Typography>
-
       <Grid container spacing={3}>
         {/* Voucher List - Left Side */}
         <Grid size={{ xs: 12, md: 5 }}>
@@ -801,5 +760,4 @@ export default function MaterialReceiptVoucher() {
     </Container>
   );
 };
-
 export default MaterialReceipt;

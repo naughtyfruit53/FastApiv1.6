@@ -1,7 +1,5 @@
 // frontend/src/services/analyticsService.ts
-
 import api from '../lib/api';
-
 export interface CustomerAnalyticsData {
   customer_id: number;
   customer_name: string;
@@ -23,7 +21,6 @@ export interface CustomerAnalyticsData {
   }>;
   calculated_at: string;
 }
-
 export interface SegmentAnalyticsData {
   segment_name: string;
   total_customers: number;
@@ -36,7 +33,6 @@ export interface SegmentAnalyticsData {
   }>;
   calculated_at: string;
 }
-
 export interface DashboardMetrics {
   total_customers: number;
   total_interactions_today: number;
@@ -53,7 +49,6 @@ export interface DashboardMetrics {
   }>;
   calculated_at: string;
 }
-
 export const analyticsService = {
   getCustomerAnalytics: async (
     customerId: number, 
@@ -72,7 +67,6 @@ export const analyticsService = {
       throw new Error(error.userMessage || 'Failed to get customer analytics');
     }
   },
-
   getSegmentAnalytics: async (
     segmentName: string,
     includeTimeline: boolean = true,
@@ -90,7 +84,6 @@ export const analyticsService = {
       throw new Error(error.userMessage || 'Failed to get segment analytics');
     }
   },
-
   getDashboardMetrics: async (): Promise<DashboardMetrics> => {
     try {
       const response = await api.get('/analytics/dashboard/metrics');
@@ -99,7 +92,6 @@ export const analyticsService = {
       throw new Error(error.userMessage || 'Failed to get dashboard metrics');
     }
   },
-
   getAvailableSegments: async (): Promise<string[]> => {
     try {
       const response = await api.get('/analytics/segments');
@@ -108,7 +100,6 @@ export const analyticsService = {
       throw new Error(error.userMessage || 'Failed to get available segments');
     }
   },
-
   getOrganizationSummary: async () => {
     try {
       const response = await api.get('/analytics/organization/summary');

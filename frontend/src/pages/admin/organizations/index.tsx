@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -43,7 +42,6 @@ import {
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-
 interface Organization {
   id: number;
   name: string;
@@ -56,7 +54,6 @@ interface Organization {
   created_at: string;
   updated_at?: string;
 }
-
 const OrganizationsPage: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -67,12 +64,10 @@ const OrganizationsPage: React.FC = () => {
   const [confirmationText, setConfirmationText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
   // Get user info for authorization
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
   const isSuperAdmin = userRole === 'super_admin';
-
   // Fetch organizations
   const { data: organizations, isLoading } = useQuery({
     queryKey: ['organizations'],
@@ -85,14 +80,12 @@ const OrganizationsPage: React.FC = () => {
     },
     enabled: !!token
   });
-
   // Organization action mutations
   const orgActionMutation = useMutation({
     mutationFn: async ({ orgId, action, data }: { orgId: number; action: string; data?: any }) => {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       let endpoint = '';
       let method = 'POST';
-      
       switch (action) {
         case 'suspend':
           endpoint = `/api/v1/settings/organization/${orgId}/suspend`;
@@ -111,7 +104,6 @@ const OrganizationsPage: React.FC = () => {
         default:
           throw new Error('Invalid action');
       }
-
       const response = await axios({
         method,
         url: `${API_BASE_URL}${endpoint}`,
@@ -127,7 +119,6 @@ const OrganizationsPage: React.FC = () => {
       setSelectedOrg(null);
       setActionType(null);
       setConfirmationText('');
-      
       // Send confirmation email for reset action
       if (variables.action === 'reset') {
         setSuccess('Organization reset completed. Confirmation email sent to organization admin.');
@@ -137,51 +128,42 @@ const OrganizationsPage: React.FC = () => {
       setError(error.response?.data?.detail || `Failed to ${actionType} organization`);
     }
   });
-
   const handleContextMenu = (event: React.MouseEvent<HTMLButtonElement>, org: Organization) => {
     event.preventDefault();
     setAnchorEl(event.currentTarget);
     setSelectedOrg(org);
   };
-
   const handleCloseMenu = () => {
     setAnchorEl(null);
     setSelectedOrg(null);
   };
-
   const handleAction = (action: 'suspend' | 'pause' | 'reactivate' | 'delete' | 'reset') => {
     setActionType(action);
     setActionDialog(true);
     handleCloseMenu();
   };
-
   const confirmAction = () => {
     if (!selectedOrg || !actionType) {return;}
-
     // For reset action, require confirmation text
     if (actionType === 'reset' && confirmationText !== 'RESET') {
       setError('Please type &apos;RESET&apos; to confirm this action');
       return;
     }
-
     // For delete action, require confirmation text
     if (actionType === 'delete' && confirmationText !== selectedOrg.name) {
       setError(`Please type &quot;${selectedOrg.name}&quot; to confirm deletion`);
       return;
     }
-
     const actionData: any = {};
     if (actionType === 'suspend') {
       actionData.reason = 'Administrative action';
     }
-
     orgActionMutation.mutate({
       orgId: selectedOrg.id,
       action: actionType,
       data: actionData
     });
   };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active': return 'success';
@@ -191,7 +173,6 @@ const OrganizationsPage: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getActionAvailability = (org: Organization) => {
     const status = org.status.toLowerCase();
     return {
@@ -201,7 +182,6 @@ const OrganizationsPage: React.FC = () => {
       reset: true
     };
   };
-
   // Check authorization
   if (!isSuperAdmin) {
     return (
@@ -215,7 +195,6 @@ const OrganizationsPage: React.FC = () => {
       </Container>
     );
   }
-
   if (isLoading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -225,7 +204,6 @@ const OrganizationsPage: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -240,19 +218,16 @@ const OrganizationsPage: React.FC = () => {
           Add Organization
         </Button>
       </Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
-
       {success && (
         <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       )}
-
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -326,7 +301,6 @@ const OrganizationsPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
       {/* Context Menu */}
       <Menu
         anchorEl={anchorEl}
@@ -358,7 +332,6 @@ const OrganizationsPage: React.FC = () => {
           </>
         )}
       </Menu>
-
       {/* Action Confirmation Dialog */}
       <Dialog open={actionDialog} onClose={() => setActionDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
@@ -369,7 +342,6 @@ const OrganizationsPage: React.FC = () => {
           <DialogContentText>
             Are you sure you want to {actionType} the organization &quot;{selectedOrg?.name}&quot;?
           </DialogContentText>
-          
           {actionType === 'reset' && (
             <Box sx={{ mt: 2 }}>
               <Alert severity="error" sx={{ mb: 2 }}>
@@ -384,7 +356,6 @@ const OrganizationsPage: React.FC = () => {
               />
             </Box>
           )}
-
           {actionType === 'delete' && (
             <Box sx={{ mt: 2 }}>
               <Alert severity="error" sx={{ mb: 2 }}>
@@ -416,5 +387,4 @@ const OrganizationsPage: React.FC = () => {
     </Container>
   );
 };
-
 export default OrganizationsPage;

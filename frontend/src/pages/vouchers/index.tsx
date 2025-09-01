@@ -1,8 +1,11 @@
 // revised fastapi_migration/frontend/src/pages/vouchers/index.tsx
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import {
+declare function refetchFinancialVouchers(...args: any[]): any;
+declare function refetchInternalVouchers(...args: any[]): any;
+declare function refetchSalesVouchers(...args: any[]): any;
+declare function refetchPurchaseVouchers(...args: any[]): any;
   Box,
   Container,
   Typography,
@@ -28,16 +31,13 @@ import MegaMenu from '../../components/MegaMenu';
 import VoucherContextMenu from '../../components/VoucherContextMenu';
 import VoucherListModal from '../../components/VoucherListModal';
 import Grid from '@mui/material/Grid';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -54,7 +54,6 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const VoucherManagement: React.FC = () => {
   const router = useRouter();
   const [user] = useState({ email: 'demo@example.com', role: 'admin' });
@@ -62,7 +61,6 @@ const VoucherManagement: React.FC = () => {
   const [showAllModal, setShowAllModal] = useState(false);
   const [modalVoucherType, setModalVoucherType] = useState('');
   const [modalVouchers, setModalVouchers] = useState<any[]>([]);
-
   // Get tab from URL parameter
   const getInitialTab = () => {
     const { tab } = router.query;
@@ -74,61 +72,48 @@ const VoucherManagement: React.FC = () => {
       default: return 0;
     }
   };
-
   const [tabValue, setTabValue] = useState(getInitialTab());
-
   // Update tab when URL changes
   useEffect(() => {
     setTabValue(getInitialTab());
-   
   }, [router.query.tab]);
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Update URL without full navigation
     const tabNames = ['purchase', 'sales', 'financial', 'internal'];
     router.replace(`/vouchers?tab=${tabNames[newValue]}`, undefined, { shallow: true });
   };
-
   const handleShowAll = (type: string, vouchers: any[]) => {
     setModalVoucherType(type);
     setModalVouchers(vouchers);
     setShowAllModal(true);
   };
-
   const handleCloseModal = () => {
     setShowAllModal(false);
     setModalVoucherType('');
     setModalVouchers([]);
   };
-
   const handleLogout = () => {
     // Handle logout
   };
-
   const handleCreateVoucher = (tabIndex: number) => {
     const tabNames = ['purchase', 'sales', 'financial', 'internal'];
     router.push(`/vouchers/${tabNames[tabIndex]}`);
   };
-
   const handleViewVoucher = (type: string, id: number) => {
     router.push(`/vouchers/${type.toLowerCase()}/view/${id}`);
   };
-
   const handleEditVoucher = (type: string, id: number) => {
     router.push(`/vouchers/${type.toLowerCase()}/edit/${id}`);
   };
-
   const handlePrintVoucher = async (type: string, id: number) => {
     try {
       // Map display type to API type
       const voucherType = type === 'Purchase' ? 'purchase-vouchers' : 
                          type === 'Sales' ? 'sales-vouchers' : 
                          type.toLowerCase().replace(' ', '-');
-      
       // Fetch voucher data
       const voucherData = await voucherApi.getVoucherById(voucherType, id);
-      
       // Generate PDF using the existing PDF utility
       const pdfConfig = getVoucherPdfConfig(voucherType);
       await generateVoucherPDF(voucherData, pdfConfig);
@@ -137,11 +122,9 @@ const VoucherManagement: React.FC = () => {
       alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
     }
   };
-
   const handleEmailVoucher = async (type: string, id: number) => {
     const voucherType = type === 'Purchase' ? 'purchase-vouchers' : (type === 'Sales' ? 'sales-vouchers' : '');
     if (!voucherType) {return alert('Email not supported for this type');}
-
     try {
       await voucherService.sendVoucherEmail(voucherType, id);
       alert('Email sent successfully');
@@ -149,7 +132,6 @@ const VoucherManagement: React.FC = () => {
       alert(`Error sending email: ${error.message || 'Unknown error'}`);
     }
   };
-
   const handleDeleteVoucher = async (type: string, id: number) => {
     if (window.confirm(`Are you sure you want to delete this ${type} voucher?`)) {
       try {
@@ -157,9 +139,7 @@ const VoucherManagement: React.FC = () => {
         const voucherType = type === 'Purchase' ? 'purchase-vouchers' : 
                            type === 'Sales' ? 'sales-vouchers' : 
                            type.toLowerCase().replace(' ', '-');
-        
         await voucherApi.deleteVoucher(voucherType, id);
-        
         // Refresh the appropriate voucher data
         if (type === 'Purchase') {
           refetchPurchaseVouchers();
@@ -170,7 +150,6 @@ const VoucherManagement: React.FC = () => {
         } else if (type === 'Internal') {
           refetchInternalVouchers();
         }
-        
         alert('Voucher deleted successfully');
       } catch (error: any) {
         console.error('Error deleting voucher:', error);
@@ -178,7 +157,6 @@ const VoucherManagement: React.FC = () => {
       }
     }
   };
-
   const handleContextMenu = (event: React.MouseEvent, voucher: any, voucherType: string) => {
     event.preventDefault();
     setContextMenu({
@@ -188,11 +166,9 @@ const VoucherManagement: React.FC = () => {
       type: voucherType
     });
   };
-
   const handleCloseContextMenu = () => {
     setContextMenu(null);
   };
-
   // Fetch real data from APIs
   const { data: dashboardStats } = useQuery({
     queryKey: ['dashboardStats'],
@@ -208,9 +184,8 @@ const VoucherManagement: React.FC = () => {
     queryFn: () => voucherService.getVouchers('sales-vouchers'),
     enabled: tabValue === 1
   });
-  
   // Financial vouchers queries
-  const { data: financialVouchers, isLoading: financialLoading, refetch: refetchFinancialVouchers } = useQuery({
+const { data: financialVouchers, isLoading:refetch: refetchFinancialVouchers } = useQuery({
     queryKey: ['financialVouchers'],
     queryFn: async () => {
       const [payments, receipts, journals, contras] = await Promise.all([
@@ -223,9 +198,8 @@ const VoucherManagement: React.FC = () => {
     },
     enabled: tabValue === 2
   });
-  
   // Internal vouchers queries  
-  const { data: internalVouchers, isLoading: internalLoading, refetch: refetchInternalVouchers } = useQuery({
+const { data: internalVouchers, isLoading:refetch: refetchInternalVouchers } = useQuery({
     queryKey: ['internalVouchers'],
     queryFn: async () => {
       const [manufacturing, stock] = await Promise.all([
@@ -236,7 +210,6 @@ const VoucherManagement: React.FC = () => {
     },
     enabled: tabValue === 3
   });
-
   // Voucher types with real data
   const voucherTypes = [
     {
@@ -268,19 +241,15 @@ const VoucherManagement: React.FC = () => {
       vouchers: internalVouchers || []
     }
   ];
-
   const renderVoucherTable = (vouchers: any[], type: string, isLoading: boolean = false) => {
     if (isLoading) {
       return <Typography>Loading {type} vouchers...</Typography>;
     }
-    
     if (!vouchers || vouchers.length === 0) {
       return <Typography>No {type} vouchers found.</Typography>;
     }
-
     // Show only latest 5 vouchers in the table
     const latestVouchers = vouchers.slice(0, 5);
-
     return (
       <Box>
         <TableContainer component={Paper}>
@@ -348,7 +317,6 @@ const VoucherManagement: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        
         {vouchers.length > 5 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
             <Button
@@ -363,11 +331,9 @@ const VoucherManagement: React.FC = () => {
       </Box>
     );
   };
-
   return (
     <Box sx={{ flexGrow: 1 }}>
       <MegaMenu user={user} onLogout={handleLogout} />
-
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Voucher Management System
@@ -375,7 +341,6 @@ const VoucherManagement: React.FC = () => {
         <Typography variant="body1" color="textSecondary" sx={{ mb: 4 }}>
           Comprehensive management of all voucher types in your ERP system
         </Typography>
-
         {/* Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {voucherTypes.map((voucherType, index) => (
@@ -400,7 +365,6 @@ const VoucherManagement: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-
         {/* Voucher Tabs */}
         <Paper sx={{ mb: 4 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -411,28 +375,24 @@ const VoucherManagement: React.FC = () => {
               <Tab label="Internal Vouchers" />
             </Tabs>
           </Box>
-
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Purchase Vouchers</Typography>
             </Box>
             {renderVoucherTable(voucherTypes[0].vouchers, 'Purchase', purchaseLoading)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={1}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Sales Vouchers</Typography>
             </Box>
             {renderVoucherTable(voucherTypes[1].vouchers, 'Sales', salesLoading)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Financial Vouchers</Typography>
             </Box>
             {renderVoucherTable(voucherTypes[2].vouchers, 'Financial', false)}
           </TabPanel>
-
           <TabPanel value={tabValue} index={3}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Internal Vouchers</Typography>
@@ -440,7 +400,6 @@ const VoucherManagement: React.FC = () => {
             {renderVoucherTable(voucherTypes[3].vouchers, 'Internal', false)}
           </TabPanel>
         </Paper>
-
         {/* Summary */}
         <Paper sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
@@ -472,7 +431,6 @@ const VoucherManagement: React.FC = () => {
           </Grid>
         </Paper>
       </Container>
-
       {/* Global Context Menu for Right-Click */}
       {contextMenu && (
         <VoucherContextMenu
@@ -489,7 +447,6 @@ const VoucherManagement: React.FC = () => {
           onClose={handleCloseContextMenu}
         />
       )}
-
       {/* Show All Modal */}
       {showAllModal && (
         <VoucherListModal
@@ -507,5 +464,4 @@ const VoucherManagement: React.FC = () => {
     </Box>
   );
 };
-
 export default VoucherManagement;

@@ -38,9 +38,7 @@ import {
   Receipt,
   Percent
 } from '@mui/icons-material';
-
 const TaxCodesPage: React.FC = () => {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
@@ -54,7 +52,6 @@ const TaxCodesPage: React.FC = () => {
     is_default: false,
     is_active: true
   });
-
   // Mock data for demonstration
   const taxCodes = [
     {
@@ -124,7 +121,6 @@ const TaxCodesPage: React.FC = () => {
       usage_count: 15
     }
   ];
-
   const taxTypes = [
     { value: 'GST', label: 'GST (Goods and Services Tax)' },
     { value: 'IGST', label: 'IGST (Integrated GST)' },
@@ -134,7 +130,6 @@ const TaxCodesPage: React.FC = () => {
     { value: 'VAT', label: 'VAT (Value Added Tax)' },
     { value: 'OTHER', label: 'Other Tax' }
   ];
-
   const resetForm = () => {
     setFormData({
       tax_code: '',
@@ -146,12 +141,10 @@ const TaxCodesPage: React.FC = () => {
       is_active: true
     });
   };
-
   const handleAddClick = () => {
     resetForm();
     setAddDialog(true);
   };
-
   const handleEditClick = (taxCode: any) => {
     setSelectedTaxCode(taxCode);
     setFormData({
@@ -165,7 +158,6 @@ const TaxCodesPage: React.FC = () => {
     });
     setEditDialog(true);
   };
-
   const handleSubmit = () => {
     if (selectedTaxCode) {
       // TODO: Implement update functionality
@@ -177,29 +169,24 @@ const TaxCodesPage: React.FC = () => {
     setAddDialog(false);
     setEditDialog(false);
   };
-
   const handleDeleteClick = (taxCode: any) => {
     // TODO: Implement delete functionality
     console.log('Delete tax code:', taxCode.id);
   };
-
   const filteredTaxCodes = taxCodes.filter((taxCode: any) =>
     taxCode.tax_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     taxCode.tax_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     taxCode.tax_type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const getTotalUsage = () => {
     return taxCodes.reduce((sum, taxCode) => sum + taxCode.usage_count, 0);
   };
-
   const getAverageRate = () => {
     const activeTaxCodes = taxCodes.filter(tc => tc.is_active && tc.tax_rate > 0);
     if (activeTaxCodes.length === 0) {return 0;}
     const total = activeTaxCodes.reduce((sum, tc) => sum + tc.tax_rate, 0);
     return (total / activeTaxCodes.length).toFixed(1);
   };
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -215,13 +202,11 @@ const TaxCodesPage: React.FC = () => {
             Add Tax Code
           </Button>
         </Box>
-
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 3 }}>
           Configure tax codes for different tax rates and types. These will be used automatically 
           in invoices, purchase orders, and financial calculations.
         </Alert>
-
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -293,7 +278,6 @@ const TaxCodesPage: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
-
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
@@ -305,7 +289,6 @@ const TaxCodesPage: React.FC = () => {
             }}
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -406,7 +389,6 @@ const TaxCodesPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Add/Edit Tax Code Dialog */}
         <Dialog 
           open={addDialog || editDialog} 
@@ -499,5 +481,4 @@ const TaxCodesPage: React.FC = () => {
     </Container>
   );
 };
-
 export default TaxCodesPage;

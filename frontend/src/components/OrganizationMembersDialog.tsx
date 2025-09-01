@@ -1,5 +1,5 @@
+declare function fetchMembers(...args: any[]): any;
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -22,7 +22,6 @@ import {
 } from '@mui/material';
 import { Add, Email, Person } from '@mui/icons-material';
 import { organizationService } from '../services/organizationService';
-
 interface User {
   id: number;
   email: string;
@@ -31,7 +30,6 @@ interface User {
   is_active: boolean;
   username: string;
 }
-
 interface OrganizationMembersDialogProps {
   open: boolean;
   onClose: () => void;
@@ -39,7 +37,6 @@ interface OrganizationMembersDialogProps {
   organizationName: string;
   canInvite?: boolean;
 }
-
 const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
   open,
   onClose,
@@ -59,13 +56,11 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
     role: 'standard_user'
   });
   const [inviting, setInviting] = useState(false);
-
   useEffect(() => {
     if (open && organizationId) {
       fetchMembers();
     }
   }, [open, organizationId]);
-
   const fetchMembers = async () => {
     try {
       setLoading(true);
@@ -78,14 +73,11 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
       setLoading(false);
     }
   };
-
   const handleInviteSubmit = async () => {
     try {
       setInviting(true);
       setError(null);
-      
       await organizationService.inviteUserToOrganization(organizationId, inviteData);
-      
       // Reset form and refresh members
       setInviteData({
         email: '',
@@ -96,14 +88,12 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
       });
       setShowInviteForm(false);
       await fetchMembers();
-      
     } catch (error: any) {
       setError(error.message);
     } finally {
       setInviting(false);
     }
   };
-
   const getRoleColor = (role: string): 'error' | 'warning' | 'info' | 'default' => {
     switch (role) {
       case 'super_admin':
@@ -116,7 +106,6 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
         return 'default';
     }
   };
-
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'super_admin':
@@ -131,7 +120,6 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
         return role;
     }
   };
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -151,14 +139,12 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
           )}
         </Box>
       </DialogTitle>
-      
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-
         {showInviteForm && (
           <Box sx={{ mb: 3, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
             <Typography variant="subtitle2" gutterBottom>
@@ -223,7 +209,6 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
             </Grid>
           </Box>
         )}
-
         {loading ? (
           <Box display="flex" justifyContent="center" p={3}>
             <CircularProgress />
@@ -276,12 +261,10 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
           </List>
         )}
       </DialogContent>
-      
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
     </Dialog>
   );
 };
-
 export default OrganizationMembersDialog;

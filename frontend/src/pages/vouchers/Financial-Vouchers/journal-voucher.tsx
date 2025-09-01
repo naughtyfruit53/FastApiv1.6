@@ -1,19 +1,16 @@
 // Journal Voucher Page - Refactored using VoucherLayout
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { Visibility, Edit } from '@mui/icons-material';
+import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from '@mui/material';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
 import EntitySelector from '../../../components/EntitySelector';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
-
+import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
 const JournalVoucher: React.FC = () => {
   const config = getVoucherConfig('journal-voucher');
   const voucherStyles = getVoucherStyles();
-  
   const {
     // State
     mode,
@@ -27,7 +24,6 @@ const JournalVoucher: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Form
     control,
     handleSubmit,
@@ -35,17 +31,14 @@ const JournalVoucher: React.FC = () => {
     setValue,
     reset,
     errors,
-
     // Data
     voucherList,
     vendorList,
     customerList,
     sortedVouchers,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -60,15 +53,11 @@ const JournalVoucher: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Watch form values
   const watchedValues = watch();
-  const totalAmount = watchedValues?.total_amount || 0;
-
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
@@ -78,7 +67,6 @@ const JournalVoucher: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
-
   // Index Content - Left Panel (40%)
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -136,7 +124,6 @@ const JournalVoucher: React.FC = () => {
       </Table>
     </TableContainer>
   );
-
   // Form Content - Right Panel (60%)
   const formContent = (
     <Box>
@@ -152,13 +139,11 @@ const JournalVoucher: React.FC = () => {
           currentId={watch('id')}
         />
       </Box>
-
       {(createMutation.isPending || updateMutation.isPending) && (
         <Box display="flex" justifyContent="center" my={2}>
           <CircularProgress />
         </Box>
       )}
-
       <Box 
         component="form" 
         onSubmit={handleSubmit(handleSubmitForm)} 
@@ -197,7 +182,6 @@ const JournalVoucher: React.FC = () => {
               helperText={errors.date?.message as string}
             />
           </Grid>
-
           <Grid size={12}>
             <EntitySelector
               name="debit_account"
@@ -209,7 +193,6 @@ const JournalVoucher: React.FC = () => {
               disabled={isViewMode}
             />
           </Grid>
-
           <Grid size={6}>
             <TextField
               {...control.register('debit_amount', {
@@ -241,7 +224,6 @@ const JournalVoucher: React.FC = () => {
               }}
             />
           </Grid>
-
           <Grid size={6}>
             <TextField
               {...control.register('credit_amount', {
@@ -273,7 +255,6 @@ const JournalVoucher: React.FC = () => {
               }}
             />
           </Grid>
-
           <Grid size={12}>
             <EntitySelector
               name="credit_account"
@@ -285,7 +266,6 @@ const JournalVoucher: React.FC = () => {
               disabled={isViewMode}
             />
           </Grid>
-
           <Grid size={12}>
             <TextField
               {...control.register('description')}
@@ -299,7 +279,6 @@ const JournalVoucher: React.FC = () => {
               placeholder="Enter transaction description..."
             />
           </Grid>
-
           {(watch('debit_amount') > 0 || watch('credit_amount') > 0) && (
             <Grid size={12}>
               <TextField
@@ -313,7 +292,6 @@ const JournalVoucher: React.FC = () => {
               />
             </Grid>
           )}
-
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
@@ -341,7 +319,6 @@ const JournalVoucher: React.FC = () => {
       </Box>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -351,7 +328,6 @@ const JournalVoucher: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -378,7 +354,6 @@ const JournalVoucher: React.FC = () => {
           />
         }
       />
-      
       {/* Keep context menu for right-click functionality */}
       <VoucherContextMenu
         voucherType="Journal Voucher"
@@ -400,5 +375,4 @@ const JournalVoucher: React.FC = () => {
     </>
   );
 };
-
 export default JournalVoucher;

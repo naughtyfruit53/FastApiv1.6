@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -47,7 +46,6 @@ import {
   Person as PersonIcon,
   LocationOn as LocationIcon
 } from '@mui/icons-material';
-
 interface Contact {
   id: number;
   firstName: string;
@@ -70,7 +68,6 @@ interface Contact {
   assignedTo: string;
   notes: string;
 }
-
 const ContactManagement: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +78,6 @@ const ContactManagement: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'create'>('view');
   const [tabValue, setTabValue] = useState(0);
-
   // Mock data - replace with actual API call
   useEffect(() => {
     const fetchContacts = async () => {
@@ -89,7 +85,6 @@ const ContactManagement: React.FC = () => {
         setLoading(true);
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
         const mockData: Contact[] = [
           {
             id: 1,
@@ -202,7 +197,6 @@ const ContactManagement: React.FC = () => {
             notes: 'Interested in analytics and reporting capabilities.'
           }
         ];
-        
         setContacts(mockData);
       } catch (err) {
         setError('Failed to load contacts');
@@ -211,10 +205,8 @@ const ContactManagement: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchContacts();
   }, []);
-
   const filteredContacts = contacts.filter(contact => {
     const matchesSearch = 
       contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -222,36 +214,29 @@ const ContactManagement: React.FC = () => {
       contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.jobTitle.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesStatus = filterStatus === 'all' || contact.status === filterStatus;
-    
     return matchesSearch && matchesStatus;
   });
-
   const handleViewContact = (contact: Contact) => {
     setSelectedContact(contact);
     setDialogMode('view');
     setDialogOpen(true);
   };
-
   const handleEditContact = (contact: Contact) => {
     setSelectedContact(contact);
     setDialogMode('edit');
     setDialogOpen(true);
   };
-
   const handleCreateContact = () => {
     setSelectedContact(null);
     setDialogMode('create');
     setDialogOpen(true);
   };
-
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedContact(null);
     setTabValue(0);
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'success';
@@ -260,18 +245,15 @@ const ContactManagement: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
-
   const contactStats = {
     total: contacts.length,
     active: contacts.filter(c => c.status === 'active').length,
     leads: contacts.filter(c => c.status === 'lead').length,
     inactive: contacts.filter(c => c.status === 'inactive').length
   };
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -281,7 +263,6 @@ const ContactManagement: React.FC = () => {
       </Container>
     );
   }
-
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -289,13 +270,11 @@ const ContactManagement: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Contact Management
       </Typography>
-
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -347,7 +326,6 @@ const ContactManagement: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Filters and Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -386,7 +364,6 @@ const ContactManagement: React.FC = () => {
           Add Contact
         </Button>
       </Box>
-
       {/* Contacts Table */}
       <TableContainer component={Paper}>
         <Table>
@@ -492,7 +469,6 @@ const ContactManagement: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
       {/* Contact Detail Dialog */}
       <Dialog 
         open={dialogOpen} 
@@ -512,7 +488,6 @@ const ContactManagement: React.FC = () => {
                 <Tab label="Contact Details" />
                 <Tab label="Notes & Activity" />
               </Tabs>
-              
               {tabValue === 0 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                   <Grid item xs={12} md={6}>
@@ -575,7 +550,6 @@ const ContactManagement: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-              
               {tabValue === 1 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                   <Grid item xs={12} md={6}>
@@ -637,7 +611,6 @@ const ContactManagement: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-              
               {tabValue === 2 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                   <Grid item xs={12}>
@@ -693,5 +666,4 @@ const ContactManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default ContactManagement;

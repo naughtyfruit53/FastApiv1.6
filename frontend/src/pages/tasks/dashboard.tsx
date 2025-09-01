@@ -1,7 +1,5 @@
 // frontend/src/pages/tasks/dashboard.tsx
-
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -29,7 +27,6 @@ import {
   Add
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-
 interface TaskStats {
   total_tasks: number;
   todo_tasks: number;
@@ -43,13 +40,11 @@ interface TaskStats {
   assigned_to_me: number;
   created_by_me: number;
 }
-
 const TaskDashboard: React.FC = () => {
   const router = useRouter();
   const [stats, setStats] = useState<TaskStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     // Simulate API call - replace with actual API integration
     const fetchStats = async () => {
@@ -57,7 +52,6 @@ const TaskDashboard: React.FC = () => {
         setLoading(true);
         // TODO: Replace with actual API call to /api/v1/tasks/dashboard
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-        
         // Mock data for demonstration
         const mockStats: TaskStats = {
           total_tasks: 45,
@@ -72,7 +66,6 @@ const TaskDashboard: React.FC = () => {
           assigned_to_me: 15,
           created_by_me: 23
         };
-        
         setStats(mockStats);
       } catch (err) {
         setError('Failed to load task dashboard data');
@@ -80,19 +73,15 @@ const TaskDashboard: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchStats();
   }, []);
-
   const getCompletionPercentage = (stats: TaskStats) => {
     if (stats.total_tasks === 0) {return 0;}
     return Math.round((stats.done_tasks / stats.total_tasks) * 100);
   };
-
   const handleNavigate = (path: string) => {
     router.push(path);
   };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -100,7 +89,6 @@ const TaskDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
@@ -108,7 +96,6 @@ const TaskDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (!stats) {
     return (
       <Box sx={{ p: 3 }}>
@@ -116,9 +103,7 @@ const TaskDashboard: React.FC = () => {
       </Box>
     );
   }
-
   const completionPercentage = getCompletionPercentage(stats);
-
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -135,7 +120,6 @@ const TaskDashboard: React.FC = () => {
           Create Task
         </Button>
       </Box>
-
       {/* Overview Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -155,7 +139,6 @@ const TaskDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -173,7 +156,6 @@ const TaskDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -191,7 +173,6 @@ const TaskDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -210,7 +191,6 @@ const TaskDashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Task Status Breakdown */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
@@ -229,7 +209,6 @@ const TaskDashboard: React.FC = () => {
                   value={stats.total_tasks > 0 ? (stats.todo_tasks / stats.total_tasks) * 100 : 0}
                   sx={{ mb: 2, height: 8, borderRadius: 1 }}
                 />
-
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="body2">In Progress</Typography>
                   <Typography variant="body2">{stats.in_progress_tasks}</Typography>
@@ -240,7 +219,6 @@ const TaskDashboard: React.FC = () => {
                   color="warning"
                   sx={{ mb: 2, height: 8, borderRadius: 1 }}
                 />
-
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="body2">Review</Typography>
                   <Typography variant="body2">{stats.review_tasks}</Typography>
@@ -251,7 +229,6 @@ const TaskDashboard: React.FC = () => {
                   color="info"
                   sx={{ mb: 2, height: 8, borderRadius: 1 }}
                 />
-
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="body2">Done</Typography>
                   <Typography variant="body2">{stats.done_tasks}</Typography>
@@ -266,7 +243,6 @@ const TaskDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -311,7 +287,6 @@ const TaskDashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Upcoming Deadlines */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
@@ -339,7 +314,6 @@ const TaskDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -369,5 +343,4 @@ const TaskDashboard: React.FC = () => {
     </Box>
   );
 };
-
 export default TaskDashboard;

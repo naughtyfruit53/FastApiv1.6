@@ -1,9 +1,7 @@
 'use client';
-
 import React, { useState } from 'react';
 import { TextField, Button, CircularProgress, Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import axios from 'axios';
-
 // State to GST state code map (mirrored from backend for autofill)
 const STATE_CODE_MAP: { [key: string]: string } = {
   "Andaman & Nicobar Islands": "35",
@@ -45,7 +43,6 @@ const STATE_CODE_MAP: { [key: string]: string } = {
   "Other Territory": "97",
   "Other Country": "99"
 };
-
 interface FormData {
   name?: string; // For direct organization creation
   subdomain?: string; // For direct organization creation
@@ -67,14 +64,12 @@ interface FormData {
   description?: string;
   max_users?: number;
 }
-
 interface OrganizationFormProps {
   onSubmit: (data: FormData) => void;
   mode?: 'license' | 'create'; // license = create license, create = direct org creation
   initialData?: Partial<FormData>;
   isEditing?: boolean;
 }
-
 const OrganizationForm: React.FC<OrganizationFormProps> = ({ 
   onSubmit, 
   mode = 'license',
@@ -104,7 +99,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
     ...initialData
   });
   const [pincodeLoading, setPincodeLoading] = useState(false);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown } }) => {
     const name = e.target.name as string;
     const value = e.target.value as string;
@@ -114,7 +108,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
       ...(name === 'state' ? { state_code: STATE_CODE_MAP[value] || '' } : {}),  // Autofill state_code based on state change
     }));
   };
-
   const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     handleChange(e);
@@ -136,13 +129,10 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
       }
     }
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     // Transform data based on mode
     let submitData = { ...formData };
-    
     if (mode === 'create') {
       // For direct organization creation, map fields appropriately
       submitData = {
@@ -163,12 +153,9 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
         max_users: formData.max_users
       };
     }
-    
     onSubmit(submitData);
   };
-
   const isLicenseMode = mode === 'license';
-
   return (
     <form onSubmit={handleSubmit}>
       <Grid container spacing={2}>
@@ -182,7 +169,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             required
           />
         </Grid>
-        
         {!isLicenseMode && (
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
@@ -196,7 +182,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             />
           </Grid>
         )}
-        
         {isLicenseMode && (
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
@@ -210,7 +195,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             />
           </Grid>
         )}
-        
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
@@ -222,7 +206,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             required
           />
         </Grid>
-        
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
@@ -233,7 +216,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             required
           />
         </Grid>
-        
         {!isLicenseMode && (
           <>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -253,7 +235,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -263,7 +244,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
                 onChange={handleChange}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -274,7 +254,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
                 onChange={handleChange}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
@@ -288,7 +267,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             </Grid>
           </>
         )}
-        
         <Grid size={12}>
           <TextField
             fullWidth
@@ -299,7 +277,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             required
           />
         </Grid>
-        
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             fullWidth
@@ -310,7 +287,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             required
           />
         </Grid>
-        
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             fullWidth
@@ -321,7 +297,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             required
           />
         </Grid>
-        
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             fullWidth
@@ -335,7 +310,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             }}
           />
         </Grid>
-        
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
@@ -346,7 +320,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             disabled  // Autofilled, so disabled for user input
           />
         </Grid>
-        
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
@@ -356,7 +329,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             onChange={handleChange}
           />
         </Grid>
-        
         {!isLicenseMode && (
           <Grid size={12}>
             <TextField
@@ -370,7 +342,6 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             />
           </Grid>
         )}
-        
         <Grid size={12}>
           <Button type="submit" variant="contained" color="primary">
             {isEditing ? 'Update Organization' : (isLicenseMode ? 'Create License' : 'Create Organization')}
@@ -380,5 +351,4 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
     </form>
   );
 };
-
 export default OrganizationForm;

@@ -1,12 +1,16 @@
+declare function renderCreateJobStep(...args: any[]): any;
+declare function renderValidationStep(...args: any[]): any;
+declare function renderMappingStep(...args: any[]): any;
+declare function renderExecutionStep(...args: any[]): any;
+declare function renderUploadStep(...args: any[]): any;
+declare function loadWizardState(...args: any[]): any;
 'use client';
-
 /**
  * Migration Wizard Component
  * 
  * A comprehensive step-by-step wizard for importing data from external ERPs like Tally, Zoho.
  * Provides guided migration workflow with data mapping, validation, and progress monitoring.
  */
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -60,7 +64,6 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-
 export interface MigrationJob {
   id: number;
   job_name: string;
@@ -72,7 +75,6 @@ export interface MigrationJob {
   progress_percentage?: number;
   error_message?: string;
 }
-
 export interface MigrationWizardStep {
   step_number: number;
   step_name: string;
@@ -81,7 +83,6 @@ export interface MigrationWizardStep {
   can_skip: boolean;
   data?: any;
 }
-
 export interface MigrationWizardState {
   job_id: number;
   current_step: number;
@@ -90,22 +91,19 @@ export interface MigrationWizardState {
   can_proceed: boolean;
   validation_errors: string[];
 }
-
 interface MigrationWizardProps {
   open: boolean;
   onClose: () => void;
   jobId?: number;
 }
-
 const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId }) => {
-  const { user } = useAuth();
+const  = useAuth();
   const [loading, setLoading] = useState(false);
   const [wizardState, setWizardState] = useState<MigrationWizardState | null>(null);
   const [currentJob, setCurrentJob] = useState<MigrationJob | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [err, setErr] = useState<string | null>(null);
-  
   // Form data for creating new migration job
   const [newJobData, setNewJobData] = useState({
     job_name: '',
@@ -114,7 +112,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
     data_types: [] as string[],
     conflict_resolution_strategy: 'skip_existing'
   });
-
   // Step definitions
   const stepNames = [
     'Create Migration Job',
@@ -123,21 +120,17 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
     'Validate Data',
     'Execute Migration'
   ];
-
   useEffect(() => {
     if (open && jobId) {
       loadWizardState();
     }
   }, [open, jobId]);
-
   const loadWizardState = async () => {
     if (!jobId) {return;}
-    
     setLoading(true);
     try {
       const response = await axios.get(`/api/v1/migration/jobs/${jobId}/wizard`);
       setWizardState(response.data);
-      
       // Also load job details
       const jobResponse = await axios.get(`/api/v1/migration/jobs/${jobId}`);
       setCurrentJob(jobResponse.data);
@@ -148,19 +141,16 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       setLoading(false);
     }
   };
-
   const createMigrationJob = async () => {
     if (!newJobData.job_name || newJobData.data_types.length === 0) {
       setErr('Please provide job name and select at least one data type');
       return;
     }
-
     setLoading(true);
     try {
       const response = await axios.post('/api/v1/migration/jobs', newJobData);
       const newJob = response.data;
       setCurrentJob(newJob);
-      
       // Load wizard state for the new job
       const wizardResponse = await axios.get(`/api/v1/migration/jobs/${newJob.id}/wizard`);
       setWizardState(wizardResponse.data);
@@ -171,19 +161,15 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       setLoading(false);
     }
   };
-
   const uploadFile = async () => {
     if (!selectedFile || !currentJob) {
       setErr('Please select a file to upload');
       return;
     }
-
     setLoading(true);
     setUploadProgress(0);
-    
     const formData = new FormData();
     formData.append('file', selectedFile);
-
     try {
       await axios.post(`/api/v1/migration/jobs/${currentJob.id}/upload`, formData, {
         headers: {
@@ -196,7 +182,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
           setUploadProgress(percentCompleted);
         },
       });
-      
       // Reload wizard state
       await loadWizardState();
     } catch (error) {
@@ -207,10 +192,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       setUploadProgress(0);
     }
   };
-
   const executeMigration = async () => {
     if (!currentJob) {return;}
-
     setLoading(true);
     try {
       await axios.post(`/api/v1/migration/jobs/${currentJob.id}/execute`);
@@ -222,10 +205,8 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       setLoading(false);
     }
   };
-
   const rollbackMigration = async () => {
     if (!currentJob) {return;}
-
     setLoading(true);
     try {
       await axios.post(`/api/v1/migration/jobs/${currentJob.id}/rollback`);
@@ -237,12 +218,9 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       setLoading(false);
     }
   };
-
   const renderStepContent = () => {
     if (!wizardState) {return null;}
-
     const currentStep = wizardState.current_step;
-
     switch (currentStep) {
       case 1:
         return renderCreateJobStep();
@@ -258,7 +236,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
         return <Typography>Unknown step</Typography>;
     }
   };
-
   const renderCreateJobStep = () => (
     <Box sx={{ mt: 2 }}>
       <Typography variant="h6" gutterBottom>Create Migration Job</Typography>
@@ -318,7 +295,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       </Grid>
     </Box>
   );
-
   const renderUploadStep = () => (
     <Box sx={{ mt: 2 }}>
       <Typography variant="h6" gutterBottom>Upload Source File</Typography>
@@ -358,7 +334,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       </Card>
     </Box>
   );
-
   const renderMappingStep = () => (
     <Box sx={{ mt: 2 }}>
       <Typography variant="h6" gutterBottom>Configure Data Mapping</Typography>
@@ -371,7 +346,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       </Typography>
     </Box>
   );
-
   const renderValidationStep = () => (
     <Box sx={{ mt: 2 }}>
       <Typography variant="h6" gutterBottom>Validate Data</Typography>
@@ -384,7 +358,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       </Typography>
     </Box>
   );
-
   const renderExecutionStep = () => (
     <Box sx={{ mt: 2 }}>
       <Typography variant="h6" gutterBottom>Execute Migration</Typography>
@@ -421,21 +394,16 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
       )}
     </Box>
   );
-
   const getStepStatus = (stepIndex: number) => {
     if (!wizardState) {return 'pending';}
-    
     const step = wizardState.steps[stepIndex];
     if (step?.is_completed) {return 'completed';}
     if (step?.is_current) {return 'active';}
     return 'pending';
   };
-
   const canProceedToNext = () => {
     if (!wizardState) {return false;}
-    
     const currentStep = wizardState.current_step;
-    
     switch (currentStep) {
       case 1:
         return newJobData.job_name && newJobData.data_types.length > 0;
@@ -445,12 +413,9 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
         return wizardState.can_proceed;
     }
   };
-
   const handleNext = async () => {
     if (!wizardState) {return;}
-    
     const currentStep = wizardState.current_step;
-    
     switch (currentStep) {
       case 1:
         await createMigrationJob();
@@ -464,7 +429,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
         break;
     }
   };
-
   return (
     <Dialog 
       open={open} 
@@ -486,20 +450,17 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
           )}
         </Box>
       </DialogTitle>
-      
       <DialogContent>
         {loading && !wizardState && (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
         )}
-
         {err && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErr(null)}>
             {err}
           </Alert>
         )}
-
         {wizardState && (
           <>
             <Stepper activeStep={wizardState.current_step - 1} sx={{ mb: 4 }}>
@@ -514,7 +475,6 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
                 </Step>
               ))}
             </Stepper>
-
             {wizardState.validation_errors.length > 0 && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="subtitle2">Validation Issues:</Typography>
@@ -525,12 +485,10 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
                 </ul>
               </Alert>
             )}
-
             {renderStepContent()}
           </>
         )}
       </DialogContent>
-
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         {wizardState && wizardState.current_step > 1 && (
@@ -553,5 +511,4 @@ const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId 
     </Dialog>
   );
 };
-
 export default MigrationWizard;

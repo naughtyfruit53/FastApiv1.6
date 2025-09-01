@@ -1,8 +1,6 @@
 // src/services/vouchersService.ts
 // frontend/src/services/vouchersService.ts
-
 import api from '../lib/api';
-
 export const voucherService = {
   // Generic Voucher Methods
   getVouchers: async (type: string, params?: any) => {
@@ -35,7 +33,6 @@ export const voucherService = {
     const response = await api.get(endpoint);
     return response.data;
   },
-
   // Purchase Vouchers
   getPurchaseVoucherById: async (id: number) => {
     const response = await api.get(`/purchase-vouchers/${id}`);
@@ -49,7 +46,6 @@ export const voucherService = {
     const response = await api.put(`/purchase-vouchers/${id}`, data);
     return response.data;
   },
-
   // Purchase Orders
   getPurchaseOrderById: async (id: number) => {
     const response = await api.get(`/purchase-orders/${id}`);
@@ -63,7 +59,6 @@ export const voucherService = {
     const response = await api.put(`/purchase-orders/${id}`, data);
     return response.data;
   },
-
   // GRN
   getGrnById: async (id: number) => {
     const response = await api.get(`/goods-receipt-notes/${id}`);
@@ -77,7 +72,6 @@ export const voucherService = {
     const response = await api.put(`/goods-receipt-notes/${id}`, data);
     return response.data;
   },
-
   // Rejection In
   getRejectionInById: async (id: number) => {
     const response = await api.get(`/purchase-returns/${id}`);
@@ -91,7 +85,6 @@ export const voucherService = {
     const response = await api.put(`/purchase-returns/${id}`, data);
     return response.data;
   },
-
   // Enhanced service methods for voucher actions
   getEmailRecipient: (voucher: any, voucherType: string) => {
     const type = voucherType.toLowerCase();
@@ -111,7 +104,6 @@ export const voucherService = {
     }
     return null;
   },
-
   sendVoucherEmail: async (voucherType: string, id: number) => {
     try {
       const response = await api.post(`/${voucherType}/${id}/send-email`);
@@ -121,7 +113,6 @@ export const voucherService = {
       throw error;
     }
   },
-
   deleteVoucher: async (voucherType: string, id: number) => {
     try {
       const response = await api.delete(`/${voucherType}/${id}`);
@@ -131,10 +122,8 @@ export const voucherService = {
       throw error;
     }
   },
-
   getVoucherActions: (voucher: any, voucherType: string) => {
     const recipient = voucherService.getEmailRecipient(voucher, voucherType);
-    
     return {
       canView: true,
       canEdit: true,

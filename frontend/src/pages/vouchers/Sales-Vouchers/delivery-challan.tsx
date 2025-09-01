@@ -1,8 +1,8 @@
 // frontend/src/pages/vouchers/Sales-Vouchers/delivery-challan.tsx
 // Delivery Challan Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
-import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description } from '@mui/icons-material';
+import {Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Fab} from '@mui/material';
+import {Add, Remove} from '@mui/icons-material';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -10,18 +10,13 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
-import VoucherReferenceDropdown from '../../../components/VoucherReferenceDropdown';
-import BalanceDisplay from '../../../components/BalanceDisplay';
-import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS, getVoucherStyles } from '../../../utils/voucherUtils';
+import {getVoucherConfig, GST_SLABS, getVoucherStyles} from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import { dispatchService } from '../../../services/dispatchService';
-import api from '../../../lib/api';  // Import api for direct call
 import { toast } from 'react-toastify';
-
 const DeliveryChallanPage: React.FC = () => {
   const config = getVoucherConfig('delivery-challan');
   const voucherStyles = getVoucherStyles();
@@ -55,17 +50,14 @@ const DeliveryChallanPage: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Enhanced pagination
     currentPage,
     pageSize,
     paginationData,
     handlePageChange,
-
     // Reference document handling
     referenceDocument,
     handleReferenceSelected,
-
     // Form
     control,
     handleSubmit,
@@ -76,7 +68,6 @@ const DeliveryChallanPage: React.FC = () => {
     append,
     remove,
     reset,
-
     // Data
     voucherList,
     customerList,
@@ -84,17 +75,14 @@ const DeliveryChallanPage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-
     // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
     totalGst,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -109,27 +97,21 @@ const DeliveryChallanPage: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Additional state for voucher list modal
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
-
   // Delivery Challan specific state
   const selectedCustomerId = watch('customer_id');
   const selectedCustomer = customerList?.find((c: any) => c.id === selectedCustomerId);
-
   // Enhanced customer options with "Add New"
   const enhancedCustomerOptions = [
     ...(customerList || []),
     { id: null, name: 'Add New Customer...' }
   ];
-
   // Stock data state for items
   const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
-
   // Delivery Challan specific handlers
   const handleAddItem = () => {
     append({
@@ -145,7 +127,6 @@ const DeliveryChallanPage: React.FC = () => {
       reorder_level: 0
     });
   };
-
   // Custom submit handler to prompt for PDF after save
   const onSubmit = async (data: any) => {
     try {
@@ -153,7 +134,6 @@ const DeliveryChallanPage: React.FC = () => {
         data.items = computedItems;
         data.total_amount = totalAmount;
       }
-
       let response;
       if (mode === 'create') {
         response = await createMutation.mutateAsync(data);
@@ -166,19 +146,16 @@ const DeliveryChallanPage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-      
     } catch (error) {
       console.error('Error saving delivery challan:', error);
       alert('Failed to save delivery challan. Please try again.');
     }
   };
-
   // Handle duplicate delivery challan
   const handleDuplicate = async (id: number) => {
     try {
       const voucher = voucherList?.find(v => v.id === id);
       if (!voucher) {return;}
-
       // Reset form with duplicated data
       reset({
         ...voucher,
@@ -195,20 +172,17 @@ const DeliveryChallanPage: React.FC = () => {
       toast.error('Failed to duplicate delivery challan');
     }
   };
-
   // Handle create dispatch order from delivery challan
   const handleCreateDispatch = async (id: number) => {
     try {
       const voucher = voucherList?.find(v => v.id === id);
       if (!voucher) {return;}
-
       // Check if delivery challan is delivered
       if (voucher.status !== 'delivered') {
         if (!confirm('This delivery challan is not marked as delivered. Create dispatch order anyway?')) {
           return;
         }
       }
-
       // Create dispatch order with delivery challan data
       const dispatchData = {
         customer_id: voucher.customer_id,
@@ -225,10 +199,8 @@ const DeliveryChallanPage: React.FC = () => {
           status: 'pending'
         })) || []
       };
-
       const response = await dispatchService.createDispatchOrder(dispatchData);
       toast.success(`Dispatch order ${response.order_number} created successfully`);
-      
       // Ask if user wants to open dispatch management
       if (confirm('Dispatch order created. Open Dispatch Management?')) {
         window.open('/service/dispatch', '_blank');
@@ -238,14 +210,12 @@ const DeliveryChallanPage: React.FC = () => {
       toast.error('Failed to create dispatch order');
     }
   };
-
   // Function to get stock color
   const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {return 'error.main';}
     if (stock <= reorder) {return 'warning.main';}
     return 'success.main';
   };
-
   // Memoize all selected products
   const selectedProducts = useMemo(() => {
     return fields.map((_, index) => {
@@ -253,7 +223,6 @@ const DeliveryChallanPage: React.FC = () => {
       return productList?.find((p: any) => p.id === productId) || null;
     });
   }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
-
   // Effect to fetch stock when product changes
   useEffect(() => {
     fields.forEach((_, index) => {
@@ -275,7 +244,6 @@ const DeliveryChallanPage: React.FC = () => {
       }
     });
   }, [fields.map(f => watch(`items.${fields.indexOf(f)}.product_id`)).join(','), setValue, fields.length]);
-
   // Manual fetch for voucher number if not loaded
   useEffect(() => {
     if (mode === 'create' && !nextVoucherNumber && !isLoading) {
@@ -284,21 +252,17 @@ const DeliveryChallanPage: React.FC = () => {
         .catch(err => console.error('Failed to fetch voucher number:', err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
-
   const handleVoucherClick = (voucher: any) => {
     handleView(voucher.id);
   };
-  
   // Enhanced handleEdit to use hook
   const handleEditWithData = (voucher: any) => {
     handleEdit(voucher.id);
   };
-  
   // Enhanced handleView to use hook
   const handleViewWithData = (voucher: any) => {
     handleView(voucher.id);
   };
-
   const indexContent = (
     <>
       {/* Voucher list table */}
@@ -356,7 +320,6 @@ const DeliveryChallanPage: React.FC = () => {
       </TableContainer>
     </>
   );
-
   const formContent = (
     <Box>
       {/* Header Actions */}
@@ -371,7 +334,6 @@ const DeliveryChallanPage: React.FC = () => {
           currentId={selectedCustomerId}
         />
       </Box>
-
       <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
@@ -387,7 +349,6 @@ const DeliveryChallanPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Date */}
           <Grid size={6}>
             <TextField
@@ -402,7 +363,6 @@ const DeliveryChallanPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Customer, Reference, Payment Terms in one row */}
           <Grid size={4}>
             <Autocomplete
@@ -432,7 +392,6 @@ const DeliveryChallanPage: React.FC = () => {
               disabled={mode === 'view'}
             />
           </Grid>
-
           <Grid size={4}>
             <TextField
               fullWidth
@@ -445,7 +404,6 @@ const DeliveryChallanPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           <Grid size={4}>
             <TextField
               fullWidth
@@ -458,7 +416,6 @@ const DeliveryChallanPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           <Grid size={12}>
             <TextField
               fullWidth
@@ -472,12 +429,10 @@ const DeliveryChallanPage: React.FC = () => {
               size="small"
             />
           </Grid>
-
           {/* Items section */}
           <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 27 }}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Items</Typography>
           </Grid>
-
           {/* Items Table */}
           <Grid size={12}>
             <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
@@ -597,7 +552,6 @@ const DeliveryChallanPage: React.FC = () => {
               </Box>
             )}
           </Grid>
-
           {/* Totals */}
           <Grid size={12}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
@@ -637,7 +591,6 @@ const DeliveryChallanPage: React.FC = () => {
               </Box>
             </Box>
           </Grid>
-
           {/* Amount in Words */}
           <Grid size={12}>
             <TextField
@@ -650,7 +603,6 @@ const DeliveryChallanPage: React.FC = () => {
               size="small"
             />
           </Grid>
-
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
@@ -671,7 +623,6 @@ const DeliveryChallanPage: React.FC = () => {
       </form>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -681,7 +632,6 @@ const DeliveryChallanPage: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -712,7 +662,6 @@ const DeliveryChallanPage: React.FC = () => {
           />
         }
       />
-
       {/* Modals */}
       <AddCustomerModal 
         open={showAddCustomerModal}
@@ -721,7 +670,6 @@ const DeliveryChallanPage: React.FC = () => {
         loading={addCustomerLoading}
         setLoading={setAddCustomerLoading}
       />
-
       <AddProductModal 
         open={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
@@ -729,14 +677,12 @@ const DeliveryChallanPage: React.FC = () => {
         loading={addProductLoading}
         setLoading={setAddProductLoading}
       />
-
       <AddShippingAddressModal 
         open={showShippingModal}
         onClose={() => setShowShippingModal(false)}
         loading={addShippingLoading}
         setLoading={setAddShippingLoading}
       />
-
       <VoucherContextMenu
         contextMenu={contextMenu}
         voucherType="Delivery Challan"
@@ -751,5 +697,4 @@ const DeliveryChallanPage: React.FC = () => {
     </>
   );
 };
-
 export default DeliveryChallanPage;

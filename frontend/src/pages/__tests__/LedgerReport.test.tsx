@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Test file for Ledger Report functionality
  */

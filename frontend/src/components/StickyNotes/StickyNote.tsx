@@ -28,7 +28,6 @@ import {
   PushPin,
   PushPinOutlined
 } from '@mui/icons-material';
-
 interface StickyNoteProps {
   id: number;
   title: string;
@@ -40,7 +39,6 @@ interface StickyNoteProps {
   onUpdate: (id: number, data: { title?: string; content?: string; color?: string; position?: { x: number; y: number }; pinned?: boolean }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }
-
 const COLORS = [
   { name: 'yellow', color: '#fff59d', border: '#fff176' },
   { name: 'blue', color: '#81d4fa', border: '#4fc3f7' },
@@ -49,7 +47,6 @@ const COLORS = [
   { name: 'purple', color: '#ce93d8', border: '#ba68c8' },
   { name: 'orange', color: '#ffcc80', border: '#ffb74d' }
 ];
-
 const StickyNote: React.FC<StickyNoteProps> = ({
   id,
   title,
@@ -68,14 +65,11 @@ const StickyNote: React.FC<StickyNoteProps> = ({
   const [colorMenuAnchor, setColorMenuAnchor] = useState<null | HTMLElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const colorConfig = COLORS.find(c => c.name === color) || COLORS[0];
-
   const handleEdit = () => {
     setIsEditing(true);
     setAnchorEl(null);
   };
-
   const handleSave = async () => {
     if (!editTitle.trim() || !editContent.trim()) {
       return;
@@ -93,13 +87,11 @@ const StickyNote: React.FC<StickyNoteProps> = ({
       setLoading(false);
     }
   };
-
   const handleCancel = () => {
     setEditTitle(title);
     setEditContent(content);
     setIsEditing(false);
   };
-
   const handleColorChange = async (newColor: string) => {
     setLoading(true);
     try {
@@ -111,7 +103,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
       setLoading(false);
     }
   };
-
   const handleTogglePin = async () => {
     setLoading(true);
     try {
@@ -122,7 +113,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
       setLoading(false);
     }
   };
-
   const handleDelete = async () => {
     setLoading(true);
     try {
@@ -134,14 +124,12 @@ const StickyNote: React.FC<StickyNoteProps> = ({
       setLoading(false);
     }
   };
-
   const handleDragStop = (e: any, data: any) => {
     const newPosition = { x: data.x, y: data.y };
     onUpdate(id, { position: newPosition }).catch(error => {
       console.error('Error saving note position:', error);
     });
   };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -151,7 +139,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({
       minute: '2-digit'
     });
   };
-
   return (
     <>
       <Draggable
@@ -339,5 +326,4 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     </>
   );
 };
-
 export default StickyNote;

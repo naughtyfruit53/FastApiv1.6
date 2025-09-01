@@ -1,4 +1,3 @@
-import { render, screen } from '@testing-library/react';
 
 // Employee management utility functions test
 describe('Employee Management Utilities', () => {

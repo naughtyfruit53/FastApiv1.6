@@ -18,14 +18,12 @@ import {
   InputAdornment
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
-
 interface AddOpportunityModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
-
 interface OpportunityFormData {
   name: string;
   account_name?: string;
@@ -40,7 +38,6 @@ interface OpportunityFormData {
   lead_id?: number;
   assigned_to_id?: number;
 }
-
 const opportunityStages = [
   'prospecting',
   'qualification',
@@ -50,7 +47,6 @@ const opportunityStages = [
   'closed_won',
   'closed_lost'
 ];
-
 const opportunitySources = [
   'Website',
   'Social Media',
@@ -63,7 +59,6 @@ const opportunitySources = [
   'Existing Customer',
   'Other'
 ];
-
 const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
   open,
   onClose,
@@ -86,7 +81,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
       assigned_to_id: undefined
     }
   });
-
   React.useEffect(() => {
     if (open) {
       reset({
@@ -105,7 +99,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
       });
     }
   }, [open, reset]);
-
   const onSubmit = async (opportunityData: OpportunityFormData) => {
     try {
       // Remove empty fields to match backend schema
@@ -117,7 +110,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
           return value !== undefined && value !== null && value !== '';
         })
       );
-
       await onAdd(cleanData);
       reset();
       onClose();
@@ -125,14 +117,12 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
       console.error('Error adding opportunity:', error);
     }
   };
-
   const handleClose = () => {
     if (!loading) {
       reset();
       onClose();
     }
   };
-
   const getStageColor = (stage: string) => {
     switch (stage) {
       case 'prospecting': return 'info';
@@ -145,7 +135,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
       default: return 'default';
     }
   };
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -153,7 +142,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
           Add New Opportunity
         </Typography>
       </DialogTitle>
-
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Box sx={{ mt: 1 }}>
@@ -164,7 +152,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   Opportunity Details
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('name', { 
@@ -178,7 +165,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('account_name')}
@@ -187,7 +173,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('contact_name')}
@@ -196,7 +181,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('amount', { 
@@ -215,7 +199,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   inputProps={{ min: 0 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('probability', {
@@ -235,7 +218,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   inputProps={{ min: 0, max: 100 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Stage</InputLabel>
@@ -270,7 +252,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   )}
                 </FormControl>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Source</InputLabel>
@@ -299,7 +280,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   )}
                 </FormControl>
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('close_date', { 
@@ -316,14 +296,12 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   }}
                 />
               </Grid>
-
               {/* Additional Information */}
               <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Additional Information
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('description')}
@@ -335,7 +313,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   placeholder="Describe the opportunity details, requirements, and potential challenges..."
                 />
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('next_step')}
@@ -345,7 +322,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   placeholder="What is the next next action required to move this opportunity forward?"
                 />
               </Grid>
-
               {/* Optional Reference Fields */}
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
@@ -357,7 +333,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   inputProps={{ min: 1 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('assigned_to_id')}
@@ -371,7 +346,6 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
             </Grid>
           </Box>
         </DialogContent>
-
         <DialogActions>
           <Button 
             onClick={handleClose} 
@@ -393,5 +367,4 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
     </Dialog>
   );
 };
-
 export default AddOpportunityModal;

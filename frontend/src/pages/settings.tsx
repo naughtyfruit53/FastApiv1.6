@@ -1,5 +1,4 @@
 'use client';
-
 /**
  * Settings Page Page Component
  * 
@@ -21,7 +20,6 @@
  * - Org Admin: Organization-level management and reset options
  * - Standard User: Basic profile and company detail access only
  */
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -58,7 +56,6 @@ import {
   canShowFactoryResetOnly,
   canShowOrgDataResetOnly
 } from '../types/user.types';
-
 export default function Settings() {
   const router = useRouter();
   const { user } = useAuth();
@@ -68,10 +65,8 @@ export default function Settings() {
   const [factoryLoading, setFactoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
   // Get token for API calls
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  
   // Use centralized permission and role functions
   const displayRole = getDisplayRole(user?.role || '', user?.is_super_admin);
   const isSuperAdmin = isAppSuperAdmin(user);
@@ -85,12 +80,10 @@ export default function Settings() {
    * Organization context is automatically managed by the backend session
    */
   const organizationName = user?.organization_id ? 'Current Organization' : null;
-
   const handleResetData = async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const response = await axios.post(
@@ -103,10 +96,8 @@ export default function Settings() {
           }
         }
       );
-
       setSuccess(response.data.message);
       setResetDialogOpen(false);
-      
       // For organization admins, refresh the page to reflect changes
       if (!isSuperAdmin) {
         setTimeout(() => {
@@ -120,12 +111,10 @@ export default function Settings() {
       setLoading(false);
     }
   };
-
   const handleFactoryReset = async () => {
     setFactoryLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const response = await axios.post(
@@ -138,10 +127,8 @@ export default function Settings() {
           }
         }
       );
-
       setSuccess(response.data.message);
       setFactoryResetDialogOpen(false);
-      
       // Refresh the page to reflect changes
       setTimeout(() => {
         window.location.reload();
@@ -153,7 +140,6 @@ export default function Settings() {
       setFactoryLoading(false);
     }
   };
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -194,13 +180,11 @@ export default function Settings() {
                 Admin Management
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              
               <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
                   App admins can create organization licenses but cannot create other app admin users.
                 </Typography>
               </Alert>
-
               <Button
                 variant="contained"
                 onClick={() => router.push('/admin/license-management')}
@@ -210,7 +194,6 @@ export default function Settings() {
               >
                 License Management
               </Button>
-              
               <Button
                 variant="outlined"
                 onClick={() => router.push('/admin/organizations')}
@@ -222,7 +205,6 @@ export default function Settings() {
             </Paper>
           </Grid>
         )}
-
         {/* Organization Settings - Hidden from App Super Admins */}
         {canAccessOrgSettings && (
           <Grid
@@ -236,7 +218,6 @@ export default function Settings() {
                 Organization Settings
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              
               <Button
                 variant="outlined"
                 onClick={() => router.push('/masters/company-details')}
@@ -244,7 +225,6 @@ export default function Settings() {
               >
                 Edit Company Details
               </Button>
-
               <Button
                 variant="outlined"
                 onClick={() => router.push('/profile')}
@@ -252,7 +232,6 @@ export default function Settings() {
               >
                 User Profile
               </Button>
-
               {/* User Management for Organization Admins - Now in Settings */}
               {canManage && (
                 <>
@@ -265,7 +244,6 @@ export default function Settings() {
                   >
                     Manage Users
                   </Button>
-                  
                   <Button
                     variant="outlined"
                     onClick={() => router.push('/settings/add-user')}
@@ -279,7 +257,6 @@ export default function Settings() {
             </Paper>
           </Grid>
         )}
-
         {/* User Profile for App Super Admins (when Organization Settings is hidden) */}
         {!canAccessOrgSettings && (
           <Grid
@@ -293,7 +270,6 @@ export default function Settings() {
                 User Profile
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              
               <Button
                 variant="outlined"
                 onClick={() => router.push('/profile')}
@@ -304,7 +280,6 @@ export default function Settings() {
             </Paper>
           </Grid>
         )}
-
         {/* Data Management */}
         {canReset && (
           <Grid
@@ -318,7 +293,6 @@ export default function Settings() {
                 Data Management
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="body2">
                   <strong>Warning:</strong> Database reset will permanently delete data
@@ -326,7 +300,6 @@ export default function Settings() {
                   This action cannot be undone.
                 </Typography>
               </Alert>
-
               {/* App Super Admin: Only Factory Reset */}
               {showFactoryResetOnly && (
                 <Button
@@ -344,7 +317,6 @@ export default function Settings() {
                   )}
                 </Button>
               )}
-
               {/* Org Super Admin: Only Reset Organization Data */}
               {showOrgDataResetOnly && (
                 <Button
@@ -362,7 +334,6 @@ export default function Settings() {
                   )}
                 </Button>
               )}
-
               {/* Legacy: Both options for other admin types */}
               {!showFactoryResetOnly && !showOrgDataResetOnly && (
                 <>
@@ -380,7 +351,6 @@ export default function Settings() {
                       `Reset ${isSuperAdmin ? 'All' : 'Organization'} Data`
                     )}
                   </Button>
-
                   <Button
                     variant="outlined"
                     color="warning"
@@ -397,7 +367,6 @@ export default function Settings() {
                   </Button>
                 </>
               )}
-
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                 {showFactoryResetOnly 
                   ? 'Restore to Factory Defaults: Wipes all app data including organizations, licenses, and license holders'
@@ -411,7 +380,6 @@ export default function Settings() {
             </Paper>
           </Grid>
         )}
-
         {/* System Administration - App-level controls only */}
         {isSuperAdmin && (
           <Grid size={12}>
@@ -421,13 +389,11 @@ export default function Settings() {
                 System Administration
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="body2">
                   System-level controls for application management. Use with caution.
                 </Typography>
               </Alert>
-
               <Button
                 variant="outlined"
                 onClick={() => router.push('/dashboard')}

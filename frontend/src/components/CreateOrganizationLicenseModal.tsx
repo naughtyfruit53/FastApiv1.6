@@ -1,7 +1,5 @@
 // frontend/src/components/CreateOrganizationLicenseModal.tsx
-
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -27,18 +25,14 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material';
-import { ExpandMore } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import { organizationService } from '../services/organizationService'; // Adjust if needed
-import { authService } from '../services/authService'; // Add this import
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
-
 interface CreateOrganizationLicenseModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: (result: any) => void;
 }
-
 interface LicenseFormData {
   organization_name: string;
   superadmin_email: string;
@@ -51,7 +45,6 @@ interface LicenseFormData {
   gst_number?: string;
   max_users: number;
 }
-
 // Indian states for dropdown selection
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 
@@ -63,7 +56,6 @@ const INDIAN_STATES = [
   'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Lakshadweep',
   'Delhi', 'Puducherry', 'Ladakh'
 ];
-
 // State to GST state code mapping
 const stateToCodeMap: { [key: string]: string } = {
   'Andhra Pradesh': '37',
@@ -103,7 +95,6 @@ const stateToCodeMap: { [key: string]: string } = {
   'Puducherry': '34',
   'Ladakh': '38',
 };
-
 const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalProps> = ({
   open,
   onClose,
@@ -124,7 +115,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
     "Analytics": true,
     "Finance": true
   });
-  
   const {
     register,
     handleSubmit,
@@ -137,20 +127,16 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
       max_users: 5, // Default value
     },
   });
-
   // Use the enhanced pincode lookup hook
   const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError } = usePincodeLookup();
-
   const pin_code = watch('pin_code');
   const state = watch('state');
-
   // Auto-populate city, state, and state_code when pin code changes
   useEffect(() => {
     if (pin_code && pin_code.length === 6 && /^\d{6}$/.test(pin_code)) {
       lookupPincode(pin_code);
     }
   }, [pin_code, lookupPincode]);
-
   // Auto-populate fields when pincode data is fetched
   useEffect(() => {
     if (pincodeData) {
@@ -159,7 +145,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
       setValue('state_code', pincodeData.state_code, { shouldValidate: true });
     }
   }, [pincodeData, setValue]);
-
   // Auto-populate state_code when state changes
   useEffect(() => {
     if (state) {
@@ -169,19 +154,16 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
       }
     }
   }, [state, setValue]);
-
   const handleClose = () => {
     reset();
     setError(null);
     setSuccess(null);
     onClose();
   };
-
   const onSubmit = async (data: LicenseFormData) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
-
     console.log('[LicenseModal] Starting license creation process');
     console.log('[LicenseModal] Current auth state before license creation:', {
       hasToken: !!localStorage.getItem('token'),
@@ -189,14 +171,12 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
       timestamp: new Date().toISOString(),
       note: 'Organization context managed by backend session'
     });
-
     // Validate required fields that might not be caught by form validation
     if (!data.state) {
       setError('Please select a state');
       setLoading(false);
       return;
     }
-
     // Prepare the data for submission
     const submissionData = {
       organization_name: data.organization_name.trim(),
@@ -211,9 +191,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
       max_users: data.max_users,
       enabled_modules: selectedModules, // Include selected modules
     };
-
     console.log('[LicenseModal] Submitting license data:', submissionData);
-
     try {
       const result = await organizationService.createLicense(submissionData);
       if (!result || typeof result !== 'object') {
@@ -224,7 +202,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
         subdomain: result.subdomain,
         adminEmail: result.superadmin_email
       });
-      
       // Verify current user's session is still intact
       console.log('[LicenseModal] Verifying session after license creation:', {
         hasToken: !!localStorage.getItem('token'),
@@ -232,15 +209,12 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
         timestamp: new Date().toISOString(),
         note: 'Organization context managed by backend session'
       });
-      
       setSuccess(result);
       if (onSuccess) {
         onSuccess(result);
       }
-      
       // Show license activation dialog after successful creation
       setLicenseActivationOpen(true);
-      
       // IMPORTANT: Auto-login functionality removed to preserve current user's session
       // The current super admin remains logged in and sees the success message
       console.log('[LicenseModal] License creation complete - current user session preserved');
@@ -256,22 +230,18 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
       setLoading(false);
     }
   };
-
   const handleModuleChange = (module: string, enabled: boolean) => {
     setSelectedModules(prev => ({
       ...prev,
       [module]: enabled
     }));
   };
-
   const handleOpenModuleDialog = () => {
     setModuleDialogOpen(true);
   };
-
   const handleCloseModuleDialog = () => {
     setModuleDialogOpen(false);
   };
-
   return (
     <>
       <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
@@ -291,7 +261,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                 {error}
               </Alert>
             )}
-            
             {success && (
               <Alert severity="success" sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'success.dark' }}>
@@ -331,7 +300,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                 </Alert>
               </Alert>
             )}
-
             {!success && (
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Organization Information Section */}
@@ -346,7 +314,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                   }}>
                     📋 Organization Information
                   </Typography>
-                  
                   <Grid container spacing={3}>
                     <Grid size={12}>
                       <TextField
@@ -366,7 +333,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         variant="outlined"
                       />
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -386,7 +352,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         variant="outlined"
                       />
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -405,7 +370,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         variant="outlined"
                       />
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -429,7 +393,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         variant="outlined"
                       />
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -449,7 +412,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     </Grid>
                   </Grid>
                 </Box>
-
                 {/* Address Information Section */}
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" sx={{ 
@@ -462,7 +424,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                   }}>
                     🏢 Address Information
                   </Typography>
-                  
                   <Grid container spacing={3}>
                     <Grid size={12}>
                       <TextField
@@ -484,7 +445,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         variant="outlined"
                       />
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
                         fullWidth
@@ -514,7 +474,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         }}
                       />
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
                         fullWidth
@@ -533,7 +492,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         variant="outlined"
                       />
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 4 }}>
                       <FormControl fullWidth error={!!errors.state} variant="outlined">
                         <InputLabel>State</InputLabel>
@@ -557,7 +515,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                         </Typography>
                       </FormControl>
                     </Grid>
-                    
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -580,9 +537,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     </Grid>
                   </Grid>
                 </Box>
-
                 {/* Information Notice */}
-
               </form>
             )}
           </Box>
@@ -622,7 +577,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
           )}
         </DialogActions>
       </Dialog>
-
       {/* Module Selection Dialog */}
       <Dialog 
         open={moduleDialogOpen} 
@@ -659,7 +613,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* License Activation Dialog */}
       <Dialog 
         open={licenseActivationOpen} 
@@ -674,7 +627,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
           <Typography variant="body1" sx={{ mb: 3 }}>
             The organization license has been created successfully. Please set the license activation period:
           </Typography>
-          
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel id="activation-period-label">License Period</InputLabel>
             <Select
@@ -688,7 +640,6 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
               <MenuItem value="perpetual">Perpetual</MenuItem>
             </Select>
           </FormControl>
-          
           {success && (
             <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
               <Typography variant="body2" color="success.dark">
@@ -719,5 +670,4 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
     </>
   );
 };
-
 export default CreateOrganizationLicenseModal;

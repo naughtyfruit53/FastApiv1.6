@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+declare function fetchProducts(...args: any[]): any;
   FormControl,
   InputLabel,
   Select,
@@ -10,7 +11,6 @@ import {
   TextField,
   Autocomplete
 } from '@mui/material';
-
 export interface Product {
   id: number;
   product_name: string;  // Using product_name field for frontend consistency as per requirements
@@ -28,7 +28,6 @@ export interface Product {
   created_at: string;
   updated_at?: string;
 }
-
 interface ProductDropdownProps {
   value?: number;
   onChange: (productId: number, product: Product | null) => void;
@@ -42,7 +41,6 @@ interface ProductDropdownProps {
   placeholder?: string;
   showDetails?: boolean;
 }
-
 const ProductDropdown: React.FC<ProductDropdownProps> = ({
   value,
   onChange,
@@ -58,12 +56,9 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
   useEffect(() => {
     fetchProducts();
   }, []);
-
   const fetchProducts = async (search?: string) => {
     try {
       setLoading(true);
@@ -73,17 +68,14 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
       }
       queryParams.append('active_only', 'true');
       queryParams.append('limit', '100');
-
       const response = await fetch(`/api/v1/products?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
-
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
-
       const data = await response.json();
       setProducts(data);
     } catch (error) {
@@ -92,14 +84,11 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
       setLoading(false);
     }
   };
-
   const handleChange = (productId: number) => {
     const selectedProduct = products.find(p => p.id === productId) || null;
     onChange(productId, selectedProduct);
   };
-
   const selectedProduct = products.find(p => p.id === value);
-
   if (variant === 'autocomplete') {
     return (
       <Autocomplete
@@ -155,7 +144,6 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
       />
     );
   }
-
   // Select variant
   return (
     <FormControl 
@@ -203,5 +191,4 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
     </FormControl>
   );
 };
-
 export default ProductDropdown;

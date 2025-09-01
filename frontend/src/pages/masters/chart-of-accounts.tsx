@@ -36,9 +36,7 @@ import {
   AccountBalance,
   AccountTree
 } from '@mui/icons-material';
-
 const ChartOfAccountsPage: React.FC = () => {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
@@ -51,7 +49,6 @@ const ChartOfAccountsPage: React.FC = () => {
     description: '',
     is_active: true
   });
-
   // Mock data for demonstration
   const accounts = [
     {
@@ -109,7 +106,6 @@ const ChartOfAccountsPage: React.FC = () => {
       is_active: true
     }
   ];
-
   const accountTypes = [
     { value: 'asset', label: 'Asset', color: 'success' },
     { value: 'liability', label: 'Liability', color: 'error' },
@@ -117,7 +113,6 @@ const ChartOfAccountsPage: React.FC = () => {
     { value: 'revenue', label: 'Revenue', color: 'info' },
     { value: 'expense', label: 'Expense', color: 'warning' }
   ];
-
   const resetForm = () => {
     setFormData({
       account_code: '',
@@ -128,12 +123,10 @@ const ChartOfAccountsPage: React.FC = () => {
       is_active: true
     });
   };
-
   const handleAddClick = () => {
     resetForm();
     setAddDialog(true);
   };
-
   const handleEditClick = (account: any) => {
     setSelectedAccount(account);
     setFormData({
@@ -146,7 +139,6 @@ const ChartOfAccountsPage: React.FC = () => {
     });
     setEditDialog(true);
   };
-
   const handleSubmit = () => {
     if (selectedAccount) {
       // TODO: Implement update functionality
@@ -158,29 +150,24 @@ const ChartOfAccountsPage: React.FC = () => {
     setAddDialog(false);
     setEditDialog(false);
   };
-
   const handleDeleteClick = (account: any) => {
     // TODO: Implement delete functionality
     console.log('Delete account:', account.id);
   };
-
   const filteredAccounts = accounts.filter((account: any) =>
     account.account_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     account.account_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     account.account_type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const getAccountTypeColor = (type: string) => {
     const accountType = accountTypes.find(t => t.value === type);
     return accountType?.color || 'default';
   };
-
   const getTotalByType = (type: string) => {
     return accounts
       .filter(account => account.account_type === type)
       .reduce((sum, account) => sum + account.balance, 0);
   };
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -196,13 +183,11 @@ const ChartOfAccountsPage: React.FC = () => {
             Add Account
           </Button>
         </Box>
-
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 3 }}>
           The Chart of Accounts is the foundation of your financial system. It categorizes all 
           financial transactions and helps generate accurate financial reports.
         </Alert>
-
         {/* Account Type Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           {accountTypes.map((type) => (
@@ -228,7 +213,6 @@ const ChartOfAccountsPage: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
@@ -240,7 +224,6 @@ const ChartOfAccountsPage: React.FC = () => {
             }}
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -317,7 +300,6 @@ const ChartOfAccountsPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Add/Edit Account Dialog */}
         <Dialog 
           open={addDialog || editDialog} 
@@ -408,5 +390,4 @@ const ChartOfAccountsPage: React.FC = () => {
     </Container>
   );
 };
-
 export default ChartOfAccountsPage;

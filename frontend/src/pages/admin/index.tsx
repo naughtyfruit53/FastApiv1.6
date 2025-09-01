@@ -1,7 +1,5 @@
 'use client';
-
 // fastapi_migration/frontend/src/pages/admin/index.tsx
-
 import React from 'react';
 import Link from 'next/link';
 import { 
@@ -21,12 +19,10 @@ import {
   Dashboard
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const isGodAccount = user?.email === 'naughty@grok.com';
   const isSuperAdmin = user?.is_super_admin || user?.role === 'super_admin';
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -56,7 +52,6 @@ const AdminDashboard: React.FC = () => {
             </Box>
           </Paper>
         </Grid>
-
         {/* Manage Organizations */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper>
@@ -77,7 +72,6 @@ const AdminDashboard: React.FC = () => {
             </Box>
           </Paper>
         </Grid>
-
         {/* App User Management - Only for God Account */}
         {isGodAccount && (
           <Grid size={{ xs: 12, md: 6 }}>
@@ -101,7 +95,6 @@ const AdminDashboard: React.FC = () => {
             </Paper>
           </Grid>
         )}
-
         {/* Dashboard */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper>
@@ -148,5 +141,4 @@ const AdminDashboard: React.FC = () => {
     </Container>
   );
 };
-
 export default AdminDashboard;

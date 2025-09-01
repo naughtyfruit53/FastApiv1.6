@@ -1,8 +1,8 @@
 // frontend/src/pages/vouchers/Sales-Vouchers/sales-return.tsx
 // Sales Return Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
-import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description } from '@mui/icons-material';
+import {Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Fab} from '@mui/material';
+import {Add, Remove} from '@mui/icons-material';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -10,16 +10,11 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
-import VoucherReferenceDropdown from '../../../components/VoucherReferenceDropdown';
-import BalanceDisplay from '../../../components/BalanceDisplay';
-import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS, getVoucherStyles } from '../../../utils/voucherUtils';
+import {getVoucherConfig, GST_SLABS, getVoucherStyles} from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
-import api from '../../../lib/api';  // Import api for direct call
-
 const SalesReturnPage: React.FC = () => {
   const config = getVoucherConfig('sales-return');
   const voucherStyles = getVoucherStyles();
@@ -53,17 +48,14 @@ const SalesReturnPage: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Enhanced pagination
     currentPage,
     pageSize,
     paginationData,
     handlePageChange,
-
     // Reference document handling
     referenceDocument,
     handleReferenceSelected,
-
     // Form
     control,
     handleSubmit,
@@ -74,7 +66,6 @@ const SalesReturnPage: React.FC = () => {
     append,
     remove,
     reset,
-
     // Data
     voucherList,
     customerList,
@@ -82,17 +73,14 @@ const SalesReturnPage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-
     // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
     totalGst,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -107,27 +95,21 @@ const SalesReturnPage: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Additional state for voucher list modal
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
-
   // Sales Return specific state
   const selectedCustomerId = watch('customer_id');
   const selectedCustomer = customerList?.find((c: any) => c.id === selectedCustomerId);
-
   // Enhanced customer options with "Add New"
   const enhancedCustomerOptions = [
     ...(customerList || []),
     { id: null, name: 'Add New Customer...' }
   ];
-
   // Stock data state for items
   const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
-
   // Sales Return specific handlers
   const handleAddItem = () => {
     append({
@@ -143,7 +125,6 @@ const SalesReturnPage: React.FC = () => {
       reorder_level: 0
     });
   };
-
   // Custom submit handler to prompt for PDF after save
   const onSubmit = async (data: any) => {
     try {
@@ -151,7 +132,6 @@ const SalesReturnPage: React.FC = () => {
         data.items = computedItems;
         data.total_amount = totalAmount;
       }
-
       let response;
       if (mode === 'create') {
         response = await createMutation.mutateAsync(data);
@@ -164,20 +144,17 @@ const SalesReturnPage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-      
     } catch (error) {
       console.error('Error saving sales return:', error);
       alert('Failed to save sales return. Please try again.');
     }
   };
-
   // Function to get stock color
   const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {return 'error.main';}
     if (stock <= reorder) {return 'warning.main';}
     return 'success.main';
   };
-
   // Memoize all selected products
   const selectedProducts = useMemo(() => {
     return fields.map((_, index) => {
@@ -185,7 +162,6 @@ const SalesReturnPage: React.FC = () => {
       return productList?.find((p: any) => p.id === productId) || null;
     });
   }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
-
   // Effect to fetch stock when product changes
   useEffect(() => {
     fields.forEach((_, index) => {
@@ -207,7 +183,6 @@ const SalesReturnPage: React.FC = () => {
       }
     });
   }, [fields.map(f => watch(`items.${fields.indexOf(f)}.product_id`)).join(','), setValue, fields.length]);
-
   // Manual fetch for voucher number if not loaded
   useEffect(() => {
     if (mode === 'create' && !nextVoucherNumber && !isLoading) {
@@ -216,21 +191,17 @@ const SalesReturnPage: React.FC = () => {
         .catch(err => console.error('Failed to fetch voucher number:', err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
-
   const handleVoucherClick = (voucher: any) => {
     handleView(voucher.id);
   };
-  
   // Enhanced handleEdit to use hook
   const handleEditWithData = (voucher: any) => {
     handleEdit(voucher.id);
   };
-  
   // Enhanced handleView to use hook
   const handleViewWithData = (voucher: any) => {
     handleView(voucher.id);
   };
-
   const indexContent = (
     <>
       {/* Voucher list table */}
@@ -286,7 +257,6 @@ const SalesReturnPage: React.FC = () => {
       </TableContainer>
     </>
   );
-
   const formContent = (
     <Box>
       {/* Header Actions */}
@@ -301,7 +271,6 @@ const SalesReturnPage: React.FC = () => {
           currentId={selectedCustomerId}
         />
       </Box>
-
       <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
@@ -317,7 +286,6 @@ const SalesReturnPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Date */}
           <Grid size={6}>
             <TextField
@@ -332,7 +300,6 @@ const SalesReturnPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           {/* Customer, Reference, Payment Terms in one row */}
           <Grid size={4}>
             <Autocomplete
@@ -362,7 +329,6 @@ const SalesReturnPage: React.FC = () => {
               disabled={mode === 'view'}
             />
           </Grid>
-
           <Grid size={4}>
             <TextField
               fullWidth
@@ -375,7 +341,6 @@ const SalesReturnPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           <Grid size={4}>
             <TextField
               fullWidth
@@ -388,7 +353,6 @@ const SalesReturnPage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-
           <Grid size={12}>
             <TextField
               fullWidth
@@ -402,12 +366,10 @@ const SalesReturnPage: React.FC = () => {
               size="small"
             />
           </Grid>
-
           {/* Items section */}
           <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 27 }}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold' }}>Items</Typography>
           </Grid>
-
           {/* Items Table */}
           <Grid size={12}>
             <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
@@ -527,7 +489,6 @@ const SalesReturnPage: React.FC = () => {
               </Box>
             )}
           </Grid>
-
           {/* Totals */}
           <Grid size={12}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
@@ -567,7 +528,6 @@ const SalesReturnPage: React.FC = () => {
               </Box>
             </Box>
           </Grid>
-
           {/* Amount in Words */}
           <Grid size={12}>
             <TextField
@@ -580,7 +540,6 @@ const SalesReturnPage: React.FC = () => {
               size="small"
             />
           </Grid>
-
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
@@ -601,7 +560,6 @@ const SalesReturnPage: React.FC = () => {
       </form>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -611,7 +569,6 @@ const SalesReturnPage: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -642,7 +599,6 @@ const SalesReturnPage: React.FC = () => {
           />
         }
       />
-
       {/* Modals */}
       <AddCustomerModal 
         open={showAddCustomerModal}
@@ -651,7 +607,6 @@ const SalesReturnPage: React.FC = () => {
         loading={addCustomerLoading}
         setLoading={setAddCustomerLoading}
       />
-
       <AddProductModal 
         open={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
@@ -659,14 +614,12 @@ const SalesReturnPage: React.FC = () => {
         loading={addProductLoading}
         setLoading={setAddProductLoading}
       />
-
       <AddShippingAddressModal 
         open={showShippingModal}
         onClose={() => setShowShippingModal(false)}
         loading={addShippingLoading}
         setLoading={setAddShippingLoading}
       />
-
       <VoucherContextMenu
         contextMenu={contextMenu}
         onClose={handleCloseContextMenu}
@@ -678,5 +631,4 @@ const SalesReturnPage: React.FC = () => {
     </>
   );
 };
-
 export default SalesReturnPage;

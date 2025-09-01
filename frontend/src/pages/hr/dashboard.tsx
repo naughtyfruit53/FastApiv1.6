@@ -1,9 +1,9 @@
 // pages/hr/dashboard.tsx
 // HR Dashboard with key metrics and overview
-
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import {
+declare function fetchDashboardData(...args: any[]): any;
   Box,
   Container,
   Typography,
@@ -38,16 +38,13 @@ import {
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
 import { hrService, HRDashboardData, HRActivity, HRTask } from '../../services';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -64,46 +61,39 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 function a11yProps(index: number) {
   return {
     id: `hr-tab-${index}`,
     'aria-controls': `hr-tabpanel-${index}`,
   };
 }
-
 const HRDashboard: NextPage = () => {
   const router = useRouter();
-  const { user } = useAuth();
+const  = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [dashboardData, setDashboardData] = useState<HRDashboardData | null>(null);
   const [recentActivities, setRecentActivities] = useState<HRActivity[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<HRTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
       const [dashboard, activities, tasks] = await Promise.all([
         hrService.getDashboardData(),
         hrService.getRecentActivities(5),
         hrService.getUpcomingTasks(5)
       ]);
-      
       setDashboardData(dashboard);
       setRecentActivities(activities);
       setUpcomingTasks(tasks);
     } catch (err: any) {
       console.error('Error fetching HR dashboard data:', err);
       setError(err.userMessage || 'Failed to load dashboard data');
-      
       // Fallback to empty data structure to prevent crashes
       setDashboardData({
         total_employees: 0,
@@ -121,11 +111,9 @@ const HRDashboard: NextPage = () => {
       setLoading(false);
     }
   };
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -139,7 +127,6 @@ const HRDashboard: NextPage = () => {
         return 'default';
     }
   };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -152,7 +139,6 @@ const HRDashboard: NextPage = () => {
         return 'default';
     }
   };
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
@@ -177,7 +163,6 @@ const HRDashboard: NextPage = () => {
           </Button>
         </Box>
       </Box>
-
       {/* Error Alert */}
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -187,7 +172,6 @@ const HRDashboard: NextPage = () => {
           </Button>
         </Alert>
       )}
-
       {/* Key Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -207,7 +191,6 @@ const HRDashboard: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -225,7 +208,6 @@ const HRDashboard: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -243,7 +225,6 @@ const HRDashboard: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -262,7 +243,6 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Additional Metrics */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -277,7 +257,6 @@ const HRDashboard: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -290,7 +269,6 @@ const HRDashboard: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -303,7 +281,6 @@ const HRDashboard: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -317,7 +294,6 @@ const HRDashboard: NextPage = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Tabs for detailed sections */}
       <Paper sx={{ width: '100%', mb: 4 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -327,7 +303,6 @@ const HRDashboard: NextPage = () => {
             <Tab label="Quick Actions" {...a11yProps(2)} />
           </Tabs>
         </Box>
-
         <TabPanel value={tabValue} index={0}>
           <Typography variant="h6" gutterBottom>
             Recent HR Activities
@@ -361,7 +336,6 @@ const HRDashboard: NextPage = () => {
             </Table>
           </TableContainer>
         </TabPanel>
-
         <TabPanel value={tabValue} index={1}>
           <Typography variant="h6" gutterBottom>
             Upcoming HR Tasks
@@ -395,7 +369,6 @@ const HRDashboard: NextPage = () => {
             </Table>
           </TableContainer>
         </TabPanel>
-
         <TabPanel value={tabValue} index={2}>
           <Typography variant="h6" gutterBottom>
             Quick Actions
@@ -470,7 +443,6 @@ const HRDashboard: NextPage = () => {
           </Grid>
         </TabPanel>
       </Paper>
-
       {/* Alerts and Notifications */}
       <Box sx={{ mb: 4 }}>
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -486,5 +458,4 @@ const HRDashboard: NextPage = () => {
     </Container>
   );
 };
-
 export default HRDashboard;

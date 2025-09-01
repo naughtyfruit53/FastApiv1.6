@@ -1,5 +1,4 @@
 // frontend/src/components/CustomerAnalyticsModal.tsx
-
 import React from 'react';
 import {
   Dialog,
@@ -12,14 +11,12 @@ import {
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import CustomerAnalytics from './CustomerAnalytics';
-
 interface CustomerAnalyticsModalProps {
   open: boolean;
   onClose: () => void;
   customerId: number;
   customerName?: string;
 }
-
 const CustomerAnalyticsModal: React.FC<CustomerAnalyticsModalProps> = ({
   open,
   onClose,
@@ -51,11 +48,9 @@ const CustomerAnalyticsModal: React.FC<CustomerAnalyticsModalProps> = ({
           <Close />
         </IconButton>
       </DialogTitle>
-      
       <DialogContent dividers sx={{ p: 0 }}>
         <CustomerAnalytics customerId={customerId} customerName={customerName} />
       </DialogContent>
-      
       <DialogActions>
         <Button onClick={onClose} color="primary">
           Close
@@ -64,5 +59,4 @@ const CustomerAnalyticsModal: React.FC<CustomerAnalyticsModalProps> = ({
     </Dialog>
   );
 };
-
 export default CustomerAnalyticsModal;

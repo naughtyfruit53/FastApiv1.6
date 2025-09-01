@@ -1,5 +1,4 @@
 import { toast } from 'react-toastify';
-
 interface ApiError {
   status?: number;
   userMessage?: string;
@@ -10,10 +9,8 @@ interface ApiError {
     };
   };
 }
-
 export const handleApiError = (error: ApiError, defaultMessage?: string) => {
   let message = defaultMessage || 'An error occurred';
-
   // Check for user-friendly message first
   if (error.userMessage) {
     message = error.userMessage;
@@ -22,7 +19,6 @@ export const handleApiError = (error: ApiError, defaultMessage?: string) => {
   } else if (error.response?.data?.message) {
     message = error.response.data.message;
   }
-
   // Handle specific status codes with enhanced messaging
   if (error.status === 412) {
     // Precondition failed - usually company setup required
@@ -35,7 +31,6 @@ export const handleApiError = (error: ApiError, defaultMessage?: string) => {
     });
     return;
   }
-
   if (error.status === 404) {
     const notFoundMessage = message.includes('company') || message.includes('Company')
       ? message
@@ -45,14 +40,12 @@ export const handleApiError = (error: ApiError, defaultMessage?: string) => {
     });
     return;
   }
-
   if (error.status === 403) {
     toast.error(message || 'Access denied', {
       autoClose: 5000,
     });
     return;
   }
-
   if (error.status === 400) {
     const badRequestMessage = message.includes('organization') || message.includes('company')
       ? message
@@ -62,13 +55,11 @@ export const handleApiError = (error: ApiError, defaultMessage?: string) => {
     });
     return;
   }
-
   // Generic error
   toast.error(message, {
     autoClose: 5000,
   });
 };
-
 export const showCompanySetupRequiredMessage = () => {
   toast.warning('Please complete your company setup before accessing this feature.', {
     autoClose: 8000,

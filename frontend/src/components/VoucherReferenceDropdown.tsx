@@ -1,8 +1,8 @@
 // frontend/src/components/VoucherReferenceDropdown.tsx
 // Reference column dropdown component for voucher types
-
 import React, { useState, useEffect } from 'react';
 import {
+declare function fetchReferenceDocuments(...args: any[]): any;
   Box,
   TextField,
   Autocomplete,
@@ -18,7 +18,6 @@ import {
 } from '@mui/material';
 import { getReferenceVoucherOptions, getVoucherConfig } from '../utils/voucherUtils';
 import api from '../lib/api';
-
 interface VoucherReferenceDropdownProps {
   voucherType: string;
   value?: {
@@ -34,7 +33,6 @@ interface VoucherReferenceDropdownProps {
   disabled?: boolean;
   onReferenceSelected?: (referenceData: any) => void;
 }
-
 const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
   voucherType,
   value = {},
@@ -45,30 +43,24 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
   const [referenceOptions, setReferenceOptions] = useState<any[]>([]);
   const [loadingReferences, setLoadingReferences] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const config = getVoucherConfig(voucherType as any);
   const allowedTypes = getReferenceVoucherOptions(voucherType as any);
-
   // Fetch reference documents when reference type changes
   useEffect(() => {
     if (value.referenceType && config.referenceConfig) {
       fetchReferenceDocuments(value.referenceType);
     }
   }, [value.referenceType, config.referenceConfig]);
-
   // If this voucher type doesn't support references, don't render
   if (!config.referenceConfig) {
     return null;
   }
-
   const fetchReferenceDocuments = async (referenceType: string) => {
     setLoadingReferences(true);
     setError(null);
-    
     try {
       const typeConfig = getVoucherConfig(referenceType as any);
       const response = await api.get(`${typeConfig.endpoint}?limit=100&sort=desc`);
-      
       if (response.data) {
         const documents = Array.isArray(response.data) ? response.data : [response.data];
         setReferenceOptions(documents.map((doc: any) => ({
@@ -86,7 +78,6 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
       setLoadingReferences(false);
     }
   };
-
   const handleTypeChange = (newType: string) => {
     onChange({
       referenceType: newType,
@@ -95,7 +86,6 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
     });
     setReferenceOptions([]);
   };
-
   const handleDocumentChange = (selectedOption: any) => {
     if (selectedOption) {
       const newReference = {
@@ -103,9 +93,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
         referenceId: selectedOption.value,
         referenceNumber: selectedOption.data.voucher_number || selectedOption.data.number
       };
-      
       onChange(newReference);
-      
       // Call callback with full reference data for auto-population
       if (onReferenceSelected) {
         onReferenceSelected(selectedOption.data);
@@ -118,7 +106,6 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
       });
     }
   };
-
   return (
     <Box sx={{ width: '100%' }}>
       <Grid container spacing={2}>
@@ -154,7 +141,6 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
             </Select>
           </FormControl>
         </Grid>
-
         {/* Reference Document Selection */}
         {value.referenceType && (
           <Grid size={{ xs: 12, md: 6 }}>
@@ -205,14 +191,12 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
           </Grid>
         )}
       </Grid>
-
       {/* Error Display */}
       {error && (
         <Alert severity="error" sx={{ mt: 1, fontSize: 12 }}>
           {error}
         </Alert>
       )}
-
       {/* Selected Reference Info */}
       {value.referenceId && value.referenceNumber && (
         <Typography 
@@ -231,5 +215,4 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
     </Box>
   );
 };
-
 export default VoucherReferenceDropdown;
