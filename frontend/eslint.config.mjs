@@ -1,4 +1,3 @@
-// D:\FastApiV1.6\V1.6\frontend\eslint.config.mjs
 import js from '@eslint/js';
 import tsEslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
@@ -14,14 +13,37 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(new URL('.', import.meta.url)));
 
 export default [
-  // Main configuration for TypeScript and React files
+  // ==== IGNORE BLOCK: Add all your ignored paths here ====
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.next/**',
+      '**/coverage/**',
+      '**/.turbo/**',
+      '**/out/**',
+      '**/public/**',
+      '**/.cache/**',
+      '**/.eslintcache',
+      '**/*.d.ts', // Optionally ignore all type definition files
+      '**/.env*',
+      '**/cypress/**',
+      '**/playwright/**',
+      '**/.storybook/**',
+      '**/storybook-static/**',
+      // Add any other generated or legacy folders you want to ignore
+    ],
+  },
+
+  // ==== MAIN CONFIG FOR TS/TSX ====
   {
     files: ['**/*.ts', '**/*.tsx'],
     plugins: {
       '@typescript-eslint': tsEslint,
       'react-hooks': reactHooks,
       'react': reactPlugin,
-      '@next/next': nextPlugin, // Added Next.js plugin
+      '@next/next': nextPlugin,
     },
     languageOptions: {
       parser: tsParser,
@@ -32,7 +54,7 @@ export default [
         project: './tsconfig.json',
       },
       globals: {
-        ...globals.browser, // Add browser globals for React/Next.js
+        ...globals.browser,
         console: 'readonly',
         fetch: 'readonly',
         localStorage: 'readonly',
@@ -45,26 +67,26 @@ export default [
       },
     },
     rules: {
-      // JavaScript rules (equivalent to @eslint/js recommended)
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      // JavaScript rules
+      'no-unused-vars': 'error',
       'no-undef': 'error',
       'eqeqeq': ['error', 'always'],
       'curly': ['error', 'all'],
       'no-redeclare': 'error',
       'no-shadow': 'error',
       'no-use-before-define': ['error', { functions: false, classes: false }],
-      // TypeScript-specific rules (equivalent to @typescript-eslint recommended)
+      // TypeScript-specific rules
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': 'off', // Temporarily off to pass lint
+      '@typescript-eslint/no-unused-vars': 'off', // Can turn on after cleanup
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/no-shadow': 'error',
       '@typescript-eslint/no-empty-function': 'error',
       '@typescript-eslint/no-unused-expressions': 'error',
       // React-specific rules
       'react-hooks/exhaustive-deps': 'off',
-      'react-hooks/rules-of-hooks': 'error', // Enforce React Hooks rules
+      'react-hooks/rules-of-hooks': 'error',
       'react/jsx-no-undef': 'error',
-      'react/no-unescaped-entities': 'off', // Off for quote issues in JSX strings
+      'react/no-unescaped-entities': 'off',
       // General JavaScript rules
       'no-useless-escape': 'off',
       'no-console': 'off',
@@ -74,14 +96,16 @@ export default [
       '@next/next/no-sync-scripts': 'error',
     },
   },
-  // Override for routes.d.ts to suppress no-empty-object-type errors
+
+  // ==== OVERRIDE: routes.d.ts ====
   {
     files: ['.next/types/routes.d.ts'],
     rules: {
       '@typescript-eslint/no-empty-object-type': 'off',
     },
   },
-  // Override for test files
+
+  // ==== TEST FILES ====
   {
     files: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
     plugins: { jest },
