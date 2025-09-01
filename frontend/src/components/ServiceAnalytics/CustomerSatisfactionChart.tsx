@@ -1,5 +1,4 @@
 // frontend/src/components/ServiceAnalytics/CustomerSatisfactionChart.tsx
-
 import React from 'react';
 import {
   Card,
@@ -22,11 +21,9 @@ import {
   TrendingUp as TrendIcon
 } from '@mui/icons-material';
 import { CustomerSatisfactionMetrics } from '../../services/serviceAnalyticsService';
-
 interface CustomerSatisfactionChartProps {
   data: CustomerSatisfactionMetrics;
 }
-
 const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ data }) => {
   const getSatisfactionColor = (level: string) => {
     switch (level.toLowerCase()) {
@@ -40,7 +37,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
         return 'info';
     }
   };
-
   const getSatisfactionIcon = (level: string) => {
     switch (level.toLowerCase()) {
       case 'satisfied':
@@ -53,17 +49,14 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
         return <HappyIcon />;
     }
   };
-
   const getRatingColor = (rating: number) => {
     if (rating >= 4) {return 'success.main';}
     if (rating >= 3) {return 'warning.main';}
     return 'error.main';
   };
-
   const formatRating = (rating?: number) => {
     return rating ? rating.toFixed(1) : 'N/A';
   };
-
   return (
     <Card>
       <CardHeader 
@@ -86,7 +79,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             Overall Rating (out of 5)
           </Typography>
         </Box>
-
         {/* Rating Breakdown */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={3}>
@@ -99,7 +91,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
               </Typography>
             </Paper>
           </Grid>
-          
           <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h6" sx={{ color: getRatingColor(data.average_technician_rating || 0) }}>
@@ -110,7 +101,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
               </Typography>
             </Paper>
           </Grid>
-          
           <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h6" sx={{ color: getRatingColor(data.average_timeliness_rating || 0) }}>
@@ -121,7 +111,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
               </Typography>
             </Paper>
           </Grid>
-          
           <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h6" sx={{ color: getRatingColor(data.average_communication_rating || 0) }}>
@@ -133,7 +122,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Grid>
         </Grid>
-
         {/* NPS Score */}
         {data.nps_score !== null && data.nps_score !== undefined && (
           <Box sx={{ mb: 3 }}>
@@ -156,7 +144,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Box>
         )}
-
         {/* Recommendation Rate */}
         {data.recommendation_rate !== null && data.recommendation_rate !== undefined && (
           <Box sx={{ mb: 3 }}>
@@ -179,7 +166,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             />
           </Box>
         )}
-
         {/* Satisfaction Distribution */}
         {Object.keys(data.satisfaction_distribution).length > 0 && (
           <Box sx={{ mb: 3 }}>
@@ -227,7 +213,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Grid>
           </Box>
         )}
-
         {/* Satisfaction Trend Preview */}
         {data.satisfaction_trend.length > 0 && (
           <Box>
@@ -255,7 +240,6 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Box>
         )}
-
         {/* No Data State */}
         {data.total_feedback_received === 0 && (
           <Box textAlign="center" py={4}>
@@ -271,5 +255,4 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
     </Card>
   );
 };
-
 export default CustomerSatisfactionChart;

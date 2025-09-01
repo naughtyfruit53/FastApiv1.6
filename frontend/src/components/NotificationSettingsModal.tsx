@@ -1,6 +1,5 @@
 // src/components/NotificationSettingsModal.tsx
 // Modal for managing user notification preferences
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -47,20 +46,17 @@ import {
   getChannelDisplayName,
   getTemplateTypeDisplayName
 } from '../services/notificationService';
-
 interface NotificationSettingsModalProps {
   open: boolean;
   onClose: () => void;
   userId: number;
   userType?: 'user' | 'customer';
 }
-
 interface PreferenceState {
   [key: string]: {
     [channel: string]: boolean;
   };
 }
-
 const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   open,
   onClose,
@@ -70,7 +66,6 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   const [preferences, setPreferences] = useState<PreferenceState>({});
   const [hasChanges, setHasChanges] = useState(false);
   const queryClient = useQueryClient();
-
   // Available notification types
   const notificationTypes = [
     { key: 'job_assignment', label: 'Job Assignment', description: 'When a new job is assigned to you' },
@@ -84,7 +79,6 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
     { key: 'marketing', label: 'Marketing Messages', description: 'Promotional and marketing content' },
     { key: 'system', label: 'System Notifications', description: 'Important system updates and alerts' }
   ];
-
   // Fetch current preferences
   const { data: currentPreferences = [], isLoading } = useQuery({
     queryKey: ['notification-preferences', userType, userId],
@@ -101,12 +95,10 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
     },
     enabled: open,
   });
-
   // Initialize preferences state from API data
   useEffect(() => {
     if (currentPreferences.length > 0) {
       const prefState: PreferenceState = {};
-      
       notificationTypes.forEach(type => {
         prefState[type.key] = {};
         NOTIFICATION_CHANNELS.forEach(channel => {
@@ -118,20 +110,16 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
           prefState[type.key][channel] = existing ? existing.is_enabled : defaultEnabled;
         });
       });
-      
       setPreferences(prefState);
     }
   }, [currentPreferences]);
-
   // Save preferences mutation
   const savePreferencesMutation = useMutation({
     mutationFn: async (prefs: PreferenceState) => {
       // TODO: Implement API call to save preferences
       console.log('Saving preferences:', prefs);
-      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
       return { success: true };
     },
     onSuccess: () => {
@@ -143,7 +131,6 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
       toast.error('Failed to save notification preferences');
     }
   });
-
   const handlePreferenceChange = (notificationType: string, channel: string, enabled: boolean) => {
     setPreferences(prev => ({
       ...prev,
@@ -154,7 +141,6 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
     }));
     setHasChanges(true);
   };
-
   const handleSelectAll = (notificationType: string, enabled: boolean) => {
     setPreferences(prev => ({
       ...prev,
@@ -165,11 +151,9 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
     }));
     setHasChanges(true);
   };
-
   const handleSave = () => {
     savePreferencesMutation.mutate(preferences);
   };
-
   const handleReset = () => {
     // Reset to defaults
     const defaultPrefs: PreferenceState = {};
@@ -182,7 +166,6 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
     setPreferences(defaultPrefs);
     setHasChanges(true);
   };
-
   const getChannelIcon = (channel: string) => {
     switch (channel) {
       case 'email':
@@ -197,12 +180,10 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
         return null;
     }
   };
-
   const getEnabledChannelsCount = (notificationType: string) => {
     if (!preferences[notificationType]) {return 0;}
     return Object.values(preferences[notificationType]).filter(Boolean).length;
   };
-
   return (
     <Dialog
       open={open}
@@ -221,13 +202,11 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
           </IconButton>
         </Box>
       </DialogTitle>
-
       <DialogContent>
         <Alert severity="info" sx={{ mb: 3 }}>
           Choose how you want to be notified about different types of events. You can enable or disable 
           notifications for each channel (email, SMS, push, in-app).
         </Alert>
-
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
@@ -308,7 +287,6 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
           </Box>
         )}
       </DialogContent>
-
       <DialogActions sx={{ p: 3, gap: 1 }}>
         <Button
           onClick={handleReset}
@@ -333,5 +311,4 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
     </Dialog>
   );
 };
-
 export default NotificationSettingsModal;

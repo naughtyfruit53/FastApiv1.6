@@ -1,5 +1,4 @@
 // frontend/src/components/VoucherContextMenu.tsx
-
 import React, { useState } from 'react';
 import { Menu, MenuItem, IconButton } from '@mui/material';
 import { 
@@ -13,7 +12,6 @@ import {
   ContentCopy,
   LocalShipping 
 } from '@mui/icons-material';
-
 interface VoucherContextMenuProps {
   voucher?: any;
   voucherType: string;
@@ -31,7 +29,6 @@ interface VoucherContextMenuProps {
   anchorPosition?: { left: number; top: number };
   anchorReference?: 'anchorPosition' | 'anchorEl' | 'none';
 }
-
 const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   voucher,
   voucherType,
@@ -50,37 +47,29 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   anchorReference,
 }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
   const effectiveVoucher = voucher || (contextMenu ? contextMenu.voucher : null);
-
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
-
   const handleMenuClose = () => {
     setAnchorEl(null);
     onClose();
   };
-
-  const handleAction = (action: (id: number) => void) => () => {
     if (effectiveVoucher) {
       action(effectiveVoucher.id);
     }
     handleMenuClose();
   };
-
   const handlePrintAction = (mode: 'print' | 'download') => () => {
     if (onPrint && effectiveVoucher) {
       onPrint(effectiveVoucher.id, mode);
     }
     handleMenuClose();
   };
-
   // Determine email recipient based on voucher type
   const getEmailRecipient = () => {
     if (!effectiveVoucher) {return '';}
     if (!voucherType) {return '';}
-
     const lowerType = voucherType.toLowerCase();
     if (lowerType.includes('sales')) {
       return effectiveVoucher.customer?.email || '';
@@ -91,7 +80,6 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     }
     return '';
   };
-
   const handleEmailClick = () => {
     if (onEmail && effectiveVoucher) {
       const recipient = getEmailRecipient();
@@ -103,7 +91,6 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     }
     handleMenuClose();
   };
-
   const menuProps = anchorPosition && anchorReference ? {
     open: open || Boolean(anchorEl),
     onClose: handleMenuClose,
@@ -114,11 +101,9 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     anchorEl,
     onClose: handleMenuClose,
   };
-
   const hasEmail = !!onEmail && !!getEmailRecipient();
   const isDeliveryChallan = voucherType.toLowerCase().includes('delivery challan');
   const isPurchaseOrder = voucherType.toLowerCase().includes('purchase order');
-
   return (
     <>
       {showKebab && (
@@ -165,5 +150,4 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     </>
   );
 };
-
 export default VoucherContextMenu;

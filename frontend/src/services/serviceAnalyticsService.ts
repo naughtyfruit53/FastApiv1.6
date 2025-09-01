@@ -1,7 +1,5 @@
 // frontend/src/services/serviceAnalyticsService.ts
-
 import api from '../lib/api';
-
 // Enums matching the backend
 export enum ReportPeriod {
   TODAY = 'today',
@@ -11,7 +9,6 @@ export enum ReportPeriod {
   YEAR = 'year',
   CUSTOM = 'custom'
 }
-
 export enum MetricType {
   JOB_COMPLETION = 'job_completion',
   TECHNICIAN_PERFORMANCE = 'technician_performance',
@@ -19,14 +16,12 @@ export enum MetricType {
   JOB_VOLUME = 'job_volume',
   SLA_COMPLIANCE = 'sla_compliance'
 }
-
 // Interfaces matching the backend schemas
 export interface TimeSeriesDataPoint {
   date: string;
   value: number;
   label?: string;
 }
-
 export interface JobCompletionMetrics {
   total_jobs: number;
   completed_jobs: number;
@@ -38,7 +33,6 @@ export interface JobCompletionMetrics {
   jobs_by_status: Record<string, number>;
   completion_trend: TimeSeriesDataPoint[];
 }
-
 export interface TechnicianPerformanceMetrics {
   technician_id: number;
   technician_name: string;
@@ -50,7 +44,6 @@ export interface TechnicianPerformanceMetrics {
   utilization_rate: number;
   efficiency_score: number;
 }
-
 export interface CustomerSatisfactionMetrics {
   total_feedback_received: number;
   average_overall_rating: number;
@@ -63,7 +56,6 @@ export interface CustomerSatisfactionMetrics {
   recommendation_rate?: number;
   satisfaction_trend: TimeSeriesDataPoint[];
 }
-
 export interface JobVolumeMetrics {
   total_jobs: number;
   jobs_per_day_average: number;
@@ -77,7 +69,6 @@ export interface JobVolumeMetrics {
     job_count: number;
   }>;
 }
-
 export interface SLAComplianceMetrics {
   total_jobs_with_sla: number;
   sla_met_count: number;
@@ -88,7 +79,6 @@ export interface SLAComplianceMetrics {
   compliance_trend: TimeSeriesDataPoint[];
   breach_reasons: Record<string, number>;
 }
-
 export interface AnalyticsDashboard {
   organization_id: number;
   report_period: ReportPeriod;
@@ -101,7 +91,6 @@ export interface AnalyticsDashboard {
   sla_compliance: SLAComplianceMetrics;
   generated_at: string;
 }
-
 export interface AnalyticsRequest {
   start_date?: string;
   end_date?: string;
@@ -109,7 +98,6 @@ export interface AnalyticsRequest {
   technician_id?: number;
   customer_id?: number;
 }
-
 export interface ReportConfiguration {
   id: number;
   organization_id: number;
@@ -124,19 +112,16 @@ export interface ReportConfiguration {
   created_at: string;
   updated_at?: string;
 }
-
 export interface TechnicianOption {
   id: number;
   name: string;
   email: string;
 }
-
 export interface CustomerOption {
   id: number;
   name: string;
   email: string;
 }
-
 export const serviceAnalyticsService = {
   /**
    * Get complete analytics dashboard
@@ -154,7 +139,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get analytics dashboard');
     }
   },
-
   /**
    * Get job completion metrics
    */
@@ -171,7 +155,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get job completion metrics');
     }
   },
-
   /**
    * Get technician performance metrics (requires manager permissions)
    */
@@ -188,7 +171,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get technician performance metrics');
     }
   },
-
   /**
    * Get customer satisfaction metrics
    */
@@ -205,7 +187,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get customer satisfaction metrics');
     }
   },
-
   /**
    * Get job volume metrics
    */
@@ -222,7 +203,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get job volume metrics');
     }
   },
-
   /**
    * Get SLA compliance metrics (requires manager permissions)
    */
@@ -239,7 +219,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get SLA compliance metrics');
     }
   },
-
   /**
    * Get available technicians for filtering
    */
@@ -251,7 +230,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get available technicians');
     }
   },
-
   /**
    * Get available customers for filtering
    */
@@ -263,7 +241,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get available customers');
     }
   },
-
   /**
    * Get report configurations
    */
@@ -280,7 +257,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to get report configurations');
     }
   },
-
   /**
    * Create a new report configuration (requires manager permissions)
    */
@@ -295,7 +271,6 @@ export const serviceAnalyticsService = {
       throw new Error(error.userMessage || 'Failed to create report configuration');
     }
   },
-
   /**
    * Export analytics data
    */

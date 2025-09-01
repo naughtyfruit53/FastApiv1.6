@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -33,7 +32,6 @@ import {
   Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import AddCommissionModal from '../../components/AddCommissionModal';
-
 interface Commission {
   id: number;
   sales_person_id: number;
@@ -49,16 +47,13 @@ interface Commission {
   notes?: string;
   created_at: string;
 }
-
 const CommissionTracking: React.FC = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
-
   // Fetch commissions from backend
   const fetchCommissions = async () => {
     try {
@@ -74,27 +69,22 @@ const CommissionTracking: React.FC = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchCommissions();
   }, []);
-
   const handleAddCommission = async (commissionData: any) => {
     try {
       setAddLoading(true);
       // TODO: Implement commission creation when backend endpoint is available
       console.log('Commission data:', commissionData);
-      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Mock adding to state for now
       const newCommission: Commission = {
         id: Date.now(),
         ...commissionData,
         created_at: new Date().toISOString()
       };
-      
       setCommissions(prev => [newCommission, ...prev]);
       setDialogOpen(false);
     } catch (err) {
@@ -104,17 +94,14 @@ const CommissionTracking: React.FC = () => {
       setAddLoading(false);
     }
   };
-
   const filteredCommissions = commissions.filter(commission => {
     const matchesSearch = 
       (commission.sales_person_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (commission.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
+// TODO: Define or import filterStatus
     const matchesStatus = filterStatus === 'all' || commission.payment_status === filterStatus;
-    
     return matchesSearch && matchesStatus;
   });
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'warning';
@@ -125,11 +112,9 @@ const CommissionTracking: React.FC = () => {
       default: return 'default';
     }
   };
-
   const totalCommissions = commissions.reduce((sum, c) => sum + (c.commission_amount || 0), 0);
   const pendingCommissions = commissions.filter(c => c.payment_status === 'pending').reduce((sum, c) => sum + (c.commission_amount || 0), 0);
   const paidCommissions = commissions.filter(c => c.payment_status === 'paid').reduce((sum, c) => sum + (c.commission_amount || 0), 0);
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -139,7 +124,6 @@ const CommissionTracking: React.FC = () => {
       </Container>
     );
   }
-
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -147,13 +131,11 @@ const CommissionTracking: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Commission Tracking
       </Typography>
-
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -172,7 +154,6 @@ const CommissionTracking: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -189,7 +170,6 @@ const CommissionTracking: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -206,7 +186,6 @@ const CommissionTracking: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -224,7 +203,6 @@ const CommissionTracking: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Actions Bar */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <TextField
@@ -248,7 +226,6 @@ const CommissionTracking: React.FC = () => {
           Add Commission
         </Button>
       </Box>
-
       {/* Commissions Table */}
       <Card>
         <TableContainer>
@@ -342,7 +319,6 @@ const CommissionTracking: React.FC = () => {
           </Table>
         </TableContainer>
       </Card>
-
       {/* Add Commission Modal */}
       <AddCommissionModal
         open={dialogOpen}
@@ -353,5 +329,4 @@ const CommissionTracking: React.FC = () => {
     </Container>
   );
 };
-
 export default CommissionTracking;

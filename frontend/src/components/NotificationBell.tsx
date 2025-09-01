@@ -1,6 +1,5 @@
 // src/components/NotificationBell.tsx
 // Notification bell icon component with unread count badge
-
 import React, { useState, useEffect } from 'react';
 import {
   IconButton,
@@ -39,16 +38,13 @@ import {
   getStatusDisplayName,
   getStatusColor
 } from '../services/notificationService';
-
 interface NotificationBellProps {
   onSettingsClick?: () => void;
 }
-
 const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const queryClient = useQueryClient();
-
   // Fetch recent notifications
   const { data: notifications = [], isLoading, error } = useQuery({
     queryKey: notificationQueryKeys.logsFiltered({ 
@@ -62,7 +58,6 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
     }),
     refetchInterval: 30000, // Poll every 30 seconds for real-time updates
   });
-
   // Calculate unread count (notifications that haven't been opened)
   useEffect(() => {
     if (notifications) {
@@ -72,7 +67,6 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
       setUnreadCount(unread);
     }
   }, [notifications]);
-
   // Mark notification as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
@@ -88,32 +82,26 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
       toast.error('Failed to mark notification as read');
     }
   });
-
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
-
   const handleClose = () => {
     setAnchorEl(null);
   };
-
   const handleNotificationClick = (notification: NotificationLog) => {
     // Mark as read if not already read
     if (!notification.opened_at) {
       markAsReadMutation.mutate(notification.id);
     }
-    
     // TODO: Navigate to relevant page based on notification type
     console.log('Clicked notification:', notification);
     handleClose();
   };
-
   const handleMarkAllRead = () => {
     // TODO: Implement mark all as read
     console.log('Mark all as read');
     handleClose();
   };
-
   const getNotificationIcon = (channel: string) => {
     switch (channel) {
       case 'email':
@@ -127,7 +115,6 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
         return <Notifications fontSize="small" />;
     }
   };
-
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -135,16 +122,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
-
     if (diffInMinutes < 1) {return 'Just now';}
     if (diffInMinutes < 60) {return `${diffInMinutes}m ago`;}
     if (diffInHours < 24) {return `${diffInHours}h ago`;}
     if (diffInDays < 7) {return `${diffInDays}d ago`;}
     return date.toLocaleDateString();
   };
-
   const isOpen = Boolean(anchorEl);
-
   return (
     <>
       <IconButton
@@ -190,7 +174,6 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
           </Box>
         </Badge>
       </IconButton>
-
       <Menu
         id="notification-menu"
         anchorEl={anchorEl}
@@ -245,7 +228,6 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
             </Typography>
           )}
         </Box>
-
         <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
           {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -349,7 +331,6 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
             </List>
           )}
         </Box>
-
         <Divider />
         <Box sx={{ p: 1 }}>
           <Button
@@ -368,5 +349,4 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
     </>
   );
 };
-
 export default NotificationBell;

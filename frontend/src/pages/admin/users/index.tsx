@@ -1,5 +1,4 @@
 // fastapi_migration/frontend/src/pages/admin/users/index.tsx
-
 import React, { useEffect, useState } from 'react';
 import { 
   Box, 
@@ -16,28 +15,24 @@ import DemoModeDialog from '../../../components/DemoModeDialog';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
-
 interface User {
   id: number;
   email: string;
   role: string;
   organization_id?: number;
 }
-
 const columns: GridColDef[] = [
   { field: 'id', headerName: 'ID', width: 90 },
   { field: 'email', headerName: 'Email', width: 200 },
   { field: 'role', headerName: 'Role', width: 150 },
   { field: 'organization_id', headerName: 'Organization ID', width: 150 },
 ];
-
 const UsersPage: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [demoModeOpen, setDemoModeOpen] = useState(false);
-
-  const { data: users, isLoading, isSuccess, isError } = useQuery<User[]>({
+const { data: users, isLoading, isSuccess} = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: async () => {
       const endpoint = user?.role === 'super_admin' ? '/users' : '/users/org';
@@ -46,27 +41,22 @@ const UsersPage: React.FC = () => {
     },
     enabled: !!user,
   });
-
   // Handle loading state with useEffect instead of onSettled
   useEffect(() => {
     if (!isLoading) {
       setLoading(false);
     }
   }, [isLoading]);
-
   const handleDemoStart = async (token: string, loginResponse?: any) => {
     // Set demo mode flags
     localStorage.setItem('demoMode', 'true');
     if (loginResponse?.demo_mode) {
       localStorage.setItem('isDemoTempUser', 'true');
     }
-    
     // Navigate to demo page
     router.push('/demo');
   };
-
   if (loading) {return <div>Loading...</div>;}
-
   return (
     <Box sx={{ p: 3 }}>
       <RoleGate allowedRoles={['super_admin', 'org_admin']}>
@@ -76,7 +66,6 @@ const UsersPage: React.FC = () => {
             <Typography variant="h4" component="h1">
               User Management
             </Typography>
-            
             <Button
               variant="outlined"
               startIcon={<PlayArrow />}
@@ -96,7 +85,6 @@ const UsersPage: React.FC = () => {
               Try Demo Mode
             </Button>
           </Box>
-
           {/* Demo Mode Info Alert */}
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
@@ -104,7 +92,6 @@ const UsersPage: React.FC = () => {
               No real user data will be affected during the demo.
             </Typography>
           </Alert>
-
           {/* Users Data Grid */}
           <Box sx={{ height: 400, width: '100%' }}>
             <DataGrid 
@@ -123,7 +110,6 @@ const UsersPage: React.FC = () => {
             />
           </Box>
         </Paper>
-
         {/* Demo Mode Dialog */}
         <DemoModeDialog
           open={demoModeOpen}
@@ -134,5 +120,4 @@ const UsersPage: React.FC = () => {
     </Box>
   );
 };
-
 export default UsersPage;

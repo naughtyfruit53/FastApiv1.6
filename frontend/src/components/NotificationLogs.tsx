@@ -1,6 +1,5 @@
 // src/components/NotificationLogs.tsx
 // Component for viewing notification history and logs
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -54,9 +53,6 @@ import {
   Warning
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
   getNotificationLogs,
   getNotificationLog,
@@ -70,13 +66,11 @@ import {
   notificationQueryKeys
 } from '../services/notificationService';
 import { format } from 'date-fns';
-
 const NotificationLogs: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [selectedLog, setSelectedLog] = useState<NotificationLog | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
   // Filter state
   const [filters, setFilters] = useState({
     recipient_type: '',
@@ -84,10 +78,7 @@ const NotificationLogs: React.FC = () => {
     channel: '',
     search: ''
   });
-
   // Analytics state
-  const [analyticsDays, setAnalyticsDays] = useState(30);
-
   // Get notification logs
   const { 
     data: logs = [], 
@@ -108,16 +99,16 @@ const NotificationLogs: React.FC = () => {
       offset: page * rowsPerPage
     }),
   });
-
   // Get analytics
   const { 
     data: analytics,
     isLoading: analyticsLoading 
   } = useQuery({
+// TODO: Define or import analyticsDays
     queryKey: notificationQueryKeys.analytics(analyticsDays),
+// TODO: Define or import analyticsDays
     queryFn: () => getNotificationAnalytics(analyticsDays),
   });
-
   // Get detailed log when modal opens
   const { 
     data: logDetail,
@@ -127,17 +118,14 @@ const NotificationLogs: React.FC = () => {
     queryFn: () => getNotificationLog(selectedLog!.id),
     enabled: !!selectedLog
   });
-
   const handleViewDetails = (log: NotificationLog) => {
     setSelectedLog(log);
     setIsDetailModalOpen(true);
   };
-
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPage(0); // Reset to first page when filtering
   };
-
   const resetFilters = () => {
     setFilters({
       recipient_type: '',
@@ -147,7 +135,6 @@ const NotificationLogs: React.FC = () => {
     });
     setPage(0);
   };
-
   const getChannelIcon = (channel: string) => {
     switch (channel) {
       case 'email': return <Email fontSize="small" />;
@@ -157,15 +144,12 @@ const NotificationLogs: React.FC = () => {
       default: return <Notifications fontSize="small" />;
     }
   };
-
   const getRecipientTypeIcon = (type: string) => {
     return type === 'customer' ? <Person fontSize="small" /> : <Group fontSize="small" />;
   };
-
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM dd, yyyy HH:mm');
   };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
@@ -180,7 +164,6 @@ const NotificationLogs: React.FC = () => {
         return <Warning fontSize="small" />;
     }
   };
-
   if (logsError) {
     return (
       <Alert severity="error">
@@ -188,7 +171,6 @@ const NotificationLogs: React.FC = () => {
       </Alert>
     );
   }
-
   return (
     <Box>
       {/* Analytics Cards */}
@@ -211,7 +193,6 @@ const NotificationLogs: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
@@ -231,7 +212,6 @@ const NotificationLogs: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
@@ -249,7 +229,6 @@ const NotificationLogs: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
@@ -269,7 +248,6 @@ const NotificationLogs: React.FC = () => {
           </Grid>
         </Grid>
       )}
-
       {/* Main Content */}
       <Card>
         <CardContent>
@@ -285,7 +263,6 @@ const NotificationLogs: React.FC = () => {
               </Tooltip>
             </Box>
           </Box>
-
           {/* Filters */}
           <Grid container spacing={2} mb={3}>
             <Grid item xs={12} sm={6} md={2}>
@@ -305,7 +282,6 @@ const NotificationLogs: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-
             <Grid item xs={12} sm={6} md={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
@@ -323,7 +299,6 @@ const NotificationLogs: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-
             <Grid item xs={12} sm={6} md={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>Recipient Type</InputLabel>
@@ -339,7 +314,6 @@ const NotificationLogs: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-
             <Grid item xs={12} sm={6} md={3}>
               <TextField
                 fullWidth
@@ -350,7 +324,6 @@ const NotificationLogs: React.FC = () => {
                 placeholder="Search by email, name..."
               />
             </Grid>
-
             <Grid item xs={12} sm={6} md={3}>
               <Box display="flex" gap={1}>
                 <Button
@@ -364,7 +337,6 @@ const NotificationLogs: React.FC = () => {
               </Box>
             </Grid>
           </Grid>
-
           {/* Table */}
           {logsLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
@@ -470,7 +442,6 @@ const NotificationLogs: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-
               <TablePagination
                 component="div"
                 count={-1} // Unknown total count
@@ -487,7 +458,6 @@ const NotificationLogs: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
       {/* Detail Modal */}
       <Dialog 
         open={isDetailModalOpen} 
@@ -512,7 +482,6 @@ const NotificationLogs: React.FC = () => {
                     {logDetail.recipient_identifier} ({logDetail.recipient_type})
                   </Typography>
                 </Grid>
-
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Channel
@@ -522,7 +491,6 @@ const NotificationLogs: React.FC = () => {
                     {getChannelDisplayName(logDetail.channel as any)}
                   </Box>
                 </Grid>
-
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Status
@@ -536,7 +504,6 @@ const NotificationLogs: React.FC = () => {
                     />
                   </Box>
                 </Grid>
-
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Created At
@@ -545,7 +512,6 @@ const NotificationLogs: React.FC = () => {
                     {formatDate(logDetail.created_at)}
                   </Typography>
                 </Grid>
-
                 {logDetail.subject && (
                   <Grid item xs={12}>
                     <Typography variant="subtitle2" color="text.secondary">
@@ -556,7 +522,6 @@ const NotificationLogs: React.FC = () => {
                     </Typography>
                   </Grid>
                 )}
-
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Content
@@ -567,7 +532,6 @@ const NotificationLogs: React.FC = () => {
                     </Typography>
                   </Paper>
                 </Grid>
-
                 {logDetail.error_message && (
                   <Grid item xs={12}>
                     <Typography variant="subtitle2" color="error">
@@ -578,7 +542,6 @@ const NotificationLogs: React.FC = () => {
                     </Alert>
                   </Grid>
                 )}
-
                 {logDetail.context_data && (
                   <Grid item xs={12}>
                     <Typography variant="subtitle2" color="text.secondary">
@@ -589,7 +552,6 @@ const NotificationLogs: React.FC = () => {
                     </Paper>
                   </Grid>
                 )}
-
                 {/* Timeline */}
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -662,5 +624,4 @@ const NotificationLogs: React.FC = () => {
     </Box>
   );
 };
-
 export default NotificationLogs;

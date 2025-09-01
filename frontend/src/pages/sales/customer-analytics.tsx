@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -41,7 +40,6 @@ import {
   Star as StarIcon,
   Warning as WarningIcon
 } from '@mui/icons-material';
-
 interface CustomerMetric {
   customerId: number;
   name: string;
@@ -54,7 +52,6 @@ interface CustomerMetric {
   lifetimeValue: number;
   satisfactionScore: number;
 }
-
 interface AnalyticsData {
   totalCustomers: number;
   activeCustomers: number;
@@ -71,14 +68,12 @@ interface AnalyticsData {
     percentage: number;
   }[];
 }
-
 const CustomerAnalytics: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [timeRange, setTimeRange] = useState('last_30_days');
-
   // Mock data - replace with actual API call
   useEffect(() => {
     const fetchAnalyticsData = async () => {
@@ -86,7 +81,6 @@ const CustomerAnalytics: React.FC = () => {
         setLoading(true);
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
         const mockData: AnalyticsData = {
           totalCustomers: 1245,
           activeCustomers: 987,
@@ -164,7 +158,6 @@ const CustomerAnalytics: React.FC = () => {
             { segment: 'Startup', count: 557, revenue: 50000, percentage: 2.1 }
           ]
         };
-        
         setAnalyticsData(mockData);
       } catch (err) {
         setError('Failed to load customer analytics');
@@ -173,10 +166,8 @@ const CustomerAnalytics: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchAnalyticsData();
   }, [timeRange]);
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'success';
@@ -185,13 +176,11 @@ const CustomerAnalytics: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getSatisfactionIcon = (score: number) => {
     if (score >= 4.5) {return <StarIcon color="success" />;}
     if (score >= 3.5) {return <StarIcon color="warning" />;}
     return <WarningIcon color="error" />;
   };
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -201,7 +190,6 @@ const CustomerAnalytics: React.FC = () => {
       </Container>
     );
   }
-
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -209,7 +197,6 @@ const CustomerAnalytics: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -228,7 +215,6 @@ const CustomerAnalytics: React.FC = () => {
           </Select>
         </FormControl>
       </Box>
-
       {analyticsData && (
         <>
           {/* Key Metrics Cards */}
@@ -254,7 +240,6 @@ const CustomerAnalytics: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
               <Card>
                 <CardContent>
@@ -275,7 +260,6 @@ const CustomerAnalytics: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
               <Card>
                 <CardContent>
@@ -297,7 +281,6 @@ const CustomerAnalytics: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
               <Card>
                 <CardContent>
@@ -319,7 +302,6 @@ const CustomerAnalytics: React.FC = () => {
               </Card>
             </Grid>
           </Grid>
-
           {/* Tabs for different analytics views */}
           <Paper sx={{ mb: 3 }}>
             <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
@@ -328,7 +310,6 @@ const CustomerAnalytics: React.FC = () => {
               <Tab label="Top Customers" />
             </Tabs>
           </Paper>
-
           {/* Customer Overview Tab */}
           {tabValue === 0 && (
             <Grid container spacing={3}>
@@ -348,7 +329,6 @@ const CustomerAnalytics: React.FC = () => {
                         sx={{ height: 8, borderRadius: 4 }}
                       />
                     </Box>
-                    
                     <Box sx={{ mb: 2 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="body2">New Customers</Typography>
@@ -361,7 +341,6 @@ const CustomerAnalytics: React.FC = () => {
                         sx={{ height: 8, borderRadius: 4 }}
                       />
                     </Box>
-                    
                     <Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="body2">Churned Customers</Typography>
@@ -377,7 +356,6 @@ const CustomerAnalytics: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -418,7 +396,6 @@ const CustomerAnalytics: React.FC = () => {
               </Grid>
             </Grid>
           )}
-
           {/* Customer Segmentation Tab */}
           {tabValue === 1 && (
             <Grid container spacing={3}>
@@ -464,7 +441,6 @@ const CustomerAnalytics: React.FC = () => {
               </Grid>
             </Grid>
           )}
-
           {/* Top Customers Tab */}
           {tabValue === 2 && (
             <Grid container spacing={3}>
@@ -529,5 +505,4 @@ const CustomerAnalytics: React.FC = () => {
     </Container>
   );
 };
-
 export default CustomerAnalytics;

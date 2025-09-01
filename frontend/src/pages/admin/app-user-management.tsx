@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -44,7 +43,6 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
-
 interface AppUser {
   id: number;
   email: string;
@@ -58,7 +56,6 @@ interface AppUser {
   created_at: string;
   last_login?: string;
 }
-
 interface CreateUserData {
   email: string;
   password: string;
@@ -67,13 +64,10 @@ interface CreateUserData {
   designation?: string;
   phone?: string;
 }
-
 const AppUserManagement: React.FC = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
@@ -84,12 +78,9 @@ const AppUserManagement: React.FC = () => {
     designation: '',
     phone: ''
   });
-
   // Check if current user is the god account
   const isGodAccount = user?.email === 'naughty@grok.com';
-
   const queryClient = useQueryClient();
-
   const { data: appUsers } = useQuery({
     queryKey: ['appUsers'],
     queryFn: async () => {
@@ -100,16 +91,13 @@ const AppUserManagement: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-
       if (!response.ok) {
         throw new Error('Failed to fetch app users');
       }
-
       const data = await response.json();
       return data as AppUser[];
     }
   });
-
   const createUserMutation = useMutation({
     mutationFn: async (data: CreateUserData) => {
       const token = localStorage.getItem('token');
@@ -124,12 +112,10 @@ const AppUserManagement: React.FC = () => {
           role: 'super_admin'
         })
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to create user');
       }
-
       return response.json();
     },
     onSuccess: () => {
@@ -145,7 +131,6 @@ const AppUserManagement: React.FC = () => {
       });
     }
   });
-
   const toggleUserStatusMutation = useMutation({
     mutationFn: async (userId: number) => {
       const token = localStorage.getItem('token');
@@ -156,19 +141,16 @@ const AppUserManagement: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to toggle user status');
       }
-
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appUsers'] });
     }
   });
-
   const resetPasswordMutation = useMutation({
     mutationFn: async (userId: number) => {
       const token = localStorage.getItem('token');
@@ -179,16 +161,13 @@ const AppUserManagement: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to reset password');
       }
-
       return response.json();
     }
   });
-
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
       const token = localStorage.getItem('token');
@@ -199,12 +178,10 @@ const AppUserManagement: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to delete user');
       }
-
       return response.json();
     },
     onSuccess: () => {
@@ -213,15 +190,12 @@ const AppUserManagement: React.FC = () => {
       setSelectedUser(null);
     }
   });
-
   const handleCreateUser = () => {
     createUserMutation.mutate(createUserData);
   };
-
   const handleToggleUserStatus = (userId: number) => {
     toggleUserStatusMutation.mutate(userId);
   };
-
   const handleResetPassword = (userId: number) => {
     resetPasswordMutation.mutate(userId, {
       onSuccess: (result) => {
@@ -229,12 +203,10 @@ const AppUserManagement: React.FC = () => {
       }
     });
   };
-
   const handleDeleteUser = () => {
     if (!selectedUser) {return;}
     deleteUserMutation.mutate(selectedUser.id);
   };
-
   const getStatusChip = (isActive: boolean) => {
     return (
       <Chip
@@ -244,7 +216,6 @@ const AppUserManagement: React.FC = () => {
       />
     );
   };
-
   if (!isGodAccount) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -254,7 +225,7 @@ const AppUserManagement: React.FC = () => {
       </Container>
     );
   }
-
+// TODO: Define or import loading
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -262,7 +233,6 @@ const AppUserManagement: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -511,5 +481,4 @@ const AppUserManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default AppUserManagement;

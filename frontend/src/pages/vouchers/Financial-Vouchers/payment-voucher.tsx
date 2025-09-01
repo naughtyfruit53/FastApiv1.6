@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Grid, CircularProgress, Container, Autocomplete, InputAdornment, Tooltip, Modal, FormControl, InputLabel, Select, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { Add, Visibility, Edit } from '@mui/icons-material';
-import EntitySelector from '../../../components/EntitySelector';
+import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Autocomplete, FormControl, InputLabel, Select, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from '@mui/material';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
 import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
+import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
 import { useReferenceOptions } from '../../../utils/nameRefUtils';
-
 const PaymentVoucher: React.FC = () => {
   const config = getVoucherConfig('payment-voucher');
   const voucherStyles = getVoucherStyles();
-  
   const {
     // State
     mode,
@@ -28,7 +24,6 @@ const PaymentVoucher: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Form
     control,
     handleSubmit,
@@ -36,18 +31,15 @@ const PaymentVoucher: React.FC = () => {
     setValue,
     reset,
     errors,
-
     // Data
     voucherList,
     vendorList,
     customerList,
     employeeList,
     sortedVouchers,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -62,11 +54,9 @@ const PaymentVoucher: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
@@ -76,19 +66,14 @@ const PaymentVoucher: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
-
   // Payment voucher specific state
-  const [selectedModule, setSelectedModule] = useState<'Vendor' | 'Customer' | null>(null);
-  
   const totalAmountValue = watch('total_amount');
   const selectedEntity = watch('entity'); // Now using entity instead of name_id/name_type
-
   // Get reference options including unpaid vouchers for the selected entity
   const referenceOptions = useReferenceOptions(
     selectedEntity?.id || null, 
     selectedEntity?.type || null
   );
-
   // Payment methods for payment vouchers
   const paymentMethods = [
     'Cash',
@@ -100,9 +85,7 @@ const PaymentVoucher: React.FC = () => {
     'UPI',
     'Net Banking'
   ];
-
   // Handle entity creation success
-  const handleEntityCreated = (newEntity: any) => {
     setValue('entity', {
       id: newEntity.id,
       name: newEntity.name,
@@ -112,7 +95,6 @@ const PaymentVoucher: React.FC = () => {
     });
     refreshMasterData();
   };
-
   // Combined list of all parties (customers + vendors + employees) for unified dropdown
   const allParties = [
     ...(customerList || []).map((customer: any) => ({
@@ -140,7 +122,6 @@ const PaymentVoucher: React.FC = () => {
       label: `${employee.name} (Employee)`
     }))
   ];
-
   // Index Content - Left Panel (40%)
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -201,7 +182,6 @@ const PaymentVoucher: React.FC = () => {
       </Table>
     </TableContainer>
   );
-
   // Form Content - Right Panel (60%)
   const formContent = (
     <Box>
@@ -217,13 +197,11 @@ const PaymentVoucher: React.FC = () => {
           currentId={selectedEntity?.id}
         />
       </Box>
-
       {(createMutation.isPending || updateMutation.isPending) && (
         <Box display="flex" justifyContent="center" my={2}>
           <CircularProgress />
         </Box>
       )}
-
       <Box 
         component="form" 
         onSubmit={handleSubmit(handleSubmitForm)} 
@@ -262,7 +240,6 @@ const PaymentVoucher: React.FC = () => {
               helperText={errors.date?.message as string}
             />
           </Grid>
-
           <Grid size={6}>
             <SearchableDropdown
               label="Party Name"
@@ -291,7 +268,6 @@ const PaymentVoucher: React.FC = () => {
               helperText={errors.entity?.message as string}
             />
           </Grid>
-
           <Grid size={6}>
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>Payment Method</InputLabel>
@@ -310,7 +286,6 @@ const PaymentVoucher: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-
           <Grid size={6}>
             <Autocomplete
               freeSolo
@@ -328,7 +303,6 @@ const PaymentVoucher: React.FC = () => {
               )}
             />
           </Grid>
-
           <Grid size={6}>
             <TextField
               {...control.register('total_amount', {
@@ -358,7 +332,6 @@ const PaymentVoucher: React.FC = () => {
               }}
             />
           </Grid>
-
           <Grid size={12}>
             <TextField
               {...control.register('notes')}
@@ -371,7 +344,6 @@ const PaymentVoucher: React.FC = () => {
               helperText={errors.notes?.message as string}
             />
           </Grid>
-
           {totalAmountValue > 0 && (
             <Grid size={12}>
               <TextField
@@ -385,7 +357,6 @@ const PaymentVoucher: React.FC = () => {
               />
             </Grid>
           )}
-
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
@@ -413,7 +384,6 @@ const PaymentVoucher: React.FC = () => {
       </Box>
     </Box>
   );
-
   if (isLoading) {
     return (
       <Container>
@@ -423,7 +393,6 @@ const PaymentVoucher: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <>
       <VoucherLayout
@@ -450,7 +419,6 @@ const PaymentVoucher: React.FC = () => {
           />
         }
       />
-      
       {/* Keep context menu for right-click functionality */}
       <VoucherContextMenu
         voucherType="Payment Voucher"
@@ -472,5 +440,4 @@ const PaymentVoucher: React.FC = () => {
     </>
   );
 };
-
 export default PaymentVoucher;

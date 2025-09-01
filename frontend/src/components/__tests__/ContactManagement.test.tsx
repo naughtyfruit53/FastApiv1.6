@@ -1,4 +1,3 @@
-import { render, screen } from '@testing-library/react';
 
 // Simple utility function test for sales CRM
 describe('Sales CRM Utilities', () => {

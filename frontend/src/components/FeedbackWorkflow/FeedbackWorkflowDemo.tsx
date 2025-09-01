@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -27,24 +26,19 @@ import {
   Group as GroupIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-
 import {
   CustomerFeedbackModal,
   ServiceClosureDialog,
   FeedbackStatusList
 } from '../FeedbackWorkflow';
-
 interface FeedbackWorkflowDemoProps {
   userRole?: 'customer' | 'manager' | 'support';
 }
-
 export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
   userRole = 'customer'
 }) => {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [closureDialogOpen, setClosureDialogOpen] = useState(false);
-  const [demoMode, setDemoMode] = useState(true);
-
   // Mock data for demo
   const mockJob = {
     id: 123,
@@ -53,21 +47,18 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
     status: 'completed',
     description: 'AC Installation - Living Room'
   };
-
   const handleSubmitFeedback = async (feedbackData: any) => {
     console.log('Demo: Submit feedback', feedbackData);
     // In real app: await feedbackService.submitFeedback(feedbackData);
     setFeedbackModalOpen(false);
     alert('✅ Demo: Feedback submitted successfully!');
   };
-
   const handleCreateClosure = async (closureData: any) => {
     console.log('Demo: Create service closure', closureData);
     // In real app: await feedbackService.createServiceClosure(closureData);
     setClosureDialogOpen(false);
     alert('✅ Demo: Service closure created successfully!');
   };
-
   const renderCustomerInterface = () => (
     <Card>
       <CardContent>
@@ -76,18 +67,15 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
             <GroupIcon color="primary" />
             <Typography variant="h6">Customer Interface</Typography>
           </Box>
-          
           <Alert severity="info">
             As a customer, you can submit feedback after service completion.
           </Alert>
-          
           <Box>
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Service: {mockJob.description}
             </Typography>
             <Chip label="Completed" color="success" size="small" />
           </Box>
-          
           <Button
             variant="contained"
             startIcon={<FeedbackIcon />}
@@ -100,7 +88,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
       </CardContent>
     </Card>
   );
-
   const renderManagerInterface = () => (
     <Card>
       <CardContent>
@@ -109,11 +96,9 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
             <AssignmentIcon color="primary" />
             <Typography variant="h6">Manager Interface</Typography>
           </Box>
-          
           <Alert severity="info">
             As a manager, you can approve service closures and review feedback.
           </Alert>
-          
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <Button
@@ -141,14 +126,12 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
       </CardContent>
     </Card>
   );
-
   const renderWorkflowSteps = () => (
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Feedback & Closure Workflow
         </Typography>
-        
         <List>
           <ListItem>
             <ListItemIcon>
@@ -159,7 +142,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
               secondary="Technician marks installation job as complete"
             />
           </ListItem>
-          
           <ListItem>
             <ListItemIcon>
               <FeedbackIcon color="primary" />
@@ -169,7 +151,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
               secondary="Automated feedback request sent to customer"
             />
           </ListItem>
-          
           <ListItem>
             <ListItemIcon>
               <AssignmentIcon color="secondary" />
@@ -179,7 +160,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
               secondary="Manager reviews feedback and approves service closure"
             />
           </ListItem>
-          
           <ListItem>
             <ListItemIcon>
               <CloseIcon color="action" />
@@ -193,14 +173,12 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
       </CardContent>
     </Card>
   );
-
   const renderFeatures = () => (
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Key Features
         </Typography>
-        
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
@@ -218,7 +196,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
               </Stack>
             </Paper>
           </Grid>
-          
           <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
@@ -235,7 +212,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
               </Stack>
             </Paper>
           </Grid>
-          
           <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
@@ -252,7 +228,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
               </Stack>
             </Paper>
           </Grid>
-          
           <Grid item xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
@@ -273,23 +248,19 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
       </CardContent>
     </Card>
   );
-
   return (
     <Box>
       <Typography variant="h4" component="h1" gutterBottom>
         Customer Feedback & Service Closure Workflow
       </Typography>
-      
       <Typography variant="body1" color="text.secondary" paragraph>
         Complete vertical slice for collecting customer feedback and managing service closures
         with role-based access control and analytics.
       </Typography>
-
       <Alert severity="success" sx={{ mb: 3 }}>
         ✅ <strong>Implementation Complete</strong> - All backend APIs, frontend components, 
         database migrations, and RBAC integration are ready for production use.
       </Alert>
-
       <Grid container spacing={3}>
         {/* Role Switcher */}
         <Grid item xs={12}>
@@ -324,23 +295,19 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
             </CardContent>
           </Card>
         </Grid>
-
         {/* User Interface */}
         <Grid item xs={12} md={6}>
           {userRole === 'customer' ? renderCustomerInterface() : renderManagerInterface()}
         </Grid>
-
         {/* Workflow Steps */}
         <Grid item xs={12} md={6}>
           {renderWorkflowSteps()}
         </Grid>
-
         {/* Features */}
         <Grid item xs={12}>
           {renderFeatures()}
         </Grid>
       </Grid>
-
       {/* Modals */}
       <CustomerFeedbackModal
         open={feedbackModalOpen}
@@ -350,7 +317,6 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
         completionRecordId={mockJob.completionRecordId}
         onSubmit={handleSubmitFeedback}
       />
-
       <ServiceClosureDialog
         open={closureDialogOpen}
         onClose={() => setClosureDialogOpen(false)}
@@ -363,5 +329,4 @@ export const FeedbackWorkflowDemo: React.FC<FeedbackWorkflowDemoProps> = ({
     </Box>
   );
 };
-
 export default FeedbackWorkflowDemo;

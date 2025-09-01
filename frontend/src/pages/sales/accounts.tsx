@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -52,7 +51,6 @@ import {
   MonetizationOn as MoneyIcon,
   Assignment as AssignmentIcon
 } from '@mui/icons-material';
-
 interface Account {
   id: number;
   name: string;
@@ -80,7 +78,6 @@ interface Account {
   totalRevenue: number;
   primaryContact: string;
 }
-
 const AccountManagement: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +89,6 @@ const AccountManagement: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'create'>('view');
   const [tabValue, setTabValue] = useState(0);
-
   // Mock data - replace with actual API call
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -100,7 +96,6 @@ const AccountManagement: React.FC = () => {
         setLoading(true);
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
         const mockData: Account[] = [
           {
             id: 1,
@@ -238,7 +233,6 @@ const AccountManagement: React.FC = () => {
             primaryContact: 'Emily Rodriguez'
           }
         ];
-        
         setAccounts(mockData);
       } catch (err) {
         setError('Failed to load accounts');
@@ -247,46 +241,37 @@ const AccountManagement: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchAccounts();
   }, []);
-
   const filteredAccounts = accounts.filter(account => {
     const matchesSearch = 
       account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.accountManager.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesType = filterType === 'all' || account.type === filterType;
     const matchesStatus = filterStatus === 'all' || account.status === filterStatus;
-    
     return matchesSearch && matchesType && matchesStatus;
   });
-
   const handleViewAccount = (account: Account) => {
     setSelectedAccount(account);
     setDialogMode('view');
     setDialogOpen(true);
   };
-
   const handleEditAccount = (account: Account) => {
     setSelectedAccount(account);
     setDialogMode('edit');
     setDialogOpen(true);
   };
-
   const handleCreateAccount = () => {
     setSelectedAccount(null);
     setDialogMode('create');
     setDialogOpen(true);
   };
-
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedAccount(null);
     setTabValue(0);
   };
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'customer': return 'success';
@@ -296,7 +281,6 @@ const AccountManagement: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'success';
@@ -305,7 +289,6 @@ const AccountManagement: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getSizeColor = (size: string) => {
     switch (size) {
       case 'enterprise': return 'error';
@@ -315,14 +298,12 @@ const AccountManagement: React.FC = () => {
       default: return 'default';
     }
   };
-
   const accountStats = {
     total: accounts.length,
     customers: accounts.filter(a => a.type === 'customer').length,
     prospects: accounts.filter(a => a.type === 'prospect').length,
     totalRevenue: accounts.reduce((sum, a) => sum + a.totalRevenue, 0)
   };
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -332,7 +313,6 @@ const AccountManagement: React.FC = () => {
       </Container>
     );
   }
-
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -340,13 +320,11 @@ const AccountManagement: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Account Management
       </Typography>
-
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -398,7 +376,6 @@ const AccountManagement: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Filters and Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -451,7 +428,6 @@ const AccountManagement: React.FC = () => {
           Add Account
         </Button>
       </Box>
-
       {/* Accounts Table */}
       <TableContainer component={Paper}>
         <Table>
@@ -530,7 +506,6 @@ const AccountManagement: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
       {/* Account Detail Dialog */}
       <Dialog 
         open={dialogOpen} 
@@ -551,7 +526,6 @@ const AccountManagement: React.FC = () => {
                 <Tab label="Business Information" />
                 <Tab label="Activity & Notes" />
               </Tabs>
-              
               {tabValue === 0 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                   <Grid item xs={12} md={6}>
@@ -612,7 +586,6 @@ const AccountManagement: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-              
               {tabValue === 1 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                   <Grid item xs={12} md={6}>
@@ -682,7 +655,6 @@ const AccountManagement: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-              
               {tabValue === 2 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                   <Grid item xs={12} md={6}>
@@ -733,7 +705,6 @@ const AccountManagement: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-              
               {tabValue === 3 && (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                   <Grid item xs={12} md={6}>
@@ -807,5 +778,4 @@ const AccountManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default AccountManagement;

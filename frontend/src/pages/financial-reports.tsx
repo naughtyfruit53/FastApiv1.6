@@ -38,7 +38,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { Line, Bar } from 'react-chartjs-2';
+import {Bar} from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -51,7 +51,6 @@ import {
   Legend
 } from 'chart.js';
 import axios from 'axios';
-
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -63,14 +62,12 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-
 interface TrialBalanceItem {
   account_code: string;
   account_name: string;
   debit_balance: number;
   credit_balance: number;
 }
-
 interface TrialBalance {
   trial_balance: TrialBalanceItem[];
   total_debits: number;
@@ -78,13 +75,11 @@ interface TrialBalance {
   as_of_date: string;
   organization_id: number;
 }
-
 interface ProfitLossItem {
   account_code: string;
   account_name: string;
   amount: number;
 }
-
 interface ProfitLoss {
   income: ProfitLossItem[];
   expenses: ProfitLossItem[];
@@ -94,13 +89,11 @@ interface ProfitLoss {
   from_date: string;
   to_date: string;
 }
-
 interface BalanceSheetItem {
   account_code: string;
   account_name: string;
   amount: number;
 }
-
 interface BalanceSheet {
   assets: BalanceSheetItem[];
   liabilities: BalanceSheetItem[];
@@ -110,13 +103,11 @@ interface BalanceSheet {
   total_equity: number;
   as_of_date: string;
 }
-
 interface CashFlowItem {
   account_code: string;
   account_name: string;
   amount: number;
 }
-
 interface CashFlow {
   operating_activities: CashFlowItem[];
   investing_activities: CashFlowItem[];
@@ -130,13 +121,11 @@ interface CashFlow {
   from_date: string;
   to_date: string;
 }
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -151,27 +140,22 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const FinancialReports: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
   // Date filters
   const [fromDate, setFromDate] = useState<Date | null>(new Date(new Date().getFullYear(), 0, 1)); // Start of year
   const [toDate, setToDate] = useState<Date | null>(new Date()); // Today
   const [asOfDate, setAsOfDate] = useState<Date | null>(new Date()); // For balance sheet and trial balance
-
   // Report data
   const [trialBalance, setTrialBalance] = useState<TrialBalance | null>(null);
   const [profitLoss, setProfitLoss] = useState<ProfitLoss | null>(null);
   const [balanceSheet, setBalanceSheet] = useState<BalanceSheet | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -180,12 +164,10 @@ const FinancialReports: React.FC = () => {
       maximumFractionDigits: 0
     }).format(amount);
   };
-
   const formatDate = (date: Date | null) => {
     if (!date) {return '';}
     return date.toISOString().split('T')[0];
   };
-
   const fetchTrialBalance = async () => {
     try {
       setLoading(true);
@@ -201,7 +183,6 @@ const FinancialReports: React.FC = () => {
       setLoading(false);
     }
   };
-
   const fetchProfitLoss = async () => {
     try {
       setLoading(true);
@@ -220,7 +201,6 @@ const FinancialReports: React.FC = () => {
       setLoading(false);
     }
   };
-
   const fetchBalanceSheet = async () => {
     try {
       setLoading(true);
@@ -236,7 +216,6 @@ const FinancialReports: React.FC = () => {
       setLoading(false);
     }
   };
-
   const fetchCashFlow = async () => {
     try {
       setLoading(true);
@@ -256,7 +235,6 @@ const FinancialReports: React.FC = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (activeTab === 0 && !trialBalance) {
       fetchTrialBalance();
@@ -268,7 +246,6 @@ const FinancialReports: React.FC = () => {
       fetchCashFlow();
     }
   }, [activeTab]);
-
   // Chart data for P&L
   const profitLossChartData = profitLoss ? {
     labels: ['Income', 'Expenses', 'Net Profit/Loss'],
@@ -281,7 +258,6 @@ const FinancialReports: React.FC = () => {
       }
     ]
   } : null;
-
   // Chart data for Balance Sheet
   const balanceSheetChartData = balanceSheet ? {
     labels: ['Assets', 'Liabilities', 'Equity'],
@@ -294,7 +270,6 @@ const FinancialReports: React.FC = () => {
       }
     ]
   } : null;
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ p: 3 }}>
@@ -323,13 +298,11 @@ const FinancialReports: React.FC = () => {
             </Button>
           </Box>
         </Box>
-
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-
         {/* Tabs */}
         <Paper sx={{ width: '100%' }}>
           <Tabs value={activeTab} onChange={handleTabChange} aria-label="financial reports tabs">
@@ -338,7 +311,6 @@ const FinancialReports: React.FC = () => {
             <Tab label="Balance Sheet" />
             <Tab label="Cash Flow" />
           </Tabs>
-
           {/* Trial Balance */}
           <TabPanel value={activeTab} index={0}>
             <Grid container spacing={3}>
@@ -390,7 +362,6 @@ const FinancialReports: React.FC = () => {
                 )}
               </Grid>
             </Grid>
-
             {loading ? (
               <Box display="flex" justifyContent="center" my={4}>
                 <CircularProgress />
@@ -429,7 +400,6 @@ const FinancialReports: React.FC = () => {
               </TableContainer>
             ) : null}
           </TabPanel>
-
           {/* Profit & Loss */}
           <TabPanel value={activeTab} index={1}>
             <Grid container spacing={3}>
@@ -477,7 +447,6 @@ const FinancialReports: React.FC = () => {
                 )}
               </Grid>
             </Grid>
-
             {loading ? (
               <Box display="flex" justifyContent="center" my={4}>
                 <CircularProgress />
@@ -563,7 +532,6 @@ const FinancialReports: React.FC = () => {
               </Grid>
             ) : null}
           </TabPanel>
-
           {/* Balance Sheet */}
           <TabPanel value={activeTab} index={2}>
             <Grid container spacing={3}>
@@ -599,7 +567,6 @@ const FinancialReports: React.FC = () => {
                 )}
               </Grid>
             </Grid>
-
             {loading ? (
               <Box display="flex" justifyContent="center" my={4}>
                 <CircularProgress />
@@ -678,7 +645,6 @@ const FinancialReports: React.FC = () => {
               </Grid>
             ) : null}
           </TabPanel>
-
           {/* Cash Flow */}
           <TabPanel value={activeTab} index={3}>
             <Grid container spacing={3}>
@@ -730,7 +696,6 @@ const FinancialReports: React.FC = () => {
                 )}
               </Grid>
             </Grid>
-
             {loading ? (
               <Box display="flex" justifyContent="center" my={4}>
                 <CircularProgress />
@@ -800,5 +765,4 @@ const FinancialReports: React.FC = () => {
     </LocalizationProvider>
   );
 };
-
 export default FinancialReports;

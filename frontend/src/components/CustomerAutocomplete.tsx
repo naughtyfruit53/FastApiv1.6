@@ -11,7 +11,6 @@ import { Add as AddIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { searchCustomers, createCustomer } from '../services/masterService';
 import AddCustomerModal from './AddCustomerModal';
-
 interface Customer {
   id: number;
   name: string;
@@ -26,7 +25,6 @@ interface Customer {
   gst_number?: string;
   pan_number?: string;
 }
-
 interface CustomerAutocompleteProps {
   value?: string | number | null;
   onChange: (customer: Customer | null) => void;
@@ -36,7 +34,6 @@ interface CustomerAutocompleteProps {
   label?: string;
   placeholder?: string;
 }
-
 const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
   value,
   onChange,
@@ -50,7 +47,6 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const queryClient = useQueryClient();
-
   // Search query with debouncing
   const { data: searchResults = [], isLoading } = useQuery({
     queryKey: ['searchCustomers', inputValue, 10],
@@ -59,15 +55,13 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     placeholderData: keepPreviousData,
     staleTime: 300, // Cache for 300ms to debounce
   });
-
   // Create customer mutation
   const createCustomerMutation = useMutation({
     mutationFn: createCustomer,
-    onSuccess: (newCustomer) => {
+    onSuccess: (newCustomer: Customer) => {
       // Invalidate search queries
       queryClient.invalidateQueries({queryKey: ['customerSearch']});
       queryClient.invalidateQueries({queryKey: ['customers']});
-      
       // Auto-select the newly created customer
       setSelectedCustomer(newCustomer);
       onChange(newCustomer);
@@ -77,7 +71,6 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       console.error('Failed to create customer:', error);
     }
   });
-
   // Create options array with "Add Customer" option
   const options = React.useMemo(() => {
     const addOption = {
@@ -85,28 +78,23 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       name: '➕ Add Customer',
       isAddOption: true,
     };
-    
     return inputValue.length >= 2 
       ? [addOption, ...searchResults]
       : searchResults.length > 0 
         ? [addOption, ...searchResults]
         : [addOption];
   }, [searchResults, inputValue]);
-
   const handleSelectionChange = (_: any, newValue: any) => {
     if (newValue?.isAddOption) {
       setAddModalOpen(true);
       return;
     }
-    
     setSelectedCustomer(newValue);
     onChange(newValue);
   };
-
   const handleAddCustomer = async (customerData: any) => {
     await createCustomerMutation.mutateAsync(customerData);
   };
-
   return (
     <>
       <Autocomplete
@@ -154,7 +142,6 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
               </Box>
             );
           }
-
           return (
             <Box component="li" {...props}>
               <Box sx={{ width: '100%' }}>
@@ -197,7 +184,6 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
             : "No customers found"
         }
       />
-
       <AddCustomerModal
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
@@ -208,5 +194,4 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     </>
   );
 };
-
 export default CustomerAutocomplete;

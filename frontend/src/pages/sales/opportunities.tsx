@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -36,7 +35,6 @@ import {
 } from '@mui/icons-material';
 import AddOpportunityModal from '../../components/AddOpportunityModal';
 import { crmService } from '../../services/crmService';
-
 interface Opportunity {
   id: number;
   name: string;
@@ -50,17 +48,13 @@ interface Opportunity {
   created_at: string;
   assigned_to_id?: number;
 }
-
 const OpportunityTracking: React.FC = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
-  const [tabValue, setTabValue] = useState(0);
-
   // Fetch opportunities from API
   const fetchOpportunities = async () => {
     try {
@@ -75,11 +69,9 @@ const OpportunityTracking: React.FC = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchOpportunities();
   }, []);
-
   const handleAddOpportunity = async (opportunityData: any) => {
     try {
       setAddLoading(true);
@@ -93,32 +85,28 @@ const OpportunityTracking: React.FC = () => {
       setAddLoading(false);
     }
   };
-
   const filteredOpportunities = opportunities.filter(opportunity =>
     opportunity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (opportunity.account_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (opportunity.contact_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const handleViewOpportunity = (opportunity: Opportunity) => {
+// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(opportunity);
     // Add view functionality if needed
   };
-
   const handleEditOpportunity = (opportunity: Opportunity) => {
+// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(opportunity);
     // Add edit functionality if needed
   };
-
   const handleCreateOpportunity = () => {
     setDialogOpen(true);
   };
-
-  const handleCloseDialog = () => {
     setDialogOpen(false);
+// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(null);
   };
-
   const getStageColor = (stage: string) => {
     switch (stage) {
       case 'prospecting': return 'info';
@@ -131,13 +119,11 @@ const OpportunityTracking: React.FC = () => {
       default: return 'default';
     }
   };
-
   const totalValue = opportunities.reduce((sum, opp) => sum + opp.amount, 0);
   const weightedValue = opportunities.reduce((sum, opp) => sum + (opp.amount * opp.probability / 100), 0);
   const avgProbability = opportunities.length > 0 
     ? opportunities.reduce((sum, opp) => sum + opp.probability, 0) / opportunities.length 
     : 0;
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -147,7 +133,6 @@ const OpportunityTracking: React.FC = () => {
       </Container>
     );
   }
-
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -155,13 +140,11 @@ const OpportunityTracking: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Opportunity Tracking
       </Typography>
-
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -213,7 +196,6 @@ const OpportunityTracking: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Actions Bar */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <TextField
@@ -237,7 +219,6 @@ const OpportunityTracking: React.FC = () => {
           Add Opportunity
         </Button>
       </Box>
-
       {/* Opportunities Table */}
       <TableContainer component={Paper}>
         <Table>
@@ -302,7 +283,6 @@ const OpportunityTracking: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
       {/* Add Opportunity Modal */}
       <AddOpportunityModal
         open={dialogOpen}
@@ -313,5 +293,4 @@ const OpportunityTracking: React.FC = () => {
     </Container>
   );
 };
-
 export default OpportunityTracking;

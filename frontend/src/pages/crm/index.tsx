@@ -1,35 +1,6 @@
 // frontend/src/pages/crm/index.tsx
-
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  TextField,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
-  Alert,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -40,7 +11,6 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
 import { crmService, Lead, Opportunity, CRMAnalytics } from '../../services';
-
 const statusColors: Record<string, string> = {
   new: 'default',
   contacted: 'info',
@@ -49,7 +19,6 @@ const statusColors: Record<string, string> = {
   lost: 'error',
   nurturing: 'secondary',
 };
-
 const stageColors: Record<string, string> = {
   prospecting: 'default',
   qualification: 'info',
@@ -58,23 +27,19 @@ const stageColors: Record<string, string> = {
   closed_won: 'success',
   closed_lost: 'error',
 };
-
 export default function CRMDashboard() {
-  const { user } = useAuth();
+const  = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [analytics, setAnalytics] = useState<CRMAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openLeadDialog, setOpenLeadDialog] = useState(false);
   const [openOpportunityDialog, setOpenOpportunityDialog] = useState(false);
-
   useEffect(() => {
     loadCRMData();
   }, []);
-
   const loadCRMData = async () => {
     setLoading(true);
     setError(null);
@@ -84,14 +49,12 @@ export default function CRMDashboard() {
         crmService.getOpportunities(),
         crmService.getAnalytics()
       ]);
-
       setLeads(leadsData);
       setOpportunities(opportunitiesData);
       setAnalytics(analyticsData);
     } catch (err: any) {
       console.error('Error loading CRM data:', err);
       setError(err.userMessage || 'Failed to load CRM data');
-      
       // Fallback to empty data to prevent crashes
       setLeads([]);
       setOpportunities([]);
@@ -118,16 +81,13 @@ export default function CRMDashboard() {
       (lead.contact_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (lead.company_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const filteredOpportunities = opportunities.filter(
     (opportunity) =>
       opportunity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       opportunity.opportunity_number.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const renderAnalyticsCards = () => {
     if (!analytics) {return null;}
-
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -201,7 +161,6 @@ export default function CRMDashboard() {
       </Grid>
     );
   };
-
   const renderLeadsTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -246,7 +205,6 @@ export default function CRMDashboard() {
       </Table>
     </TableContainer>
   );
-
   const renderOpportunitiesTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -285,7 +243,6 @@ export default function CRMDashboard() {
       </Table>
     </TableContainer>
   );
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -309,7 +266,6 @@ export default function CRMDashboard() {
           </Button>
         </Box>
       </Box>
-
       {/* Error Alert */}
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -319,9 +275,7 @@ export default function CRMDashboard() {
           </Button>
         </Alert>
       )}
-
       {renderAnalyticsCards()}
-
       <Card>
         <CardContent>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -330,7 +284,6 @@ export default function CRMDashboard() {
               <Tab label="Opportunities" />
             </Tabs>
           </Box>
-
           <Box sx={{ mb: 2 }}>
             <TextField
               placeholder="Search..."
@@ -346,12 +299,10 @@ export default function CRMDashboard() {
               sx={{ maxWidth: 300 }}
             />
           </Box>
-
           {currentTab === 0 && renderLeadsTable()}
           {currentTab === 1 && renderOpportunitiesTable()}
         </CardContent>
       </Card>
-
       {/* Add Lead Dialog - Placeholder */}
       <Dialog
         open={openLeadDialog}
@@ -425,7 +376,6 @@ export default function CRMDashboard() {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Add Opportunity Dialog - Placeholder */}
       <Dialog
         open={openOpportunityDialog}

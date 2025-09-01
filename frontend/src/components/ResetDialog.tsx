@@ -1,5 +1,4 @@
 'use client';
-
 // ResetDialog component for requirement #2 - Add Reset Option for Superadmins
 import React, { useState } from 'react';
 import {
@@ -19,7 +18,6 @@ import {
 } from '@mui/material';
 import { Warning as WarningIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-
 interface ResetDialogProps {
   open: boolean;
   onClose: () => void;
@@ -28,7 +26,6 @@ interface ResetDialogProps {
   entityId?: number;
   onSuccess?: () => void;
 }
-
 const ResetDialog: React.FC<ResetDialogProps> = ({
   open,
   onClose,
@@ -40,28 +37,22 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
   const [confirmText, setConfirmText] = useState('');
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const expectedConfirmText = resetType === 'organization' 
     ? 'RESET ORGANIZATION' 
     : 'RESET ENTITY';
-
   const handleReset = async () => {
     if (confirmText !== expectedConfirmText || !confirmChecked) {
       toast.error('Please confirm the reset action properly');
       return;
     }
-
     try {
       setLoading(true);
-      
       const endpoint = resetType === 'organization' 
         ? '/api/v1/settings/reset/organization'
         : `/api/v1/settings/reset/entity`;
-
       const body = resetType === 'entity' && entityId
         ? { entity_id: entityId, confirm: true }
         : { confirm: true };
-
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -70,19 +61,16 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
         },
         body: JSON.stringify(body),
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.detail || 'Reset failed');
       }
-
       const result = await response.json();
       toast.success(result.message || 'Reset completed successfully');
-      
       if (onSuccess) {
         onSuccess();
       }
-      
+// handleClose is defined later in this file
       handleClose();
     } catch (error) {
       console.error('Reset error:', error);
@@ -91,16 +79,13 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
       setLoading(false);
     }
   };
-
   const handleClose = () => {
     setConfirmText('');
     setConfirmChecked(false);
     setLoading(false);
     onClose();
   };
-
   const isConfirmValid = confirmText === expectedConfirmText && confirmChecked;
-
   return (
     <Dialog 
       open={open} 
@@ -112,21 +97,18 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
         <WarningIcon color="error" />
         {resetType === 'organization' ? 'Reset Organization Data' : 'Reset Entity Data'}
       </DialogTitle>
-      
       <DialogContent>
         <Alert severity="error" sx={{ mb: 2 }}>
           <Typography variant="subtitle1" fontWeight="bold">
             ⚠️ DANGER - This action cannot be undone!
           </Typography>
         </Alert>
-
         <Typography variant="body1" gutterBottom>
           {resetType === 'organization' 
             ? `This will permanently delete ALL data for the current organization${organizationName ? ` &quot;${organizationName}&quot;` : ''}.`
             : `This will permanently delete ALL data for the selected entity${organizationName ? ` &quot;${organizationName}&quot;` : ''}.`
           }
         </Typography>
-
         <Box sx={{ my: 2 }}>
           <Typography variant="body2" color="text.secondary">
             The following data will be deleted:
@@ -140,13 +122,10 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
             <li>Non-admin user accounts</li>
           </ul>
         </Box>
-
         <Divider sx={{ my: 2 }} />
-
         <Typography variant="body2" fontWeight="bold" gutterBottom>
           To confirm this action:
         </Typography>
-
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" gutterBottom>
             1. Type &quot;{expectedConfirmText}&quot; in the box below:
@@ -165,7 +144,6 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
             }
           />
         </Box>
-
         <FormControlLabel
           control={
             <Checkbox
@@ -176,14 +154,12 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
           }
           label="I understand this action is permanent and cannot be undone"
         />
-
         {resetType === 'organization' && (
           <Alert severity="info" sx={{ mt: 2 }}>
             The organization itself and admin user accounts will be preserved.
           </Alert>
         )}
       </DialogContent>
-
       <DialogActions>
         <Button 
           onClick={handleClose} 
@@ -204,5 +180,4 @@ const ResetDialog: React.FC<ResetDialogProps> = ({
     </Dialog>
   );
 };
-
 export default ResetDialog;

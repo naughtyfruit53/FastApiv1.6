@@ -1,7 +1,5 @@
 // frontend/src/services/organizationService.ts
-
 import api from '../lib/api';
-
 export const organizationService = {
   createLicense: async (data: any) => {
     try {
@@ -114,7 +112,6 @@ export const organizationService = {
       throw new Error(error.userMessage || 'Failed to delete organization');
     }
   },
-
   // Organization-scoped user management
   getOrganizationUsers: async (organizationId: number, params?: any) => {
     try {
@@ -124,7 +121,6 @@ export const organizationService = {
       throw new Error(error.userMessage || 'Failed to get organization users');
     }
   },
-
   createUserInOrganization: async (organizationId: number, userData: any) => {
     try {
       const response = await api.post(`/organizations/${organizationId}/users`, userData);
@@ -133,7 +129,6 @@ export const organizationService = {
       throw new Error(error.userMessage || 'Failed to create user in organization');
     }
   },
-
   updateUserInOrganization: async (organizationId: number, userId: number, userData: any) => {
     try {
       const response = await api.put(`/organizations/${organizationId}/users/${userId}`, userData);
@@ -142,7 +137,6 @@ export const organizationService = {
       throw new Error(error.userMessage || 'Failed to update user in organization');
     }
   },
-
   deleteUserFromOrganization: async (organizationId: number, userId: number) => {
     try {
       const response = await api.delete(`/organizations/${organizationId}/users/${userId}`);
@@ -151,7 +145,6 @@ export const organizationService = {
       throw new Error(error.userMessage || 'Failed to delete user from organization');
     }
   },
-
   // Invitation management
   getOrganizationInvitations: async (organizationId: number, params?: any) => {
     try {
@@ -161,7 +154,6 @@ export const organizationService = {
       throw new Error(error.userMessage || 'Failed to get organization invitations');
     }
   },
-
   resendInvitation: async (organizationId: number, invitationId: number) => {
     try {
       const response = await api.post(`/organizations/${organizationId}/invitations/${invitationId}/resend`);
@@ -170,7 +162,6 @@ export const organizationService = {
       throw new Error(error.userMessage || 'Failed to resend invitation');
     }
   },
-
   cancelInvitation: async (organizationId: number, invitationId: number) => {
     try {
       const response = await api.delete(`/organizations/${organizationId}/invitations/${invitationId}`);

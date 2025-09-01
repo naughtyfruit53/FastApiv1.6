@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -18,7 +17,6 @@ import {
   Description
 } from '@mui/icons-material';
 import { saveAs } from 'file-saver';
-
 interface ExportPrintToolbarProps {
   onExportExcel?: () => Promise<Blob | void>;
   onExportCSV?: () => Promise<Blob | void>;
@@ -30,7 +28,6 @@ interface ExportPrintToolbarProps {
   loading?: boolean;
   filename?: string;
 }
-
 const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
   onExportExcel,
   onExportCSV,
@@ -44,18 +41,14 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
 }) => {
   const [exportAnchorEl, setExportAnchorEl] = useState<null | HTMLElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-
   const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setExportAnchorEl(event.currentTarget);
   };
-
   const handleExportClose = () => {
     setExportAnchorEl(null);
   };
-
   const handleExcelExport = async () => {
     if (!onExportExcel) {return;}
-    
     setIsExporting(true);
     try {
       const blob = await onExportExcel();
@@ -70,10 +63,8 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       handleExportClose();
     }
   };
-
   const handleCSVExport = async () => {
     if (!onExportCSV) {return;}
-    
     setIsExporting(true);
     try {
       const blob = await onExportCSV();
@@ -88,7 +79,6 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       handleExportClose();
     }
   };
-
   const handlePrint = () => {
     if (onPrint) {
       onPrint();
@@ -97,9 +87,7 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       window.print();
     }
   };
-
   const hasExportOptions = (showExcel && onExportExcel) || (showCSV && onExportCSV);
-
   return (
     <Box sx={{ display: 'flex', gap: 1 }}>
       {hasExportOptions && (
@@ -142,7 +130,6 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
           </Menu>
         </>
       )}
-      
       {showPrint && (
         <Tooltip title="Print Report">
           <IconButton
@@ -158,5 +145,4 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
     </Box>
   );
 };
-
 export default ExportPrintToolbar;

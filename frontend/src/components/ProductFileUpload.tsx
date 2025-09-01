@@ -24,7 +24,6 @@ import {
 } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
-
 interface ProductFile {
   id: number;
   filename: string;
@@ -33,12 +32,10 @@ interface ProductFile {
   content_type: string;
   created_at: string;
 }
-
 interface ProductFileUploadProps {
   productId?: number;
   disabled?: boolean;
 }
-
 const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
   productId,
   disabled = false
@@ -47,7 +44,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-
   // Query to get existing files
   const { data: files = [], isLoading } = useQuery({
     queryKey: ['product-files', productId],
@@ -58,15 +54,12 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
     },
     enabled: !!productId
   });
-
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!productId) {throw new Error('Product ID is required');}
-      
       const formData = new FormData();
       formData.append('file', file);
-      
       const response = await api.post(
         `/api/v1/products/${productId}/files`,
         formData,
@@ -86,7 +79,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
       setUploadError(error.response?.data?.detail || 'Upload failed');
     }
   });
-
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (fileId: number) => {
@@ -96,55 +88,43 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
       queryClient.invalidateQueries({ queryKey: ['product-files', productId] });
     }
   });
-
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) {return;}
-    
     const file = files[0];
-    
     // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       setUploadError('File size must be less than 10MB');
       return;
     }
-    
     uploadMutation.mutate(file);
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
     if (disabled || !productId) {return;}
-    
     handleFileSelect(e.dataTransfer.files);
   };
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     if (!disabled && productId) {
       setIsDragOver(true);
     }
   };
-
   const handleDragLeave = () => {
     setIsDragOver(false);
   };
-
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelect(e.target.files);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
   const handleDownload = async (fileId: number, filename: string) => {
     try {
       const response = await api.get(
         `/api/v1/products/${productId}/files/${fileId}/download`,
         { responseType: 'blob' }
       );
-      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -157,7 +137,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
       console.error('Download failed:', error);
     }
   };
-
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) {return '0 Bytes';}
     const k = 1024;
@@ -165,7 +144,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
   const getFileIcon = (contentType: string) => {
     if (contentType.startsWith('image/')) {return '🖼️';}
     if (contentType.includes('pdf')) {return '📄';}
@@ -173,7 +151,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
     if (contentType.includes('excel') || contentType.includes('spreadsheet')) {return '📊';}
     return '📎';
   };
-
   if (!productId) {
     return (
       <Alert severity="info">
@@ -181,7 +158,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
       </Alert>
     );
   }
-
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
@@ -193,13 +169,11 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
           sx={{ ml: 1 }}
         />
       </Typography>
-
       {uploadError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {uploadError}
         </Alert>
       )}
-
       {/* Upload Area */}
       {files.length < 5 && !disabled && (
         <Paper
@@ -225,7 +199,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
             onChange={handleFileInputChange}
             accept="*/*"
           />
-          
           {uploadMutation.isPending ? (
             <Box>
               <Typography variant="body2" color="textSecondary" gutterBottom>
@@ -246,7 +219,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
           )}
         </Paper>
       )}
-
       {/* Files List */}
       {files.length > 0 && (
         <Paper sx={{ mt: 2 }}>
@@ -298,7 +270,6 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
           </List>
         </Paper>
       )}
-
       {files.length === 0 && productId && !isLoading && (
         <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
           No files uploaded yet
@@ -307,5 +278,4 @@ const ProductFileUpload: React.FC<ProductFileUploadProps> = ({
     </Box>
   );
 };
-
 export default ProductFileUpload;

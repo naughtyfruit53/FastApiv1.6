@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -34,7 +33,6 @@ import {
   TrendingUp as TrendingUpIcon,
   MonetizationOn as MoneyIcon
 } from '@mui/icons-material';
-
 interface PipelineStage {
   id: string;
   name: string;
@@ -42,7 +40,6 @@ interface PipelineStage {
   color: string;
   order: number;
 }
-
 interface Opportunity {
   id: number;
   name: string;
@@ -53,7 +50,6 @@ interface Opportunity {
   closeDate: string;
   probability: number;
 }
-
 interface Pipeline {
   id: number;
   name: string;
@@ -62,15 +58,12 @@ interface Pipeline {
   isDefault: boolean;
   isActive: boolean;
 }
-
 const SalesPipeline: React.FC = () => {
-  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
   const [opportunities, setOpportunities] = useState<{[stageId: string]: Opportunity[]}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-
   // Mock data - replace with actual API call
   useEffect(() => {
     const fetchPipelineData = async () => {
@@ -78,7 +71,6 @@ const SalesPipeline: React.FC = () => {
         setLoading(true);
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
         const mockStages: PipelineStage[] = [
           { id: 'qualification', name: 'Qualification', probability: 10, color: '#f44336', order: 1 },
           { id: 'needs-analysis', name: 'Needs Analysis', probability: 25, color: '#ff9800', order: 2 },
@@ -86,7 +78,6 @@ const SalesPipeline: React.FC = () => {
           { id: 'negotiation', name: 'Negotiation', probability: 75, color: '#4caf50', order: 4 },
           { id: 'closed-won', name: 'Closed Won', probability: 100, color: '#8bc34a', order: 5 }
         ];
-
         const mockPipeline: Pipeline = {
           id: 1,
           name: 'Standard Sales Pipeline',
@@ -95,7 +86,6 @@ const SalesPipeline: React.FC = () => {
           isDefault: true,
           isActive: true
         };
-
         const mockOpportunities: {[stageId: string]: Opportunity[]} = {
           'qualification': [
             {
@@ -168,7 +158,7 @@ const SalesPipeline: React.FC = () => {
             }
           ]
         };
-        
+// TODO: Define or import setPipelines
         setPipelines([mockPipeline]);
         setSelectedPipeline(mockPipeline);
         setOpportunities(mockOpportunities);
@@ -179,27 +169,21 @@ const SalesPipeline: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchPipelineData();
   }, []);
-
   const calculateStageMetrics = (stageId: string) => {
     const stageOpps = opportunities[stageId] || [];
     const count = stageOpps.length;
     const value = stageOpps.reduce((sum, opp) => sum + opp.amount, 0);
     const weightedValue = stageOpps.reduce((sum, opp) => sum + (opp.amount * opp.probability / 100), 0);
-    
     return { count, value, weightedValue };
   };
-
   const getTotalPipelineValue = () => {
     return Object.values(opportunities).flat().reduce((sum, opp) => sum + opp.amount, 0);
   };
-
   const getWeightedPipelineValue = () => {
     return Object.values(opportunities).flat().reduce((sum, opp) => sum + (opp.amount * opp.probability / 100), 0);
   };
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -209,7 +193,6 @@ const SalesPipeline: React.FC = () => {
       </Container>
     );
   }
-
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -217,13 +200,11 @@ const SalesPipeline: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Sales Pipeline
       </Typography>
-
       {/* Pipeline Summary */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -277,7 +258,6 @@ const SalesPipeline: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {selectedPipeline && (
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -290,13 +270,11 @@ const SalesPipeline: React.FC = () => {
               Configure Pipeline
             </Button>
           </Box>
-
           {/* Pipeline Stages */}
           <Grid container spacing={2}>
             {selectedPipeline.stages.map((stage) => {
               const metrics = calculateStageMetrics(stage.id);
               const stageOpps = opportunities[stage.id] || [];
-              
               return (
                 <Grid item xs={12} md={2.4} key={stage.id}>
                   <Paper 
@@ -326,7 +304,6 @@ const SalesPipeline: React.FC = () => {
                         sx={{ mt: 1, height: 6, borderRadius: 3 }}
                       />
                     </Box>
-
                     {/* Opportunities List */}
                     <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
                       {stageOpps.map((opportunity) => (
@@ -361,7 +338,6 @@ const SalesPipeline: React.FC = () => {
                           </CardContent>
                         </Card>
                       ))}
-                      
                       {/* Add Opportunity Button */}
                       <Button
                         variant="outlined"
@@ -384,7 +360,6 @@ const SalesPipeline: React.FC = () => {
           </Grid>
         </Box>
       )}
-
       {/* Pipeline Configuration Dialog */}
       <Dialog 
         open={dialogOpen} 
@@ -443,5 +418,4 @@ const SalesPipeline: React.FC = () => {
     </Container>
   );
 };
-
 export default SalesPipeline;

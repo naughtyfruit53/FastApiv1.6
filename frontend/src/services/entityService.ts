@@ -1,14 +1,11 @@
 // src/services/entityService.ts
 // Unified Entity service for Customer + Vendor + Employee + ExpenseAccount management
-
 import api from '../lib/api';
-import { Entity, EntityType, EntityOption, ENTITY_CONFIGS, Customer, Vendor, Employee, ExpenseAccount } from '../types/entity.types';
-
+import {Entity, EntityType, EntityOption, ENTITY_CONFIGS} from '../types/entity.types';
 interface QueryFunctionContext {
   queryKey: any[];
   signal?: AbortSignal;
 }
-
 /**
  * Get all entities of a specific type
  */
@@ -20,7 +17,6 @@ export const getEntitiesByType = async (entityType: EntityType, { signal }: { si
     type: entityType
   }));
 };
-
 /**
  * Get all entities across all types (unified)
  */
@@ -33,14 +29,12 @@ export const getAllEntities = async ({ signal }: { signal?: AbortSignal } = {}):
       // getEntitiesByType('Employee', { signal }).catch(() => []),
       // getEntitiesByType('ExpenseAccount', { signal }).catch(() => [])
     ]);
-
     return [...customers, ...vendors];
   } catch (error) {
     console.error('Error fetching entities:', error);
     return [];
   }
 };
-
 /**
  * Convert entities to form-compatible options
  */
@@ -54,7 +48,6 @@ export const entitiesToOptions = (entities: Entity[]): EntityOption[] => {
     originalData: entity
   }));
 };
-
 /**
  * Search entities across all types
  */
@@ -79,7 +72,6 @@ export const searchEntities = async (
         type
       }));
     });
-
     const results = await Promise.all(searchPromises);
     const allEntities = results.flat();
     return entitiesToOptions(allEntities);
@@ -88,7 +80,6 @@ export const searchEntities = async (
     return [];
   }
 };
-
 /**
  * Get entity by ID and type
  */
@@ -109,7 +100,6 @@ export const getEntityById = async (
     return null;
   }
 };
-
 /**
  * Create new entity
  */
@@ -124,7 +114,6 @@ export const createEntity = async (
     type: entityType
   };
 };
-
 /**
  * Update existing entity
  */
@@ -140,7 +129,6 @@ export const updateEntity = async (
     type: entityType
   };
 };
-
 /**
  * Delete entity
  */
@@ -151,7 +139,6 @@ export const deleteEntity = async (
   const config = ENTITY_CONFIGS[entityType];
   await api.delete(`${config.endpoint}/${id}`);
 };
-
 /**
  * Get entity balance/outstanding amount
  */
@@ -159,14 +146,13 @@ export const getEntityBalance = async (
   id: number,
   entityType: EntityType,
   { signal }: { signal?: AbortSignal } = {}
-) => {
+): any =>  {
   try {
     const params = entityType === 'Customer' ? { customer_id: id } : { vendor_id: id };
     const response = await api.get('/reports/outstanding-ledger', {
       params,
       signal
     });
-    
     const balances = response.data?.outstanding_balances || [];
     return balances.find((balance: any) => 
       (entityType === 'Customer' && balance.customer_id === id) ||
@@ -177,10 +163,8 @@ export const getEntityBalance = async (
     return null;
   }
 };
-
 // Legacy compatibility functions (to maintain existing code)
 export const getVendors = ({ signal }: QueryFunctionContext = { queryKey: [] }) => 
   getEntitiesByType('Vendor', { signal });
-
 export const getCustomers = ({ signal }: QueryFunctionContext = { queryKey: [] }) => 
   getEntitiesByType('Customer', { signal });

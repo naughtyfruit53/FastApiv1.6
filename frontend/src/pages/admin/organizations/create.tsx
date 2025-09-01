@@ -1,7 +1,5 @@
 'use client';
-
 // fastapi_migration/frontend/src/pages/admin/organizations/create.tsx
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OrganizationForm from '../../../components/OrganizationForm';
@@ -9,17 +7,13 @@ import api from '../../../utils/api';
 import RoleGate from '../../../components/RoleGate';
 import { Alert, Snackbar, CircularProgress } from '@mui/material';
 import { useAuth } from '../../../context/AuthContext';
-
 const CreateOrganizationPage: React.FC = () => {
   const { loading } = useAuth();
-  const router = useRouter();
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-
   if (loading) {
     return <CircularProgress />;
   }
-
   const handleSubmit = async (data: any) => {
     try {
       // Post to license/create endpoint instead of /organizations
@@ -30,11 +24,9 @@ const CreateOrganizationPage: React.FC = () => {
       console.error('Failed to create organization', error);
     }
   };
-
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
-
   return (
     <RoleGate allowedRoles={['super_admin']}>
       <div>
@@ -54,5 +46,4 @@ const CreateOrganizationPage: React.FC = () => {
     </RoleGate>
   );
 };
-
 export default CreateOrganizationPage;

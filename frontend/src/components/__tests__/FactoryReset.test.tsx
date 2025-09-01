@@ -8,7 +8,6 @@ import FactoryReset from '../../pages/settings/FactoryReset';
 import { useAuth } from '../../context/AuthContext';
 // Update the path below to the correct location of resetService
 import * as resetService from '../../services/resetService';
-import { message } from 'antd';
 
 jest.mock('../../../context/AuthContext');
 jest.mock('../../../services/resetService');

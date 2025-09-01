@@ -1,12 +1,10 @@
 // frontend/src/types/rbac.types.ts
-
 /**
  * Service CRM RBAC Types
  * 
  * TypeScript type definitions for Role-Based Access Control
  * in the Service CRM module.
  */
-
 // Enums matching backend
 export enum ServiceRoleType {
   ADMIN = 'admin',
@@ -14,7 +12,6 @@ export enum ServiceRoleType {
   SUPPORT = 'support',
   VIEWER = 'viewer'
 }
-
 export enum ServiceModule {
   SERVICE = 'service',
   TECHNICIAN = 'technician',
@@ -24,7 +21,6 @@ export enum ServiceModule {
   SERVICE_REPORTS = 'service_reports',
   CRM_ADMIN = 'crm_admin'
 }
-
 export enum ServiceAction {
   CREATE = 'create',
   READ = 'read',
@@ -33,7 +29,6 @@ export enum ServiceAction {
   EXPORT = 'export',
   ADMIN = 'admin'
 }
-
 // Service Permission Types
 export interface ServicePermission {
   id: number;
@@ -46,7 +41,6 @@ export interface ServicePermission {
   created_at: string;
   updated_at?: string;
 }
-
 export interface ServicePermissionCreate {
   name: string;
   display_name: string;
@@ -55,13 +49,11 @@ export interface ServicePermissionCreate {
   action: ServiceAction;
   is_active?: boolean;
 }
-
 export interface ServicePermissionUpdate {
   display_name?: string;
   description?: string;
   is_active?: boolean;
 }
-
 // Service Role Types
 export interface ServiceRole {
   id: number;
@@ -73,11 +65,9 @@ export interface ServiceRole {
   created_at: string;
   updated_at?: string;
 }
-
 export interface ServiceRoleWithPermissions extends ServiceRole {
   permissions: ServicePermission[];
 }
-
 export interface ServiceRoleCreate {
   name: ServiceRoleType;
   display_name: string;
@@ -86,14 +76,12 @@ export interface ServiceRoleCreate {
   permission_ids?: number[];
   is_active?: boolean;
 }
-
 export interface ServiceRoleUpdate {
   display_name?: string;
   description?: string;
   is_active?: boolean;
   permission_ids?: number[];
 }
-
 // User Role Assignment Types
 export interface UserServiceRole {
   id: number;
@@ -104,14 +92,12 @@ export interface UserServiceRole {
   created_at: string;
   updated_at?: string;
 }
-
 export interface UserServiceRoleCreate {
   user_id: number;
   role_id: number;
   assigned_by_id?: number;
   is_active?: boolean;
 }
-
 export interface UserWithServiceRoles {
   id: number;
   email: string;
@@ -120,25 +106,21 @@ export interface UserWithServiceRoles {
   is_active: boolean;
   service_roles: ServiceRole[];
 }
-
 // Role Assignment Request/Response Types
 export interface RoleAssignmentRequest {
   user_id: number;
   role_ids: number[];
 }
-
 export interface RoleAssignmentResponse {
   success: boolean;
   message: string;
   assignments: UserServiceRole[];
 }
-
 export interface BulkRoleAssignmentRequest {
   user_ids: number[];
   role_ids: number[];
   replace_existing?: boolean;
 }
-
 export interface BulkRoleAssignmentResponse {
   success: boolean;
   message: string;
@@ -146,33 +128,28 @@ export interface BulkRoleAssignmentResponse {
   failed_assignments: number;
   details: string[];
 }
-
 // Permission Checking Types
 export interface PermissionCheckRequest {
   user_id: number;
   permission: string;
   organization_id?: number;
 }
-
 export interface PermissionCheckResponse {
   has_permission: boolean;
   user_id: number;
   permission: string;
   source: string;
 }
-
 export interface UserPermissions {
   user_id: number;
   permissions: string[];
   service_roles: ServiceRole[];
   total_permissions: number;
 }
-
 // UI Component Props Types
 export interface RoleManagementProps {
   organizationId: number;
 }
-
 export interface RoleFormProps {
   role?: ServiceRoleWithPermissions;
   permissions: ServicePermission[];
@@ -181,7 +158,6 @@ export interface RoleFormProps {
   onCancel: () => void;
   loading?: boolean;
 }
-
 export interface UserRoleAssignmentProps {
   userId: number;
   userEmail: string;
@@ -192,14 +168,12 @@ export interface UserRoleAssignmentProps {
   onRemove: (roleId: number) => void;
   loading?: boolean;
 }
-
 export interface RolePermissionMatrixProps {
   roles: ServiceRoleWithPermissions[];
   permissions: ServicePermission[];
   onPermissionToggle: (roleId: number, permissionId: number, granted: boolean) => void;
   loading?: boolean;
 }
-
 // Service Role Defaults
 export const SERVICE_ROLE_DEFAULTS: Record<ServiceRoleType, Partial<ServiceRoleCreate>> = {
   [ServiceRoleType.ADMIN]: {
@@ -223,7 +197,6 @@ export const SERVICE_ROLE_DEFAULTS: Record<ServiceRoleType, Partial<ServiceRoleC
     description: 'Read-only access to service information'
   }
 };
-
 // Permission Display Names
 export const PERMISSION_DISPLAY_NAMES: Record<string, string> = {
   // Service Management
@@ -231,40 +204,33 @@ export const PERMISSION_DISPLAY_NAMES: Record<string, string> = {
   'service_read': 'View Services',
   'service_update': 'Update Services',
   'service_delete': 'Delete Services',
-  
   // Technician Management
   'technician_create': 'Create Technicians',
   'technician_read': 'View Technicians',
   'technician_update': 'Update Technicians',
   'technician_delete': 'Delete Technicians',
-  
   // Appointment Management
   'appointment_create': 'Create Appointments',
   'appointment_read': 'View Appointments',
   'appointment_update': 'Update Appointments',
   'appointment_delete': 'Cancel Appointments',
-  
   // Customer Service
   'customer_service_create': 'Create Customer Records',
   'customer_service_read': 'View Customer Records',
   'customer_service_update': 'Update Customer Records',
   'customer_service_delete': 'Delete Customer Records',
-  
   // Work Orders
   'work_order_create': 'Create Work Orders',
   'work_order_read': 'View Work Orders',
   'work_order_update': 'Update Work Orders',
   'work_order_delete': 'Delete Work Orders',
-  
   // Reports
   'service_reports_read': 'View Service Reports',
   'service_reports_export': 'Export Service Reports',
-  
   // CRM Admin
   'crm_admin': 'CRM Administration',
   'crm_settings': 'CRM Settings'
 };
-
 // Module Display Names
 export const MODULE_DISPLAY_NAMES: Record<ServiceModule, string> = {
   [ServiceModule.SERVICE]: 'Service Management',
@@ -275,7 +241,6 @@ export const MODULE_DISPLAY_NAMES: Record<ServiceModule, string> = {
   [ServiceModule.SERVICE_REPORTS]: 'Service Reports',
   [ServiceModule.CRM_ADMIN]: 'CRM Administration'
 };
-
 // Role Badge Colors (for UI display)
 export const ROLE_BADGE_COLORS: Record<ServiceRoleType, string> = {
   [ServiceRoleType.ADMIN]: 'error', // Red
@@ -283,7 +248,6 @@ export const ROLE_BADGE_COLORS: Record<ServiceRoleType, string> = {
   [ServiceRoleType.SUPPORT]: 'info', // Blue
   [ServiceRoleType.VIEWER]: 'success' // Green
 };
-
 // Permission checking helper functions
 export const hasServicePermission = (
   userRoles: ServiceRole[],
@@ -301,13 +265,11 @@ export const hasServicePermission = (
   }
   return false;
 };
-
 export const getUserServicePermissions = (
   userRoles: ServiceRole[],
   allRoles: ServiceRoleWithPermissions[]
 ): string[] => {
   const permissions = new Set<string>();
-  
   for (const userRole of userRoles) {
     const roleWithPermissions = allRoles.find(r => r.id === userRole.id);
     if (roleWithPermissions) {
@@ -316,10 +278,8 @@ export const getUserServicePermissions = (
         .forEach(p => permissions.add(p.name));
     }
   }
-  
   return Array.from(permissions);
 };
-
 // Service permission constants (matching backend)
 export const SERVICE_PERMISSIONS = {
   // Service Management
@@ -327,67 +287,56 @@ export const SERVICE_PERMISSIONS = {
   SERVICE_READ: 'service_read',
   SERVICE_UPDATE: 'service_update',
   SERVICE_DELETE: 'service_delete',
-  
   // Technician Management
   TECHNICIAN_CREATE: 'technician_create',
   TECHNICIAN_READ: 'technician_read',
   TECHNICIAN_UPDATE: 'technician_update',
   TECHNICIAN_DELETE: 'technician_delete',
-  
   // Appointment Management
   APPOINTMENT_CREATE: 'appointment_create',
   APPOINTMENT_READ: 'appointment_read',
   APPOINTMENT_UPDATE: 'appointment_update',
   APPOINTMENT_DELETE: 'appointment_delete',
-  
   // Customer Service
   CUSTOMER_SERVICE_CREATE: 'customer_service_create',
   CUSTOMER_SERVICE_READ: 'customer_service_read',
   CUSTOMER_SERVICE_UPDATE: 'customer_service_update',
   CUSTOMER_SERVICE_DELETE: 'customer_service_delete',
-  
   // Work Orders
   WORK_ORDER_CREATE: 'work_order_create',
   WORK_ORDER_READ: 'work_order_read',
   WORK_ORDER_UPDATE: 'work_order_update',
   WORK_ORDER_DELETE: 'work_order_delete',
-  
   // Reports
   SERVICE_REPORTS_READ: 'service_reports_read',
   SERVICE_REPORTS_EXPORT: 'service_reports_export',
-  
   // CRM Admin
   CRM_ADMIN: 'crm_admin',
   CRM_SETTINGS: 'crm_settings',
-  
   // Finance & Accounting
   FINANCE_DASHBOARD_READ: 'finance_dashboard_read',
   FINANCE_ACCOUNTS_CREATE: 'finance_accounts_create',
   FINANCE_ACCOUNTS_READ: 'finance_accounts_read',
   FINANCE_ACCOUNTS_UPDATE: 'finance_accounts_update',
   FINANCE_ACCOUNTS_DELETE: 'finance_accounts_delete',
-  
   // General Ledger
   GL_ENTRY_CREATE: 'gl_entry_create',
   GL_ENTRY_READ: 'gl_entry_read',
   GL_ENTRY_UPDATE: 'gl_entry_update',
   GL_ENTRY_DELETE: 'gl_entry_delete',
   GL_RECONCILE: 'gl_reconcile',
-  
   // Cost Centers
   COST_CENTER_CREATE: 'cost_center_create',
   COST_CENTER_READ: 'cost_center_read',
   COST_CENTER_UPDATE: 'cost_center_update',
   COST_CENTER_DELETE: 'cost_center_delete',
   COST_CENTER_BUDGET: 'cost_center_budget',
-  
   // Bank Management
   BANK_ACCOUNT_CREATE: 'bank_account_create',
   BANK_ACCOUNT_READ: 'bank_account_read',
   BANK_ACCOUNT_UPDATE: 'bank_account_update',
   BANK_ACCOUNT_DELETE: 'bank_account_delete',
   BANK_RECONCILIATION: 'bank_reconciliation',
-  
   // Financial Reports
   FINANCIAL_REPORTS_READ: 'financial_reports_read',
   FINANCIAL_REPORTS_EXPORT: 'financial_reports_export',
@@ -395,17 +344,14 @@ export const SERVICE_PERMISSIONS = {
   PROFIT_LOSS_READ: 'profit_loss_read',
   BALANCE_SHEET_READ: 'balance_sheet_read',
   CASH_FLOW_READ: 'cash_flow_read',
-  
   // Financial Analytics
   FINANCE_ANALYTICS_READ: 'finance_analytics_read',
   FINANCE_KPI_CREATE: 'finance_kpi_create',
   FINANCE_KPI_READ: 'finance_kpi_read',
   FINANCE_KPI_UPDATE: 'finance_kpi_update',
   FINANCE_KPI_DELETE: 'finance_kpi_delete',
-  
   // Finance Admin
   FINANCE_ADMIN: 'finance_admin',
   FINANCE_SETTINGS: 'finance_settings'
 } as const;
-
 export type ServicePermissionType = typeof SERVICE_PERMISSIONS[keyof typeof SERVICE_PERMISSIONS];

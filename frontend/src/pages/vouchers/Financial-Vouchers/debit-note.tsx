@@ -1,18 +1,16 @@
 // Debit Note Page - Refactored using shared DRY logic with 40:60 split layout
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { Add, Visibility, Edit } from '@mui/icons-material';
+import {Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Paper, Table, TableBody, TableCell, TableHead, TableRow} from '@mui/material';
+import {Add} from '@mui/icons-material';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
-
+import {getVoucherConfig, getVoucherStyles} from '../../../utils/voucherUtils';
 const DebitNotePage: React.FC = () => {
   const config = getVoucherConfig('debit-note');
   const voucherStyles = getVoucherStyles();
-  
   const {
     // State
     mode,
@@ -31,7 +29,6 @@ const DebitNotePage: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-
     // Form
     control,
     handleSubmit,
@@ -39,16 +36,13 @@ const DebitNotePage: React.FC = () => {
     setValue,
     reset,
     errors,
-
     // Data
     voucherList,
     customerList,
     sortedVouchers,
-
     // Mutations
     createMutation,
     updateMutation,
-
     // Event handlers
     handleCreate,
     handleEdit,
@@ -63,18 +57,13 @@ const DebitNotePage: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
-
   // Watch form values
   const watchedValues = watch();
   const totalAmount = watchedValues?.total_amount || 0;
-
   // Combined customer options for autocomplete
-  const customerFilter = createFilterOptions();
-
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
@@ -84,13 +73,11 @@ const DebitNotePage: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
-
   // Handle customer creation success
   const handleCustomerCreated = async (newCustomer: any): Promise<void> => {
     setValue('customer_id', newCustomer.id);
     refreshMasterData();
   };
-
   return (
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
@@ -107,7 +94,6 @@ const DebitNotePage: React.FC = () => {
                 onModalOpen={handleModalOpen}
               />
             </Box>
-
             {isLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <CircularProgress />
@@ -150,7 +136,6 @@ const DebitNotePage: React.FC = () => {
             )}
           </Paper>
         </Grid>
-
         {/* Right side - Voucher Form (60%) */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
@@ -171,13 +156,11 @@ const DebitNotePage: React.FC = () => {
                 </Box>
               )}
             </Box>
-
             {(createMutation.isPending || updateMutation.isPending) && (
               <Box display="flex" justifyContent="center" my={2}>
                 <CircularProgress />
               </Box>
             )}
-
             <Box 
               component="form" 
               onSubmit={handleSubmit(handleSubmitForm)} 
@@ -211,7 +194,6 @@ const DebitNotePage: React.FC = () => {
                     disabled={isViewMode}
                   />
                 </Grid>
-
                 <Grid size={12}>
                   <Autocomplete
                     options={customerList || []}
@@ -252,7 +234,6 @@ const DebitNotePage: React.FC = () => {
                     disabled={isViewMode}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     {...control.register('total_amount')}
@@ -267,7 +248,6 @@ const DebitNotePage: React.FC = () => {
                     }}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     {...control.register('reference')}
@@ -277,7 +257,6 @@ const DebitNotePage: React.FC = () => {
                     sx={voucherStyles.centerField}
                   />
                 </Grid>
-
                 <Grid size={12}>
                   <TextField
                     {...control.register('notes')}
@@ -288,7 +267,6 @@ const DebitNotePage: React.FC = () => {
                     disabled={isViewMode}
                   />
                 </Grid>
-
                 {totalAmount > 0 && (
                   <Grid size={12}>
                     <Alert severity="info">
@@ -298,7 +276,6 @@ const DebitNotePage: React.FC = () => {
                     </Alert>
                   </Grid>
                 )}
-
                 {!isViewMode && (
                   <Grid size={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
@@ -317,16 +294,13 @@ const DebitNotePage: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
-
       {/* Add Customer Modal */}
       <AddCustomerModal
         open={showAddCustomerModal}
         onClose={() => setShowAddCustomerModal(false)}
         onAdd={handleCustomerCreated}
         loading={addCustomerLoading}
-        
       />
-
       {/* Context Menu */}
       <VoucherContextMenu
         voucherType="debit-note"
@@ -337,7 +311,6 @@ const DebitNotePage: React.FC = () => {
         onDelete={handleDelete}
         onPrint={() => handleGeneratePDF()}
       />
-
       {/* Voucher List Modal */}
       <VoucherListModal
         open={showFullModal}
@@ -353,5 +326,4 @@ const DebitNotePage: React.FC = () => {
     </Container>
   );
 };
-
 export default DebitNotePage;

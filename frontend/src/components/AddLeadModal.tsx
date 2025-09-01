@@ -17,14 +17,12 @@ import {
   Chip
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
-
 interface AddLeadModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
-
 interface LeadFormData {
   first_name: string;
   last_name: string;
@@ -45,7 +43,6 @@ interface LeadFormData {
   expected_close_date?: string;
   notes?: string;
 }
-
 const leadSources = [
   'Website',
   'Social Media',
@@ -58,7 +55,6 @@ const leadSources = [
   'Direct Mail',
   'Other'
 ];
-
 const leadStatuses = [
   'new',
   'contacted',
@@ -69,7 +65,6 @@ const leadStatuses = [
   'lost',
   'disqualified'
 ];
-
 const AddLeadModal: React.FC<AddLeadModalProps> = ({
   open,
   onClose,
@@ -98,7 +93,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       notes: ''
     }
   });
-
   React.useEffect(() => {
     if (open) {
       reset({
@@ -123,7 +117,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       });
     }
   }, [open, reset]);
-
   const onSubmit = async (leadData: LeadFormData) => {
     try {
       // Remove empty fields to match backend schema
@@ -135,7 +128,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           return value !== undefined && value !== null && value !== '';
         })
       );
-
       await onAdd(cleanData);
       reset();
       onClose();
@@ -143,14 +135,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       console.error('Error adding lead:', error);
     }
   };
-
   const handleClose = () => {
     if (!loading) {
       reset();
       onClose();
     }
   };
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -158,7 +148,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           Add New Lead
         </Typography>
       </DialogTitle>
-
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Box sx={{ mt: 1 }}>
@@ -169,7 +158,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   Basic Information
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('first_name', { 
@@ -183,7 +171,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('last_name', { 
@@ -197,7 +184,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('email', { 
@@ -215,7 +201,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('phone')}
@@ -224,14 +209,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               {/* Company Information */}
               <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Company Information
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('company')}
@@ -240,7 +223,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('job_title')}
@@ -249,7 +231,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('website')}
@@ -258,14 +239,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               {/* Address Information */}
               <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Address Information
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('address')}
@@ -274,7 +253,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('city')}
@@ -283,7 +261,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('state')}
@@ -292,7 +269,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('postal_code')}
@@ -301,7 +277,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('country')}
@@ -310,14 +285,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-
               {/* Lead Details */}
               <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Lead Details
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Source</InputLabel>
@@ -346,7 +319,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   )}
                 </FormControl>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Status</InputLabel>
@@ -380,7 +352,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   )}
                 </FormControl>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('score', {
@@ -396,7 +367,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   inputProps={{ min: 0, max: 100 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('estimated_value', {
@@ -411,7 +381,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   inputProps={{ min: 0 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register('expected_close_date')}
@@ -424,7 +393,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('notes')}
@@ -438,7 +406,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </Grid>
           </Box>
         </DialogContent>
-
         <DialogActions>
           <Button 
             onClick={handleClose} 
@@ -460,5 +427,4 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     </Dialog>
   );
 };
-
 export default AddLeadModal;

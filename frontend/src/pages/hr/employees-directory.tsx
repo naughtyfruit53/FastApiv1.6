@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -40,7 +39,6 @@ import {
   Phone as PhoneIcon,
   Business as BusinessIcon
 } from '@mui/icons-material';
-
 interface Employee {
   id: number;
   employee_id: string;
@@ -53,14 +51,11 @@ interface Employee {
   hire_date: string;
   salary: number;
 }
-
 const EmployeeDirectory: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [openDialog, setOpenDialog] = useState(false);
-
   // Mock data for demonstration
   useEffect(() => {
     const mockEmployees: Employee[] = [
@@ -103,7 +98,6 @@ const EmployeeDirectory: React.FC = () => {
     ];
     setEmployees(mockEmployees);
   }, []);
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'success';
@@ -113,9 +107,7 @@ const EmployeeDirectory: React.FC = () => {
       default: return 'default';
     }
   };
-
   const departments = ['Engineering', 'Marketing', 'Finance', 'HR', 'Sales', 'Operations'];
-
   const filteredEmployees = employees.filter(employee => {
     const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          employee.employee_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,7 +115,6 @@ const EmployeeDirectory: React.FC = () => {
     const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
     return matchesSearch && matchesDepartment;
   });
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -139,7 +130,6 @@ const EmployeeDirectory: React.FC = () => {
             Add Employee
           </Button>
         </Box>
-
         {/* Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -191,7 +181,6 @@ const EmployeeDirectory: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
-
         {/* Filters */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           <TextField
@@ -223,7 +212,6 @@ const EmployeeDirectory: React.FC = () => {
             </Select>
           </FormControl>
         </Box>
-
         {/* Employees Table */}
         <Card>
           <TableContainer>
@@ -297,7 +285,6 @@ const EmployeeDirectory: React.FC = () => {
             </Table>
           </TableContainer>
         </Card>
-
         {/* Add Employee Dialog */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
           <DialogTitle>Add New Employee</DialogTitle>
@@ -317,5 +304,4 @@ const EmployeeDirectory: React.FC = () => {
     </Container>
   );
 };
-
 export default EmployeeDirectory;

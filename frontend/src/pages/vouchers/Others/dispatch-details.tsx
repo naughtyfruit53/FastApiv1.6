@@ -48,13 +48,11 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import VoucherLayout from '../../../components/VoucherLayout';
 import { dispatchService } from '../../../services/dispatchService';
-
 const DispatchDetailsPage: React.FC = () => {
   const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-
   // Fetch dispatch orders
   const { data: dispatches = [], isLoading, error } = useQuery({
     queryKey: ['dispatch-orders', searchTerm, statusFilter],
@@ -63,17 +61,14 @@ const DispatchDetailsPage: React.FC = () => {
       filter: statusFilter ? { status: statusFilter } : undefined
     })
   });
-
   const handleView = (dispatch: any) => {
     setSelectedDispatch(dispatch);
     setIsDialogOpen(true);
   };
-
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setSelectedDispatch(null);
   };
-
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'pending': return 'warning';
@@ -83,17 +78,14 @@ const DispatchDetailsPage: React.FC = () => {
       default: return 'default';
     }
   };
-
   const formatDate = (dateString: string) => {
     if (!dateString) {return '-';}
     return new Date(dateString).toLocaleDateString();
   };
-
   const formatDateTime = (dateString: string) => {
     if (!dateString) {return '-';}
     return new Date(dateString).toLocaleString();
   };
-
   return (
     <VoucherLayout
       title="Dispatch Details"
@@ -128,21 +120,18 @@ const DispatchDetailsPage: React.FC = () => {
             </FormControl>
           </Box>
         </Box>
-
         {/* Error Alert */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             Failed to load dispatch orders
           </Alert>
         )}
-
         {/* Loading */}
         {isLoading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
         )}
-
         {/* Dispatch Cards */}
         <Grid container spacing={3}>
           {dispatches.map((dispatch: any) => (
@@ -159,21 +148,18 @@ const DispatchDetailsPage: React.FC = () => {
                       size="small"
                     />
                   </Box>
-                  
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Person fontSize="small" color="action" />
                     <Typography variant="body2">
                       Customer ID: {dispatch.customer_id}
                     </Typography>
                   </Box>
-                  
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <LocationOn fontSize="small" color="action" />
                     <Typography variant="body2" noWrap>
                       {dispatch.delivery_address}
                     </Typography>
                   </Box>
-                  
                   {dispatch.delivery_contact_person && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <Phone fontSize="small" color="action" />
@@ -182,21 +168,17 @@ const DispatchDetailsPage: React.FC = () => {
                       </Typography>
                     </Box>
                   )}
-                  
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Created:</strong> {formatDate(dispatch.created_at)}
                   </Typography>
-                  
                   {dispatch.expected_delivery_date && (
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Expected:</strong> {formatDate(dispatch.expected_delivery_date)}
                     </Typography>
                   )}
-                  
                   <Typography variant="body2">
                     <strong>Items:</strong> {dispatch.items?.length || 0}
                   </Typography>
-                  
                   {dispatch.tracking_number && (
                     <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
                       <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -211,7 +193,6 @@ const DispatchDetailsPage: React.FC = () => {
                     </Box>
                   )}
                 </CardContent>
-                
                 <CardActions>
                   <Button
                     size="small"
@@ -225,7 +206,6 @@ const DispatchDetailsPage: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-
         {/* Empty State */}
         {!isLoading && dispatches.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -241,7 +221,6 @@ const DispatchDetailsPage: React.FC = () => {
             </Typography>
           </Box>
         )}
-
         {/* Dispatch Details Dialog */}
         <Dialog open={isDialogOpen} onClose={handleDialogClose} maxWidth="lg" fullWidth>
           <DialogTitle>
@@ -257,7 +236,6 @@ const DispatchDetailsPage: React.FC = () => {
               )}
             </Box>
           </DialogTitle>
-          
           <DialogContent dividers>
             {selectedDispatch && (
               <Grid container spacing={3}>
@@ -267,7 +245,6 @@ const DispatchDetailsPage: React.FC = () => {
                     Basic Information
                   </Typography>
                 </Grid>
-                
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -276,7 +253,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-                
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -285,7 +261,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-                
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -294,7 +269,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-                
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -303,7 +277,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-
                 {/* Delivery Information */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
@@ -311,7 +284,6 @@ const DispatchDetailsPage: React.FC = () => {
                     Delivery Information
                   </Typography>
                 </Grid>
-                
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
@@ -322,7 +294,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-                
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -331,7 +302,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-                
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -340,7 +310,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-
                 {/* Dates */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
@@ -348,7 +317,6 @@ const DispatchDetailsPage: React.FC = () => {
                     Important Dates
                   </Typography>
                 </Grid>
-                
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
@@ -357,7 +325,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-                
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
@@ -366,7 +333,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-                
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
@@ -375,7 +341,6 @@ const DispatchDetailsPage: React.FC = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Grid>
-
                 {/* Tracking Information */}
                 {(selectedDispatch.tracking_number || selectedDispatch.courier_name) && (
                   <>
@@ -385,7 +350,6 @@ const DispatchDetailsPage: React.FC = () => {
                         Tracking Information
                       </Typography>
                     </Grid>
-                    
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
@@ -394,7 +358,6 @@ const DispatchDetailsPage: React.FC = () => {
                         InputProps={{ readOnly: true }}
                       />
                     </Grid>
-                    
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
@@ -405,7 +368,6 @@ const DispatchDetailsPage: React.FC = () => {
                     </Grid>
                   </>
                 )}
-
                 {/* Notes */}
                 {selectedDispatch.notes && (
                   <>
@@ -415,7 +377,6 @@ const DispatchDetailsPage: React.FC = () => {
                         Notes
                       </Typography>
                     </Grid>
-                    
                     <Grid item xs={12}>
                       <TextField
                         fullWidth
@@ -428,14 +389,12 @@ const DispatchDetailsPage: React.FC = () => {
                     </Grid>
                   </>
                 )}
-
                 {/* Items */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
                   <Typography variant="h6" gutterBottom>
                     Dispatch Items
                   </Typography>
-                  
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
@@ -476,7 +435,6 @@ const DispatchDetailsPage: React.FC = () => {
               </Grid>
             )}
           </DialogContent>
-          
           <DialogActions>
             <Button onClick={handleDialogClose}>
               Close
@@ -487,5 +445,4 @@ const DispatchDetailsPage: React.FC = () => {
     </VoucherLayout>
   );
 };
-
 export default DispatchDetailsPage;

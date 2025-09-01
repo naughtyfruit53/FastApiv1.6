@@ -1,7 +1,5 @@
 // frontend/src/pages/mail/dashboard.tsx
-
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -41,7 +39,6 @@ import {
   Delete
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-
 interface MailStats {
   total_emails: number;
   unread_emails: number;
@@ -52,7 +49,6 @@ interface MailStats {
   draft_emails: number;
   spam_emails: number;
 }
-
 interface RecentEmail {
   id: number;
   subject: string;
@@ -64,7 +60,6 @@ interface RecentEmail {
   has_attachments: boolean;
   priority: 'low' | 'normal' | 'high' | 'urgent';
 }
-
 interface EmailAccount {
   id: number;
   name: string;
@@ -73,7 +68,6 @@ interface EmailAccount {
   sync_status: 'success' | 'error' | 'syncing';
   last_sync: string;
 }
-
 const MailDashboard: React.FC = () => {
   const router = useRouter();
   const [stats, setStats] = useState<MailStats | null>(null);
@@ -81,7 +75,6 @@ const MailDashboard: React.FC = () => {
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     // Simulate API call - replace with actual API integration
     const fetchData = async () => {
@@ -89,7 +82,6 @@ const MailDashboard: React.FC = () => {
         setLoading(true);
         // TODO: Replace with actual API calls
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-        
         // Mock data for demonstration
         const mockStats: MailStats = {
           total_emails: 1247,
@@ -101,7 +93,6 @@ const MailDashboard: React.FC = () => {
           draft_emails: 3,
           spam_emails: 12
         };
-
         const mockEmails: RecentEmail[] = [
           {
             id: 1,
@@ -137,7 +128,6 @@ const MailDashboard: React.FC = () => {
             priority: 'normal'
           }
         ];
-
         const mockAccounts: EmailAccount[] = [
           {
             id: 1,
@@ -156,7 +146,6 @@ const MailDashboard: React.FC = () => {
             last_sync: new Date(Date.now() - 15 * 60 * 1000).toISOString()
           }
         ];
-        
         setStats(mockStats);
         setRecentEmails(mockEmails);
         setEmailAccounts(mockAccounts);
@@ -166,14 +155,11 @@ const MailDashboard: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
-
   const handleNavigate = (path: string) => {
     router.push(path);
   };
-
   const formatTimeAgo = (dateTime: string) => {
     const date = new Date(dateTime);
     const now = new Date();
@@ -181,14 +167,12 @@ const MailDashboard: React.FC = () => {
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-
     if (diffMins < 1) {return 'Just now';}
     if (diffMins < 60) {return `${diffMins}m ago`;}
     if (diffHours < 24) {return `${diffHours}h ago`;}
     if (diffDays < 7) {return `${diffDays}d ago`;}
     return date.toLocaleDateString();
   };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'error';
@@ -198,7 +182,6 @@ const MailDashboard: React.FC = () => {
       default: return 'default';
     }
   };
-
   const getSyncStatusColor = (status: string) => {
     switch (status) {
       case 'success': return 'success';
@@ -207,7 +190,6 @@ const MailDashboard: React.FC = () => {
       default: return 'default';
     }
   };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -215,7 +197,6 @@ const MailDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
@@ -223,7 +204,6 @@ const MailDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (!stats) {
     return (
       <Box sx={{ p: 3 }}>
@@ -231,7 +211,6 @@ const MailDashboard: React.FC = () => {
       </Box>
     );
   }
-
   return (
     <Box 
       sx={{ 
@@ -304,7 +283,6 @@ const MailDashboard: React.FC = () => {
           </Button>
         </Box>
       </Box>
-
       {/* Overview Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -324,7 +302,6 @@ const MailDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -344,7 +321,6 @@ const MailDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -362,7 +338,6 @@ const MailDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -381,7 +356,6 @@ const MailDashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Main Content */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
@@ -469,7 +443,6 @@ const MailDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} md={4}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
@@ -515,7 +488,6 @@ const MailDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-
             <Grid item xs={12}>
               <Card>
                 <CardContent>
@@ -571,7 +543,6 @@ const MailDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-
             <Grid item xs={12}>
               <Card>
                 <CardContent>
@@ -607,5 +578,4 @@ const MailDashboard: React.FC = () => {
     </Box>
   );
 };
-
 export default MailDashboard;

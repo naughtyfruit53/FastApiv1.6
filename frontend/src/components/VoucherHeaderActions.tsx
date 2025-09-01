@@ -1,11 +1,9 @@
 // frontend/src/components/VoucherHeaderActions.tsx
 'use client';
-
 import React from 'react';
 import { Box, Button } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-
 interface VoucherHeaderActionsProps {
   mode: 'create' | 'edit' | 'view';
   voucherType: string; // e.g., 'Purchase Order', 'Sales Voucher', etc.
@@ -21,7 +19,6 @@ interface VoucherHeaderActionsProps {
   onView?: (voucher: any) => void;
   isLoading?: boolean;
 }
-
 const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
   mode,
   voucherType,
@@ -38,17 +35,14 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
   isLoading,
 }) => {
   const router = useRouter();
-
   const handleEditFallback = () => {
     if (currentId) {
       router.push(`${voucherRoute}?mode=edit&id=${currentId}`);
     }
   };
-
   const handleCreateFallback = () => {
     router.push(`${voucherRoute}?mode=create`);
   };
-
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       {mode === 'view' && (
@@ -117,5 +111,4 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
     </Box>
   );
 };
-
 export default VoucherHeaderActions;

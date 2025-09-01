@@ -9,10 +9,9 @@ import {
   Chip
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
 import { getProducts, createProduct } from '../services/masterService';
 import AddProductModal from './AddProductModal';
-
 interface Product {
   id: number;
   product_name: string; // Updated to match API response format
@@ -26,7 +25,6 @@ interface Product {
   description?: string;
   is_manufactured?: boolean;
 }
-
 interface ProductAutocompleteProps {
   value: Product | null;
   onChange: (product: Product | null) => void;
@@ -37,7 +35,6 @@ interface ProductAutocompleteProps {
   placeholder?: string;
   size?: 'small' | 'medium';
 }
-
 const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   value,
   onChange,
@@ -51,7 +48,6 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const queryClient = useQueryClient();
-
   // Fetch all products
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
@@ -59,14 +55,12 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
     enabled: true,
     staleTime: Infinity, // Cache indefinitely since it's all data
   });
-
   // Create product mutation
   const createProductMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: (newProduct) => {
       // Invalidate queries
       queryClient.invalidateQueries({queryKey: ['products']});
-      
       // Auto-select the newly created product
       onChange(newProduct);
       setAddModalOpen(false);
@@ -75,7 +69,6 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
       console.error('Failed to create product:', error);
     }
   });
-
   // Filtered options based on input
   const filteredOptions = React.useMemo(() => {
     const lowerInput = inputValue.toLowerCase();
@@ -85,7 +78,6 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
       (product.part_number || '').toLowerCase().includes(lowerInput)
     );
   }, [allProducts, inputValue]);
-
   // Create options array with "Add Product" option
   const options = React.useMemo(() => {
     const addOption = {
@@ -93,23 +85,18 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
       product_name: '➕ Add Product',
       isAddOption: true,
     };
-    
     return [addOption, ...filteredOptions];
   }, [filteredOptions]);
-
   const handleSelectionChange = (_: any, newValue: any) => {
     if (newValue?.isAddOption) {
       setAddModalOpen(true);
       return;
     }
-    
     onChange(newValue);
   };
-
   const handleAddProduct = async (productData: any) => {
     await createProductMutation.mutateAsync(productData);
   };
-
   return (
     <>
       <Autocomplete
@@ -157,7 +144,6 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
               </Box>
             );
           }
-
           return (
             <Box component="li" {...props}>
               <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
@@ -172,7 +158,6 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
             : "No products found"
         }
       />
-
       <AddProductModal
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
@@ -183,5 +168,4 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
     </>
   );
 };
-
 export default ProductAutocomplete;

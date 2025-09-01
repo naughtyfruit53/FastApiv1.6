@@ -1,43 +1,11 @@
 // frontend/src/pages/inventory/stock.tsx
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataService, companyService } from '../../services/authService';  // Assuming masterDataService is masterService
 import { getProductMovements, getLastVendorForProduct } from '../../services/stockService';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Container,
-  Typography,
-  Paper,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Checkbox,
-  FormControlLabel,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputAdornment,
-  Stack,
-  Grid,
-  Menu,
-  ListItemIcon,
-  ListItemText,
-  MenuItem as MuiMenuItem,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Edit,
@@ -52,14 +20,12 @@ import {
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'react-toastify';
-
 // Type declaration for jsPDF autoTable extension
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
 }
-
 const StockManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -71,28 +37,24 @@ const StockManagement: React.FC = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [movementsDialogOpen, setMovementsDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importMode, setImportMode] = useState<'add' | 'replace'>('replace');
   const [selectedStock, setSelectedStock] = useState<any>(null);
   const [selectedMovements, setSelectedMovements] = useState<any[]>([]);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuProductId, setMenuProductId] = useState<number | null>(null);
   const [manualFormData, setManualFormData] = useState({ product_id: 0, quantity: 0, unit: '' });
   const [editFormData, setEditFormData] = useState({ quantity: 0 });
-
   // Params object for stock fetch - service will clean invalid values from queryKey[1]
   const stockParams = {
     search: searchText,
     show_zero: showZero,
     // Add if you have low_stock_only or product_id states
   };
-
   // Only fetch stock data if organization context is ready
-  const { data: stockData, isLoading, error: stockError } = useQuery({
+const { data: stockData,error: stockError } = useQuery({
     queryKey: ['stock', stockParams],
     queryFn: () => masterDataService.getStock(),  // Fix the function call
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
-
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: () => masterDataService.getProducts(),
@@ -103,7 +65,6 @@ const StockManagement: React.FC = () => {
     queryFn: companyService.getCurrentCompany,
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
-
   const updateStockMutation = useMutation({
     mutationFn: (data: any) => masterDataService.updateStock(data.product_id, data),
     onSuccess: () => {
@@ -112,7 +73,6 @@ const StockManagement: React.FC = () => {
       setManualDialogOpen(false);
     }
   });
-
   const bulkImportMutation = useMutation({
     mutationFn: ({ file, mode }: { file: File; mode: 'add' | 'replace' }) => masterDataService.bulkImportStock(file, mode),
     onSuccess: () => {
@@ -124,13 +84,11 @@ const StockManagement: React.FC = () => {
       alert(`Import failed: ${error.userMessage || 'Please check the file format and required columns.'}`);
     }
   });
-
   const handleEditStock = (stock: any) => {
     setSelectedStock(stock);
     setEditFormData({ quantity: stock.quantity });
     setEditDialogOpen(true);
   };
-
   const handleSaveEdit = () => {
     if (!selectedStock || !selectedStock.product_id) {
       toast.error('Invalid stock selection. Please try again.');
@@ -138,19 +96,15 @@ const StockManagement: React.FC = () => {
     }
     updateStockMutation.mutate({ product_id: selectedStock.product_id, quantity: editFormData.quantity });
   };
-
   const handleManualEntry = () => {
     setManualDialogOpen(true);
   };
-
   const handleSaveManual = () => {
     updateStockMutation.mutate(manualFormData);
   };
-
   const handleDownloadTemplate = () => {
     masterDataService.downloadStockTemplate();
   };
-
   const handleImportClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -164,7 +118,6 @@ const StockManagement: React.FC = () => {
     };
     input.click();
   };
-
   const handleImportConfirm = (mode: 'add' | 'replace') => {
     if (selectedFile) {
       bulkImportMutation.mutate({ file: selectedFile, mode });
@@ -172,7 +125,6 @@ const StockManagement: React.FC = () => {
     setImportDialogOpen(false);
     setSelectedFile(null);
   };
-
   const handleExport = async () => {
     try {
       await masterDataService.exportStock({ search: searchText, show_zero: showZero });
@@ -180,23 +132,18 @@ const StockManagement: React.FC = () => {
       alert('Failed to export stock data. Please try again.');
     }
   };
-
   const handlePrint = () => {
     generateStockReport('stock_report.pdf', companyData, stockData);
   };
-
   const generateStockReport = (filePath: string, companyData: any, items: any[]) => {
     const doc = new jsPDF();
-
     doc.setFontSize(16);
     doc.text("Stock Report", 14, 20);
-
     let yPosition = 30;
     companyData.forEach(([key, value]: [string, string]) => {
       doc.text(`${key}: ${value}`, 14, yPosition);
       yPosition += 10;
     });
-
     yPosition += 20;
     doc.autoTable({
       startY: yPosition,
@@ -214,15 +161,12 @@ const StockManagement: React.FC = () => {
       styles: { cellPadding: 2, fontSize: 10 },
       headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] }
     });
-
     doc.save(filePath);
   };
-
   const resetForm = () => {
     setManualFormData({ product_id: 0, quantity: 0, unit: '' });
     setEditFormData({ quantity: 0 });
   };
-
   // Handle ESC key for canceling import dialog
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -235,17 +179,14 @@ const StockManagement: React.FC = () => {
       window.removeEventListener('keydown', handleEsc);
     };
   }, []);
-
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, productId: number) => {
     setMenuAnchorEl(event.currentTarget);
     setMenuProductId(productId);
   };
-
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
     setMenuProductId(null);
   };
-
   const handleShowMovement = async () => {
     if (menuProductId) {
       const movements = await getProductMovements(menuProductId);
@@ -254,7 +195,6 @@ const StockManagement: React.FC = () => {
     }
     handleMenuClose();
   };
-
   const handleCreatePurchaseOrder = async () => {
     if (menuProductId) {
       const lastVendor = await getLastVendorForProduct(menuProductId);
@@ -262,14 +202,12 @@ const StockManagement: React.FC = () => {
     }
     handleMenuClose();
   };
-
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" gutterBottom>
           Stock Management
         </Typography>
-
         {/* Show loading or error states before organization context is ready */}
         {!isOrgContextReady && (
           <Paper sx={{ p: 3, textAlign: 'center' }}>
@@ -281,7 +219,6 @@ const StockManagement: React.FC = () => {
             </Typography>
           </Paper>
         )}
-
         {/* Show error message if there's a stock loading error */}
         {isOrgContextReady && stockError && (
           <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'error.light', color: 'error.contrastText' }}>
@@ -293,7 +230,6 @@ const StockManagement: React.FC = () => {
             </Typography>
           </Paper>
         )}
-
         {/* Only show main interface when organization context is ready */}
         {isOrgContextReady && (
           <>
@@ -363,7 +299,6 @@ const StockManagement: React.FC = () => {
                 </Grid>
               </Grid>
             </Paper>
-
             <Box sx={{ 
               overflowY: 'auto', 
               maxHeight: 'calc(100vh - 200px)', /* Adjust based on header heights */
@@ -412,7 +347,6 @@ const StockManagement: React.FC = () => {
           </>
         )}
       </Container>
-
       {/* Kebab Menu */}
       <Menu
         anchorEl={menuAnchorEl}
@@ -428,7 +362,6 @@ const StockManagement: React.FC = () => {
           <ListItemText>Create Purchase Order</ListItemText>
         </MuiMenuItem>
       </Menu>
-
       {/* Movements Dialog */}
       <Dialog open={movementsDialogOpen} onClose={() => setMovementsDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Stock Movements</DialogTitle>
@@ -467,7 +400,6 @@ const StockManagement: React.FC = () => {
           <Button onClick={() => setMovementsDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-
       {/* Edit Stock Dialog */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
         <DialogTitle>Edit Stock</DialogTitle>
@@ -485,7 +417,6 @@ const StockManagement: React.FC = () => {
           <Button onClick={handleSaveEdit}>Save</Button>
         </DialogActions>
       </Dialog>
-
       {/* Manual Entry Dialog */}
       <Dialog open={manualDialogOpen} onClose={() => setManualDialogOpen(false)}>
         <DialogTitle>Manual Stock Entry</DialogTitle>
@@ -524,7 +455,6 @@ const StockManagement: React.FC = () => {
           <Button onClick={handleSaveManual}>Save</Button>
         </DialogActions>
       </Dialog>
-
       {/* Import Mode Prompt Dialog */}
       <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Import Stock</DialogTitle>
@@ -552,5 +482,4 @@ const StockManagement: React.FC = () => {
     </Box>
   );
 };
-
 export default StockManagement;

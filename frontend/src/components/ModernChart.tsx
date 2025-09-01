@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Typography, Paper } from '@mui/material';
-
 export interface ModernChartProps {
   title: string;
   data: any[];
@@ -9,7 +8,6 @@ export interface ModernChartProps {
   color?: 'primary' | 'success' | 'warning' | 'error' | 'info';
   loading?: boolean;
 }
-
 const ModernChart: React.FC<ModernChartProps> = ({
   title,
   data,
@@ -33,8 +31,6 @@ const ModernChart: React.FC<ModernChartProps> = ({
         return ['var(--primary-500)', 'var(--primary-600)', 'var(--primary-700)'];
     }
   };
-
-  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -98,7 +94,6 @@ const ModernChart: React.FC<ModernChartProps> = ({
       }
     }
   };
-
   if (loading) {
     return (
       <Paper className="modern-card" sx={{ p: 3 }}>
@@ -116,7 +111,6 @@ const ModernChart: React.FC<ModernChartProps> = ({
       </Paper>
     );
   }
-
   return (
     <Paper className="modern-card" sx={{ p: 3 }}>
       <Typography className="modern-card-title" variant="h6" gutterBottom>
@@ -153,5 +147,4 @@ const ModernChart: React.FC<ModernChartProps> = ({
     </Paper>
   );
 };
-
 export default ModernChart;

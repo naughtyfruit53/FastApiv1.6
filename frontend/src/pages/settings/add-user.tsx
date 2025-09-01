@@ -24,11 +24,9 @@ import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { canManageUsers, isAppSuperAdmin } from '../../types/user.types';
-
 const AddUser: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -41,11 +39,9 @@ const AddUser: React.FC = () => {
     employee_id: '',
     phone: ''
   });
-
   // Get user info for authorization (no token here—moved to mutation)
   const canAddUser = canManageUsers(user);
   const isSuperAdmin = isAppSuperAdmin(user);
-
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
       const token = localStorage.getItem('token'); // Moved here: Only runs on client during mutation
@@ -75,34 +71,28 @@ const AddUser: React.FC = () => {
       setSuccess(null);
     }
   });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-
     // Basic validation
     if (!formData.email || !formData.full_name || !formData.password) {
       setError('Please fill in all required fields');
       return;
     }
-
     // Password validation
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters long');
       return;
     }
-
     createUserMutation.mutate(formData);
   };
-
   const handleInputChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: string } }) => {
     setFormData(prev => ({
       ...prev,
       [field]: e.target.value
     }));
   };
-
   const resetForm = () => {
     setFormData({
       email: '',
@@ -117,7 +107,6 @@ const AddUser: React.FC = () => {
     setError(null);
     setSuccess(null);
   };
-
   // Check authorization
   if (!canAddUser) {
     return (
@@ -135,7 +124,6 @@ const AddUser: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -146,19 +134,16 @@ const AddUser: React.FC = () => {
           Add New User
         </Typography>
       </Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
-
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
           {success}
         </Alert>
       )}
-
       <Paper sx={{ p: 4 }}>
         <form onSubmit={handleSubmit}>
           <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -166,7 +151,6 @@ const AddUser: React.FC = () => {
             User Information
           </Typography>
           <Divider sx={{ mb: 3 }} />
-
           {/* Basic Information */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
             <TextField
@@ -186,7 +170,6 @@ const AddUser: React.FC = () => {
               required
             />
           </Box>
-
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
             <TextField
               fullWidth
@@ -212,7 +195,6 @@ const AddUser: React.FC = () => {
               </Select>
             </FormControl>
           </Box>
-
           {/* Additional Information */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
             <TextField
@@ -228,7 +210,6 @@ const AddUser: React.FC = () => {
               onChange={handleInputChange('designation')}
             />
           </Box>
-
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
             <TextField
               fullWidth
@@ -243,7 +224,6 @@ const AddUser: React.FC = () => {
               onChange={handleInputChange('phone')}
             />
           </Box>
-
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
             <Button
@@ -275,5 +255,4 @@ const AddUser: React.FC = () => {
     </Container>
   );
 };
-
 export default AddUser;

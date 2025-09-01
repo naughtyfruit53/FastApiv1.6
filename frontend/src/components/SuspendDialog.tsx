@@ -1,5 +1,4 @@
 'use client';
-
 // SuspendDialog component for requirement #5 - Account Suspension & License Pause
 import React, { useState } from 'react';
 import {
@@ -18,7 +17,6 @@ import {
 } from '@mui/material';
 import { Block as BlockIcon, PlayArrow as ActivateIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-
 interface SuspendDialogProps {
   open: boolean;
   onClose: () => void;
@@ -27,7 +25,6 @@ interface SuspendDialogProps {
   currentStatus: string;
   onSuccess?: () => void;
 }
-
 const SuspendDialog: React.FC<SuspendDialogProps> = ({
   open,
   onClose,
@@ -39,32 +36,25 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
   const [reason, setReason] = useState('');
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const isCurrentlySuspended = currentStatus === 'suspended';
   const action = isCurrentlySuspended ? 'activate' : 'suspend';
-
   const handleAction = async () => {
     if (!isCurrentlySuspended && !reason.trim()) {
       toast.error('Please provide a reason for suspension');
       return;
     }
-
     if (!confirmChecked) {
       toast.error('Please confirm the action');
       return;
     }
-
     try {
       setLoading(true);
-      
       const endpoint = isCurrentlySuspended
         ? `/api/v1/settings/settings/organization/${organizationId}/activate`
         : `/api/v1/settings/organization/${organizationId}/suspend`;
-
       const body = isCurrentlySuspended 
         ? {} 
         : { reason: reason.trim() };
-
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -73,19 +63,16 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
         },
         body: JSON.stringify(body),
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.detail || `Failed to ${action} organization`);
       }
-
       const result = await response.json();
       toast.success(result.message || `Organization ${action}d successfully`);
-      
       if (onSuccess) {
         onSuccess();
       }
-      
+// handleClose is defined later in this file
       handleClose();
     } catch (error) {
       console.error(`${action} error:`, error);
@@ -94,16 +81,13 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
       setLoading(false);
     }
   };
-
   const handleClose = () => {
     setReason('');
     setConfirmChecked(false);
     setLoading(false);
     onClose();
   };
-
   const isValid = isCurrentlySuspended ? confirmChecked : (reason.trim().length > 0 && confirmChecked);
-
   return (
     <Dialog 
       open={open} 
@@ -124,7 +108,6 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
           </>
         )}
       </DialogTitle>
-      
       <DialogContent>
         <Alert severity={isCurrentlySuspended ? "info" : "warning"} sx={{ mb: 2 }}>
           <Typography variant="subtitle1" fontWeight="bold">
@@ -134,14 +117,12 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
             }
           </Typography>
         </Alert>
-
         <Typography variant="body1" gutterBottom>
           {isCurrentlySuspended 
             ? `Are you sure you want to activate "${organizationName}"? This will restore full access to all users in this organization.`
             : `Are you sure you want to suspend "${organizationName}"? This will immediately block access for all users in this organization.`
           }
         </Typography>
-
         {!isCurrentlySuspended && (
           <Box sx={{ my: 2 }}>
             <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -155,7 +136,6 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
             </ul>
           </Box>
         )}
-
         {!isCurrentlySuspended && (
           <Box sx={{ my: 2 }}>
             <TextField
@@ -171,7 +151,6 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
             />
           </Box>
         )}
-
         <FormControlLabel
           control={
             <Checkbox
@@ -185,14 +164,12 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
             : `I confirm that I want to suspend "${organizationName}"`
           }
         />
-
         {!isCurrentlySuspended && (
           <Alert severity="error" sx={{ mt: 2 }}>
             This action takes effect immediately and will affect all users in the organization.
           </Alert>
         )}
       </DialogContent>
-
       <DialogActions>
         <Button 
           onClick={handleClose} 
@@ -216,5 +193,4 @@ const SuspendDialog: React.FC<SuspendDialogProps> = ({
     </Dialog>
   );
 };
-
 export default SuspendDialog;

@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Box,
-  Typography,
-  Alert,
-  CircularProgress,
-  SelectChangeEvent
-} from '@mui/material';
+import { from '@mui/material';
 import { organizationService } from '../services/organizationService';
-
 interface Organization {
   id: number;
   name: string;
@@ -19,24 +8,20 @@ interface Organization {
   role: string;
   is_current: boolean;
 }
-
 const OrganizationSwitcher: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currentOrganization, setCurrentOrganization] = useState<number | ''>('');
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
   useEffect(() => {
     fetchUserOrganizations();
   }, []);
-
   const fetchUserOrganizations = async () => {
     try {
       setLoading(true);
       const orgs = await organizationService.getUserOrganizations();
       setOrganizations(orgs);
-      
       // Find current organization
       const current = orgs.find((org: Organization) => org.is_current);
       if (current) {
@@ -48,20 +33,15 @@ const OrganizationSwitcher: React.FC = () => {
       setLoading(false);
     }
   };
-
   const handleOrganizationSwitch = async (event: SelectChangeEvent<number | ''>) => {
     const organizationId = event.target.value as number;
-    
     if (!organizationId || organizationId === currentOrganization) {
       return;
     }
-
     try {
       setSwitching(true);
       setErr(null);
-      
       await organizationService.switchOrganization(organizationId);
-      
       // Update current organization state
       setCurrentOrganization(organizationId);
       setOrganizations(prev => 
@@ -70,17 +50,14 @@ const OrganizationSwitcher: React.FC = () => {
           is_current: org.id === organizationId
         }))
       );
-      
       // Call the page to update all components with new organization context
       window.location.reload();
-      
     } catch (error: any) {
       setErr(error.message);
     } finally {
       setSwitching(false);
     }
   };
-
   if (loading) {
     return (
       <Box display="flex" alignItems="center" gap={1}>
@@ -89,7 +66,6 @@ const OrganizationSwitcher: React.FC = () => {
       </Box>
     );
   }
-
   if (organizations.length === 0) {
     return (
       <Typography variant="caption" color="text.secondary">
@@ -97,7 +73,6 @@ const OrganizationSwitcher: React.FC = () => {
       </Typography>
     );
   }
-
   if (organizations.length === 1) {
     const org = organizations[0];
     return (
@@ -111,7 +86,6 @@ const OrganizationSwitcher: React.FC = () => {
       </Box>
     );
   }
-
   return (
     <Box sx={{ minWidth: 200 }}>
       {err && (
@@ -119,7 +93,6 @@ const OrganizationSwitcher: React.FC = () => {
           {err}
         </Alert>
       )}
-      
       <FormControl fullWidth size="small">
         <InputLabel id="organization-select-label">Organization</InputLabel>
         <Select
@@ -143,7 +116,6 @@ const OrganizationSwitcher: React.FC = () => {
           ))}
         </Select>
       </FormControl>
-      
       {switching && (
         <Box display="flex" alignItems="center" gap={1} mt={1}>
           <CircularProgress size={16} />
@@ -153,5 +125,4 @@ const OrganizationSwitcher: React.FC = () => {
     </Box>
   );
 };
-
 export default OrganizationSwitcher;

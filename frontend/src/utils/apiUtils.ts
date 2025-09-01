@@ -1,14 +1,11 @@
 // Revised: v1/frontend/src/utils/apiUtils.ts
-
 import axios from 'axios';
-
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
 // Add token interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -17,7 +14,6 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
 // Add error handling interceptor
 api.interceptors.response.use(
   (response) => response,
@@ -30,7 +26,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 export const handleApiError = (error: any): string => {
   if (error.response) {
     return error.response.data?.message || error.response.data?.detail || 'An error occurred';
@@ -40,7 +35,6 @@ export const handleApiError = (error: any): string => {
     return error.message || 'Unknown error';
   }
 };
-
 export const getApiParams = (params: any): URLSearchParams => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -50,12 +44,10 @@ export const getApiParams = (params: any): URLSearchParams => {
   });
   return searchParams;
 };
-
 export const uploadStockBulk = async (file: File): Promise<any> => {
   try {
     const formData = new FormData();
     formData.append('file', file); // Ensure field name matches backend expectation ('file')
-
     const response = await api.post('/stock/bulk', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -66,5 +58,4 @@ export const uploadStockBulk = async (file: File): Promise<any> => {
     throw new Error(handleApiError(error));
   }
 };
-
 export default api;

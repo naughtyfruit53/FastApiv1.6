@@ -1,11 +1,9 @@
 // frontend/src/components/AdminUserForm.tsx
 import React, { useState } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, Button } from '@mui/material';
-
 interface AdminUserFormProps {
   onSubmit: (formData: any) => void;
 }
-
 const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
     email: '',
@@ -13,16 +11,13 @@ const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
     role: 'platform_admin',
     password: ''
   });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
-
   const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
   };
-
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       <TextField
@@ -65,5 +60,4 @@ const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
     </Box>
   );
 };
-
 export default AdminUserForm;

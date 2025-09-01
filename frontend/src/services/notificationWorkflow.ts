@@ -1,13 +1,10 @@
 // src/services/notificationWorkflow.ts
 // Workflow integration utilities for triggering notifications from other modules
-
 import api from '../lib/api';
-
 export interface WorkflowNotificationTrigger {
   trigger_event: string;
   context_data: Record<string, any>;
 }
-
 export interface JobNotificationContext {
   job_id: number;
   job_title?: string;
@@ -19,7 +16,6 @@ export interface JobNotificationContext {
   priority?: string;
   service_type?: string;
 }
-
 export interface SLANotificationContext {
   sla_id: number;
   job_id: number;
@@ -28,7 +24,6 @@ export interface SLANotificationContext {
   time_remaining?: number;
   expected_completion?: string;
 }
-
 export interface FeedbackNotificationContext {
   feedback_id: number;
   job_id: number;
@@ -38,11 +33,8 @@ export interface FeedbackNotificationContext {
   rating?: number;
   requires_attention?: boolean;
 }
-
 // Notification workflow triggers for different modules
-
 export class NotificationWorkflow {
-  
   // Job Management Notifications
   static async triggerJobAssignment(context: JobNotificationContext): Promise<void> {
     try {
@@ -59,7 +51,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger job assignment notification:', error);
     }
   }
-
   static async triggerJobUpdate(context: JobNotificationContext & { update_type: string; details?: string }): Promise<void> {
     try {
       await api.post('/api/v1/notifications/trigger', {
@@ -75,7 +66,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger job update notification:', error);
     }
   }
-
   static async triggerJobCompletion(context: JobNotificationContext): Promise<void> {
     try {
       await api.post('/api/v1/notifications/trigger', {
@@ -91,7 +81,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger job completion notification:', error);
     }
   }
-
   // SLA Management Notifications
   static async triggerSLABreach(context: SLANotificationContext): Promise<void> {
     try {
@@ -100,7 +89,6 @@ export class NotificationWorkflow {
         critical: 'SLA Critical',
         overdue: 'SLA Breach'
       };
-
       await api.post('/api/v1/notifications/trigger', {
         trigger_event: 'sla_breach',
         context_data: {
@@ -114,7 +102,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger SLA breach notification:', error);
     }
   }
-
   // Feedback Management Notifications
   static async triggerFeedbackRequest(context: FeedbackNotificationContext): Promise<void> {
     try {
@@ -131,7 +118,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger feedback request notification:', error);
     }
   }
-
   static async triggerFeedbackReceived(context: FeedbackNotificationContext): Promise<void> {
     try {
       await api.post('/api/v1/notifications/trigger', {
@@ -147,7 +133,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger feedback received notification:', error);
     }
   }
-
   // Appointment Management Notifications
   static async triggerAppointmentReminder(context: {
     appointment_id: number;
@@ -172,7 +157,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger appointment reminder notification:', error);
     }
   }
-
   // Dispatch Management Notifications
   static async triggerDispatchUpdate(context: {
     dispatch_id: number;
@@ -196,7 +180,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger dispatch update notification:', error);
     }
   }
-
   // System Notifications
   static async triggerSystemAlert(context: {
     alert_type: string;
@@ -219,7 +202,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger system alert notification:', error);
     }
   }
-
   // Batch notification utilities
   static async triggerBatchNotifications(triggers: WorkflowNotificationTrigger[]): Promise<void> {
     try {
@@ -232,7 +214,6 @@ export class NotificationWorkflow {
       console.error('Failed to trigger batch notifications:', error);
     }
   }
-
   // Utility method to trigger custom notifications
   static async triggerCustomNotification(
     eventType: string,
@@ -255,9 +236,8 @@ export class NotificationWorkflow {
     }
   }
 }
-
 // React hooks for workflow integration
-export const useNotificationWorkflow = () => {
+export const useNotificationWorkflow = (): any => {
   return {
     triggerJobAssignment: NotificationWorkflow.triggerJobAssignment,
     triggerJobUpdate: NotificationWorkflow.triggerJobUpdate,
@@ -271,11 +251,9 @@ export const useNotificationWorkflow = () => {
     triggerCustomNotification: NotificationWorkflow.triggerCustomNotification,
   };
 };
-
 // Integration helper for existing modules
-export const integrateNotificationsWithModule = (moduleName: string) => {
+export const integrateNotificationsWithModule = (moduleName: string): any => {
   console.log(`Notification integration available for ${moduleName} module`);
-  
   return {
     // Generic trigger method for module-specific events
     trigger: (eventType: string, context: Record<string, any>) => {
@@ -286,7 +264,6 @@ export const integrateNotificationsWithModule = (moduleName: string) => {
         { ...context, module: moduleName }
       );
     },
-    
     // Batch trigger for multiple events
     triggerBatch: (events: Array<{ eventType: string; context: Record<string, any> }>) => {
       const triggers = events.map(event => ({
@@ -297,5 +274,4 @@ export const integrateNotificationsWithModule = (moduleName: string) => {
     }
   };
 };
-
 export default NotificationWorkflow;

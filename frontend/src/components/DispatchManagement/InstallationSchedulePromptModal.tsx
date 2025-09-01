@@ -1,6 +1,5 @@
 // src/components/DispatchManagement/InstallationSchedulePromptModal.tsx
 'use client';
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -32,7 +31,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { InstallationJobCreate } from '../../services/dispatchService';
 import { INSTALLATION_JOB_PRIORITIES, InstallationJobPriority } from '../../types/dispatch.types';
-
 interface InstallationSchedulePromptModalProps {
   open: boolean;
   onClose: () => void;
@@ -42,7 +40,6 @@ interface InstallationSchedulePromptModalProps {
   customerName?: string;
   deliveryAddress?: string;
 }
-
 const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalProps> = ({
   open,
   onClose,
@@ -63,37 +60,30 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
   const [assignedTechnician, setAssignedTechnician] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const handleSubmit = async () => {
     if (createSchedule === 'no') {
       onClose();
       return;
     }
-
     if (!dispatchOrderId || !customerId) {
       setError('Missing required dispatch order or customer information');
       return;
     }
-
     if (!installationAddress.trim()) {
       setError('Installation address is required');
       return;
     }
-
     if (!scheduledDate) {
       setError('Scheduled date and time are required');
       return;
     }
-
     if (estimatedDuration <= 0) {
       setError('Estimated duration must be greater than 0');
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
-
       const installationJobData: InstallationJobCreate = {
         dispatch_order_id: dispatchOrderId,
         customer_id: customerId,
@@ -107,7 +97,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
         installation_notes: installationNotes.trim() || null,
         assigned_technician_id: assignedTechnician ? parseInt(assignedTechnician) : null
       };
-
       await onCreateInstallation(installationJobData);
       onClose();
     } catch (err: any) {
@@ -117,11 +106,9 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
       setLoading(false);
     }
   };
-
   const handleCancel = () => {
     onClose();
   };
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -133,14 +120,12 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
             </Typography>
           </Box>
         </DialogTitle>
-
         <DialogContent dividers>
           <Box sx={{ mb: 3 }}>
             <Alert severity="info" sx={{ mb: 2 }}>
               A delivery challan or service voucher has been created for {customerName || 'Unknown Customer'}. 
               Would you like to schedule an installation for the delivered items?
             </Alert>
-
             <FormControl component="fieldset" sx={{ mb: 3 }}>
               <Typography variant="subtitle1" gutterBottom>
                 Do you want to create an installation schedule for this customer?
@@ -162,22 +147,18 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                 />
               </RadioGroup>
             </FormControl>
-
             {createSchedule === 'yes' && (
               <>
                 <Divider sx={{ mb: 3 }} />
-                
                 <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <ScheduleIcon />
                   Installation Details
                 </Typography>
-
                 {error && (
                   <Alert severity="error" sx={{ mb: 2 }}>
                     {error}
                   </Alert>
                 )}
-
                 <Grid container spacing={3}>
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
@@ -196,7 +177,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       </Select>
                     </FormControl>
                   </Grid>
-
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
                     <DateTimePicker
@@ -211,7 +191,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       }}
                     />
                   </Grid>
-
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
                     <TextField
@@ -224,7 +203,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       helperText="Expected time to complete installation"
                     />
                   </Grid>
-
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
                     <TextField
@@ -236,7 +214,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       type="number"
                     />
                   </Grid>
-
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12}>
                     <TextField
@@ -250,7 +227,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       helperText="Where the installation will take place"
                     />
                   </Grid>
-
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
                     <TextField
@@ -261,7 +237,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       helperText="Primary contact for installation"
                     />
                   </Grid>
-
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12} md={6}>
                     <TextField
@@ -272,7 +247,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       helperText="Phone number for coordination"
                     />
                   </Grid>
-
                   {/* @ts-expect-error Suppress Grid item prop type mismatch due to MUI type resolution */}
                   <Grid item xs={12}>
                     <TextField
@@ -290,7 +264,6 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
             )}
           </Box>
         </DialogContent>
-
         <DialogActions>
           <Button 
             onClick={handleCancel}
@@ -311,5 +284,4 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
     </LocalizationProvider>
   );
 };
-
 export default InstallationSchedulePromptModal;

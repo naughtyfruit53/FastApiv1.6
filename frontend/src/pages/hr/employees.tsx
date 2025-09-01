@@ -53,16 +53,13 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
 import { hrService, Employee } from '../../services';
 import AddEmployeeModal from '../../components/AddEmployeeModal';
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -79,14 +76,12 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 function a11yProps(index: number) {
   return {
     id: `employee-tab-${index}`,
     'aria-controls': `employee-tabpanel-${index}`,
   };
 }
-
 const EmployeesManagement: NextPage = () => {
   const router = useRouter();
   const { user } = useAuth();
@@ -102,11 +97,9 @@ const EmployeesManagement: NextPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'view'>('view');
-
   useEffect(() => {
     fetchEmployees();
   }, []);
-
   const fetchEmployees = async () => {
     try {
       setLoading(true);
@@ -121,58 +114,46 @@ const EmployeesManagement: NextPage = () => {
       setLoading(false);
     }
   };
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
     setPage(1);
   };
-
   const handleFilterDepartment = (event: any) => {
     setFilterDepartment(event.target.value);
     setPage(1);
   };
-
   const handleFilterStatus = (event: any) => {
     setFilterStatus(event.target.value);
     setPage(1);
   };
-
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
-
   const handleViewEmployee = (employee: any) => {
     setSelectedEmployee(employee);
     setDialogMode('view');
     setDialogOpen(true);
   };
-
   const handleEditEmployee = (employee: any) => {
     setSelectedEmployee(employee);
     setDialogMode('edit');
     setDialogOpen(true);
   };
-
   const handleCreateEmployee = () => {
     setSelectedEmployee(null);
     setDialogMode('create');
     setDialogOpen(true);
   };
-
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedEmployee(null);
   };
-
-  const handleAddEmployee = async (newEmployee: any) => {
     setDialogOpen(false);
     await fetchEmployees(); // Refresh list
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -187,7 +168,6 @@ const EmployeesManagement: NextPage = () => {
         return 'default';
     }
   };
-
   const getEmployeeTypeColor = (type: string) => {
     switch (type) {
       case 'permanent':
@@ -202,31 +182,24 @@ const EmployeesManagement: NextPage = () => {
         return 'default';
     }
   };
-
   // Filter employees based on search and filters
   const filteredEmployees = employees.filter(employee => {
     const matchesSearch = (employee.user?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          employee.employee_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (employee.user?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
     const employeeDept = employee.department || employee.user?.department;
     const matchesDepartment = !filterDepartment || employeeDept === filterDepartment;
     const matchesStatus = !filterStatus || employee.employment_status === filterStatus;
-    
     return matchesSearch && matchesDepartment && matchesStatus;
   });
-
   // Paginate results
   const paginatedEmployees = filteredEmployees.slice(
     (page - 1) * rowsPerPage,
     page * rowsPerPage
   );
-
   const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage);
-
   // Get unique departments for filter
   const departments = [...new Set(employees.map(emp => emp.department || emp.user?.department).filter(Boolean))];
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
@@ -256,7 +229,6 @@ const EmployeesManagement: NextPage = () => {
           </Button>
         </Box>
       </Box>
-
       {/* Error Alert */}
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -266,7 +238,6 @@ const EmployeesManagement: NextPage = () => {
           </Button>
         </Alert>
       )}
-
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -286,7 +257,6 @@ const EmployeesManagement: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -304,7 +274,6 @@ const EmployeesManagement: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -322,7 +291,6 @@ const EmployeesManagement: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -341,7 +309,6 @@ const EmployeesManagement: NextPage = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Filters and Search */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">
@@ -405,7 +372,6 @@ const EmployeesManagement: NextPage = () => {
           </Grid>
         </Grid>
       </Paper>
-
       {/* Employees Table */}
       <Paper>
         <TableContainer>
@@ -508,7 +474,6 @@ const EmployeesManagement: NextPage = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Pagination */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
           <Typography variant="body2" color="textSecondary">
@@ -522,7 +487,6 @@ const EmployeesManagement: NextPage = () => {
           />
         </Box>
       </Paper>
-
       {/* Employee Modal */}
       <AddEmployeeModal
         open={dialogOpen}
@@ -534,5 +498,4 @@ const EmployeesManagement: NextPage = () => {
     </Container>
   );
 };
-
 export default EmployeesManagement;

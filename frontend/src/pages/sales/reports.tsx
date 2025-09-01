@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -52,7 +51,6 @@ import * as XLSX from 'exceljs';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-
 interface SalesData {
   period: string;
   revenue: number;
@@ -61,7 +59,6 @@ interface SalesData {
   conversionRate: number;
   growth: number;
 }
-
 interface SalespersonPerformance {
   name: string;
   revenue: number;
@@ -70,7 +67,6 @@ interface SalespersonPerformance {
   achievement: number;
   commission: number;
 }
-
 interface ProductPerformance {
   product: string;
   revenue: number;
@@ -78,26 +74,21 @@ interface ProductPerformance {
   margin: number;
   growth: number;
 }
-
 interface RegionPerformance {
   region: string;
   revenue: number;
   deals: number;
   growth: number;
 }
-
 const SalesReports: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('last_quarter');
-  const [reportType, setReportType] = useState('overview');
   const [tabValue, setTabValue] = useState(0);
-  
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [salespersonData, setSalespersonData] = useState<SalespersonPerformance[]>([]);
   const [productData, setProductData] = useState<ProductPerformance[]>([]);
   const [regionData, setRegionData] = useState<RegionPerformance[]>([]);
-
   // Mock data - replace with actual API call
   useEffect(() => {
     const fetchReportData = async () => {
@@ -105,7 +96,6 @@ const SalesReports: React.FC = () => {
         setLoading(true);
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
         const mockSalesData: SalesData[] = [
           { period: 'Jan 2024', revenue: 850000, deals: 23, averageDealSize: 36956, conversionRate: 23.5, growth: 12.3 },
           { period: 'Feb 2024', revenue: 920000, deals: 27, averageDealSize: 34074, conversionRate: 25.1, growth: 8.2 },
@@ -114,7 +104,6 @@ const SalesReports: React.FC = () => {
           { period: 'May 2024', revenue: 1120000, deals: 29, averageDealSize: 38621, conversionRate: 26.7, growth: 6.7 },
           { period: 'Jun 2024', revenue: 980000, deals: 25, averageDealSize: 39200, conversionRate: 24.5, growth: -12.5 }
         ];
-
         const mockSalespersonData: SalespersonPerformance[] = [
           { name: 'Sarah Johnson', revenue: 450000, deals: 12, quota: 400000, achievement: 112.5, commission: 36000 },
           { name: 'David Brown', revenue: 380000, deals: 9, quota: 350000, achievement: 108.6, commission: 30400 },
@@ -122,7 +111,6 @@ const SalesReports: React.FC = () => {
           { name: 'Lisa Thompson', revenue: 275000, deals: 8, quota: 280000, achievement: 98.2, commission: 22000 },
           { name: 'Robert Chen', revenue: 195000, deals: 6, quota: 250000, achievement: 78.0, commission: 15600 }
         ];
-
         const mockProductData: ProductPerformance[] = [
           { product: 'ERP Software', revenue: 1200000, units: 15, margin: 65.5, growth: 18.2 },
           { product: 'CRM Software', revenue: 850000, units: 23, margin: 58.3, growth: 12.7 },
@@ -130,14 +118,12 @@ const SalesReports: React.FC = () => {
           { product: 'Cloud Services', revenue: 480000, units: 12, margin: 45.8, growth: 8.9 },
           { product: 'Support Services', revenue: 320000, units: 35, margin: 38.2, growth: 5.1 }
         ];
-
         const mockRegionData: RegionPerformance[] = [
           { region: 'West Coast', revenue: 1850000, deals: 42, growth: 15.8 },
           { region: 'East Coast', revenue: 1650000, deals: 38, growth: 12.3 },
           { region: 'Central', revenue: 980000, deals: 24, growth: 8.7 },
           { region: 'South', revenue: 720000, deals: 18, growth: 22.1 }
         ];
-        
         setSalesData(mockSalesData);
         setSalespersonData(mockSalespersonData);
         setProductData(mockProductData);
@@ -149,55 +135,50 @@ const SalesReports: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchReportData();
   }, [timeRange]);
-
   const totalRevenue = salesData.reduce((sum, data) => sum + data.revenue, 0);
   const totalDeals = salesData.reduce((sum, data) => sum + data.deals, 0);
   const avgDealSize = totalDeals > 0 ? totalRevenue / totalDeals : 0;
   const avgConversionRate = salesData.length > 0 
     ? salesData.reduce((sum, data) => sum + data.conversionRate, 0) / salesData.length 
     : 0;
-
   const handleExport = async (format: 'excel' | 'pdf') => {
     try {
       if (format === 'excel') {
+// exportToExcel is defined later in this file
         await exportToExcel();
       } else if (format === 'pdf') {
+// exportToPDF is defined later in this file
         await exportToPDF();
       }
     } catch (error) {
       console.error(`Error exporting as ${format}:`, error);
     }
   };
-
   const exportToExcel = async () => {
     const workbook = new XLSX.Workbook();
-    
     // Sales Overview Sheet
     const overviewSheet = workbook.addWorksheet('Sales Overview');
-    
     // Add headers
     overviewSheet.addRow(['Metric', 'Value']);
     overviewSheet.addRow(['Total Revenue', `$${totalRevenue.toLocaleString()}`]);
+// TODO: Define or import avgGrowth
     overviewSheet.addRow(['Revenue Growth', `${avgGrowth.toFixed(1)}%`]);
+// TODO: Define or import avgConversion
     overviewSheet.addRow(['Conversion Rate', `${avgConversion.toFixed(1)}%`]);
+// TODO: Define or import totalLeads
     overviewSheet.addRow(['Total Leads', totalLeads]);
     overviewSheet.addRow(['Export Date', new Date().toLocaleDateString()]);
     overviewSheet.addRow(['Time Range', timeRange.replace('_', ' ').toUpperCase()]);
-
     // Style the header row
     overviewSheet.getRow(1).font = { bold: true };
     overviewSheet.getColumn(1).width = 20;
     overviewSheet.getColumn(2).width = 20;
-
     // Sales Data Sheet
     const dataSheet = workbook.addWorksheet('Sales Data');
-    
     // Add headers for sales data
     dataSheet.addRow(['Period', 'Revenue', 'Leads', 'Customers', 'Conversion Rate (%)', 'Growth (%)']);
-    
     // Add sales data
     salesData.forEach(data => {
       dataSheet.addRow([
@@ -209,41 +190,36 @@ const SalesReports: React.FC = () => {
         data.growth
       ]);
     });
-
     // Style the header row
     dataSheet.getRow(1).font = { bold: true };
     dataSheet.columns.forEach(column => {
       column.width = 15;
     });
-
     // Generate buffer and save file
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, `sales-report-${timeRange}-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
-
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
     // Add title
     doc.setFontSize(20);
     doc.text('Sales Report', 20, 20);
-    
     // Add metadata
     doc.setFontSize(12);
     doc.text(`Time Range: ${timeRange.replace('_', ' ').toUpperCase()}`, 20, 35);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 45);
-    
     // Add summary metrics
     doc.setFontSize(14);
     doc.text('Summary Metrics:', 20, 65);
-    
     doc.setFontSize(11);
     doc.text(`Total Revenue: $${totalRevenue.toLocaleString()}`, 20, 75);
+// TODO: Define or import avgGrowth
     doc.text(`Revenue Growth: ${avgGrowth.toFixed(1)}%`, 20, 85);
+// TODO: Define or import avgConversion
     doc.text(`Conversion Rate: ${avgConversion.toFixed(1)}%`, 20, 95);
+// TODO: Define or import totalLeads
     doc.text(`Total Leads: ${totalLeads}`, 20, 105);
-
     // Add sales data table
     const tableData = salesData.map(data => [
       data.period,
@@ -253,7 +229,6 @@ const SalesReports: React.FC = () => {
       `${data.conversionRate}%`,
       `${data.growth}%`
     ]);
-
     (doc as any).autoTable({
       head: [['Period', 'Revenue', 'Leads', 'Customers', 'Conversion Rate', 'Growth']],
       body: tableData,
@@ -261,15 +236,12 @@ const SalesReports: React.FC = () => {
       styles: { fontSize: 10 },
       headStyles: { fillColor: [41, 128, 185] }
     });
-
     // Save the PDF
     doc.save(`sales-report-${timeRange}-${new Date().toISOString().split('T')[0]}.pdf`);
   };
-
   const handlePrint = () => {
     window.print();
   };
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -279,7 +251,6 @@ const SalesReports: React.FC = () => {
       </Container>
     );
   }
-
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -287,7 +258,6 @@ const SalesReports: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -320,7 +290,6 @@ const SalesReports: React.FC = () => {
           </ButtonGroup>
         </Box>
       </Box>
-
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -344,7 +313,6 @@ const SalesReports: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -365,7 +333,6 @@ const SalesReports: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -387,7 +354,6 @@ const SalesReports: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -409,7 +375,6 @@ const SalesReports: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Tabs for different report types */}
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
@@ -419,7 +384,6 @@ const SalesReports: React.FC = () => {
           <Tab label="Regional Analysis" />
         </Tabs>
       </Paper>
-
       {/* Sales Trends Tab */}
       {tabValue === 0 && (
         <Grid container spacing={3}>
@@ -472,7 +436,6 @@ const SalesReports: React.FC = () => {
           </Grid>
         </Grid>
       )}
-
       {/* Salesperson Performance Tab */}
       {tabValue === 1 && (
         <Grid container spacing={3}>
@@ -538,7 +501,6 @@ const SalesReports: React.FC = () => {
           </Grid>
         </Grid>
       )}
-
       {/* Product Performance Tab */}
       {tabValue === 2 && (
         <Grid container spacing={3}>
@@ -605,7 +567,6 @@ const SalesReports: React.FC = () => {
           </Grid>
         </Grid>
       )}
-
       {/* Regional Analysis Tab */}
       {tabValue === 3 && (
         <Grid container spacing={3}>
@@ -672,5 +633,4 @@ const SalesReports: React.FC = () => {
     </Container>
   );
 };
-
 export default SalesReports;

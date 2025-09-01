@@ -1,31 +1,24 @@
 'use client';
-
 import React, { useState } from 'react';
 import { Button, Typography, CircularProgress, Alert, Box } from '@mui/material';
 import axios from 'axios';
-
-const ExcelUploadComponent = ({ endpoint = '/api/v1/stock/import/excel' }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+const ExcelUploadComponent = ({ endpoint = '/api/v1/stock/import/excel' }): void => {  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<{ message: string; total_processed: number; errors: any[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedFile(event.target.files?.[0] || null);
     setResponse(null);
     setError(null);
   };
-
   const handleUpload = async () => {
     if (!selectedFile) {
       setError('Please select an Excel file first');
       return;
     }
-
     setLoading(true);
     const formData = new FormData();
     formData.append('file', selectedFile);
-
     try {
       const res = await axios.post(endpoint, formData, {
         headers: {
@@ -42,7 +35,6 @@ const ExcelUploadComponent = ({ endpoint = '/api/v1/stock/import/excel' }) => {
       setLoading(false);
     }
   };
-
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6">Upload Excel File</Typography>
@@ -59,5 +51,4 @@ const ExcelUploadComponent = ({ endpoint = '/api/v1/stock/import/excel' }) => {
     </Box>
   );
 };
-
 export default ExcelUploadComponent;

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -34,7 +33,6 @@ import {
   UserWithServiceRoles,
   ROLE_BADGE_COLORS
 } from '../../types/rbac.types';
-
 interface UserRoleAssignmentDialogProps {
   open: boolean;
   onClose: () => void;
@@ -43,7 +41,6 @@ interface UserRoleAssignmentDialogProps {
   onAssign: (userId: number, roleIds: number[]) => void;
   onRemove: (userId: number, roleId: number) => void;
 }
-
 const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
   open,
   onClose,
@@ -54,14 +51,11 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
 }) => {
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
-
   useEffect(() => {
     setSelectedRoleIds([]);
   }, [user, open]);
-
   const handleAssignRoles = async () => {
     if (selectedRoleIds.length === 0) {return;}
-    
     setLoading(true);
     try {
       await onAssign(user.id, selectedRoleIds);
@@ -72,7 +66,6 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
       setLoading(false);
     }
   };
-
   const handleRemoveRole = async (roleId: number) => {
     setLoading(true);
     try {
@@ -83,17 +76,14 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
       setLoading(false);
     }
   };
-
   const handleRoleSelectionChange = (event: any) => {
     const value = event.target.value;
     setSelectedRoleIds(typeof value === 'string' ? value.split(',').map(Number) : value);
   };
-
   // Filter out roles that the user already has
   const assignableRoles = availableRoles.filter(role => 
     !user.service_roles.some(userRole => userRole.id === role.id)
   );
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
@@ -109,7 +99,6 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
           </Box>
         </Box>
       </DialogTitle>
-      
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Current Roles */}
@@ -117,7 +106,6 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
             <Typography variant="h6" sx={{ mb: 2 }}>
               Current Service Roles
             </Typography>
-            
             {user.service_roles.length === 0 ? (
               <Alert severity="info">
                 This user has no service roles assigned.
@@ -155,15 +143,12 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
               </List>
             )}
           </Box>
-          
           <Divider />
-          
           {/* Assign New Roles */}
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Assign New Roles
             </Typography>
-            
             {assignableRoles.length === 0 ? (
               <Alert severity="warning">
                 No additional roles available for assignment.
@@ -204,7 +189,6 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
                     ))}
                   </Select>
                 </FormControl>
-                
                 <Button
                   variant="contained"
                   onClick={handleAssignRoles}
@@ -216,7 +200,6 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
               </Box>
             )}
           </Box>
-          
           {/* User Info */}
           <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
@@ -234,7 +217,6 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
           </Box>
         </Box>
       </DialogContent>
-      
       <DialogActions>
         <Button onClick={onClose}>
           Close
@@ -243,5 +225,4 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
     </Dialog>
   );
 };
-
 export default UserRoleAssignmentDialog;

@@ -1,6 +1,5 @@
 // pages/analytics/customer.tsx
 // Customer Analytics page - Business intelligence and customer insights
-
 import React from 'react';
 import { NextPage } from 'next';
 import {
@@ -17,10 +16,8 @@ import { Analytics, TrendingUp, People, Assessment } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import CustomerAnalytics from '../../components/CustomerAnalytics';
 import { canManageUsers } from '../../types/user.types';
-
 const CustomerAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
-
   if (!user || !canManageUsers(user)) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -30,7 +27,6 @@ const CustomerAnalyticsPage: NextPage = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
@@ -42,7 +38,6 @@ const CustomerAnalyticsPage: NextPage = () => {
           Business intelligence and customer insights to help you understand your customer base and improve business decisions.
         </Typography>
       </Box>
-
       <Grid container spacing={3}>
         {/* Overview Cards */}
         <Grid item xs={12} md={4}>
@@ -60,7 +55,6 @@ const CustomerAnalyticsPage: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
@@ -76,7 +70,6 @@ const CustomerAnalyticsPage: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
@@ -92,7 +85,6 @@ const CustomerAnalyticsPage: NextPage = () => {
             </CardContent>
           </Card>
         </Grid>
-
         {/* Main Analytics Component */}
         <Grid item xs={12}>
           <Card>
@@ -105,5 +97,4 @@ const CustomerAnalyticsPage: NextPage = () => {
     </Container>
   );
 };
-
 export default CustomerAnalyticsPage;

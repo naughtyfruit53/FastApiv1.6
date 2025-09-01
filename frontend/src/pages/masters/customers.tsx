@@ -34,44 +34,36 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataService } from '../../services/authService';
 import ExcelImportExport from '../../components/ExcelImportExport';
 import { bulkImportCustomers } from '../../services/masterService';
-import Grid from '@mui/material/Grid';
 import { useAuth } from '../../context/AuthContext';
 import AddCustomerModal from '../../components/AddCustomerModal';
 import CustomerAnalyticsModal from '../../components/CustomerAnalyticsModal';
-
 const CustomersPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
   const { isOrgContextReady } = useAuth();
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [addCustomerLoading, setAddCustomerLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [sortBy, setSortBy] = useState<'name'>('name');
   const [analyticsModal, setAnalyticsModal] = useState<{
     open: boolean;
     customerId?: number;
     customerName?: string;
   }>({ open: false });
   const queryClient = useQueryClient();
-
-  const { data: customers, isLoading: customersLoading } = useQuery({
+const { data: customers, isLoading:} = useQuery({
     queryKey: ['customers'],
     queryFn: () => masterDataService.getCustomers(),
     enabled: isOrgContextReady,
   });
-
   // Debounced search and sorting
   const filteredAndSortedCustomers = useMemo(() => {
     if (!customers) {return [];}
-
     const filtered = customers.filter((customer: any) =>
       customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
     // Sort by name
     if (sortBy === 'name') {
       filtered.sort((a: any, b: any) => {
@@ -84,24 +76,19 @@ const CustomersPage: React.FC = () => {
         }
       });
     }
-
     return filtered;
   }, [customers, searchTerm, sortBy, sortOrder]);
-
   const handleSort = () => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
-
   const handleCustomerAdd = async (customerData: any) => {
     setAddCustomerLoading(true);
     try {
       const response = await masterDataService.createCustomer(customerData);
       const newCustomer = response;
-      
       // Update query data immediately
       queryClient.setQueryData(['customers'], (old: any) => old ? [...old, newCustomer] : [newCustomer]);
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      
       setShowAddCustomerModal(false);
       alert('Customer added successfully!');
     } catch (error: any) {
@@ -120,7 +107,6 @@ const CustomersPage: React.FC = () => {
       setAddCustomerLoading(false);
     }
   };
-
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteCustomer(id),
     onSuccess: () => {
@@ -131,23 +117,19 @@ const CustomersPage: React.FC = () => {
       setErrorMessage(error.response?.data?.detail || 'Failed to delete customer');
     }
   });
-
   const openAddCustomerModal = useCallback(() => {
     setErrorMessage('');
     setShowAddCustomerModal(true);
   }, []);
-
   // Auto-open add modal if action=add in URL
   React.useEffect(() => {
     if (action === 'add') {
       openAddCustomerModal();
     }
   }, [action, openAddCustomerModal]);
-
   if (!isOrgContextReady) {
     return <div>Loading...</div>;
   }
-
   return (
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -165,7 +147,6 @@ const CustomersPage: React.FC = () => {
             Add Customer
           </Button>
         </Box>
-
         {/* Customers Table */}
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -176,7 +157,6 @@ const CustomersPage: React.FC = () => {
               onImport={bulkImportCustomers}
             />
           </Box>
-          
           {/* Search Field */}
           <Box sx={{ mb: 3 }}>
             <TextField
@@ -193,7 +173,6 @@ const CustomersPage: React.FC = () => {
               sx={{ width: 400 }}
             />
           </Box>
-          
           <TableContainer>
             <Table>
               <TableHead>
@@ -275,7 +254,6 @@ const CustomersPage: React.FC = () => {
             </Table>
           </TableContainer>
         </Paper>
-
         {/* Add Customer Modal */}
         <AddCustomerModal
           open={showAddCustomerModal}
@@ -283,7 +261,6 @@ const CustomersPage: React.FC = () => {
           onAdd={handleCustomerAdd}
           loading={addCustomerLoading}
         />
-
         {/* Customer Analytics Modal */}
         {analyticsModal.customerId && (
           <CustomerAnalyticsModal
@@ -297,5 +274,4 @@ const CustomersPage: React.FC = () => {
     </Container>
   );
 };
-
 export default CustomersPage;

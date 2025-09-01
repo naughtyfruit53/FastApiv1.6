@@ -8,7 +8,6 @@ import '../styles/modern-theme.css';
 import Layout from '../components/layout'; // Use lowercase layout
 import { useRouter } from 'next/router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
-
 // Create modern theme using our design system
 const theme = createTheme({
   palette: {
@@ -145,7 +144,6 @@ const theme = createTheme({
     },
   },
 });
-
 // Create query client (unchanged)
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -155,21 +153,17 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-function MyApp({ Component, pageProps }: AppProps) {
+function MyApp({ Component, pageProps }: AppProps): any {
   const router = useRouter();
-
   const LayoutWrapper = () => {
     const { user, logout } = useAuth();
     const showMegaMenu = !!user && router.pathname !== '/login' && router.pathname !== '/';
-
     return (
       <Layout user={user} onLogout={logout} showMegaMenu={showMegaMenu}>
         <Component {...pageProps} />
       </Layout>
     );
   };
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
@@ -192,5 +186,4 @@ function MyApp({ Component, pageProps }: AppProps) {
     </AuthProvider>
   );
 }
-
 export default MyApp;

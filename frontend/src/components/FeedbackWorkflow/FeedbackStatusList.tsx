@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -47,27 +46,23 @@ import {
   FilterList as FilterIcon,
   Assignment as AssignmentIcon
 } from '@mui/icons-material';
-
 interface FeedbackStatusListProps {
   organizationId: number;
   onFeedbackSelect?: (feedback: any) => void;
   onClosureSelect?: (closure: any) => void;
 }
-
 const FEEDBACK_STATUS_CONFIG = {
   submitted: { label: 'Submitted', color: 'info', icon: FeedbackIcon },
   reviewed: { label: 'Reviewed', color: 'warning', icon: EditIcon },
   responded: { label: 'Responded', color: 'success', icon: CheckCircleIcon },
   closed: { label: 'Closed', color: 'default', icon: CloseIcon }
 };
-
 const CLOSURE_STATUS_CONFIG = {
   pending: { label: 'Pending', color: 'warning', icon: ScheduleIcon },
   approved: { label: 'Approved', color: 'info', icon: CheckCircleIcon },
   closed: { label: 'Closed', color: 'success', icon: CheckCircleIcon },
   reopened: { label: 'Reopened', color: 'error', icon: WarningIcon }
 };
-
 const SATISFACTION_CONFIG = {
   very_satisfied: { label: 'Very Satisfied', color: '#4caf50' },
   satisfied: { label: 'Satisfied', color: '#8bc34a' },
@@ -75,7 +70,6 @@ const SATISFACTION_CONFIG = {
   dissatisfied: { label: 'Dissatisfied', color: '#f44336' },
   very_dissatisfied: { label: 'Very Dissatisfied', color: '#d32f2f' }
 };
-
 export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
   organizationId,
   onFeedbackSelect,
@@ -102,8 +96,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
     total: 0
   });
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
-  const [selectedClosure, setSelectedClosure] = useState<any>(null);
-
   // Mock data - replace with actual API calls
   const loadFeedback = async () => {
     setLoading(true);
@@ -143,7 +135,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
       setLoading(false);
     }
   };
-
   const loadClosures = async () => {
     setLoading(true);
     try {
@@ -181,7 +172,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (activeTab === 0) {
       loadFeedback();
@@ -189,36 +179,31 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
       loadClosures();
     }
   }, [activeTab, feedbackFilters, closureFilters, organizationId]);
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
     setError(null);
   };
-
   const handleFeedbackFilterChange = (field: string) => (event: any) => {
     setFeedbackFilters(prev => ({
       ...prev,
       [field]: event.target.value
     }));
   };
-
   const handleClosureFilterChange = (field: string) => (event: any) => {
     setClosureFilters(prev => ({
       ...prev,
       [field]: event.target.value
     }));
   };
-
   const handleViewFeedback = (feedback: any) => {
     setSelectedFeedback(feedback);
     onFeedbackSelect?.(feedback);
   };
-
   const handleViewClosure = (closure: any) => {
+// TODO: Define or import setSelectedClosure
     setSelectedClosure(closure);
     onClosureSelect?.(closure);
   };
-
   const renderFeedbackTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -291,7 +276,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
       </Table>
     </TableContainer>
   );
-
   const renderClosureTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -360,7 +344,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
       </Table>
     </TableContainer>
   );
-
   return (
     <Box>
       {error && (
@@ -368,7 +351,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
           {error}
         </Alert>
       )}
-
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
           <Tab 
@@ -383,7 +365,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
           />
         </Tabs>
       </Box>
-
       {/* Filters */}
       <Card sx={{ mb: 2 }}>
         <CardContent>
@@ -495,19 +476,16 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
           </Grid>
         </CardContent>
       </Card>
-
       {/* Loading */}
       {loading && (
         <Box display="flex" justifyContent="center" p={4}>
           <CircularProgress />
         </Box>
       )}
-
       {/* Tables */}
       {!loading && (
         <>
           {activeTab === 0 ? renderFeedbackTable() : renderClosureTable()}
-          
           {/* Pagination */}
           <Box display="flex" justifyContent="center" mt={2}>
             <Pagination
@@ -519,7 +497,6 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
           </Box>
         </>
       )}
-
       {/* Feedback Detail Dialog */}
       <Dialog
         open={!!selectedFeedback}
@@ -553,5 +530,4 @@ export const FeedbackStatusList: React.FC<FeedbackStatusListProps> = ({
     </Box>
   );
 };
-
 export default FeedbackStatusList;

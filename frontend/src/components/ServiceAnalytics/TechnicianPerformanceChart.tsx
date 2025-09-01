@@ -1,5 +1,4 @@
 // frontend/src/components/ServiceAnalytics/TechnicianPerformanceChart.tsx
-
 import React, { useState } from 'react';
 import {
   Card,
@@ -32,31 +31,25 @@ import {
   Star as RatingIcon
 } from '@mui/icons-material';
 import { TechnicianPerformanceMetrics } from '../../services/serviceAnalyticsService';
-
 interface TechnicianPerformanceChartProps {
   data: TechnicianPerformanceMetrics[];
 }
-
 const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({ data }) => {
   const [expandedTechnician, setExpandedTechnician] = useState<number | null>(null);
-
   const getPerformanceColor = (score: number) => {
     if (score >= 80) {return 'success';}
     if (score >= 60) {return 'warning';}
     return 'error';
   };
-
   const getUtilizationColor = (rate: number) => {
     if (rate >= 80) {return 'success';}
     if (rate >= 60) {return 'info';}
     if (rate >= 40) {return 'warning';}
     return 'error';
   };
-
   const handleTechnicianExpand = (technicianId: number) => {
     setExpandedTechnician(expandedTechnician === technicianId ? null : technicianId);
   };
-
   // Calculate summary statistics
   const totalJobsAssigned = data.reduce((sum, tech) => sum + tech.total_jobs_assigned, 0);
   const totalJobsCompleted = data.reduce((sum, tech) => sum + tech.jobs_completed, 0);
@@ -66,7 +59,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
   const averageEfficiency = data.length > 0 
     ? data.reduce((sum, tech) => sum + tech.efficiency_score, 0) / data.length 
     : 0;
-
   if (data.length === 0) {
     return (
       <Card>
@@ -84,7 +76,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
       </Card>
     );
   }
-
   return (
     <Card>
       <CardHeader 
@@ -104,7 +95,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               </Typography>
             </Paper>
           </Grid>
-          
           <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="info.main">
@@ -115,7 +105,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               </Typography>
             </Paper>
           </Grid>
-          
           <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="success.main">
@@ -126,7 +115,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               </Typography>
             </Paper>
           </Grid>
-          
           <Grid item xs={6} sm={3}>
             <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
               <Typography variant="h5" color="warning.main">
@@ -138,7 +126,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Paper>
           </Grid>
         </Grid>
-
         {/* Team Performance Overview */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>
@@ -163,7 +150,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                 </Box>
               </Paper>
             </Grid>
-            
             <Grid item xs={12} sm={6}>
               <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
                 <Typography variant="body2" gutterBottom>
@@ -184,7 +170,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Grid>
           </Grid>
         </Box>
-
         {/* Individual Technician Performance */}
         <Typography variant="h6" gutterBottom>
           Individual Performance
@@ -221,7 +206,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         </Box>
                       </Box>
                     </TableCell>
-                    
                     <TableCell align="center">
                       <Chip 
                         label={technician.total_jobs_assigned}
@@ -230,7 +214,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         variant="outlined"
                       />
                     </TableCell>
-                    
                     <TableCell align="center">
                       <Chip 
                         label={technician.jobs_completed}
@@ -239,7 +222,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         variant="outlined"
                       />
                     </TableCell>
-                    
                     <TableCell align="center">
                       <Box>
                         <Typography variant="body2" color={`${getUtilizationColor(technician.utilization_rate)}.main`}>
@@ -254,7 +236,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         />
                       </Box>
                     </TableCell>
-                    
                     <TableCell align="center">
                       <Chip 
                         label={`${technician.efficiency_score.toFixed(1)}%`}
@@ -262,7 +243,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         color={getPerformanceColor(technician.efficiency_score)}
                       />
                     </TableCell>
-                    
                     <TableCell align="center">
                       {technician.customer_rating_average ? (
                         <Box display="flex" alignItems="center" gap={1}>
@@ -282,7 +262,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         </Typography>
                       )}
                     </TableCell>
-                    
                     <TableCell align="center">
                       <IconButton 
                         size="small"
@@ -292,7 +271,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                       </IconButton>
                     </TableCell>
                   </TableRow>
-                  
                   {/* Expanded Details */}
                   <TableRow>
                     <TableCell colSpan={7} sx={{ py: 0 }}>
@@ -307,7 +285,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                                 </Typography>
                               </Box>
                             </Grid>
-                            
                             {technician.average_completion_time_hours && (
                               <Grid item xs={12} sm={4}>
                                 <Box display="flex" alignItems="center" gap={1}>
@@ -318,7 +295,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                                 </Box>
                               </Grid>
                             )}
-                            
                             <Grid item xs={12} sm={4}>
                               <Box display="flex" alignItems="center" gap={1}>
                                 <EfficiencyIcon color="action" fontSize="small" />
@@ -339,7 +315,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Performance Insights */}
         <Box sx={{ mt: 3 }}>
           <Typography variant="h6" gutterBottom>
@@ -353,7 +328,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               const mostUtilized = data.reduce((prev, current) => 
                 prev.utilization_rate > current.utilization_rate ? prev : current
               );
-              
               return (
                 <>
                   <Grid item xs={12} sm={6}>
@@ -369,7 +343,6 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                       </Typography>
                     </Paper>
                   </Grid>
-                  
                   <Grid item xs={12} sm={6}>
                     <Paper elevation={1} sx={{ p: 2, bgcolor: 'info.light', color: 'info.contrastText' }}>
                       <Typography variant="body2" gutterBottom>
@@ -392,5 +365,4 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
     </Card>
   );
 };
-
 export default TechnicianPerformanceChart;

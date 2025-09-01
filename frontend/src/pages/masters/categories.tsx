@@ -36,9 +36,7 @@ import {
   Category,
   Inventory
 } from '@mui/icons-material';
-
 const CategoriesPage: React.FC = () => {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
@@ -49,7 +47,6 @@ const CategoriesPage: React.FC = () => {
     parent_category_id: '',
     is_active: true
   });
-
   // Mock data for demonstration
   const categories = [
     {
@@ -87,7 +84,6 @@ const CategoriesPage: React.FC = () => {
       is_active: true
     }
   ];
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -96,12 +92,10 @@ const CategoriesPage: React.FC = () => {
       is_active: true
     });
   };
-
   const handleAddClick = () => {
     resetForm();
     setAddDialog(true);
   };
-
   const handleEditClick = (category: any) => {
     setSelectedCategory(category);
     setFormData({
@@ -112,7 +106,6 @@ const CategoriesPage: React.FC = () => {
     });
     setEditDialog(true);
   };
-
   const handleSubmit = () => {
     if (selectedCategory) {
       // TODO: Implement update functionality
@@ -124,20 +117,16 @@ const CategoriesPage: React.FC = () => {
     setAddDialog(false);
     setEditDialog(false);
   };
-
   const handleDeleteClick = (category: any) => {
     // TODO: Implement delete functionality
     console.log('Delete category:', category.id);
   };
-
   const filteredCategories = categories.filter((category: any) =>
     category.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     category.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   // Get parent categories for dropdown
   const parentCategories = categories.filter(cat => !cat.parent_category_id);
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -153,13 +142,11 @@ const CategoriesPage: React.FC = () => {
             Add Category
           </Button>
         </Box>
-
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 3 }}>
           Categories help organize your products for better inventory management and reporting.
           You can create hierarchical categories with parent-child relationships.
         </Alert>
-
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -231,7 +218,6 @@ const CategoriesPage: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
-
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
@@ -243,7 +229,6 @@ const CategoriesPage: React.FC = () => {
             }}
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -324,7 +309,6 @@ const CategoriesPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Add/Edit Category Dialog */}
         <Dialog 
           open={addDialog || editDialog} 
@@ -389,5 +373,4 @@ const CategoriesPage: React.FC = () => {
     </Container>
   );
 };
-
 export default CategoriesPage;

@@ -1,5 +1,4 @@
 // frontend/src/components/ServiceAnalytics/ServiceAnalyticsDashboard.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -26,7 +25,6 @@ import {
   Download as DownloadIcon,
   DateRange as DateRangeIcon
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   serviceAnalyticsService, 
@@ -43,27 +41,21 @@ import CustomerSatisfactionChart from './CustomerSatisfactionChart';
 import JobVolumeChart from './JobVolumeChart';
 import SLAComplianceChart from './SLAComplianceChart';
 import AnalyticsFilters from './AnalyticsFilters';
-
 interface ServiceAnalyticsDashboardProps {
   organizationId?: number;
 }
-
 const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
   organizationId: propOrganizationId
 }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
   // Use the organization ID from props or fall back to the user's organization
   const organizationId = propOrganizationId || user?.organization_id;
-  
   // State for filters
   const [filters, setFilters] = useState<AnalyticsRequest>({
     period: ReportPeriod.MONTH
   });
-  
   const [showFilters, setShowFilters] = useState(false);
-
   // Query for dashboard data
   const {
     data: dashboardData,
@@ -77,32 +69,26 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
     staleTime: 2 * 60 * 1000 // Consider data stale after 2 minutes
   });
-
   // Query for filter options
   const { data: technicians } = useQuery({
     queryKey: ['analytics-technicians', organizationId],
     queryFn: () => serviceAnalyticsService.getAvailableTechnicians(organizationId!),
     enabled: !!organizationId
   });
-
   const { data: customers } = useQuery({
     queryKey: ['analytics-customers', organizationId],
     queryFn: () => serviceAnalyticsService.getAvailableCustomers(organizationId!),
     enabled: !!organizationId
   });
-
   const handleFilterChange = (newFilters: AnalyticsRequest) => {
     setFilters(newFilters);
   };
-
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['service-analytics-dashboard'] });
     refetch();
   };
-
   const handleExport = async () => {
     if (!organizationId) {return;}
-    
     try {
       const blob = await serviceAnalyticsService.exportAnalyticsData(organizationId, {
         format: 'csv',
@@ -110,7 +96,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
         filters: filters,
         include_raw_data: false
       });
-      
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -124,7 +109,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       console.error('Failed to export analytics data:', error);
     }
   };
-
   if (!organizationId) {
     return (
       <Alert severity="error">
@@ -132,7 +116,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       </Alert>
     );
   }
-
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -143,7 +126,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       </Box>
     );
   }
-
   if (error) {
     return (
       <Alert severity="error" action={
@@ -155,7 +137,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       </Alert>
     );
   }
-
   if (!dashboardData) {
     return (
       <Alert severity="info">
@@ -163,7 +144,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       </Alert>
     );
   }
-
   return (
     <Box>
       {/* Header */}
@@ -171,7 +151,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
         <Typography variant="h4" component="h1">
           Service Analytics Dashboard
         </Typography>
-        
         <Box display="flex" gap={1}>
           <Tooltip title="Toggle Filters">
             <IconButton 
@@ -181,13 +160,11 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
               <FilterIcon />
             </IconButton>
           </Tooltip>
-          
           <Tooltip title="Export Data">
             <IconButton onClick={handleExport}>
               <DownloadIcon />
             </IconButton>
           </Tooltip>
-          
           <Tooltip title="Refresh Data">
             <IconButton onClick={handleRefresh}>
               <RefreshIcon />
@@ -195,7 +172,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
           </Tooltip>
         </Box>
       </Box>
-
       {/* Filters */}
       {showFilters && (
         <Card sx={{ mb: 3 }}>
@@ -209,7 +185,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
           </CardContent>
         </Card>
       )}
-
       {/* Dashboard Info */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
@@ -231,29 +206,24 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
           </Box>
         </CardContent>
       </Card>
-
       {/* Analytics Charts Grid */}
       <Grid container spacing={3}>
         {/* Job Completion Metrics */}
         <Grid item xs={12} md={6}>
           <JobCompletionChart data={dashboardData.job_completion} />
         </Grid>
-
         {/* Customer Satisfaction Metrics */}
         <Grid item xs={12} md={6}>
           <CustomerSatisfactionChart data={dashboardData.customer_satisfaction} />
         </Grid>
-
         {/* Job Volume Chart */}
         <Grid item xs={12} md={6}>
           <JobVolumeChart data={dashboardData.job_volume} />
         </Grid>
-
         {/* SLA Compliance Chart */}
         <Grid item xs={12} md={6}>
           <SLAComplianceChart data={dashboardData.sla_compliance} />
         </Grid>
-
         {/* Technician Performance - Full width if data available */}
         {dashboardData.technician_performance.length > 0 && (
           <Grid item xs={12}>
@@ -261,7 +231,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
           </Grid>
         )}
       </Grid>
-
       {/* Summary Statistics */}
       <Card sx={{ mt: 3 }}>
         <CardHeader title="Summary Statistics" />
@@ -277,7 +246,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
                 </Typography>
               </Box>
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="success.main">
@@ -288,7 +256,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
                 </Typography>
               </Box>
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="info.main">
@@ -299,7 +266,6 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
                 </Typography>
               </Box>
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="warning.main">
@@ -316,5 +282,4 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
     </Box>
   );
 };
-
 export default ServiceAnalyticsDashboard;

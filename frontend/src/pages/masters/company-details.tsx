@@ -5,33 +5,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '../../services/authService';
 import CompanyDetailsModal from '../../components/CompanyDetailsModal';
 import Grid from '@mui/material/Grid';
-
 const CompanyDetails: React.FC = () => {
   const [openModal, setOpenModal] = useState(false);
   const queryClient = useQueryClient();
-
-  const { data, isLoading, error, isError } = useQuery({
+const { data, isLoading,isError } = useQuery({
     queryKey: ['company'],
     queryFn: companyService.getCurrentCompany,
   });
-  const mutation = useMutation({
     mutationFn: companyService.createCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
     },
   });
-
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['company'] });
     handleCloseModal();
   };
-
   if (isLoading) {
     return <Typography>Loading...</Typography>;
   }
-
   if (isError || !data || !data.id) {
     console.error('Failed to fetch company details or data is invalid');
     return (
@@ -60,7 +54,6 @@ const CompanyDetails: React.FC = () => {
       </Box>
     );
   }
-
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 2 }}>
@@ -90,7 +83,6 @@ const CompanyDetails: React.FC = () => {
             </Typography>
           </Box>
         </Stack>
-        
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2">Business Type</Typography>
@@ -151,5 +143,4 @@ const CompanyDetails: React.FC = () => {
     </Box>
   );
 };
-
 export default CompanyDetails;

@@ -1,7 +1,5 @@
 'use client';
-
 // frontend/src/pages/demo.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -32,7 +30,6 @@ import {
   ExitToApp
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-
 // Mock/Sample data for demo mode
 const mockData = {
   stats: [
@@ -121,25 +118,20 @@ const mockData = {
     gst: '24AAACC1206D1ZV'
   }
 };
-
 export default function DemoPage() {
   const router = useRouter();
   const [demoMode, setDemoMode] = useState(true);
   const [isDemoTempUser, setIsDemoTempUser] = useState(false);
-
   useEffect(() => {
     // Set demo mode flag
     localStorage.setItem('demoMode', demoMode.toString());
-    
     // Check if this is a temporary demo user
     const tempUser = localStorage.getItem('isDemoTempUser');
     setIsDemoTempUser(tempUser === 'true');
   }, [demoMode]);
-
   const handleExitDemo = () => {
     localStorage.removeItem('demoMode');
     localStorage.removeItem('isDemoTempUser');
-    
     // If this was a temporary demo user, redirect to login
     if (isDemoTempUser) {
       localStorage.removeItem('token');
@@ -150,7 +142,6 @@ export default function DemoPage() {
       router.push('/dashboard');
     }
   };
-
   const handleToggleDemo = () => {
     setDemoMode(!demoMode);
     if (!demoMode) {
@@ -159,7 +150,6 @@ export default function DemoPage() {
       localStorage.removeItem('demoMode');
     }
   };
-
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -199,7 +189,6 @@ export default function DemoPage() {
             {isDemoTempUser && ' Your temporary session will end when you logout or close the browser.'}
           </Typography>
         </Alert>
-
         {/* Additional alert for temporary demo users */}
         {isDemoTempUser && (
           <Alert severity="warning" sx={{ mb: 3 }}>
@@ -209,11 +198,9 @@ export default function DemoPage() {
             </Typography>
           </Alert>
         )}
-
         <Typography variant="h4" component="h1" gutterBottom>
           Organization Dashboard - Demo Mode
         </Typography>
-
         {/* Company Info Card */}
         <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
           <Typography variant="h6" gutterBottom>
@@ -226,7 +213,6 @@ export default function DemoPage() {
             GST: {mockData.companyInfo.gst}
           </Typography>
         </Paper>
-
         <Grid container spacing={3}>
           {/* Statistics Cards */}
           {mockData.stats.map((stat, index) => (
@@ -256,7 +242,6 @@ export default function DemoPage() {
               </Card>
             </Grid>
           ))}
-
           {/* Recent Purchase Vouchers */}
           <Grid
             size={{
@@ -299,7 +284,6 @@ export default function DemoPage() {
               </TableContainer>
             </Paper>
           </Grid>
-
           {/* Recent Sales Vouchers */}
           <Grid
             size={{
@@ -342,7 +326,6 @@ export default function DemoPage() {
               </TableContainer>
             </Paper>
           </Grid>
-
           {/* Demo Features - Comprehensive Feature Showcase */}
           <Grid size={12}>
             <Paper sx={{ p: 3 }}>
@@ -352,7 +335,6 @@ export default function DemoPage() {
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
                 Explore all features of the TRITIQ ERP system with sample data. This demo provides access to every module and functionality.
               </Typography>
-
               {/* Master Data Section */}
               <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
                 👥 Master Data Management
@@ -395,7 +377,6 @@ export default function DemoPage() {
                   </Button>
                 </Grid>
               </Grid>
-
               {/* Inventory Management */}
               <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
                 📦 Inventory Management
@@ -438,7 +419,6 @@ export default function DemoPage() {
                   </Button>
                 </Grid>
               </Grid>
-
               {/* Voucher System */}
               <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
                 🧾 Complete Voucher System
@@ -481,7 +461,6 @@ export default function DemoPage() {
                   </Button>
                 </Grid>
               </Grid>
-
               {/* Analytics & Reports */}
               <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
                 📊 Business Intelligence & Analytics
@@ -524,7 +503,6 @@ export default function DemoPage() {
                   </Button>
                 </Grid>
               </Grid>
-
               {/* Service CRM Features */}
               <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
                 🔧 Service CRM & Operations
@@ -567,7 +545,6 @@ export default function DemoPage() {
                   </Button>
                 </Grid>
               </Grid>
-
               {/* Reports & Financial */}
               <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
                 📈 Reports & Financial Analysis
@@ -610,7 +587,6 @@ export default function DemoPage() {
                   </Button>
                 </Grid>
               </Grid>
-
               {/* Administration Features */}
               <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
                 ⚙️ Administration & Management
@@ -653,7 +629,6 @@ export default function DemoPage() {
                   </Button>
                 </Grid>
               </Grid>
-
               <Alert severity="info" sx={{ mt: 3 }}>
                 <Typography variant="body2">
                   <strong>✨ Full Feature Parity:</strong> This demo showcases all live features of the TRITIQ ERP system. 

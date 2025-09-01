@@ -17,14 +17,12 @@ import {
   InputAdornment
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
-
 interface AddCommissionModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
-
 interface CommissionFormData {
   sales_person_id: number;
   opportunity_id?: number;
@@ -37,14 +35,12 @@ interface CommissionFormData {
   payment_status: string;
   notes?: string;
 }
-
 const commissionTypes = [
   'percentage',
   'fixed_amount',
   'tiered',
   'bonus'
 ];
-
 const paymentStatuses = [
   'pending',
   'paid',
@@ -52,7 +48,6 @@ const paymentStatuses = [
   'rejected',
   'on_hold'
 ];
-
 const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
   open,
   onClose,
@@ -73,11 +68,9 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       notes: '',
     }
   });
-
   const commissionType = watch('commission_type');
   const baseAmount = watch('base_amount');
   const commissionRate = watch('commission_rate');
-
   React.useEffect(() => {
     if (open) {
       reset({
@@ -94,7 +87,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       });
     }
   }, [open, reset]);
-
   // Calculate commission amount automatically for percentage type
   React.useEffect(() => {
     if (commissionType === 'percentage' && baseAmount && commissionRate) {
@@ -102,7 +94,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       console.log(calculated); // Use the expression to fix no-unused-expressions
     }
   }, [commissionType, baseAmount, commissionRate]);
-
   const onSubmit = async (commissionData: CommissionFormData) => {
     try {
       // Clean and prepare data
@@ -116,14 +107,12 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
         commission_amount: commissionData.commission_amount ? Number(commissionData.commission_amount) : null,
         base_amount: Number(commissionData.base_amount)
       };
-
       // Remove undefined/empty fields
       Object.keys(cleanData).forEach(key => {
         if (cleanData[key as keyof typeof cleanData] === undefined || cleanData[key as keyof typeof cleanData] === '') {
           delete cleanData[key as keyof typeof cleanData];
         }
       });
-
       await onAdd(cleanData);
       reset();
       onClose();
@@ -131,14 +120,12 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       console.error('Error adding commission:', error);
     }
   };
-
   const handleClose = () => {
     if (!loading) {
       reset();
       onClose();
     }
   };
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -146,7 +133,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
           Add New Commission Record
         </Typography>
       </DialogTitle>
-
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Box sx={{ mt: 1 }}>
@@ -157,7 +143,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   Commission Details
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('sales_person_id', { 
@@ -173,7 +158,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   inputProps={{ min: 1 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Commission Type</InputLabel>
@@ -202,7 +186,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   )}
                 </FormControl>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('base_amount', { 
@@ -221,7 +204,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   inputProps={{ min: 0, step: 0.01 }}
                 />
               </Grid>
-
               {commissionType === 'percentage' && (
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
@@ -242,7 +224,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   />
                 </Grid>
               )}
-
               {(commissionType === 'fixed_amount' || commissionType === 'bonus') && (
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
@@ -262,7 +243,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   />
                 </Grid>
               )}
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('commission_date', { 
@@ -279,7 +259,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Payment Status</InputLabel>
@@ -308,14 +287,12 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   )}
                 </FormControl>
               </Grid>
-
               {/* Reference Fields */}
               <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
                   Reference Information (Optional)
                 </Typography>
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('opportunity_id')}
@@ -326,7 +303,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   inputProps={{ min: 1 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register('lead_id')}
@@ -337,7 +313,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   inputProps={{ min: 1 }}
                 />
               </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register('notes')}
@@ -349,7 +324,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   placeholder="Add any additional notes about this commission..."
                 />
               </Grid>
-
               {/* Calculation Display */}
               {commissionType === 'percentage' && baseAmount && commissionRate && (
                 <Grid size={{ xs: 12 }}>
@@ -369,7 +343,6 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
             </Grid>
           </Box>
         </DialogContent>
-
         <DialogActions>
           <Button 
             onClick={handleClose} 
@@ -391,5 +364,4 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
     </Dialog>
   );
 };
-
 export default AddCommissionModal;

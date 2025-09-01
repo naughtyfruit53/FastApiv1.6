@@ -13,9 +13,7 @@ import {
   Typography
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
-
 export type Order = 'asc' | 'desc';
-
 export interface HeadCell<T> {
   id: keyof T;
   label: string;
@@ -26,7 +24,6 @@ export interface HeadCell<T> {
   align?: 'left' | 'right' | 'center';
   render?: (value: any, row: T) => React.ReactNode;
 }
-
 interface SortableTableProps<T> {
   data: T[];
   headCells: HeadCell<T>[];
@@ -41,30 +38,24 @@ interface SortableTableProps<T> {
   loading?: boolean;
   actions?: (row: T) => React.ReactNode;
 }
-
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   const aVal = a[orderBy];
   const bVal = b[orderBy];
-  
   // Handle null/undefined values
   if (bVal == null && aVal == null) {return 0;}
   if (bVal == null) {return -1;}
   if (aVal == null) {return 1;}
-  
   // Handle different types
   if (typeof aVal === 'number' && typeof bVal === 'number') {
     return bVal - aVal;
   }
-  
   if (typeof aVal === 'string' && typeof bVal === 'string') {
     return bVal.localeCompare(aVal, undefined, { numeric: true, sensitivity: 'base' });
   }
-  
   // Handle dates
   if (aVal instanceof Date && bVal instanceof Date) {
     return bVal.getTime() - aVal.getTime();
   }
-  
   // Handle date strings
   if (typeof aVal === 'string' && typeof bVal === 'string') {
     const aDate = new Date(aVal);
@@ -73,17 +64,14 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
       return bDate.getTime() - aDate.getTime();
     }
   }
-  
   // Default string comparison
   return String(bVal).localeCompare(String(aVal), undefined, { numeric: true, sensitivity: 'base' });
 }
-
 function getComparator<T>(order: Order, orderBy: keyof T): (a: T, b: T) => number {
   return order === 'desc'
     ? (a, b) => descendingComparator(a, b, orderBy)
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
-
 function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) {
   const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
   stabilizedThis.sort((a, b) => {
@@ -95,7 +83,6 @@ function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) 
   });
   return stabilizedThis.map((el) => el[0]);
 }
-
 interface SortableTableHeadProps<T> {
   headCells: HeadCell<T>[];
   order: Order;
@@ -103,14 +90,11 @@ interface SortableTableHeadProps<T> {
   onRequestSort: (property: keyof T) => void;
   hasActions: boolean;
 }
-
 function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
   const { headCells, order, orderBy, onRequestSort, hasActions } = props;
-  
   const createSortHandler = (property: keyof T) => () => {
     onRequestSort(property);
   };
-
   return (
     <TableHead>
       <TableRow>
@@ -153,7 +137,6 @@ function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
     </TableHead>
   );
 }
-
 function SortableTable<T>({
   data,
   headCells,
@@ -170,20 +153,16 @@ function SortableTable<T>({
 }: SortableTableProps<T>) {
   const [order, setOrder] = useState<Order>(defaultOrder);
   const [orderBy, setOrderBy] = useState<keyof T>(defaultOrderBy || headCells[0]?.id);
-
   const handleRequestSort = (property: keyof T) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
-
   const sortedData = useMemo(() => {
     if (!data?.length) {return [];}
     return stableSort(data, getComparator(order, orderBy));
   }, [data, order, orderBy]);
-
   const hasActions = Boolean(actions);
-
   if (loading) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
@@ -191,7 +170,6 @@ function SortableTable<T>({
       </Paper>
     );
   }
-
   return (
     <Paper sx={{ width: '100%', mb: 2 }}>
       {title && (
@@ -264,5 +242,4 @@ function SortableTable<T>({
     </Paper>
   );
 }
-
 export default SortableTable;

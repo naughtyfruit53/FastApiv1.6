@@ -1,9 +1,6 @@
 // frontend/src/utils/voucherUtils.ts
-
 import { UI_CONSTANTS } from '../constants/ui';
-
 export const GST_SLABS = [0, 5, 12, 18, 28];
-
 // State to GST state code mapping for GST calculations
 export const STATE_TO_CODE_MAP: { [key: string]: string } = {
   'Andhra Pradesh': '37',
@@ -43,7 +40,6 @@ export const STATE_TO_CODE_MAP: { [key: string]: string } = {
   'Puducherry': '34',
   'Ladakh': '38',
 };
-
 export const voucherTypes = {
   purchase: [
     { label: 'Purchase Order', slug: 'purchase-orders' },
@@ -66,7 +62,6 @@ export const voucherTypes = {
     { label: 'Contra Voucher', slug: 'contra-vouchers' },
   ]
 };
-
 /**
  * Convert number to words in Indian format
  * This is the centralized implementation used across all voucher types
@@ -100,7 +95,6 @@ export const numberToWordsInteger = (num: number): string => {
   }
   return word.trim();
 };
-
 /**
  * Convert number to words with decimal support
  * This is the the centralized implementation used across all voucher types
@@ -115,29 +109,24 @@ export const numberToWords = (num: number): string => {
   }
   return word ? word + ' only' : '';
 };
-
 /**
  * Enhanced GST calculation utilities with state-based split logic
  * Supports both intrastate (CGST+SGST) and interstate (IGST) transactions
  */
-
 // Helper function to determine if transaction is intrastate
 export const isIntrastateTransaction = (companyStateCode: string, customerVendorStateCode: string): boolean => {
   return companyStateCode === customerVendorStateCode;
 };
-
 // Common voucher item calculation utilities with enhanced GST logic
-export const calculateItemTotals = (item: any, isIntrastate: boolean = true) => {
+export const calculateItemTotals = (item: any, isIntrastate: boolean = true): any => {
   const subtotal = (item.quantity || 0) * (item.unit_price || 0);
   const discountAmount = subtotal * ((item.discount_percentage || 0) / 100);
   const taxableAmount = subtotal - discountAmount;
   const gstAmount = taxableAmount * ((item.gst_rate || 0) / 100);
-  
   // GST split logic based on transaction type
   let cgstAmount = 0;
   let sgstAmount = 0; 
   let igstAmount = 0;
-  
   if (isIntrastate) {
     // Same state: Split GST into CGST and SGST (half each)
     cgstAmount = gstAmount / 2;
@@ -149,9 +138,7 @@ export const calculateItemTotals = (item: any, isIntrastate: boolean = true) => 
     sgstAmount = 0;
     igstAmount = gstAmount;
   }
-  
   const totalAmount = taxableAmount + gstAmount;
-
   return {
     ...item,
     discount_amount: parseFloat(discountAmount.toFixed(2)),
@@ -162,17 +149,14 @@ export const calculateItemTotals = (item: any, isIntrastate: boolean = true) => 
     total_amount: parseFloat(totalAmount.toFixed(2)),
   };
 };
-
-export const calculateVoucherTotals = (items: any[], isIntrastate: boolean = true) => {
+export const calculateVoucherTotals = (items: any[], isIntrastate: boolean = true): any => {
   const computedItems = items.map(item => calculateItemTotals(item, isIntrastate));
-  
   const totalAmount = computedItems.reduce((sum, item) => sum + item.total_amount, 0);
   const totalSubtotal = computedItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0);
   const totalGst = computedItems.reduce((sum, item) => sum + item.taxable_amount * ((item.gst_rate || 0) / 100), 0);
   const totalCgst = computedItems.reduce((sum, item) => sum + item.cgst_amount, 0);
   const totalSgst = computedItems.reduce((sum, item) => sum + item.sgst_amount, 0);
   const totalIgst = computedItems.reduce((sum, item) => sum + item.igst_amount, 0);
-  
   return {
     computedItems,
     totalAmount: parseFloat(totalAmount.toFixed(2)),
@@ -183,11 +167,10 @@ export const calculateVoucherTotals = (items: any[], isIntrastate: boolean = tru
     totalIgst: parseFloat(totalIgst.toFixed(2)),
   };
 };
-
 /**
  * Get GST breakdown labels based on transaction type
  */
-export const getGstLabels = (isIntrastate: boolean) => {
+export const getGstLabels = (isIntrastate: boolean): any => {
   if (isIntrastate) {
     return {
       tax1Label: 'CGST',
@@ -202,9 +185,8 @@ export const getGstLabels = (isIntrastate: boolean) => {
     };
   }
 };
-
 // Common default values for voucher forms
-export const getDefaultVoucherValues = (type: 'purchase' | 'sales') => {
+export const getDefaultVoucherValues = (type: 'purchase' | 'sales'): any => {
   const baseValues = {
     voucher_number: '',
     date: new Date().toISOString().slice(0, 10),
@@ -229,7 +211,6 @@ export const getDefaultVoucherValues = (type: 'purchase' | 'sales') => {
     }],
     total_amount: 0.00,
   };
-
   if (type === 'purchase') {
     return {
       ...baseValues,
@@ -242,7 +223,6 @@ export const getDefaultVoucherValues = (type: 'purchase' | 'sales') => {
     };
   }
 };
-
 /**
  * Format number to 2 decimal places for rate fields
  */
@@ -250,7 +230,6 @@ export const formatRateField = (value: number | string): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
 };
-
 /**
  * Parse rate field input to ensure 2 decimal places
  */
@@ -258,11 +237,10 @@ export const parseRateField = (value: string): number => {
   const parsed = parseFloat(value);
   return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100;
 };
-
 /**
  * Get financial voucher default values (no items array)
  */
-export const getFinancialVoucherDefaults = () => ({
+export const getFinancialVoucherDefaults = (): any => ({
   voucher_number: '',
   date: new Date().toISOString().slice(0, 10),
   reference: '',
@@ -273,7 +251,6 @@ export const getFinancialVoucherDefaults = () => ({
   payment_method: '',
   receipt_method: ''
 });
-
 /**
  * Voucher configuration presets for common voucher types
  */
@@ -480,7 +457,6 @@ export const VOUCHER_CONFIGS = {
     voucherTitle: 'Stock Journal'
   }
 } as const;
-
 /**
  * Reference column configurations for voucher types
  * Defines which voucher types can reference which other voucher types
@@ -519,12 +495,10 @@ export const REFERENCE_CONFIGS = {
   'quotation': null,
   'purchase-order': null,
 } as const;
-
 /**
  * Voucher types that should NOT have GST/totals sections
  */
 export const NO_GST_VOUCHER_TYPES = ['grn', 'delivery-challan'] as const;
-
 /**
  * Default pagination settings for all voucher types
  */
@@ -533,15 +507,13 @@ export const VOUCHER_PAGINATION_DEFAULTS = {
   sortOrder: 'desc', // Latest on top
   sortBy: 'created_at'
 } as const;
-
 /**
  * Get voucher configuration by type
  */
-export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
+export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS): any => {
   const baseConfig = VOUCHER_CONFIGS[voucherType];
   const referenceConfig = REFERENCE_CONFIGS[voucherType as keyof typeof REFERENCE_CONFIGS];
   const hasGstSection = !NO_GST_VOUCHER_TYPES.includes(voucherType as any);
-  
   return {
     ...baseConfig,
     referenceConfig,
@@ -549,31 +521,26 @@ export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
     pagination: VOUCHER_PAGINATION_DEFAULTS
   };
 };
-
 /**
  * Get reference voucher options for a given voucher type
  */
-export const getReferenceVoucherOptions = (voucherType: keyof typeof REFERENCE_CONFIGS) => {
+export const getReferenceVoucherOptions = (voucherType: keyof typeof REFERENCE_CONFIGS): any => {
   const config = REFERENCE_CONFIGS[voucherType];
   if (!config) {return [{ value: 'new', label: 'New', endpoint: '' }];}
-  
   const options = config.allowedTypes.map(type => ({
     value: type,
     label: VOUCHER_CONFIGS[type]?.voucherTitle || type,
     endpoint: VOUCHER_CONFIGS[type]?.endpoint || `/${type}s`
   }));
-  
   // Add 'New' as the first option instead of 'None'
   return [{ value: 'new', label: 'New', endpoint: '' }, ...options];
 };
-
 /**
  * Check if a voucher type should have GST/totals section
  */
 export const shouldShowGstSection = (voucherType: string): boolean => {
   return !NO_GST_VOUCHER_TYPES.includes(voucherType as any);
 };
-
 /**
  * Enhanced rate field utilities with strict 2 decimal place formatting
  */
@@ -585,7 +552,6 @@ export const enhancedRateUtils = {
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
   },
-  
   /**
    * Parse rate input ensuring 2 decimal places max
    */
@@ -593,7 +559,6 @@ export const enhancedRateUtils = {
     const parsed = parseFloat(value);
     return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100;
   },
-  
   /**
    * Validate rate input (positive number with max 2 decimal places)
    */
@@ -602,7 +567,6 @@ export const enhancedRateUtils = {
     return regex.test(value) && parseFloat(value) >= 0;
   }
 };
-
 /**
  * Enhanced voucher list utilities with minimal pagination and sorting
  */
@@ -610,18 +574,17 @@ export const voucherListUtils = {
   /**
    * Sort vouchers with latest first
    */
-  sortLatestFirst: (vouchers: any[]) => {
+sortLatestFirst: (vouchers: any[]): any => {
     return [...vouchers].sort((a, b) => {
       const dateA = new Date(a.created_at || a.date);
       const dateB = new Date(b.created_at || b.date);
       return dateB.getTime() - dateA.getTime();
     });
   },
-  
   /**
    * Paginate vouchers with default 5 per page
    */
-  paginate: (vouchers: any[], page: number = 1, pageSize: number = 5) => {
+paginate: (vouchers: any[], page: number = 1, pageSize: number = 5): any => {
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return {
@@ -633,19 +596,17 @@ export const voucherListUtils = {
       hasPrev: page > 1
     };
   },
-  
   /**
    * Get latest vouchers for dashboard display
    */
-  getLatestVouchers: (vouchers: any[], count: number = 7) => {
+getLatestVouchers: (vouchers: any[], count: number = 7): any => {
     return voucherListUtils.sortLatestFirst(vouchers).slice(0, count);
   }
 };
-
 /**
  * Common styling utilities for voucher forms and tables with minimal gaps
  */
-export const getVoucherStyles = () => ({
+export const getVoucherStyles = (): any => ({
   // Center alignment for all text elements
   centerText: {
     textAlign: 'center' as const,
@@ -653,7 +614,6 @@ export const getVoucherStyles = () => ({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  
   // Center alignment for form fields
   centerField: {
     textAlign: 'center' as const,
@@ -661,18 +621,15 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const,
     },
   },
-  
   // Center alignment for table headers
   centerHeader: {
     textAlign: 'center' as const,
     fontWeight: 'bold',
   },
-  
   // Center alignment for table cells
   centerCell: {
     textAlign: 'center' as const,
   },
-  
   // Container for voucher layout with minimal padding
   voucherContainer: {
     display: 'flex',
@@ -682,7 +639,6 @@ export const getVoucherStyles = () => ({
     margin: 0,
     padding: 0
   },
-  
   // Full-width edge-to-edge layout container
   edgeToEdgeContainer: {
     width: '100%',
@@ -698,14 +654,12 @@ export const getVoucherStyles = () => ({
       margin: '0 !important',
     }
   },
-  
   // Index and form layout containers
   indexContainer: {
     width: '100%',
     padding: '8px',
     margin: 0,
   },
-  
   formContainer: {
     width: '100%',
     padding: '8px',
@@ -740,7 +694,6 @@ export const getVoucherStyles = () => ({
       }
     }
   },
-  
   // Table with center-aligned content
   centeredTable: {
     '& .MuiTableCell-root': {
@@ -751,7 +704,6 @@ export const getVoucherStyles = () => ({
       fontWeight: 'bold',
     },
   },
-  
   // Rate field styling with 2 decimal places
   rateField: {
     '& .MuiInputBase-input': {
@@ -769,7 +721,6 @@ export const getVoucherStyles = () => ({
       margin: 0,
     },
   },
-  
   // Enhanced title styling with center alignment
   voucherTitle: {
     textAlign: 'center' as const,
@@ -780,7 +731,6 @@ export const getVoucherStyles = () => ({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  
   // Date field styling to ensure visibility in view mode
   dateField: {
     '& .MuiInputBase-input': {
@@ -791,7 +741,6 @@ export const getVoucherStyles = () => ({
       visibility: 'visible !important'
     }
   },
-  
   // Pagination styling for 5 per page standard
   paginationContainer: {
     display: 'flex',
@@ -804,7 +753,6 @@ export const getVoucherStyles = () => ({
       }
     }
   },
-
   // Optimized table column widths for voucher product tables
   productTableColumns: {
     productName: {
@@ -872,7 +820,6 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     }
   },
-
   // GRN specific column widths (different from standard vouchers)
   grnTableColumns: {
     productName: {
@@ -916,7 +863,6 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
   },
-
   // Enhanced table container with minimal gaps
   optimizedTableContainer: {
     '& .MuiTableContainer-root': {

@@ -35,38 +35,30 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataService } from '../../services/authService';
 import ExcelImportExport from '../../components/ExcelImportExport';
 import { bulkImportVendors } from '../../services/masterService';
-import Grid from '@mui/material/Grid';
 import { useAuth } from '../../context/AuthContext';
 import AddVendorModal from '../../components/AddVendorModal';
-
 const VendorsPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
   const { isOrgContextReady } = useAuth();
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [addVendorLoading, setAddVendorLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [sortBy, setSortBy] = useState<'name'>('name');
   const queryClient = useQueryClient();
-
-  const { data: vendors, isLoading: vendorsLoading } = useQuery({
+const { data: vendors, isLoading:} = useQuery({
     queryKey: ['vendors'],
     queryFn: () => masterDataService.getVendors(),
     enabled: isOrgContextReady,
   });
-
   // Debounced search and sorting
   const filteredAndSortedVendors = useMemo(() => {
     if (!vendors) {return [];}
-
     const filtered = vendors.filter((vendor: any) =>
       vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
     // Sort by name
     if (sortBy === 'name') {
       filtered.sort((a: any, b: any) => {
@@ -79,24 +71,19 @@ const VendorsPage: React.FC = () => {
         }
       });
     }
-
     return filtered;
   }, [vendors, searchTerm, sortBy, sortOrder]);
-
   const handleSort = () => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
-
   const handleVendorAdd = async (vendorData: any) => {
     setAddVendorLoading(true);
     try {
       const response = await masterDataService.createVendor(vendorData);
       const newVendor = response;
-      
       // Update query data immediately
       queryClient.setQueryData(['vendors'], (old: any) => old ? [...old, newVendor] : [newVendor]);
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
-      
       setShowAddVendorModal(false);
       alert('Vendor added successfully!');
     } catch (error: any) {
@@ -115,7 +102,6 @@ const VendorsPage: React.FC = () => {
       setAddVendorLoading(false);
     }
   };
-
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteVendor(id),
     onSuccess: () => {
@@ -126,23 +112,19 @@ const VendorsPage: React.FC = () => {
       setErrorMessage(error.response?.data?.detail || 'Failed to delete vendor');
     }
   });
-
   const openAddVendorModal = useCallback(() => {
     setErrorMessage('');
     setShowAddVendorModal(true);
   }, []);
-
   // Auto-open add modal if action=add in URL
   React.useEffect(() => {
     if (action === 'add') {
       openAddVendorModal();
     }
   }, [action, openAddVendorModal]);
-
   if (!isOrgContextReady) {
     return <div>Loading...</div>;
   }
-
   return (
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -160,7 +142,6 @@ const VendorsPage: React.FC = () => {
             Add Vendor
           </Button>
         </Box>
-
         {/* Vendors Table */}
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -171,7 +152,6 @@ const VendorsPage: React.FC = () => {
               onImport={bulkImportVendors}
             />
           </Box>
-          
           {/* Search Field */}
           <Box sx={{ mb: 3 }}>
             <TextField
@@ -188,7 +168,6 @@ const VendorsPage: React.FC = () => {
               sx={{ width: 400 }}
             />
           </Box>
-          
           <TableContainer>
             <Table>
               <TableHead>
@@ -258,7 +237,6 @@ const VendorsPage: React.FC = () => {
             </Table>
           </TableContainer>
         </Paper>
-
         {/* Add Vendor Modal */}
         <AddVendorModal
           open={showAddVendorModal}
@@ -270,5 +248,4 @@ const VendorsPage: React.FC = () => {
     </Container>
   );
 };
-
 export default VendorsPage;

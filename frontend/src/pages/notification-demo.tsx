@@ -1,6 +1,5 @@
 // src/pages/notification-demo.tsx
 // Demo page to showcase notification components
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -25,7 +24,6 @@ import NotificationSettingsModal from '../components/NotificationSettingsModal';
 import AlertsFeed from '../components/AlertsFeed';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
-
 // Create a query client for the demo
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,18 +33,14 @@ const queryClient = new QueryClient({
     },
   },
 });
-
 const NotificationDemo: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
-
   const handleOpenSettings = () => {
     setSettingsOpen(true);
   };
-
   const handleCloseSettings = () => {
     setSettingsOpen(false);
   };
-
   return (
     <QueryClientProvider client={queryClient}>
       <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -62,7 +56,6 @@ const NotificationDemo: React.FC = () => {
             user preferences, and workflow integration for the Service CRM platform.
           </Alert>
         </Box>
-
         <Grid container spacing={4}>
           {/* Notification Bell Demo */}
           <Grid item xs={12} md={6}>
@@ -86,7 +79,6 @@ const NotificationDemo: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-
           {/* Settings Modal Demo */}
           <Grid item xs={12} md={6}>
             <Card>
@@ -114,7 +106,6 @@ const NotificationDemo: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-
           {/* Alerts Feed Demo */}
           <Grid item xs={12}>
             <Card>
@@ -137,7 +128,6 @@ const NotificationDemo: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-
           {/* Feature Overview */}
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
@@ -192,7 +182,6 @@ const NotificationDemo: React.FC = () => {
               </Grid>
             </Paper>
           </Grid>
-
           {/* Implementation Status */}
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
@@ -232,7 +221,6 @@ const NotificationDemo: React.FC = () => {
             </Paper>
           </Grid>
         </Grid>
-
         {/* Settings Modal */}
         <NotificationSettingsModal
           open={settingsOpen}
@@ -240,7 +228,6 @@ const NotificationDemo: React.FC = () => {
           userId={1}
           userType="user"
         />
-
         {/* Toast Container for notifications */}
         <ToastContainer
           position="top-right"
@@ -257,5 +244,4 @@ const NotificationDemo: React.FC = () => {
     </QueryClientProvider>
   );
 };
-
 export default NotificationDemo;

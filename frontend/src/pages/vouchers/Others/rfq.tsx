@@ -1,39 +1,7 @@
 // frontend/src/pages/vouchers/Others/rfq.tsx
 // Request for Quotation (RFQ) Page
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Grid,
-  IconButton,
-  CircularProgress,
-  Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Autocomplete,
-  Chip,
-  Card,
-  CardContent,
-  CardActions,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  Fab,
-  Tooltip
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Remove,
@@ -51,7 +19,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import VoucherLayout from '../../../components/VoucherLayout';
 import { procurementService } from '../../../services/procurementService';
-
 interface RFQItem {
   item_code: string;
   item_name: string;
@@ -61,7 +28,6 @@ interface RFQItem {
   specifications: any;
   expected_price: number;
 }
-
 interface RFQFormData {
   rfq_title: string;
   rfq_description: string;
@@ -76,7 +42,6 @@ interface RFQFormData {
   allow_partial_quotes: boolean;
   rfq_items: RFQItem[];
 }
-
 const RFQPage: React.FC = () => {
   const [mode, setMode] = useState<'create' | 'view' | 'edit'>('view');
   const [selectedRFQ, setSelectedRFQ] = useState<any>(null);
@@ -97,9 +62,7 @@ const RFQPage: React.FC = () => {
     allow_partial_quotes: true,
     rfq_items: []
   });
-
   const queryClient = useQueryClient();
-
   // Fetch RFQs
   const { data: rfqs = [], isLoading, error } = useQuery({
     queryKey: ['rfqs', searchTerm, statusFilter],
@@ -108,7 +71,6 @@ const RFQPage: React.FC = () => {
       status: statusFilter || undefined
     })
   });
-
   // Create RFQ mutation
   const createRFQMutation = useMutation({
     mutationFn: procurementService.createRFQ,
@@ -121,7 +83,6 @@ const RFQPage: React.FC = () => {
       toast.error(error.message || 'Failed to create RFQ');
     }
   });
-
   // Update RFQ mutation
   const updateRFQMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
@@ -135,7 +96,6 @@ const RFQPage: React.FC = () => {
       toast.error(error.message || 'Failed to update RFQ');
     }
   });
-
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setSelectedRFQ(null);
@@ -155,13 +115,11 @@ const RFQPage: React.FC = () => {
       rfq_items: []
     });
   };
-
   const handleCreateNew = () => {
     setMode('create');
     setSelectedRFQ(null);
     setIsDialogOpen(true);
   };
-
   const handleEdit = (rfq: any) => {
     setMode('edit');
     setSelectedRFQ(rfq);
@@ -181,7 +139,6 @@ const RFQPage: React.FC = () => {
     });
     setIsDialogOpen(true);
   };
-
   const handleView = (rfq: any) => {
     setMode('view');
     setSelectedRFQ(rfq);
@@ -201,7 +158,6 @@ const RFQPage: React.FC = () => {
     });
     setIsDialogOpen(true);
   };
-
   const handleSubmit = () => {
     if (mode === 'create') {
       createRFQMutation.mutate(formData);
@@ -209,7 +165,6 @@ const RFQPage: React.FC = () => {
       updateRFQMutation.mutate({ id: selectedRFQ.id, data: formData });
     }
   };
-
   const addRFQItem = () => {
     setFormData(prev => ({
       ...prev,
@@ -224,14 +179,12 @@ const RFQPage: React.FC = () => {
       }]
     }));
   };
-
   const removeRFQItem = (index: number) => {
     setFormData(prev => ({
       ...prev,
       rfq_items: prev.rfq_items.filter((_, i) => i !== index)
     }));
   };
-
   const updateRFQItem = (index: number, field: keyof RFQItem, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -240,7 +193,6 @@ const RFQPage: React.FC = () => {
       )
     }));
   };
-
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'draft': return 'default';
@@ -252,7 +204,6 @@ const RFQPage: React.FC = () => {
       default: return 'default';
     }
   };
-
   return (
     <VoucherLayout
       title="Request for Quotation (RFQ)"
@@ -288,7 +239,6 @@ const RFQPage: React.FC = () => {
               </Select>
             </FormControl>
           </Box>
-
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -297,21 +247,18 @@ const RFQPage: React.FC = () => {
             Create RFQ
           </Button>
         </Box>
-
         {/* Error Alert */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             Failed to load RFQs
           </Alert>
         )}
-
         {/* Loading */}
         {isLoading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
         )}
-
         {/* RFQ Cards */}
         <Grid container spacing={3}>
           {rfqs.map((rfq: any) => (
@@ -328,28 +275,22 @@ const RFQPage: React.FC = () => {
                       size="small"
                     />
                   </Box>
-                  
                   <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
                     {rfq.rfq_title}
                   </Typography>
-                  
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {rfq.rfq_description}
                   </Typography>
-                  
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Issue Date:</strong> {rfq.issue_date}
                   </Typography>
-                  
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Deadline:</strong> {rfq.submission_deadline}
                   </Typography>
-                  
                   <Typography variant="body2">
                     <strong>Items:</strong> {rfq.rfq_items?.length || 0}
                   </Typography>
                 </CardContent>
-                
                 <CardActions>
                   <Button
                     size="small"
@@ -370,7 +311,6 @@ const RFQPage: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-
         {/* RFQ Dialog */}
         <Dialog open={isDialogOpen} onClose={handleDialogClose} maxWidth="lg" fullWidth>
           <DialogTitle>
@@ -381,7 +321,6 @@ const RFQPage: React.FC = () => {
               {mode === 'view' && 'View RFQ'}
             </Box>
           </DialogTitle>
-          
           <DialogContent dividers>
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
@@ -394,7 +333,6 @@ const RFQPage: React.FC = () => {
                   required
                 />
               </Grid>
-              
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -405,7 +343,6 @@ const RFQPage: React.FC = () => {
                   disabled={mode === 'view'}
                 />
               </Grid>
-              
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -418,7 +355,6 @@ const RFQPage: React.FC = () => {
                   required
                 />
               </Grid>
-              
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -431,7 +367,6 @@ const RFQPage: React.FC = () => {
                   required
                 />
               </Grid>
-              
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -443,7 +378,6 @@ const RFQPage: React.FC = () => {
                   disabled={mode === 'view'}
                 />
               </Grid>
-              
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -456,7 +390,6 @@ const RFQPage: React.FC = () => {
                 />
               </Grid>
             </Grid>
-
             {/* RFQ Items */}
             <Box sx={{ mt: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -472,7 +405,6 @@ const RFQPage: React.FC = () => {
                   </Button>
                 )}
               </Box>
-
               <TableContainer component={Paper} variant="outlined">
                 <Table size="small">
                   <TableHead>
@@ -553,7 +485,6 @@ const RFQPage: React.FC = () => {
               </TableContainer>
             </Box>
           </DialogContent>
-          
           <DialogActions>
             <Button onClick={handleDialogClose}>
               {mode === 'view' ? 'Close' : 'Cancel'}
@@ -573,5 +504,4 @@ const RFQPage: React.FC = () => {
     </VoucherLayout>
   );
 };
-
 export default RFQPage;

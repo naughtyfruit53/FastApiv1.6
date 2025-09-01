@@ -42,9 +42,7 @@ import {
   SwapHoriz,
   ExpandMore
 } from '@mui/icons-material';
-
 const UnitsPage: React.FC = () => {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
@@ -58,7 +56,6 @@ const UnitsPage: React.FC = () => {
     conversion_factor: 1,
     alternate_units: []
   });
-
   // Mock data for demonstration
   const units = [
     {
@@ -119,7 +116,6 @@ const UnitsPage: React.FC = () => {
       is_active: true
     }
   ];
-
   const unitTypes = [
     { value: 'weight', label: 'Weight/Mass' },
     { value: 'length', label: 'Length/Distance' },
@@ -130,7 +126,6 @@ const UnitsPage: React.FC = () => {
     { value: 'temperature', label: 'Temperature' },
     { value: 'other', label: 'Other' }
   ];
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -142,12 +137,10 @@ const UnitsPage: React.FC = () => {
       alternate_units: []
     });
   };
-
   const handleAddClick = () => {
     resetForm();
     setAddDialog(true);
   };
-
   const handleEditClick = (unit: any) => {
     setSelectedUnit(unit);
     setFormData({
@@ -161,7 +154,6 @@ const UnitsPage: React.FC = () => {
     });
     setEditDialog(true);
   };
-
   const handleSubmit = () => {
     if (selectedUnit) {
       // TODO: Implement update functionality
@@ -173,12 +165,10 @@ const UnitsPage: React.FC = () => {
     setAddDialog(false);
     setEditDialog(false);
   };
-
   const handleDeleteClick = (unit: any) => {
     // TODO: Implement delete functionality
     console.log('Delete unit:', unit.id);
   };
-
   const addAlternateUnit = () => {
     setFormData(prev => ({
       ...prev,
@@ -188,14 +178,12 @@ const UnitsPage: React.FC = () => {
       ]
     }));
   };
-
   const removeAlternateUnit = (index: number) => {
     setFormData(prev => ({
       ...prev,
       alternate_units: prev.alternate_units.filter((_, i) => i !== index)
     }));
   };
-
   const updateAlternateUnit = (index: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -204,13 +192,11 @@ const UnitsPage: React.FC = () => {
       )
     }));
   };
-
   const filteredUnits = units.filter((unit: any) =>
     unit.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     unit.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     unit.unit_type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -226,13 +212,11 @@ const UnitsPage: React.FC = () => {
             Add Unit
           </Button>
         </Box>
-
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 3 }}>
           Define units of measurement for your inventory items. Set up alternate unit relations 
           to automatically convert between different units (e.g., kg to grams, meters to centimeters).
         </Alert>
-
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -304,7 +288,6 @@ const UnitsPage: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
-
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
@@ -316,7 +299,6 @@ const UnitsPage: React.FC = () => {
             }}
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -412,7 +394,6 @@ const UnitsPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Add/Edit Unit Dialog */}
         <Dialog 
           open={addDialog || editDialog} 
@@ -478,7 +459,6 @@ const UnitsPage: React.FC = () => {
                   label="Base Unit"
                 />
               </Grid>
-
               {/* Alternate Units Section */}
               <Grid item xs={12}>
                 <Accordion>
@@ -498,7 +478,6 @@ const UnitsPage: React.FC = () => {
                         Add Alternate Unit
                       </Button>
                     </Box>
-                    
                     {formData.alternate_units.map((altUnit: any, index: number) => (
                       <Grid container spacing={2} key={index} sx={{ mb: 2 }}>
                         <Grid item xs={4}>
@@ -541,7 +520,6 @@ const UnitsPage: React.FC = () => {
                         </Grid>
                       </Grid>
                     ))}
-                    
                     {formData.alternate_units.length === 0 && (
                       <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
                         No alternate units defined. Click "Add Alternate Unit" to create unit conversions.
@@ -565,5 +543,4 @@ const UnitsPage: React.FC = () => {
     </Container>
   );
 };
-
 export default UnitsPage;

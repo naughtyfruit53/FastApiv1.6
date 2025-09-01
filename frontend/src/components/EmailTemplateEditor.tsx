@@ -38,7 +38,6 @@ import {
   Add
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-
 interface EmailTemplate {
   id: number;
   name: string;
@@ -52,7 +51,6 @@ interface EmailTemplate {
   variables: string[];
   is_active: boolean;
 }
-
 interface EmailTemplateEditorProps {
   open: boolean;
   onClose: () => void;
@@ -60,16 +58,13 @@ interface EmailTemplateEditorProps {
   onSave: (template: Partial<EmailTemplate>) => void;
   onTest?: (template: Partial<EmailTemplate>) => void;
 }
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
-
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -86,7 +81,6 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   open,
   onClose,
@@ -107,9 +101,8 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     variables: template?.variables || [],
     is_active: template?.is_active ?? true
   });
-  
   const [newVariable, setNewVariable] = useState('');
-  const [previewData, setPreviewData] = useState<{ [key: string]: string }>({
+const [previewData,] = useState<{ [key: string]: string }>({
     prospect_name: 'John Smith',
     company_name: 'TechCorp Solutions',
     exhibition_name: 'Tech Expo 2024',
@@ -118,7 +111,6 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     contact_email: 'sarah@yourcompany.com',
     contact_phone: '+1-555-0123'
   });
-
   const templateTypes = [
     { value: 'exhibition_intro', label: 'Exhibition Introduction' },
     { value: 'follow_up', label: 'Follow-up Email' },
@@ -127,7 +119,6 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     { value: 'proposal_sent', label: 'Proposal Sent' },
     { value: 'meeting_request', label: 'Meeting Request' }
   ];
-
   const availableVariables = [
     'prospect_name',
     'company_name',
@@ -141,29 +132,21 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     'meeting_time',
     'proposal_link'
   ];
-
   const defaultTemplates = {
     exhibition_intro: {
       subject: 'Great meeting you at {{exhibition_name}}!',
       body: `Hi {{prospect_name}},
-
 It was wonderful meeting you at {{exhibition_name}} in {{exhibition_location}}. I enjoyed our conversation about {{company_name}} and would love to continue our discussion.
-
 I believe our solutions could be a great fit for your needs. Would you be interested in scheduling a brief call to explore how we can help {{company_name}} achieve its goals?
-
 Best regards,
 {{contact_person}}
 {{contact_email}}
 {{contact_phone}}`,
       html_body: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
   <h2 style="color: #2196F3;">Great meeting you at {{exhibition_name}}!</h2>
-  
   <p>Hi <strong>{{prospect_name}}</strong>,</p>
-  
   <p>It was wonderful meeting you at <strong>{{exhibition_name}}</strong> in {{exhibition_location}}. I enjoyed our conversation about <strong>{{company_name}}</strong> and would love to continue our discussion.</p>
-  
   <p>I believe our solutions could be a great fit for your needs. Would you be interested in scheduling a brief call to explore how we can help {{company_name}} achieve its goals?</p>
-  
   <div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-radius: 5px;">
     <p style="margin: 0;"><strong>{{contact_person}}</strong><br>
     📧 {{contact_email}}<br>
@@ -172,18 +155,15 @@ Best regards,
 </div>`
     }
   };
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
-
   const handleInputChange = (field: keyof EmailTemplate, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
-
   const handleAddVariable = () => {
     if (newVariable && !formData.variables?.includes(newVariable)) {
       setFormData(prev => ({
@@ -193,43 +173,34 @@ Best regards,
       setNewVariable('');
     }
   };
-
   const handleRemoveVariable = (variable: string) => {
     setFormData(prev => ({
       ...prev,
       variables: prev.variables?.filter(v => v !== variable) || []
     }));
   };
-
-  const insertVariable = (variable: string, field: 'subject' | 'body' | 'html_body') => {
     const variableText = `{{${variable}}}`;
     const currentValue = formData[field] || '';
-    
     // For simplicity, just append the variable. In a real implementation,
     // you'd want to insert at cursor position
     handleInputChange(field, currentValue + variableText);
   };
-
   const renderPreview = (text: string, isHtml: boolean = false) => {
     let processedText = text;
-    
     // Replace variables with preview data
     Object.entries(previewData).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
       processedText = processedText.replace(regex, value);
     });
-    
     if (isHtml) {
       return <div dangerouslySetInnerHTML={{ __html: processedText }} />;
     }
-    
     return (
       <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
         {processedText}
       </Typography>
     );
   };
-
   const loadDefaultTemplate = () => {
     const defaultTemplate = defaultTemplates[formData.template_type as keyof typeof defaultTemplates];
     if (defaultTemplate) {
@@ -241,24 +212,20 @@ Best regards,
       toast.success('Default template loaded');
     }
   };
-
   const handleSave = () => {
     if (!formData.name || !formData.subject || !formData.body) {
       toast.error('Please fill in required fields: Name, Subject, and Body');
       return;
     }
-    
     onSave(formData);
     toast.success('Email template saved successfully');
   };
-
   const handleTest = () => {
     if (onTest) {
       onTest(formData);
       toast.success('Test email sent');
     }
   };
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>
@@ -280,7 +247,6 @@ Best regards,
           </Box>
         </Box>
       </DialogTitle>
-      
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={activeTab} onChange={handleTabChange}>
@@ -290,7 +256,6 @@ Best regards,
             <Tab label="Preview" />
           </Tabs>
         </Box>
-
         {/* Template Settings Tab */}
         <TabPanel value={activeTab} index={0}>
           <Grid container spacing={3}>
@@ -354,7 +319,6 @@ Best regards,
             </Grid>
           </Grid>
         </TabPanel>
-
         {/* Email Content Tab */}
         <TabPanel value={activeTab} index={1}>
           <Grid container spacing={3}>
@@ -393,16 +357,15 @@ Best regards,
             </Grid>
           </Grid>
         </TabPanel>
-
         {/* Variables Tab */}
         <TabPanel value={activeTab} index={2}>
           <Typography variant="h6" gutterBottom>
             Template Variables
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+// TODO: Define or import variable_name
             Variables allow you to personalize emails with dynamic content. Use {{variable_name}} in your template.
           </Typography>
-
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <Paper sx={{ p: 2 }}>
@@ -434,7 +397,6 @@ Best regards,
                 </List>
               </Paper>
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <Paper sx={{ p: 2 }}>
                 <Typography variant="subtitle1" gutterBottom>
@@ -450,7 +412,6 @@ Best regards,
                     />
                   ))}
                 </Box>
-                
                 <Box display="flex" gap={1}>
                   <TextField
                     size="small"
@@ -472,7 +433,6 @@ Best regards,
             </Grid>
           </Grid>
         </TabPanel>
-
         {/* Preview Tab */}
         <TabPanel value={activeTab} index={3}>
           <Typography variant="h6" gutterBottom>
@@ -481,13 +441,11 @@ Best regards,
           <Alert severity="info" sx={{ mb: 3 }}>
             This preview shows how the email will look with sample data.
           </Alert>
-
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
               Subject: {renderPreview(formData.subject || '')}
             </Typography>
             <Divider sx={{ my: 2 }} />
-            
             <Box sx={{ minHeight: 200 }}>
               {activeTab === 3 && formData.html_body ? (
                 <Box>
@@ -506,7 +464,6 @@ Best regards,
               )}
             </Box>
           </Paper>
-
           <Box display="flex" gap={2}>
             <Button
               variant="outlined"
@@ -530,7 +487,6 @@ Best regards,
           </Box>
         </TabPanel>
       </DialogContent>
-
       <DialogActions>
         <Button onClick={onClose}>
           Cancel
@@ -546,5 +502,4 @@ Best regards,
     </Dialog>
   );
 };
-
 export default EmailTemplateEditor;

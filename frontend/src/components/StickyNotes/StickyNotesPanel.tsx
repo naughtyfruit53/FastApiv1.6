@@ -1,29 +1,11 @@
 // frontend/src/components/StickyNotes/StickyNotesPanel.tsx
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  CircularProgress,
-  Alert,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Typography // Added import
-} from '@mui/material';
-import { Add, PushPin, PushPinOutlined } from '@mui/icons-material';
+import { from '@mui/material';
+import {PushPin, PushPinOutlined} from '@mui/icons-material';
 import StickyNote from './StickyNote';
 import { useAuth } from '../../context/AuthContext';
 import { stickyNotesService } from '../../services/stickyNotesService';
 import { useStickyNotes } from '../../hooks/useStickyNotes';
-
 interface StickyNoteData {
   id: number;
   title: string;
@@ -34,7 +16,6 @@ interface StickyNoteData {
   position?: { x: number; y: number };
   pinned?: boolean;
 }
-
 const COLORS = [
   { name: 'yellow', label: 'Yellow' },
   { name: 'blue', label: 'Blue' },
@@ -43,9 +24,8 @@ const COLORS = [
   { name: 'purple', label: 'Purple' },
   { name: 'orange', label: 'Orange' }
 ];
-
 const StickyNotesPanel: React.FC = () => {
-  const { user } = useAuth();
+const  = useAuth();
   const { userSettings } = useStickyNotes();
   const [notes, setNotes] = useState<StickyNoteData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,13 +40,11 @@ const StickyNotesPanel: React.FC = () => {
     pinned: false
   });
   const [creating, setCreating] = useState(false);
-
   useEffect(() => {
     if (userSettings.sticky_notes_enabled) {
       fetchNotes();
     }
   }, [userSettings.sticky_notes_enabled]);
-
   const fetchNotes = async () => {
     try {
       setLoading(true);
@@ -80,7 +58,6 @@ const StickyNotesPanel: React.FC = () => {
       setLoading(false);
     }
   };
-
   const createNote = async () => {
     if (!newNote.title.trim() || !newNote.content.trim()) {
       return;
@@ -99,7 +76,6 @@ const StickyNotesPanel: React.FC = () => {
       setCreating(false);
     }
   };
-
   const updateNote = async (id: number, updateData: { title?: string; content?: string; color?: string; position?: { x: number; y: number }; pinned?: boolean }) => {
     try {
       const updatedNote = await stickyNotesService.updateNote(id, updateData);
@@ -111,11 +87,9 @@ const StickyNotesPanel: React.FC = () => {
       throw err;
     }
   };
-
   const togglePin = (note: StickyNoteData) => {
     updateNote(note.id, { pinned: !note.pinned });
   };
-
   const deleteNote = async (id: number) => {
     try {
       await stickyNotesService.deleteNote(id);
@@ -127,7 +101,6 @@ const StickyNotesPanel: React.FC = () => {
       throw err;
     }
   };
-
   // Always show icon, regardless of settings, but disable functionality if not enabled
   return (
     <>
@@ -160,7 +133,6 @@ const StickyNotesPanel: React.FC = () => {
           <polygon points="100,60 100,100 60,100" fill="#b45309" />
         </svg>
       </Box>
-
       {/* Pinned notes - rendered separately at top right */}
       {notes.filter(note => note.pinned).map((note) => (
         <Box
@@ -187,7 +159,6 @@ const StickyNotesPanel: React.FC = () => {
           />
         </Box>
       ))}
-
       {/* Unpinned notes - draggable as before */}
       {notes.filter(note => !note.pinned).map((note) => (
         <StickyNote
@@ -203,7 +174,6 @@ const StickyNotesPanel: React.FC = () => {
           onDelete={deleteNote}
         />
       ))}
-
       {/* Popup dialog for notes list */}
       <Dialog
         open={popupOpen}
@@ -239,7 +209,6 @@ const StickyNotesPanel: React.FC = () => {
           <Button onClick={() => setPopupOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-
       {/* Create note dialog */}
       <Dialog
         open={createDialogOpen}
@@ -302,5 +271,4 @@ const StickyNotesPanel: React.FC = () => {
     </>
   );
 };
-
 export default StickyNotesPanel;

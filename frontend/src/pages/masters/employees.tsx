@@ -1,32 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Container,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  IconButton,
-  Avatar,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Add,
   Edit,
@@ -39,9 +13,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEmployees, createEmployee } from '../../services/masterService';
 import AddEmployeeModal from '../../components/AddEmployeeModal';
-
 const EmployeesPage: React.FC = () => {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
@@ -59,15 +31,12 @@ const EmployeesPage: React.FC = () => {
     designation: '',
     salary: 0
   });
-
   const queryClient = useQueryClient();
-
   // Fetch employees
   const { data: employees, isLoading } = useQuery({
     queryKey: ['employees', searchTerm],
     queryFn: getEmployees
   });
-
   // Create employee mutation
   const createMutation = useMutation({
     mutationFn: createEmployee,
@@ -80,7 +49,6 @@ const EmployeesPage: React.FC = () => {
       console.error('Error creating employee:', error);
     }
   });
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -96,12 +64,10 @@ const EmployeesPage: React.FC = () => {
       salary: 0
     });
   };
-
   const handleAddClick = () => {
     resetForm();
     setAddModalOpen(true);
   };
-
   const handleEditClick = (employee: any) => {
     setSelectedEmployee(employee);
     setFormData({
@@ -119,7 +85,6 @@ const EmployeesPage: React.FC = () => {
     });
     setEditDialog(true);
   };
-
   const handleSubmit = () => {
     if (selectedEmployee) {
       // TODO: Implement update mutation
@@ -128,22 +93,18 @@ const EmployeesPage: React.FC = () => {
       createMutation.mutate(formData);
     }
   };
-
   const handleDeleteClick = (employee: any) => {
     // TODO: Implement delete functionality
     console.log('Delete employee:', employee.id);
   };
-
   const handleAddEmployee = async (data: any) => {
     createMutation.mutate(data);
   };
-
   const filteredEmployees = employees?.filter((employee: any) =>
     employee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.department?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -159,7 +120,6 @@ const EmployeesPage: React.FC = () => {
             Add Employee
           </Button>
         </Box>
-
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
@@ -171,7 +131,6 @@ const EmployeesPage: React.FC = () => {
             }}
           />
         </Box>
-
         {isLoading ? (
           <Typography>Loading employees...</Typography>
         ) : (
@@ -248,7 +207,6 @@ const EmployeesPage: React.FC = () => {
             </Table>
           </TableContainer>
         )}
-
         {/* Add Employee Modal */}
         <AddEmployeeModal
           open={addModalOpen}
@@ -256,7 +214,6 @@ const EmployeesPage: React.FC = () => {
           onAdd={handleAddEmployee}
           mode="create"
         />
-
         {/* Edit Employee Dialog */}
         <Dialog 
           open={editDialog} 
@@ -374,5 +331,4 @@ const EmployeesPage: React.FC = () => {
     </Container>
   );
 };
-
 export default EmployeesPage;

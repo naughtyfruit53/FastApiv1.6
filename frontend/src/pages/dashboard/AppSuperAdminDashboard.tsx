@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Container,
-  Chip,
-  CircularProgress,
-  Alert,
-  Paper,
-  Grid as Grid,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Business,
   People,
@@ -25,7 +16,6 @@ import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
 import StickyNotesPanel from '../../components/StickyNotes/StickyNotesPanel';
 import { useStickyNotes } from '../../hooks/useStickyNotes';
-
 interface AppStatistics {
   total_licenses_issued: number;
   active_organizations: number;
@@ -44,17 +34,14 @@ interface AppStatistics {
   failed_login_attempts?: number;
   recent_new_orgs?: number;
 }
-
 const AppSuperAdminDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<AppStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { userSettings } = useStickyNotes();
-
+const  = useStickyNotes();
   useEffect(() => {
     fetchAppStatistics();
   }, []);
-
   const fetchAppStatistics = async () => {
     try {
       const data = await adminService.getAppStatistics();
@@ -74,7 +61,6 @@ const AppSuperAdminDashboard: React.FC = () => {
       setLoading(false);
     }
   };
-
   if (loading) {
     return (
       <DashboardLayout 
@@ -90,7 +76,6 @@ const AppSuperAdminDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
-
   if (error) {
     return (
       <DashboardLayout 
@@ -111,11 +96,9 @@ const AppSuperAdminDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
-
   if (!statistics) {
     return null;
   }
-
   const statsCards = [
     {
       title: 'Total Licenses Issued',
@@ -206,18 +189,15 @@ const AppSuperAdminDashboard: React.FC = () => {
       description: 'Average active users per organization'
     }
   ];
-
   const activationRate = statistics.total_licenses_issued > 0 
     ? Math.round((statistics.active_organizations / statistics.total_licenses_issued) * 100)
     : 0;
-
   return (
     <DashboardLayout 
       title="Super Admin Dashboard"
       subtitle="Monitor platform-wide metrics and system health"
     >
       <StickyNotesPanel />
-      
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
         {statsCards.map((stat, index) => (
           <MetricCard
@@ -231,7 +211,6 @@ const AppSuperAdminDashboard: React.FC = () => {
           />
         ))}
       </Box>
-
       <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
         <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
@@ -259,7 +238,6 @@ const AppSuperAdminDashboard: React.FC = () => {
             ))}
           </Box>
         </Paper>
-
         <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             System Status
@@ -291,7 +269,6 @@ const AppSuperAdminDashboard: React.FC = () => {
           </Typography>
         </Paper>
       </Box>
-
       <Paper className="modern-card" sx={{ p: 4 }}>
         <Typography variant="h6" className="modern-card-title" gutterBottom sx={{ mb: 3 }}>
           Platform Growth Overview
@@ -347,5 +324,4 @@ const AppSuperAdminDashboard: React.FC = () => {
     </DashboardLayout>
   );
 };
-
 export default AppSuperAdminDashboard;

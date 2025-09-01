@@ -1,7 +1,5 @@
 // frontend/src/pages/calendar/dashboard.tsx
-
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -34,7 +32,6 @@ import {
   LocationOn
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-
 interface CalendarStats {
   total_events: number;
   today_events: number;
@@ -45,7 +42,6 @@ interface CalendarStats {
   my_events: number;
   shared_events: number;
 }
-
 interface UpcomingEvent {
   id: number;
   title: string;
@@ -56,14 +52,12 @@ interface UpcomingEvent {
   meeting_url?: string;
   attendees_count: number;
 }
-
 const CalendarDashboard: React.FC = () => {
   const router = useRouter();
   const [stats, setStats] = useState<CalendarStats | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     // Simulate API call - replace with actual API integration
     const fetchData = async () => {
@@ -71,7 +65,6 @@ const CalendarDashboard: React.FC = () => {
         setLoading(true);
         // TODO: Replace with actual API calls
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-        
         // Mock data for demonstration
         const mockStats: CalendarStats = {
           total_events: 34,
@@ -83,7 +76,6 @@ const CalendarDashboard: React.FC = () => {
           my_events: 28,
           shared_events: 6
         };
-
         const mockEvents: UpcomingEvent[] = [
           {
             id: 1,
@@ -112,7 +104,6 @@ const CalendarDashboard: React.FC = () => {
             attendees_count: 8
           }
         ];
-        
         setStats(mockStats);
         setUpcomingEvents(mockEvents);
       } catch (err) {
@@ -121,21 +112,17 @@ const CalendarDashboard: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
-
   const handleNavigate = (path: string) => {
     router.push(path);
   };
-
   const formatDateTime = (dateTime: string) => {
     const date = new Date(dateTime);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     const eventDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
     let dateStr = '';
     if (eventDate.getTime() === today.getTime()) {
       dateStr = 'Today';
@@ -144,11 +131,9 @@ const CalendarDashboard: React.FC = () => {
     } else {
       dateStr = date.toLocaleDateString();
     }
-
     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return `${dateStr} ${timeStr}`;
   };
-
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'meeting': return 'primary';
@@ -158,7 +143,6 @@ const CalendarDashboard: React.FC = () => {
       default: return 'default';
     }
   };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -166,7 +150,6 @@ const CalendarDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
@@ -174,7 +157,6 @@ const CalendarDashboard: React.FC = () => {
       </Box>
     );
   }
-
   if (!stats) {
     return (
       <Box sx={{ p: 3 }}>
@@ -182,7 +164,6 @@ const CalendarDashboard: React.FC = () => {
       </Box>
     );
   }
-
   return (
     <Box 
       sx={{ 
@@ -248,7 +229,6 @@ const CalendarDashboard: React.FC = () => {
           Create Event
         </Button>
       </Box>
-
       {/* Overview Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -291,7 +271,6 @@ const CalendarDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card 
             sx={{
@@ -332,7 +311,6 @@ const CalendarDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card 
             sx={{
@@ -363,7 +341,6 @@ const CalendarDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -382,7 +359,6 @@ const CalendarDashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Main Content */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
@@ -466,7 +442,6 @@ const CalendarDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} md={4}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
@@ -512,7 +487,6 @@ const CalendarDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-
             <Grid item xs={12}>
               <Card>
                 <CardContent>
@@ -548,5 +522,4 @@ const CalendarDashboard: React.FC = () => {
     </Box>
   );
 };
-
 export default CalendarDashboard;

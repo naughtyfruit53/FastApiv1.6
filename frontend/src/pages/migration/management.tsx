@@ -1,12 +1,10 @@
 'use client';
-
 /**
  * Migration Management Page
  * 
  * Main page for managing data migrations and integrations.
  * Only accessible to super admins.
  */
-
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -53,7 +51,6 @@ import { useRouter } from 'next/router';
 import MigrationWizard from '../../components/MigrationWizard';
 import IntegrationDashboard from '../../components/IntegrationDashboard';
 import axios from 'axios';
-
 interface MigrationJob {
   id: number;
   job_name: string;
@@ -67,7 +64,6 @@ interface MigrationJob {
   error_message?: string;
   created_by_name?: string;
 }
-
 const MigrationManagement: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
@@ -79,18 +75,16 @@ const MigrationManagement: React.FC = () => {
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<MigrationJob | null>(null);
-
   // Check if user is super admin
   const isSuperAdmin = user?.is_super_admin;
-
   useEffect(() => {
     if (!isSuperAdmin) {
       router.push('/settings'); // Redirect if not super admin
       return;
     }
+// loadMigrationJobs is defined later in this file
     loadMigrationJobs();
   }, [isSuperAdmin, router]);
-
   const loadMigrationJobs = async () => {
     setLoading(true);
     try {
@@ -103,7 +97,6 @@ const MigrationManagement: React.FC = () => {
       setLoading(false);
     }
   };
-
   const deleteJob = async (job: MigrationJob) => {
     try {
       await axios.delete(`/api/v1/migration/jobs/${job.id}`);
@@ -115,7 +108,6 @@ const MigrationManagement: React.FC = () => {
       setError('Failed to delete migration job');
     }
   };
-
   const executeJob = async (jobId: number) => {
     try {
       await axios.post(`/api/v1/migration/jobs/${jobId}/execute`);
@@ -125,7 +117,6 @@ const MigrationManagement: React.FC = () => {
       setError('Failed to execute migration job');
     }
   };
-
   const rollbackJob = async (jobId: number) => {
     try {
       await axios.post(`/api/v1/migration/jobs/${jobId}/rollback`);
@@ -135,7 +126,6 @@ const MigrationManagement: React.FC = () => {
       setError('Failed to rollback migration job');
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
@@ -152,18 +142,15 @@ const MigrationManagement: React.FC = () => {
         return 'default';
     }
   };
-
   const openWizard = (jobId?: number) => {
     setSelectedJobId(jobId || null);
     setWizardOpen(true);
   };
-
   const closeWizard = () => {
     setWizardOpen(false);
     setSelectedJobId(null);
     loadMigrationJobs(); // Refresh the list
   };
-
   if (!isSuperAdmin) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -173,7 +160,6 @@ const MigrationManagement: React.FC = () => {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
@@ -197,13 +183,11 @@ const MigrationManagement: React.FC = () => {
           </Button>
         </Box>
       </Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
-
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -255,7 +239,6 @@ const MigrationManagement: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {/* Migration Jobs Table */}
       <Paper sx={{ mb: 4 }}>
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -268,7 +251,6 @@ const MigrationManagement: React.FC = () => {
             Refresh
           </Button>
         </Box>
-        
         {loading ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <CircularProgress />
@@ -348,7 +330,6 @@ const MigrationManagement: React.FC = () => {
                             <Edit />
                           </IconButton>
                         </Tooltip>
-                        
                         {job.status === 'approved' && (
                           <Tooltip title="Execute Migration">
                             <IconButton
@@ -360,7 +341,6 @@ const MigrationManagement: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         )}
-                        
                         {job.status === 'completed' && (
                           <Tooltip title="Rollback Migration">
                             <IconButton
@@ -372,7 +352,6 @@ const MigrationManagement: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         )}
-                        
                         <Tooltip title="Delete Job">
                           <IconButton
                             size="small"
@@ -403,7 +382,6 @@ const MigrationManagement: React.FC = () => {
           </TableContainer>
         )}
       </Paper>
-
       {/* Recent Activity */}
       <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
@@ -445,20 +423,17 @@ const MigrationManagement: React.FC = () => {
           </Grid>
         </Grid>
       </Paper>
-
       {/* Migration Wizard Dialog */}
       <MigrationWizard
         open={wizardOpen}
         onClose={closeWizard}
         jobId={selectedJobId || undefined}
       />
-
       {/* Integration Dashboard */}
       <IntegrationDashboard
         open={dashboardOpen}
         onClose={() => setDashboardOpen(false)}
       />
-
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
@@ -484,5 +459,4 @@ const MigrationManagement: React.FC = () => {
     </Container>
   );
 };
-
 export default MigrationManagement;

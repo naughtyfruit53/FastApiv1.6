@@ -1,15 +1,11 @@
 // frontend/src/services/authService.ts
-
 // Revised: frontend/src/services/authService.ts
-
 // frontend/src/services/authService.ts (Revised for detailed error handling in companyService)
 import api from '../lib/api';  // Use the api client
-
 export const authService = {
   login: async (username: string, password: string) => {
     try {
       console.log('[AuthService] Starting login process for:', username);
-      
       const formData = new FormData();
       formData.append('username', username);
       formData.append('password', password);
@@ -18,23 +14,19 @@ export const authService = {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
-      
       console.log('[AuthService] Login API response received:', {
         hasToken: !!response.data.access_token,
         organizationId: response.data.organization_id,
         userRole: response.data.user_role,
         mustChangePassword: response.data.must_change_password
       });
-      
       // Store token FIRST
       localStorage.setItem('token', response.data.access_token);
-      
       // Store refresh token if provided
       if (response.data.refresh_token) {
         localStorage.setItem('refresh_token', response.data.refresh_token);
         console.log('[AuthService] Stored refresh token');
       }
-      
       // Store authentication context data (NOT organization_id - that stays in memory)
       if (response.data.user_role) {
         localStorage.setItem('user_role', response.data.user_role);
@@ -43,7 +35,6 @@ export const authService = {
       localStorage.setItem('is_super_admin', response.data.user?.is_super_admin ? 'true' : 'false');
       console.log('[AuthService] Stored is_super_admin:', response.data.user?.is_super_admin);
       console.log('[AuthService] Organization context managed by backend session only');
-      
       console.log('[AuthService] Login complete - auth context established');
       return response.data;
     } catch (error: any) {
@@ -54,27 +45,22 @@ export const authService = {
   loginWithEmail: async (email: string, password: string) => {
     try {
       console.log('[AuthService] Starting email login process for:', email);
-      
       const formData = new FormData();
       formData.append('username', email);
       formData.append('password', password);
-      
       const response = await api.post('/auth/login', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
-      
       console.log('[AuthService] Email login API response received:', {
         hasToken: !!response.data.access_token,
         organizationId: response.data.organization_id,
         userRole: response.data.user_role,
         mustChangePassword: response.data.must_change_password
       });
-      
       // Store token FIRST
       localStorage.setItem('token', response.data.access_token);
-      
       // Store ALL authentication context data immediately after token
       // Store authentication context data (NOT organization_id - that stays in memory)
       if (response.data.user_role) {
@@ -84,7 +70,6 @@ export const authService = {
       localStorage.setItem('is_super_admin', response.data.user?.is_super_admin ? 'true' : 'false');
       console.log('[AuthService] Stored is_super_admin:', response.data.user?.is_super_admin);
       console.log('[AuthService] Organization context managed by backend session only');
-      
       console.log('[AuthService] Email login complete - all context established');
       return response.data;
     } catch (error: any) {
@@ -99,7 +84,6 @@ export const authService = {
   getCurrentUser: async () => {
     try {
       console.log('[AuthService] Fetching current user data');
-      
       const response = await api.get('/users/me');
       console.log('[AuthService] User data received from /users/me:', {
         id: response.data.id,
@@ -109,19 +93,15 @@ export const authService = {
         organization_id: response.data.organization_id,
         must_change_password: response.data.must_change_password
       });
-      
       // Organization context is managed by backend session only
       console.log('[AuthService] Organization context from backend session:', response.data.organization_id);
-      
       // Store role information
       if (response.data.role) {
         localStorage.setItem('user_role', response.data.role);
         console.log('[AuthService] Updated user_role in localStorage:', response.data.role);
       }
-      
       localStorage.setItem('is_super_admin', response.data.is_super_admin ? 'true' : 'false');
       console.log('[AuthService] Updated is_super_admin in localStorage:', response.data.is_super_admin);
-      
       console.log('[AuthService] getCurrentUser complete - all localStorage updated');
       return response.data;
     } catch (error: any) {
@@ -139,15 +119,12 @@ export const authService = {
   requestOTP: async (email: string, phone: string, deliveryMethod: string = 'auto', purpose: string = 'login') => {
     try {
       const requestData: any = { email, purpose };
-      
       if (phone) {
         requestData.phone_number = phone;
       }
-      
       if (deliveryMethod) {
         requestData.delivery_method = deliveryMethod;
       }
-      
       const response = await api.post('/auth/otp/request', requestData);
       return response.data;
     } catch (error: any) {
@@ -166,17 +143,13 @@ export const authService = {
     try {
       console.log('[AuthService] Attempting to refresh token');
       const refreshToken = localStorage.getItem('refresh_token');
-      
       if (!refreshToken) {
         throw new Error('No refresh token available');
       }
-      
       const response = await api.post('/auth/refresh-token', {
         refresh_token: refreshToken
       });
-      
       console.log('[AuthService] Token refresh successful');
-      
       // Update stored tokens
       if (response.data.access_token) {
         localStorage.setItem('token', response.data.access_token);
@@ -184,29 +157,24 @@ export const authService = {
       if (response.data.refresh_token) {
         localStorage.setItem('refresh_token', response.data.refresh_token);
       }
-      
       return response.data;
     } catch (error: any) {
       console.error('[AuthService] Token refresh failed:', error);
-      
       // Clear invalid tokens
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_role');
       localStorage.removeItem('is_super_admin');
-      
       throw new Error(error.userMessage || 'Token refresh failed');
     }
   },
   isTokenValid: () => {
     const token = localStorage.getItem('token');
     if (!token) {return false;}
-    
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const expiry = payload.exp * 1000; // Convert to milliseconds
       const now = Date.now();
-      
       // Check if token expires in next 5 minutes
       return expiry > now + (5 * 60 * 1000);
     } catch (error) {
@@ -223,7 +191,6 @@ export const authService = {
     }
   },
 };
-
 export const voucherService = {
   // Generic function for CRUD
   getVouchers: async (type: string, params?: any) => {
@@ -318,7 +285,6 @@ export const voucherService = {
     return masterDataService.getCustomers(params);
   },
 };
-
 export const masterDataService = {
   getVendors: async ({ signal, params = {} } = {}) => {
     try {
@@ -462,7 +428,6 @@ export const masterDataService = {
       if (!token) {
         throw new Error('Authentication required. Please log in before importing inventory.');
       }
-      
       const formData = new FormData();
       formData.append('file', file);
       /**
@@ -529,7 +494,6 @@ export const masterDataService = {
     }
   },
 };
-
 export const companyService = {
   getCurrentCompany: async () => {
     const token = localStorage.getItem('token');
@@ -604,7 +568,6 @@ export const companyService = {
   getLogoUrl: (companyId: number) => {
     return `/api/v1/companies/${companyId}/logo`;
   },
-  
   // Multi-company management methods
   getCompanies: async () => {
     try {
@@ -614,7 +577,6 @@ export const companyService = {
       throw new Error(error.userMessage || 'Failed to fetch companies');
     }
   },
-  
   getOrganizationInfo: async () => {
     try {
       const response = await api.get('/organizations/current');
@@ -623,7 +585,6 @@ export const companyService = {
       throw new Error(error.userMessage || 'Failed to fetch organization info');
     }
   },
-  
   getCompanyUsers: async (companyId: number) => {
     try {
       const response = await api.get(`/companies/${companyId}/users`);
@@ -632,7 +593,6 @@ export const companyService = {
       throw new Error(error.userMessage || 'Failed to fetch company users');
     }
   },
-  
   assignUserToCompany: async (companyId: number, data: { user_id: number; company_id: number; is_company_admin: boolean }) => {
     try {
       const response = await api.post(`/companies/${companyId}/users`, data);
@@ -641,7 +601,6 @@ export const companyService = {
       throw new Error(error.userMessage || 'Failed to assign user to company');
     }
   },
-  
   updateUserCompanyAssignment: async (companyId: number, userId: number, updates: any) => {
     try {
       const response = await api.put(`/companies/${companyId}/users/${userId}`, updates);
@@ -650,7 +609,6 @@ export const companyService = {
       throw new Error(error.userMessage || 'Failed to update user assignment');
     }
   },
-  
   removeUserFromCompany: async (companyId: number, userId: number) => {
     try {
       const response = await api.delete(`/companies/${companyId}/users/${userId}`);
@@ -660,7 +618,6 @@ export const companyService = {
     }
   },
 };
-
 export const reportsService = {
   getDashboardStats: async () => {
     try {
@@ -722,7 +679,6 @@ export const reportsService = {
       throw new Error(error.userMessage || 'Failed to get outstanding ledger');
     }
   },
-  
   // Export functions
   exportSalesReportExcel: async (params?: any) => {
     try {
@@ -735,7 +691,6 @@ export const reportsService = {
       throw new Error(error.userMessage || 'Failed to export sales report');
     }
   },
-  
   exportPurchaseReportExcel: async (params?: any) => {
     try {
       const response = await api.get('/reports/purchase-report/export/excel', { 
@@ -747,7 +702,6 @@ export const reportsService = {
       throw new Error(error.userMessage || 'Failed to export purchase report');
     }
   },
-  
   exportInventoryReportExcel: async (params?: any) => {
     try {
       const response = await api.get('/reports/inventory-report/export/excel', { 
@@ -759,7 +713,6 @@ export const reportsService = {
       throw new Error(error.userMessage || 'Failed to export inventory report');
     }
   },
-  
   exportPendingOrdersExcel: async (params?: any) => {
     try {
       const response = await api.get('/reports/pending-orders/export/excel', { 
@@ -771,7 +724,6 @@ export const reportsService = {
       throw new Error(error.userMessage || 'Failed to export pending orders report');
     }
   },
-  
   exportCompleteLedgerExcel: async (params?: any) => {
     try {
       const response = await api.get('/reports/complete-ledger/export/excel', { 
@@ -783,7 +735,6 @@ export const reportsService = {
       throw new Error(error.userMessage || 'Failed to export complete ledger');
     }
   },
-  
   exportOutstandingLedgerExcel: async (params?: any) => {
     try {
       const response = await api.get('/reports/outstanding-ledger/export/excel', { 
@@ -796,7 +747,6 @@ export const reportsService = {
     }
   },
 };
-
 export const organizationService = {
   createLicense: async (data: any) => {
     try {
@@ -848,30 +798,24 @@ export const organizationService = {
     }
   },
 };
-
 export const passwordService = {
   changePassword: async (currentPassword: string | null, newPassword: string, confirmPassword?: string) => {
     try {
       const payload: { new_password: string; current_password?: string; confirm_password?: string } = {
         new_password: newPassword
       };
-      
       if (currentPassword) {
         payload.current_password = currentPassword;
       }
-      
       if (confirmPassword) {
         payload.confirm_password = confirmPassword;
       }
-      
       const response = await api.post('/password/change', payload);
-      
       // Handle new token if provided in response (password change returns new JWT)
       if (response.data.access_token) {
         console.log('[PasswordService] New token received after password change, updating storage');
         localStorage.setItem('token', response.data.access_token);
       }
-      
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to change password');
@@ -892,20 +836,17 @@ export const passwordService = {
         otp,
         new_password: newPassword
       });
-      
       // Handle new token if provided in response (password reset returns new JWT)
       if (response.data.access_token) {
         console.log('[PasswordService] New token received after password reset, updating storage');
         localStorage.setItem('token', response.data.access_token);
       }
-      
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || 'Failed to reset password');
     }
   },
 };
-
 export const userService = {
   // Organization user management (for org admins)
   getOrganizationUsers: async (params?: any) => {

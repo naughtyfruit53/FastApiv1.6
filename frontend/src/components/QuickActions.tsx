@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Paper, Typography, IconButton } from '@mui/material';
+import {Box, Button, Paper, Typography} from '@mui/material';
 import { Add, Edit, Delete, Download, Upload, Share } from '@mui/icons-material';
 
 export interface QuickAction {

@@ -13,42 +13,33 @@ import {
   StepLabel,
   Container
 } from '@mui/material';
-import { useForm, FieldErrors } from 'react-hook-form';
+import {useForm} from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { authService } from '../services/authService';
-
 interface OTPLoginProps {
   onLogin: (token: string, loginResponse?: any) => void;
 }
-
 interface EmailFormData {
   email: string;
 }
-
 interface OTPFormData {
   otp: string;
 }
-
 const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [userEmail, setUserEmail] = useState('');
-  
   const emailForm = useForm<EmailFormData>();
   const otpForm = useForm<OTPFormData>();
   const router = useRouter(); // Removed underscore since it's used
-
   const steps = ['Enter Email', 'Verify OTP'];
-
   const handleEmailSubmit = async (data: EmailFormData) => {
     setLoading(true);
     setError('');
     setSuccess('');
-    
     try {
-      const response = await authService.requestOTP(data.email);
       setUserEmail(data.email);
       setSuccess(`OTP sent to ${data.email}. Please check your email.`);
       setActiveStep(1);
@@ -58,23 +49,18 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
       setLoading(false);
     }
   };
-
   const handleOTPSubmit = async (data: OTPFormData) => {
     setLoading(true);
     setError('');
-    
     try {
       const response = await authService.verifyOTP(userEmail, data.otp);
       setSuccess('Login successful!');
-      
       // Login successful!
       localStorage.setItem('token', response.access_token);
       localStorage.setItem('user_role', response.user_role);
       // Organization context is managed by backend session only
-      
       // Call parent callback with token and response
       onLogin(response.access_token, response);
-      
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (error: any) {
@@ -83,11 +69,9 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
       setLoading(false);
     }
   };
-
   const handleResendOTP = async () => {
     setLoading(true);
     setError('');
-    
     try {
       await authService.requestOTP(userEmail);
       setSuccess('OTP resent successfully!');
@@ -97,7 +81,6 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
       setLoading(false);
     }
   };
-
   const handleBack = () => {
     setActiveStep(0);
     setError('');
@@ -105,7 +88,6 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
     emailForm.reset();
     otpForm.reset();
   };
-
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 8, mb: 4 }}>
@@ -117,7 +99,6 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
             <Typography variant="h6" component="h2" gutterBottom align="center" color="textSecondary">
               OTP Authentication
             </Typography>
-
             <Stepper activeStep={activeStep} sx={{ mt: 3, mb: 4 }}>
               {steps.map((label) => (
                 <Step key={label}>
@@ -125,19 +106,16 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
                 </Step>
               ))}
             </Stepper>
-
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
-
             {success && (
               <Alert severity="success" sx={{ mb: 2 }}>
                 {success}
               </Alert>
             )}
-
             {activeStep === 0 && (
               <Box component="form" onSubmit={emailForm.handleSubmit(handleEmailSubmit)}>
                 <TextField
@@ -156,7 +134,6 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
                   margin="normal"
                   autoFocus
                 />
-
                 <Button
                   type="submit"
                   fullWidth
@@ -166,19 +143,16 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
                 >
                   {loading ? <CircularProgress size={24} /> : 'Send OTP'}
                 </Button>
-
                 <Typography variant="body2" color="textSecondary" align="center">
                   Enter your email address to receive an OTP for secure login.
                 </Typography>
               </Box>
             )}
-
             {activeStep === 1 && (
               <Box component="form" onSubmit={otpForm.handleSubmit(handleOTPSubmit)}>
                 <Typography variant="body1" sx={{ mb: 2 }}>
                   Enter the 6-digit OTP sent to: <strong>{userEmail}</strong>
                 </Typography>
-
                 <TextField
                   fullWidth
                   label="OTP Code"
@@ -196,7 +170,6 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
                   margin="normal"
                   autoFocus
                 />
-
                 <Box sx={{ mt: 3, mb: 2, display: 'flex', gap: 2 }}>
                   <Button
                     variant="outlined"
@@ -215,7 +188,6 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
                     {loading ? <CircularProgress size={24} /> : 'Verify & Login'}
                   </Button>
                 </Box>
-
                 <Button
                   variant="text"
                   onClick={handleResendOTP}
@@ -225,7 +197,6 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
                 >
                   Resend OTP
                 </Button>
-
                 <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 2 }}>
                   OTP is valid for 10 minutes.
                 </Typography>
@@ -237,5 +208,4 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
     </Container>
   );
 };
-
 export default OTPLogin;

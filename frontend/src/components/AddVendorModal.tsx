@@ -23,7 +23,6 @@ import { CloudUpload, Description, CheckCircle, Search } from '@mui/icons-materi
 import { useForm } from 'react-hook-form';
 import { usePincodeLookup } from '../hooks/usePincodeLookup';
 import api from '../lib/api';
-
 interface AddVendorModalProps {
   open: boolean;
   onClose: () => void;
@@ -31,7 +30,6 @@ interface AddVendorModalProps {
   loading?: boolean;
   initialName?: string;
 }
-
 interface VendorFormData {
   name: string;
   contact_number: string;
@@ -45,7 +43,6 @@ interface VendorFormData {
   pan_number: string;
   state_code: string;
 }
-
 const AddVendorModal: React.FC<AddVendorModalProps> = ({
   open,
   onClose,
@@ -59,7 +56,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   const [gstExtractedData, setGstExtractedData] = useState<any>(null);
   const [gstUploadError, setGstUploadError] = useState<string | null>(null);
   const [gstSearchLoading, setGstSearchLoading] = useState(false);
-
   const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<VendorFormData>({
     defaultValues: {
       name: initialName,
@@ -75,11 +71,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       state_code: '',
     }
   });
-
   const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError, clearData } = usePincodeLookup();
   const watchedPincode = watch('pin_code');
   const watchedGstNumber = watch('gst_number');
-
   // Auto-populate form fields when pincode data is available
   useEffect(() => {
     if (pincodeData) {
@@ -88,54 +82,45 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setValue('state_code', pincodeData.state_code);
     }
   }, [pincodeData, setValue]);
-
   // Handle pincode change with debouncing
   useEffect(() => {
     if (watchedPincode && /^\d{6}$/.test(watchedPincode)) {
       const timeoutId = setTimeout(() => {
         lookupPincode(watchedPincode);
       }, 500); // 500ms debounce
-
       return () => clearTimeout(timeoutId);
     } else {
       clearData();
     }
   }, [watchedPincode, lookupPincode, clearData]);
-
   // Handle GST certificate upload with actual API call
   const handleGstFileUpload = async (file: File) => {
     setGstUploadLoading(true);
     setGstUploadError(null);
-    
     try {
       // Create FormData for file upload
       const formData = new FormData();
       formData.append('file', file);
-      
       // Call backend PDF extraction API
       const response = await api.post('/pdf-extraction/extract/vendor', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
       if (response.data.success) {
         const extractedData = response.data.extracted_data;
-        
         // Auto-populate form fields with processed extracted data
         Object.entries(extractedData).forEach(([key, value]) => {
           if (value) {
             setValue(key as keyof VendorFormData, value as string);
           }
         });
-        
         setGstExtractedData(extractedData);
         setGstFile(file);
       } else {
         const errorMessage = (response.data as any)?.detail || 'Extraction failed';
         throw new globalThis.Error(errorMessage);
       }
-      
     } catch (error: any) {
       console.error('Error processing GST certificate:', error);
       setGstUploadError(error.response?.data?.detail || 'Failed to process GST certificate. Please try again.');
@@ -143,7 +128,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setGstUploadLoading(false);
     }
   };
-
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -158,11 +142,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       handleGstFileUpload(file);
     }
   };
-
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
   };
-
   const removeGstFile = () => {
     setGstFile(null);
     setGstExtractedData(null);
@@ -171,34 +153,28 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       fileInputRef.current.value = '';
     }
   };
-
   const handleGstSearch = async () => {
     if (!watchedGstNumber || !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(watchedGstNumber)) {
       setGstUploadError('Please enter a valid GSTIN');
       return;
     }
-    
     setGstSearchLoading(true);
     setGstUploadError(null);
-    
     try {
       const response = await api.get(`/gst/search/${watchedGstNumber}`);
       const data = response.data;
-      
       // Auto-populate fields from API response
       Object.entries(data).forEach(([key, value]) => {
         if (value) {
           setValue(key as keyof VendorFormData, value as string);
         }
       });
-      
     } catch (error: any) {
       setGstUploadError(error.response?.data?.detail || 'Failed to fetch GST details. Please check GSTIN.');
     } finally {
       setGstSearchLoading(false);
     }
   };
-
   const onSubmit = async (data: VendorFormData) => {
     try {
       // Remove empty fields and exclude unexpected fields like 'is_active'
@@ -206,16 +182,13 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       const cleanData = Object.fromEntries(
         Object.entries(data).filter(([key, value]) => allowedFields.includes(key) && value !== null && String(value).trim() !== '')
       );
-      
       // Direct API call to save vendor
       const response = await api.post('/vendors', cleanData);
       console.log('Vendor added successfully:', response.data);
-      
       // Call onAdd if provided and is a function
       if (typeof onAdd === 'function') {
         await onAdd(response.data);
       }
-      
       reset();
       onClose();  // Close modal on success
     } catch (error: any) {
@@ -225,14 +198,12 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setGstUploadError(errorMessage);
     }
   };
-
   const handleClose = () => {
     reset();
     clearData();
     removeGstFile();
     onClose();
   };
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -254,7 +225,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
@@ -266,7 +236,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
@@ -286,7 +255,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
@@ -315,7 +283,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-
             {/* GST Certificate Upload Section */}
             <Grid size={12}>
               <Paper sx={{ p: 2, bgcolor: 'grey.50', border: '1px dashed', borderColor: 'grey.300' }}>
@@ -329,7 +296,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     </Typography>
                   </Tooltip>
                 </Box>
-                
                 {!gstFile && !gstUploadLoading && (
                   <Box
                     sx={{
@@ -355,7 +321,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     </Typography>
                   </Box>
                 )}
-                
                 {gstUploadLoading && (
                   <Box sx={{ p: 3, textAlign: 'center' }}>
                     <CircularProgress size={40} sx={{ mb: 2 }} />
@@ -365,7 +330,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     <LinearProgress sx={{ mt: 1 }} />
                   </Box>
                 )}
-                
                 {gstFile && !gstUploadLoading && (
                   <Box sx={{ p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
                     <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -400,13 +364,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     )}
                   </Box>
                 )}
-                
                 {gstUploadError && (
                   <Alert severity="error" sx={{ mt: 1 }} onClose={() => setGstUploadError(null)}>
                     {gstUploadError}
                   </Alert>
                 )}
-                
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -416,7 +378,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 />
               </Paper>
             </Grid>
-            
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
@@ -439,7 +400,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={12}>
               <TextField
                 fullWidth
@@ -451,7 +411,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -478,7 +437,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -495,7 +453,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -512,7 +469,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -529,7 +485,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-
             {pincodeError && (
               <Grid size={12}>
                 <Alert severity="warning" sx={{ mt: 1 }}>
@@ -539,7 +494,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             )}
           </Grid>
         </DialogContent>
-        
         <DialogActions>
           <Button onClick={handleClose} disabled={loading}>
             Cancel
@@ -557,5 +511,4 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     </Dialog>
   );
 };
-
 export default AddVendorModal;

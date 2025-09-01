@@ -1,15 +1,6 @@
 // frontend/src/pages/dashboard/OrgDashboard.tsx
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Container,
-  Chip,
-  CircularProgress,
-  Alert,
-  Paper,
-  Grid as MuiGrid,
-} from '@mui/material';
+import { from '@mui/material';
 import {
   Business,
   People,
@@ -21,7 +12,6 @@ import adminService from '../../services/adminService';
 import MetricCard from '../../components/MetricCard';
 import DashboardLayout from '../../components/DashboardLayout';
 import ModernLoading from '../../components/ModernLoading';
-
 interface OrgStatistics {
   total_products: number;
   total_customers: number;
@@ -33,16 +23,13 @@ interface OrgStatistics {
   storage_used_gb: number;
   generated_at: string;
 }
-
 const OrgDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     fetchOrgStatistics();
   }, []);
-
   const fetchOrgStatistics = async () => {
     try {
       const data = await adminService.getOrgStatistics();
@@ -53,7 +40,6 @@ const OrgDashboard: React.FC = () => {
       setLoading(false);
     }
   };
-
   if (loading) {
     return (
       <DashboardLayout 
@@ -68,7 +54,6 @@ const OrgDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
-
   if (error) {
     return (
       <DashboardLayout 
@@ -88,7 +73,6 @@ const OrgDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
-
   if (!statistics) {
     return (
       <DashboardLayout 
@@ -108,7 +92,6 @@ const OrgDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
-
   const statsCards = [
     {
       title: 'Total Products',
@@ -183,7 +166,6 @@ const OrgDashboard: React.FC = () => {
       }
     }
   ];
-
   return (
     <DashboardLayout 
       title="Organization Dashboard"
@@ -201,7 +183,6 @@ const OrgDashboard: React.FC = () => {
           />
         ))}
       </Box>
-
       <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
         <Paper 
           className="modern-card"
@@ -232,7 +213,6 @@ const OrgDashboard: React.FC = () => {
             Storage Used: {statistics.storage_used_gb ?? 0} GB
           </Typography>
         </Paper>
-
         <Paper 
           className="modern-card"
           sx={{ p: 3 }}
@@ -245,7 +225,6 @@ const OrgDashboard: React.FC = () => {
           </Typography>
         </Paper>
       </Box>
-
       <Paper 
         className="modern-card"
         sx={{ p: 4 }}
@@ -307,5 +286,4 @@ const OrgDashboard: React.FC = () => {
     </DashboardLayout>
   );
 };
-
 export default OrgDashboard;

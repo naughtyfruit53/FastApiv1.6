@@ -45,7 +45,6 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-
 interface ExhibitionEvent {
   id: number;
   name: string;
@@ -61,7 +60,6 @@ interface ExhibitionEvent {
   card_scan_count?: number;
   prospect_count?: number;
 }
-
 interface BusinessCardScan {
   id: number;
   scan_id: string;
@@ -81,7 +79,6 @@ interface BusinessCardScan {
   intro_email_sent: boolean;
   created_at: string;
 }
-
 interface ExhibitionProspect {
   id: number;
   exhibition_event_id: number;
@@ -103,7 +100,6 @@ interface ExhibitionProspect {
   intro_email_sent_at?: string;
   contact_attempts: number;
 }
-
 // Mock API service - would be replaced with actual API calls
 const exhibitionAPI = {
   getEvents: () => Promise.resolve([
@@ -138,7 +134,6 @@ const exhibitionAPI = {
       prospect_count: 0
     }
   ] as ExhibitionEvent[]),
-  
   getCardScans: (eventId: number) => Promise.resolve([
     {
       id: 1,
@@ -176,7 +171,6 @@ const exhibitionAPI = {
       created_at: "2024-02-21T09:15:00Z"
     }
   ] as BusinessCardScan[]),
-  
   getProspects: (eventId: number) => Promise.resolve([
     {
       id: 1,
@@ -198,7 +192,6 @@ const exhibitionAPI = {
     }
   ] as ExhibitionProspect[])
 };
-
 const ExhibitionMode: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<ExhibitionEvent | null>(null);
   const [activeTab, setActiveTab] = useState<'events' | 'scans' | 'prospects' | 'analytics'>('events');
@@ -206,27 +199,22 @@ const ExhibitionMode: React.FC = () => {
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
-
   const queryClient = useQueryClient();
-
   // Queries
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ['exhibition-events'],
     queryFn: exhibitionAPI.getEvents
   });
-
   const { data: cardScans, isLoading: scansLoading } = useQuery({
     queryKey: ['card-scans', selectedEvent?.id],
     queryFn: () => selectedEvent ? exhibitionAPI.getCardScans(selectedEvent.id) : Promise.resolve([]),
     enabled: !!selectedEvent
   });
-
   const { data: prospects, isLoading: prospectsLoading } = useQuery({
     queryKey: ['prospects', selectedEvent?.id],
     queryFn: () => selectedEvent ? exhibitionAPI.getProspects(selectedEvent.id) : Promise.resolve([]),
     enabled: !!selectedEvent
   });
-
   // Mock scan mutation
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -259,7 +247,6 @@ const ExhibitionMode: React.FC = () => {
       toast.error('Failed to scan business card');
     }
   });
-
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
@@ -268,13 +255,11 @@ const ExhibitionMode: React.FC = () => {
       toast.error('Please select a valid image file');
     }
   };
-
   const handleScanCard = () => {
     if (selectedFile) {
       scanMutation.mutate(selectedFile);
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'success';
@@ -290,7 +275,6 @@ const ExhibitionMode: React.FC = () => {
       default: return 'default';
     }
   };
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -298,7 +282,6 @@ const ExhibitionMode: React.FC = () => {
       day: 'numeric'
     });
   };
-
   if (eventsLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -306,7 +289,6 @@ const ExhibitionMode: React.FC = () => {
       </Box>
     );
   }
-
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -315,7 +297,6 @@ const ExhibitionMode: React.FC = () => {
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         Scan business cards, manage prospects, and track leads from exhibition events
       </Typography>
-
       {/* Tab Navigation */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Box display="flex" gap={2}>
@@ -337,7 +318,6 @@ const ExhibitionMode: React.FC = () => {
           ))}
         </Box>
       </Box>
-
       {/* Events Tab */}
       {activeTab === 'events' && (
         <Box>
@@ -351,7 +331,6 @@ const ExhibitionMode: React.FC = () => {
               Create Event
             </Button>
           </Box>
-
           <Grid container spacing={3}>
             {events?.map(event => (
               <Grid item xs={12} md={6} lg={4} key={event.id}>
@@ -374,23 +353,19 @@ const ExhibitionMode: React.FC = () => {
                         size="small"
                       />
                     </Box>
-                    
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       {event.description}
                     </Typography>
-                    
                     <Box display="flex" gap={2} mb={2}>
                       <Typography variant="body2">
                         📍 {event.location}
                       </Typography>
                     </Box>
-                    
                     {event.start_date && (
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {formatDate(event.start_date)} - {event.end_date ? formatDate(event.end_date) : 'Ongoing'}
                       </Typography>
                     )}
-                    
                     <Box display="flex" justifyContent="between" alignItems="center">
                       <Box display="flex" gap={2}>
                         <Chip 
@@ -425,7 +400,6 @@ const ExhibitionMode: React.FC = () => {
           </Grid>
         </Box>
       )}
-
       {/* Card Scans Tab */}
       {activeTab === 'scans' && selectedEvent && (
         <Box>
@@ -441,7 +415,6 @@ const ExhibitionMode: React.FC = () => {
               Scan New Card
             </Button>
           </Box>
-
           {scansLoading ? (
             <CircularProgress />
           ) : (
@@ -493,14 +466,12 @@ const ExhibitionMode: React.FC = () => {
           )}
         </Box>
       )}
-
       {/* Prospects Tab */}
       {activeTab === 'prospects' && selectedEvent && (
         <Box>
           <Typography variant="h6" sx={{ mb: 3 }}>
             Prospects - {selectedEvent.name}
           </Typography>
-
           {prospectsLoading ? (
             <CircularProgress />
           ) : (
@@ -553,7 +524,6 @@ const ExhibitionMode: React.FC = () => {
           )}
         </Box>
       )}
-
       {/* Analytics Tab */}
       {activeTab === 'analytics' && (
         <Box>
@@ -566,7 +536,6 @@ const ExhibitionMode: React.FC = () => {
           </Alert>
         </Box>
       )}
-
       {/* Card Scan Modal */}
       <Dialog open={scanModalOpen} onClose={() => setScanModalOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Scan Business Card</DialogTitle>
@@ -587,7 +556,6 @@ const ExhibitionMode: React.FC = () => {
               <Typography variant="body1" sx={{ mb: 3 }}>
                 Upload an image of a business card to extract contact information automatically.
               </Typography>
-              
               <Box 
                 border={2} 
                 borderColor={selectedFile ? 'primary.main' : 'grey.300'}
@@ -616,7 +584,6 @@ const ExhibitionMode: React.FC = () => {
                   Supports JPG, PNG, and other image formats
                 </Typography>
               </Box>
-              
               {selectedFile && (
                 <Alert severity="success" sx={{ mb: 2 }}>
                   Business card image selected: {selectedFile.name}
@@ -638,7 +605,6 @@ const ExhibitionMode: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Event Creation Modal - Placeholder */}
       <Dialog open={eventModalOpen} onClose={() => setEventModalOpen(false)}>
         <DialogTitle>Create Exhibition Event</DialogTitle>
@@ -655,5 +621,4 @@ const ExhibitionMode: React.FC = () => {
     </Box>
   );
 };
-
 export default ExhibitionMode;

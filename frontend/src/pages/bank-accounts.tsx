@@ -43,14 +43,12 @@ import {
   Visibility
 } from '@mui/icons-material';
 import axios from 'axios';
-
 interface ChartAccount {
   id: number;
   account_code: string;
   account_name: string;
   account_type: string;
 }
-
 interface BankAccount {
   id: number;
   chart_account_id: number;
@@ -69,7 +67,6 @@ interface BankAccount {
   created_at: string;
   updated_at: string;
 }
-
 interface CreateBankAccountData {
   chart_account_id: number;
   bank_name: string;
@@ -83,16 +80,12 @@ interface CreateBankAccountData {
   is_default: boolean;
   auto_reconcile: boolean;
 }
-
 const BankAccounts: React.FC = () => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [chartAccounts, setChartAccounts] = useState<ChartAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
-
   // Create bank account form state
   const [createData, setCreateData] = useState<CreateBankAccountData>({
     chart_account_id: 0,
@@ -104,7 +97,6 @@ const BankAccounts: React.FC = () => {
     is_default: false,
     auto_reconcile: false
   });
-
   const accountTypes = [
     'Savings',
     'Current',
@@ -114,9 +106,7 @@ const BankAccounts: React.FC = () => {
     'Overdraft',
     'Cash Credit'
   ];
-
   const currencies = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SAR'];
-
   const fetchBankAccounts = async () => {
     try {
       setLoading(true);
@@ -132,7 +122,6 @@ const BankAccounts: React.FC = () => {
       setLoading(false);
     }
   };
-
   const fetchChartAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -144,19 +133,16 @@ const BankAccounts: React.FC = () => {
       console.error('Failed to fetch chart accounts:', err);
     }
   };
-
   useEffect(() => {
     fetchChartAccounts();
     fetchBankAccounts();
   }, []);
-
   const handleCreateBankAccount = async () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post('/api/v1/erp/bank-accounts', createData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       setCreateDialogOpen(false);
       setCreateData({
         chart_account_id: 0,
@@ -173,7 +159,6 @@ const BankAccounts: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to create bank account');
     }
   };
-
   const formatCurrency = (amount: number, currency: string = 'INR') => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -181,13 +166,11 @@ const BankAccounts: React.FC = () => {
       minimumFractionDigits: 2
     }).format(amount);
   };
-
   const formatAccountNumber = (accountNumber: string) => {
     // Mask account number for security (show only last 4 digits)
     if (accountNumber.length <= 4) {return accountNumber;}
     return '*'.repeat(accountNumber.length - 4) + accountNumber.slice(-4);
   };
-
   const handleSetDefault = async (accountId: number) => {
     try {
       const token = localStorage.getItem('token');
@@ -201,15 +184,12 @@ const BankAccounts: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to set default account');
     }
   };
-
   // Calculate totals
   const totalBalance = bankAccounts
     .filter(acc => acc.is_active)
     .reduce((sum, acc) => sum + acc.current_balance, 0);
-  
   const activeAccounts = bankAccounts.filter(acc => acc.is_active).length;
   const defaultAccount = bankAccounts.find(acc => acc.is_default);
-
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -231,7 +211,6 @@ const BankAccounts: React.FC = () => {
           </IconButton>
         </Box>
       </Box>
-
       {/* Summary Cards */}
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} sm={4}>
@@ -251,7 +230,6 @@ const BankAccounts: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={4}>
           <Card>
             <CardContent>
@@ -269,7 +247,6 @@ const BankAccounts: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={4}>
           <Card>
             <CardContent>
@@ -288,13 +265,11 @@ const BankAccounts: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-
       {/* Bank Accounts Table */}
       <Paper>
         <TableContainer>
@@ -402,7 +377,9 @@ const BankAccounts: React.FC = () => {
                         <IconButton 
                           size="small"
                           onClick={() => {
+// TODO: Define or import setSelectedAccount
                             setSelectedAccount(account);
+// TODO: Define or import setEditDialogOpen
                             setEditDialogOpen(true);
                           }}
                         >
@@ -422,7 +399,6 @@ const BankAccounts: React.FC = () => {
           </Table>
         </TableContainer>
       </Paper>
-
       {/* Create Bank Account Dialog */}
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Create Bank Account</DialogTitle>
@@ -560,5 +536,4 @@ const BankAccounts: React.FC = () => {
     </Box>
   );
 };
-
 export default BankAccounts;

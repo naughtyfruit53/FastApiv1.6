@@ -36,7 +36,6 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '../../services/authService';
 import CompanyDetailsModal from '../../components/CompanyDetailsModal';
-
 interface Company {
   id: number;
   name: string;
@@ -48,7 +47,6 @@ interface Company {
   industry?: string;
   created_at: string;
 }
-
 interface UserCompanyAssignment {
   id: number;
   user_id: number;
@@ -58,49 +56,40 @@ interface UserCompanyAssignment {
   user_email: string;
   user_full_name: string;
 }
-
 const MultiCompanyManagement: React.FC = () => {
   const [openCompanyModal, setOpenCompanyModal] = useState(false);
   const [openUserAssignModal, setOpenUserAssignModal] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const queryClient = useQueryClient();
-
   // Fetch all companies
   const { data: companies, isLoading, error } = useQuery({
     queryKey: ['companies'],
     queryFn: companyService.getCompanies,
   });
-
   // Fetch organization info to check max_companies
   const { data: orgInfo } = useQuery({
     queryKey: ['organization-info'],
     queryFn: companyService.getOrganizationInfo,
   });
-
   // Fetch users assigned to selected company
   const { data: companyUsers } = useQuery({
     queryKey: ['company-users', selectedCompanyId],
     queryFn: () => selectedCompanyId ? companyService.getCompanyUsers(selectedCompanyId) : Promise.resolve([]),
     enabled: !!selectedCompanyId,
   });
-
-  const createCompanyMutation = useMutation({
     mutationFn: companyService.createCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       setOpenCompanyModal(false);
     },
   });
-
-  const assignUserMutation = useMutation({
     mutationFn: ({ companyId, userId, isAdmin }: { companyId: number; userId: number; isAdmin: boolean }) =>
       companyService.assignUserToCompany(companyId, { user_id: userId, company_id: companyId, is_company_admin: isAdmin }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-users', selectedCompanyId] });
     },
   });
-
   const updateUserAssignmentMutation = useMutation({
     mutationFn: ({ companyId, userId, updates }: { companyId: number; userId: number; updates: any }) =>
       companyService.updateUserCompanyAssignment(companyId, userId, updates),
@@ -108,7 +97,6 @@ const MultiCompanyManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['company-users', selectedCompanyId] });
     },
   });
-
   const removeUserMutation = useMutation({
     mutationFn: ({ companyId, userId }: { companyId: number; userId: number }) =>
       companyService.removeUserFromCompany(companyId, userId),
@@ -116,23 +104,19 @@ const MultiCompanyManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['company-users', selectedCompanyId] });
     },
   });
-
   const handleCreateCompany = () => {
     setSelectedCompany(null);
     setOpenCompanyModal(true);
   };
-
   const handleEditCompany = (company: Company) => {
     setSelectedCompany(company);
     setOpenCompanyModal(true);
   };
-
   const handleManageUsers = (company: Company) => {
     setSelectedCompany(company);
     setSelectedCompanyId(company.id);
     setOpenUserAssignModal(true);
   };
-
   const handleToggleAdmin = (assignment: UserCompanyAssignment) => {
     updateUserAssignmentMutation.mutate({
       companyId: assignment.company_id,
@@ -140,7 +124,6 @@ const MultiCompanyManagement: React.FC = () => {
       updates: { is_company_admin: !assignment.is_company_admin }
     });
   };
-
   const handleRemoveUser = (assignment: UserCompanyAssignment) => {
     if (window.confirm(`Remove ${assignment.user_full_name} from ${selectedCompany?.name}?`)) {
       removeUserMutation.mutate({
@@ -149,20 +132,16 @@ const MultiCompanyManagement: React.FC = () => {
       });
     }
   };
-
   const canCreateCompany = () => {
     if (!companies || !orgInfo) {return false;}
     return companies.length < (orgInfo.max_companies || 1);
   };
-
   if (isLoading) {
     return <Typography>Loading companies...</Typography>;
   }
-
   if (error) {
     return <Alert severity="error">Failed to load companies</Alert>;
   }
-
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -184,14 +163,12 @@ const MultiCompanyManagement: React.FC = () => {
           )}
         </Box>
       </Box>
-
       {!canCreateCompany() && (
         <Alert severity="warning" sx={{ mb: 3 }}>
           You have reached the maximum number of companies ({orgInfo?.max_companies || 1}) for your organization.
           Contact your administrator to increase the limit.
         </Alert>
       )}
-
       <Grid container spacing={3}>
         {companies?.map((company: Company) => (
           <Grid item xs={12} md={6} lg={4} key={company.id}>
@@ -203,11 +180,9 @@ const MultiCompanyManagement: React.FC = () => {
                     {company.name}
                   </Typography>
                 </Box>
-                
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   {company.address1}, {company.city}, {company.state}
                 </Typography>
-                
                 {company.business_type && (
                   <Chip 
                     label={company.business_type} 
@@ -215,7 +190,6 @@ const MultiCompanyManagement: React.FC = () => {
                     sx={{ mt: 1, mr: 1 }} 
                   />
                 )}
-                
                 {company.industry && (
                   <Chip 
                     label={company.industry} 
@@ -224,14 +198,12 @@ const MultiCompanyManagement: React.FC = () => {
                     variant="outlined"
                   />
                 )}
-                
                 {company.gst_number && (
                   <Typography variant="caption" display="block" sx={{ mt: 1 }}>
                     GST: {company.gst_number}
                   </Typography>
                 )}
               </CardContent>
-              
               <CardActions>
                 <Button size="small" startIcon={<Edit />} onClick={() => handleEditCompany(company)}>
                   Edit
@@ -244,7 +216,6 @@ const MultiCompanyManagement: React.FC = () => {
           </Grid>
         ))}
       </Grid>
-
       {(!companies || companies.length === 0) && (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Business sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -263,7 +234,6 @@ const MultiCompanyManagement: React.FC = () => {
           </Button>
         </Paper>
       )}
-
       {/* Company Creation/Edit Modal */}
       <CompanyDetailsModal
         open={openCompanyModal}
@@ -275,7 +245,6 @@ const MultiCompanyManagement: React.FC = () => {
         companyData={selectedCompany}
         mode={selectedCompany ? 'edit' : 'create'}
       />
-
       {/* User Assignment Modal */}
       <Dialog
         open={openUserAssignModal}
@@ -296,7 +265,6 @@ const MultiCompanyManagement: React.FC = () => {
               Assign User
             </Button>
           </Box>
-          
           <List>
             {companyUsers?.map((assignment: UserCompanyAssignment) => (
               <ListItem key={assignment.id}>
@@ -325,7 +293,6 @@ const MultiCompanyManagement: React.FC = () => {
               </ListItem>
             ))}
           </List>
-          
           {(!companyUsers || companyUsers.length === 0) && (
             <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
               No users assigned to this company
@@ -341,5 +308,4 @@ const MultiCompanyManagement: React.FC = () => {
     </Box>
   );
 };
-
 export default MultiCompanyManagement;
