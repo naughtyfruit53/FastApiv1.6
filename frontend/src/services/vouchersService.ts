@@ -3,85 +3,85 @@
 import api from '../lib/api';
 export const voucherService = {
   // Generic Voucher Methods
-  getVouchers: async (type: string, params?: any) => {
+  getVouchers: async (type: string, params?: any): Promise<any> => {
     const endpoint = `/${type}`;  // Use type directly since it's already plural
     console.log(`[voucherService] Fetching vouchers from endpoint: ${endpoint}`);
     const response = await api.get(endpoint, { params });
     console.log(`[voucherService] Received data for ${type}:`, response.data);
     return response.data;
   },
-  getVoucherById: async (type: string, id: number) => {
+  getVoucherById: async (type: string, id: number): Promise<any> => {
     const endpoint = `/${type}/${id}`;
     console.log(`[voucherService] Fetching voucher by ID from: ${endpoint}`);
     const response = await api.get(endpoint);
     return response.data;
   },
-  createVoucher: async (type: string, data: any, sendEmail: boolean = false) => {
+  createVoucher: async (type: string, data: any, sendEmail: boolean = false): Promise<any> => {
     const endpoint = `/${type}`;
     console.log(`[voucherService] Creating voucher at: ${endpoint}`);
     const response = await api.post(endpoint, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updateVoucher: async (type: string, id: number, data: any) => {
+  updateVoucher: async (type: string, id: number, data: any): Promise<any> => {
     const endpoint = `/${type}/${id}`;
     console.log(`[voucherService] Updating voucher at: ${endpoint}`);
     const response = await api.put(endpoint, data);
     return response.data;
   },
-  getNextVoucherNumber: async (endpoint: string) => {
+  getNextVoucherNumber: async (endpoint: string): Promise<any> => {
     console.log(`[voucherService] Fetching next number from: ${endpoint}`);
     const response = await api.get(endpoint);
     return response.data;
   },
   // Purchase Vouchers
-  getPurchaseVoucherById: async (id: number) => {
+  getPurchaseVoucherById: async (id: number): Promise<any> => {
     const response = await api.get(`/purchase-vouchers/${id}`);
     return response.data;
   },
-  createPurchaseVoucher: async (data: any, sendEmail: boolean) => {
+  createPurchaseVoucher: async (data: any, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/purchase-vouchers`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updatePurchaseVoucher: async (id: number, data: any) => {
+  updatePurchaseVoucher: async (id: number, data: any): Promise<any> => {
     const response = await api.put(`/purchase-vouchers/${id}`, data);
     return response.data;
   },
   // Purchase Orders
-  getPurchaseOrderById: async (id: number) => {
+  getPurchaseOrderById: async (id: number): Promise<any> => {
     const response = await api.get(`/purchase-orders/${id}`);
     return response.data;
   },
-  createPurchaseOrder: async (data: any, sendEmail: boolean) => {
+  createPurchaseOrder: async (data: any, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/purchase-orders`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updatePurchaseOrder: async (id: number, data: any) => {
+  updatePurchaseOrder: async (id: number, data: any): Promise<any> => {
     const response = await api.put(`/purchase-orders/${id}`, data);
     return response.data;
   },
   // GRN
-  getGrnById: async (id: number) => {
+  getGrnById: async (id: number): Promise<any> => {
     const response = await api.get(`/goods-receipt-notes/${id}`);
     return response.data;
   },
-  createGrn: async (data: any, sendEmail: boolean) => {
+  createGrn: async (data: any, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/goods-receipt-notes`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updateGrn: async (id: number, data: any) => {
+  updateGrn: async (id: number, data: any): Promise<any> => {
     const response = await api.put(`/goods-receipt-notes/${id}`, data);
     return response.data;
   },
   // Rejection In
-  getRejectionInById: async (id: number) => {
+  getRejectionInById: async (id: number): Promise<any> => {
     const response = await api.get(`/purchase-returns/${id}`);
     return response.data;
   },
-  createRejectionIn: async (data: any, sendEmail: boolean) => {
+  createRejectionIn: async (data: any, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/purchase-returns`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updateRejectionIn: async (id: number, data: any) => {
+  updateRejectionIn: async (id: number, data: any): Promise<any> => {
     const response = await api.put(`/purchase-returns/${id}`, data);
     return response.data;
   },
@@ -104,7 +104,7 @@ getEmailRecipient: (voucher: any, voucherType: string): any => {
     }
     return null;
   },
-  sendVoucherEmail: async (voucherType: string, id: number) => {
+  sendVoucherEmail: async (voucherType: string, id: number): Promise<any> => {
     try {
       const response = await api.post(`/${voucherType}/${id}/send-email`);
       return response.data;
@@ -113,7 +113,7 @@ getEmailRecipient: (voucher: any, voucherType: string): any => {
       throw error;
     }
   },
-  deleteVoucher: async (voucherType: string, id: number) => {
+  deleteVoucher: async (voucherType: string, id: number): Promise<any> => {
     try {
       const response = await api.delete(`/${voucherType}/${id}`);
       return response.data;
