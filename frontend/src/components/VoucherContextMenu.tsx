@@ -68,8 +68,12 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   };
   // Determine email recipient based on voucher type
   const getEmailRecipient = () => {
-    if (!effectiveVoucher) {return '';}
-    if (!voucherType) {return '';}
+    if (!effectiveVoucher) {
+      return '';
+    }
+    if (!voucherType) {
+      return '';
+    }
     const lowerType = voucherType.toLowerCase();
     if (lowerType.includes('sales')) {
       return effectiveVoucher.customer?.email || '';
