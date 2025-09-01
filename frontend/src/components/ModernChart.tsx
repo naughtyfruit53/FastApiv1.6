@@ -32,7 +32,7 @@ const ModernChart: React.FC<ModernChartProps> = ({
     }
   };
 
-  const options = {
+  const _options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {

@@ -65,8 +65,8 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
       setError(null);
       const membersData = await organizationService.getOrganizationMembers(organizationId);
       setMembers(membersData);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -86,8 +86,8 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
       });
       setShowInviteForm(false);
       await fetchMembers();
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setInviting(false);
     }

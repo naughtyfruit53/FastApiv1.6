@@ -27,7 +27,7 @@ import {
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import {
-  ServiceRole,
+  _ServiceRole,
   ServiceRoleWithPermissions,
   ServicePermission,
   ServiceRoleCreate,
@@ -43,7 +43,7 @@ interface RoleFormDialogProps {
   role?: ServiceRoleWithPermissions | null;
   permissions: ServicePermission[];
   organizationId: number;
-  onSubmit: (data: ServiceRoleCreate | ServiceRoleUpdate) => void;
+  onSubmit: (_data: ServiceRoleCreate | ServiceRoleUpdate) => void;
 }
 const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
   open,

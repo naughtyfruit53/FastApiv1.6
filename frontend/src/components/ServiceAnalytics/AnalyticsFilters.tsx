@@ -23,7 +23,7 @@ import {
 } from '../../services/serviceAnalyticsService';
 interface AnalyticsFiltersProps {
   filters: AnalyticsRequest;
-  onFiltersChange: (filters: AnalyticsRequest) => void;
+  onFiltersChange: (_filters: AnalyticsRequest) => void;
   technicians: TechnicianOption[];
   customers: CustomerOption[];
 }
