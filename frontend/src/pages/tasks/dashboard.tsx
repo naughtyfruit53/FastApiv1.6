@@ -9,10 +9,8 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Paper,
   LinearProgress,
   Chip,
-  IconButton,
   Button
 } from '@mui/material';
 import {
@@ -67,7 +65,7 @@ const TaskDashboard: React.FC = () => {
           created_by_me: 23
         };
         setStats(mockStats);
-      } catch (err) {
+      } catch {
         setError('Failed to load task dashboard data');
       } finally {
         setLoading(false);
@@ -75,9 +73,11 @@ const TaskDashboard: React.FC = () => {
     };
     fetchStats();
   }, []);
-  const getCompletionPercentage = (stats: TaskStats) => {
-    if (stats.total_tasks === 0) {return 0;}
-    return Math.round((stats.done_tasks / stats.total_tasks) * 100);
+  const getCompletionPercentage = (taskStats: TaskStats) => {
+    if (taskStats.total_tasks === 0) {
+      return 0;
+    }
+    return Math.round((taskStats.done_tasks / taskStats.total_tasks) * 100);
   };
   const handleNavigate = (path: string) => {
     router.push(path);

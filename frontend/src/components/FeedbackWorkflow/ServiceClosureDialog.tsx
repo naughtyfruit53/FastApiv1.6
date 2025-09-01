@@ -40,7 +40,7 @@ interface ServiceClosureDialogProps {
   installationJobId: number;
   completionRecordId?: number;
   customerFeedbackId?: number;
-  onSubmit: (closureData: any) => Promise<void>;
+  onSubmit: (_closureData: any) => Promise<void>;
   currentClosure?: any;
   userRole: string;
 }
@@ -209,11 +209,6 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
     }
   };
   const renderWorkflowStepper = () => {
-    const _steps = [
-      'Closure Requested',
-      'Manager Review',
-      'Service Closed'
-    ];
     const activeStep = getStepContent();
     return (
       <Box sx={{ mb: 3 }}>

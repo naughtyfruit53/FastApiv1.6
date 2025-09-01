@@ -10,7 +10,6 @@ import {
   CardContent,
   Grid,
   Alert,
-  Button,
 } from '@mui/material';
 import { Analytics, TrendingUp, People, Assessment } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';

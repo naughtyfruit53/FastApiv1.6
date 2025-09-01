@@ -868,7 +868,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     }
   };
   const renderMegaMenu = () => {
-    if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {return null;}
+    if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {
+      return null;
+    }
     const menu = menuItems[activeMenu as keyof typeof menuItems];
     // Filter menu items based on user permissions
     const filterMenuItems = (subSection: any) => {

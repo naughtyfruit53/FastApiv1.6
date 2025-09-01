@@ -32,18 +32,12 @@ import {
 } from '@mui/material';
 import {
   Upload,
-  CheckCircle,
-  Error,
-  Warning,
   Refresh,
   CloudUpload,
   Settings,
   PlayArrow,
-  Undo,
-  Download,
-  Info
+  Undo
 } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 export interface MigrationJob {
   id: number;
@@ -78,7 +72,6 @@ interface MigrationWizardProps {
   jobId?: number;
 }
 const MigrationWizard: React.FC<MigrationWizardProps> = ({ open, onClose, jobId }) => {
-  const { user: _user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [wizardState, setWizardState] = useState<MigrationWizardState | null>(null);
   const [currentJob, setCurrentJob] = useState<MigrationJob | null>(null);

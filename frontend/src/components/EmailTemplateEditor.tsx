@@ -28,13 +28,11 @@ import {
 } from '@mui/material';
 import {
   Preview,
-  Code,
   Send,
   Save,
   Refresh,
   Info,
   ContentCopy,
-  Delete,
   Add
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
@@ -55,8 +53,8 @@ interface EmailTemplateEditorProps {
   open: boolean;
   onClose: () => void;
   template?: EmailTemplate | null;
-  onSave: (template: Partial<EmailTemplate>) => void;
-  onTest?: (template: Partial<EmailTemplate>) => void;
+  onSave: (_templateData: Partial<EmailTemplate>) => void;
+  onTest?: (_templateData: Partial<EmailTemplate>) => void;
 }
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -102,7 +100,7 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     is_active: template?.is_active ?? true
   });
   const [newVariable, setNewVariable] = useState('');
-const [previewData,] = useState<{ [key: string]: string }>({
+  const [previewData] = useState<{ [key: string]: string }>({
     prospect_name: 'John Smith',
     company_name: 'TechCorp Solutions',
     exhibition_name: 'Tech Expo 2024',
@@ -179,12 +177,7 @@ Best regards,
       variables: prev.variables?.filter(v => v !== variable) || []
     }));
   };
-    const variableText = `{{${variable}}}`;
-    const currentValue = formData[field] || '';
-    // For simplicity, just append the variable. In a real implementation,
-    // you'd want to insert at cursor position
-    handleInputChange(field, currentValue + variableText);
-  };
+  
   const renderPreview = (text: string, isHtml: boolean = false) => {
     let processedText = text;
     // Replace variables with preview data
@@ -363,8 +356,7 @@ Best regards,
             Template Variables
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-// TODO: Define or import variable_name
-            Variables allow you to personalize emails with dynamic content. Use {{variable_name}} in your template.
+            Variables allow you to personalize emails with dynamic content. Use the format &#123;&#123;variable_name&#125;&#125; in your template.
           </Typography>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
@@ -504,3 +496,4 @@ Best regards,
 };
 
 export default EmailTemplateEditor;
+
