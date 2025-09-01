@@ -24,8 +24,7 @@ import {
   Sms,
   NotificationImportant,
   Settings,
-  MarkEmailRead,
-  Clear
+  MarkEmailRead
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
@@ -77,7 +76,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onSettingsClick }) 
       // Refresh notifications
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.logs() });
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Failed to mark notification as read');
     }
   });

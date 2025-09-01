@@ -3,7 +3,7 @@
 import api from '../lib/api';
 export const voucherService = {
   // Generic Voucher Methods
-  getVouchers: async (type: string, params?: any): Promise<any> => {
+  getVouchers: async (type: string, params?: Record<string, any>): Promise<any> => {
     const endpoint = `/${type}`;  // Use type directly since it's already plural
     console.log(`[voucherService] Fetching vouchers from endpoint: ${endpoint}`);
     const response = await api.get(endpoint, { params });
@@ -16,13 +16,13 @@ export const voucherService = {
     const response = await api.get(endpoint);
     return response.data;
   },
-  createVoucher: async (type: string, data: any, sendEmail: boolean = false): Promise<any> => {
+  createVoucher: async (type: string, data: Record<string, any>, sendEmail: boolean = false): Promise<any> => {
     const endpoint = `/${type}`;
     console.log(`[voucherService] Creating voucher at: ${endpoint}`);
     const response = await api.post(endpoint, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updateVoucher: async (type: string, id: number, data: any): Promise<any> => {
+  updateVoucher: async (type: string, id: number, data: Record<string, any>): Promise<any> => {
     const endpoint = `/${type}/${id}`;
     console.log(`[voucherService] Updating voucher at: ${endpoint}`);
     const response = await api.put(endpoint, data);
@@ -38,11 +38,11 @@ export const voucherService = {
     const response = await api.get(`/purchase-vouchers/${id}`);
     return response.data;
   },
-  createPurchaseVoucher: async (data: any, sendEmail: boolean): Promise<any> => {
+  createPurchaseVoucher: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/purchase-vouchers`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updatePurchaseVoucher: async (id: number, data: any): Promise<any> => {
+  updatePurchaseVoucher: async (id: number, data: Record<string, any>): Promise<any> => {
     const response = await api.put(`/purchase-vouchers/${id}`, data);
     return response.data;
   },
@@ -51,11 +51,11 @@ export const voucherService = {
     const response = await api.get(`/purchase-orders/${id}`);
     return response.data;
   },
-  createPurchaseOrder: async (data: any, sendEmail: boolean): Promise<any> => {
+  createPurchaseOrder: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/purchase-orders`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updatePurchaseOrder: async (id: number, data: any): Promise<any> => {
+  updatePurchaseOrder: async (id: number, data: Record<string, any>): Promise<any> => {
     const response = await api.put(`/purchase-orders/${id}`, data);
     return response.data;
   },
@@ -64,11 +64,11 @@ export const voucherService = {
     const response = await api.get(`/goods-receipt-notes/${id}`);
     return response.data;
   },
-  createGrn: async (data: any, sendEmail: boolean): Promise<any> => {
+  createGrn: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/goods-receipt-notes`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updateGrn: async (id: number, data: any): Promise<any> => {
+  updateGrn: async (id: number, data: Record<string, any>): Promise<any> => {
     const response = await api.put(`/goods-receipt-notes/${id}`, data);
     return response.data;
   },
@@ -77,16 +77,16 @@ export const voucherService = {
     const response = await api.get(`/purchase-returns/${id}`);
     return response.data;
   },
-  createRejectionIn: async (data: any, sendEmail: boolean): Promise<any> => {
+  createRejectionIn: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
     const response = await api.post(`/purchase-returns`, data, { params: { send_email: sendEmail } });
     return response.data;
   },
-  updateRejectionIn: async (id: number, data: any): Promise<any> => {
+  updateRejectionIn: async (id: number, data: Record<string, any>): Promise<any> => {
     const response = await api.put(`/purchase-returns/${id}`, data);
     return response.data;
   },
   // Enhanced service methods for voucher actions
-getEmailRecipient: (voucher: any, voucherType: string): any => {
+getEmailRecipient: (voucher: Record<string, any>, voucherType: string): any => {
     const type = voucherType.toLowerCase();
     if (type === 'purchase' && voucher.vendor) {
       return {
@@ -122,7 +122,7 @@ getEmailRecipient: (voucher: any, voucherType: string): any => {
       throw error;
     }
   },
-getVoucherActions: (voucher: any, voucherType: string): any => {
+getVoucherActions: (voucher: Record<string, any>, voucherType: string): any => {
     const recipient = voucherService.getEmailRecipient(voucher, voucherType);
     return {
       canView: true,

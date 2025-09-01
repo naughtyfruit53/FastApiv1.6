@@ -14,7 +14,7 @@ interface VoucherLayoutProps {
   pagination?: {
     currentPage: number;
     totalPages: number;
-    onPageChange: (page: number) => void;
+    onPageChange: (_page: number) => void;
     totalItems: number;
   };
   // Additional props for modal functionality
@@ -26,16 +26,16 @@ interface VoucherLayoutProps {
 }
 const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   voucherType,
-  voucherTitle,
+  voucherTitle: _voucherTitle,
   indexContent,
   formContent,
   onShowAll,
   showAllButton = true,
   pagination,
-  showModal = false,
-  onCloseModal,
+  showModal: _showModal = false,
+  onCloseModal: _onCloseModal,
   modalContent,
-  centerAligned = true
+  centerAligned: _centerAligned = true
 }) => {
   const voucherStyles = getVoucherStyles();
   return (

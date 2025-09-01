@@ -17,7 +17,7 @@ import {useForm} from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { authService } from '../services/authService';
 interface OTPLoginProps {
-  onLogin: (token: string, loginResponse?: any) => void;
+  onLogin: (_token: string, _loginResponse?: any) => void;
 }
 interface EmailFormData {
   email: string;
@@ -43,8 +43,8 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
       setUserEmail(data.email);
       setSuccess(`OTP sent to ${data.email}. Please check your email.`);
       setActiveStep(1);
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Failed to send OTP. Please try again.');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to send OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -63,8 +63,8 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
       onLogin(response.access_token, response);
       // Redirect to dashboard
       router.push('/dashboard');
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Invalid OTP. Please try again.');
+    } catch (otpError: any) {
+      setError(otpError.response?.data?.detail || 'Invalid OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -75,8 +75,8 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
     try {
       await authService.requestOTP(userEmail);
       setSuccess('OTP resent successfully!');
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Failed to resend OTP.');
+    } catch (resendError: any) {
+      setError(resendError.response?.data?.detail || 'Failed to resend OTP.');
     } finally {
       setLoading(false);
     }

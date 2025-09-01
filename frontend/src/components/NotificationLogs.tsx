@@ -33,8 +33,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
-  Divider
+  ListItemIcon
 } from '@mui/material';
 import {
   Visibility,
@@ -100,13 +99,12 @@ const NotificationLogs: React.FC = () => {
     }),
   });
   // Get analytics
+  const analyticsDays = 30; // Default to 30 days for analytics
   const { 
     data: analytics,
-    isLoading: analyticsLoading 
+    isLoading: _analyticsLoading 
   } = useQuery({
-// TODO: Define or import analyticsDays
     queryKey: notificationQueryKeys.analytics(analyticsDays),
-// TODO: Define or import analyticsDays
     queryFn: () => getNotificationAnalytics(analyticsDays),
   });
   // Get detailed log when modal opens

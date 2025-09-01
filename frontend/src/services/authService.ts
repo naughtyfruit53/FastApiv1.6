@@ -3,7 +3,7 @@
 // frontend/src/services/authService.ts (Revised for detailed error handling in companyService)
 import api from '../lib/api';  // Use the api client
 export const authService = {
-  login: async (username: string, password: string) => {
+  login: async (username: string, password: string): Promise<any> => {
     try {
       console.log('[AuthService] Starting login process for:', username);
       const formData = new FormData();
@@ -42,7 +42,7 @@ export const authService = {
       throw new Error(error.userMessage || 'Login failed');
     }
   },
-  loginWithEmail: async (email: string, password: string) => {
+  loginWithEmail: async (email: string, password: string): Promise<any> => {
     try {
       console.log('[AuthService] Starting email login process for:', email);
       const formData = new FormData();
@@ -81,7 +81,7 @@ export const authService = {
   // 1. Initial user fetch on app mount 
   // 2. Manual user refresh operations
   // DO NOT call this directly from components - use useAuth() hook instead
-  getCurrentUser: async () => {
+  getCurrentUser: async (): Promise<any> => {
     try {
       console.log('[AuthService] Fetching current user data');
       const response = await api.get('/users/me');
@@ -116,7 +116,7 @@ export const authService = {
     localStorage.removeItem('is_super_admin');
     window.location.href = '/';
   },
-  requestOTP: async (email: string, phone: string, deliveryMethod: string = 'auto', purpose: string = 'login') => {
+  requestOTP: async (email: string, phone: string, deliveryMethod: string = 'auto', purpose: string = 'login'): Promise<any> => {
     try {
       const requestData: any = { email, purpose };
       if (phone) {
@@ -131,7 +131,7 @@ export const authService = {
       throw new Error(error.userMessage || 'Failed to send OTP');
     }
   },
-  verifyOTP: async (email: string, otp: string, purpose: string = 'login') => {
+  verifyOTP: async (email: string, otp: string, purpose: string = 'login'): Promise<any> => {
     try {
       const response = await api.post('/auth/otp/verify', { email, otp, purpose });
       return response.data;
@@ -139,7 +139,7 @@ export const authService = {
       throw new Error(error.userMessage || 'OTP verification failed');
     }
   },
-  refreshToken: async () => {
+  refreshToken: async (): Promise<any> => {
     try {
       console.log('[AuthService] Attempting to refresh token');
       const refreshToken = localStorage.getItem('refresh_token');
@@ -182,7 +182,7 @@ export const authService = {
       return false;
     }
   },
-  setupAdminAccount: async () => {
+  setupAdminAccount: async (): Promise<any> => {
     try {
       const response = await api.post('/auth/admin/setup');
       return response.data;

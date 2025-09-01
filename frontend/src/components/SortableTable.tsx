@@ -22,7 +22,7 @@ export interface HeadCell<T> {
   sortable?: boolean;
   width?: string | number;
   align?: 'left' | 'right' | 'center';
-  render?: (value: any, row: T) => React.ReactNode;
+  render?: (_value: any, _row: T) => React.ReactNode;
 }
 interface SortableTableProps<T> {
   data: T[];
@@ -30,19 +30,19 @@ interface SortableTableProps<T> {
   title?: string;
   defaultOrderBy?: keyof T;
   defaultOrder?: Order;
-  onRowClick?: (row: T) => void;
+  onRowClick?: (_row: T) => void;
   dense?: boolean;
   stickyHeader?: boolean;
   maxHeight?: string | number;
   emptyMessage?: string;
   loading?: boolean;
-  actions?: (row: T) => React.ReactNode;
+  actions?: (_row: T) => React.ReactNode;
 }
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   const aVal = a[orderBy];
   const bVal = b[orderBy];
   // Handle null/undefined values
-  if (bVal == null && aVal == null) {return 0;}
+  if (bVal === null && aVal === null) {return 0;}
   if (bVal == null) {return -1;}
   if (aVal == null) {return 1;}
   // Handle different types
@@ -67,12 +67,12 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   // Default string comparison
   return String(bVal).localeCompare(String(aVal), undefined, { numeric: true, sensitivity: 'base' });
 }
-function getComparator<T>(order: Order, orderBy: keyof T): (a: T, b: T) => number {
+function getComparator<T>(order: Order, orderBy: keyof T): (_a: T, _b: T) => number {
   return order === 'desc'
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
+    ? (_a, _b) => descendingComparator(_a, _b, orderBy)
+    : (_a, _b) => -descendingComparator(_a, _b, orderBy);
 }
-function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) {
+function stableSort<T>(array: readonly T[], comparator: (_a: T, _b: T) => number) {
   const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -87,7 +87,7 @@ interface SortableTableHeadProps<T> {
   headCells: HeadCell<T>[];
   order: Order;
   orderBy: keyof T;
-  onRequestSort: (property: keyof T) => void;
+  onRequestSort: (_property: keyof T) => void;
   hasActions: boolean;
 }
 function SortableTableHead<T>(props: SortableTableHeadProps<T>) {

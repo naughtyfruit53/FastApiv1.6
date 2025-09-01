@@ -11,11 +11,9 @@ import {
   AppBar
 } from '@mui/material';
 import {
-  Dashboard,
   Create,
   Send,
-  History,
-  BarChart
+  History
 } from '@mui/icons-material';
 import NotificationTemplates from './NotificationTemplates';
 import SendNotification from './SendNotification';

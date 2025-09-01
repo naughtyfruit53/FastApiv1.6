@@ -36,9 +36,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       const response = await authService.loginWithEmail(data.email, data.password);
       // Store user info - removed redundant localStorage sets since AuthContext handles it
       onLogin(response.access_token, response);
-    } catch (error: any) {
+    } catch (loginError: any) {
       // Better error handling to prevent flicker
-      const errorMessage = error.message || error.response?.data?.detail || 'Login failed. Please check your credentials.';
+      const errorMessage = loginError.message || loginError.response?.data?.detail || 'Login failed. Please check your credentials.';
       setError(errorMessage);
     } finally {
       setLoading(false);

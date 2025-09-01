@@ -7,7 +7,6 @@ import {
   Typography,
   Paper,
   Popper,
-  ClickAwayListener,
   List,
   ListItemText,
   ListItemIcon,
@@ -18,10 +17,10 @@ import { Add, Search } from '@mui/icons-material';
 interface SearchableDropdownProps {
   options: any[];
   value: any;
-  onChange: (value: any) => void;
+  onChange: (_value: any) => void;
   onAddNew?: () => void;
-  getOptionLabel: (option: any) => string;
-  getOptionValue: (option: any) => any;
+  getOptionLabel: (_option: any) => string;
+  getOptionValue: (_option: any) => any;
   placeholder?: string;
   label?: string;
   disabled?: boolean;

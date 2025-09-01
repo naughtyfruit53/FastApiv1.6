@@ -22,7 +22,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { authService } from '../services/authService';
 interface UnifiedLoginFormProps {
-  onLogin: (token: string, loginResponse?: any) => void;
+  onLogin: (_token: string, _loginResponse?: any) => void;
 }
 interface LoginFormData {
   email: string;
