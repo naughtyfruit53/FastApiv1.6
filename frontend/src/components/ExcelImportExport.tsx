@@ -6,7 +6,7 @@ import { exportToExcel, importFromExcel } from '../lib/excelUtils';
 interface ExcelImportExportProps {
   data: any[];
   entity: string;
-  onImport: (importedData: any[]) => void;
+  onImport: (_importedData: any[]) => void;
 }
 const ExcelImportExport: React.FC<ExcelImportExportProps> = ({ data, entity, onImport }) => {
   const handleExport = () => {

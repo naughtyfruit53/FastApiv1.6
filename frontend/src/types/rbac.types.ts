@@ -7,27 +7,27 @@
  */
 // Enums matching backend
 export enum ServiceRoleType {
-  ADMIN = 'admin',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  MANAGER = 'manager',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  SUPPORT = 'support',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  VIEWER = 'viewer'  // eslint-disable-line @typescript-eslint/no-unused-vars
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  SUPPORT = 'support',
+  VIEWER = 'viewer'
 }
 export enum ServiceModule {
-  SERVICE = 'service',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  TECHNICIAN = 'technician',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  APPOINTMENT = 'appointment',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  CUSTOMER_SERVICE = 'customer_service',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  WORK_ORDER = 'work_order',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  SERVICE_REPORTS = 'service_reports',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  CRM_ADMIN = 'crm_admin'  // eslint-disable-line @typescript-eslint/no-unused-vars
+  SERVICE = 'service',
+  TECHNICIAN = 'technician',
+  APPOINTMENT = 'appointment',
+  CUSTOMER_SERVICE = 'customer_service',
+  WORK_ORDER = 'work_order',
+  SERVICE_REPORTS = 'service_reports',
+  CRM_ADMIN = 'crm_admin'
 }
 export enum ServiceAction {
-  CREATE = 'create',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  READ = 'read',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  UPDATE = 'update',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  DELETE = 'delete',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  EXPORT = 'export',  // eslint-disable-line @typescript-eslint/no-unused-vars
-  ADMIN = 'admin'  // eslint-disable-line @typescript-eslint/no-unused-vars
+  CREATE = 'create',
+  READ = 'read',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  EXPORT = 'export',
+  ADMIN = 'admin'
 }
 // Service Permission Types
 export interface ServicePermission {

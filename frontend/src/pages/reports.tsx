@@ -111,7 +111,7 @@ const ReportsPage: React.FC = () => {
     setDateRange(prev => ({ ...prev, [field]: value }));
   };
   // Fetch dashboard statistics
-const { data: dashboardStats, isLoading: statsLoading, refetch:} = useQuery({
+  const { data: dashboardStats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: reportsService.getDashboardStats,
     enabled: true,

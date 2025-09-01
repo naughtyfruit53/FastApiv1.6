@@ -25,7 +25,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField,
   Pagination,
   Rating,
   Dialog,
@@ -35,21 +34,18 @@ import {
 } from '@mui/material';
 import {
   Feedback as FeedbackIcon,
-  Star as StarIcon,
   Visibility as ViewIcon,
   Edit as EditIcon,
   Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
-  Search as SearchIcon,
-  FilterList as FilterIcon,
   Assignment as AssignmentIcon
 } from '@mui/icons-material';
 interface FeedbackStatusListProps {
   organizationId: number;
-  onFeedbackSelect?: (feedback: any) => void;
-  onClosureSelect?: (closure: any) => void;
+  onFeedbackSelect?: (_feedback: any) => void;
+  onClosureSelect?: (_closure: any) => void;
 }
 const FEEDBACK_STATUS_CONFIG = {
   submitted: { label: 'Submitted', color: 'info', icon: FeedbackIcon },
