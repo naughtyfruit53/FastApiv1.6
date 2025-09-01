@@ -1,5 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Union
@@ -26,18 +27,22 @@ class EmailLogin(BaseModel):
     email: EmailStr
     password: str
 
-@router.post("/login/email", response_model=LoginResponse)
-async def login_email(
-    form_data: EmailLogin,
+@router.post("/login", response_model=LoginResponse)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    user: Union[User, PlatformUser, None] = db.query(User).filter(User.email == form_data.email).first()
-    if not user:
-        user = db.query(PlatformUser).filter(PlatformUser.email == form_data.email).first()
+    # Handle both username and email login (assuming username can be email)
+    email = form_data.username  # OAuth2 uses 'username', but treat as email
+    password = form_data.password
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        logger.info(f"[LOGIN:FAILED] Email: {form_data.email}")
+    user: Union[User, PlatformUser, None] = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
+
+    if not user or not verify_password(password, user.hashed_password):
+        logger.info(f"[LOGIN:FAILED] Email: {email}")
         create_audit_log(
             db=db,
             table_name="security_events",
@@ -47,7 +52,7 @@ async def login_email(
             changes={
                 "event_type": "LOGIN",
                 "action": "FAILED",
-                "user_email": form_data.email,
+                "user_email": email,
                 "success": "FAILURE",
                 "error_message": "Invalid credentials",
                 "ip_address": request.client.host if request else "unknown",

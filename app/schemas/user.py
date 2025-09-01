@@ -4,7 +4,7 @@
 User schemas for authentication and user management
 """
 from pydantic import BaseModel, EmailStr, field_validator, Field, ConfigDict
-from typing import Optional, Union, TypeAlias
+from typing import Optional, Union, TypeAlias, Dict
 from datetime import datetime
 from enum import Enum
 # Removed import of check_password_strength from security to break circular import
@@ -106,6 +106,7 @@ class UserInDB(UserBase):
     updated_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     has_stock_access: bool = True  # Module access for stock functionality
+    user_settings: Optional[Dict] = None  # Add user_settings here
     
     model_config = ConfigDict(from_attributes = True, use_enum_values=True)  # Added use_enum_values=True
 

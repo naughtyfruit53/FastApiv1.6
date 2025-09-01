@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 # Import enhanced v1 routers
 from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
-# Added missing v1 imports
-from app.api.v1 import admin_setup as v1_admin_setup, login as v1_login, master_auth as v1_master_auth, otp as v1_otp, password as v1_password, user as v1_user
+# Added missing v1 imports (removed v1_login as merged into auth)
+from app.api.v1 import admin_setup as v1_admin_setup, master_auth as v1_master_auth, otp as v1_otp, password as v1_password, user as v1_user
 from app.api.v1 import pdf_extraction as v1_pdf_extraction
 # Organizations router (modular version)
 from app.api.v1.organizations import router as organizations_router
@@ -216,15 +216,9 @@ logger.info("App users router included successfully at prefix: /api/v1/app-users
 app.include_router(
     v1_admin_setup.router,
     prefix="/api/v1/admin-setup",
-    tags=["admin-setup-v1"]
+    tags=["admin-setup"]
 )
 logger.info("Admin setup router included successfully at prefix: /api/v1/admin-setup")
-app.include_router(
-    v1_login.router,
-    prefix="/api/v1/login",
-    tags=["login-v1"]
-)
-logger.info("Login router included successfully at prefix: /api/v1/login")
 app.include_router(
     v1_master_auth.router,
     prefix="/api/v1/master-auth",

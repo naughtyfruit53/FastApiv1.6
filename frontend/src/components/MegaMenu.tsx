@@ -1,6 +1,5 @@
 'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -17,7 +16,8 @@ import {
   IconButton,
   ListItemButton,
   Grid,
-  Tooltip
+  Tooltip,
+  InputBase
 } from '@mui/material';
 import {
   Dashboard,
@@ -81,7 +81,8 @@ import {
   Inbox,
   Send,
   Drafts,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
@@ -90,13 +91,11 @@ import { useQuery } from '@tanstack/react-query';
 import { companyService } from '../services/authService';
 import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
-
 interface MegaMenuProps {
   user?: any;
   onLogout: () => void;
   isVisible?: boolean;
 }
-
 const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
@@ -105,8 +104,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const [activeSubCategory, setActiveSubCategory] = useState<any>(null);
   const [createLicenseModalOpen, setCreateLicenseModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filteredMenuItems, setFilteredMenuItems] = useState<any[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
   // Common button style for enhanced UI/UX
   const modernButtonStyle = {
     mx: 1,
@@ -126,7 +127,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       transform: 'translateY(0) scale(0.98)',
     }
   };
-
   // Query for company data to show logo
   const { data: companyData } = useQuery({
     queryKey: ['company'],
@@ -135,7 +135,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     retry: false,
     staleTime: 0, // 5 minutes
   });
-
   // Query for current organization (to get enabled_modules)
   const { data: organizationData } = useQuery({
     queryKey: ['currentOrganization'],
@@ -155,7 +154,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       console.error('Failed to fetch organization data:', error);
     }
   });
-
   // Query for current user's service permissions
   const { data: userPermissions = [] } = useQuery({
     queryKey: ['userServicePermissions'],
@@ -167,7 +165,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       console.log('User permissions fetched:', data);
     }
   });
-
   // Add keyboard event listener for Escape key
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -183,60 +180,62 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       }
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [anchorEl, userMenuAnchor, subAnchorEl]);
-
+  // Click outside to close search results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setSearchQuery('');
+        setFilteredMenuItems([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [searchRef]);
   // Don't render if not visible
   if (!isVisible) {
     return null;
   }
-
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
     setAnchorEl(event.currentTarget);
     setActiveMenu(menuName);
     setSelectedSection(null);
   };
-
   const handleSubClick = (event: React.MouseEvent<HTMLElement>, category: any) => {
     setSubAnchorEl(event.currentTarget);
     setActiveSubCategory(category);
   };
-
   const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setUserMenuAnchor(event.currentTarget);
   };
-
   const navigateTo = (path: string) => {
     router.push(path);
     handleMenuClose();
     handleSubClose();
   };
-
   // Enhanced logo navigation function
   const navigateToHome = () => {
     router.push('/dashboard');
     handleMenuClose();
   };
-
   // Check user roles using proper utility functions
   const isSuperAdmin = isAppSuperAdmin(user);
   const _isOrgAdmin = isOrgSuperAdmin(user);
   const _canManage = canManageUsers(user);
   const _canShowUserMgmtInMenu = canShowUserManagementInMegaMenu(user);
-
   // Service permission helper functions
   const hasServicePermission = (permission: string): boolean => {
     return userPermissions.includes(permission);
   };
-
   const hasAnyServicePermission = (permissions: string[]): boolean => {
     return permissions.some(permission => userPermissions.includes(permission));
   };
-
   const canAccessServiceFeatures = (): boolean => {
     const hasAccess = hasAnyServicePermission([
       SERVICE_PERMISSIONS.SERVICE_READ,
@@ -250,15 +249,12 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return hasAccess;
   };
-
   const canAccessServiceAnalytics = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.SERVICE_REPORTS_READ);
   };
-
   const canManageServiceRoles = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
   };
-
   // Helper to check if a module is enabled for the organization
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) {return true;} // Super admins see all
@@ -269,40 +265,33 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return enabled;
   };
-
   const handleDemoMode = () => {
     // Navigate to demo page
     router.push('/demo');
     handleMenuClose();
   };
-
   const handleContactSupport = () => {
     // In production, this could open a support ticket form or email client
     window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
   };
-
   const handleSubClose = () => {
     setSubAnchorEl(null);
     setActiveSubCategory(null);
   };
-
   const handleUserMenuClose = () => {
     setUserMenuAnchor(null);
   };
-
   const handleMenuClose = () => {
     setAnchorEl(null);
     setActiveMenu(null);
     setSelectedSection(null);
   };
-
   const _handleCreateOrgLicense = () => {
     // For now, we'll use a state to control the modal
     // In a full implementation, this would be managed by parent component
     setCreateLicenseModalOpen(true);
     handleMenuClose();
   };
-
   const menuItems = {
     // Master Data - Restored as top-level menu with direct navigation
     masterData: {
@@ -415,7 +404,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Finance menu (separated from Accounting)
+    // Finance menu (split from Finance & Accounting)
     finance: {
       title: 'Finance',
       icon: <AccountBalance />,
@@ -437,12 +426,18 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           ]
         },
         {
+          title: 'Cost Management',
+          items: [
+            { name: 'Cost Centers', path: '/cost-centers', icon: <CorporateFare /> },
+            { name: 'Budget Management', path: '/budgets', icon: <TrendingUp /> },
+            { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
+          ]
+        },
+        {
           title: 'Financial Reports',
           items: [
-            { name: 'Trial Balance', path: '/reports/trial-balance', icon: <BarChart /> },
-            { name: 'Profit & Loss', path: '/reports/profit-loss', icon: <TrendingUp /> },
-            { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> },
-            { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> }
+            { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> },
+            { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> }
           ]
         },
         {
@@ -450,16 +445,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           items: [
             { name: 'Finance Dashboard', path: '/finance-dashboard', icon: <Analytics /> },
             { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
-            { name: 'Expense Analysis', path: '/expense-analysis', icon: <BarChart /> },
-            { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> }
+            { name: 'Expense Analysis', path: '/expense-analysis', icon: <BarChart /> }
           ]
         }
       ]
     },
-    // Accounting menu (separated from Finance)
+    // Accounting menu (split from Finance & Accounting)
     accounting: {
       title: 'Accounting',
-      icon: <Assessment />,
+      icon: <AccountBalance />,
       sections: [
         {
           title: 'Chart of Accounts',
@@ -478,16 +472,16 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           ]
         },
         {
-          title: 'Cost Management',
+          title: 'Financial Reports',
           items: [
-            { name: 'Cost Centers', path: '/cost-centers', icon: <CorporateFare /> },
-            { name: 'Budget Management', path: '/budgets', icon: <TrendingUp /> },
-            { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
+            { name: 'Trial Balance', path: '/reports/trial-balance', icon: <BarChart /> },
+            { name: 'Profit & Loss', path: '/reports/profit-loss', icon: <TrendingUp /> },
+            { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> }
           ]
         }
       ]
     },
-    // Combined Reports & Analytics menu
+    // Reports & Analytics menu
     reportsAnalytics: {
       title: 'Reports & Analytics',
       icon: <Assessment />,
@@ -537,7 +531,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Sales menu (renamed from CRM, service sections moved out)
+    // Sales menu (renamed from CRM, with service options removed)
     sales: {
       title: 'Sales',
       icon: <Person />,
@@ -605,32 +599,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Service menu (renamed from Service Desk, service sections from CRM moved here)
+    // Service menu (renamed from Service Desk, with CRM service options added)
     service: {
       title: 'Service',
       icon: <SupportAgent />,
       sections: [
         {
-          title: 'Service CRM',
-          items: [
-            { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-            { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
-            { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-            { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
-          ]
-        },
-        {
-          title: 'Management',
-          items: [
-            { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
-            { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
-            { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
-          ]
-        },
-        {
           title: 'Helpdesk & Ticketing',
           items: [
-            { name: 'Service Desk Dashboard', path: '/service-desk', icon: <Dashboard /> },
+            { name: 'Service Dashboard', path: '/service-desk', icon: <Dashboard /> },
             { name: 'Tickets', path: '/service-desk/tickets', icon: <Assignment /> },
             { name: 'SLA Management', path: '/service-desk/sla', icon: <Schedule /> },
             { name: 'Escalations', path: '/service-desk/escalations', icon: <TrendingUp /> }
@@ -652,6 +629,23 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Survey Templates', path: '/service-desk/survey-templates', icon: <NoteAdd /> },
             { name: 'Feedback Analytics', path: '/service-desk/feedback-analytics', icon: <Analytics /> },
             { name: 'Satisfaction Reports', path: '/service-desk/satisfaction', icon: <Feedback /> }
+          ]
+        },
+        {
+          title: 'Service CRM',
+          items: [
+            { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+            { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
+          ]
+        },
+        {
+          title: 'Management',
+          items: [
+            { name: 'Technicians', path: '/service/technicians', icon: <Engineering />, servicePermission: SERVICE_PERMISSIONS.TECHNICIAN_READ },
+            { name: 'Work Orders', path: '/service/work-orders', icon: <Assignment />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
+            { name: 'Appointments', path: '/service/appointments', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.APPOINTMENT_READ }
           ]
         }
       ]
@@ -698,9 +692,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
-    // Workspace divided into "Calendar & Tasks" and "Email"
-    calendarTasks: {
-      title: 'Calendar & Tasks',
+    // Tasks & Calendar menu (split from Workspace)
+    tasksCalendar: {
+      title: 'Tasks & Calendar',
       icon: <Task />,
       sections: [
         {
@@ -750,9 +744,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }
       ]
     },
+    // Email menu (split from Workspace)
     email: {
       title: 'Email',
-      icon: <Inbox />,
+      icon: <Email />,
       sections: [
         {
           title: 'Email Management',
@@ -810,7 +805,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       ]
     }
   };
-
   // Create main menu sections dynamically
   const mainMenuSections = isSuperAdmin
     ? [
@@ -837,21 +831,42 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         { title: 'Marketing', subSections: menuItems.marketing.sections },
         { title: 'Service', subSections: menuItems.service.sections },
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
-        { title: 'Calendar & Tasks', subSections: menuItems.calendarTasks.sections },
+        { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
         { title: 'Email', subSections: menuItems.email.sections }
       ];
-
   menuItems.menu = {
     title: 'Menu',
     icon: <MenuIcon />,
     sections: mainMenuSections
   };
-
+  const flattenMenuItems = (menu: any) => {
+    let items = [];
+    menu.sections.forEach(section => {
+      section.subSections.forEach(subSection => {
+        subSection.items.forEach(item => {
+          if (item.subItems) {
+            item.subItems.forEach(subItem => items.push(subItem));
+          } else {
+            items.push(item);
+          }
+        });
+      });
+    });
+    return items;
+  };
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.length >= 2) {
+      const allItems = flattenMenuItems(menuItems.menu);
+      const filtered = allItems.filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
+      setFilteredMenuItems(filtered);
+    } else {
+      setFilteredMenuItems([]);
+    }
+  };
   const renderMegaMenu = () => {
     if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {return null;}
-
     const menu = menuItems[activeMenu as keyof typeof menuItems];
-
     // Filter menu items based on user permissions
     const filterMenuItems = (subSection: any) => {
       return subSection.items.filter((item: any) => {
@@ -859,37 +874,43 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         if (item.role && !canManageUsers(user)) {
           return false;
         }
-        
+       
         // Check super admin only items
         if (item.superAdminOnly && !isSuperAdmin) {
           return false;
         }
-        
+       
         // Check service permissions
         if (item.servicePermission && !hasServicePermission(item.servicePermission)) {
           return false;
         }
-        
+       
         return true;
       });
     };
-
-    const filteredSections = menu.sections.map(section => ({
+    const normalizedSections = menu.sections.map(section => {
+      if (!section.subSections) {
+        return {
+          ...section,
+          subSections: [{
+            title: '',
+            items: section.items || []
+          }]
+        };
+      }
+      return section;
+    });
+    const filteredSections = normalizedSections.map(section => ({
       ...section,
-      subSections: (section.subSections || []).map((subSection: any) => ({
+      subSections: section.subSections.map((subSection: any) => ({
         ...subSection,
         items: filterMenuItems(subSection)
       })).filter((subSection: any) => subSection.items.length > 0)
     })).filter(section => section.subSections.length > 0);
-
     if (filteredSections.length === 0) {
       console.log(`No items in submenu for ${activeMenu} - permissions may be missing`);
       return null;
     }
-
-    const isMenuExpanded = !!selectedSection;
-    const menuWidth = isMenuExpanded ? 'calc(100vw - 40px)' : '250px'; // Small width for left panel only, expand when selected
-
     return (
       <Menu
         anchorEl={anchorEl}
@@ -897,10 +918,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         onClose={handleMenuClose}
         PaperProps={{
           sx: {
-            width: menuWidth,
-            maxWidth: menuWidth,
+            width: selectedSection ? 'calc(100vw - 40px)' : 'auto',
+            maxWidth: selectedSection ? 'calc(100vw - 40px)' : 'auto',
             maxHeight: 'calc(100vh - 100px)',
-            mt: 1,
+            overflowY: 'hidden',
+            mt: 0,
             borderRadius: 2,
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
             border: '1px solid',
@@ -927,13 +949,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         disableAutoFocusItem
       >
-        {activeMenu !== 'menu' && (
-          <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-            {menu.title}
-          </Typography>
-        )}
-        <Grid container sx={{ height: '100%', overflow: 'hidden' }}>
-          <Grid item xs={isMenuExpanded ? 3 : 12} sx={{ overflowY: 'auto', pr: isMenuExpanded ? 2 : 0 }}>
+        <Grid container>
+          <Grid item xs={3}>
             <List>
               {filteredSections.map((section, index) => (
                 <ListItemButton
@@ -955,14 +972,16 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               ))}
             </List>
           </Grid>
-          {isMenuExpanded && (
-            <Grid item xs={9} sx={{ pl: 2, overflowY: 'auto' }}>
+          <Grid item xs={9} sx={{ pl: 2 }}>
+            {selectedSection && (
               <Grid container spacing={2}>
                 {filteredSections.find(s => s.title === selectedSection)?.subSections.map((subSection: any, subIndex: number) => (
                   <Grid item xs={12} sm={6} md={4} key={subIndex}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
-                      {subSection.title}
-                    </Typography>
+                    {subSection.title && (
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
+                        {subSection.title}
+                      </Typography>
+                    )}
                     <List dense>
                       {subSection.items.map((item: any, itemIndex: number) => (
                         <ListItemButton
@@ -988,16 +1007,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   </Grid>
                 ))}
               </Grid>
-            </Grid>
-          )}
+            )}
+          </Grid>
         </Grid>
       </Menu>
     );
   };
-
   const renderSubMenu = () => {
     if (!activeSubCategory) {return null;}
-
     return (
       <Menu
         anchorEl={subAnchorEl}
@@ -1058,11 +1075,33 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       </Menu>
     );
   };
-
+  const renderSearchResults = () => {
+    if (filteredMenuItems.length === 0) return null;
+    return (
+      <Menu
+        open={filteredMenuItems.length > 0}
+        onClose={() => setSearchQuery('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            width: 300,
+            maxHeight: 400,
+          }
+        }}
+      >
+        {filteredMenuItems.map((item, index) => (
+          <MenuItem key={index} onClick={() => navigateTo(item.path)}>
+            {item.name}
+          </MenuItem>
+        ))}
+      </Menu>
+    );
+  };
   return (
     <>
-      <AppBar 
-        position="static" 
+      <AppBar
+        position="static"
         className="modern-nav"
         sx={{
           backgroundColor: 'var(--bg-surface)',
@@ -1072,40 +1111,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }}
       >
         <Toolbar>
-          {/* Enhanced Logo Section */}
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              cursor: 'pointer',
-              mr: 3,
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: 1
-              },
-              p: 1,
-              borderRadius: 1,
-              transition: 'background-color 0.2s'
-            }}
-            onClick={navigateToHome}
-          >
-            <Box 
-              component="img"
-              src="/Tritiq.png"
-              alt="TritiQ"
-              sx={{ 
-                width: 40,
-                height: 40,
-                mr: 1,
-                objectFit: 'contain'
-              }}
-            />
-            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-              {companyData?.name || 'ERP'}
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+          {/* Menu and Settings on the left */}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Button
               color="inherit"
               startIcon={<MenuIcon />}
@@ -1127,7 +1134,58 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               Settings
             </Button>
           </Box>
-
+          {/* Enhanced Logo Section in the center */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              flexGrow: 1,
+              justifyContent: 'center',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 1
+              },
+              p: 1,
+              borderRadius: 1,
+              transition: 'background-color 0.2s'
+            }}
+            onClick={navigateToHome}
+          >
+            <Box
+              component="img"
+              src="/Tritiq.png"
+              alt="TritiQ"
+              sx={{
+                width: 40,
+                height: 40,
+                mr: 1,
+                objectFit: 'contain'
+              }}
+            />
+            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+              {companyData?.name || 'ERP'}
+            </Typography>
+          </Box>
+          {/* Search bar on the right */}
+          <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', ml: 2 }} ref={searchRef}>
+            <InputBase
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              startAdornment={<SearchIcon />}
+              sx={{
+                color: 'inherit',
+                ml: 1,
+                '& .MuiInputBase-input': {
+                  padding: '8px 8px 8px 0',
+                  transition: 'width 0.3s',
+                  width: searchQuery ? '200px' : '100px',
+                },
+              }}
+            />
+            {renderSearchResults()}
+          </Box>
           <IconButton
             color="inherit"
             onClick={handleUserMenuClick}
@@ -1137,11 +1195,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           </IconButton>
         </Toolbar>
       </AppBar>
-
       {renderMegaMenu()}
-
       {renderSubMenu()}
-
       <Menu
         anchorEl={userMenuAnchor}
         open={Boolean(userMenuAnchor)}
@@ -1188,7 +1243,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           Logout
         </MenuItem>
       </Menu>
-
       {/* Organization License Creation Modal */}
       <CreateOrganizationLicenseModal
         open={createLicenseModalOpen}
@@ -1201,5 +1255,4 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     </>
   );
 };
-
 export default MegaMenu;

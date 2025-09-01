@@ -109,7 +109,7 @@ class Organization(Base):
     company_details_completed: Mapped[bool] = mapped_column(Boolean, default=False) # Track if company details have been filled
 
     # Custom org code
-    org_code: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True, index=True) # Custom format: yy/mm-(total user)-tqnnnn
+    org_code: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True, index=True, default=None) # Custom format: yy/mm-(total user)-tqnnnn
 
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
