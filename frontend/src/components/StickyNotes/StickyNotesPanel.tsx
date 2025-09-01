@@ -32,7 +32,7 @@ const COLORS = [
   { name: 'orange', label: 'Orange' }
 ];
 const StickyNotesPanel: React.FC = () => {
-const  = useAuth();
+  const { user } = useAuth();
   const { userSettings } = useStickyNotes();
   const [notes, setNotes] = useState<StickyNoteData[]>([]);
   const [loading, setLoading] = useState(true);

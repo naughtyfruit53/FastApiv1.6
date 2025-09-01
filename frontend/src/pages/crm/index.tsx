@@ -1,6 +1,6 @@
 // frontend/src/pages/crm/index.tsx
 import React, { useState, useEffect } from 'react';
-import { from '@mui/material';
+import { Box, Typography, Card, CardContent, Grid, Button, TextField, Tab, Tabs } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -28,7 +28,7 @@ const stageColors: Record<string, string> = {
   closed_lost: 'error',
 };
 export default function CRMDashboard() {
-const  = useAuth();
+  const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);

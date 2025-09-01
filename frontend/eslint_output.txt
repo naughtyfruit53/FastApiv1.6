@@ -1,0 +1,1207 @@
+
+> tritiq-erp-frontend@1.0.0 lint:check
+> eslint src/**/*.{ts,tsx}
+
+(node:3496) ESLintIgnoreWarning: The ".eslintignore" file is no longer supported. Switch to using the "ignores" property in "eslint.config.js": https://eslint.org/docs/latest/use/configure/migration-guide#ignoring-files
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/EmailTemplateEditor.tsx
+  504:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/FeedbackWorkflow/CustomerFeedbackModal.tsx
+  375:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/FeedbackWorkflow/FeedbackStatusList.tsx
+  95:10  error  'selectedClosure' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/FeedbackWorkflow/ServiceClosureDialog.tsx
+  216:4  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/IntegrationDashboard.tsx
+  90:7  error  Parsing error: Variable declaration expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/MegaMenu.tsx
+  255:2  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/MigrationWizard.tsx
+  94:7  error  Parsing error: Variable declaration expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/NotificationTemplates.tsx
+   95:15  error  'notificationQueryKeys' is not defined                                   no-undef
+  102:49  error  'notificationQueryKeys' is not defined                                   no-undef
+  104:7   error  'resetForm' was used before it was defined                               no-use-before-define
+  107:15  error  'error' is already declared in the upper scope on line 93 column 5       no-shadow
+  107:15  error  'error' is already declared in the upper scope on line 93 column 5       @typescript-eslint/no-shadow
+  116:49  error  'notificationQueryKeys' is not defined                                   no-undef
+  118:7   error  'resetForm' was used before it was defined                               no-use-before-define
+  121:15  error  'error' is already declared in the upper scope on line 93 column 5       no-shadow
+  121:15  error  'error' is already declared in the upper scope on line 93 column 5       @typescript-eslint/no-shadow
+  129:49  error  'notificationQueryKeys' is not defined                                   no-undef
+  134:15  error  'error' is already declared in the upper scope on line 93 column 5       no-shadow
+  134:15  error  'error' is already declared in the upper scope on line 93 column 5       @typescript-eslint/no-shadow
+  146:15  error  'error' is already declared in the upper scope on line 93 column 5       no-shadow
+  146:15  error  'error' is already declared in the upper scope on line 93 column 5       @typescript-eslint/no-shadow
+  227:77  error  'templates' is already declared in the upper scope on line 91 column 11  no-shadow
+  227:77  error  'templates' is already declared in the upper scope on line 91 column 11  @typescript-eslint/no-shadow
+  328:8   error  'Alert' is not defined                                                   react/jsx-no-undef
+  328:8   error  'Alert' is not defined                                                   no-undef
+  330:9   error  'Alert' is not defined                                                   no-undef
+  336:10  error  'CardContent' is not defined                                             react/jsx-no-undef
+  336:10  error  'CardContent' is not defined                                             no-undef
+  351:16  error  'CircularProgress' is not defined                                        react/jsx-no-undef
+  351:16  error  'CircularProgress' is not defined                                        no-undef
+  395:11  error  'CardContent' is not defined                                             no-undef
+  404:10  error  'DialogTitle' is not defined                                             react/jsx-no-undef
+  404:10  error  'DialogTitle' is not defined                                             no-undef
+  406:11  error  'DialogTitle' is not defined                                             no-undef
+  407:10  error  'DialogContent' is not defined                                           react/jsx-no-undef
+  407:10  error  'DialogContent' is not defined                                           no-undef
+  419:16  error  'FormControl' is not defined                                             react/jsx-no-undef
+  419:16  error  'FormControl' is not defined                                             no-undef
+  420:18  error  'InputLabel' is not defined                                              react/jsx-no-undef
+  420:18  error  'InputLabel' is not defined                                              no-undef
+  420:44  error  'InputLabel' is not defined                                              no-undef
+  421:18  error  'Select' is not defined                                                  react/jsx-no-undef
+  421:18  error  'Select' is not defined                                                  no-undef
+  427:22  error  'MenuItem' is not defined                                                react/jsx-no-undef
+  427:22  error  'MenuItem' is not defined                                                no-undef
+  429:23  error  'MenuItem' is not defined                                                no-undef
+  431:19  error  'Select' is not defined                                                  no-undef
+  432:17  error  'FormControl' is not defined                                             no-undef
+  435:16  error  'FormControl' is not defined                                             react/jsx-no-undef
+  435:16  error  'FormControl' is not defined                                             no-undef
+  436:18  error  'InputLabel' is not defined                                              react/jsx-no-undef
+  436:18  error  'InputLabel' is not defined                                              no-undef
+  436:38  error  'InputLabel' is not defined                                              no-undef
+  437:18  error  'Select' is not defined                                                  react/jsx-no-undef
+  437:18  error  'Select' is not defined                                                  no-undef
+  443:22  error  'MenuItem' is not defined                                                react/jsx-no-undef
+  443:22  error  'MenuItem' is not defined                                                no-undef
+  445:23  error  'MenuItem' is not defined                                                no-undef
+  447:19  error  'Select' is not defined                                                  no-undef
+  448:17  error  'FormControl' is not defined                                             no-undef
+  451:16  error  'FormControlLabel' is not defined                                        react/jsx-no-undef
+  451:16  error  'FormControlLabel' is not defined                                        no-undef
+  453:20  error  'Switch' is not defined                                                  react/jsx-no-undef
+  453:20  error  'Switch' is not defined                                                  no-undef
+  516:11  error  'DialogContent' is not defined                                           no-undef
+  517:10  error  'DialogActions' is not defined                                           react/jsx-no-undef
+  517:10  error  'DialogActions' is not defined                                           no-undef
+  526:11  error  'DialogActions' is not defined                                           no-undef
+  530:10  error  'DialogTitle' is not defined                                             react/jsx-no-undef
+  530:10  error  'DialogTitle' is not defined                                             no-undef
+  530:38  error  'DialogTitle' is not defined                                             no-undef
+  531:10  error  'DialogContent' is not defined                                           react/jsx-no-undef
+  531:10  error  'DialogContent' is not defined                                           no-undef
+  536:11  error  'DialogContent' is not defined                                           no-undef
+  537:10  error  'DialogActions' is not defined                                           react/jsx-no-undef
+  537:10  error  'DialogActions' is not defined                                           no-undef
+  547:11  error  'DialogActions' is not defined                                           no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/OrganizationSwitcher.tsx
+   26:5   error  'fetchUserOrganizations' was used before it was defined  no-use-before-define
+   44:50  error  'SelectChangeEvent' is not defined                       no-undef
+  100:10  error  'Alert' is not defined                                   react/jsx-no-undef
+  100:10  error  'Alert' is not defined                                   no-undef
+  102:11  error  'Alert' is not defined                                   no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ProductDropdown.tsx
+   31:14  error  'productId' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+   31:33  error  'product' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+   58:5   error  'fetchProducts' was used before it was defined                               no-use-before-define
+   79:14  error  'error' is already declared in the upper scope on line 47 column 3           no-shadow
+   79:14  error  'error' is already declared in the upper scope on line 47 column 3           @typescript-eslint/no-shadow
+  156:23  error  'SelectChangeEvent' is not defined                                           no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/RoleManagement/RoleManagement.tsx
+   48:3   error  'MODULE_DISPLAY_NAMES' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   49:3   error  'PERMISSION_DISPLAY_NAMES' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  104:5   error  'loadData' was used before it was defined                                                   no-use-before-define
+  168:33  error  'user' is already declared in the upper scope on line 78 column 11                          no-shadow
+  168:33  error  'user' is already declared in the upper scope on line 78 column 11                          @typescript-eslint/no-shadow
+  207:17  error  'ViewIcon' is not defined                                                                   react/jsx-no-undef
+  207:17  error  'ViewIcon' is not defined                                                                   no-undef
+  220:10  error  'Alert' is not defined                                                                      react/jsx-no-undef
+  220:10  error  'Alert' is not defined                                                                      no-undef
+  222:11  error  'Alert' is not defined                                                                      no-undef
+  257:10  error  'Alert' is not defined                                                                      react/jsx-no-undef
+  257:10  error  'Alert' is not defined                                                                      no-undef
+  259:11  error  'Alert' is not defined                                                                      no-undef
+  271:12  error  'FormControlLabel' is not defined                                                           react/jsx-no-undef
+  271:12  error  'FormControlLabel' is not defined                                                           no-undef
+  273:16  error  'Switch' is not defined                                                                     react/jsx-no-undef
+  273:16  error  'Switch' is not defined                                                                     no-undef
+  300:18  error  'CardContent' is not defined                                                                react/jsx-no-undef
+  300:18  error  'CardContent' is not defined                                                                no-undef
+  323:22  error  'Tooltip' is not defined                                                                    react/jsx-no-undef
+  323:22  error  'Tooltip' is not defined                                                                    no-undef
+  331:23  error  'Tooltip' is not defined                                                                    no-undef
+  332:22  error  'Tooltip' is not defined                                                                    react/jsx-no-undef
+  332:22  error  'Tooltip' is not defined                                                                    no-undef
+  341:23  error  'Tooltip' is not defined                                                                    no-undef
+  343:19  error  'CardContent' is not defined                                                                no-undef
+  390:28  error  'user' is already declared in the upper scope on line 78 column 11                          no-shadow
+  390:28  error  'user' is already declared in the upper scope on line 78 column 11                          @typescript-eslint/no-shadow
+  448:18  error  'CardContent' is not defined                                                                react/jsx-no-undef
+  448:18  error  'CardContent' is not defined                                                                no-undef
+  470:19  error  'CardContent' is not defined                                                                no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/SendNotification.tsx
+   33:3   error  'Error' is defined but never used. Allowed unused vars must match /^_/u                       no-unused-vars
+   41:3   error  'NotificationTemplate' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   45:3   error  'RECIPIENT_TYPES' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   46:3   error  'BULK_RECIPIENT_TYPES' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   49:3   error  'getTemplateTypeDisplayName' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  100:16  error  'templatesLoading' is assigned a value but never used. Allowed unused vars must match /^_/u   no-unused-vars
+  103:20  error  'getNotificationTemplates' is not defined                                                     no-undef
+  108:16  error  'entitiesLoading' is assigned a value but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  116:17  error  'data' is defined but never used. Allowed unused args must match /^_/u                        no-unused-vars
+  118:7   error  'resetSingleForm' was used before it was defined                                              no-use-before-define
+  132:7   error  'resetBulkForm' was used before it was defined                                                no-use-before-define
+  146:15  error  'error' is defined but never used. Allowed unused args must match /^_/u                       no-unused-vars
+  318:18  error  'Autocomplete' is not defined                                                                 react/jsx-no-undef
+  318:18  error  'Autocomplete' is not defined                                                                 no-undef
+  470:20  error  'Autocomplete' is not defined                                                                 react/jsx-no-undef
+  470:20  error  'Autocomplete' is not defined                                                                 no-undef
+  514:20  error  'Autocomplete' is not defined                                                                 react/jsx-no-undef
+  514:20  error  'Autocomplete' is not defined                                                                 no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ServiceAnalytics/SLAComplianceChart.tsx
+  316:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/ServiceAnalytics/ServiceAnalyticsDashboard.tsx
+   34:3   error  'TechnicianOption' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   35:3   error  'CustomerOption' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  108:14  error  'error' is already declared in the upper scope on line 63 column 5                  no-shadow
+  108:14  error  'error' is already declared in the upper scope on line 63 column 5                  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/SortableTable.tsx
+   46:12  error  Expected '===' and instead saw '=='  eqeqeq
+   47:12  error  Expected '===' and instead saw '=='  eqeqeq
+  140:1   error  Missing return type on function      @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/StickyNotes/StickyNote.tsx
+   2:27  error  'useEffect' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  39:14  error  'id' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+  39:26  error  'data' is defined but never used. Allowed unused args must match /^_/u       no-unused-vars
+  40:14  error  'id' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/StickyNotes/StickyNotesPanel.tsx
+  35:7  error  Parsing error: Variable declaration expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/UnifiedLoginForm.tsx
+   64:29  error  'email' is already declared in the upper scope on line 49 column 9   no-shadow
+   64:29  error  'email' is already declared in the upper scope on line 49 column 9   @typescript-eslint/no-shadow
+   76:14  error  'error' is already declared in the upper scope on line 35 column 10  no-shadow
+   76:14  error  'error' is already declared in the upper scope on line 35 column 10  @typescript-eslint/no-shadow
+  108:14  error  'error' is already declared in the upper scope on line 35 column 10  no-shadow
+  108:14  error  'error' is already declared in the upper scope on line 35 column 10  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherContextMenu.tsx
+  152:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherHeaderActions.tsx
+  35:3  error  'isLoading' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherListModal.tsx
+   28:20  error  'voucher' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+   29:13  error  'id' is defined but never used. Allowed unused args must match /^_/u       no-unused-vars
+   30:13  error  'id' is defined but never used. Allowed unused args must match /^_/u       no-unused-vars
+   31:15  error  'id' is defined but never used. Allowed unused args must match /^_/u       no-unused-vars
+   32:20  error  'voucher' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  233:36  error  Unexpected empty arrow function                                            @typescript-eslint/no-empty-function
+  234:36  error  Unexpected empty arrow function                                            @typescript-eslint/no-empty-function
+  235:40  error  Unexpected empty arrow function                                            @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/VoucherReferenceDropdown.tsx
+  4:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/components/__tests__/ExportPrintToolbar.test.tsx
+  90:80  error  Unexpected empty arrow function  @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/AuthContext.tsx
+   12:11  error  'loginResponse' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+   15:16  error  'updatedData' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+   71:9   error  'handlePostLoginRedirect' was used before it was defined                         no-use-before-define
+  142:11  error  'restoreFormData' was used before it was defined                                 no-use-before-define
+  163:44  error  'formKey' is defined but never used. Allowed unused args must match /^_/u        no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/CompanyContext.tsx
+  33:9  error  'toast' is not defined  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/ErrorContext.tsx
+   9:15  error  'message' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+   9:32  error  'type' is defined but never used. Allowed unused args must match /^_/u     no-unused-vars
+  10:15  error  'id' is defined but never used. Allowed unused args must match /^_/u       no-unused-vars
+  32:7   error  'hideError' was used before it was defined                                 no-use-before-define
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/VoucherContext.tsx
+  6:16  error  'voucher' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+  7:19  error  'id' is defined but never used. Allowed unused args must match /^_/u              no-unused-vars
+  7:31  error  'updatedVoucher' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/context/__tests__/AuthContext.test.tsx
+  124:81  error  Unexpected empty arrow function      @typescript-eslint/no-empty-function
+  142:7   error  'resolveAuthService' is not defined  no-undef
+  157:7   error  'resolveAuthService' is not defined  no-undef
+  174:73  error  Unexpected empty arrow function      @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/__tests__/usePincodeLookup.test.ts
+  13:6  error  'global' is not defined  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/usePincodeLookup.ts
+  9:19  error  'pincode' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/useUIConfig.ts
+  10:16  error  'path' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  11:17  error  'path' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  12:21  error  'path' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  13:23  error  'path' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/useVoucherNumbering.ts
+   8:14  error  'name' is defined but never used. Allowed unused args must match /^_/u   no-unused-vars
+   8:28  error  'value' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  16:30  error  Missing return type on function                                          @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/hooks/useVoucherPage.ts
+  519:50  error  Parsing error: ',' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/lib/api.ts
+  47:3  error  'resetAuthReady' was used before it was defined  no-use-before-define
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/_error.tsx
+  20:22  error  'ctx' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/app-user-management.tsx
+   22:3  error  'FormControl' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   23:3  error  'InputLabel' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   24:3  error  'Select' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   25:3  error  'MenuItem' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   26:3  error  'Switch' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   27:3  error  'FormControlLabel' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   34:3  error  'Edit' is defined but never used. Allowed unused vars must match /^_/u              no-unused-vars
+  229:7  error  'loading' is not defined                                                            no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/index.tsx
+  18:3  error  'Settings' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/license-management.tsx
+  317:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/manage-organizations.tsx
+   22:3   error  'TextField' is defined but never used. Allowed unused vars must match /^_/u                  no-unused-vars
+   23:3   error  'MenuItem' is defined but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   24:3   error  'FormControl' is defined but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   25:3   error  'InputLabel' is defined but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   26:3   error  'Select' is defined but never used. Allowed unused vars must match /^_/u                     no-unused-vars
+   34:3   error  'Edit' is defined but never used. Allowed unused vars must match /^_/u                       no-unused-vars
+   40:3   error  'Security' is defined but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   41:3   error  'Delete' is defined but never used. Allowed unused vars must match /^_/u                     no-unused-vars
+   70:8   error  'availableModules' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   92:41  error  'data' is defined but never used. Allowed unused args must match /^_/u                       no-unused-vars
+  113:24  error  'orgId' is defined but never used. Allowed unused args must match /^_/u                      no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/organizations/[id].tsx
+   68:7   error  'fetchOrganization' was used before it was defined                   no-use-before-define
+  106:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  106:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  140:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  140:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  161:18  error  'jsonError' is defined but never used                                no-unused-vars
+  170:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  170:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  195:16  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  195:16  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+  223:14  error  'error' is already declared in the upper scope on line 59 column 10  no-shadow
+  223:14  error  'error' is already declared in the upper scope on line 59 column 10  @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/organizations/create.tsx
+  4:10  error  'useRouter' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/organizations/index.tsx
+   32:3   error  'Pause' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   40:3   error  'Email' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  127:15  error  'error' is already declared in the upper scope on line 65 column 10      no-shadow
+  127:15  error  'error' is already declared in the upper scope on line 65 column 10      @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/admin/users/index.tsx
+  35:33  error  'isSuccess' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/analytics/customer.tsx
+  13:3  error  'Button' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/assets.tsx
+    3:27  error  'useEffect' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   24:3   error  'Dialog' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   25:3   error  'DialogTitle' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   26:3   error  'DialogContent' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+   27:3   error  'DialogActions' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+   28:3   error  'TextField' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   29:3   error  'FormControl' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   30:3   error  'InputLabel' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   31:3   error  'Select' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   32:3   error  'MenuItem' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   40:13  error  'DeleteIcon' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   49:19  error  'useQueryClient' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  258:28  error  'setOpenDialog' is not defined                                                    no-undef
+  314:29  error  'setSelectedAsset' is not defined                                                 no-undef
+  316:29  error  'setOpenDialog' is not defined                                                    no-undef
+  327:29  error  'setSelectedAsset' is not defined                                                 no-undef
+  329:29  error  'setOpenDialog' is not defined                                                    no-undef
+  351:28  error  'setOpenDialog' is not defined                                                    no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/bank-accounts.tsx
+  381:29  error  'setSelectedAccount' is not defined  no-undef
+  383:29  error  'setEditDialogOpen' is not defined   no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/calendar/dashboard.tsx
+  109:16  error  'err' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/cost-centers.tsx
+  134:32  error  'costCenters' is already declared in the upper scope on line 70 column 10  no-shadow
+  134:32  error  'costCenters' is already declared in the upper scope on line 70 column 10  @typescript-eslint/no-shadow
+  142:33  error  'costCenters' is already declared in the upper scope on line 70 column 10  no-shadow
+  142:33  error  'costCenters' is already declared in the upper scope on line 70 column 10  @typescript-eslint/no-shadow
+  354:35  error  'setSelectedCostCenter' is not defined                                     no-undef
+  356:35  error  'setEditDialogOpen' is not defined                                         no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/crm/index.tsx
+  3:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/dashboard/AppSuperAdminDashboard.tsx
+  2:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/dashboard/OrgDashboard.tsx
+  3:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/demo.tsx
+  121:16  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/exhibition-mode.tsx
+    4:3   error  'Paper' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   12:3   error  'Tooltip' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   17:3   error  'TextField' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+   18:3   error  'FormControl' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   19:3   error  'InputLabel' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+   20:3   error  'Select' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   21:3   error  'MenuItem' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   36:3   error  'Delete' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   40:3   error  'Analytics' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+   41:3   error  'FileUpload' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+  220:24  error  'file' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/finance-dashboard.tsx
+  26:3  error  'TrendingDown' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  29:3  error  'Receipt' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/financial-reports.tsx
+  22:3  error  'FormControl' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+  23:3  error  'InputLabel' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+  24:3  error  'Select' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  25:3  error  'MenuItem' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+  33:3  error  'TrendingUp' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+  34:3  error  'TrendingDown' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  35:3  error  'AccountBalance' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  36:3  error  'Assessment' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/hr/dashboard.tsx
+  5:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/hr/employees-directory.tsx
+  16:3   error  'Paper' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  37:16  error  'PersonAddIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/hr/employees.tsx
+  500:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/inventory/index.tsx
+  111:13  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/inventory/low-stock.tsx
+  6:3  error  'Box' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/inventory/movements.tsx
+   6:3  error  'Box' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+  19:3  error  'Button' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/inventory/stock.tsx
+   35:3   error  'CircularProgress' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+   54:17  error  'options' is defined but never used. Allowed unused args must match /^_/u             no-unused-vars
+  159:14  error  'error' is defined but never used                                                     no-unused-vars
+  164:5   error  'generateStockReport' was used before it was defined                                  no-use-before-define
+  166:50  error  'companyData' is already declared in the upper scope on line 91 column 17             no-shadow
+  166:50  error  'companyData' is already declared in the upper scope on line 91 column 17             @typescript-eslint/no-shadow
+  194:9   error  'resetForm' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  286:20  error  'Stack' is not defined                                                                react/jsx-no-undef
+  286:20  error  'Stack' is not defined                                                                no-undef
+  326:21  error  'Stack' is not defined                                                                no-undef
+  384:10  error  'MuiMenuItem' is not defined                                                          react/jsx-no-undef
+  384:10  error  'MuiMenuItem' is not defined                                                          no-undef
+  385:12  error  'ListItemIcon' is not defined                                                         react/jsx-no-undef
+  385:12  error  'ListItemIcon' is not defined                                                         no-undef
+  385:42  error  'ListItemIcon' is not defined                                                         no-undef
+  386:12  error  'ListItemText' is not defined                                                         react/jsx-no-undef
+  386:12  error  'ListItemText' is not defined                                                         no-undef
+  386:40  error  'ListItemText' is not defined                                                         no-undef
+  387:11  error  'MuiMenuItem' is not defined                                                          no-undef
+  388:10  error  'MuiMenuItem' is not defined                                                          react/jsx-no-undef
+  388:10  error  'MuiMenuItem' is not defined                                                          no-undef
+  389:12  error  'ListItemIcon' is not defined                                                         react/jsx-no-undef
+  389:12  error  'ListItemIcon' is not defined                                                         no-undef
+  389:43  error  'ListItemIcon' is not defined                                                         no-undef
+  390:12  error  'ListItemText' is not defined                                                         react/jsx-no-undef
+  390:12  error  'ListItemText' is not defined                                                         no-undef
+  390:48  error  'ListItemText' is not defined                                                         no-undef
+  391:11  error  'MuiMenuItem' is not defined                                                          no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/login.tsx
+   8:3   error  'Checkbox' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   9:3   error  'FormControlLabel' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  10:3   error  'IconButton' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+  11:3   error  'InputAdornment' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  20:10  error  'useRouter' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/mail/dashboard.tsx
+   31:3   error  'DateRange' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   39:3   error  'Delete' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+  152:16  error  'err' is defined but never used                                              no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/management/dashboard.tsx
+    2:27  error  'useEffect' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   17:3   error  'Divider' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   24:3   error  'Paper' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   28:3   error  'TrendingDown' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  121:14  error  'error' is already declared in the upper scope on line 79 column 43             no-shadow
+  121:14  error  'error' is already declared in the upper scope on line 79 column 43             @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/marketing/index.tsx
+  3:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/bom.tsx
+  168:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/categories.tsx
+  2:10  error  'useRouter' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/chart-of-accounts.tsx
+  2:10  error  'useRouter' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/company-details.tsx
+  16:13  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/customers.tsx
+  54:35  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/employees.tsx
+  3:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/index.tsx
+  4:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/multi-company.tsx
+  82:13  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/payment-terms.tsx
+  2:10  error  'useRouter' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/products.tsx
+  25:3  error  'Select' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+  26:3  error  'MenuItem' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+  29:3  error  'InputLabel' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+  30:3  error  'FormControl' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  40:3  error  'Inventory' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  41:3  error  'Visibility' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/units.tsx
+  2:10  error  'useRouter' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/masters/vendors.tsx
+  49:33  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/migration/management.tsx
+   39:3   error  'Settings' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   44:3   error  'Stop' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   46:3   error  'History' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+   86:5   error  'loadMigrationJobs' was used before it was defined                          no-use-before-define
+   93:14  error  'error' is already declared in the upper scope on line 72 column 10         no-shadow
+   93:14  error  'error' is already declared in the upper scope on line 72 column 10         @typescript-eslint/no-shadow
+  106:14  error  'error' is already declared in the upper scope on line 72 column 10         no-shadow
+  106:14  error  'error' is already declared in the upper scope on line 72 column 10         @typescript-eslint/no-shadow
+  115:14  error  'error' is already declared in the upper scope on line 72 column 10         no-shadow
+  115:14  error  'error' is already declared in the upper scope on line 72 column 10         @typescript-eslint/no-shadow
+  124:14  error  'error' is already declared in the upper scope on line 72 column 10         no-shadow
+  124:14  error  'error' is already declared in the upper scope on line 72 column 10         @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/notification-demo.tsx
+  13:3  error  'Divider' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/reports.tsx
+   32:3   error  'Assessment' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   35:3   error  'Download' is defined but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   36:3   error  'Print' is defined but never used. Allowed unused vars must match /^_/u                  no-unused-vars
+   42:3   error  'AccountBalance' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  114:67  error  'refetchStats' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/accounts.tsx
+  45:15  error  'BusinessIcon' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  46:17  error  'LocationIcon' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  49:13  error  'PersonIcon' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+  50:17  error  'TrendingUpIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  51:21  error  'MoneyIcon' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/commissions.tsx
+  102:27  error  'filterStatus' is not defined  no-undef
+  102:83  error  'filterStatus' is not defined  no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/contacts.tsx
+  42:19  error  'ContactPhoneIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  45:15  error  'BusinessIcon' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+  46:13  error  'PersonIcon' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+  47:17  error  'LocationIcon' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/customer-analytics.tsx
+  35:19  error  'TrendingDownIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/leads.tsx
+  16:3   error  'Paper' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  34:16  error  'PersonAddIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/opportunities.tsx
+  295:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/pipeline.tsx
+   13:3   error  'Chip' is defined but never used. Allowed unused vars must match /^_/u                     no-unused-vars
+   19:3   error  'List' is defined but never used. Allowed unused vars must match /^_/u                     no-unused-vars
+   20:3   error  'ListItem' is defined but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   21:3   error  'ListItemText' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   22:3   error  'ListItemSecondaryAction' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   32:15  error  'TimelineIcon' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   33:17  error  'TrendingUpIcon' is defined but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   34:21  error  'MoneyIcon' is defined but never used. Allowed unused vars must match /^_/u                no-unused-vars
+  162:9   error  'setPipelines' is not defined                                                              no-undef
+  374:51  error  'index' is defined but never used. Allowed unused args must match /^_/u                    no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sales/reports.tsx
+   27:3   error  'List' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   28:3   error  'ListItem' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   29:3   error  'ListItemText' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   30:3   error  'ListItemIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   31:3   error  'Divider' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   43:15  error  'PieChartIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   44:15  error  'DownloadIcon' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   46:12  error  'ShareIcon' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+  150:15  error  'exportToExcel' was used before it was defined                                  no-use-before-define
+  153:15  error  'exportToPDF' was used before it was defined                                    no-use-before-define
+  155:14  error  'error' is already declared in the upper scope on line 85 column 10             no-shadow
+  155:14  error  'error' is already declared in the upper scope on line 85 column 10             @typescript-eslint/no-shadow
+  167:48  error  'avgGrowth' is not defined                                                      no-undef
+  169:49  error  'avgConversion' is not defined                                                  no-undef
+  171:42  error  'totalLeads' is not defined                                                     no-undef
+  218:33  error  'avgGrowth' is not defined                                                      no-undef
+  220:34  error  'avgConversion' is not defined                                                  no-undef
+  222:30  error  'totalLeads' is not defined                                                     no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/service-desk/index.tsx
+  3:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings.tsx
+  59:16  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/FactoryReset.tsx
+  15:3   error  'Divider' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  24:10  error  'requestResetOTP' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  24:27  error  'confirmReset' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/Settings.tsx
+   9:3  error  'Divider' is defined but never used. Allowed unused vars must match /^_/u      no-unused-vars
+  19:3  error  'StickyNote2' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/UserPreferences.tsx
+  2:27  error  'useEffect' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/add-user.tsx
+  13:3   error  'FormControlLabel' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  14:3   error  'Checkbox' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  15:3   error  'FormGroup' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  61:17  error  'data' is defined but never used. Allowed unused args must match /^_/u              no-unused-vars
+  69:15  error  'error' is already declared in the upper scope on line 30 column 10                 no-shadow
+  69:15  error  'error' is already declared in the upper scope on line 30 column 10                 @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/settings/user-management.tsx
+  2:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/sla/index.tsx
+  3:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/tasks/dashboard.tsx
+  12:3   error  'Paper' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+  15:3   error  'IconButton' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  70:16  error  'err' is defined but never used                                               no-unused-vars
+  78:36  error  'stats' is already declared in the upper scope on line 45 column 10           no-shadow
+  78:36  error  'stats' is already declared in the upper scope on line 45 column 10           @typescript-eslint/no-shadow
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/transport.tsx
+    3:27  error  'useEffect' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   24:3   error  'Dialog' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   25:3   error  'DialogTitle' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   26:3   error  'DialogContent' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   27:3   error  'DialogActions' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   29:3   error  'FormControl' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   30:3   error  'InputLabel' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   31:3   error  'Select' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   32:3   error  'MenuItem' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   36:3   error  'Accordion' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   37:3   error  'AccordionSummary' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   38:3   error  'AccordionDetails' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   43:13  error  'DeleteIcon' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   45:12  error  'RouteIcon' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   48:17  error  'AssessmentIcon' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+   50:17  error  'ExpandMoreIcon' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+   52:12  error  'ErrorIcon' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   53:14  error  'WarningIcon' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   56:19  error  'useQueryClient' is defined but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  263:28  error  'setOpenDialog' is not defined                                                      no-undef
+  332:29  error  'setSelectedItem' is not defined                                                    no-undef
+  334:29  error  'setOpenDialog' is not defined                                                      no-undef
+  356:28  error  'setOpenDialog' is not defined                                                      no-undef
+  411:29  error  'setSelectedItem' is not defined                                                    no-undef
+  413:29  error  'setOpenDialog' is not defined                                                      no-undef
+  435:28  error  'setOpenDialog' is not defined                                                      no-undef
+  496:29  error  'setSelectedItem' is not defined                                                    no-undef
+  498:29  error  'setOpenDialog' is not defined                                                      no-undef
+  520:28  error  'setOpenDialog' is not defined                                                      no-undef
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/contra-voucher.tsx
+   16:5   error  'setMode' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   20:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   21:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   22:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   23:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   24:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   25:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   26:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u   no-unused-vars
+   35:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   49:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   54:5   error  'refreshMasterData' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  135:36  error  Unexpected empty arrow function                                                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/credit-note.tsx
+   3:101  error  'createFilterOptions' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+  21:5    error  'setAddCustomerLoading' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  24:5    error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+  25:5    error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  26:5    error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  27:5    error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  28:5    error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+  29:5    error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+  39:5    error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  46:5    error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+  52:5    error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/debit-note.tsx
+   3:101  error  'createFilterOptions' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+  22:5    error  'setAddCustomerLoading' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  25:5    error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+  26:5    error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  27:5    error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  28:5    error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  29:5    error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+  30:5    error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+  40:5    error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  47:5    error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+  53:5    error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/journal-voucher.tsx
+   20:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   21:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u      no-unused-vars
+   22:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   23:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   24:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   25:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   26:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u   no-unused-vars
+   35:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   49:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   54:5   error  'refreshMasterData' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  116:36  error  Unexpected empty arrow function                                                               @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/non-sales-credit-note.tsx
+   22:5   error  'setAddCustomerLoading' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   25:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   26:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   27:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   28:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   29:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   30:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   31:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   40:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   54:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   60:5   error  'refreshMasterData' is assigned a value but never used. Allowed unused vars must match /^_/u      no-unused-vars
+  157:36  error  Unexpected empty arrow function                                                                   @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/payment-voucher.tsx
+  442:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Financial-Vouchers/receipt-voucher.tsx
+  71:4  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/finished-good-receipt.tsx
+  178:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/job-card-temp.tsx
+  144:67  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/job-card.tsx
+  144:67  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/manufacturing-journal.tsx
+  120:67  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/material-receipt.tsx
+  96:26  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/material-requisition.tsx
+  108:35  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/production-order.tsx
+  113:35  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Manufacturing-Vouchers/stock-journal.tsx
+  94:28  error  Parsing error: ';' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Others/dispatch-details.tsx
+   3:27  error  'useEffect' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+  10:3   error  'IconButton' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  33:3   error  'Tooltip' is defined but never used. Allowed unused vars must match /^_/u     no-unused-vars
+  39:3   error  'Edit' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+  41:3   error  'FilterList' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  43:3   error  'Assignment' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Others/rfq.tsx
+  4:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Pre-Sales-Voucher/proforma-invoice.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   72:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  279:38  error  Unexpected empty arrow function                                                                     @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Pre-Sales-Voucher/quotation.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   72:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  279:38  error  Unexpected empty arrow function                                                                     @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Pre-Sales-Voucher/sales-order.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   72:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  279:38  error  Unexpected empty arrow function                                                                     @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/grn.tsx
+  121:42  error  Parsing error: Identifier expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
+   46:5   error  'setAddingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   47:5   error  'showFullModal' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   49:5   error  'useDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   50:5   error  'setUseDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   51:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   52:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   53:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   54:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   55:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   56:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   57:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   59:5   error  'currentPage' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   60:5   error  'pageSize' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   61:5   error  'paginationData' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   62:5   error  'handlePageChange' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   64:5   error  'referenceDocument' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   65:5   error  'handleReferenceSelected' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   99:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+  100:5   error  'handleModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  101:5   error  'handleModalClose' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  107:5   error  'isViewMode' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  167:38  error  'original_unit_price' is defined but never used. Allowed unused args must match /^_/u               no-unused-vars
+  215:13  error  'productId' is already declared in the upper scope on line 26 column 11                             no-shadow
+  215:13  error  'productId' is already declared in the upper scope on line 26 column 11                             @typescript-eslint/no-shadow
+  222:13  error  'productId' is already declared in the upper scope on line 26 column 11                             no-shadow
+  222:13  error  'productId' is already declared in the upper scope on line 26 column 11                             @typescript-eslint/no-shadow
+  392:38  error  Unexpected empty arrow function                                                                     @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/purchase-return.tsx
+   39:5   error  'addingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   40:5   error  'setAddingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   41:5   error  'showFullModal' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   43:5   error  'useDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   44:5   error  'setUseDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   45:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   46:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   47:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   48:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   49:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   50:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   51:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   53:5   error  'currentPage' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   54:5   error  'pageSize' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   55:5   error  'paginationData' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   56:5   error  'handlePageChange' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   58:5   error  'referenceDocument' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   59:5   error  'handleReferenceSelected' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   71:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   86:5   error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   92:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   93:5   error  'handleModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   94:5   error  'handleModalClose' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  100:5   error  'isViewMode' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  278:38  error  Unexpected empty arrow function                                                                     @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Purchase-Vouchers/purchase-voucher.tsx
+  721:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Sales-Vouchers/delivery-challan.tsx
+   40:5   error  'addingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   41:5   error  'setAddingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   42:5   error  'showFullModal' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   44:5   error  'useDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   45:5   error  'setUseDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   46:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   47:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   48:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   49:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   50:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   51:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   52:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   54:5   error  'currentPage' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   55:5   error  'pageSize' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   56:5   error  'paginationData' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   57:5   error  'handlePageChange' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   59:5   error  'referenceDocument' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   60:5   error  'handleReferenceSelected' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   87:5   error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   93:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   94:5   error  'handleModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   95:5   error  'handleModalClose' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  101:5   error  'isViewMode' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  312:38  error  Unexpected empty arrow function                                                                     @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Sales-Vouchers/sales-return.tsx
+   24:5   error  'setMode' is assigned a value but never used. Allowed unused vars must match /^_/u                  no-unused-vars
+   38:5   error  'addingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   39:5   error  'setAddingItemIndex' is assigned a value but never used. Allowed unused vars must match /^_/u       no-unused-vars
+   40:5   error  'showFullModal' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   42:5   error  'useDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u     no-unused-vars
+   43:5   error  'setUseDifferentShipping' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   44:5   error  'searchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+   45:5   error  'setSearchTerm' is assigned a value but never used. Allowed unused vars must match /^_/u            no-unused-vars
+   46:5   error  'fromDate' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   47:5   error  'setFromDate' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   48:5   error  'toDate' is assigned a value but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   49:5   error  'setToDate' is assigned a value but never used. Allowed unused vars must match /^_/u                no-unused-vars
+   50:5   error  'filteredVouchers' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   52:5   error  'currentPage' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   53:5   error  'pageSize' is assigned a value but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   54:5   error  'paginationData' is assigned a value but never used. Allowed unused vars must match /^_/u           no-unused-vars
+   55:5   error  'handlePageChange' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   57:5   error  'referenceDocument' is assigned a value but never used. Allowed unused vars must match /^_/u        no-unused-vars
+   58:5   error  'handleReferenceSelected' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+   68:5   error  'reset' is assigned a value but never used. Allowed unused vars must match /^_/u                    no-unused-vars
+   70:5   error  'voucherList' is assigned a value but never used. Allowed unused vars must match /^_/u              no-unused-vars
+   85:5   error  'handleCreate' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   91:5   error  'handleSearch' is assigned a value but never used. Allowed unused vars must match /^_/u             no-unused-vars
+   92:5   error  'handleModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          no-unused-vars
+   93:5   error  'handleModalClose' is assigned a value but never used. Allowed unused vars must match /^_/u         no-unused-vars
+   99:5   error  'isViewMode' is assigned a value but never used. Allowed unused vars must match /^_/u               no-unused-vars
+  249:38  error  Unexpected empty arrow function                                                                     @typescript-eslint/no-empty-function
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/Sales-Vouchers/sales-voucher.tsx
+  680:0  error  Parsing error: Declaration or statement expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/pages/vouchers/index.tsx
+  4:9  error  Parsing error: '}' expected
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/analyticsService.ts
+  103:3  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/authService.ts
+  112:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  171:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  196:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  196:37  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  204:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  204:39  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  212:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  220:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  220:51  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  228:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  236:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  248:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  248:28  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  252:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  252:29  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  255:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  258:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  258:31  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  261:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  261:43  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  265:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  265:19  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  268:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  271:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  271:21  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  274:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  274:33  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  278:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  278:22  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  279:12  error  'masterDataService' was used before it was defined      no-use-before-define
+  281:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  281:23  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  282:12  error  'masterDataService' was used before it was defined      no-use-before-define
+  284:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  284:24  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  285:12  error  'masterDataService' was used before it was defined      no-use-before-define
+  289:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  298:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  298:24  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  306:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  306:36  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  314:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  322:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  331:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  331:26  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  339:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  339:38  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  347:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  355:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  364:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  364:25  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  372:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  372:37  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  380:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  388:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  397:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  406:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  406:42  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  414:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  424:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  451:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  471:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  471:23  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  498:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  521:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  525:14  error  'error' is defined but never used                       no-unused-vars
+  530:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  530:25  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  538:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  538:37  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  546:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  560:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  568:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  572:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  580:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  588:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  596:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  604:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  604:74  error  Argument 'updates' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+  612:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  622:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  630:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  630:26  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  638:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  638:29  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  646:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  656:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  666:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  666:29  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  674:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  674:32  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  683:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  683:34  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  694:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  694:37  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  705:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  705:38  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  716:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  716:36  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  727:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  727:37  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  738:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  738:40  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  751:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  751:25  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  759:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  767:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  767:30  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  776:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  784:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  792:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  792:46  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  802:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  824:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  832:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  852:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  852:32  error  Argument 'params' should be typed with a non-any type   @typescript-eslint/explicit-module-boundary-types
+  860:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  860:22  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  868:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  868:34  error  Argument 'data' should be typed with a non-any type     @typescript-eslint/explicit-module-boundary-types
+  876:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  884:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+  892:3   error  Missing return type on function                         @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/entityService.ts
+   12:108  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  167:81   error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  169:83   error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/masterService.ts
+   12:68  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   17:70  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   22:69  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   27:70  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   32:83  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+   45:82  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  124:54  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  128:56  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  132:55  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  136:52  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+  141:76  error  Missing return type on function  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/organizationService.ts
+    4:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+    4:25  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   13:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   22:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   22:30  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   31:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   39:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   47:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   47:46  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   56:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   56:30  error  Argument 'data' should be typed with a non-any type      @typescript-eslint/explicit-module-boundary-types
+   64:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   73:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   81:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   81:60  error  Argument 'userData' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+   90:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+   98:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  107:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  116:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  116:56  error  Argument 'params' should be typed with a non-any type    @typescript-eslint/explicit-module-boundary-types
+  124:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  124:60  error  Argument 'userData' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+  132:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  132:76  error  Argument 'userData' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+  140:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  149:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  149:62  error  Argument 'params' should be typed with a non-any type    @typescript-eslint/explicit-module-boundary-types
+  157:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+  165:3   error  Missing return type on function                          @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/rbacService.ts
+  11:3  error  'ServicePermissionCreate' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  16:3  error  'UserServiceRole' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/serviceAnalyticsService.ts
+   5:3  error  'TODAY' is defined but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   6:3  error  'WEEK' is defined but never used. Allowed unused vars must match /^_/u                    no-unused-vars
+   7:3  error  'MONTH' is defined but never used. Allowed unused vars must match /^_/u                   no-unused-vars
+   8:3  error  'QUARTER' is defined but never used. Allowed unused vars must match /^_/u                 no-unused-vars
+   9:3  error  'YEAR' is defined but never used. Allowed unused vars must match /^_/u                    no-unused-vars
+  10:3  error  'CUSTOM' is defined but never used. Allowed unused vars must match /^_/u                  no-unused-vars
+  13:3  error  'JOB_COMPLETION' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+  14:3  error  'TECHNICIAN_PERFORMANCE' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  15:3  error  'CUSTOMER_SATISFACTION' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+  16:3  error  'JOB_VOLUME' is defined but never used. Allowed unused vars must match /^_/u              no-unused-vars
+  17:3  error  'SLA_COMPLIANCE' is defined but never used. Allowed unused vars must match /^_/u          no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/slaService.ts
+  147:73  error  Argument 'update' should be typed with a non-any type  @typescript-eslint/explicit-module-boundary-types
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/services/stockService.ts
+  80:12  error  '_error' is defined but never used  no-unused-vars
+
+/home/runner/work/FastApiv1.6/FastApiv1.6/frontend/src/types/rbac.types.ts
+  10:3  error  'ADMIN' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+  11:3  error  'MANAGER' is defined but never used. Allowed unused vars must match /^_/u           no-unused-vars
+  12:3  error  'SUPPORT' is defined but never used. Allowed unused vars must match /^_/u           no-unused-vars
+  13:3  error  'VIEWER' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  16:3  error  'SERVICE' is defined but never used. Allowed unused vars must match /^_/u           no-unused-vars
+  17:3  error  'TECHNICIAN' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+  18:3  error  'APPOINTMENT' is defined but never used. Allowed unused vars must match /^_/u       no-unused-vars
+  19:3  error  'CUSTOMER_SERVICE' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  20:3  error  'WORK_ORDER' is defined but never used. Allowed unused vars must match /^_/u        no-unused-vars
+  21:3  error  'SERVICE_REPORTS' is defined but never used. Allowed unused vars must match /^_/u   no-unused-vars
+  22:3  error  'CRM_ADMIN' is defined but never used. Allowed unused vars must match /^_/u         no-unused-vars
+  25:3  error  'CREATE' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  26:3  error  'READ' is defined but never used. Allowed unused vars must match /^_/u              no-unused-vars
+  27:3  error  'UPDATE' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  28:3  error  'DELETE' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  29:3  error  'EXPORT' is defined but never used. Allowed unused vars must match /^_/u            no-unused-vars
+  30:3  error  'ADMIN' is defined but never used. Allowed unused vars must match /^_/u             no-unused-vars
+
+✖ 924 problems (924 errors, 0 warnings)
+

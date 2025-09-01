@@ -239,6 +239,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const hasAnyServicePermission = (permissions: string[]): boolean => {
     return permissions.some(permission => userPermissions.includes(permission));
   };
+  const canAccessService = (): boolean => {
     const hasAccess = hasAnyServicePermission([
       SERVICE_PERMISSIONS.SERVICE_READ,
       SERVICE_PERMISSIONS.APPOINTMENT_READ,
@@ -251,11 +252,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return hasAccess;
   };
+  const canAccessServiceReports = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.SERVICE_REPORTS_READ);
   };
+  const canAccessCRMAdmin = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
   };
   // Helper to check if a module is enabled for the organization
+  const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) {return true;} // Super admins see all
     const enabled = organizationData?.enabled_modules?.[module] ?? false;
     console.log(`Module check - ${module}:`, enabled, {
@@ -264,11 +268,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return enabled;
   };
+  const openDemoMode = () => {
     // Navigate to demo page
     router.push('/demo');
 // handleMenuClose is defined later in this file
     handleMenuClose();
   };
+  const requestModuleActivation = () => {
     // In production, this could open a support ticket form or email client
     window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
   };

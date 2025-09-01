@@ -2,7 +2,7 @@
 // HR Dashboard with key metrics and overview
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
-import { from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, Chip, Tab, Tabs, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
 import {
   People as PeopleIcon,
   PersonAdd as PersonAddIcon,

@@ -15,7 +15,6 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  Divider,
   Grid,
   Card,
   CardContent,
@@ -210,6 +209,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
     }
   };
   const renderWorkflowStepper = () => {
+    const _steps = [
       'Closure Requested',
       'Manager Review',
       'Service Closed'
