@@ -56,6 +56,7 @@ class Organization(Base):
     industry: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     website: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Contact information
     primary_email: Mapped[str] = mapped_column(String, nullable=False)
@@ -78,7 +79,7 @@ class Organization(Base):
     # Subscription details
     plan_type: Mapped[str] = mapped_column(String, default="trial") # trial, basic, premium, enterprise
     max_users: Mapped[int] = mapped_column(Integer, default=5)
-    max_companies: Mapped[int] = mapped_column(Integer, default=1) # Maximum companies allowed for this organization
+    max_companies: Mapped[int] = mapped_column(Integer, default=1) # Maximum companies allowed for this this organization
     storage_limit_gb: Mapped[int] = mapped_column(Integer, default=1)
     features: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # Feature flags
     

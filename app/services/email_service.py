@@ -75,6 +75,7 @@ class EmailService:
     
     def _send_email_brevo(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
         """Send email via Brevo"""
+        logger.debug(f"Attempting to send email via Brevo to {to_email}")
         try:
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
                 to=[{"email": to_email}],
@@ -85,13 +86,13 @@ class EmailService:
             if html_body:
                 send_smtp_email.html_content = html_body
             
-            self.api_instance.send_transac_email(send_smtp_email)
-            logger.info(f"Email sent successfully via Brevo to {to_email}")
+            response = self.api_instance.send_transac_email(send_smtp_email)
+            logger.info(f"Email sent successfully via Brevo to {to_email}. Response: {response}")
             log_email_operation("send", to_email, True)
             return True, None
             
         except ApiException as e:
-            error_msg = f"Brevo API error: {str(e)}"
+            error_msg = f"Brevo API error: {str(e)} - Body: {e.body if hasattr(e, 'body') else 'No body'}"
             logger.error(error_msg)
             log_email_operation("send", to_email, False, error_msg)
             return False, error_msg
@@ -104,6 +105,7 @@ class EmailService:
     
     def _send_email_smtp(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
         """Send email via SMTP fallback"""
+        logger.debug(f"Attempting to send email via SMTP to {to_email}")
         try:
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
@@ -120,9 +122,13 @@ class EmailService:
                 msg.attach(html_part)
             
             # Connect to SMTP server
+            logger.debug(f"Connecting to SMTP server: {self.smtp_host}:{self.smtp_port}")
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                logger.debug("Starting TLS")
                 server.starttls()
+                logger.debug(f"Logging in as {self.smtp_username}")
                 server.login(self.smtp_username, self.smtp_password)
+                logger.debug("Sending message")
                 server.send_message(msg)
             
             logger.info(f"Email sent successfully via SMTP to {to_email}")
@@ -146,6 +152,7 @@ class EmailService:
         Internal method to send an email, trying Brevo first then SMTP fallback.
         Returns tuple of (success: bool, error_message: Optional[str])
         """
+        logger.debug(f"Starting email send process to {to_email} with subject: {subject}")
         is_valid, error_msg = self._validate_email_config()
         if not is_valid:
             logger.warning(f"Email configuration invalid: {error_msg}")
@@ -154,12 +161,14 @@ class EmailService:
         
         # Try Brevo first if available
         if self.api_instance:
+            logger.debug("Trying Brevo")
             success, error = self._send_email_brevo(to_email, subject, body, html_body)
             if success:
                 return True, None
             logger.warning(f"Brevo failed, falling back to SMTP: {error}")
         
         # Fallback to SMTP
+        logger.debug("Trying SMTP fallback")
         return self._send_email_smtp(to_email, subject, body, html_body)
     
     def load_email_template(self, template_name: str, **kwargs) -> tuple[str, str]:
@@ -170,6 +179,7 @@ class EmailService:
         try:
             template_path = Path(__file__).parent.parent / "templates" / "email" / f"{template_name}.html"
             
+            logger.debug(f"Loading template from: {template_path}")
             if not template_path.exists():
                 logger.warning(f"Email template not found: {template_path}")
                 return self._generate_fallback_content(**kwargs)
@@ -377,6 +387,7 @@ TRITIQ ERP System
                                   organization_name: Optional[str] = None) -> tuple[bool, Optional[str]]:
         """Send password reset email with template"""
         try:
+            logger.debug(f"Preparing password reset email for {user_email}")
             template_vars = {
                 'user_name': user_name,
                 'user_email': user_email,
@@ -394,10 +405,15 @@ TRITIQ ERP System
             
             subject = "TRITIQ ERP - Password Reset Notification"
             
-            return self._send_email(user_email, subject, plain_text, html_content)
+            success, error = self._send_email(user_email, subject, plain_text, html_content)
+            if success:
+                logger.info(f"Password reset email sent successfully to {user_email}")
+            else:
+                logger.error(f"Failed to send password reset email to {user_email}: {error}")
+            return success, error
             
         except Exception as e:
-            error_msg = f"Error preparing password reset email: {e}"
+            error_msg = f"Error preparing password reset email for {user_email}: {str(e)}"
             logger.error(error_msg)
             return False, error_msg
 

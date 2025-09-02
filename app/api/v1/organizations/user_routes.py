@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict
 import logging
+import secrets
+import string
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
@@ -14,6 +16,7 @@ from app.schemas import UserCreate, UserInDB
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
+from app.services.email_service import email_service  # Assuming email_service exists for sending emails
 
 logger = logging.getLogger(__name__)
 
@@ -301,4 +304,78 @@ async def delete_user_from_organization(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete user from organization"
+        )
+
+@user_router.post("/{organization_id:int}/users/{user_id:int}/reset-password")
+async def reset_user_password(
+    organization_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Reset user password (org admin or super admin only)"""
+    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this organization"
+        )
+  
+    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization administrators can reset passwords"
+        )
+  
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.organization_id == organization_id
+    ).first()
+  
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found in this organization"
+        )
+  
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use the password change endpoint to reset your own password"
+        )
+  
+    try:
+        # Generate secure random password (12 characters: letters, digits, symbols)
+        alphabet = string.ascii_letters + string.digits + string.punctuation
+        new_password = ''.join(secrets.choice(alphabet) for i in range(12))
+        
+        # Update hashed password
+        user.hashed_password = get_password_hash(new_password)
+        user.must_change_password = True  # Force password change on next login
+        db.commit()
+        
+        # Send email with new password
+        success, error = email_service.send_password_reset_email(
+            user_email=user.email,
+            user_name=user.full_name or user.username,
+            new_password=new_password,
+            reset_by=current_user.email
+        )
+        
+        if not success:
+            logger.warning(f"Password reset succeeded but email failed for user {user.email}: {error}")
+        
+        logger.info(f"Password reset for user {user.email} in organization {organization_id} by {current_user.email}")
+        return {
+            "message": "Password reset successful" + (" but email notification failed" if not success else ". New password sent to user's email"),
+            "new_password": new_password,  # Return for admin to manually share
+            "email_sent": success,
+            "email_error": error if not success else None
+        }
+      
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error resetting user password: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset user password"
         )

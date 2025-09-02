@@ -22,6 +22,12 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Container,
+  Alert,
+  Divider,
+  FormGroup,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import {
   Add,
@@ -125,6 +131,21 @@ const UserManagement: React.FC = () => {
             currentOrgId!,
             userId,
           );
+        case "activate":
+          return organizationService.updateUserInOrganization(
+            currentOrgId!,
+            userId,
+            { is_active: true }
+          );
+        case "deactivate":
+          return organizationService.updateUserInOrganization(
+            currentOrgId!,
+            userId,
+            { is_active: false }
+          );
+        case "reset":
+          // Assuming organizationService has a resetUserPassword method; implement if not
+          return organizationService.resetUserPassword(currentOrgId!, userId);
         default:
           throw new Error("Invalid action");
       }
@@ -136,6 +157,10 @@ const UserManagement: React.FC = () => {
       setActionDialogOpen(false);
       setSelectedUser(null);
       setActionType(null);
+    },
+    onError: (error) => {
+      console.error("Action failed:", error);
+      // Optionally show a snackbar or alert for error
     },
   });
   // Wait for authentication and organization context to be ready
@@ -332,7 +357,7 @@ const UserManagement: React.FC = () => {
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="primary">
                 {users?.length || 0}
@@ -342,7 +367,7 @@ const UserManagement: React.FC = () => {
               </Typography>
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="success.main">
                 {users?.filter((user: User) => user.is_active).length || 0}
@@ -352,7 +377,7 @@ const UserManagement: React.FC = () => {
               </Typography>
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="info.main">
                 {users?.filter((user: User) => user.role === "admin").length ||
@@ -363,7 +388,7 @@ const UserManagement: React.FC = () => {
               </Typography>
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="secondary.main">
                 {users?.filter((user: User) => user.role === "standard_user")
@@ -503,7 +528,7 @@ const UserManagement: React.FC = () => {
         <DialogTitle>Add New User</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Full Name"
@@ -517,7 +542,7 @@ const UserManagement: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Username"
@@ -528,7 +553,7 @@ const UserManagement: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Email"
@@ -540,7 +565,7 @@ const UserManagement: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select
@@ -558,7 +583,7 @@ const UserManagement: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Department"
@@ -571,7 +596,7 @@ const UserManagement: React.FC = () => {
                 }
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Designation"
@@ -584,7 +609,7 @@ const UserManagement: React.FC = () => {
                 }
               />
             </Grid>
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
                 Module Access
               </Typography>
@@ -640,7 +665,7 @@ const UserManagement: React.FC = () => {
         <DialogTitle>Edit User</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Full Name"
@@ -654,7 +679,7 @@ const UserManagement: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Username"
@@ -665,7 +690,7 @@ const UserManagement: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Email"
@@ -677,7 +702,7 @@ const UserManagement: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select
@@ -695,7 +720,7 @@ const UserManagement: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Department"
@@ -708,7 +733,7 @@ const UserManagement: React.FC = () => {
                 }
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Designation"
@@ -721,7 +746,7 @@ const UserManagement: React.FC = () => {
                 }
               />
             </Grid>
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
                 Module Access
               </Typography>

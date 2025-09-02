@@ -217,4 +217,12 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to cancel invitation");
     }
   },
+  resetUserPassword: async (organizationId: number, userId: number): Promise<any> => {
+    try {
+      const response = await api.post(`/organizations/${organizationId}/users/${userId}/reset-password`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to reset user password");
+    }
+  },
 };

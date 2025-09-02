@@ -38,6 +38,7 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     is_active: bool = True
     has_stock_access: bool = True  # Module access for stock functionality
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
 
 
 class UserCreate(UserBase):
@@ -90,6 +91,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     must_change_password: Optional[bool] = None
     has_stock_access: Optional[bool] = None  # Module access for stock functionality
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
 
 
 class UserInDB(UserBase):
@@ -107,6 +109,7 @@ class UserInDB(UserBase):
     last_login: Optional[datetime] = None
     has_stock_access: bool = True  # Module access for stock functionality
     user_settings: Optional[Dict] = None  # Add user_settings here
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
     
     model_config = ConfigDict(from_attributes = True, use_enum_values=True)  # Added use_enum_values=True
 
@@ -293,7 +296,7 @@ class AdminPasswordResetRequest(BaseModel):
 class AdminPasswordResetResponse(BaseModel):
     message: str
     target_email: str
-    new_password: str  # Displayed to admin
+    new_password: str  # New password to display
     email_sent: bool
     email_error: Optional[str] = None
     must_change_password: bool = True
@@ -382,6 +385,7 @@ class UserResponse(BaseModel):
     updated_at: Optional[datetime]
     last_login: Optional[datetime]
     has_stock_access: bool
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
 
     class Config:
         from_attributes = True
