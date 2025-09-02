@@ -18,6 +18,8 @@ import {
   Typography,
   Chip,
   Grid,
+  Container,
+  Avatar,
 } from "@mui/material";
 import {
   Add,
@@ -64,7 +66,7 @@ const EmployeesPage: React.FC = () => {
       resetForm();
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error(error);
     },
   });
   const resetForm = () => {

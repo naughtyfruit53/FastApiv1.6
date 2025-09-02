@@ -1,6 +1,6 @@
 // frontend/src/pages/dashboard/OrgDashboard.tsx
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Chip, Alert } from "@mui/material";
+import { Box, Typography, Chip, Alert, Paper } from "@mui/material";
 import {
   Business,
   People,

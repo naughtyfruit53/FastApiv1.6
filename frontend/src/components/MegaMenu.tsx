@@ -88,7 +88,6 @@ import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
 import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers, canShowUserManagementInMegaMenu } from '../types/user.types';
 import { useQuery } from '@tanstack/react-query';
-import { companyService } from '../services/authService';
 import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
 
@@ -130,15 +129,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       transform: 'translateY(0) scale(0.98)',
     }
   };
-
-  // Query for company data to show logo
-  const { data: companyData } = useQuery({
-    queryKey: ['company'],
-    queryFn: companyService.getCurrentCompany,
-    enabled: !isAppSuperAdmin(user), // Only fetch for organization users
-    retry: false,
-    staleTime: 0, // 5 minutes
-  });
 
   // Query for current organization (to get enabled_modules)
   const { data: organizationData } = useQuery({
@@ -326,27 +316,27 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Business Entities',
           items: [
-            { name: 'Vendors', path: 'masters/vendors', icon: <People /> },
-            { name: 'Customers', path: 'masters/customers', icon: <Business /> },
-            { name: 'Employees', path: 'masters/employees', icon: <People /> },
-            { name: 'Company Details', path: 'masters/company-details', icon: <Business /> }
+            { name: 'Vendors', path: '/masters/vendors', icon: <People /> },
+            { name: 'Customers', path: '/masters/customers', icon: <Business /> },
+            { name: 'Employees', path: '/masters/employees', icon: <People /> },
+            { name: 'Company Details', path: '/masters/company-details', icon: <Business /> }
           ]
         },
         {
           title: 'Product & Inventory',
           items: [
-            { name: 'Products', path: 'masters/products', icon: <Inventory /> },
-            { name: 'Categories', path: '/categories', icon: <Storage /> },
-            { name: 'Units', path: '/units', icon: <Storage /> },
-            { name: 'Bill of Materials (BOM)', path: '/bom', icon: <Build /> }
+            { name: 'Products', path: '/masters/products', icon: <Inventory /> },
+            { name: 'Categories', path: '/masters/categories', icon: <Storage /> },
+            { name: 'Units', path: '/masters/units', icon: <Storage /> },
+            { name: 'Bill of Materials (BOM)', path: '/masters/bom', icon: <Build /> }
           ]
         },
         {
           title: 'Financial Configuration',
           items: [
-            { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: <AccountBalance /> },
-            { name: 'Tax Codes', path: '/tax-codes', icon: <Assessment /> },
-            { name: 'Payment Terms', path: '/payment-terms', icon: <Business /> }
+            { name: 'Chart of Accounts', path: '/masters/chart-of-accounts', icon: <AccountBalance /> },
+            { name: 'Tax Codes', path: '/masters/tax-codes', icon: <Assessment /> },
+            { name: 'Payment Terms', path: '/masters/payment-terms', icon: <Business /> }
           ]
         }
       ]
@@ -1196,7 +1186,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               }}
             />
             <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-              {companyData?.name || 'ERP'}
+              {organizationData?.name || 'ERP'}
             </Typography>
           </Box>
           {/* Search bar on the right */}

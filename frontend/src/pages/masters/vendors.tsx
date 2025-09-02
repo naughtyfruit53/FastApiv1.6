@@ -41,6 +41,8 @@ const VendorsPage: React.FC = () => {
   const [addVendorLoading, setAddVendorLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const sortBy = "name"; // Fixed sort column since only one sortable field
   const queryClient = useQueryClient();
   const { data: vendors, isLoading } = useQuery({
     queryKey: ["vendors"],
@@ -88,7 +90,7 @@ const VendorsPage: React.FC = () => {
       setShowAddVendorModal(false);
       alert("Vendor added successfully!");
     } catch (error: any) {
-      console.error(msg, err);
+      console.error("Error adding vendor", error);
       let errorMsg = "Error adding vendor";
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
@@ -109,7 +111,7 @@ const VendorsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error deleting vendor", error);
       setErrorMessage(
         error.response?.data?.detail || "Failed to delete vendor",
       );

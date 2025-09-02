@@ -1,7 +1,7 @@
 // frontend/src/pages/inventory/stock.tsx
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { masterDataService, companyService } from "../../services/authService"; // Assuming masterDataService is masterService
+import { masterDataService } from "../../services/authService"; // Assuming masterDataService is masterService
 import {
   getProductMovements,
   getLastVendorForProduct,
@@ -35,6 +35,9 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Stack,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Add,
@@ -50,6 +53,7 @@ import {
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { toast } from "react-toastify";
+import { organizationService } from "../../services/organizationService";
 // Type declaration for jsPDF autoTable extension
 declare module "jspdf" {
   interface jsPDF {
@@ -94,9 +98,9 @@ const StockManagement: React.FC = () => {
     queryFn: () => masterDataService.getProducts(),
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
-  const { data: companyData } = useQuery({
-    queryKey: ["company"],
-    queryFn: companyService.getCurrentCompany,
+  const { data: organizationData } = useQuery({
+    queryKey: ["organization"],
+    queryFn: organizationService.getCurrentOrganization,
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
   const updateStockMutation = useMutation({
@@ -116,7 +120,7 @@ const StockManagement: React.FC = () => {
       alert("Stock import completed successfully.");
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Bulk import error", error);
       alert(
         `Import failed: ${error.userMessage || "Please check the file format and required columns."}`,
       );
@@ -177,7 +181,7 @@ const StockManagement: React.FC = () => {
     }
   };
   const handlePrint = () => {
-    generateStockReport("stock_report.pdf", companyData, stockData);
+    generateStockReport("stock_report.pdf", organizationData, stockData);
   };
   const generateStockReport = (
     filePath: string,
@@ -468,18 +472,18 @@ const StockManagement: React.FC = () => {
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
       >
-        <MuiMenuItem onClick={handleShowMovement}>
+        <MenuItem onClick={handleShowMovement}>
           <ListItemIcon>
             <HistoryIcon />
           </ListItemIcon>
           <ListItemText>Show Movement</ListItemText>
-        </MuiMenuItem>
-        <MuiMenuItem onClick={handleCreatePurchaseOrder}>
+        </MenuItem>
+        <MenuItem onClick={handleCreatePurchaseOrder}>
           <ListItemIcon>
             <PurchaseIcon />
           </ListItemIcon>
           <ListItemText>Create Purchase Order</ListItemText>
-        </MuiMenuItem>
+        </MenuItem>
       </Menu>
       {/* Movements Dialog */}
       <Dialog
