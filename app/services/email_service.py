@@ -40,7 +40,7 @@ class EmailService:
         # Brevo config
         self.brevo_api_key = getattr(settings, 'BREVO_API_KEY', None)
         self.from_email = getattr(settings, 'BREVO_FROM_EMAIL', None) or getattr(settings, 'EMAILS_FROM_EMAIL', 'naughtyfruit53@gmail.com')
-        self.from_name = getattr(settings, 'BREVO_FROM_NAME', 'TRITIQ ERP')
+        self.from_name = getattr(settings, 'BREVO_FROM_NAME', 'TritIQ Business Suite')
         
         if self.brevo_api_key:
             try:

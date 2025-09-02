@@ -82,7 +82,7 @@ const LoginPage: React.FC = () => {
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Image
           src="/Tritiq.png"
-          alt="TRITIQ ERP"
+          alt="TritIQ Business Suite"
           width={300}
           height={120}
           style={{ maxWidth: "100%", height: "auto", marginBottom: "16px" }}
