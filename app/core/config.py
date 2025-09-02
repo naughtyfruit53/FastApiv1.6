@@ -78,16 +78,7 @@ class Settings:
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     
     # Cors
-    BACKEND_CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8000",
-        "http://127.0.0.1:8080"
-    ]
-    
-    # Super Admin Configuration
-    SUPER_ADMIN_EMAILS: List[str] = ["admin@tritiq.com", "superadmin@tritiq.com", "naughtyfruit53@gmail.com"]
+    BACKEND_CORS_ORIGINS: List[str] = assemble_cors_origins(os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8000,http://127.0.0.1:8080"))
     
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str] | str:
