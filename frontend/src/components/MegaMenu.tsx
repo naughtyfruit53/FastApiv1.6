@@ -352,10 +352,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             { name: 'Current Stock', path: '/inventory/stock', icon: <Inventory /> },
             { name: 'Stock Movements', path: '/inventory/movements', icon: <SwapHoriz /> },
             { name: 'Low Stock Report', path: '/inventory/low-stock', icon: <TrendingUp /> },
-            { name: 'Stock Bulk Import', path: '/inventory/bulk-import', icon: <CloudUpload />, role: 'org_admin' },
-            { name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
-            { name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
-            { name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
+            //{ name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
+            //{ name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
+            //{ name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
           ]
         },
         {

@@ -82,7 +82,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     if (!voucherType) {
       return '';
     }
-    const lowerType = voucherType.toLowerCase();
+    const lowerType = voucherType?.toLowerCase() || '';
     if (lowerType.includes('sales')) {
       return effectiveVoucher.customer?.email || '';
     } else if (lowerType.includes('purchase') || lowerType.includes('financial') || lowerType.includes('payment')) {
@@ -117,8 +117,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   };
 
   const hasEmail = !!onEmail && !!getEmailRecipient();
-  const isDeliveryChallan = voucherType.toLowerCase().includes('delivery challan');
-  const isPurchaseOrder = voucherType.toLowerCase().includes('purchase order');
+  const isDeliveryChallan = (voucherType?.toLowerCase() || '').includes('delivery challan');
+  const isPurchaseOrder = (voucherType?.toLowerCase() || '').includes('purchase order');
 
   return (
     <>
