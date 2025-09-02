@@ -72,7 +72,7 @@ class BrevoWhatsAppProvider(WhatsAppProvider):
                 )
             else:
                 # Use text-based message (may require template approval)
-                message_text = f"🔐 TRITIQ ERP Security Code\n\nYour OTP for {purpose}: {otp}\n\nValid for 10 minutes. Do not share this code.\n\n- TRITIQ ERP Team"
+                message_text = f"🔐 TritIQ Business Suite Security Code\n\nYour OTP for {purpose}: {otp}\n\nValid for 10 minutes. Do not share this code.\n\n- TritIQ Business Suite Team"
                 whatsapp_message = SendWhatsappMessage(
                     text=message_text,
                     sender_number=self.sender_number,

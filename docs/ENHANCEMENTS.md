@@ -24,7 +24,7 @@ See [VOUCHER_SYSTEM_ENHANCEMENTS.md](./VOUCHER_SYSTEM_ENHANCEMENTS.md) for detai
 
 ---
 
-This document outlines the enhancements made to the TRITIQ ERP FastAPI migration as part of the Turbopack frontend upgrade and backend improvements.
+This document outlines the enhancements made to the TritIQ Business Suite FastAPI migration as part of the Turbopack frontend upgrade and backend improvements.
 
 ## 🚀 Frontend Enhancements
 
@@ -299,7 +299,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 EMAILS_FROM_EMAIL=your-email@gmail.com
-EMAILS_FROM_NAME="TRITIQ ERP"
+EMAILS_FROM_NAME="TritIQ Business Suite"
 
 # Database Configuration
 DATABASE_URL=postgresql://user:password@localhost/db_name
@@ -386,4 +386,4 @@ pool_status = get_pool_status()
 
 ---
 
-**Note**: This enhancement documentation covers all major improvements made to the TRITIQ ERP system as part of the Turbopack migration and backend modernization effort.
+**Note**: This enhancement documentation covers all major improvements made to the TritIQ Business Suite system as part of the Turbopack migration and backend modernization effort.
