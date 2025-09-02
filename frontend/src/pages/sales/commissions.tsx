@@ -1,5 +1,5 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -19,8 +19,8 @@ import {
   TextField,
   InputAdornment,
   CircularProgress,
-  Alert
-} from '@mui/material';
+  Alert,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -29,9 +29,9 @@ import {
   MonetizationOn as MoneyIcon,
   TrendingUp as TrendingUpIcon,
   CalendarToday as CalendarIcon,
-  Assessment as AssessmentIcon
-} from '@mui/icons-material';
-import AddCommissionModal from '../../components/AddCommissionModal';
+  Assessment as AssessmentIcon,
+} from "@mui/icons-material";
+import AddCommissionModal from "../../components/AddCommissionModal";
 interface Commission {
   id: number;
   sales_person_id: number;
@@ -51,7 +51,7 @@ const CommissionTracking: React.FC = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   // Fetch commissions from backend
@@ -63,8 +63,8 @@ const CommissionTracking: React.FC = () => {
       // For now, show empty state
       setCommissions([]);
     } catch (err) {
-      console.error('Error fetching commissions:', err);
-      setError('Failed to load commissions. Please try again.');
+      console.error("Error fetching commissions:", err);
+      setError("Failed to load commissions. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -76,49 +76,70 @@ const CommissionTracking: React.FC = () => {
     try {
       setAddLoading(true);
       // TODO: Implement commission creation when backend endpoint is available
-      console.log('Commission data:', commissionData);
+      console.log("Commission data:", commissionData);
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       // Mock adding to state for now
       const newCommission: Commission = {
         id: Date.now(),
         ...commissionData,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
-      setCommissions(prev => [newCommission, ...prev]);
+      setCommissions((prev) => [newCommission, ...prev]);
       setDialogOpen(false);
     } catch (err) {
-      console.error('Error adding commission:', err);
+      console.error("Error adding commission:", err);
       throw err;
     } finally {
       setAddLoading(false);
     }
   };
-  const filteredCommissions = commissions.filter(commission => {
-    const matchesSearch = 
-      (commission.sales_person_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (commission.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
-// TODO: Define or import filterStatus
-    const matchesStatus = filterStatus === 'all' || commission.payment_status === filterStatus;
+  const filteredCommissions = commissions.filter((commission) => {
+    const matchesSearch =
+      (commission.sales_person_name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (commission.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+    // TODO: Define or import filterStatus
+    const matchesStatus =
+      filterStatus === "all" || commission.payment_status === filterStatus;
     return matchesSearch && matchesStatus;
   });
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'warning';
-      case 'approved': return 'info';
-      case 'paid': return 'success';
-      case 'rejected': return 'error';
-      case 'on_hold': return 'default';
-      default: return 'default';
+      case "pending":
+        return "warning";
+      case "approved":
+        return "info";
+      case "paid":
+        return "success";
+      case "rejected":
+        return "error";
+      case "on_hold":
+        return "default";
+      default:
+        return "default";
     }
   };
-  const totalCommissions = commissions.reduce((sum, c) => sum + (c.commission_amount || 0), 0);
-  const pendingCommissions = commissions.filter(c => c.payment_status === 'pending').reduce((sum, c) => sum + (c.commission_amount || 0), 0);
-  const paidCommissions = commissions.filter(c => c.payment_status === 'paid').reduce((sum, c) => sum + (c.commission_amount || 0), 0);
+  const totalCommissions = commissions.reduce(
+    (sum, c) => sum + (c.commission_amount || 0),
+    0,
+  );
+  const pendingCommissions = commissions
+    .filter((c) => c.payment_status === "pending")
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0);
+  const paidCommissions = commissions
+    .filter((c) => c.payment_status === "paid")
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0);
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress size={40} />
         </Box>
       </Container>
@@ -141,7 +162,7 @@ const CommissionTracking: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <MoneyIcon color="primary" sx={{ mr: 1 }} />
                 <Typography variant="h6">Total Commissions</Typography>
               </Box>
@@ -157,7 +178,7 @@ const CommissionTracking: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <CalendarIcon color="warning" sx={{ mr: 1 }} />
                 <Typography variant="h6">Pending</Typography>
               </Box>
@@ -173,7 +194,7 @@ const CommissionTracking: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <AssessmentIcon color="success" sx={{ mr: 1 }} />
                 <Typography variant="h6">Paid</Typography>
               </Box>
@@ -189,7 +210,7 @@ const CommissionTracking: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <TrendingUpIcon color="info" sx={{ mr: 1 }} />
                 <Typography variant="h6">Records</Typography>
               </Box>
@@ -204,7 +225,14 @@ const CommissionTracking: React.FC = () => {
         </Grid>
       </Grid>
       {/* Actions Bar */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <TextField
           placeholder="Search commissions..."
           value={searchTerm}
@@ -258,40 +286,47 @@ const CommissionTracking: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={commission.commission_type.replace('_', ' ').toUpperCase()} 
+                    <Chip
+                      label={commission.commission_type
+                        .replace("_", " ")
+                        .toUpperCase()}
                       size="small"
                       variant="outlined"
-                      sx={{ textTransform: 'capitalize' }}
+                      sx={{ textTransform: "capitalize" }}
                     />
                   </TableCell>
                   <TableCell align="right">
                     ${commission.base_amount.toLocaleString()}
                   </TableCell>
                   <TableCell align="right">
-                    {commission.commission_type === 'percentage' ? (
-                      `${commission.commission_rate}%`
-                    ) : (
-                      `$${commission.commission_amount?.toLocaleString() || 0}`
-                    )}
+                    {commission.commission_type === "percentage"
+                      ? `${commission.commission_rate}%`
+                      : `$${commission.commission_amount?.toLocaleString() || 0}`}
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="subtitle2" color="primary">
-                      ${(commission.commission_amount || 
-                        (commission.commission_rate ? 
-                          (commission.base_amount * commission.commission_rate) / 100 : 0)
-                        ).toLocaleString()}
+                      $
+                      {(
+                        commission.commission_amount ||
+                        (commission.commission_rate
+                          ? (commission.base_amount *
+                              commission.commission_rate) /
+                            100
+                          : 0)
+                      ).toLocaleString()}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     {new Date(commission.commission_date).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={commission.payment_status.replace('_', ' ').toUpperCase()} 
+                    <Chip
+                      label={commission.payment_status
+                        .replace("_", " ")
+                        .toUpperCase()}
                       color={getStatusColor(commission.payment_status) as any}
                       size="small"
-                      sx={{ textTransform: 'capitalize' }}
+                      sx={{ textTransform: "capitalize" }}
                     />
                   </TableCell>
                   <TableCell align="center">
@@ -307,10 +342,14 @@ const CommissionTracking: React.FC = () => {
               {filteredCommissions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} align="center">
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
-                      {commissions.length === 0 
-                        ? 'No commission records found. Start by adding your first commission record!' 
-                        : 'No records match your search criteria.'}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ py: 4 }}
+                    >
+                      {commissions.length === 0
+                        ? "No commission records found. Start by adding your first commission record!"
+                        : "No records match your search criteria."}
                     </Typography>
                   </TableCell>
                 </TableRow>

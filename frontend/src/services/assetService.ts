@@ -1,7 +1,7 @@
 // services/assetService.ts
 // Asset Management service for API interactions
 
-import api from '../lib/api';
+import api from "../lib/api";
 
 export interface Asset {
   id: number;
@@ -18,8 +18,8 @@ export interface Asset {
   location?: string;
   department?: string;
   assigned_to_employee?: string;
-  status: 'active' | 'inactive' | 'maintenance' | 'retired' | 'disposed';
-  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
+  status: "active" | "inactive" | "maintenance" | "retired" | "disposed";
+  condition: "excellent" | "good" | "fair" | "poor" | "critical";
   useful_life_years?: number;
   salvage_value?: number;
   created_at: string;
@@ -29,7 +29,7 @@ export interface MaintenanceSchedule {
   id: number;
   asset_id: number;
   schedule_name: string;
-  maintenance_type: 'preventive' | 'corrective' | 'emergency' | 'inspection';
+  maintenance_type: "preventive" | "corrective" | "emergency" | "inspection";
   description?: string;
   frequency_type: string;
   frequency_value?: number;
@@ -44,12 +44,12 @@ export interface MaintenanceRecord {
   id: number;
   work_order_number: string;
   asset_id: number;
-  maintenance_type: 'preventive' | 'corrective' | 'emergency' | 'inspection';
+  maintenance_type: "preventive" | "corrective" | "emergency" | "inspection";
   priority: string;
   scheduled_date?: string;
   actual_start_date?: string;
   actual_end_date?: string;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overdue';
+  status: "scheduled" | "in_progress" | "completed" | "cancelled" | "overdue";
   description: string;
   total_cost: number;
   created_at: string;
@@ -82,12 +82,16 @@ export interface AssetCreate {
   location?: string;
   department?: string;
   assigned_to_employee?: string;
-  status?: 'active' | 'inactive' | 'maintenance' | 'retired' | 'disposed';
-  condition?: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
+  status?: "active" | "inactive" | "maintenance" | "retired" | "disposed";
+  condition?: "excellent" | "good" | "fair" | "poor" | "critical";
   specifications?: string;
   operating_capacity?: string;
   power_rating?: string;
-  depreciation_method?: 'straight_line' | 'declining_balance' | 'units_of_production' | 'sum_of_years';
+  depreciation_method?:
+    | "straight_line"
+    | "declining_balance"
+    | "units_of_production"
+    | "sum_of_years";
   useful_life_years?: number;
   salvage_value?: number;
   depreciation_rate?: number;
@@ -100,7 +104,7 @@ export interface AssetCreate {
 export interface MaintenanceScheduleCreate {
   asset_id: number;
   schedule_name: string;
-  maintenance_type: 'preventive' | 'corrective' | 'emergency' | 'inspection';
+  maintenance_type: "preventive" | "corrective" | "emergency" | "inspection";
   description?: string;
   frequency_type: string;
   frequency_value?: number;
@@ -119,7 +123,7 @@ export interface MaintenanceScheduleCreate {
 export interface MaintenanceRecordCreate {
   asset_id: number;
   schedule_id?: number;
-  maintenance_type: 'preventive' | 'corrective' | 'emergency' | 'inspection';
+  maintenance_type: "preventive" | "corrective" | "emergency" | "inspection";
   priority?: string;
   scheduled_date?: string;
   description: string;
@@ -134,8 +138,8 @@ export interface MaintenanceRecordCreate {
   external_cost?: number;
   meter_reading_before?: number;
   meter_reading_after?: number;
-  condition_before?: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
-  condition_after?: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
+  condition_before?: "excellent" | "good" | "fair" | "poor" | "critical";
+  condition_after?: "excellent" | "good" | "fair" | "poor" | "critical";
   quality_check_passed?: boolean;
   quality_remarks?: string;
   parts_used?: Array<{
@@ -159,7 +163,7 @@ class AssetService {
     location?: string;
     department?: string;
   }): Promise<Asset[]> {
-    const response = await api.get('/api/v1/assets/', { params });
+    const response = await api.get("/api/v1/assets/", { params });
     return response.data;
   }
 
@@ -169,7 +173,7 @@ class AssetService {
   }
 
   async createAsset(data: AssetCreate): Promise<Asset> {
-    const response = await api.post('/api/v1/assets/', data);
+    const response = await api.post("/api/v1/assets/", data);
     return response.data;
   }
 
@@ -183,7 +187,7 @@ class AssetService {
   }
 
   async getAssetCategories(): Promise<string[]> {
-    const response = await api.get('/api/v1/assets/categories/');
+    const response = await api.get("/api/v1/assets/categories/");
     return response.data;
   }
 
@@ -195,19 +199,31 @@ class AssetService {
     maintenance_type?: string;
     is_active?: boolean;
   }): Promise<MaintenanceSchedule[]> {
-    const response = await api.get('/api/v1/assets/maintenance-schedules/', { params });
-    return response.data;
-  }
-
-  async createMaintenanceSchedule(data: MaintenanceScheduleCreate): Promise<MaintenanceSchedule> {
-    const response = await api.post('/api/v1/assets/maintenance-schedules/', data);
-    return response.data;
-  }
-
-  async getDueMaintenance(daysAhead: number = 30): Promise<MaintenanceSchedule[]> {
-    const response = await api.get('/api/v1/assets/maintenance-schedules/due/', {
-      params: { days_ahead: daysAhead }
+    const response = await api.get("/api/v1/assets/maintenance-schedules/", {
+      params,
     });
+    return response.data;
+  }
+
+  async createMaintenanceSchedule(
+    data: MaintenanceScheduleCreate,
+  ): Promise<MaintenanceSchedule> {
+    const response = await api.post(
+      "/api/v1/assets/maintenance-schedules/",
+      data,
+    );
+    return response.data;
+  }
+
+  async getDueMaintenance(
+    daysAhead: number = 30,
+  ): Promise<MaintenanceSchedule[]> {
+    const response = await api.get(
+      "/api/v1/assets/maintenance-schedules/due/",
+      {
+        params: { days_ahead: daysAhead },
+      },
+    );
     return response.data;
   }
 
@@ -219,12 +235,19 @@ class AssetService {
     maintenance_type?: string;
     status?: string;
   }): Promise<MaintenanceRecord[]> {
-    const response = await api.get('/api/v1/assets/maintenance-records/', { params });
+    const response = await api.get("/api/v1/assets/maintenance-records/", {
+      params,
+    });
     return response.data;
   }
 
-  async createMaintenanceRecord(data: MaintenanceRecordCreate): Promise<MaintenanceRecord> {
-    const response = await api.post('/api/v1/assets/maintenance-records/', data);
+  async createMaintenanceRecord(
+    data: MaintenanceRecordCreate,
+  ): Promise<MaintenanceRecord> {
+    const response = await api.post(
+      "/api/v1/assets/maintenance-records/",
+      data,
+    );
     return response.data;
   }
 
@@ -234,28 +257,33 @@ class AssetService {
       actual_end_date?: string;
       work_performed?: string;
       findings?: string;
-    }
+    },
   ): Promise<MaintenanceRecord> {
-    const response = await api.put(`/api/v1/assets/maintenance-records/${id}/complete`, data);
+    const response = await api.put(
+      `/api/v1/assets/maintenance-records/${id}/complete`,
+      data,
+    );
     return response.data;
   }
 
   // Asset Depreciation
   async getAssetDepreciation(assetId: number, year?: number): Promise<any[]> {
     const response = await api.get(`/api/v1/assets/${assetId}/depreciation`, {
-      params: year ? { year } : {}
+      params: year ? { year } : {},
     });
     return response.data;
   }
 
   async calculateDepreciation(assetId: number, year: number): Promise<any> {
-    const response = await api.post(`/api/v1/assets/${assetId}/depreciation`, { year });
+    const response = await api.post(`/api/v1/assets/${assetId}/depreciation`, {
+      year,
+    });
     return response.data;
   }
 
   // Dashboard
   async getDashboardSummary(): Promise<AssetDashboard> {
-    const response = await api.get('/api/v1/assets/dashboard/summary');
+    const response = await api.get("/api/v1/assets/dashboard/summary");
     return response.data;
   }
 }

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { 
+import React, { useState, useEffect } from "react";
+import {
   Alert,
   Box,
   CircularProgress,
@@ -8,9 +8,9 @@ import {
   MenuItem,
   Select,
   SelectChangeEvent,
-  Typography
-} from '@mui/material';
-import { organizationService } from '../services/organizationService';
+  Typography,
+} from "@mui/material";
+import { organizationService } from "../services/organizationService";
 interface Organization {
   id: number;
   name: string;
@@ -20,7 +20,9 @@ interface Organization {
 }
 const OrganizationSwitcher: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [currentOrganization, setCurrentOrganization] = useState<number | ''>('');
+  const [currentOrganization, setCurrentOrganization] = useState<number | "">(
+    "",
+  );
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -43,7 +45,9 @@ const OrganizationSwitcher: React.FC = () => {
       setLoading(false);
     }
   };
-  const handleOrganizationSwitch = async (event: SelectChangeEvent<number | ''>) => {
+  const handleOrganizationSwitch = async (
+    event: SelectChangeEvent<number | "">,
+  ) => {
     const organizationId = event.target.value as number;
     if (!organizationId || organizationId === currentOrganization) {
       return;
@@ -54,11 +58,11 @@ const OrganizationSwitcher: React.FC = () => {
       await organizationService.switchOrganization(organizationId);
       // Update current organization state
       setCurrentOrganization(organizationId);
-      setOrganizations(prev => 
-        prev.map(org => ({
+      setOrganizations((prev) =>
+        prev.map((org) => ({
           ...org,
-          is_current: org.id === organizationId
-        }))
+          is_current: org.id === organizationId,
+        })),
       );
       // Call the page to update all components with new organization context
       window.location.reload();
@@ -99,7 +103,7 @@ const OrganizationSwitcher: React.FC = () => {
   return (
     <Box sx={{ minWidth: 200 }}>
       {err && (
-        <Alert severity="error" sx={{ mb: 1, fontSize: '0.8rem' }}>
+        <Alert severity="error" sx={{ mb: 1, fontSize: "0.8rem" }}>
           {err}
         </Alert>
       )}

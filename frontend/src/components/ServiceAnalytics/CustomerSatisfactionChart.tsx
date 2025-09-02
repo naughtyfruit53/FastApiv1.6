@@ -1,5 +1,5 @@
 // frontend/src/components/ServiceAnalytics/CustomerSatisfactionChart.tsx
-import React from 'react';
+import React from "react";
 import {
   Card,
   CardContent,
@@ -10,68 +10,76 @@ import {
   LinearProgress,
   Chip,
   Paper,
-  Rating
-} from '@mui/material';
+  Rating,
+} from "@mui/material";
 import {
   SentimentVerySatisfied as VeryHappyIcon,
   SentimentSatisfied as HappyIcon,
   SentimentNeutral as NeutralIcon,
   SentimentDissatisfied as UnhappyIcon,
   ThumbUp as RecommendIcon,
-  TrendingUp as _TrendIcon
-} from '@mui/icons-material';
-import { CustomerSatisfactionMetrics } from '../../services/serviceAnalyticsService';
+} from "@mui/icons-material";
+import { CustomerSatisfactionMetrics } from "../../services/serviceAnalyticsService";
 interface CustomerSatisfactionChartProps {
   data: CustomerSatisfactionMetrics;
 }
-const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ data }) => {
+const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({
+  data,
+}) => {
   const getSatisfactionColor = (level: string) => {
     switch (level.toLowerCase()) {
-      case 'satisfied':
-        return 'success';
-      case 'neutral':
-        return 'warning';
-      case 'dissatisfied':
-        return 'error';
+      case "satisfied":
+        return "success";
+      case "neutral":
+        return "warning";
+      case "dissatisfied":
+        return "error";
       default:
-        return 'info';
+        return "info";
     }
   };
   const getSatisfactionIcon = (level: string) => {
     switch (level.toLowerCase()) {
-      case 'satisfied':
+      case "satisfied":
         return <VeryHappyIcon />;
-      case 'neutral':
+      case "neutral":
         return <NeutralIcon />;
-      case 'dissatisfied':
+      case "dissatisfied":
         return <UnhappyIcon />;
       default:
         return <HappyIcon />;
     }
   };
   const getRatingColor = (rating: number) => {
-    if (rating >= 4) {return 'success.main';}
-    if (rating >= 3) {return 'warning.main';}
-    return 'error.main';
+    if (rating >= 4) {
+      return "success.main";
+    }
+    if (rating >= 3) {
+      return "warning.main";
+    }
+    return "error.main";
   };
   const formatRating = (rating?: number) => {
-    return rating ? rating.toFixed(1) : 'N/A';
+    return rating ? rating.toFixed(1) : "N/A";
   };
   return (
     <Card>
-      <CardHeader 
-        title="Customer Satisfaction" 
+      <CardHeader
+        title="Customer Satisfaction"
         subheader={`${data.total_feedback_received} feedback responses analyzed`}
       />
       <CardContent>
         {/* Overall Rating */}
-        <Box sx={{ mb: 3, textAlign: 'center' }}>
-          <Typography variant="h3" sx={{ color: getRatingColor(data.average_overall_rating) }}>
+        <Box sx={{ mb: 3, textAlign: "center" }}>
+          <Typography
+            variant="h3"
+            sx={{ color: getRatingColor(data.average_overall_rating) }}
+          >
             {formatRating(data.average_overall_rating)}
           </Typography>
-          <Rating 
-            value={data.average_overall_rating} 
-            readOnly 
+          <Rating
+            value={data.average_overall_rating}
+            readOnly
             precision={0.1}
             size="large"
           />
@@ -82,8 +90,16 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
         {/* Rating Breakdown */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
-              <Typography variant="h6" sx={{ color: getRatingColor(data.average_service_quality || 0) }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  color: getRatingColor(data.average_service_quality || 0),
+                }}
+              >
                 {formatRating(data.average_service_quality)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -92,8 +108,16 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
-              <Typography variant="h6" sx={{ color: getRatingColor(data.average_technician_rating || 0) }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  color: getRatingColor(data.average_technician_rating || 0),
+                }}
+              >
                 {formatRating(data.average_technician_rating)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -102,8 +126,16 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
-              <Typography variant="h6" sx={{ color: getRatingColor(data.average_timeliness_rating || 0) }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  color: getRatingColor(data.average_timeliness_rating || 0),
+                }}
+              >
                 {formatRating(data.average_timeliness_rating)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -112,8 +144,16 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
-              <Typography variant="h6" sx={{ color: getRatingColor(data.average_communication_rating || 0) }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  color: getRatingColor(data.average_communication_rating || 0),
+                }}
+              >
                 {formatRating(data.average_communication_rating)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -125,19 +165,27 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
         {/* NPS Score */}
         {data.nps_score !== null && data.nps_score !== undefined && (
           <Box sx={{ mb: 3 }}>
-            <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Paper elevation={1} sx={{ p: 2, bgcolor: "background.default" }}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
                 <Box>
-                  <Typography variant="h6">
-                    Net Promoter Score (NPS)
-                  </Typography>
+                  <Typography variant="h6">Net Promoter Score (NPS)</Typography>
                   <Typography variant="body2" color="text.secondary">
                     Customer recommendation likelihood
                   </Typography>
                 </Box>
                 <Chip
                   label={`${data.nps_score.toFixed(1)}`}
-                  color={data.nps_score > 0 ? 'success' : data.nps_score < 0 ? 'error' : 'warning'}
+                  color={
+                    data.nps_score > 0
+                      ? "success"
+                      : data.nps_score < 0
+                        ? "error"
+                        : "warning"
+                  }
                   size="large"
                 />
               </Box>
@@ -145,27 +193,31 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
           </Box>
         )}
         {/* Recommendation Rate */}
-        {data.recommendation_rate !== null && data.recommendation_rate !== undefined && (
-          <Box sx={{ mb: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-              <Box display="flex" alignItems="center" gap={1}>
-                <RecommendIcon color="primary" />
-                <Typography variant="body2">
-                  Would Recommend
+        {data.recommendation_rate !== null &&
+          data.recommendation_rate !== undefined && (
+            <Box sx={{ mb: 3 }}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={1}
+              >
+                <Box display="flex" alignItems="center" gap={1}>
+                  <RecommendIcon color="primary" />
+                  <Typography variant="body2">Would Recommend</Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {data.recommendation_rate.toFixed(1)}%
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
-                {data.recommendation_rate.toFixed(1)}%
-              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={data.recommendation_rate}
+                sx={{ height: 8, borderRadius: 4 }}
+                color="success"
+              />
             </Box>
-            <LinearProgress
-              variant="determinate"
-              value={data.recommendation_rate}
-              sx={{ height: 8, borderRadius: 4 }}
-              color="success"
-            />
-          </Box>
-        )}
+          )}
         {/* Satisfaction Distribution */}
         {Object.keys(data.satisfaction_distribution).length > 0 && (
           <Box sx={{ mb: 3 }}>
@@ -173,43 +225,50 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
               Satisfaction Distribution
             </Typography>
             <Grid container spacing={1}>
-              {Object.entries(data.satisfaction_distribution).map(([level, count]) => (
-                <Grid item xs={12} sm={4} key={level}>
-                  <Paper 
-                    elevation={1} 
-                    sx={{ 
-                      p: 2, 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      gap: 1,
-                      bgcolor: 'background.default'
-                    }}
-                  >
-                    <Box 
-                      sx={{ 
-                        color: `${getSatisfactionColor(level)}.main`,
-                        display: 'flex',
-                        alignItems: 'center'
+              {Object.entries(data.satisfaction_distribution).map(
+                ([level, count]) => (
+                  <Grid item xs={12} sm={4} key={level}>
+                    <Paper
+                      elevation={1}
+                      sx={{
+                        p: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        bgcolor: "background.default",
                       }}
                     >
-                      {getSatisfactionIcon(level)}
-                    </Box>
-                    <Box flexGrow={1}>
-                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                        {level}
+                      <Box
+                        sx={{
+                          color: `${getSatisfactionColor(level)}.main`,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {getSatisfactionIcon(level)}
+                      </Box>
+                      <Box flexGrow={1}>
+                        <Typography
+                          variant="body2"
+                          sx={{ textTransform: "capitalize" }}
+                        >
+                          {level}
+                        </Typography>
+                        <Typography variant="h6">{count}</Typography>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {data.total_feedback_received > 0
+                          ? (
+                              (count / data.total_feedback_received) *
+                              100
+                            ).toFixed(1)
+                          : 0}
+                        %
                       </Typography>
-                      <Typography variant="h6">
-                        {count}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {data.total_feedback_received > 0 
-                        ? ((count / data.total_feedback_received) * 100).toFixed(1)
-                        : 0}%
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
+                    </Paper>
+                  </Grid>
+                ),
+              )}
             </Grid>
           </Box>
         )}
@@ -219,7 +278,7 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
             <Typography variant="h6" gutterBottom>
               Recent Satisfaction Trend
             </Typography>
-            <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
+            <Paper elevation={1} sx={{ p: 2, bgcolor: "background.default" }}>
               <Typography variant="body2" color="text.secondary">
                 Average daily satisfaction ratings
               </Typography>
@@ -227,13 +286,19 @@ const CustomerSatisfactionChart: React.FC<CustomerSatisfactionChartProps> = ({ d
                 {data.satisfaction_trend.slice(-7).map((point, index) => (
                   <Chip
                     key={index}
-                    label={`${new Date(point.date).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric' 
+                    label={`${new Date(point.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
                     })}: ${point.value}/5`}
                     size="small"
                     variant="outlined"
-                    color={point.value >= 4 ? 'success' : point.value >= 3 ? 'warning' : 'error'}
+                    color={
+                      point.value >= 4
+                        ? "success"
+                        : point.value >= 3
+                          ? "warning"
+                          : "error"
+                    }
                   />
                 ))}
               </Box>

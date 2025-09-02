@@ -1,20 +1,20 @@
 // frontend/src/services/serviceAnalyticsService.ts
-import api from '../lib/api';
+import api from "../lib/api";
 // Enums matching the backend
 export enum ReportPeriod {
-  TODAY = 'today',
-  WEEK = 'week',
-  MONTH = 'month',
-  QUARTER = 'quarter',
-  YEAR = 'year',
-  CUSTOM = 'custom'
+  TODAY = "today",
+  WEEK = "week",
+  MONTH = "month",
+  QUARTER = "quarter",
+  YEAR = "year",
+  CUSTOM = "custom",
 }
 export enum MetricType {
-  JOB_COMPLETION = 'job_completion',
-  TECHNICIAN_PERFORMANCE = 'technician_performance',
-  CUSTOMER_SATISFACTION = 'customer_satisfaction',
-  JOB_VOLUME = 'job_volume',
-  SLA_COMPLIANCE = 'sla_compliance'
+  JOB_COMPLETION = "job_completion",
+  TECHNICIAN_PERFORMANCE = "technician_performance",
+  CUSTOMER_SATISFACTION = "customer_satisfaction",
+  JOB_VOLUME = "job_volume",
+  SLA_COMPLIANCE = "sla_compliance",
 }
 // Interfaces matching the backend schemas
 export interface TimeSeriesDataPoint {
@@ -128,15 +128,18 @@ export const serviceAnalyticsService = {
    */
   getAnalyticsDashboard: async (
     organizationId: number,
-    filters: AnalyticsRequest = {}
+    filters: AnalyticsRequest = {},
   ): Promise<AnalyticsDashboard> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/dashboard`, {
-        params: filters
-      });
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/dashboard`,
+        {
+          params: filters,
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get analytics dashboard');
+      throw new Error(error.userMessage || "Failed to get analytics dashboard");
     }
   },
   /**
@@ -144,15 +147,20 @@ export const serviceAnalyticsService = {
    */
   getJobCompletionMetrics: async (
     organizationId: number,
-    filters: AnalyticsRequest = {}
+    filters: AnalyticsRequest = {},
   ): Promise<JobCompletionMetrics> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/job-completion`, {
-        params: filters
-      });
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/job-completion`,
+        {
+          params: filters,
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get job completion metrics');
+      throw new Error(
+        error.userMessage || "Failed to get job completion metrics",
+      );
     }
   },
   /**
@@ -160,15 +168,20 @@ export const serviceAnalyticsService = {
    */
   getTechnicianPerformanceMetrics: async (
     organizationId: number,
-    filters: AnalyticsRequest = {}
+    filters: AnalyticsRequest = {},
   ): Promise<TechnicianPerformanceMetrics[]> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/technician-performance`, {
-        params: filters
-      });
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/technician-performance`,
+        {
+          params: filters,
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get technician performance metrics');
+      throw new Error(
+        error.userMessage || "Failed to get technician performance metrics",
+      );
     }
   },
   /**
@@ -176,15 +189,20 @@ export const serviceAnalyticsService = {
    */
   getCustomerSatisfactionMetrics: async (
     organizationId: number,
-    filters: AnalyticsRequest = {}
+    filters: AnalyticsRequest = {},
   ): Promise<CustomerSatisfactionMetrics> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/customer-satisfaction`, {
-        params: filters
-      });
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/customer-satisfaction`,
+        {
+          params: filters,
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get customer satisfaction metrics');
+      throw new Error(
+        error.userMessage || "Failed to get customer satisfaction metrics",
+      );
     }
   },
   /**
@@ -192,15 +210,18 @@ export const serviceAnalyticsService = {
    */
   getJobVolumeMetrics: async (
     organizationId: number,
-    filters: AnalyticsRequest = {}
+    filters: AnalyticsRequest = {},
   ): Promise<JobVolumeMetrics> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/job-volume`, {
-        params: filters
-      });
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/job-volume`,
+        {
+          params: filters,
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get job volume metrics');
+      throw new Error(error.userMessage || "Failed to get job volume metrics");
     }
   },
   /**
@@ -208,37 +229,52 @@ export const serviceAnalyticsService = {
    */
   getSLAComplianceMetrics: async (
     organizationId: number,
-    filters: AnalyticsRequest = {}
+    filters: AnalyticsRequest = {},
   ): Promise<SLAComplianceMetrics> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/sla-compliance`, {
-        params: filters
-      });
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/sla-compliance`,
+        {
+          params: filters,
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get SLA compliance metrics');
+      throw new Error(
+        error.userMessage || "Failed to get SLA compliance metrics",
+      );
     }
   },
   /**
    * Get available technicians for filtering
    */
-  getAvailableTechnicians: async (organizationId: number): Promise<TechnicianOption[]> => {
+  getAvailableTechnicians: async (
+    organizationId: number,
+  ): Promise<TechnicianOption[]> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/technicians`);
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/technicians`,
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get available technicians');
+      throw new Error(
+        error.userMessage || "Failed to get available technicians",
+      );
     }
   },
   /**
    * Get available customers for filtering
    */
-  getAvailableCustomers: async (organizationId: number): Promise<CustomerOption[]> => {
+  getAvailableCustomers: async (
+    organizationId: number,
+  ): Promise<CustomerOption[]> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/customers`);
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/customers`,
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get available customers');
+      throw new Error(error.userMessage || "Failed to get available customers");
     }
   },
   /**
@@ -246,15 +282,20 @@ export const serviceAnalyticsService = {
    */
   getReportConfigurations: async (
     organizationId: number,
-    activeOnly: boolean = true
+    activeOnly: boolean = true,
   ): Promise<ReportConfiguration[]> => {
     try {
-      const response = await api.get(`/service-analytics/organizations/${organizationId}/analytics/report-configurations`, {
-        params: { active_only: activeOnly }
-      });
+      const response = await api.get(
+        `/service-analytics/organizations/${organizationId}/analytics/report-configurations`,
+        {
+          params: { active_only: activeOnly },
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get report configurations');
+      throw new Error(
+        error.userMessage || "Failed to get report configurations",
+      );
     }
   },
   /**
@@ -262,13 +303,21 @@ export const serviceAnalyticsService = {
    */
   createReportConfiguration: async (
     organizationId: number,
-    config: Omit<ReportConfiguration, 'id' | 'organization_id' | 'created_at' | 'updated_at'>
+    config: Omit<
+      ReportConfiguration,
+      "id" | "organization_id" | "created_at" | "updated_at"
+    >,
   ): Promise<ReportConfiguration> => {
     try {
-      const response = await api.post(`/service-analytics/organizations/${organizationId}/analytics/report-configurations`, config);
+      const response = await api.post(
+        `/service-analytics/organizations/${organizationId}/analytics/report-configurations`,
+        config,
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to create report configuration');
+      throw new Error(
+        error.userMessage || "Failed to create report configuration",
+      );
     }
   },
   /**
@@ -281,19 +330,19 @@ export const serviceAnalyticsService = {
       metric_types: MetricType[];
       filters: AnalyticsRequest;
       include_raw_data?: boolean;
-    }
+    },
   ): Promise<Blob> => {
     try {
       const response = await api.post(
         `/service-analytics/organizations/${organizationId}/analytics/export`,
         exportRequest,
         {
-          responseType: 'blob'
-        }
+          responseType: "blob",
+        },
       );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export analytics data');
+      throw new Error(error.userMessage || "Failed to export analytics data");
     }
-  }
+  },
 };

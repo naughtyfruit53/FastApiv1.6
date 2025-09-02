@@ -1,6 +1,6 @@
 // frontend/src/pages/mail/dashboard.tsx
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -18,8 +18,8 @@ import {
   ListItemSecondaryAction,
   Divider,
   Avatar,
-  Badge
-} from '@mui/material';
+  Badge,
+} from "@mui/material";
 import {
   Email,
   Dashboard,
@@ -28,7 +28,6 @@ import {
   Drafts,
   Flag,
   Today,
-  DateRange,
   AttachFile,
   Person,
   Add,
@@ -36,9 +35,8 @@ import {
   MarkEmailRead,
   MarkEmailUnread,
   Archive,
-  Delete
-} from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
+} from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 interface MailStats {
   total_emails: number;
   unread_emails: number;
@@ -58,14 +56,14 @@ interface RecentEmail {
   is_unread: boolean;
   is_flagged: boolean;
   has_attachments: boolean;
-  priority: 'low' | 'normal' | 'high' | 'urgent';
+  priority: "low" | "normal" | "high" | "urgent";
 }
 interface EmailAccount {
   id: number;
   name: string;
   email_address: string;
   unread_count: number;
-  sync_status: 'success' | 'error' | 'syncing';
+  sync_status: "success" | "error" | "syncing";
   last_sync: string;
 }
 const MailDashboard: React.FC = () => {
@@ -81,7 +79,7 @@ const MailDashboard: React.FC = () => {
       try {
         setLoading(true);
         // TODO: Replace with actual API calls
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
         // Mock data for demonstration
         const mockStats: MailStats = {
           total_emails: 1247,
@@ -91,66 +89,70 @@ const MailDashboard: React.FC = () => {
           this_week_emails: 67,
           sent_emails: 145,
           draft_emails: 3,
-          spam_emails: 12
+          spam_emails: 12,
         };
         const mockEmails: RecentEmail[] = [
           {
             id: 1,
-            subject: 'Q4 Budget Review Meeting',
-            from_address: 'john.doe@company.com',
-            from_name: 'John Doe',
+            subject: "Q4 Budget Review Meeting",
+            from_address: "john.doe@company.com",
+            from_name: "John Doe",
             received_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
             is_unread: true,
             is_flagged: false,
             has_attachments: true,
-            priority: 'high'
+            priority: "high",
           },
           {
             id: 2,
-            subject: 'Project Status Update',
-            from_address: 'sarah.smith@company.com',
-            from_name: 'Sarah Smith',
-            received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+            subject: "Project Status Update",
+            from_address: "sarah.smith@company.com",
+            from_name: "Sarah Smith",
+            received_at: new Date(
+              Date.now() - 2 * 60 * 60 * 1000,
+            ).toISOString(), // 2 hours ago
             is_unread: true,
             is_flagged: true,
             has_attachments: false,
-            priority: 'normal'
+            priority: "normal",
           },
           {
             id: 3,
-            subject: 'Welcome to TritiQ ERP',
-            from_address: 'support@tritiq.com',
-            from_name: 'TritiQ Support',
-            received_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+            subject: "Welcome to TritiQ ERP",
+            from_address: "support@tritiq.com",
+            from_name: "TritiQ Support",
+            received_at: new Date(
+              Date.now() - 4 * 60 * 60 * 1000,
+            ).toISOString(), // 4 hours ago
             is_unread: false,
             is_flagged: false,
             has_attachments: false,
-            priority: 'normal'
-          }
+            priority: "normal",
+          },
         ];
         const mockAccounts: EmailAccount[] = [
           {
             id: 1,
-            name: 'Work Email',
-            email_address: 'user@company.com',
+            name: "Work Email",
+            email_address: "user@company.com",
             unread_count: 18,
-            sync_status: 'success',
-            last_sync: new Date(Date.now() - 10 * 60 * 1000).toISOString()
+            sync_status: "success",
+            last_sync: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
           },
           {
             id: 2,
-            name: 'Personal Gmail',
-            email_address: 'user@gmail.com',
+            name: "Personal Gmail",
+            email_address: "user@gmail.com",
             unread_count: 5,
-            sync_status: 'success',
-            last_sync: new Date(Date.now() - 15 * 60 * 1000).toISOString()
-          }
+            sync_status: "success",
+            last_sync: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+          },
         ];
         setStats(mockStats);
         setRecentEmails(mockEmails);
         setEmailAccounts(mockAccounts);
       } catch (err) {
-        setError('Failed to load mail dashboard data');
+        setError("Failed to load mail dashboard data");
       } finally {
         setLoading(false);
       }
@@ -167,32 +169,54 @@ const MailDashboard: React.FC = () => {
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    if (diffMins < 1) {return 'Just now';}
-    if (diffMins < 60) {return `${diffMins}m ago`;}
-    if (diffHours < 24) {return `${diffHours}h ago`;}
-    if (diffDays < 7) {return `${diffDays}d ago`;}
+    if (diffMins < 1) {
+      return "Just now";
+    }
+    if (diffMins < 60) {
+      return `${diffMins}m ago`;
+    }
+    if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    }
+    if (diffDays < 7) {
+      return `${diffDays}d ago`;
+    }
     return date.toLocaleDateString();
   };
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'error';
-      case 'high': return 'warning';
-      case 'normal': return 'default';
-      case 'low': return 'info';
-      default: return 'default';
+      case "urgent":
+        return "error";
+      case "high":
+        return "warning";
+      case "normal":
+        return "default";
+      case "low":
+        return "info";
+      default:
+        return "default";
     }
   };
   const getSyncStatusColor = (status: string) => {
     switch (status) {
-      case 'success': return 'success';
-      case 'error': return 'error';
-      case 'syncing': return 'warning';
-      default: return 'default';
+      case "success":
+        return "success";
+      case "error":
+        return "error";
+      case "syncing":
+        return "warning";
+      default:
+        return "default";
     }
   };
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
@@ -212,64 +236,66 @@ const MailDashboard: React.FC = () => {
     );
   }
   return (
-    <Box 
-      sx={{ 
+    <Box
+      sx={{
         p: 3,
         opacity: 0,
-        animation: 'fadeInUp 0.6s ease-out forwards',
-        '@keyframes fadeInUp': {
-          from: { opacity: 0, transform: 'translateY(30px)' },
-          to: { opacity: 1, transform: 'translateY(0)' }
-        }
+        animation: "fadeInUp 0.6s ease-out forwards",
+        "@keyframes fadeInUp": {
+          from: { opacity: 0, transform: "translateY(30px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
       }}
     >
       {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 4,
-        pb: 2,
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        position: 'relative',
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          bottom: '-1px',
-          left: 0,
-          width: '60px',
-          height: '3px',
-          background: 'linear-gradient(90deg, primary.main, primary.light)',
-          borderRadius: '2px',
-        }
-      }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+          pb: 2,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          position: "relative",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            bottom: "-1px",
+            left: 0,
+            width: "60px",
+            height: "3px",
+            background: "linear-gradient(90deg, primary.main, primary.light)",
+            borderRadius: "2px",
+          },
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            display: "flex",
+            alignItems: "center",
             gap: 1,
-            fontWeight: 'bold',
-            color: 'text.primary'
+            fontWeight: "bold",
+            color: "text.primary",
           }}
         >
           <Dashboard color="primary" />
           Mail Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="outlined"
             startIcon={<Sync />}
-            onClick={() => handleNavigate('/mail/sync')}
+            onClick={() => handleNavigate("/mail/sync")}
             sx={{
               borderRadius: 2,
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              }
+              transition: "all 0.2s ease-in-out",
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+              },
             }}
           >
             Sync Mail
@@ -277,7 +303,7 @@ const MailDashboard: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => handleNavigate('/mail/compose')}
+            onClick={() => handleNavigate("/mail/compose")}
           >
             Compose
           </Button>
@@ -288,7 +314,13 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Total Emails
@@ -305,7 +337,13 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Unread
@@ -324,14 +362,18 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Flagged
                   </Typography>
-                  <Typography variant="h5">
-                    {stats.flagged_emails}
-                  </Typography>
+                  <Typography variant="h5">{stats.flagged_emails}</Typography>
                 </Box>
                 <Flag color="error" sx={{ fontSize: 40 }} />
               </Box>
@@ -341,14 +383,18 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Today's Emails
                   </Typography>
-                  <Typography variant="h5">
-                    {stats.today_emails}
-                  </Typography>
+                  <Typography variant="h5">{stats.today_emails}</Typography>
                 </Box>
                 <Today color="info" sx={{ fontSize: 40 }} />
               </Box>
@@ -361,7 +407,11 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
                 <Inbox color="primary" />
                 Recent Emails
               </Typography>
@@ -370,38 +420,63 @@ const MailDashboard: React.FC = () => {
                   <React.Fragment key={email.id}>
                     <ListItem
                       sx={{
-                        cursor: 'pointer',
+                        cursor: "pointer",
                         borderRadius: 1,
-                        backgroundColor: email.is_unread ? 'action.hover' : 'transparent',
-                        '&:hover': {
-                          backgroundColor: 'action.selected'
-                        }
+                        backgroundColor: email.is_unread
+                          ? "action.hover"
+                          : "transparent",
+                        "&:hover": {
+                          backgroundColor: "action.selected",
+                        },
                       }}
                       onClick={() => handleNavigate(`/mail/emails/${email.id}`)}
                     >
                       <ListItemIcon>
-                        <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
-                          {email.from_name ? email.from_name.charAt(0).toUpperCase() : <Person />}
+                        <Avatar
+                          sx={{
+                            bgcolor: "primary.main",
+                            width: 32,
+                            height: 32,
+                          }}
+                        >
+                          {email.from_name ? (
+                            email.from_name.charAt(0).toUpperCase()
+                          ) : (
+                            <Person />
+                          )}
                         </Avatar>
                       </ListItemIcon>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            <Typography 
-                              variant="subtitle2" 
-                              sx={{ fontWeight: email.is_unread ? 'bold' : 'normal' }}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              sx={{
+                                fontWeight: email.is_unread ? "bold" : "normal",
+                              }}
                             >
                               {email.subject}
                             </Typography>
-                            {email.priority !== 'normal' && (
+                            {email.priority !== "normal" && (
                               <Chip
                                 label={email.priority}
                                 size="small"
                                 color={getPriorityColor(email.priority) as any}
                               />
                             )}
-                            {email.is_flagged && <Flag color="error" sx={{ fontSize: 16 }} />}
-                            {email.has_attachments && <AttachFile sx={{ fontSize: 16 }} />}
+                            {email.is_flagged && (
+                              <Flag color="error" sx={{ fontSize: 16 }} />
+                            )}
+                            {email.has_attachments && (
+                              <AttachFile sx={{ fontSize: 16 }} />
+                            )}
                           </Box>
                         }
                         secondary={
@@ -428,12 +503,14 @@ const MailDashboard: React.FC = () => {
                 ))}
               </List>
               {recentEmails.length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography color="textSecondary">No recent emails</Typography>
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Typography color="textSecondary">
+                    No recent emails
+                  </Typography>
                   <Button
                     variant="outlined"
                     startIcon={<Add />}
-                    onClick={() => handleNavigate('/mail/accounts')}
+                    onClick={() => handleNavigate("/mail/accounts")}
                     sx={{ mt: 2 }}
                   >
                     Setup Email Account
@@ -451,11 +528,18 @@ const MailDashboard: React.FC = () => {
                   <Typography variant="h6" gutterBottom>
                     Quick Actions
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 2,
+                      mt: 2,
+                    }}
+                  >
                     <Button
                       variant="outlined"
                       startIcon={<Inbox />}
-                      onClick={() => handleNavigate('/mail/inbox')}
+                      onClick={() => handleNavigate("/mail/inbox")}
                       fullWidth
                     >
                       View Inbox
@@ -463,7 +547,7 @@ const MailDashboard: React.FC = () => {
                     <Button
                       variant="outlined"
                       startIcon={<Send />}
-                      onClick={() => handleNavigate('/mail/sent')}
+                      onClick={() => handleNavigate("/mail/sent")}
                       fullWidth
                     >
                       Sent Items
@@ -471,7 +555,7 @@ const MailDashboard: React.FC = () => {
                     <Button
                       variant="outlined"
                       startIcon={<Drafts />}
-                      onClick={() => handleNavigate('/mail/drafts')}
+                      onClick={() => handleNavigate("/mail/drafts")}
                       fullWidth
                     >
                       Drafts ({stats.draft_emails})
@@ -479,7 +563,7 @@ const MailDashboard: React.FC = () => {
                     <Button
                       variant="outlined"
                       startIcon={<Archive />}
-                      onClick={() => handleNavigate('/mail/archived')}
+                      onClick={() => handleNavigate("/mail/archived")}
                       fullWidth
                     >
                       Archived
@@ -501,12 +585,20 @@ const MailDashboard: React.FC = () => {
                         sx={{
                           borderRadius: 1,
                           mb: 1,
-                          border: '1px solid',
-                          borderColor: 'divider'
+                          border: "1px solid",
+                          borderColor: "divider",
                         }}
                       >
                         <ListItemIcon>
-                          <Avatar sx={{ bgcolor: getSyncStatusColor(account.sync_status) + '.main', width: 32, height: 32 }}>
+                          <Avatar
+                            sx={{
+                              bgcolor:
+                                getSyncStatusColor(account.sync_status) +
+                                ".main",
+                              width: 32,
+                              height: 32,
+                            }}
+                          >
                             <Email />
                           </Avatar>
                         </ListItemIcon>
@@ -517,14 +609,20 @@ const MailDashboard: React.FC = () => {
                               <Typography variant="caption" display="block">
                                 {account.email_address}
                               </Typography>
-                              <Typography variant="caption" color="textSecondary">
+                              <Typography
+                                variant="caption"
+                                color="textSecondary"
+                              >
                                 Last sync: {formatTimeAgo(account.last_sync)}
                               </Typography>
                             </Box>
                           }
                         />
                         <ListItemSecondaryAction>
-                          <Badge badgeContent={account.unread_count} color="warning">
+                          <Badge
+                            badgeContent={account.unread_count}
+                            color="warning"
+                          >
                             <Inbox />
                           </Badge>
                         </ListItemSecondaryAction>
@@ -534,7 +632,7 @@ const MailDashboard: React.FC = () => {
                   <Button
                     variant="outlined"
                     startIcon={<Add />}
-                    onClick={() => handleNavigate('/mail/accounts/create')}
+                    onClick={() => handleNavigate("/mail/accounts/create")}
                     fullWidth
                     sx={{ mt: 1 }}
                   >
@@ -550,22 +648,56 @@ const MailDashboard: React.FC = () => {
                     Mail Stats
                   </Typography>
                   <Box sx={{ mt: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1,
+                      }}
+                    >
                       <Typography variant="body2">Sent Emails</Typography>
-                      <Typography variant="body2">{stats.sent_emails}</Typography>
+                      <Typography variant="body2">
+                        {stats.sent_emails}
+                      </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1,
+                      }}
+                    >
                       <Typography variant="body2">This Week</Typography>
-                      <Typography variant="body2">{stats.this_week_emails}</Typography>
+                      <Typography variant="body2">
+                        {stats.this_week_emails}
+                      </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1,
+                      }}
+                    >
                       <Typography variant="body2">Drafts</Typography>
-                      <Typography variant="body2">{stats.draft_emails}</Typography>
+                      <Typography variant="body2">
+                        {stats.draft_emails}
+                      </Typography>
                     </Box>
                     {stats.spam_emails > 0 && (
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" color="error">Spam</Typography>
-                        <Typography variant="body2" color="error">{stats.spam_emails}</Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 1,
+                        }}
+                      >
+                        <Typography variant="body2" color="error">
+                          Spam
+                        </Typography>
+                        <Typography variant="body2" color="error">
+                          {stats.spam_emails}
+                        </Typography>
                       </Box>
                     )}
                   </Box>

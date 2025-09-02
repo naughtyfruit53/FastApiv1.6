@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -23,29 +23,29 @@ import {
   Tab,
   FormControlLabel,
   Checkbox,
-  Rating
-} from '@mui/material';
+  Rating,
+} from "@mui/material";
 import {
   Close as CloseIcon,
   Add as AddIcon,
   PlayArrow as StartIcon,
-  Check as CompleteIcon
-} from '@mui/icons-material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { useAuth } from '../../context/AuthContext';
-import { 
+  Check as CompleteIcon,
+} from "@mui/icons-material";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { useAuth } from "../../context/AuthContext";
+import {
   dispatchService,
   InstallationJobWithDetails,
   INSTALLATION_TASK_STATUSES,
   INSTALLATION_TASK_PRIORITIES,
-  COMPLETION_STATUSES
-} from '../../services/dispatchService';
+  COMPLETION_STATUSES,
+} from "../../services/dispatchService";
 import {
   INSTALLATION_JOB_STATUSES,
-  InstallationJobPriority
-} from '../../types/dispatch.types';
+  InstallationJobPriority,
+} from "../../types/dispatch.types";
 interface InstallationJobDialogProps {
   open: boolean;
   onClose: () => void;
@@ -67,11 +67,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`job-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 2 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 2 }}>{children}</Box>}
     </div>
   );
 }
@@ -79,7 +75,7 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
   open,
   onClose,
   jobId,
-  onJobUpdated
+  onJobUpdated,
 }) => {
   const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
@@ -93,67 +89,75 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
     priority: InstallationJobPriority;
     estimated_duration_minutes: number;
     sequence_order: number;
-    status: typeof INSTALLATION_TASK_STATUSES[keyof typeof INSTALLATION_TASK_STATUSES];
+    status: (typeof INSTALLATION_TASK_STATUSES)[keyof typeof INSTALLATION_TASK_STATUSES];
   }>({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     priority: INSTALLATION_TASK_PRIORITIES.MEDIUM,
     estimated_duration_minutes: 60,
     sequence_order: 1,
-    status: INSTALLATION_TASK_STATUSES.PENDING
+    status: INSTALLATION_TASK_STATUSES.PENDING,
   });
   // Completion form state
   const [completionForm, setCompletionForm] = useState({
-    work_performed: '',
-    issues_encountered: '',
-    resolution_notes: '',
-    materials_used: '',
-    parts_replaced: '',
+    work_performed: "",
+    issues_encountered: "",
+    resolution_notes: "",
+    materials_used: "",
+    parts_replaced: "",
     quality_check_passed: false,
-    verification_notes: '',
+    verification_notes: "",
     photos_attached: false,
     customer_present: true,
     customer_signature_received: false,
-    customer_feedback_notes: '',
+    customer_feedback_notes: "",
     customer_rating: 5,
     follow_up_required: false,
-    follow_up_notes: '',
+    follow_up_notes: "",
     actual_start_time: new Date(),
-    actual_end_time: new Date()
+    actual_end_time: new Date(),
   });
 
   const loadJobDetails = async (): Promise<void> => {
-    if (!jobId) {return;}
+    if (!jobId) {
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-      const jobDetails = await dispatchService.getInstallationJobWithDetails(jobId);
+      const jobDetails =
+        await dispatchService.getInstallationJobWithDetails(jobId);
       setJob(jobDetails);
       // Initialize completion form if completion record exists
       if (jobDetails.completion_record) {
         const record = jobDetails.completion_record;
         setCompletionForm({
-          work_performed: record.work_performed || '',
-          issues_encountered: record.issues_encountered || '',
-          resolution_notes: record.resolution_notes || '',
-          materials_used: record.materials_used || '',
-          parts_replaced: record.parts_replaced || '',
+          work_performed: record.work_performed || "",
+          issues_encountered: record.issues_encountered || "",
+          resolution_notes: record.resolution_notes || "",
+          materials_used: record.materials_used || "",
+          parts_replaced: record.parts_replaced || "",
           quality_check_passed: record.quality_check_passed || false,
-          verification_notes: record.verification_notes || '',
+          verification_notes: record.verification_notes || "",
           photos_attached: record.photos_attached || false,
           customer_present: record.customer_present || true,
-          customer_signature_received: record.customer_signature_received || false,
-          customer_feedback_notes: record.customer_feedback_notes || '',
+          customer_signature_received:
+            record.customer_signature_received || false,
+          customer_feedback_notes: record.customer_feedback_notes || "",
           customer_rating: record.customer_rating || 5,
           follow_up_required: record.follow_up_required || false,
-          follow_up_notes: record.follow_up_notes || '',
-          actual_start_time: record.actual_start_time ? new Date(record.actual_start_time) : new Date(),
-          actual_end_time: record.actual_end_time ? new Date(record.actual_end_time) : new Date()
+          follow_up_notes: record.follow_up_notes || "",
+          actual_start_time: record.actual_start_time
+            ? new Date(record.actual_start_time)
+            : new Date(),
+          actual_end_time: record.actual_end_time
+            ? new Date(record.actual_end_time)
+            : new Date(),
         });
       }
     } catch (err) {
-      setError('Failed to load job details');
-      console.error('Error loading job details:', err);
+      setError("Failed to load job details");
+      console.error("Error loading job details:", err);
     } finally {
       setLoading(false);
     }
@@ -166,7 +170,9 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
     }
   }, [open, jobId]);
   const handleCreateTask = async () => {
-    if (!job || !newTask.title.trim()) {return;}
+    if (!job || !newTask.title.trim()) {
+      return;
+    }
     try {
       await dispatchService.createInstallationTask({
         installation_job_id: job.id,
@@ -175,22 +181,22 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
         priority: newTask.priority,
         estimated_duration_minutes: newTask.estimated_duration_minutes,
         sequence_order: newTask.sequence_order,
-        status: INSTALLATION_TASK_STATUSES.PENDING
+        status: INSTALLATION_TASK_STATUSES.PENDING,
       });
       // Refresh job details
       await loadJobDetails();
       // Reset form
       setNewTask({
-        title: '',
-        description: '',
+        title: "",
+        description: "",
         priority: INSTALLATION_TASK_PRIORITIES.MEDIUM,
         estimated_duration_minutes: 60,
         sequence_order: (job.tasks?.length || 0) + 1,
-        status: INSTALLATION_TASK_STATUSES.PENDING
+        status: INSTALLATION_TASK_STATUSES.PENDING,
       });
     } catch (err) {
-      setError('Failed to create task');
-      console.error('Error creating task:', err);
+      setError("Failed to create task");
+      console.error("Error creating task:", err);
     }
   };
   const handleUpdateTaskStatus = async (taskId: number, status: string) => {
@@ -198,12 +204,14 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
       await dispatchService.updateInstallationTask(taskId, { status });
       await loadJobDetails();
     } catch (err) {
-      setError('Failed to update task status');
-      console.error('Error updating task status:', err);
+      setError("Failed to update task status");
+      console.error("Error updating task status:", err);
     }
   };
   const handleCompleteJob = async (): Promise<void> => {
-    if (!job) {return;}
+    if (!job) {
+      return;
+    }
     try {
       setLoading(true);
       await dispatchService.completeInstallationJob(job.id, {
@@ -212,22 +220,27 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
         completion_status: COMPLETION_STATUSES.COMPLETED,
         ...completionForm,
         actual_start_time: completionForm.actual_start_time.toISOString(),
-        actual_end_time: completionForm.actual_end_time.toISOString()
+        actual_end_time: completionForm.actual_end_time.toISOString(),
       });
       await loadJobDetails();
-      if (onJobUpdated) {onJobUpdated();}
+      if (onJobUpdated) {
+        onJobUpdated();
+      }
       setCurrentTab(0); // Switch back to overview tab
     } catch (err) {
-      setError('Failed to complete job');
-      console.error('Error completing job:', err);
+      setError("Failed to complete job");
+      console.error("Error completing job:", err);
     } finally {
       setLoading(false);
     }
   };
-  const canAssignTasks = user?.role === 'admin' || user?.role === 'manager';
-  const canCompleteJob = job?.assigned_technician_id === user?.id || user?.role === 'admin';
+  const canAssignTasks = user?.role === "admin" || user?.role === "manager";
+  const canCompleteJob =
+    job?.assigned_technician_id === user?.id || user?.role === "admin";
   const isJobCompleted = job?.status === INSTALLATION_JOB_STATUSES.COMPLETED;
-  if (!job && !loading) {return null;}
+  if (!job && !loading) {
+    return null;
+  }
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Dialog
@@ -236,11 +249,15 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
         maxWidth="lg"
         fullWidth
         PaperProps={{
-          sx: { minHeight: '80vh' }
+          sx: { minHeight: "80vh" },
         }}
       >
         <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Typography variant="h6">
               Installation Job Details - {job?.job_number}
             </Typography>
@@ -261,59 +278,105 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
             </Box>
           ) : job ? (
             <>
-              <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)}>
+              <Tabs
+                value={currentTab}
+                onChange={(_, newValue) => setCurrentTab(newValue)}
+              >
                 <Tab label="Overview" />
                 <Tab label="Tasks" />
-                {!isJobCompleted && canCompleteJob && <Tab label="Complete Job" />}
+                {!isJobCompleted && canCompleteJob && (
+                  <Tab label="Complete Job" />
+                )}
                 {isJobCompleted && <Tab label="Completion Details" />}
               </Tabs>
               <TabPanel value={currentTab} index={0}>
                 {/* Overview Tab */}
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="h6" gutterBottom>Job Information</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      Job Information
+                    </Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
                       <Box>
-                        <Typography variant="body2" color="textSecondary">Status</Typography>
-                        <Chip 
+                        <Typography variant="body2" color="textSecondary">
+                          Status
+                        </Typography>
+                        <Chip
                           label={job.status}
-                          color={job.status === 'completed' ? 'success' : job.status === 'in_progress' ? 'warning' : 'default'}
+                          color={
+                            job.status === "completed"
+                              ? "success"
+                              : job.status === "in_progress"
+                                ? "warning"
+                                : "default"
+                          }
                         />
                       </Box>
                       <Box>
-                        <Typography variant="body2" color="textSecondary">Priority</Typography>
-                        <Chip 
+                        <Typography variant="body2" color="textSecondary">
+                          Priority
+                        </Typography>
+                        <Chip
                           label={job.priority}
-                          color={job.priority === 'urgent' ? 'error' : job.priority === 'high' ? 'warning' : 'default'}
+                          color={
+                            job.priority === "urgent"
+                              ? "error"
+                              : job.priority === "high"
+                                ? "warning"
+                                : "default"
+                          }
                         />
                       </Box>
                       <Box>
-                        <Typography variant="body2" color="textSecondary">Scheduled Date</Typography>
-                        <Typography>{job.scheduled_date ? new Date(job.scheduled_date).toLocaleDateString() : 'Not scheduled'}</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          Scheduled Date
+                        </Typography>
+                        <Typography>
+                          {job.scheduled_date
+                            ? new Date(job.scheduled_date).toLocaleDateString()
+                            : "Not scheduled"}
+                        </Typography>
                       </Box>
                       <Box>
-                        <Typography variant="body2" color="textSecondary">Installation Address</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          Installation Address
+                        </Typography>
                         <Typography>{job.installation_address}</Typography>
                       </Box>
                     </Box>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="h6" gutterBottom>Progress Summary</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      Progress Summary
+                    </Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
                       <Box>
-                        <Typography variant="body2" color="textSecondary">Total Tasks</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          Total Tasks
+                        </Typography>
                         <Typography>{job.tasks?.length || 0}</Typography>
                       </Box>
                       <Box>
-                        <Typography variant="body2" color="textSecondary">Completed Tasks</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          Completed Tasks
+                        </Typography>
                         <Typography>
-                          {job.tasks?.filter(task => task.status === 'completed').length || 0}
+                          {job.tasks?.filter(
+                            (task) => task.status === "completed",
+                          ).length || 0}
                         </Typography>
                       </Box>
                       <Box>
-                        <Typography variant="body2" color="textSecondary">Estimated Duration</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          Estimated Duration
+                        </Typography>
                         <Typography>
-                          {job.tasks?.reduce((total, task) => total + (task.estimated_duration_minutes || 0), 0) || 0} minutes
+                          {job.tasks?.reduce(
+                            (total, task) =>
+                              total + (task.estimated_duration_minutes || 0),
+                            0,
+                          ) || 0}{" "}
+                          minutes
                         </Typography>
                       </Box>
                     </Box>
@@ -323,13 +386,20 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
               <TabPanel value={currentTab} index={1}>
                 {/* Tasks Tab */}
                 <Box>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={2}
+                  >
                     <Typography variant="h6">Installation Tasks</Typography>
                     {canAssignTasks && !isJobCompleted && (
                       <Button
                         startIcon={<AddIcon />}
                         variant="contained"
-                        onClick={() => {/* Open task creation form */}}
+                        onClick={() => {
+                          /* Open task creation form */
+                        }}
                         size="small"
                       >
                         Add Task
@@ -340,14 +410,21 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                   {canAssignTasks && !isJobCompleted && (
                     <Card sx={{ mb: 3 }}>
                       <CardContent>
-                        <Typography variant="subtitle2" gutterBottom>Create New Task</Typography>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Create New Task
+                        </Typography>
                         <Grid container spacing={2}>
                           <Grid item xs={12} md={6}>
                             <TextField
                               fullWidth
                               label="Task Title"
                               value={newTask.title}
-                              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                              onChange={(e) =>
+                                setNewTask({
+                                  ...newTask,
+                                  title: e.target.value,
+                                })
+                              }
                               size="small"
                             />
                           </Grid>
@@ -356,10 +433,19 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               <InputLabel>Priority</InputLabel>
                               <Select
                                 value={newTask.priority}
-                                onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                                onChange={(e) =>
+                                  setNewTask({
+                                    ...newTask,
+                                    priority: e.target.value,
+                                  })
+                                }
                               >
-                                {Object.values(INSTALLATION_TASK_PRIORITIES).map(priority => (
-                                  <MenuItem key={priority} value={priority}>{priority}</MenuItem>
+                                {Object.values(
+                                  INSTALLATION_TASK_PRIORITIES,
+                                ).map((priority) => (
+                                  <MenuItem key={priority} value={priority}>
+                                    {priority}
+                                  </MenuItem>
                                 ))}
                               </Select>
                             </FormControl>
@@ -370,7 +456,14 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               type="number"
                               label="Est. Duration (min)"
                               value={newTask.estimated_duration_minutes}
-                              onChange={(e) => setNewTask({ ...newTask, estimated_duration_minutes: parseInt(e.target.value) })}
+                              onChange={(e) =>
+                                setNewTask({
+                                  ...newTask,
+                                  estimated_duration_minutes: parseInt(
+                                    e.target.value,
+                                  ),
+                                })
+                              }
                               size="small"
                             />
                           </Grid>
@@ -381,13 +474,18 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                               rows={2}
                               label="Description"
                               value={newTask.description}
-                              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                              onChange={(e) =>
+                                setNewTask({
+                                  ...newTask,
+                                  description: e.target.value,
+                                })
+                              }
                               size="small"
                             />
                           </Grid>
                           <Grid item xs={12}>
-                            <Button 
-                              variant="contained" 
+                            <Button
+                              variant="contained"
                               onClick={handleCreateTask}
                               disabled={!newTask.title.trim()}
                               size="small"
@@ -404,38 +502,67 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                     {job.tasks?.map((task) => (
                       <Card key={task.id}>
                         <CardContent>
-                          <Box display="flex" justifyContent="space-between" alignItems="start">
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="start"
+                          >
                             <Box flex={1}>
-                              <Typography variant="subtitle1">{task.title}</Typography>
-                              <Typography variant="body2" color="textSecondary" gutterBottom>
+                              <Typography variant="subtitle1">
+                                {task.title}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                gutterBottom
+                              >
                                 {task.description}
                               </Typography>
                               <Box display="flex" gap={1} mt={1}>
-                                <Chip 
-                                  label={task.status} 
+                                <Chip
+                                  label={task.status}
                                   size="small"
-                                  color={task.status === 'completed' ? 'success' : task.status === 'in_progress' ? 'warning' : 'default'}
+                                  color={
+                                    task.status === "completed"
+                                      ? "success"
+                                      : task.status === "in_progress"
+                                        ? "warning"
+                                        : "default"
+                                  }
                                 />
                                 <Chip label={task.priority} size="small" />
-                                <Chip label={`${task.estimated_duration_minutes || 0} min`} size="small" />
+                                <Chip
+                                  label={`${task.estimated_duration_minutes || 0} min`}
+                                  size="small"
+                                />
                               </Box>
                             </Box>
                             <Box display="flex" gap={1}>
-                              {task.status === 'pending' && (
+                              {task.status === "pending" && (
                                 <Tooltip title="Start Task">
                                   <IconButton
                                     size="small"
-                                    onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                                    onClick={() =>
+                                      handleUpdateTaskStatus(
+                                        task.id,
+                                        "in_progress",
+                                      )
+                                    }
                                   >
                                     <StartIcon />
                                   </IconButton>
                                 </Tooltip>
                               )}
-                              {task.status === 'in_progress' && (
+                              {task.status === "in_progress" && (
                                 <Tooltip title="Complete Task">
                                   <IconButton
                                     size="small"
-                                    onClick={() => handleUpdateTaskStatus(task.id, 'completed')}
+                                    onClick={() =>
+                                      handleUpdateTaskStatus(
+                                        task.id,
+                                        "completed",
+                                      )
+                                    }
                                   >
                                     <CompleteIcon />
                                   </IconButton>
@@ -447,7 +574,12 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       </Card>
                     ))}
                     {(!job.tasks || job.tasks.length === 0) && (
-                      <Typography variant="body2" color="textSecondary" textAlign="center" py={4}>
+                      <Typography
+                        variant="body2"
+                        color="textSecondary"
+                        textAlign="center"
+                        py={4}
+                      >
                         No tasks created yet
                       </Typography>
                     )}
@@ -457,7 +589,9 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
               {!isJobCompleted && canCompleteJob && (
                 <TabPanel value={currentTab} index={2}>
                   {/* Complete Job Tab */}
-                  <Typography variant="h6" gutterBottom>Complete Installation Job</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    Complete Installation Job
+                  </Typography>
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
                       <TextField
@@ -466,7 +600,12 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                         rows={4}
                         label="Work Performed *"
                         value={completionForm.work_performed}
-                        onChange={(e) => setCompletionForm({ ...completionForm, work_performed: e.target.value })}
+                        onChange={(e) =>
+                          setCompletionForm({
+                            ...completionForm,
+                            work_performed: e.target.value,
+                          })
+                        }
                         required
                       />
                     </Grid>
@@ -477,7 +616,12 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                         rows={3}
                         label="Issues Encountered"
                         value={completionForm.issues_encountered}
-                        onChange={(e) => setCompletionForm({ ...completionForm, issues_encountered: e.target.value })}
+                        onChange={(e) =>
+                          setCompletionForm({
+                            ...completionForm,
+                            issues_encountered: e.target.value,
+                          })
+                        }
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
@@ -487,14 +631,24 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                         rows={3}
                         label="Resolution Notes"
                         value={completionForm.resolution_notes}
-                        onChange={(e) => setCompletionForm({ ...completionForm, resolution_notes: e.target.value })}
+                        onChange={(e) =>
+                          setCompletionForm({
+                            ...completionForm,
+                            resolution_notes: e.target.value,
+                          })
+                        }
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
                       <DateTimePicker
                         label="Actual Start Time"
                         value={completionForm.actual_start_time}
-                        onChange={(date) => setCompletionForm({ ...completionForm, actual_start_time: date || new Date() })}
+                        onChange={(date) =>
+                          setCompletionForm({
+                            ...completionForm,
+                            actual_start_time: date || new Date(),
+                          })
+                        }
                         slotProps={{ textField: { fullWidth: true } }}
                       />
                     </Grid>
@@ -502,7 +656,12 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       <DateTimePicker
                         label="Actual End Time"
                         value={completionForm.actual_end_time}
-                        onChange={(date) => setCompletionForm({ ...completionForm, actual_end_time: date || new Date() })}
+                        onChange={(date) =>
+                          setCompletionForm({
+                            ...completionForm,
+                            actual_end_time: date || new Date(),
+                          })
+                        }
                         slotProps={{ textField: { fullWidth: true } }}
                       />
                     </Grid>
@@ -512,7 +671,12 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                           control={
                             <Checkbox
                               checked={completionForm.quality_check_passed}
-                              onChange={(e) => setCompletionForm({ ...completionForm, quality_check_passed: e.target.checked })}
+                              onChange={(e) =>
+                                setCompletionForm({
+                                  ...completionForm,
+                                  quality_check_passed: e.target.checked,
+                                })
+                              }
                             />
                           }
                           label="Quality Check Passed"
@@ -521,7 +685,12 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                           control={
                             <Checkbox
                               checked={completionForm.customer_present}
-                              onChange={(e) => setCompletionForm({ ...completionForm, customer_present: e.target.checked })}
+                              onChange={(e) =>
+                                setCompletionForm({
+                                  ...completionForm,
+                                  customer_present: e.target.checked,
+                                })
+                              }
                             />
                           }
                           label="Customer Present"
@@ -529,8 +698,15 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                         <FormControlLabel
                           control={
                             <Checkbox
-                              checked={completionForm.customer_signature_received}
-                              onChange={(e) => setCompletionForm({ ...completionForm, customer_signature_received: e.target.checked })}
+                              checked={
+                                completionForm.customer_signature_received
+                              }
+                              onChange={(e) =>
+                                setCompletionForm({
+                                  ...completionForm,
+                                  customer_signature_received: e.target.checked,
+                                })
+                              }
                             />
                           }
                           label="Customer Signature Received"
@@ -544,15 +720,27 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                         rows={3}
                         label="Customer Feedback"
                         value={completionForm.customer_feedback_notes}
-                        onChange={(e) => setCompletionForm({ ...completionForm, customer_feedback_notes: e.target.value })}
+                        onChange={(e) =>
+                          setCompletionForm({
+                            ...completionForm,
+                            customer_feedback_notes: e.target.value,
+                          })
+                        }
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
                       <Box>
-                        <Typography variant="body2" gutterBottom>Customer Rating</Typography>
+                        <Typography variant="body2" gutterBottom>
+                          Customer Rating
+                        </Typography>
                         <Rating
                           value={completionForm.customer_rating}
-                          onChange={(_, value) => setCompletionForm({ ...completionForm, customer_rating: value || 5 })}
+                          onChange={(_, value) =>
+                            setCompletionForm({
+                              ...completionForm,
+                              customer_rating: value || 5,
+                            })
+                          }
                         />
                       </Box>
                     </Grid>
@@ -562,16 +750,22 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
               {isJobCompleted && job.completion_record && (
                 <TabPanel value={currentTab} index={2}>
                   {/* Completion Details Tab */}
-                  <Typography variant="h6" gutterBottom>Completion Details</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    Completion Details
+                  </Typography>
                   <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle2" gutterBottom>Work Performed</Typography>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Work Performed
+                      </Typography>
                       <Typography variant="body2" paragraph>
                         {job.completion_record.work_performed}
                       </Typography>
                       {job.completion_record.issues_encountered && (
                         <>
-                          <Typography variant="subtitle2" gutterBottom>Issues Encountered</Typography>
+                          <Typography variant="subtitle2" gutterBottom>
+                            Issues Encountered
+                          </Typography>
                           <Typography variant="body2" paragraph>
                             {job.completion_record.issues_encountered}
                           </Typography>
@@ -579,22 +773,45 @@ const InstallationJobDialog: React.FC<InstallationJobDialogProps> = ({
                       )}
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle2" gutterBottom>Quality & Customer</Typography>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Quality & Customer
+                      </Typography>
                       <Box display="flex" flexDirection="column" gap={1}>
-                        <Chip 
-                          label={job.completion_record.quality_check_passed ? "Quality Check Passed" : "Quality Check Failed"}
-                          color={job.completion_record.quality_check_passed ? "success" : "error"}
+                        <Chip
+                          label={
+                            job.completion_record.quality_check_passed
+                              ? "Quality Check Passed"
+                              : "Quality Check Failed"
+                          }
+                          color={
+                            job.completion_record.quality_check_passed
+                              ? "success"
+                              : "error"
+                          }
                           size="small"
                         />
-                        <Chip 
-                          label={job.completion_record.customer_present ? "Customer Present" : "Customer Not Present"}
-                          color={job.completion_record.customer_present ? "success" : "default"}
+                        <Chip
+                          label={
+                            job.completion_record.customer_present
+                              ? "Customer Present"
+                              : "Customer Not Present"
+                          }
+                          color={
+                            job.completion_record.customer_present
+                              ? "success"
+                              : "default"
+                          }
                           size="small"
                         />
                         {job.completion_record.customer_rating && (
                           <Box>
-                            <Typography variant="body2">Customer Rating:</Typography>
-                            <Rating value={job.completion_record.customer_rating} readOnly />
+                            <Typography variant="body2">
+                              Customer Rating:
+                            </Typography>
+                            <Rating
+                              value={job.completion_record.customer_rating}
+                              readOnly
+                            />
                           </Box>
                         )}
                       </Box>

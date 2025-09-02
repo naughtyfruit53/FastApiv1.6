@@ -1,6 +1,6 @@
 // src/components/DispatchManagement/InstallationSchedulePromptModal.tsx
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,65 +19,74 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Divider
-} from '@mui/material';
+  Divider,
+} from "@mui/material";
 import {
   Build as InstallationIcon,
-  Schedule as ScheduleIcon
-} from '@mui/icons-material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { InstallationJobCreate } from '../../services/dispatchService';
-import { INSTALLATION_JOB_PRIORITIES, InstallationJobPriority } from '../../types/dispatch.types';
+  Schedule as ScheduleIcon,
+} from "@mui/icons-material";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { InstallationJobCreate } from "../../services/dispatchService";
+import {
+  INSTALLATION_JOB_PRIORITIES,
+  InstallationJobPriority,
+} from "../../types/dispatch.types";
 interface InstallationSchedulePromptModalProps {
   open: boolean;
   onClose: () => void;
-  onCreateInstallation: (_installationData: InstallationJobCreate) => Promise<void>;
+  onCreateInstallation: (
+    _installationData: InstallationJobCreate,
+  ) => Promise<void>;
   dispatchOrderId?: number;
   customerId?: number;
   customerName?: string;
   deliveryAddress?: string;
 }
-const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalProps> = ({
+const InstallationSchedulePromptModal: React.FC<
+  InstallationSchedulePromptModalProps
+> = ({
   open,
   onClose,
   onCreateInstallation,
   dispatchOrderId,
   customerId,
   customerName,
-  deliveryAddress
+  deliveryAddress,
 }) => {
-  const [createSchedule, setCreateSchedule] = useState<string>('yes');
+  const [createSchedule, setCreateSchedule] = useState<string>("yes");
   const [scheduledDate, setScheduledDate] = useState<Date | null>(null);
-  const [priority, setPriority] = useState<InstallationJobPriority>('medium');
+  const [priority, setPriority] = useState<InstallationJobPriority>("medium");
   const [estimatedDuration, setEstimatedDuration] = useState<number>(2);
-  const [installationAddress, setInstallationAddress] = useState<string>(deliveryAddress || '');
-  const [contactPerson, setContactPerson] = useState<string>('');
-  const [contactNumber, setContactNumber] = useState<string>('');
-  const [installationNotes, setInstallationNotes] = useState<string>('');
-  const [assignedTechnician, setAssignedTechnician] = useState<string>('');
+  const [installationAddress, setInstallationAddress] = useState<string>(
+    deliveryAddress || "",
+  );
+  const [contactPerson, setContactPerson] = useState<string>("");
+  const [contactNumber, setContactNumber] = useState<string>("");
+  const [installationNotes, setInstallationNotes] = useState<string>("");
+  const [assignedTechnician, setAssignedTechnician] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const handleSubmit = async () => {
-    if (createSchedule === 'no') {
+    if (createSchedule === "no") {
       onClose();
       return;
     }
     if (!dispatchOrderId || !customerId) {
-      setError('Missing required dispatch order or customer information');
+      setError("Missing required dispatch order or customer information");
       return;
     }
     if (!installationAddress.trim()) {
-      setError('Installation address is required');
+      setError("Installation address is required");
       return;
     }
     if (!scheduledDate) {
-      setError('Scheduled date and time are required');
+      setError("Scheduled date and time are required");
       return;
     }
     if (estimatedDuration <= 0) {
-      setError('Estimated duration must be greater than 0');
+      setError("Estimated duration must be greater than 0");
       return;
     }
     try {
@@ -86,7 +95,7 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
       const installationJobData: InstallationJobCreate = {
         dispatch_order_id: dispatchOrderId,
         customer_id: customerId,
-        status: 'scheduled',
+        status: "scheduled",
         priority,
         scheduled_date: scheduledDate.toISOString(),
         estimated_duration_hours: estimatedDuration,
@@ -94,13 +103,17 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
         contact_person: contactPerson.trim() || null,
         contact_number: contactNumber.trim() || null,
         installation_notes: installationNotes.trim() || null,
-        assigned_technician_id: assignedTechnician ? parseInt(assignedTechnician) : null
+        assigned_technician_id: assignedTechnician
+          ? parseInt(assignedTechnician)
+          : null,
       };
       await onCreateInstallation(installationJobData);
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create installation schedule');
-      console.error('Error creating installation schedule:', err);
+      setError(
+        err.response?.data?.detail || "Failed to create installation schedule",
+      );
+      console.error("Error creating installation schedule:", err);
     } finally {
       setLoading(false);
     }
@@ -112,22 +125,22 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <InstallationIcon color="primary" />
-            <Typography variant="h6">
-              Create Installation Schedule
-            </Typography>
+            <Typography variant="h6">Create Installation Schedule</Typography>
           </Box>
         </DialogTitle>
         <DialogContent dividers>
           <Box sx={{ mb: 3 }}>
             <Alert severity="info" sx={{ mb: 2 }}>
-              A delivery challan or service voucher has been created for {customerName || 'Unknown Customer'}. 
-              Would you like to schedule an installation for the delivered items?
+              A delivery challan or service voucher has been created for{" "}
+              {customerName || "Unknown Customer"}. Would you like to schedule
+              an installation for the delivered items?
             </Alert>
             <FormControl component="fieldset" sx={{ mb: 3 }}>
               <Typography variant="subtitle1" gutterBottom>
-                Do you want to create an installation schedule for this customer?
+                Do you want to create an installation schedule for this
+                customer?
               </Typography>
               <RadioGroup
                 value={createSchedule}
@@ -146,10 +159,14 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                 />
               </RadioGroup>
             </FormControl>
-            {createSchedule === 'yes' && (
+            {createSchedule === "yes" && (
               <>
                 <Divider sx={{ mb: 3 }} />
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
                   <ScheduleIcon />
                   Installation Details
                 </Typography>
@@ -165,14 +182,18 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       <InputLabel>Priority</InputLabel>
                       <Select
                         value={priority}
-                        onChange={(e) => setPriority(e.target.value as InstallationJobPriority)}
+                        onChange={(e) =>
+                          setPriority(e.target.value as InstallationJobPriority)
+                        }
                         label="Priority"
                       >
-                        {Object.values(INSTALLATION_JOB_PRIORITIES).map(value => (
-                          <MenuItem key={value} value={value}>
-                            {value.charAt(0).toUpperCase() + value.slice(1)}
-                          </MenuItem>
-                        ))}
+                        {Object.values(INSTALLATION_JOB_PRIORITIES).map(
+                          (value) => (
+                            <MenuItem key={value} value={value}>
+                              {value.charAt(0).toUpperCase() + value.slice(1)}
+                            </MenuItem>
+                          ),
+                        )}
                       </Select>
                     </FormControl>
                   </Grid>
@@ -185,8 +206,9 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       slotProps={{
                         textField: {
                           fullWidth: true,
-                          helperText: 'Select the preferred installation date and time'
-                        }
+                          helperText:
+                            "Select the preferred installation date and time",
+                        },
                       }}
                     />
                   </Grid>
@@ -197,7 +219,11 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
                       type="number"
                       label="Estimated Duration (hours)"
                       value={estimatedDuration}
-                      onChange={(e) => setEstimatedDuration(Math.max(0.5, parseFloat(e.target.value) || 0))}
+                      onChange={(e) =>
+                        setEstimatedDuration(
+                          Math.max(0.5, parseFloat(e.target.value) || 0),
+                        )
+                      }
                       inputProps={{ min: 0.5, step: 0.5 }}
                       helperText="Expected time to complete installation"
                     />
@@ -264,19 +290,26 @@ const InstallationSchedulePromptModal: React.FC<InstallationSchedulePromptModalP
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            {createSchedule === 'yes' ? 'Cancel' : 'Skip'}
+          <Button onClick={handleCancel} disabled={loading}>
+            {createSchedule === "yes" ? "Cancel" : "Skip"}
           </Button>
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={loading || (createSchedule === 'yes' && (!installationAddress.trim() || !scheduledDate))}
-            startIcon={createSchedule === 'yes' ? <InstallationIcon /> : undefined}
+            disabled={
+              loading ||
+              (createSchedule === "yes" &&
+                (!installationAddress.trim() || !scheduledDate))
+            }
+            startIcon={
+              createSchedule === "yes" ? <InstallationIcon /> : undefined
+            }
           >
-            {loading ? 'Creating...' : createSchedule === 'yes' ? 'Create Installation Schedule' : 'Continue'}
+            {loading
+              ? "Creating..."
+              : createSchedule === "yes"
+                ? "Create Installation Schedule"
+                : "Continue"}
           </Button>
         </DialogActions>
       </Dialog>

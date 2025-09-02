@@ -1,15 +1,33 @@
 // Journal Voucher Page - Refactored using VoucherLayout
-import React from 'react';
-import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from '@mui/material';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-import VoucherListModal from '../../../components/VoucherListModal';
-import VoucherLayout from '../../../components/VoucherLayout';
-import EntitySelector from '../../../components/EntitySelector';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
+import React from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from "@mui/material";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import VoucherListModal from "../../../components/VoucherListModal";
+import VoucherLayout from "../../../components/VoucherLayout";
+import EntitySelector from "../../../components/EntitySelector";
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import {
+  getVoucherConfig,
+  getVoucherStyles,
+  parseRateField,
+} from "../../../utils/voucherUtils";
 const JournalVoucher: React.FC = () => {
-  const config = getVoucherConfig('journal-voucher');
+  const config = getVoucherConfig("journal-voucher");
   const voucherStyles = getVoucherStyles();
   const {
     // State
@@ -62,7 +80,7 @@ const JournalVoucher: React.FC = () => {
     // Load the selected voucher into the form
     reset(voucher);
     // Set the form with the voucher data
-    Object.keys(voucher).forEach(key => {
+    Object.keys(voucher).forEach((key) => {
       setValue(key, voucher[key]);
     });
   };
@@ -72,37 +90,69 @@ const JournalVoucher: React.FC = () => {
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Debit</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Credit</TableCell>
-            <TableCell align="right" sx={{ fontSize: 12, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Voucher No.
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Date
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Debit
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Credit
+            </TableCell>
+            <TableCell
+              align="right"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 0, width: 40 }}
+            ></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {(sortedVouchers?.length === 0) ? (
+          {sortedVouchers?.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">No journal vouchers available</TableCell>
+              <TableCell colSpan={5} align="center">
+                No journal vouchers available
+              </TableCell>
             </TableRow>
           ) : (
             sortedVouchers?.slice(0, 7).map((voucher: any) => (
-              <TableRow 
-                key={voucher.id} 
+              <TableRow
+                key={voucher.id}
                 hover
-                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
-                sx={{ cursor: 'pointer' }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  handleContextMenu(e, voucher);
+                }}
+                sx={{ cursor: "pointer" }}
               >
-                <TableCell align="center" sx={{ fontSize: 11, p: 1 }} onClick={() => handleVoucherClick(voucher)}>
+                <TableCell
+                  align="center"
+                  sx={{ fontSize: 11, p: 1 }}
+                  onClick={() => handleVoucherClick(voucher)}
+                >
                   {voucher.voucher_number}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
                   {new Date(voucher.date).toLocaleDateString()}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.debit_amount?.toFixed(2) || '0.00'}
+                  ₹{voucher.debit_amount?.toFixed(2) || "0.00"}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.credit_amount?.toFixed(2) || '0.00'}
+                  ₹{voucher.credit_amount?.toFixed(2) || "0.00"}
                 </TableCell>
                 <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
                   <VoucherContextMenu
@@ -127,15 +177,31 @@ const JournalVoucher: React.FC = () => {
   const formContent = (
     <Box>
       {/* Header Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
-          Journal Voucher - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        <Typography
+          variant="h6"
+          sx={{
+            fontSize: 18,
+            fontWeight: "bold",
+            textAlign: "center",
+            flex: 1,
+          }}
+        >
+          Journal Voucher -{" "}
+          {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
         </Typography>
         <VoucherHeaderActions
           mode={mode}
           voucherType="Journal Voucher"
           voucherRoute="/vouchers/Financial-Vouchers/journal-voucher"
-          currentId={watch('id')}
+          currentId={watch("id")}
         />
       </Box>
       {(createMutation.isPending || updateMutation.isPending) && (
@@ -143,31 +209,31 @@ const JournalVoucher: React.FC = () => {
           <CircularProgress />
         </Box>
       )}
-      <Box 
-        component="form" 
-        onSubmit={handleSubmit(handleSubmitForm)} 
-        sx={{ 
+      <Box
+        component="form"
+        onSubmit={handleSubmit(handleSubmitForm)}
+        sx={{
           mt: 2,
-          ...voucherStyles.formContainer
+          ...voucherStyles.formContainer,
         }}
       >
         <Grid container spacing={2}>
           <Grid size={6}>
             <TextField
-              {...control.register('voucher_number')}
+              {...control.register("voucher_number")}
               label="Voucher Number"
               fullWidth
               disabled={true}
               sx={voucherStyles.centerField}
               InputProps={{
                 readOnly: true,
-                style: { textAlign: 'center', fontWeight: 'bold' }
+                style: { textAlign: "center", fontWeight: "bold" },
               }}
             />
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('date')}
+              {...control.register("date")}
               label="Date"
               type="date"
               fullWidth
@@ -176,7 +242,7 @@ const JournalVoucher: React.FC = () => {
               InputLabelProps={{
                 shrink: true,
               }}
-              inputProps={{ style: { textAlign: 'center' } }}
+              inputProps={{ style: { textAlign: "center" } }}
               error={!!errors.date}
               helperText={errors.date?.message as string}
             />
@@ -186,7 +252,7 @@ const JournalVoucher: React.FC = () => {
               name="debit_account"
               control={control}
               label="Debit Account"
-              entityTypes={['ExpenseAccount', 'Customer', 'Vendor', 'Employee']}
+              entityTypes={["ExpenseAccount", "Customer", "Vendor", "Employee"]}
               allowTypeSelection={true}
               required={true}
               disabled={isViewMode}
@@ -194,10 +260,10 @@ const JournalVoucher: React.FC = () => {
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('debit_amount', {
-                required: 'Debit amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' },
-                setValueAs: (value) => parseRateField(value)
+              {...control.register("debit_amount", {
+                required: "Debit amount is required",
+                min: { value: 0.01, message: "Amount must be greater than 0" },
+                setValueAs: (value) => parseRateField(value),
               })}
               label="Debit Amount"
               type="number"
@@ -207,28 +273,28 @@ const JournalVoucher: React.FC = () => {
               helperText={errors.debit_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
-                ...voucherStyles.centerField
+                ...voucherStyles.centerField,
               }}
               InputProps={{
-                inputProps: { 
+                inputProps: {
                   step: "0.01",
-                  style: { textAlign: 'center' }
-                }
+                  style: { textAlign: "center" },
+                },
               }}
               onChange={(e) => {
                 const value = parseRateField(e.target.value);
-                setValue('debit_amount', value);
+                setValue("debit_amount", value);
                 // Auto-set credit amount to match (for balanced entry)
-                setValue('credit_amount', value);
+                setValue("credit_amount", value);
               }}
             />
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('credit_amount', {
-                required: 'Credit amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' },
-                setValueAs: (value) => parseRateField(value)
+              {...control.register("credit_amount", {
+                required: "Credit amount is required",
+                min: { value: 0.01, message: "Amount must be greater than 0" },
+                setValueAs: (value) => parseRateField(value),
               })}
               label="Credit Amount"
               type="number"
@@ -238,19 +304,19 @@ const JournalVoucher: React.FC = () => {
               helperText={errors.credit_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
-                ...voucherStyles.centerField
+                ...voucherStyles.centerField,
               }}
               InputProps={{
-                inputProps: { 
+                inputProps: {
                   step: "0.01",
-                  style: { textAlign: 'center' }
-                }
+                  style: { textAlign: "center" },
+                },
               }}
               onChange={(e) => {
                 const value = parseRateField(e.target.value);
-                setValue('credit_amount', value);
+                setValue("credit_amount", value);
                 // Auto-set debit amount to match (for balanced entry)
-                setValue('debit_amount', value);
+                setValue("debit_amount", value);
               }}
             />
           </Grid>
@@ -259,7 +325,7 @@ const JournalVoucher: React.FC = () => {
               name="credit_account"
               control={control}
               label="Credit Account"
-              entityTypes={['ExpenseAccount', 'Customer', 'Vendor', 'Employee']}
+              entityTypes={["ExpenseAccount", "Customer", "Vendor", "Employee"]}
               allowTypeSelection={true}
               required={true}
               disabled={isViewMode}
@@ -267,7 +333,7 @@ const JournalVoucher: React.FC = () => {
           </Grid>
           <Grid size={12}>
             <TextField
-              {...control.register('description')}
+              {...control.register("description")}
               label="Description"
               multiline
               rows={3}
@@ -278,15 +344,20 @@ const JournalVoucher: React.FC = () => {
               placeholder="Enter transaction description..."
             />
           </Grid>
-          {(watch('debit_amount') > 0 || watch('credit_amount') > 0) && (
+          {(watch("debit_amount") > 0 || watch("credit_amount") > 0) && (
             <Grid size={12}>
               <TextField
                 fullWidth
                 label="Amount in Words"
-                value={getAmountInWords(Math.max(watch('debit_amount') || 0, watch('credit_amount') || 0))}
+                value={getAmountInWords(
+                  Math.max(
+                    watch("debit_amount") || 0,
+                    watch("credit_amount") || 0,
+                  ),
+                )}
                 disabled
                 InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+                inputProps={{ style: { fontSize: 14, textAlign: "center" } }}
                 size="small"
               />
             </Grid>
@@ -294,12 +365,14 @@ const JournalVoucher: React.FC = () => {
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
-              {mode !== 'view' && (
+              {mode !== "view" && (
                 <Button
                   type="submit"
                   variant="contained"
                   color="success"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                   sx={{ fontSize: 12 }}
                 >
                   Save
@@ -321,7 +394,12 @@ const JournalVoucher: React.FC = () => {
   if (isLoading) {
     return (
       <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress />
         </Box>
       </Container>

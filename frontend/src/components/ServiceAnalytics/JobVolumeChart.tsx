@@ -1,6 +1,6 @@
 // frontend/src/components/ServiceAnalytics/JobVolumeChart.tsx
 
-import React from 'react';
+import React from "react";
 import {
   Card,
   CardContent,
@@ -15,15 +15,15 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
-} from '@mui/material';
+  TableRow,
+} from "@mui/material";
 import {
   TrendingUp as TrendIcon,
   Schedule as VolumeIcon,
   Person as CustomerIcon,
-  Flag as PriorityIcon
-} from '@mui/icons-material';
-import { JobVolumeMetrics } from '../../services/serviceAnalyticsService';
+  Flag as PriorityIcon,
+} from "@mui/icons-material";
+import { JobVolumeMetrics } from "../../services/serviceAnalyticsService";
 
 interface JobVolumeChartProps {
   data: JobVolumeMetrics;
@@ -32,37 +32,40 @@ interface JobVolumeChartProps {
 const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
-      case 'urgent':
-        return 'error';
-      case 'high':
-        return 'warning';
-      case 'medium':
-        return 'info';
-      case 'low':
-        return 'success';
+      case "urgent":
+        return "error";
+      case "high":
+        return "warning";
+      case "medium":
+        return "info";
+      case "low":
+        return "success";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
     });
   };
 
   return (
     <Card>
-      <CardHeader 
-        title="Job Volume Analytics" 
+      <CardHeader
+        title="Job Volume Analytics"
         subheader={`${data.total_jobs} total jobs analyzed`}
       />
       <CardContent>
         {/* Key Volume Metrics */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="primary.main">
                 {data.total_jobs}
               </Typography>
@@ -71,9 +74,12 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
               </Typography>
             </Paper>
           </Grid>
-          
+
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="info.main">
                 {data.jobs_per_day_average.toFixed(1)}
               </Typography>
@@ -82,9 +88,12 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
               </Typography>
             </Paper>
           </Grid>
-          
+
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="success.main">
                 {data.peak_day_count}
               </Typography>
@@ -93,9 +102,12 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
               </Typography>
             </Paper>
           </Grid>
-          
+
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="warning.main">
                 {data.jobs_by_customer.length}
               </Typography>
@@ -109,12 +121,14 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
         {/* Peak Day Information */}
         {data.peak_day && (
           <Box sx={{ mb: 3 }}>
-            <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Paper elevation={1} sx={{ p: 2, bgcolor: "background.default" }}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
                 <Box>
-                  <Typography variant="h6">
-                    Peak Day
-                  </Typography>
+                  <Typography variant="h6">Peak Day</Typography>
                   <Typography variant="body2" color="text.secondary">
                     Highest job volume recorded
                   </Typography>
@@ -139,41 +153,44 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
               Jobs by Priority
             </Typography>
             <Grid container spacing={1}>
-              {Object.entries(data.jobs_by_priority).map(([priority, count]) => (
-                <Grid item xs={6} sm={3} key={priority}>
-                  <Paper 
-                    elevation={1} 
-                    sx={{ 
-                      p: 2, 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      gap: 1,
-                      bgcolor: 'background.default'
-                    }}
-                  >
-                    <Box 
-                      sx={{ 
-                        color: `${getPriorityColor(priority)}.main`,
-                        display: 'flex',
-                        alignItems: 'center'
+              {Object.entries(data.jobs_by_priority).map(
+                ([priority, count]) => (
+                  <Grid item xs={6} sm={3} key={priority}>
+                    <Paper
+                      elevation={1}
+                      sx={{
+                        p: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        bgcolor: "background.default",
                       }}
                     >
-                      <PriorityIcon />
-                    </Box>
-                    <Box flexGrow={1}>
-                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                        {priority}
+                      <Box
+                        sx={{
+                          color: `${getPriorityColor(priority)}.main`,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <PriorityIcon />
+                      </Box>
+                      <Box flexGrow={1}>
+                        <Typography
+                          variant="body2"
+                          sx={{ textTransform: "capitalize" }}
+                        >
+                          {priority}
+                        </Typography>
+                        <Typography variant="h6">{count}</Typography>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {((count / data.total_jobs) * 100).toFixed(1)}%
                       </Typography>
-                      <Typography variant="h6">
-                        {count}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {((count / data.total_jobs) * 100).toFixed(1)}%
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
+                    </Paper>
+                  </Grid>
+                ),
+              )}
             </Grid>
           </Box>
         )}
@@ -205,15 +222,19 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
                         </Box>
                       </TableCell>
                       <TableCell align="right">
-                        <Chip 
+                        <Chip
                           label={customer.job_count}
                           size="small"
-                          color={index < 3 ? 'primary' : 'default'}
+                          color={index < 3 ? "primary" : "default"}
                         />
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" color="text.secondary">
-                          {((customer.job_count / data.total_jobs) * 100).toFixed(1)}%
+                          {(
+                            (customer.job_count / data.total_jobs) *
+                            100
+                          ).toFixed(1)}
+                          %
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -230,7 +251,7 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
             <Typography variant="h6" gutterBottom>
               Recent Volume Trend
             </Typography>
-            <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
+            <Paper elevation={1} sx={{ p: 2, bgcolor: "background.default" }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Daily job creation volume
               </Typography>
@@ -241,12 +262,22 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
                     label={`${formatDate(point.date)}: ${point.value}`}
                     size="small"
                     variant="outlined"
-                    color={point.value > data.jobs_per_day_average ? 'success' : 'default'}
-                    icon={point.value > data.jobs_per_day_average ? <TrendIcon /> : <VolumeIcon />}
+                    color={
+                      point.value > data.jobs_per_day_average
+                        ? "success"
+                        : "default"
+                    }
+                    icon={
+                      point.value > data.jobs_per_day_average ? (
+                        <TrendIcon />
+                      ) : (
+                        <VolumeIcon />
+                      )
+                    }
                   />
                 ))}
               </Box>
-              
+
               {/* Trend Analysis */}
               <Box mt={2}>
                 <Typography variant="body2" color="text.secondary">
@@ -254,13 +285,20 @@ const JobVolumeChart: React.FC<JobVolumeChartProps> = ({ data }) => {
                 </Typography>
                 {(() => {
                   const recentTrend = data.volume_trend.slice(-7);
-                  const avgRecent = recentTrend.reduce((sum, point) => sum + point.value, 0) / recentTrend.length;
-                  const trendDirection = avgRecent > data.jobs_per_day_average ? 'above' : 'below';
-                  const trendColor = avgRecent > data.jobs_per_day_average ? 'success.main' : 'warning.main';
-                  
+                  const avgRecent =
+                    recentTrend.reduce((sum, point) => sum + point.value, 0) /
+                    recentTrend.length;
+                  const trendDirection =
+                    avgRecent > data.jobs_per_day_average ? "above" : "below";
+                  const trendColor =
+                    avgRecent > data.jobs_per_day_average
+                      ? "success.main"
+                      : "warning.main";
+
                   return (
                     <Typography variant="body2" sx={{ color: trendColor }}>
-                      Recent 7-day average ({avgRecent.toFixed(1)} jobs/day) is {trendDirection} overall average
+                      Recent 7-day average ({avgRecent.toFixed(1)} jobs/day) is{" "}
+                      {trendDirection} overall average
                     </Typography>
                   );
                 })()}

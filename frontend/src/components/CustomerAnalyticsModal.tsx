@@ -1,15 +1,15 @@
 // frontend/src/components/CustomerAnalyticsModal.tsx
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  IconButton
-} from '@mui/material';
-import { Close } from '@mui/icons-material';
-import CustomerAnalytics from './CustomerAnalytics';
+  IconButton,
+} from "@mui/material";
+import { Close } from "@mui/icons-material";
+import CustomerAnalytics from "./CustomerAnalytics";
 interface CustomerAnalyticsModalProps {
   open: boolean;
   onClose: () => void;
@@ -20,7 +20,7 @@ const CustomerAnalyticsModal: React.FC<CustomerAnalyticsModalProps> = ({
   open,
   onClose,
   customerId,
-  customerName
+  customerName,
 }) => {
   return (
     <Dialog
@@ -30,12 +30,18 @@ const CustomerAnalyticsModal: React.FC<CustomerAnalyticsModalProps> = ({
       fullWidth
       PaperProps={{
         sx: {
-          height: '90vh',
-          maxHeight: '90vh'
-        }
+          height: "90vh",
+          maxHeight: "90vh",
+        },
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         Customer Analytics
         <IconButton
           aria-label="close"
@@ -48,7 +54,10 @@ const CustomerAnalyticsModal: React.FC<CustomerAnalyticsModalProps> = ({
         </IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 0 }}>
-        <CustomerAnalytics customerId={customerId} customerName={customerName} />
+        <CustomerAnalytics
+          customerId={customerId}
+          customerName={customerName}
+        />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="primary">

@@ -1,7 +1,7 @@
 // src/hooks/useEntity.ts
 // React hooks for Entity abstraction system
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   getAllEntities,
   getEntitiesByType,
@@ -11,15 +11,17 @@ import {
   updateEntity,
   deleteEntity,
   getEntityBalance,
-  entitiesToOptions
-} from '../services/entityService';
-import { Entity, EntityType, EntityOption } from '../types/entity.types';
+  entitiesToOptions,
+} from "../services/entityService";
+import { Entity, EntityType, EntityOption } from "../types/entity.types";
 /**
  * Hook to get all entities with unified interface
  */
-export const useEntities = (entityTypes: EntityType[] = ['Customer', 'Vendor']): any => {
+export const useEntities = (
+  entityTypes: EntityType[] = ["Customer", "Vendor"],
+): any => {
   return useQuery({
-    queryKey: ['entities', entityTypes],
+    queryKey: ["entities", entityTypes],
     queryFn: ({ signal }) => {
       if (entityTypes.length === 1) {
         return getEntitiesByType(entityTypes[0], { signal });
@@ -32,13 +34,15 @@ export const useEntities = (entityTypes: EntityType[] = ['Customer', 'Vendor']):
 /**
  * Hook to get entity options for form dropdowns
  */
-export const useEntityOptions = (entityTypes: EntityType[] = ['Customer', 'Vendor']): any => {
+export const useEntityOptions = (
+  entityTypes: EntityType[] = ["Customer", "Vendor"],
+): any => {
   const { data: entities, ...queryProps } = useEntities(entityTypes);
   const options: EntityOption[] = entities ? entitiesToOptions(entities) : [];
   return {
     options,
     entities,
-    ...queryProps
+    ...queryProps,
   };
 };
 /**
@@ -46,12 +50,13 @@ export const useEntityOptions = (entityTypes: EntityType[] = ['Customer', 'Vendo
  */
 export const useEntitySearch = (
   searchTerm: string,
-  entityTypes: EntityType[] = ['Customer', 'Vendor'],
-  enabled: boolean = true
-): any =>  {
+  entityTypes: EntityType[] = ["Customer", "Vendor"],
+  enabled: boolean = true,
+): any => {
   return useQuery({
-    queryKey: ['entitySearch', searchTerm, entityTypes],
-    queryFn: ({ signal }) => searchEntities(searchTerm, entityTypes, { signal }),
+    queryKey: ["entitySearch", searchTerm, entityTypes],
+    queryFn: ({ signal }) =>
+      searchEntities(searchTerm, entityTypes, { signal }),
     enabled: enabled && searchTerm.length >= 2,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
@@ -59,11 +64,16 @@ export const useEntitySearch = (
 /**
  * Hook to get specific entity by ID and type
  */
-export const useEntity = (id: number | null, entityType: EntityType | null): any => {
+export const useEntity = (
+  id: number | null,
+  entityType: EntityType | null,
+): any => {
   return useQuery({
-    queryKey: ['entity', id, entityType],
+    queryKey: ["entity", id, entityType],
     queryFn: ({ signal }) => {
-      if (!id || !entityType) {return null;}
+      if (!id || !entityType) {
+        return null;
+      }
       return getEntityById(id, entityType, { signal });
     },
     enabled: !!id && !!entityType,
@@ -72,14 +82,20 @@ export const useEntity = (id: number | null, entityType: EntityType | null): any
 /**
  * Hook for entity balance/outstanding amount
  */
-export const useEntityBalance = (id: number | null, entityType: EntityType | null): any => {
+export const useEntityBalance = (
+  id: number | null,
+  entityType: EntityType | null,
+): any => {
   return useQuery({
-    queryKey: ['entityBalance', id, entityType],
+    queryKey: ["entityBalance", id, entityType],
     queryFn: ({ signal }) => {
-      if (!id || !entityType) {return null;}
+      if (!id || !entityType) {
+        return null;
+      }
       return getEntityBalance(id, entityType, { signal });
     },
-    enabled: !!id && !!entityType && ['Customer', 'Vendor'].includes(entityType),
+    enabled:
+      !!id && !!entityType && ["Customer", "Vendor"].includes(entityType),
     staleTime: 1 * 60 * 1000, // 1 minute
   });
 };
@@ -89,27 +105,39 @@ export const useEntityBalance = (id: number | null, entityType: EntityType | nul
 export const useEntityMutations = (): any => {
   const queryClient = useQueryClient();
   const createMutation = useMutation({
-    mutationFn: ({ entityType, data }: { entityType: EntityType; data: Partial<Entity> }) =>
-      createEntity(entityType, data),
+    mutationFn: ({
+      entityType,
+      data,
+    }: {
+      entityType: EntityType;
+      data: Partial<Entity>;
+    }) => createEntity(entityType, data),
     onSuccess: (_, { entityType }) => {
-      queryClient.invalidateQueries({ queryKey: ['entities'] });
-      queryClient.invalidateQueries({ queryKey: ['entities', [entityType]] });
+      queryClient.invalidateQueries({ queryKey: ["entities"] });
+      queryClient.invalidateQueries({ queryKey: ["entities", [entityType]] });
     },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, entityType, data }: { id: number; entityType: EntityType; data: Partial<Entity> }) =>
-      updateEntity(id, entityType, data),
+    mutationFn: ({
+      id,
+      entityType,
+      data,
+    }: {
+      id: number;
+      entityType: EntityType;
+      data: Partial<Entity>;
+    }) => updateEntity(id, entityType, data),
     onSuccess: (_, { entityType }) => {
-      queryClient.invalidateQueries({ queryKey: ['entities'] });
-      queryClient.invalidateQueries({ queryKey: ['entities', [entityType]] });
+      queryClient.invalidateQueries({ queryKey: ["entities"] });
+      queryClient.invalidateQueries({ queryKey: ["entities", [entityType]] });
     },
   });
   const deleteMutation = useMutation({
     mutationFn: ({ id, entityType }: { id: number; entityType: EntityType }) =>
       deleteEntity(id, entityType),
     onSuccess: (_, { entityType }) => {
-      queryClient.invalidateQueries({ queryKey: ['entities'] });
-      queryClient.invalidateQueries({ queryKey: ['entities', [entityType]] });
+      queryClient.invalidateQueries({ queryKey: ["entities"] });
+      queryClient.invalidateQueries({ queryKey: ["entities", [entityType]] });
     },
   });
   return {
@@ -121,18 +149,21 @@ export const useEntityMutations = (): any => {
 /**
  * Hook for entity form state management
  */
-export const useEntityForm = (initialEntityType: EntityType = 'Customer'): any => {
-  const [selectedEntityType, setSelectedEntityType] = useState<EntityType>(initialEntityType);
+export const useEntityForm = (
+  initialEntityType: EntityType = "Customer",
+): any => {
+  const [selectedEntityType, setSelectedEntityType] =
+    useState<EntityType>(initialEntityType);
   const [selectedEntityId, setSelectedEntityId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const { options, isLoading } = useEntityOptions([selectedEntityType]);
   const { data: searchResults, isLoading: searchLoading } = useEntitySearch(
     searchTerm,
     [selectedEntityType],
-    searchTerm.length >= 2
+    searchTerm.length >= 2,
   );
-  const displayOptions = searchTerm.length >= 2 ? (searchResults || []) : options;
+  const displayOptions = searchTerm.length >= 2 ? searchResults || [] : options;
   const handleEntitySelect = (entityOption: EntityOption | null) => {
     if (entityOption) {
       setSelectedEntityId(entityOption.id);
@@ -144,7 +175,7 @@ export const useEntityForm = (initialEntityType: EntityType = 'Customer'): any =
   const handleEntityTypeChange = (newType: EntityType) => {
     setSelectedEntityType(newType);
     setSelectedEntityId(null); // Reset selection when type changes
-    setSearchTerm(''); // Reset search
+    setSearchTerm(""); // Reset search
   };
   return {
     // State
@@ -166,5 +197,5 @@ export const useEntityForm = (initialEntityType: EntityType = 'Customer'): any =
 /**
  * Legacy compatibility hooks
  */
-export const useVendors = (): any => useEntities(['Vendor']);
-export const useCustomers = (): any => useEntities(['Customer']);
+export const useVendors = (): any => useEntities(["Vendor"]);
+export const useCustomers = (): any => useEntities(["Customer"]);

@@ -1,26 +1,26 @@
-'use client';
+"use client";
 /**
  * Settings Page Page Component
- * 
+ *
  * This component provides the main settings interface for users with different roles.
  * It uses centralized role and permission functions from user.types.ts to ensure
  * consistent behavior across the application.
- * 
+ *
  * Role Display:
  * - Uses getDisplayRole(user.role, user.is_super_admin) for consistent role naming
  * - Prioritizes is_super_admin flag over role string for App Super Admin detection
- * 
+ *
  * Permission Checks:
  * - isAppSuperAdmin(user): Determines if user is an app-level super admin
- * - canFactoryReset(user): Determines if user can perform reset operations  
+ * - canFactoryReset(user): Determines if user can perform reset operations
  * - canManageUsers(user): Determines if user can manage other users
- * 
+ *
  * Features shown based on permissions:
  * - App Super Admin: All features including cross-org management
  * - Org Admin: Organization-level management and reset options
  * - Standard User: Basic profile and company detail access only
  */
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -34,28 +34,28 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  DialogContentText
-} from '@mui/material';
-import Grid from '@mui/material/Grid';
-import { 
+  DialogContentText,
+} from "@mui/material";
+import Grid from "@mui/material/Grid";
+import {
   Warning,
   DeleteSweep,
   Security,
   Business,
-  Add
-} from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
-import { 
-  getDisplayRole, 
-  isAppSuperAdmin, 
-  canFactoryReset, 
-  canManageUsers, 
+  Add,
+} from "@mui/icons-material";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+import {
+  getDisplayRole,
+  isAppSuperAdmin,
+  canFactoryReset,
+  canManageUsers,
   canAccessOrganizationSettings,
   canShowFactoryResetOnly,
-  canShowOrgDataResetOnly
-} from '../types/user.types';
+  canShowOrgDataResetOnly,
+} from "../types/user.types";
 export default function Settings() {
   const router = useRouter();
   const { user } = useAuth();
@@ -66,9 +66,10 @@ export default function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   // Get token for API calls
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   // Use centralized permission and role functions
-  const displayRole = getDisplayRole(user?.role || '', user?.is_super_admin);
+  const displayRole = getDisplayRole(user?.role || "", user?.is_super_admin);
   const isSuperAdmin = isAppSuperAdmin(user);
   const canReset = canFactoryReset(user);
   const canManage = canManageUsers(user);
@@ -79,22 +80,25 @@ export default function Settings() {
    * @deprecated Organization name should come from React user context, not localStorage
    * Organization context is automatically managed by the backend session
    */
-  const organizationName = user?.organization_id ? 'Current Organization' : null;
+  const organizationName = user?.organization_id
+    ? "Current Organization"
+    : null;
   const handleResetData = async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const response = await axios.post(
         `${API_BASE_URL}/api/v1/organizations/reset-data`,
         {},
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+            "Content-Type": "application/json",
+          },
+        },
       );
       setSuccess(response.data.message);
       setResetDialogOpen(false);
@@ -105,7 +109,7 @@ export default function Settings() {
         }, 2000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to reset data');
+      setError(err.response?.data?.detail || "Failed to reset data");
       setResetDialogOpen(false);
     } finally {
       setLoading(false);
@@ -116,16 +120,17 @@ export default function Settings() {
     setError(null);
     setSuccess(null);
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const response = await axios.post(
         `${API_BASE_URL}/api/v1/organizations/factory-default`,
         {},
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+            "Content-Type": "application/json",
+          },
+        },
       );
       setSuccess(response.data.message);
       setFactoryResetDialogOpen(false);
@@ -134,7 +139,7 @@ export default function Settings() {
         window.location.reload();
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to perform factory reset');
+      setError(err.response?.data?.detail || "Failed to perform factory reset");
       setFactoryResetDialogOpen(false);
     } finally {
       setFactoryLoading(false);
@@ -146,13 +151,17 @@ export default function Settings() {
         Settings
       </Typography>
       {/* User Role Information */}
-      <Paper sx={{ p: 2, mb: 3, bgcolor: 'info.main', color: 'info.contrastText' }}>
+      <Paper
+        sx={{ p: 2, mb: 3, bgcolor: "info.main", color: "info.contrastText" }}
+      >
         <Typography variant="body1">
-          <strong>Current Role:</strong> {displayRole} {organizationName && `• Organization: ${organizationName}`}
+          <strong>Current Role:</strong> {displayRole}{" "}
+          {organizationName && `• Organization: ${organizationName}`}
         </Typography>
         {canManage && (
           <Typography variant="body2" sx={{ mt: 1 }}>
-            You have administrative privileges to manage users and organization settings.
+            You have administrative privileges to manage users and organization
+            settings.
           </Typography>
         )}
       </Paper>
@@ -172,22 +181,28 @@ export default function Settings() {
           <Grid
             size={{
               xs: 12,
-              md: 6
-            }}>
+              md: 6,
+            }}
+          >
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center" }}
+              >
                 <Security sx={{ mr: 1 }} />
                 Admin Management
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  App admins can create organization licenses but cannot create other app admin users.
+                  App admins can create organization licenses but cannot create
+                  other app admin users.
                 </Typography>
               </Alert>
               <Button
                 variant="contained"
-                onClick={() => router.push('/admin/license-management')}
+                onClick={() => router.push("/admin/license-management")}
                 sx={{ mb: 2, mr: 2 }}
                 startIcon={<Business />}
                 color="primary"
@@ -196,7 +211,7 @@ export default function Settings() {
               </Button>
               <Button
                 variant="outlined"
-                onClick={() => router.push('/admin/organizations')}
+                onClick={() => router.push("/admin/organizations")}
                 sx={{ mb: 2 }}
                 startIcon={<Business />}
               >
@@ -210,24 +225,29 @@ export default function Settings() {
           <Grid
             size={{
               xs: 12,
-              md: 6
-            }}>
+              md: 6,
+            }}
+          >
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center" }}
+              >
                 <Business sx={{ mr: 1 }} />
                 Organization Settings
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Button
                 variant="outlined"
-                onClick={() => router.push('/masters/company-details')}
+                onClick={() => router.push("/masters/company-details")}
                 sx={{ mb: 2, mr: 2 }}
               >
                 Edit Company Details
               </Button>
               <Button
                 variant="outlined"
-                onClick={() => router.push('/profile')}
+                onClick={() => router.push("/profile")}
                 sx={{ mb: 2 }}
               >
                 User Profile
@@ -237,7 +257,7 @@ export default function Settings() {
                 <>
                   <Button
                     variant="contained"
-                    onClick={() => router.push('/settings/user-management')}
+                    onClick={() => router.push("/settings/user-management")}
                     sx={{ mb: 2, mr: 2 }}
                     startIcon={<Security />}
                     color="primary"
@@ -246,7 +266,7 @@ export default function Settings() {
                   </Button>
                   <Button
                     variant="outlined"
-                    onClick={() => router.push('/settings/add-user')}
+                    onClick={() => router.push("/settings/add-user")}
                     sx={{ mb: 2 }}
                     startIcon={<Add />}
                   >
@@ -262,17 +282,22 @@ export default function Settings() {
           <Grid
             size={{
               xs: 12,
-              md: 6
-            }}>
+              md: 6,
+            }}
+          >
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center" }}
+              >
                 <Business sx={{ mr: 1 }} />
                 User Profile
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Button
                 variant="outlined"
-                onClick={() => router.push('/profile')}
+                onClick={() => router.push("/profile")}
                 sx={{ mb: 2 }}
               >
                 Edit Profile
@@ -285,19 +310,27 @@ export default function Settings() {
           <Grid
             size={{
               xs: 12,
-              md: 6
-            }}>
+              md: 6,
+            }}
+          >
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center" }}
+              >
                 <Security sx={{ mr: 1 }} />
                 Data Management
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  <strong>Warning:</strong> Database reset will permanently delete data
-                  {showFactoryResetOnly ? ' for all organizations' : ' for your organization'}. 
-                  This action cannot be undone.
+                  <strong>Warning:</strong> Database reset will permanently
+                  delete data
+                  {showFactoryResetOnly
+                    ? " for all organizations"
+                    : " for your organization"}
+                  . This action cannot be undone.
                 </Typography>
               </Alert>
               {/* App Super Admin: Only Factory Reset */}
@@ -313,7 +346,7 @@ export default function Settings() {
                   {factoryLoading ? (
                     <CircularProgress size={20} color="inherit" />
                   ) : (
-                    'Restore to Factory Defaults'
+                    "Restore to Factory Defaults"
                   )}
                 </Button>
               )}
@@ -330,7 +363,7 @@ export default function Settings() {
                   {loading ? (
                     <CircularProgress size={20} color="inherit" />
                   ) : (
-                    'Reset Organization Data'
+                    "Reset Organization Data"
                   )}
                 </Button>
               )}
@@ -348,7 +381,7 @@ export default function Settings() {
                     {loading ? (
                       <CircularProgress size={20} color="inherit" />
                     ) : (
-                      `Reset ${isSuperAdmin ? 'All' : 'Organization'} Data`
+                      `Reset ${isSuperAdmin ? "All" : "Organization"} Data`
                     )}
                   </Button>
                   <Button
@@ -362,20 +395,19 @@ export default function Settings() {
                     {factoryLoading ? (
                       <CircularProgress size={20} color="inherit" />
                     ) : (
-                      'Factory Default Reset'
+                      "Factory Default Reset"
                     )}
                   </Button>
                 </>
               )}
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                {showFactoryResetOnly 
-                  ? 'Restore to Factory Defaults: Wipes all app data including organizations, licenses, and license holders'
+                {showFactoryResetOnly
+                  ? "Restore to Factory Defaults: Wipes all app data including organizations, licenses, and license holders"
                   : showOrgDataResetOnly
-                  ? 'Reset Organization Data: Removes all business data but not organization settings'
-                  : isSuperAdmin 
-                  ? 'As app super admin, this will reset all organization data'
-                  : 'Reset data: removes all business data but keeps organization settings'
-                }
+                    ? "Reset Organization Data: Removes all business data but not organization settings"
+                    : isSuperAdmin
+                      ? "As app super admin, this will reset all organization data"
+                      : "Reset data: removes all business data but keeps organization settings"}
               </Typography>
             </Paper>
           </Grid>
@@ -384,19 +416,24 @@ export default function Settings() {
         {isSuperAdmin && (
           <Grid size={12}>
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <Warning sx={{ mr: 1, color: 'warning.main' }} />
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center" }}
+              >
+                <Warning sx={{ mr: 1, color: "warning.main" }} />
                 System Administration
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  System-level controls for application management. Use with caution.
+                  System-level controls for application management. Use with
+                  caution.
                 </Typography>
               </Alert>
               <Button
                 variant="outlined"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push("/dashboard")}
                 sx={{ mr: 2, mb: 2 }}
                 startIcon={<Business />}
               >
@@ -407,18 +444,20 @@ export default function Settings() {
         )}
       </Grid>
       {/* Reset Confirmation Dialog */}
-      <Dialog
-        open={resetDialogOpen}
-        onClose={() => setResetDialogOpen(false)}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
-          <Warning sx={{ mr: 1, color: 'error.main' }} />
+      <Dialog open={resetDialogOpen} onClose={() => setResetDialogOpen(false)}>
+        <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
+          <Warning sx={{ mr: 1, color: "error.main" }} />
           Confirm Data Reset
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to reset {showOrgDataResetOnly ? 'your organization&apos;s' : isSuperAdmin ? 'all' : 'your organization&apos;s'} data? 
-            This action will permanently delete:
+            Are you sure you want to reset{" "}
+            {showOrgDataResetOnly
+              ? "your organization&apos;s"
+              : isSuperAdmin
+                ? "all"
+                : "your organization&apos;s"}{" "}
+            data? This action will permanently delete:
           </DialogContentText>
           <Box component="ul" sx={{ mt: 2, mb: 2 }}>
             <li>All companies</li>
@@ -438,20 +477,19 @@ export default function Settings() {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => setResetDialogOpen(false)} 
-            disabled={loading}
-          >
+          <Button onClick={() => setResetDialogOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleResetData} 
-            color="error" 
+          <Button
+            onClick={handleResetData}
+            color="error"
             variant="contained"
             disabled={loading}
-            startIcon={loading ? <CircularProgress size={16} /> : <DeleteSweep />}
+            startIcon={
+              loading ? <CircularProgress size={16} /> : <DeleteSweep />
+            }
           >
-            {loading ? 'Resetting...' : 'Reset Data'}
+            {loading ? "Resetting..." : "Reset Data"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -460,21 +498,24 @@ export default function Settings() {
         open={factoryResetDialogOpen}
         onClose={() => setFactoryResetDialogOpen(false)}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
-          <Warning sx={{ mr: 1, color: 'warning.main' }} />
-          {showFactoryResetOnly ? 'Confirm Restore to Factory Defaults' : 'Confirm Factory Default Reset'}
+        <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
+          <Warning sx={{ mr: 1, color: "warning.main" }} />
+          {showFactoryResetOnly
+            ? "Confirm Restore to Factory Defaults"
+            : "Confirm Factory Default Reset"}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
             {showFactoryResetOnly ? (
               <>
-                Are you sure you want to restore the entire application to factory defaults? 
-                This action will permanently delete:
+                Are you sure you want to restore the entire application to
+                factory defaults? This action will permanently delete:
               </>
             ) : (
               <>
-                Are you sure you want to perform a factory default reset? 
-                This action will permanently restore your organization to its initial state:
+                Are you sure you want to perform a factory default reset? This
+                action will permanently restore your organization to its initial
+                state:
               </>
             )}
           </DialogContentText>
@@ -501,30 +542,37 @@ export default function Settings() {
               </>
             )}
           </Box>
-          <DialogContentText color={showFactoryResetOnly ? 'error' : 'warning.main'}>
+          <DialogContentText
+            color={showFactoryResetOnly ? "error" : "warning.main"}
+          >
             <strong>
-              {showFactoryResetOnly 
-                ? 'This action cannot be undone and will completely reset the entire application!'
-                : 'This action cannot be undone and will reset both data and settings!'
-              }
+              {showFactoryResetOnly
+                ? "This action cannot be undone and will completely reset the entire application!"
+                : "This action cannot be undone and will reset both data and settings!"}
             </strong>
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => setFactoryResetDialogOpen(false)} 
+          <Button
+            onClick={() => setFactoryResetDialogOpen(false)}
             disabled={factoryLoading}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleFactoryReset} 
-            color={showFactoryResetOnly ? 'error' : 'warning'} 
+          <Button
+            onClick={handleFactoryReset}
+            color={showFactoryResetOnly ? "error" : "warning"}
             variant="contained"
             disabled={factoryLoading}
-            startIcon={factoryLoading ? <CircularProgress size={16} /> : <Warning />}
+            startIcon={
+              factoryLoading ? <CircularProgress size={16} /> : <Warning />
+            }
           >
-            {factoryLoading ? 'Resetting...' : (showFactoryResetOnly ? 'Restore to Factory Defaults' : 'Factory Default Reset')}
+            {factoryLoading
+              ? "Resetting..."
+              : showFactoryResetOnly
+                ? "Restore to Factory Defaults"
+                : "Factory Default Reset"}
           </Button>
         </DialogActions>
       </Dialog>

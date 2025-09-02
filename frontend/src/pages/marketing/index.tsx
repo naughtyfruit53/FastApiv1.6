@@ -1,5 +1,5 @@
 // frontend/src/pages/marketing/index.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   Paper,
   Table,
   TableBody,
@@ -21,7 +20,7 @@ import {
   Typography,
   Chip,
   Grid,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -31,16 +30,21 @@ import {
   AttachMoney as AttachMoneyIcon,
   Email as EmailIcon,
   Analytics as AnalyticsIcon,
-} from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
-import { marketingService, Campaign, Promotion, MarketingAnalytics } from '../../services/marketingService';
+} from "@mui/icons-material";
+import { useAuth } from "../../context/AuthContext";
+import {
+  marketingService,
+  Campaign,
+  Promotion,
+  MarketingAnalytics,
+} from "../../services/marketingService";
 const campaignStatusColors: Record<string, string> = {
-  draft: 'default',
-  scheduled: 'info',
-  active: 'success',
-  paused: 'warning',
-  completed: 'primary',
-  cancelled: 'error',
+  draft: "default",
+  scheduled: "info",
+  active: "success",
+  paused: "warning",
+  completed: "primary",
+  cancelled: "error",
 };
 const campaignTypeIcons: Record<string, JSX.Element> = {
   email: <EmailIcon />,
@@ -48,7 +52,11 @@ const campaignTypeIcons: Record<string, JSX.Element> = {
   social_media: <AnalyticsIcon />,
   digital_ads: <TrendingUpIcon />,
 };
-function TabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
+function TabPanel(props: {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}) {
   const { children, value, index, ...other } = props;
   return (
     <div
@@ -58,22 +66,18 @@ function TabPanel(props: { children?: React.ReactNode; index: number; value: num
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
 export default function MarketingDashboard() {
-const { _user } = useAuth();
+  const { _user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [analytics, setAnalytics] = useState<MarketingAnalytics | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [openCampaignDialog, setOpenCampaignDialog] = useState(false);
   const [openPromotionDialog, setOpenPromotionDialog] = useState(false);
   useEffect(() => {
@@ -86,14 +90,14 @@ const { _user } = useAuth();
       const [campaignsData, promotionsData, analyticsData] = await Promise.all([
         marketingService.getCampaigns(),
         marketingService.getPromotions(),
-        marketingService.getAnalytics()
+        marketingService.getAnalytics(),
       ]);
       setCampaigns(campaignsData);
       setPromotions(promotionsData);
       setAnalytics(analyticsData);
     } catch (err: any) {
-      console.error('Error loading marketing data:', err);
-      setError(err.userMessage || 'Failed to load marketing data');
+      console.error("Error loading marketing data:", err);
+      setError(err.userMessage || "Failed to load marketing data");
       // Fallback to empty data to prevent crashes
       setCampaigns([]);
       setPromotions([]);
@@ -118,21 +122,23 @@ const { _user } = useAuth();
   const filteredCampaigns = campaigns.filter(
     (campaign) =>
       campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      campaign.campaign_number.toLowerCase().includes(searchTerm.toLowerCase())
+      campaign.campaign_number.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   const filteredPromotions = promotions.filter(
     (promotion) =>
       promotion.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      promotion.promotion_code.toLowerCase().includes(searchTerm.toLowerCase())
+      promotion.promotion_code.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   const renderAnalyticsCards = () => {
-    if (!analytics) {return null;}
+    if (!analytics) {
+      return null;
+    }
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <CampaignIcon color="primary" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -152,7 +158,7 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <EmailIcon color="info" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -172,7 +178,7 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <AttachMoneyIcon color="success" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -182,7 +188,11 @@ const { _user } = useAuth();
                     ${(analytics?.revenue_from_campaigns || 0).toLocaleString()}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    ${(analytics?.customer_acquisition_cost || 0).toLocaleString()} spent
+                    $
+                    {(
+                      analytics?.customer_acquisition_cost || 0
+                    ).toLocaleString()}{" "}
+                    spent
                   </Typography>
                 </Box>
               </Box>
@@ -192,7 +202,7 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <TrendingUpIcon color="warning" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -229,18 +239,30 @@ const { _user } = useAuth();
         </TableHead>
         <TableBody>
           {filteredCampaigns.map((campaign) => {
-            const openRate = campaign.delivered_count > 0 ? (campaign.opened_count / campaign.delivered_count) * 100 : 0;
-            const conversionRate = campaign.delivered_count > 0 ? (campaign.converted_count / campaign.delivered_count) * 100 : 0;
-            const roi = campaign.budget ? ((campaign.revenue_generated - campaign.budget) / campaign.budget) * 100 : 0;
+            const openRate =
+              campaign.delivered_count > 0
+                ? (campaign.opened_count / campaign.delivered_count) * 100
+                : 0;
+            const conversionRate =
+              campaign.delivered_count > 0
+                ? (campaign.converted_count / campaign.delivered_count) * 100
+                : 0;
+            const roi = campaign.budget
+              ? ((campaign.revenue_generated - campaign.budget) /
+                  campaign.budget) *
+                100
+              : 0;
             return (
               <TableRow key={campaign.id} hover>
                 <TableCell>{campaign.campaign_number}</TableCell>
                 <TableCell>{campaign.name}</TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {campaignTypeIcons[campaign.campaign_type] || <CampaignIcon />}
-                    <Typography sx={{ ml: 1, textTransform: 'capitalize' }}>
-                      {campaign.campaign_type.replace('_', ' ')}
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    {campaignTypeIcons[campaign.campaign_type] || (
+                      <CampaignIcon />
+                    )}
+                    <Typography sx={{ ml: 1, textTransform: "capitalize" }}>
+                      {campaign.campaign_type.replace("_", " ")}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -254,21 +276,26 @@ const { _user } = useAuth();
                 <TableCell>
                   <Box sx={{ minWidth: 120 }}>
                     <Typography variant="body2">
-                      {openRate.toFixed(1)}% open | {conversionRate.toFixed(1)}% conv
+                      {openRate.toFixed(1)}% open | {conversionRate.toFixed(1)}%
+                      conv
                     </Typography>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={Math.min(openRate, 100)} 
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(openRate, 100)}
                       sx={{ mt: 0.5 }}
                     />
                   </Box>
                 </TableCell>
                 <TableCell>
-                  {campaign.budget ? `$${campaign.budget.toLocaleString()}` : '-'}
+                  {campaign.budget
+                    ? `$${campaign.budget.toLocaleString()}`
+                    : "-"}
                 </TableCell>
-                <TableCell>${campaign.revenue_generated.toLocaleString()}</TableCell>
                 <TableCell>
-                  <Typography color={roi > 0 ? 'success.main' : 'error.main'}>
+                  ${campaign.revenue_generated.toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <Typography color={roi > 0 ? "success.main" : "error.main"}>
                     {roi.toFixed(1)}%
                   </Typography>
                 </TableCell>
@@ -304,28 +331,30 @@ const { _user } = useAuth();
               </TableCell>
               <TableCell>{promotion.name}</TableCell>
               <TableCell>
-                <Typography sx={{ textTransform: 'capitalize' }}>
-                  {promotion.promotion_type.replace('_', ' ')}
+                <Typography sx={{ textTransform: "capitalize" }}>
+                  {promotion.promotion_type.replace("_", " ")}
                 </Typography>
               </TableCell>
               <TableCell>
-                {promotion.discount_percentage 
-                  ? `${promotion.discount_percentage}%` 
+                {promotion.discount_percentage
+                  ? `${promotion.discount_percentage}%`
                   : `$${promotion.discount_amount}`}
               </TableCell>
               <TableCell>
                 <Chip
-                  label={promotion.is_active ? 'Active' : 'Inactive'}
-                  color={promotion.is_active ? 'success' : 'default'}
+                  label={promotion.is_active ? "Active" : "Inactive"}
+                  color={promotion.is_active ? "success" : "default"}
                   size="small"
                 />
               </TableCell>
               <TableCell>{promotion.total_redemptions}</TableCell>
-              <TableCell>${promotion.total_discount_given.toLocaleString()}</TableCell>
               <TableCell>
-                {promotion.valid_until 
+                ${promotion.total_discount_given.toLocaleString()}
+              </TableCell>
+              <TableCell>
+                {promotion.valid_until
                   ? new Date(promotion.valid_until).toLocaleDateString()
-                  : 'No expiry'}
+                  : "No expiry"}
               </TableCell>
             </TableRow>
           ))}
@@ -335,11 +364,18 @@ const { _user } = useAuth();
   );
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h4" component="h1">
           Marketing Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -368,8 +404,11 @@ const { _user } = useAuth();
       {renderAnalyticsCards()}
       <Card>
         <CardContent>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={tabValue}
+              onChange={(_, newValue) => setTabValue(newValue)}
+            >
               <Tab label="Campaigns" />
               <Tab label="Promotions" />
             </Tabs>
@@ -405,11 +444,7 @@ const { _user } = useAuth();
           <Box sx={{ pt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <TextField
-                  label="Campaign Name"
-                  fullWidth
-                  required
-                />
+                <TextField label="Campaign Name" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
@@ -423,11 +458,7 @@ const { _user } = useAuth();
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Budget"
-                  type="number"
-                  fullWidth
-                />
+                <TextField label="Budget" type="number" fullWidth />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -446,19 +477,17 @@ const { _user } = useAuth();
                 />
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  label="Description"
-                  multiline
-                  rows={3}
-                  fullWidth
-                />
+                <TextField label="Description" multiline rows={3} fullWidth />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenCampaignDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setOpenCampaignDialog(false)}>
+          <Button
+            variant="contained"
+            onClick={() => setOpenCampaignDialog(false)}
+          >
             Create Campaign
           </Button>
         </DialogActions>
@@ -475,25 +504,21 @@ const { _user } = useAuth();
           <Box sx={{ pt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Promotion Code"
-                  fullWidth
-                  required
-                />
+                <TextField label="Promotion Code" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Promotion Name"
-                  fullWidth
-                  required
-                />
+                <TextField label="Promotion Name" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Promotion Type</InputLabel>
                   <Select defaultValue="percentage_discount">
-                    <MenuItem value="percentage_discount">Percentage Discount</MenuItem>
-                    <MenuItem value="fixed_amount_discount">Fixed Amount Discount</MenuItem>
+                    <MenuItem value="percentage_discount">
+                      Percentage Discount
+                    </MenuItem>
+                    <MenuItem value="fixed_amount_discount">
+                      Fixed Amount Discount
+                    </MenuItem>
                     <MenuItem value="buy_x_get_y">Buy X Get Y</MenuItem>
                     <MenuItem value="free_shipping">Free Shipping</MenuItem>
                   </Select>
@@ -528,7 +553,10 @@ const { _user } = useAuth();
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenPromotionDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setOpenPromotionDialog(false)}>
+          <Button
+            variant="contained"
+            onClick={() => setOpenPromotionDialog(false)}
+          >
             Create Promotion
           </Button>
         </DialogActions>

@@ -1,25 +1,38 @@
 // frontend/src/components/FactoryReset.tsx
 
-import React, { useState } from 'react';
-import { Button, TextField, Typography, Box, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
-import { requestResetOTP, confirmReset } from '../services/resetService';
+import React, { useState } from "react";
+import {
+  Button,
+  TextField,
+  Typography,
+  Box,
+  Alert,
+  CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
+import { requestResetOTP, confirmReset } from "../services/resetService";
 
 const FactoryReset: React.FC = () => {
-  const [scope, setScope] = useState('organization');
-  const [organizationId, setOrganizationId] = useState<number | undefined>(undefined);
-  const [otp, setOtp] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [scope, setScope] = useState("organization");
+  const [organizationId, setOrganizationId] = useState<number | undefined>(
+    undefined,
+  );
+  const [otp, setOtp] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
 
   const handleRequestOTP = async () => {
     setLoading(true);
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
     try {
       await requestResetOTP(scope, organizationId);
-      setMessage('OTP sent to your email.');
+      setMessage("OTP sent to your email.");
       setOtpSent(true);
     } catch (err: any) {
       setError(err.message);
@@ -30,11 +43,11 @@ const FactoryReset: React.FC = () => {
 
   const handleConfirmReset = async () => {
     setLoading(true);
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
     try {
       await confirmReset(otp);
-      setMessage('Data reset successful.');
+      setMessage("Data reset successful.");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -43,9 +56,11 @@ const FactoryReset: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 400, margin: 'auto', padding: 2 }}>
-      <Typography variant="h5" gutterBottom>Factory Reset</Typography>
-      
+    <Box sx={{ maxWidth: 400, margin: "auto", padding: 2 }}>
+      <Typography variant="h5" gutterBottom>
+        Factory Reset
+      </Typography>
+
       {!otpSent ? (
         <>
           <FormControl fullWidth margin="normal">
@@ -59,18 +74,20 @@ const FactoryReset: React.FC = () => {
               <MenuItem value="all">All Organizations</MenuItem>
             </Select>
           </FormControl>
-          
-          {scope === 'organization' && (
+
+          {scope === "organization" && (
             <TextField
               fullWidth
               margin="normal"
               label="Organization ID"
               type="number"
-              value={organizationId || ''}
-              onChange={(e) => setOrganizationId(parseInt(e.target.value) || undefined)}
+              value={organizationId || ""}
+              onChange={(e) =>
+                setOrganizationId(parseInt(e.target.value) || undefined)
+              }
             />
           )}
-          
+
           <Button
             variant="contained"
             color="primary"
@@ -78,7 +95,7 @@ const FactoryReset: React.FC = () => {
             disabled={loading}
             fullWidth
           >
-            {loading ? <CircularProgress size={24} /> : 'Request OTP'}
+            {loading ? <CircularProgress size={24} /> : "Request OTP"}
           </Button>
         </>
       ) : (
@@ -90,7 +107,7 @@ const FactoryReset: React.FC = () => {
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
           />
-          
+
           <Button
             variant="contained"
             color="warning"
@@ -98,13 +115,21 @@ const FactoryReset: React.FC = () => {
             disabled={loading}
             fullWidth
           >
-            {loading ? <CircularProgress size={24} /> : 'Confirm Reset'}
+            {loading ? <CircularProgress size={24} /> : "Confirm Reset"}
           </Button>
         </>
       )}
-      
-      {message && <Alert severity="success" sx={{ mt: 2 }}>{message}</Alert>}
-      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+
+      {message && (
+        <Alert severity="success" sx={{ mt: 2 }}>
+          {message}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      )}
     </Box>
   );
 };

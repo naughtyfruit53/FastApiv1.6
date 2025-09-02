@@ -1,6 +1,16 @@
 // frontend/src/pages/crm/index.tsx
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Card, CardContent, Grid, Button, TextField, Tab, Tabs } from '@mui/material';
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Button,
+  TextField,
+  Tab,
+  Tabs,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -8,24 +18,24 @@ import {
   People as PeopleIcon,
   Assignment as AssignmentIcon,
   AttachMoney as AttachMoneyIcon,
-} from '@mui/icons-material';
-import { useAuth } from '@/context/AuthContext';
-import { crmService, Lead, Opportunity, CRMAnalytics } from '../../services';
+} from "@mui/icons-material";
+import { useAuth } from "@/context/AuthContext";
+import { crmService, Lead, Opportunity, CRMAnalytics } from "../../services";
 const statusColors: Record<string, string> = {
-  new: 'default',
-  contacted: 'info',
-  qualified: 'warning',
-  converted: 'success',
-  lost: 'error',
-  nurturing: 'secondary',
+  new: "default",
+  contacted: "info",
+  qualified: "warning",
+  converted: "success",
+  lost: "error",
+  nurturing: "secondary",
 };
 const stageColors: Record<string, string> = {
-  prospecting: 'default',
-  qualification: 'info',
-  proposal: 'warning',
-  negotiation: 'secondary',
-  closed_won: 'success',
-  closed_lost: 'error',
+  prospecting: "default",
+  qualification: "info",
+  proposal: "warning",
+  negotiation: "secondary",
+  closed_won: "success",
+  closed_lost: "error",
 };
 export default function CRMDashboard() {
   const { user } = useAuth();
@@ -34,7 +44,7 @@ export default function CRMDashboard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [analytics, setAnalytics] = useState<CRMAnalytics | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [openLeadDialog, setOpenLeadDialog] = useState(false);
   const [openOpportunityDialog, setOpenOpportunityDialog] = useState(false);
   useEffect(() => {
@@ -47,14 +57,14 @@ export default function CRMDashboard() {
       const [leadsData, opportunitiesData, analyticsData] = await Promise.all([
         crmService.getLeads(),
         crmService.getOpportunities(),
-        crmService.getAnalytics()
+        crmService.getAnalytics(),
       ]);
       setLeads(leadsData);
       setOpportunities(opportunitiesData);
       setAnalytics(analyticsData);
     } catch (err: any) {
-      console.error('Error loading CRM data:', err);
-      setError(err.userMessage || 'Failed to load CRM data');
+      console.error("Error loading CRM data:", err);
+      setError(err.userMessage || "Failed to load CRM data");
       // Fallback to empty data to prevent crashes
       setLeads([]);
       setOpportunities([]);
@@ -76,24 +86,34 @@ export default function CRMDashboard() {
   };
   const filteredLeads = leads.filter(
     (lead) =>
-      (lead.contact_person || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.contact_person || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       lead.lead_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.contact_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.company_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (lead.contact_email || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (lead.company_name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()),
   );
   const filteredOpportunities = opportunities.filter(
     (opportunity) =>
       opportunity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      opportunity.opportunity_number.toLowerCase().includes(searchTerm.toLowerCase())
+      opportunity.opportunity_number
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()),
   );
   const renderAnalyticsCards = () => {
-    if (!analytics) {return null;}
+    if (!analytics) {
+      return null;
+    }
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <PeopleIcon color="primary" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -110,7 +130,7 @@ export default function CRMDashboard() {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <AssignmentIcon color="info" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -127,7 +147,7 @@ export default function CRMDashboard() {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <AttachMoneyIcon color="success" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -144,7 +164,7 @@ export default function CRMDashboard() {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <TrendingUpIcon color="warning" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -183,7 +203,7 @@ export default function CRMDashboard() {
               <TableCell>
                 {lead.first_name} {lead.last_name}
               </TableCell>
-              <TableCell>{lead.company || '-'}</TableCell>
+              <TableCell>{lead.company || "-"}</TableCell>
               <TableCell>{lead.email}</TableCell>
               <TableCell>
                 <Chip
@@ -194,7 +214,9 @@ export default function CRMDashboard() {
               </TableCell>
               <TableCell>{lead.score}</TableCell>
               <TableCell>
-                {lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : '-'}
+                {lead.estimated_value
+                  ? `$${lead.estimated_value.toLocaleString()}`
+                  : "-"}
               </TableCell>
               <TableCell>
                 {new Date(lead.created_at).toLocaleDateString()}
@@ -233,7 +255,9 @@ export default function CRMDashboard() {
               </TableCell>
               <TableCell>${opportunity.amount.toLocaleString()}</TableCell>
               <TableCell>{opportunity.probability}%</TableCell>
-              <TableCell>${opportunity.expected_revenue.toLocaleString()}</TableCell>
+              <TableCell>
+                ${opportunity.expected_revenue.toLocaleString()}
+              </TableCell>
               <TableCell>
                 {new Date(opportunity.expected_close_date).toLocaleDateString()}
               </TableCell>
@@ -245,11 +269,18 @@ export default function CRMDashboard() {
   );
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h4" component="h1">
           CRM Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -278,8 +309,11 @@ export default function CRMDashboard() {
       {renderAnalyticsCards()}
       <Card>
         <CardContent>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={currentTab}
+              onChange={(_, newValue) => setCurrentTab(newValue)}
+            >
               <Tab label="Leads" />
               <Tab label="Opportunities" />
             </Tabs>
@@ -315,38 +349,19 @@ export default function CRMDashboard() {
           <Box sx={{ pt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="First Name"
-                  fullWidth
-                  required
-                />
+                <TextField label="First Name" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Last Name"
-                  fullWidth
-                  required
-                />
+                <TextField label="Last Name" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Email"
-                  type="email"
-                  fullWidth
-                  required
-                />
+                <TextField label="Email" type="email" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Phone"
-                  fullWidth
-                />
+                <TextField label="Phone" fullWidth />
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  label="Company"
-                  fullWidth
-                />
+                <TextField label="Company" fullWidth />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
@@ -360,11 +375,7 @@ export default function CRMDashboard() {
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Estimated Value"
-                  type="number"
-                  fullWidth
-                />
+                <TextField label="Estimated Value" type="number" fullWidth />
               </Grid>
             </Grid>
           </Box>
@@ -388,19 +399,10 @@ export default function CRMDashboard() {
           <Box sx={{ pt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <TextField
-                  label="Opportunity Name"
-                  fullWidth
-                  required
-                />
+                <TextField label="Opportunity Name" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Amount"
-                  type="number"
-                  fullWidth
-                  required
-                />
+                <TextField label="Amount" type="number" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
@@ -414,11 +416,7 @@ export default function CRMDashboard() {
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Probability (%)"
-                  type="number"
-                  fullWidth
-                />
+                <TextField label="Probability (%)" type="number" fullWidth />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -429,19 +427,19 @@ export default function CRMDashboard() {
                 />
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  label="Description"
-                  multiline
-                  rows={3}
-                  fullWidth
-                />
+                <TextField label="Description" multiline rows={3} fullWidth />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenOpportunityDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setOpenOpportunityDialog(false)}>
+          <Button onClick={() => setOpenOpportunityDialog(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setOpenOpportunityDialog(false)}
+          >
             Create Opportunity
           </Button>
         </DialogActions>

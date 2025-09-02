@@ -1,23 +1,17 @@
 // frontend/src/pages/404.tsx
 
-'use client';
+"use client";
 
-import React from 'react';
-import {
-  Box,
-  Container,
-  Typography,
-  Button,
-  Paper
-} from '@mui/material';
-import { Home, ArrowBack } from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
+import React from "react";
+import { Box, Container, Typography, Button, Paper } from "@mui/material";
+import { Home, ArrowBack } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 
 const NotFoundPage: React.FC = () => {
   const router = useRouter();
 
   const handleGoHome = () => {
-    router.push('/');
+    router.push("/");
   };
 
   const handleGoBack = () => {
@@ -26,16 +20,16 @@ const NotFoundPage: React.FC = () => {
 
   return (
     <Container maxWidth="md" sx={{ mt: 8 }}>
-      <Paper sx={{ p: 4, textAlign: 'center' }}>
+      <Paper sx={{ p: 4, textAlign: "center" }}>
         <Typography variant="h3" color="error" gutterBottom>
           404 - Page Not Found
         </Typography>
-        
+
         <Typography variant="h6" color="textSecondary" gutterBottom>
           The page you are looking for does not exist or has been moved.
         </Typography>
 
-        <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
+        <Box sx={{ mt: 4, display: "flex", gap: 2, justifyContent: "center" }}>
           <Button
             variant="contained"
             startIcon={<Home />}
@@ -43,7 +37,7 @@ const NotFoundPage: React.FC = () => {
           >
             Go Home
           </Button>
-          
+
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}

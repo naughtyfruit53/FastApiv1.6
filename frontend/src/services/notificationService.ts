@@ -1,7 +1,7 @@
 // src/services/notificationService.ts
 // Service for managing notifications and templates in the Service CRM
 
-import api from '../lib/api';
+import api from "../lib/api";
 
 // Types for notification system
 export interface NotificationTemplate {
@@ -132,108 +132,142 @@ export interface TemplateTestResponse {
 }
 
 // Constants
-export const NOTIFICATION_CHANNELS = ['email', 'sms', 'push', 'in_app'] as const;
-export const TEMPLATE_TYPES = ['appointment_reminder', 'service_completion', 'follow_up', 'marketing', 'system'] as const;
-export const RECIPIENT_TYPES = ['customer', 'user'] as const;
-export const BULK_RECIPIENT_TYPES = ['customers', 'segment', 'users'] as const;
-export const NOTIFICATION_STATUSES = ['pending', 'sent', 'delivered', 'failed', 'bounced'] as const;
+export const NOTIFICATION_CHANNELS = [
+  "email",
+  "sms",
+  "push",
+  "in_app",
+] as const;
+export const TEMPLATE_TYPES = [
+  "appointment_reminder",
+  "service_completion",
+  "follow_up",
+  "marketing",
+  "system",
+] as const;
+export const RECIPIENT_TYPES = ["customer", "user"] as const;
+export const BULK_RECIPIENT_TYPES = ["customers", "segment", "users"] as const;
+export const NOTIFICATION_STATUSES = [
+  "pending",
+  "sent",
+  "delivered",
+  "failed",
+  "bounced",
+] as const;
 
-export type NotificationChannel = typeof NOTIFICATION_CHANNELS[number];
-export type TemplateType = typeof TEMPLATE_TYPES[number];
-export type RecipientType = typeof RECIPIENT_TYPES[number];
-export type BulkRecipientType = typeof BULK_RECIPIENT_TYPES[number];
-export type NotificationStatus = typeof NOTIFICATION_STATUSES[number];
+export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
+export type TemplateType = (typeof TEMPLATE_TYPES)[number];
+export type RecipientType = (typeof RECIPIENT_TYPES)[number];
+export type BulkRecipientType = (typeof BULK_RECIPIENT_TYPES)[number];
+export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number];
 
 // Template Management API
-export const getNotificationTemplates = async (params: {
-  channel?: NotificationChannel;
-  template_type?: TemplateType;
-  is_active?: boolean;
-  signal?: AbortSignal;
-} = {}): Promise<NotificationTemplate[]> => {
+export const getNotificationTemplates = async (
+  params: {
+    channel?: NotificationChannel;
+    template_type?: TemplateType;
+    is_active?: boolean;
+    signal?: AbortSignal;
+  } = {},
+): Promise<NotificationTemplate[]> => {
   const { signal, ...queryParams } = params;
-  const response = await api.get('/api/v1/notifications/templates', {
+  const response = await api.get("/api/v1/notifications/templates", {
     params: queryParams,
-    signal
+    signal,
   });
   return response.data;
 };
 
 export const getNotificationTemplate = async (
   templateId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<NotificationTemplate> => {
-  const response = await api.get(`/api/v1/notifications/templates/${templateId}`, { signal });
+  const response = await api.get(
+    `/api/v1/notifications/templates/${templateId}`,
+    { signal },
+  );
   return response.data;
 };
 
 export const createNotificationTemplate = async (
-  templateData: NotificationTemplateCreate
+  templateData: NotificationTemplateCreate,
 ): Promise<NotificationTemplate> => {
-  const response = await api.post('/api/v1/notifications/templates', templateData);
+  const response = await api.post(
+    "/api/v1/notifications/templates",
+    templateData,
+  );
   return response.data;
 };
 
 export const updateNotificationTemplate = async (
   templateId: number,
-  updateData: NotificationTemplateUpdate
+  updateData: NotificationTemplateUpdate,
 ): Promise<NotificationTemplate> => {
-  const response = await api.put(`/api/v1/notifications/templates/${templateId}`, updateData);
+  const response = await api.put(
+    `/api/v1/notifications/templates/${templateId}`,
+    updateData,
+  );
   return response.data;
 };
 
-export const deleteNotificationTemplate = async (templateId: number): Promise<void> => {
+export const deleteNotificationTemplate = async (
+  templateId: number,
+): Promise<void> => {
   await api.delete(`/api/v1/notifications/templates/${templateId}`);
 };
 
 // Notification Sending API
 export const sendNotification = async (
-  request: NotificationSendRequest
+  request: NotificationSendRequest,
 ): Promise<NotificationSendResponse> => {
-  const response = await api.post('/api/v1/notifications/send', request);
+  const response = await api.post("/api/v1/notifications/send", request);
   return response.data;
 };
 
 export const sendBulkNotification = async (
-  request: BulkNotificationRequest
+  request: BulkNotificationRequest,
 ): Promise<BulkNotificationResponse> => {
-  const response = await api.post('/api/v1/notifications/send-bulk', request);
+  const response = await api.post("/api/v1/notifications/send-bulk", request);
   return response.data;
 };
 
 // Notification Logs API
-export const getNotificationLogs = async (params: {
-  recipient_type?: string;
-  status?: NotificationStatus;
-  channel?: NotificationChannel;
-  limit?: number;
-  offset?: number;
-  signal?: AbortSignal;
-} = {}): Promise<NotificationLog[]> => {
+export const getNotificationLogs = async (
+  params: {
+    recipient_type?: string;
+    status?: NotificationStatus;
+    channel?: NotificationChannel;
+    limit?: number;
+    offset?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<NotificationLog[]> => {
   const { signal, ...queryParams } = params;
-  const response = await api.get('/api/v1/notifications/logs', {
+  const response = await api.get("/api/v1/notifications/logs", {
     params: queryParams,
-    signal
+    signal,
   });
   return response.data;
 };
 
 export const getNotificationLog = async (
   logId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<NotificationLog> => {
-  const response = await api.get(`/api/v1/notifications/logs/${logId}`, { signal });
+  const response = await api.get(`/api/v1/notifications/logs/${logId}`, {
+    signal,
+  });
   return response.data;
 };
 
 // Analytics API
 export const getNotificationAnalytics = async (
   days: number = 30,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<NotificationAnalytics> => {
-  const response = await api.get('/api/v1/notifications/analytics/summary', {
+  const response = await api.get("/api/v1/notifications/analytics/summary", {
     params: { days },
-    signal
+    signal,
   });
   return response.data;
 };
@@ -241,66 +275,70 @@ export const getNotificationAnalytics = async (
 // Template Testing API
 export const testNotificationTemplate = async (
   templateId: number,
-  testData: TemplateTestData = {}
+  testData: TemplateTestData = {},
 ): Promise<TemplateTestResponse> => {
-  const response = await api.post(`/api/v1/notifications/templates/${templateId}/test`, testData);
+  const response = await api.post(
+    `/api/v1/notifications/templates/${templateId}/test`,
+    testData,
+  );
   return response.data;
 };
 
 // Utility functions
 export const getChannelDisplayName = (channel: NotificationChannel): string => {
   const channelNames: Record<NotificationChannel, string> = {
-    email: 'Email',
-    sms: 'SMS',
-    push: 'Push Notification',
-    in_app: 'In-App'
+    email: "Email",
+    sms: "SMS",
+    push: "Push Notification",
+    in_app: "In-App",
   };
   return channelNames[channel] || channel;
 };
 
 export const getTemplateTypeDisplayName = (type: TemplateType): string => {
   const typeNames: Record<TemplateType, string> = {
-    appointment_reminder: 'Appointment Reminder',
-    service_completion: 'Service Completion',
-    follow_up: 'Follow-up',
-    marketing: 'Marketing',
-    system: 'System'
+    appointment_reminder: "Appointment Reminder",
+    service_completion: "Service Completion",
+    follow_up: "Follow-up",
+    marketing: "Marketing",
+    system: "System",
   };
   return typeNames[type] || type;
 };
 
 export const getStatusDisplayName = (status: NotificationStatus): string => {
   const statusNames: Record<NotificationStatus, string> = {
-    pending: 'Pending',
-    sent: 'Sent',
-    delivered: 'Delivered',
-    failed: 'Failed',
-    bounced: 'Bounced'
+    pending: "Pending",
+    sent: "Sent",
+    delivered: "Delivered",
+    failed: "Failed",
+    bounced: "Bounced",
   };
   return statusNames[status] || status;
 };
 
 export const getStatusColor = (status: NotificationStatus): string => {
   const statusColors: Record<NotificationStatus, string> = {
-    pending: 'text-yellow-600 bg-yellow-100',
-    sent: 'text-blue-600 bg-blue-100',
-    delivered: 'text-green-600 bg-green-100',
-    failed: 'text-red-600 bg-red-100',
-    bounced: 'text-orange-600 bg-orange-100'
+    pending: "text-yellow-600 bg-yellow-100",
+    sent: "text-blue-600 bg-blue-100",
+    delivered: "text-green-600 bg-green-100",
+    failed: "text-red-600 bg-red-100",
+    bounced: "text-orange-600 bg-orange-100",
   };
-  return statusColors[status] || 'text-gray-600 bg-gray-100';
+  return statusColors[status] || "text-gray-600 bg-gray-100";
 };
 
 // React Query keys for caching
 export const notificationQueryKeys = {
-  all: ['notifications'] as const,
-  templates: () => [...notificationQueryKeys.all, 'templates'] as const,
-  templatesFiltered: (filters: Record<string, any>) => 
+  all: ["notifications"] as const,
+  templates: () => [...notificationQueryKeys.all, "templates"] as const,
+  templatesFiltered: (filters: Record<string, any>) =>
     [...notificationQueryKeys.templates(), filters] as const,
   template: (id: number) => [...notificationQueryKeys.templates(), id] as const,
-  logs: () => [...notificationQueryKeys.all, 'logs'] as const,
-  logsFiltered: (filters: Record<string, any>) => 
+  logs: () => [...notificationQueryKeys.all, "logs"] as const,
+  logsFiltered: (filters: Record<string, any>) =>
     [...notificationQueryKeys.logs(), filters] as const,
   log: (id: number) => [...notificationQueryKeys.logs(), id] as const,
-  analytics: (days: number) => [...notificationQueryKeys.all, 'analytics', days] as const,
+  analytics: (days: number) =>
+    [...notificationQueryKeys.all, "analytics", days] as const,
 } as const;

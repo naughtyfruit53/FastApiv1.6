@@ -1,5 +1,5 @@
 // frontend/src/components/ServiceAnalytics/TechnicianPerformanceChart.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -19,8 +19,8 @@ import {
   Avatar,
   IconButton,
   Collapse,
-  Rating
-} from '@mui/material';
+  Rating,
+} from "@mui/material";
 import {
   Person as TechnicianIcon,
   ExpandMore as ExpandIcon,
@@ -28,37 +28,60 @@ import {
   Schedule as TimeIcon,
   Assignment as JobIcon,
   Speed as EfficiencyIcon,
-  Star as _RatingIcon
-} from '@mui/icons-material';
-import { TechnicianPerformanceMetrics } from '../../services/serviceAnalyticsService';
+} from "@mui/icons-material";
+import { TechnicianPerformanceMetrics } from "../../services/serviceAnalyticsService";
 interface TechnicianPerformanceChartProps {
   data: TechnicianPerformanceMetrics[];
 }
-const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({ data }) => {
-  const [expandedTechnician, setExpandedTechnician] = useState<number | null>(null);
+const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
+  data,
+}) => {
+  const [expandedTechnician, setExpandedTechnician] = useState<number | null>(
+    null,
+  );
   const getPerformanceColor = (score: number) => {
-    if (score >= 80) {return 'success';}
-    if (score >= 60) {return 'warning';}
-    return 'error';
+    if (score >= 80) {
+      return "success";
+    }
+    if (score >= 60) {
+      return "warning";
+    }
+    return "error";
   };
   const getUtilizationColor = (rate: number) => {
-    if (rate >= 80) {return 'success';}
-    if (rate >= 60) {return 'info';}
-    if (rate >= 40) {return 'warning';}
-    return 'error';
+    if (rate >= 80) {
+      return "success";
+    }
+    if (rate >= 60) {
+      return "info";
+    }
+    if (rate >= 40) {
+      return "warning";
+    }
+    return "error";
   };
   const handleTechnicianExpand = (technicianId: number) => {
-    setExpandedTechnician(expandedTechnician === technicianId ? null : technicianId);
+    setExpandedTechnician(
+      expandedTechnician === technicianId ? null : technicianId,
+    );
   };
   // Calculate summary statistics
-  const totalJobsAssigned = data.reduce((sum, tech) => sum + tech.total_jobs_assigned, 0);
-  const totalJobsCompleted = data.reduce((sum, tech) => sum + tech.jobs_completed, 0);
-  const averageUtilization = data.length > 0 
-    ? data.reduce((sum, tech) => sum + tech.utilization_rate, 0) / data.length 
-    : 0;
-  const averageEfficiency = data.length > 0 
-    ? data.reduce((sum, tech) => sum + tech.efficiency_score, 0) / data.length 
-    : 0;
+  const totalJobsAssigned = data.reduce(
+    (sum, tech) => sum + tech.total_jobs_assigned,
+    0,
+  );
+  const totalJobsCompleted = data.reduce(
+    (sum, tech) => sum + tech.jobs_completed,
+    0,
+  );
+  const averageUtilization =
+    data.length > 0
+      ? data.reduce((sum, tech) => sum + tech.utilization_rate, 0) / data.length
+      : 0;
+  const averageEfficiency =
+    data.length > 0
+      ? data.reduce((sum, tech) => sum + tech.efficiency_score, 0) / data.length
+      : 0;
   if (data.length === 0) {
     return (
       <Card>
@@ -69,7 +92,8 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               No technician performance data available for the selected period.
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Performance metrics will appear here once technicians are assigned to jobs.
+              Performance metrics will appear here once technicians are assigned
+              to jobs.
             </Typography>
           </Box>
         </CardContent>
@@ -78,15 +102,18 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
   }
   return (
     <Card>
-      <CardHeader 
-        title="Technician Performance" 
+      <CardHeader
+        title="Technician Performance"
         subheader={`${data.length} technicians analyzed`}
       />
       <CardContent>
         {/* Summary Statistics */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="primary.main">
                 {data.length}
               </Typography>
@@ -96,7 +123,10 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="info.main">
                 {totalJobsAssigned}
               </Typography>
@@ -106,7 +136,10 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="success.main">
                 {totalJobsCompleted}
               </Typography>
@@ -116,7 +149,10 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+            <Paper
+              elevation={1}
+              sx={{ p: 2, textAlign: "center", bgcolor: "background.default" }}
+            >
               <Typography variant="h5" color="warning.main">
                 {averageEfficiency.toFixed(1)}%
               </Typography>
@@ -133,7 +169,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
+              <Paper elevation={1} sx={{ p: 2, bgcolor: "background.default" }}>
                 <Typography variant="body2" gutterBottom>
                   Average Team Utilization
                 </Typography>
@@ -151,7 +187,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
               </Paper>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
+              <Paper elevation={1} sx={{ p: 2, bgcolor: "background.default" }}>
                 <Typography variant="body2" gutterBottom>
                   Team Completion Rate
                 </Typography>
@@ -163,7 +199,13 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                     color="success"
                   />
                   <Typography variant="body2" color="text.secondary">
-                    {totalJobsAssigned > 0 ? ((totalJobsCompleted / totalJobsAssigned) * 100).toFixed(1) : 0}%
+                    {totalJobsAssigned > 0
+                      ? (
+                          (totalJobsCompleted / totalJobsAssigned) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
                   </Typography>
                 </Box>
               </Paper>
@@ -207,7 +249,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                       </Box>
                     </TableCell>
                     <TableCell align="center">
-                      <Chip 
+                      <Chip
                         label={technician.total_jobs_assigned}
                         size="small"
                         color="primary"
@@ -215,7 +257,7 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <Chip 
+                      <Chip
                         label={technician.jobs_completed}
                         size="small"
                         color="success"
@@ -224,7 +266,10 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                     </TableCell>
                     <TableCell align="center">
                       <Box>
-                        <Typography variant="body2" color={`${getUtilizationColor(technician.utilization_rate)}.main`}>
+                        <Typography
+                          variant="body2"
+                          color={`${getUtilizationColor(technician.utilization_rate)}.main`}
+                        >
                           {technician.utilization_rate.toFixed(1)}%
                         </Typography>
                         <LinearProgress
@@ -232,12 +277,14 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                           value={technician.utilization_rate}
                           size="small"
                           sx={{ width: 60, height: 4 }}
-                          color={getUtilizationColor(technician.utilization_rate)}
+                          color={getUtilizationColor(
+                            technician.utilization_rate,
+                          )}
                         />
                       </Box>
                     </TableCell>
                     <TableCell align="center">
-                      <Chip 
+                      <Chip
                         label={`${technician.efficiency_score.toFixed(1)}%`}
                         size="small"
                         color={getPerformanceColor(technician.efficiency_score)}
@@ -246,9 +293,9 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                     <TableCell align="center">
                       {technician.customer_rating_average ? (
                         <Box display="flex" alignItems="center" gap={1}>
-                          <Rating 
-                            value={technician.customer_rating_average} 
-                            readOnly 
+                          <Rating
+                            value={technician.customer_rating_average}
+                            readOnly
                             size="small"
                             precision={0.1}
                           />
@@ -263,19 +310,27 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                       )}
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton 
+                      <IconButton
                         size="small"
-                        onClick={() => handleTechnicianExpand(technician.technician_id)}
+                        onClick={() =>
+                          handleTechnicianExpand(technician.technician_id)
+                        }
                       >
-                        {expandedTechnician === technician.technician_id ? <CollapseIcon /> : <ExpandIcon />}
+                        {expandedTechnician === technician.technician_id ? (
+                          <CollapseIcon />
+                        ) : (
+                          <ExpandIcon />
+                        )}
                       </IconButton>
                     </TableCell>
                   </TableRow>
                   {/* Expanded Details */}
                   <TableRow>
                     <TableCell colSpan={7} sx={{ py: 0 }}>
-                      <Collapse in={expandedTechnician === technician.technician_id}>
-                        <Box sx={{ p: 2, bgcolor: 'background.default' }}>
+                      <Collapse
+                        in={expandedTechnician === technician.technician_id}
+                      >
+                        <Box sx={{ p: 2, bgcolor: "background.default" }}>
                           <Grid container spacing={2}>
                             <Grid item xs={12} sm={4}>
                               <Box display="flex" alignItems="center" gap={1}>
@@ -290,18 +345,31 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                                 <Box display="flex" alignItems="center" gap={1}>
                                   <TimeIcon color="action" fontSize="small" />
                                   <Typography variant="body2">
-                                    Avg Time: {technician.average_completion_time_hours.toFixed(1)}h
+                                    Avg Time:{" "}
+                                    {technician.average_completion_time_hours.toFixed(
+                                      1,
+                                    )}
+                                    h
                                   </Typography>
                                 </Box>
                               </Grid>
                             )}
                             <Grid item xs={12} sm={4}>
                               <Box display="flex" alignItems="center" gap={1}>
-                                <EfficiencyIcon color="action" fontSize="small" />
+                                <EfficiencyIcon
+                                  color="action"
+                                  fontSize="small"
+                                />
                                 <Typography variant="body2">
-                                  Completion Rate: {technician.total_jobs_assigned > 0 
-                                    ? ((technician.jobs_completed / technician.total_jobs_assigned) * 100).toFixed(1)
-                                    : 0}%
+                                  Completion Rate:{" "}
+                                  {technician.total_jobs_assigned > 0
+                                    ? (
+                                        (technician.jobs_completed /
+                                          technician.total_jobs_assigned) *
+                                        100
+                                      ).toFixed(1)
+                                    : 0}
+                                  %
                                 </Typography>
                               </Box>
                             </Grid>
@@ -322,16 +390,27 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
           </Typography>
           <Grid container spacing={2}>
             {(() => {
-              const topPerformer = data.reduce((prev, current) => 
-                prev.efficiency_score > current.efficiency_score ? prev : current
+              const topPerformer = data.reduce((prev, current) =>
+                prev.efficiency_score > current.efficiency_score
+                  ? prev
+                  : current,
               );
-              const mostUtilized = data.reduce((prev, current) => 
-                prev.utilization_rate > current.utilization_rate ? prev : current
+              const mostUtilized = data.reduce((prev, current) =>
+                prev.utilization_rate > current.utilization_rate
+                  ? prev
+                  : current,
               );
               return (
                 <>
                   <Grid item xs={12} sm={6}>
-                    <Paper elevation={1} sx={{ p: 2, bgcolor: 'success.light', color: 'success.contrastText' }}>
+                    <Paper
+                      elevation={1}
+                      sx={{
+                        p: 2,
+                        bgcolor: "success.light",
+                        color: "success.contrastText",
+                      }}
+                    >
                       <Typography variant="body2" gutterBottom>
                         Top Performer
                       </Typography>
@@ -339,12 +418,20 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         {topPerformer.technician_name}
                       </Typography>
                       <Typography variant="body2">
-                        Efficiency Score: {topPerformer.efficiency_score.toFixed(1)}%
+                        Efficiency Score:{" "}
+                        {topPerformer.efficiency_score.toFixed(1)}%
                       </Typography>
                     </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Paper elevation={1} sx={{ p: 2, bgcolor: 'info.light', color: 'info.contrastText' }}>
+                    <Paper
+                      elevation={1}
+                      sx={{
+                        p: 2,
+                        bgcolor: "info.light",
+                        color: "info.contrastText",
+                      }}
+                    >
                       <Typography variant="body2" gutterBottom>
                         Highest Utilization
                       </Typography>
@@ -352,7 +439,8 @@ const TechnicianPerformanceChart: React.FC<TechnicianPerformanceChartProps> = ({
                         {mostUtilized.technician_name}
                       </Typography>
                       <Typography variant="body2">
-                        Utilization Rate: {mostUtilized.utilization_rate.toFixed(1)}%
+                        Utilization Rate:{" "}
+                        {mostUtilized.utilization_rate.toFixed(1)}%
                       </Typography>
                     </Paper>
                   </Grid>

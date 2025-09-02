@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Autocomplete,
   TextField,
   CircularProgress,
   Box,
   Typography,
-  Chip
-} from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { searchCustomers, createCustomer } from '../services/masterService';
-import AddCustomerModal from './AddCustomerModal';
+  Chip,
+} from "@mui/material";
+import { Add as AddIcon } from "@mui/icons-material";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
+import { searchCustomers, createCustomer } from "../services/masterService";
+import AddCustomerModal from "./AddCustomerModal";
 interface Customer {
   id: number;
   name: string;
@@ -38,18 +43,20 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
   value: _value,
   onChange,
   error = false,
-  helperText = '',
+  helperText = "",
   disabled = false,
-  label = 'Customer',
-  placeholder = 'Search or add customer...'
+  label = "Customer",
+  placeholder = "Search or add customer...",
 }) => {
-  const [inputValue, setInputValue] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [inputValue, setInputValue] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
   const [addModalOpen, setAddModalOpen] = useState(false);
   const queryClient = useQueryClient();
   // Search query with debouncing
   const { data: searchResults = [], isLoading } = useQuery({
-    queryKey: ['searchCustomers', inputValue, 10],
+    queryKey: ["searchCustomers", inputValue, 10],
     queryFn: searchCustomers,
     enabled: inputValue.length >= 2,
     placeholderData: keepPreviousData,
@@ -60,27 +67,27 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     mutationFn: createCustomer,
     onSuccess: (newCustomer: Customer) => {
       // Invalidate search queries
-      queryClient.invalidateQueries({queryKey: ['customerSearch']});
-      queryClient.invalidateQueries({queryKey: ['customers']});
+      queryClient.invalidateQueries({ queryKey: ["customerSearch"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       // Auto-select the newly created customer
       setSelectedCustomer(newCustomer);
       onChange(newCustomer);
       setAddModalOpen(false);
     },
     onError: (createError: any) => {
-      console.error('Failed to create customer:', createError);
-    }
+      console.error("Failed to create customer:", createError);
+    },
   });
   // Create options array with "Add Customer" option
   const options = React.useMemo(() => {
     const addOption = {
       id: -1,
-      name: '➕ Add Customer',
+      name: "➕ Add Customer",
       isAddOption: true,
     };
-    return inputValue.length >= 2 
+    return inputValue.length >= 2
       ? [addOption, ...searchResults]
-      : searchResults.length > 0 
+      : searchResults.length > 0
         ? [addOption, ...searchResults]
         : [addOption];
   }, [searchResults, inputValue]);
@@ -104,10 +111,14 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
         onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         options={options}
         getOptionLabel={(option) => {
-          if (option.isAddOption) {return option.name;}
+          if (option.isAddOption) {
+            return option.name;
+          }
           return option.name;
         }}
-        isOptionEqualToValue={(option, selectedValue) => option.id === selectedValue?.id}
+        isOptionEqualToValue={(option, selectedValue) =>
+          option.id === selectedValue?.id
+        }
         loading={isLoading}
         disabled={disabled}
         filterOptions={(x) => x} // Disable default default filtering since we use backend search
@@ -122,7 +133,9 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
               ...params.InputProps,
               endAdornment: (
                 <>
-                  {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                  {isLoading ? (
+                    <CircularProgress color="inherit" size={20} />
+                  ) : null}
                   {params.InputProps.endAdornment}
                 </>
               ),
@@ -132,11 +145,15 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
         renderOption={(props, option) => {
           if (option.isAddOption) {
             return (
-              <Box component="li" {...props} sx={{ 
-                color: 'primary.main', 
-                fontWeight: 'bold',
-                borderBottom: '1px solid #eee'
-              }}>
+              <Box
+                component="li"
+                {...props}
+                sx={{
+                  color: "primary.main",
+                  fontWeight: "bold",
+                  borderBottom: "1px solid #eee",
+                }}
+              >
                 <AddIcon sx={{ mr: 1 }} />
                 {option.name}
               </Box>
@@ -144,20 +161,26 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
           }
           return (
             <Box component="li" {...props}>
-              <Box sx={{ width: '100%' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+              <Box sx={{ width: "100%" }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Typography variant="body1" sx={{ fontWeight: "medium" }}>
                     {option.name}
                   </Typography>
                   {option.gst_number && (
-                    <Chip 
-                      label={`GST: ${option.gst_number}`} 
-                      size="small" 
-                      variant="outlined" 
+                    <Chip
+                      label={`GST: ${option.gst_number}`}
+                      size="small"
+                      variant="outlined"
                     />
                   )}
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
                   {option.contact_number && (
                     <Typography variant="caption" color="text.secondary">
                       📞 {option.contact_number}
@@ -179,8 +202,8 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
           );
         }}
         noOptionsText={
-          inputValue.length < 2 
-            ? "Type to search customers..." 
+          inputValue.length < 2
+            ? "Type to search customers..."
             : "No customers found"
         }
       />

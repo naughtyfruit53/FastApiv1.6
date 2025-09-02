@@ -1,5 +1,5 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -23,18 +23,13 @@ import {
   ListItemText as MuiListItemText,
   Divider,
   Alert,
-  CardContent,
-  Tooltip,
-} from '@mui/material';
-import {
-  Close as CloseIcon,
-  Person as PersonIcon
-} from '@mui/icons-material';
+} from "@mui/material";
+import { Close as CloseIcon, Person as PersonIcon } from "@mui/icons-material";
 import {
   ServiceRole,
   UserWithServiceRoles,
-  ROLE_BADGE_COLORS
-} from '../../types/rbac.types';
+  ROLE_BADGE_COLORS,
+} from "../../types/rbac.types";
 interface UserRoleAssignmentDialogProps {
   open: boolean;
   onClose: () => void;
@@ -49,7 +44,7 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
   user,
   availableRoles,
   onAssign,
-  onRemove
+  onRemove,
 }) => {
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +52,9 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
     setSelectedRoleIds([]);
   }, [user, open]);
   const handleAssignRoles = async () => {
-    if (selectedRoleIds.length === 0) {return;}
+    if (selectedRoleIds.length === 0) {
+      return;
+    }
     setLoading(true);
     try {
       await onAssign(user.id, selectedRoleIds);
@@ -80,21 +77,21 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
   };
   const handleRoleSelectionChange = (event: any) => {
     const value = event.target.value;
-    setSelectedRoleIds(typeof value === 'string' ? value.split(',').map(Number) : value);
+    setSelectedRoleIds(
+      typeof value === "string" ? value.split(",").map(Number) : value,
+    );
   };
   // Filter out roles that the user already has
-  const assignableRoles = availableRoles.filter(role => 
-    !user.service_roles.some(userRole => userRole.id === role.id)
+  const assignableRoles = availableRoles.filter(
+    (role) => !user.service_roles.some((userRole) => userRole.id === role.id),
   );
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <PersonIcon />
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6">
-              Manage Service Roles
-            </Typography>
+            <Typography variant="h6">Manage Service Roles</Typography>
             <Typography variant="body2" color="text.secondary">
               {user.full_name || user.email}
             </Typography>
@@ -102,7 +99,7 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
         </Box>
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {/* Current Roles */}
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -156,7 +153,7 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
                 No additional roles available for assignment.
               </Alert>
             ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <FormControl fullWidth>
                   <InputLabel>Select Roles to Assign</InputLabel>
                   <Select
@@ -165,9 +162,11 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
                     onChange={handleRoleSelectionChange}
                     input={<OutlinedInput label="Select Roles to Assign" />}
                     renderValue={(selected) => (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                         {(selected as number[]).map((roleId) => {
-                          const role = assignableRoles.find(r => r.id === roleId);
+                          const role = assignableRoles.find(
+                            (r) => r.id === roleId,
+                          );
                           return role ? (
                             <Chip
                               key={roleId}
@@ -182,7 +181,9 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
                   >
                     {assignableRoles.map((role) => (
                       <MenuItem key={role.id} value={role.id}>
-                        <Checkbox checked={selectedRoleIds.indexOf(role.id) > -1} />
+                        <Checkbox
+                          checked={selectedRoleIds.indexOf(role.id) > -1}
+                        />
                         <ListItemText
                           primary={role.display_name}
                           secondary={role.description}
@@ -203,8 +204,12 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
             )}
           </Box>
           {/* User Info */}
-          <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          <Box sx={{ p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 1 }}
+            >
               User Information
             </Typography>
             <Typography variant="body2">
@@ -214,15 +219,13 @@ const UserRoleAssignmentDialog: React.FC<UserRoleAssignmentDialogProps> = ({
               <strong>System Role:</strong> {user.role}
             </Typography>
             <Typography variant="body2">
-              <strong>Status:</strong> {user.is_active ? 'Active' : 'Inactive'}
+              <strong>Status:</strong> {user.is_active ? "Active" : "Inactive"}
             </Typography>
           </Box>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>
-          Close
-        </Button>
+        <Button onClick={onClose}>Close</Button>
       </DialogActions>
     </Dialog>
   );

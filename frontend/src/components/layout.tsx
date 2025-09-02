@@ -1,13 +1,13 @@
 // frontend/src/components/layout.tsx
-import React from 'react';
-import MegaMenu from './MegaMenu';
-import CompanySetupGuard from './CompanySetupGuard';
-import { Box } from '@mui/material';
-import StickyNotesPanel from './StickyNotes/StickyNotesPanel';
+import React from "react";
+import MegaMenu from "./MegaMenu";
+import CompanySetupGuard from "./CompanySetupGuard";
+import { Box } from "@mui/material";
+import StickyNotesPanel from "./StickyNotes/StickyNotesPanel";
 
-const Layout: React.FC<{ 
-  children: React.ReactNode; 
-  user?: any; 
+const Layout: React.FC<{
+  children: React.ReactNode;
+  user?: any;
   onLogout: () => void;
   showMegaMenu?: boolean;
 }> = ({ children, user, onLogout, showMegaMenu = true }) => {

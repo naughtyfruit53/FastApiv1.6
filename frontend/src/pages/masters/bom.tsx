@@ -29,18 +29,22 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import AddBOMModal from '../../components/AddBOMModal';
+
 const BOMManagement: React.FC = () => {
   const [mode, setMode] = useState<'list' | 'view'>('list');
   const [selectedBOM, setSelectedBOM] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
+
   const queryClient = useQueryClient();
+
   // Fetch BOMs
   const { data: bomList, isLoading: isLoadingBOMs } = useQuery({
     queryKey: ['boms'],
     queryFn: () => api.get('/bom').then(res => res.data),
   });
+
   // Delete BOM mutation
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/bom/${id}`),
@@ -50,37 +54,46 @@ const BOMManagement: React.FC = () => {
       setSelectedBOM(null);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error('Error deleting BOM:', error);
     }
   });
+
   const handleView = (bom: any) => {
     setSelectedBOM(bom);
     setMode('view');
   };
+
   const handleEdit = (bom: any) => {
     setSelectedBOM(bom);
     setEditMode('edit');
     setShowAddModal(true);
   };
+
   const handleDelete = (bom: any) => {
     setSelectedBOM(bom);
     setShowDeleteDialog(true);
   };
+
   const confirmDelete = () => {
     if (selectedBOM?.id) {
       deleteMutation.mutate(selectedBOM.id);
     }
   };
+
+  const handleAddBOM = () => {
     setShowAddModal(false);
     setSelectedBOM(null);
   };
+
   const handleCreate = () => {
     setEditMode('create');
     setShowAddModal(true);
   };
+
   if (isLoadingBOMs) {
     return <CircularProgress />;
   }
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -166,4 +179,5 @@ const BOMManagement: React.FC = () => {
     </Container>
   );
 };
+
 export default BOMManagement;

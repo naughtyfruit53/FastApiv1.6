@@ -1,5 +1,5 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -10,10 +10,10 @@ import {
   Box,
   Typography,
   Alert,
-  CircularProgress
-} from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { getFeatureFlag } from '../utils/config';
+  CircularProgress,
+} from "@mui/material";
+import { useForm } from "react-hook-form";
+import { getFeatureFlag } from "../utils/config";
 interface PasswordChangeModalProps {
   open: boolean;
   onClose: () => void;
@@ -29,21 +29,21 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   open,
   onClose,
   onSuccess,
-  isRequired = false
+  isRequired = false,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   // Check if password change functionality is enabled
-  const passwordChangeEnabled = getFeatureFlag('passwordChange');
+  const passwordChangeEnabled = getFeatureFlag("passwordChange");
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    watch
+    watch,
   } = useForm<PasswordFormData>();
-  const new_password = watch('new_password');
+  const new_password = watch("new_password");
   const handleClose = () => {
     if (!isRequired || success) {
       reset();
@@ -55,25 +55,29 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   const onSubmit = async (data: PasswordFormData) => {
     // Validation checks
     if (data.new_password !== data.confirm_password) {
-      setError('New passwords do not match');
+      setError("New passwords do not match");
       return;
     }
     if (!isRequired && !data.current_password) {
-      setError('Current password is required');
+      setError("Current password is required");
       return;
     }
     setLoading(true);
     setError(null);
     try {
       // Call API for password change (mandatory or regular)
-      const endpoint = isRequired ? '/api/v1/password/change-mandatory' : '/api/v1/password/change';
+      const endpoint = isRequired
+        ? "/api/v1/password/change-mandatory"
+        : "/api/v1/password/change";
       const payload = isRequired ? { new_password: data.new_password } : data;
       const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!response.ok) {throw new Error('Failed to change password');}
+      if (!response.ok) {
+        throw new Error("Failed to change password");
+      }
       setSuccess(true);
       if (onSuccess) {
         onSuccess();
@@ -87,22 +91,26 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
       // Try to extract from various error structures
       const detail = err.response?.data?.detail;
       const message = err.response?.data?.message;
-      let errorMessage = 'Failed to change password';
-      if (typeof detail === 'string' && detail) {
+      let errorMessage = "Failed to change password";
+      if (typeof detail === "string" && detail) {
         errorMessage = detail;
-      } else if (typeof message === 'string' && message) {
+      } else if (typeof message === "string" && message) {
         errorMessage = message;
       } else if (Array.isArray(detail) && detail.length > 0) {
         // Handle Pydantic validation errors
-        const messages = detail.map(e => e.msg || `${e.loc?.join(' -> ')}: ${e.type}`).filter(Boolean);
-        errorMessage = messages.length > 0 ? messages.join(', ') : 'Validation error';
-      } else if (detail && typeof detail === 'object') {
+        const messages = detail
+          .map((e) => e.msg || `${e.loc?.join(" -> ")}: ${e.type}`)
+          .filter(Boolean);
+        errorMessage =
+          messages.length > 0 ? messages.join(", ") : "Validation error";
+      } else if (detail && typeof detail === "object") {
         // Handle object error details
-        errorMessage = detail.error || detail.message || 'Invalid request format';
-      } else if (typeof err.message === 'string' && err.message) {
+        errorMessage =
+          detail.error || detail.message || "Invalid request format";
+      } else if (typeof err.message === "string" && err.message) {
         errorMessage = err.message;
       } else if (err.status === 422) {
-        errorMessage = 'Invalid request. Please check your input fields.';
+        errorMessage = "Invalid request. Please check your input fields.";
       }
       setError(errorMessage);
     } finally {
@@ -110,15 +118,15 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
     }
   };
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
       fullWidth
       disableEscapeKeyDown={isRequired && !success}
     >
       <DialogTitle>
-        {isRequired ? 'Change Your Password' : 'Change Password'}
+        {isRequired ? "Change Your Password" : "Change Password"}
       </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 2 }}>
@@ -129,7 +137,8 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
           )}
           {!passwordChangeEnabled && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Password change functionality is temporarily disabled. Please contact your administrator.
+              Password change functionality is temporarily disabled. Please
+              contact your administrator.
             </Alert>
           )}
           {error && (
@@ -155,8 +164,8 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                   label="Current Password"
                   type="password"
                   margin="normal"
-                  {...register('current_password', {
-                    required: 'Current password is required'
+                  {...register("current_password", {
+                    required: "Current password is required",
                   })}
                   error={!!errors.current_password}
                   helperText={errors.current_password?.message}
@@ -168,16 +177,18 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                 label="New Password"
                 type="password"
                 margin="normal"
-                {...register('new_password', {
-                  required: 'New password is required',
+                {...register("new_password", {
+                  required: "New password is required",
                   minLength: {
                     value: 8,
-                    message: 'Password must be at least 8 characters long'
+                    message: "Password must be at least 8 characters long",
                   },
                   pattern: {
-                    value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&].+$/,
-                    message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-                  }
+                    value:
+                      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&].+$/,
+                    message:
+                      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+                  },
                 })}
                 error={!!errors.new_password}
                 helperText={errors.new_password?.message}
@@ -188,9 +199,10 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                 label="Confirm New Password"
                 type="password"
                 margin="normal"
-                {...register('confirm_password', {
-                  required: 'Please confirm your new password',
-                  validate: (value) => value === new_password || 'Passwords do not match'
+                {...register("confirm_password", {
+                  required: "Please confirm your new password",
+                  validate: (value) =>
+                    value === new_password || "Passwords do not match",
                 })}
                 error={!!errors.confirm_password}
                 helperText={errors.confirm_password?.message}
@@ -198,8 +210,9 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
               />
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Password must be at least 8 characters long and contain at least one uppercase letter, 
-                  one lowercase letter, one number, and one special character (@$!%*?&).
+                  Password must be at least 8 characters long and contain at
+                  least one uppercase letter, one lowercase letter, one number,
+                  and one special character (@$!%*?&).
                 </Typography>
               </Box>
             </form>
@@ -227,15 +240,14 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             Change Password
           </Button>
         )}
-        {!passwordChangeEnabled && (isRequired ? (
-          <Button onClick={handleClose} variant="contained">
-            Continue Without Changing Password
-          </Button>
-        ) : (
-          <Button onClick={handleClose}>
-            Close
-          </Button>
-        ))}
+        {!passwordChangeEnabled &&
+          (isRequired ? (
+            <Button onClick={handleClose} variant="contained">
+              Continue Without Changing Password
+            </Button>
+          ) : (
+            <Button onClick={handleClose}>Close</Button>
+          ))}
       </DialogActions>
     </Dialog>
   );

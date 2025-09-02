@@ -1,16 +1,16 @@
 // src/components/ProductAutocomplete.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Autocomplete,
   TextField,
   CircularProgress,
   Box,
-  Typography
-} from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
-import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
-import { getProducts, createProduct } from '../services/masterService';
-import AddProductModal from './AddProductModal';
+  Typography,
+} from "@mui/material";
+import { Add as AddIcon } from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getProducts, createProduct } from "../services/masterService";
+import AddProductModal from "./AddProductModal";
 interface Product {
   id: number;
   product_name: string; // Updated to match API response format
@@ -32,24 +32,24 @@ interface ProductAutocompleteProps {
   disabled?: boolean;
   label?: string;
   placeholder?: string;
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
 }
 const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   value,
   onChange,
   error = false,
-  helperText = '',
+  helperText = "",
   disabled = false,
-  label = 'Product',
-  placeholder = 'Search or add product...',
-  size = 'medium'
+  label = "Product",
+  placeholder = "Search or add product...",
+  size = "medium",
 }) => {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const queryClient = useQueryClient();
   // Fetch all products
   const { data: allProducts = [], isLoading } = useQuery({
-    queryKey: ['products'],
+    queryKey: ["products"],
     queryFn: getProducts,
     enabled: true,
     staleTime: Infinity, // Cache indefinitely since it's all data
@@ -59,29 +59,30 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
     mutationFn: createProduct,
     onSuccess: (newProduct) => {
       // Invalidate queries
-      queryClient.invalidateQueries({queryKey: ['products']});
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       // Auto-select the newly created product
       onChange(newProduct);
       setAddModalOpen(false);
     },
     onError: (err: any) => {
-      console.error('Failed to create product:', err);
-    }
+      console.error("Failed to create product:", err);
+    },
   });
   // Filtered options based on input
   const filteredOptions = React.useMemo(() => {
     const lowerInput = inputValue.toLowerCase();
-    return allProducts.filter((product: any) => 
-      product.product_name.toLowerCase().includes(lowerInput) ||
-      (product.hsn_code || '').toLowerCase().includes(lowerInput) ||
-      (product.part_number || '').toLowerCase().includes(lowerInput)
+    return allProducts.filter(
+      (product: any) =>
+        product.product_name.toLowerCase().includes(lowerInput) ||
+        (product.hsn_code || "").toLowerCase().includes(lowerInput) ||
+        (product.part_number || "").toLowerCase().includes(lowerInput),
     );
   }, [allProducts, inputValue]);
   // Create options array with "Add Product" option
   const options = React.useMemo(() => {
     const addOption = {
       id: -1,
-      product_name: '➕ Add Product',
+      product_name: "➕ Add Product",
       isAddOption: true,
     };
     return [addOption, ...filteredOptions];
@@ -105,10 +106,14 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
         onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         options={options}
         getOptionLabel={(option) => {
-          if (option.isAddOption) {return option.product_name;}
+          if (option.isAddOption) {
+            return option.product_name;
+          }
           return option.product_name;
         }}
-        isOptionEqualToValue={(option, selectedValue) => option.id === selectedValue?.id}
+        isOptionEqualToValue={(option, selectedValue) =>
+          option.id === selectedValue?.id
+        }
         loading={isLoading}
         disabled={disabled}
         renderInput={(params) => (
@@ -123,7 +128,9 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
               ...params.InputProps,
               endAdornment: (
                 <>
-                  {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                  {isLoading ? (
+                    <CircularProgress color="inherit" size={20} />
+                  ) : null}
                   {params.InputProps.endAdornment}
                 </>
               ),
@@ -133,11 +140,15 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
         renderOption={(props, option) => {
           if (option.isAddOption) {
             return (
-              <Box component="li" {...props} sx={{ 
-                color: 'primary.main', 
-                fontWeight: 'bold',
-                borderBottom: '1px solid #eee'
-              }}>
+              <Box
+                component="li"
+                {...props}
+                sx={{
+                  color: "primary.main",
+                  fontWeight: "bold",
+                  borderBottom: "1px solid #eee",
+                }}
+              >
                 <AddIcon sx={{ mr: 1 }} />
                 {option.product_name}
               </Box>
@@ -145,15 +156,15 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
           }
           return (
             <Box component="li" {...props}>
-              <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+              <Typography variant="body1" sx={{ fontWeight: "medium" }}>
                 {option.product_name}
               </Typography>
             </Box>
           );
         }}
         noOptionsText={
-          inputValue.length < 1 
-            ? "Type to search or select from list..." 
+          inputValue.length < 1
+            ? "Type to search or select from list..."
             : "No products found"
         }
       />

@@ -47,6 +47,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import { getProducts, getVendors } from '../../../services/masterService';
+
 interface JobCardSuppliedMaterial {
   product_id: number;
   quantity_supplied: number;
@@ -56,6 +57,7 @@ interface JobCardSuppliedMaterial {
   lot_number?: string;
   supply_date?: string;
 }
+
 interface JobCardReceivedOutput {
   product_id: number;
   quantity_received: number;
@@ -67,6 +69,7 @@ interface JobCardReceivedOutput {
   batch_number?: string;
   receipt_date?: string;
 }
+
 interface JobCardVoucher {
   id?: number;
   voucher_number: string;
@@ -90,6 +93,7 @@ interface JobCardVoucher {
   supplied_materials: JobCardSuppliedMaterial[];
   received_outputs: JobCardReceivedOutput[];
 }
+
 const defaultValues: Partial<JobCardVoucher> = {
   voucher_number: '',
   date: new Date().toISOString().split('T')[0],
@@ -102,27 +106,32 @@ const defaultValues: Partial<JobCardVoucher> = {
   supplied_materials: [],
   received_outputs: []
 };
+
 const jobTypeOptions = [
   { value: 'outsourcing', label: 'Outsourcing' },
   { value: 'subcontracting', label: 'Subcontracting' },
   { value: 'processing', label: 'Processing' }
 ];
+
 const jobStatusOptions = [
   { value: 'planned', label: 'Planned' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' }
 ];
+
 const materialsSuppliedByOptions = [
   { value: 'company', label: 'Company' },
   { value: 'vendor', label: 'Vendor' },
   { value: 'mixed', label: 'Mixed' }
 ];
+
 const qualityStatusOptions = [
   { value: 'accepted', label: 'Accepted' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'rework', label: 'Rework Required' }
 ];
+
 function TabPanel({ children, value, index, ...other }: any) {
   return (
     <div
@@ -136,14 +145,17 @@ function TabPanel({ children, value, index, ...other }: any) {
     </div>
   );
 }
+
 export default function JobCardVoucher() {
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const queryClient = useQueryClient();
-const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<JobCardVoucher>({
+
+  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<JobCardVoucher>({
     defaultValues
   });
+
   const {
     fields: materialFields,
     append: appendMaterial,
@@ -152,6 +164,7 @@ const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<J
     control,
     name: 'supplied_materials'
   });
+
   const {
     fields: outputFields,
     append: appendOutput,
@@ -160,45 +173,54 @@ const { control, handleSubmit, watch, setValue, reset, formState:  } = useForm<J
     control,
     name: 'received_outputs'
   });
+
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
     queryKey: ['job-card-vouchers'],
     queryFn: () => api.get('/job-card-vouchers').then(res => res.data),
   });
+
   // Fetch vendors
   const { data: vendorList } = useQuery({
     queryKey: ['vendors'],
     queryFn: getVendors
   });
+
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ['manufacturing-orders'],
     queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
   });
+
   // Fetch products
   const { data: productList } = useQuery({
     queryKey: ['products'],
     queryFn: getProducts
   });
+
   // Fetch specific voucher
-const { data: voucherData} = useQuery({
+  const { data: voucherData} = useQuery({
     queryKey: ['job-card-voucher', selectedId],
     queryFn: () => api.get(`/job-card-vouchers/${selectedId}`).then(res => res.data),
     enabled: !!selectedId
   });
+
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ['nextJobCardNumber'],
     queryFn: () => api.get('/job-card-vouchers/next-number').then(res => res.data),
     enabled: mode === 'create',
   });
+
   const sortedVouchers = voucherList ? [...voucherList].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   ) : [];
   const latestVouchers = sortedVouchers.slice(0, 10);
+
   const productOptions = productList || [];
   const vendorOptions = vendorList || [];
   const manufacturingOrderOptions = manufacturingOrders || [];
+
   useEffect(() => {
     if (mode === 'create' && nextVoucherNumber) {
       setValue('voucher_number', nextVoucherNumber);
@@ -208,6 +230,7 @@ const { data: voucherData} = useQuery({
       reset(defaultValues);
     }
   }, [voucherData, mode, reset, nextVoucherNumber, setValue]);
+
   // Calculate totals
   useEffect(() => {
     const suppliedMaterials = watch('supplied_materials') || [];
@@ -220,6 +243,7 @@ const { data: voucherData} = useQuery({
     const total = outputValue - suppliedValue;
     setValue('total_amount', total);
   }, [watch('supplied_materials'), watch('received_outputs'), setValue]);
+
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: JobCardVoucher) => api.post('/job-card-vouchers', data),
@@ -232,9 +256,10 @@ const { data: voucherData} = useQuery({
       setValue('voucher_number', newNextNumber);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error('Error creating voucher:', error);
     }
   });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: JobCardVoucher }) => 
       api.put(`/job-card-vouchers/${id}`, data),
@@ -245,9 +270,10 @@ const { data: voucherData} = useQuery({
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error('Error updating voucher:', error);
     }
   });
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/job-card-vouchers/${id}`),
     onSuccess: () => {
@@ -259,6 +285,7 @@ const { data: voucherData} = useQuery({
       }
     }
   });
+
   const onSubmit = (data: JobCardVoucher) => {
     if (mode === 'edit' && selectedId) {
       updateMutation.mutate({ id: selectedId, data });
@@ -266,24 +293,29 @@ const { data: voucherData} = useQuery({
       createMutation.mutate(data);
     }
   };
+
   const handleEdit = (voucher: JobCardVoucher) => {
     setSelectedId(voucher.id!);
     setMode('edit');
   };
+
   const handleView = (voucher: JobCardVoucher) => {
     setSelectedId(voucher.id!);
     setMode('view');
   };
+
   const handleDelete = (voucherId: number) => {
     if (window.confirm('Are you sure you want to delete this voucher?')) {
       deleteMutation.mutate(voucherId);
     }
   };
+
   const handleCancel = () => {
     setMode('create');
     setSelectedId(null);
     reset(defaultValues);
   };
+
   const addMaterial = () => {
     appendMaterial({
       product_id: 0,
@@ -292,6 +324,7 @@ const { data: voucherData} = useQuery({
       unit_rate: 0
     });
   };
+
   const addOutput = () => {
     appendOutput({
       product_id: 0,
@@ -300,6 +333,7 @@ const { data: voucherData} = useQuery({
       unit_rate: 0
     });
   };
+
   if (isLoading) {
     return (
       <Container>
@@ -309,6 +343,7 @@ const { data: voucherData} = useQuery({
       </Container>
     );
   }
+
   return (
     <Container maxWidth="xl">
       <Typography variant="h4" component="h1" gutterBottom>
@@ -316,7 +351,7 @@ const { data: voucherData} = useQuery({
       </Typography>
       <Grid container spacing={3}>
         {/* Voucher List - Left Side  */}
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Grid item xs={12} md={5}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -374,7 +409,7 @@ const { data: voucherData} = useQuery({
           </Card>
         </Grid>
         {/* Voucher Form - Right Side  */}
-        <Grid size={{ xs: 12, md: 7 }}>
+        <Grid item xs={12} md={7}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -396,7 +431,7 @@ const { data: voucherData} = useQuery({
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Basic Details  */}
                 <Grid container spacing={2} mb={3}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     {/* <TextField
                       label="Voucher Number"
                       {...control.register('voucher_number')}
@@ -405,7 +440,7 @@ const { data: voucherData} = useQuery({
                       value={watch('voucher_number')}
                     /> */}
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     {/* <TextField
                       label="Date"
                       type="date"
@@ -415,7 +450,7 @@ const { data: voucherData} = useQuery({
                       disabled={mode === 'view'}
                     /> */}
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
                       <InputLabel>Job Type</InputLabel>
                       <Select
@@ -431,19 +466,21 @@ const { data: voucherData} = useQuery({
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     <Autocomplete
                       options={vendorOptions}
                       getOptionLabel={(option) => option.name || ''}
                       value={vendorOptions.find((vendor: any) => vendor.id === watch('vendor_id')) || null}
-                      onChange={(_, newValue) => setValue('vendor_id', newValue?.id || 0)}
+                      onChange={(_, newValue) => {
+                        setValue('vendor_id', newValue?.id || 0);
+                      }}
                       renderInput={(params) => (
                         <TextField {...params} label="Vendor" required />
                       )}
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     <Autocomplete
                       options={manufacturingOrderOptions}
                       getOptionLabel={(option) => option.voucher_number || ''}
@@ -455,7 +492,7 @@ const { data: voucherData} = useQuery({
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
                       <InputLabel>Job Status</InputLabel>
                       <Select
@@ -479,7 +516,7 @@ const { data: voucherData} = useQuery({
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
-                      <Grid size={12}>
+                      <Grid item xs={12}>
                         <TextField
                           label="Job Description"
                           {...control.register('job_description')}
@@ -490,7 +527,7 @@ const { data: voucherData} = useQuery({
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid size={{ xs: 12, sm: 6 }}>
+                      <Grid item xs={12} sm={6}>
                         <TextField
                           label="Job Category"
                           {...control.register('job_category')}
@@ -499,7 +536,7 @@ const { data: voucherData} = useQuery({
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid size={{ xs: 12, sm: 6 }}>
+                      <Grid item xs={12} sm={6}>
                         <FormControl fullWidth>
                           <InputLabel>Materials Supplied By</InputLabel>
                           <Select
@@ -515,7 +552,7 @@ const { data: voucherData} = useQuery({
                           </Select>
                         </FormControl>
                       </Grid>
-                      <Grid size={{ xs: 12, sm: 6 }}>
+                      <Grid item xs={12} sm={6}>
                         <TextField
                           label="Expected Completion Date"
                           type="date"
@@ -525,7 +562,7 @@ const { data: voucherData} = useQuery({
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid size={{ xs: 12, sm: 6 }}>
+                      <Grid item xs={12} sm={6}>
                         <TextField
                           label="Actual Completion Date"
                           type="date"
@@ -535,7 +572,7 @@ const { data: voucherData} = useQuery({
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid size={{ xs: 12, sm: 6 }}>
+                      <Grid item xs={12} sm={6}>
                         <TextField
                           label="Transport Mode"
                           {...control.register('transport_mode')}
@@ -543,7 +580,7 @@ const { data: voucherData} = useQuery({
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid size={12}>
+                      <Grid item xs={12}>
                         <TextField
                           label="Delivery Address"
                           {...control.register('delivery_address')}
@@ -563,7 +600,7 @@ const { data: voucherData} = useQuery({
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
-                      <Grid size={12}>
+                      <Grid item xs={12}>
                         <FormControlLabel
                           control={
                             <Checkbox
@@ -575,7 +612,7 @@ const { data: voucherData} = useQuery({
                           label="Quality Check Required"
                         />
                       </Grid>
-                      <Grid size={12}>
+                      <Grid item xs={12}>
                         <TextField
                           label="Quality Specifications"
                           {...control.register('quality_specifications')}
@@ -837,7 +874,7 @@ const { data: voucherData} = useQuery({
                 </Box>
                 {/* Notes  */}
                 <Grid container spacing={2} mt={2}>
-                  <Grid size={12}>
+                  <Grid item xs={12}>
                     <TextField
                       label="Notes"
                       {...control.register('notes')}

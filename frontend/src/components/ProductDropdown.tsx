@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { 
+import React, { useState, useEffect } from "react";
+import {
   Autocomplete,
   Box,
   CircularProgress,
@@ -9,10 +9,10 @@ import {
   Select,
   TextField,
   SelectChangeEvent,
-} from '@mui/material';
+} from "@mui/material";
 export interface Product {
   id: number;
-  product_name: string;  // Using product_name field for frontend consistency as per requirements
+  product_name: string; // Using product_name field for frontend consistency as per requirements
   hsn_code?: string;
   part_number?: string;
   unit: string;
@@ -36,22 +36,22 @@ interface ProductDropdownProps {
   helperText?: string;
   required?: boolean;
   fullWidth?: boolean;
-  variant?: 'autocomplete' | 'select';
+  variant?: "autocomplete" | "select";
   placeholder?: string;
   showDetails?: boolean;
 }
 const ProductDropdown: React.FC<ProductDropdownProps> = ({
   value,
   onChange,
-  label = 'Select Product',
+  label = "Select Product",
   disabled = false,
   error = false,
   helperText,
   required = false,
   fullWidth = true,
-  variant = 'autocomplete',
-  placeholder = 'Search products...',
-  showDetails = false
+  variant = "autocomplete",
+  placeholder = "Search products...",
+  showDetails = false,
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,32 +63,32 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
       setLoading(true);
       const queryParams = new URLSearchParams();
       if (search) {
-        queryParams.append('search', search);
+        queryParams.append("search", search);
       }
-      queryParams.append('active_only', 'true');
-      queryParams.append('limit', '100');
+      queryParams.append("active_only", "true");
+      queryParams.append("limit", "100");
       const response = await fetch(`/api/v1/products?${queryParams}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        throw new Error("Failed to fetch products");
       }
       const data = await response.json();
       setProducts(data);
     } catch (err) {
-      console.error('Error fetching products:', err);
+      console.error("Error fetching products:", err);
     } finally {
       setLoading(false);
     }
   };
   const handleChange = (productId: number) => {
-    const selectedProduct = products.find(p => p.id === productId) || null;
+    const selectedProduct = products.find((p) => p.id === productId) || null;
     onChange(productId, selectedProduct);
   };
-  const selectedProduct = products.find(p => p.id === value);
-  if (variant === 'autocomplete') {
+  const selectedProduct = products.find((p) => p.id === value);
+  if (variant === "autocomplete") {
     return (
       <Autocomplete
         fullWidth={fullWidth}
@@ -107,7 +107,7 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
             <Box>
               <div>{option.product_name}</div>
               {showDetails && (
-                <div style={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                <div style={{ fontSize: "0.75rem", color: "text.secondary" }}>
                   {option.hsn_code && `HSN: ${option.hsn_code} • `}
                   {option.part_number && `PN: ${option.part_number} • `}
                   Unit: {option.unit} • ₹{option.unit_price}
@@ -139,21 +139,23 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
         loading={loading}
         disabled={disabled}
         noOptionsText="No products found"
-        isOptionEqualToValue={(option, selectedValue) => option.id === selectedValue.id}
+        isOptionEqualToValue={(option, selectedValue) =>
+          option.id === selectedValue.id
+        }
       />
     );
   }
   // Select variant
   return (
-    <FormControl 
-      fullWidth={fullWidth} 
-      error={error} 
+    <FormControl
+      fullWidth={fullWidth}
+      error={error}
       disabled={disabled}
       required={required}
     >
       <InputLabel>{label}</InputLabel>
       <Select
-        value={value || ''}
+        value={value || ""}
         onChange={(e: SelectChangeEvent<number>) => {
           const productId = e.target.value as number;
           handleChange(productId);
@@ -174,7 +176,10 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
             <MenuItem key={product.id} value={product.id}>
               {product.product_name}
               {showDetails && (
-                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 1 }}>
+                <Box
+                  component="span"
+                  sx={{ fontSize: "0.75rem", color: "text.secondary", ml: 1 }}
+                >
                   ({product.unit} • ₹{product.unit_price})
                 </Box>
               )}
@@ -183,7 +188,13 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
         )}
       </Select>
       {helperText && (
-        <Box sx={{ fontSize: '0.75rem', color: error ? 'error.main' : 'text.secondary', mt: 0.5 }}>
+        <Box
+          sx={{
+            fontSize: "0.75rem",
+            color: error ? "error.main" : "text.secondary",
+            mt: 0.5,
+          }}
+        >
           {helperText}
         </Box>
       )}

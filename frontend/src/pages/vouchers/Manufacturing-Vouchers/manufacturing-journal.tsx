@@ -1,50 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  Grid, 
-  IconButton, 
-  Alert, 
-  CircularProgress, 
-  Container, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  Autocomplete, 
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
+import React, { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import {
+  Box,
+  Typography,
+  Grid,
+  CircularProgress,
+  Container,
   Card,
   CardContent,
-  Tabs,
-  Tab,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
-} from '@mui/material';
-import { 
-  Add, 
-  Remove,
-  Visibility, 
-  Edit, 
-  Delete, 
-  Save,
-  Cancel,
-  ExpandMore
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../../lib/api';
-import { getProducts } from '../../../services/masterService';
+} from "@mui/material";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "../../../lib/api";
+import { getProducts } from "../../../services/masterService";
 interface ManufacturingJournalFinishedProduct {
   product_id: number;
   quantity: number;
@@ -98,9 +66,9 @@ interface ManufacturingJournalVoucher {
   byproducts: ManufacturingJournalByproduct[];
 }
 const defaultValues: Partial<ManufacturingJournalVoucher> = {
-  voucher_number: '',
-  date: new Date().toISOString().split('T')[0],
-  date_of_manufacture: new Date().toISOString().split('T')[0],
+  voucher_number: "",
+  date: new Date().toISOString().split("T")[0],
+  date_of_manufacture: new Date().toISOString().split("T")[0],
   finished_quantity: 0,
   scrap_quantity: 0,
   rework_quantity: 0,
@@ -108,134 +76,163 @@ const defaultValues: Partial<ManufacturingJournalVoucher> = {
   material_cost: 0,
   labor_cost: 0,
   overhead_cost: 0,
-  status: 'draft',
+  status: "draft",
   finished_products: [],
   consumed_materials: [],
-  byproducts: []
+  byproducts: [],
 };
 export default function ManufacturingJournalVoucher() {
-  const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-  const { control, handleSubmit, watch, setValue, reset, formState } = useForm<ManufacturingJournalVoucher>({
-    defaultValues
-  });
+  const { control, handleSubmit, watch, setValue, reset, formState } =
+    useForm<ManufacturingJournalVoucher>({
+      defaultValues,
+    });
   const {
     fields: finishedProductFields,
     append: appendFinishedProduct,
-    remove: removeFinishedProduct
+    remove: removeFinishedProduct,
   } = useFieldArray({
     control,
-    name: 'finished_products'
+    name: "finished_products",
   });
   const {
     fields: materialFields,
     append: appendMaterial,
-    remove: removeMaterial
+    remove: removeMaterial,
   } = useFieldArray({
     control,
-    name: 'consumed_materials'
+    name: "consumed_materials",
   });
   const {
     fields: byproductFields,
     append: appendByproduct,
-    remove: removeByproduct
+    remove: removeByproduct,
   } = useFieldArray({
     control,
-    name: 'byproducts'
+    name: "byproducts",
   });
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
-    queryKey: ['manufacturing-journal-vouchers'],
-    queryFn: () => api.get('/manufacturing-journal-vouchers').then(res => res.data),
+    queryKey: ["manufacturing-journal-vouchers"],
+    queryFn: () =>
+      api.get("/manufacturing-journal-vouchers").then((res) => res.data),
   });
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
-    queryKey: ['manufacturing-orders'],
-    queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
+    queryKey: ["manufacturing-orders"],
+    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
   });
   // Fetch BOMs
   const { data: bomList } = useQuery({
-    queryKey: ['boms'],
-    queryFn: () => api.get('/boms').then(res => res.data),
+    queryKey: ["boms"],
+    queryFn: () => api.get("/boms").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
-    queryKey: ['products'],
-    queryFn: getProducts
+    queryKey: ["products"],
+    queryFn: getProducts,
   });
   // Fetch specific voucher
-const { data: voucherData} = useQuery({
-    queryKey: ['manufacturing-journal-voucher', selectedId],
-    queryFn: () => api.get(`/manufacturing-journal-vouchers/${selectedId}`).then(res => res.data),
-    enabled: !!selectedId
+  const { data: voucherData } = useQuery({
+    queryKey: ["manufacturing-journal-voucher", selectedId],
+    queryFn: () =>
+      api
+        .get(`/manufacturing-journal-vouchers/${selectedId}`)
+        .then((res) => res.data),
+    enabled: !!selectedId,
   });
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
-    queryKey: ['nextManufacturingJournalNumber'],
-    queryFn: () => api.get('/manufacturing-journal-vouchers/next-number').then(res => res.data),
-    enabled: mode === 'create',
+    queryKey: ["nextManufacturingJournalNumber"],
+    queryFn: () =>
+      api
+        .get("/manufacturing-journal-vouchers/next-number")
+        .then((res) => res.data),
+    enabled: mode === "create",
   });
-  const sortedVouchers = voucherList ? [...voucherList].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ) : [];
+  const sortedVouchers = voucherList
+    ? [...voucherList].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+    : [];
   useEffect(() => {
-    if (mode === 'create' && nextVoucherNumber) {
-      setValue('voucher_number', nextVoucherNumber);
+    if (mode === "create" && nextVoucherNumber) {
+      setValue("voucher_number", nextVoucherNumber);
     } else if (voucherData) {
       reset(voucherData);
-    } else if (mode === 'create') {
+    } else if (mode === "create") {
       reset(defaultValues);
     }
   }, [voucherData, mode, reset, nextVoucherNumber, setValue]);
   // Calculate totals
   useEffect(() => {
-    const materialCost = watch('material_cost') || 0;
-    const laborCost = watch('labor_cost') || 0;
-    const overheadCost = watch('overhead_cost') || 0;
+    const materialCost = watch("material_cost") || 0;
+    const laborCost = watch("labor_cost") || 0;
+    const overheadCost = watch("overhead_cost") || 0;
     // setValue('total_amount', totalCost); // Commented out due to type mismatch
-  }, [watch('material_cost'), watch('labor_cost'), watch('overhead_cost'), setValue]);
+  }, [
+    watch("material_cost"),
+    watch("labor_cost"),
+    watch("overhead_cost"),
+    setValue,
+  ]);
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: ManufacturingJournalVoucher) => api.post('/manufacturing-journal-vouchers', data),
+    mutationFn: (data: ManufacturingJournalVoucher) =>
+      api.post("/manufacturing-journal-vouchers", data),
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-journal-vouchers'] });
-      setMode('create');
+      queryClient.invalidateQueries({
+        queryKey: ["manufacturing-journal-vouchers"],
+      });
+      setMode("create");
       setSelectedId(null);
       reset(defaultValues);
       const { data: newNextNumber } = await refetchNextNumber();
-      setValue('voucher_number', newNextNumber);
+      setValue("voucher_number", newNextNumber);
     },
     onError: (error: any) => {
       console.error(msg, err);
-    }
+    },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ManufacturingJournalVoucher }) => 
-      api.put(`/manufacturing-journal-vouchers/${id}`, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: ManufacturingJournalVoucher;
+    }) => api.put(`/manufacturing-journal-vouchers/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-journal-vouchers'] });
-      setMode('create');
+      queryClient.invalidateQueries({
+        queryKey: ["manufacturing-journal-vouchers"],
+      });
+      setMode("create");
       setSelectedId(null);
       reset(defaultValues);
     },
     onError: (error: any) => {
       console.error(msg, err);
-    }
+    },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/manufacturing-journal-vouchers/${id}`),
+    mutationFn: (id: number) =>
+      api.delete(`/manufacturing-journal-vouchers/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-journal-vouchers'] });
+      queryClient.invalidateQueries({
+        queryKey: ["manufacturing-journal-vouchers"],
+      });
       if (selectedId) {
         setSelectedId(null);
-        setMode('create');
+        setMode("create");
         reset(defaultValues);
       }
-    }
+    },
   });
   const onSubmit = (data: ManufacturingJournalVoucher) => {
-    if (mode === 'edit' && selectedId) {
+    if (mode === "edit" && selectedId) {
       updateMutation.mutate({ id: selectedId, data });
     } else {
       createMutation.mutate(data);
@@ -243,26 +240,31 @@ const { data: voucherData} = useQuery({
   };
   const handleEdit = (voucher: ManufacturingJournalVoucher) => {
     setSelectedId(voucher.id!);
-    setMode('edit');
+    setMode("edit");
   };
   const handleView = (voucher: ManufacturingJournalVoucher) => {
     setSelectedId(voucher.id!);
-    setMode('view');
+    setMode("view");
   };
   const handleDelete = (voucherId: number) => {
-    if (window.confirm('Are you sure you want to delete this voucher?')) {
+    if (window.confirm("Are you sure you want to delete this voucher?")) {
       deleteMutation.mutate(voucherId);
     }
   };
   const handleCancel = () => {
-    setMode('create');
+    setMode("create");
     setSelectedId(null);
     reset(defaultValues);
   };
   if (isLoading) {
     return (
       <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="200px"
+        >
           <CircularProgress />
         </Box>
       </Container>
@@ -278,330 +280,13 @@ const { data: voucherData} = useQuery({
         <Grid size={{ xs: 12, md: 5 }}>
           <Card>
             <CardContent>
-              <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
+              <Box
+                display="flex"
+                justifyContent="between"
+                alignItems="center"
+                mb={2}
+              >
                 <Typography variant="h6">Recent Vouchers</Typography>
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
-                {/* VoucherHeaderActions commented out */}
                 {/* VoucherHeaderActions commented out */}
               </Box>
             </CardContent>
@@ -610,5 +295,4 @@ const { data: voucherData} = useQuery({
       </Grid>
     </Container>
   );
-};
-export default ManufacturingJournal;
+}

@@ -1,19 +1,22 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Alert, Snackbar } from '@mui/material';
+import React, { createContext, useContext, useState, ReactNode } from "react";
+import { Alert, Snackbar } from "@mui/material";
 interface ErrorMessage {
   id: string;
   message: string;
-  type: 'error' | 'warning' | 'info' | 'success';
+  type: "error" | "warning" | "info" | "success";
 }
 interface ErrorContextType {
-  showError: (message: string, type?: 'error' | 'warning' | 'info' | 'success') => void;
+  showError: (
+    message: string,
+    type?: "error" | "warning" | "info" | "success",
+  ) => void;
   hideError: (id: string) => void;
 }
 const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
 export const useError = (): any => {
   const context = useContext(ErrorContext);
   if (!context) {
-    throw new Error('useError must be used within an ErrorProvider');
+    throw new Error("useError must be used within an ErrorProvider");
   }
   return context;
 };
@@ -22,18 +25,21 @@ interface ErrorProviderProps {
 }
 export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
   const [errors, setErrors] = useState<ErrorMessage[]>([]);
-  const showError = (message: string, type: 'error' | 'warning' | 'info' | 'success' = 'error') => {
+  const showError = (
+    message: string,
+    type: "error" | "warning" | "info" | "success" = "error",
+  ) => {
     const id = Date.now().toString();
     const newError: ErrorMessage = { id, message, type };
-    setErrors(prev => [...prev, newError]);
+    setErrors((prev) => [...prev, newError]);
     // Auto-hide after 6 seconds
     setTimeout(() => {
-// hideError is defined later in this file
+      // hideError is defined later in this file
       hideError(id);
     }, 6000);
   };
   const hideError = (id: string) => {
-    setErrors(prev => prev.filter(error => error.id !== id));
+    setErrors((prev) => prev.filter((error) => error.id !== id));
   };
   return (
     <ErrorContext.Provider value={{ showError, hideError }}>
@@ -45,13 +51,13 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
           open={true}
           autoHideDuration={6000}
           onClose={() => hideError(error.id)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
           sx={{ mt: index * 7 }} // Stack multiple errors
         >
-          <Alert 
-            onClose={() => hideError(error.id)} 
+          <Alert
+            onClose={() => hideError(error.id)}
             severity={error.type}
-            sx={{ width: '100%' }}
+            sx={{ width: "100%" }}
           >
             {error.message}
           </Alert>

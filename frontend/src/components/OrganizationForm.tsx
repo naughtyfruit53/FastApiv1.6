@@ -1,47 +1,56 @@
-'use client';
-import React, { useState } from 'react';
-import { TextField, Button, CircularProgress, Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import axios from 'axios';
+"use client";
+import React, { useState } from "react";
+import {
+  TextField,
+  Button,
+  CircularProgress,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
+import axios from "axios";
 // State to GST state code map (mirrored from backend for autofill)
 const STATE_CODE_MAP: { [key: string]: string } = {
   "Andaman & Nicobar Islands": "35",
   "Andhra Pradesh": "37",
   "Arunachal Pradesh": "12",
-  "Assam": "18",
-  "Bihar": "10",
-  "Chandigarh": "04",
-  "Chhattisgarh": "22",
+  Assam: "18",
+  Bihar: "10",
+  Chandigarh: "04",
+  Chhattisgarh: "22",
   "Dadra & Nagar Haveli & Daman & Diu": "26",
-  "Delhi": "07",
-  "Goa": "30",
-  "Gujarat": "24",
-  "Haryana": "06",
+  Delhi: "07",
+  Goa: "30",
+  Gujarat: "24",
+  Haryana: "06",
   "Himachal Pradesh": "02",
   "Jammu & Kashmir": "01",
-  "Jharkhand": "20",
-  "Karnataka": "29",
-  "Kerala": "32",
-  "Ladakh": "38",
-  "Lakshadweep": "31",
+  Jharkhand: "20",
+  Karnataka: "29",
+  Kerala: "32",
+  Ladakh: "38",
+  Lakshadweep: "31",
   "Madhya Pradesh": "23",
-  "Maharashtra": "27",
-  "Manipur": "14",
-  "Meghalaya": "17",
-  "Mizoram": "15",
-  "Nagaland": "13",
-  "Odisha": "21",
-  "Puducherry": "34",
-  "Punjab": "03",
-  "Rajasthan": "08",
-  "Sikkim": "11",
+  Maharashtra: "27",
+  Manipur: "14",
+  Meghalaya: "17",
+  Mizoram: "15",
+  Nagaland: "13",
+  Odisha: "21",
+  Puducherry: "34",
+  Punjab: "03",
+  Rajasthan: "08",
+  Sikkim: "11",
   "Tamil Nadu": "33",
-  "Telangana": "36",
-  "Tripura": "16",
+  Telangana: "36",
+  Tripura: "16",
   "Uttar Pradesh": "09",
-  "Uttarakhand": "05",
+  Uttarakhand: "05",
   "West Bengal": "19",
   "Other Territory": "97",
-  "Other Country": "99"
+  "Other Country": "99",
 };
 interface FormData {
   name?: string; // For direct organization creation
@@ -66,49 +75,55 @@ interface FormData {
 }
 interface OrganizationFormProps {
   onSubmit: (_data: FormData) => void;
-  mode?: 'license' | 'create'; // license = create license, create = direct org creation
+  mode?: "license" | "create"; // license = create license, create = direct org creation
   initialData?: Partial<FormData>;
   isEditing?: boolean;
 }
-const OrganizationForm: React.FC<OrganizationFormProps> = ({ 
-  onSubmit, 
-  mode = 'license',
+const OrganizationForm: React.FC<OrganizationFormProps> = ({
+  onSubmit,
+  mode = "license",
   initialData = {},
-  isEditing = false 
+  isEditing = false,
 }) => {
   const [formData, setFormData] = useState<FormData>({
-    organization_name: '',
-    name: '',
-    subdomain: '',
-    admin_password: '',
-    superadmin_email: '',
-    primary_email: '',
-    primary_phone: '',
-    address1: '',
-    address: '',
-    city: '',
-    state: '',
-    pin_code: '',
-    state_code: '',
-    gst_number: '',
-    business_type: '',
-    industry: '',
-    website: '',
-    description: '',
+    organization_name: "",
+    name: "",
+    subdomain: "",
+    admin_password: "",
+    superadmin_email: "",
+    primary_email: "",
+    primary_phone: "",
+    address1: "",
+    address: "",
+    city: "",
+    state: "",
+    pin_code: "",
+    state_code: "",
+    gst_number: "",
+    business_type: "",
+    industry: "",
+    website: "",
+    description: "",
     max_users: 5,
-    ...initialData
+    ...initialData,
   });
   const [pincodeLoading, setPincodeLoading] = useState(false);
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown } }) => {
+  const handleChange = (
+    e:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | { target: { name: string; value: unknown } },
+  ) => {
     const name = e.target.name as string;
     const value = e.target.value as string;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === 'state' ? { state_code: STATE_CODE_MAP[value] || '' } : {}),  // Autofill state_code based on state change
+      ...(name === "state" ? { state_code: STATE_CODE_MAP[value] || "" } : {}), // Autofill state_code based on state change
     }));
   };
-  const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePincodeChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const value = e.target.value;
     handleChange(e);
     if (value.length === 6) {
@@ -120,7 +135,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           ...prev,
           city,
           state,
-          state_code
+          state_code,
         }));
       } catch (err) {
         console.error(msg, err);
@@ -133,7 +148,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
     e.preventDefault();
     // Transform data based on mode
     let submitData = { ...formData };
-    if (mode === 'create') {
+    if (mode === "create") {
       // For direct organization creation, map fields appropriately
       submitData = {
         name: formData.name || formData.organization_name,
@@ -150,12 +165,12 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
         industry: formData.industry,
         website: formData.website,
         description: formData.description,
-        max_users: formData.max_users
+        max_users: formData.max_users,
       };
     }
     onSubmit(submitData);
   };
-  const isLicenseMode = mode === 'license';
+  const isLicenseMode = mode === "license";
   return (
     <form onSubmit={handleSubmit}>
       <Grid container spacing={2}>
@@ -201,7 +216,9 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             label="Primary Email"
             name={isLicenseMode ? "superadmin_email" : "primary_email"}
             type="email"
-            value={isLicenseMode ? formData.superadmin_email : formData.primary_email}
+            value={
+              isLicenseMode ? formData.superadmin_email : formData.primary_email
+            }
             onChange={handleChange}
             required
           />
@@ -223,7 +240,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
                 <InputLabel>Business Type</InputLabel>
                 <Select
                   name="business_type"
-                  value={formData.business_type || ''}
+                  value={formData.business_type || ""}
                   label="Business Type"
                   onChange={handleChange}
                 >
@@ -306,7 +323,9 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             onChange={handlePincodeChange}
             required
             InputProps={{
-              endAdornment: pincodeLoading ? <CircularProgress size={20} /> : null,
+              endAdornment: pincodeLoading ? (
+                <CircularProgress size={20} />
+              ) : null,
             }}
           />
         </Grid>
@@ -317,7 +336,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
             name="state_code"
             value={formData.state_code}
             onChange={handleChange}
-            disabled  // Autofilled, so disabled for user input
+            disabled // Autofilled, so disabled for user input
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -344,7 +363,11 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
         )}
         <Grid size={12}>
           <Button type="submit" variant="contained" color="primary">
-            {isEditing ? 'Update Organization' : (isLicenseMode ? 'Create License' : 'Create Organization')}
+            {isEditing
+              ? "Update Organization"
+              : isLicenseMode
+                ? "Create License"
+                : "Create Organization"}
           </Button>
         </Grid>
       </Grid>

@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import AddOpportunityModal from '../../components/AddOpportunityModal';
 import { crmService } from '../../services/crmService';
+
 interface Opportunity {
   id: number;
   name: string;
@@ -48,6 +49,7 @@ interface Opportunity {
   created_at: string;
   assigned_to_id?: number;
 }
+
 const OpportunityTracking: React.FC = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,7 @@ const OpportunityTracking: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+
   // Fetch opportunities from API
   const fetchOpportunities = async () => {
     try {
@@ -69,9 +72,11 @@ const OpportunityTracking: React.FC = () => {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchOpportunities();
   }, []);
+
   const handleAddOpportunity = async (opportunityData: any) => {
     try {
       setAddLoading(true);
@@ -85,28 +90,32 @@ const OpportunityTracking: React.FC = () => {
       setAddLoading(false);
     }
   };
+
   const filteredOpportunities = opportunities.filter(opportunity =>
     opportunity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (opportunity.account_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (opportunity.contact_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
   const handleViewOpportunity = (opportunity: Opportunity) => {
-// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(opportunity);
     // Add view functionality if needed
   };
+
   const handleEditOpportunity = (opportunity: Opportunity) => {
-// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(opportunity);
     // Add edit functionality if needed
   };
+
   const handleCreateOpportunity = () => {
     setDialogOpen(true);
   };
+
+  const handleCloseAddModal = () => {
     setDialogOpen(false);
-// TODO: Define or import setSelectedOpportunity
     setSelectedOpportunity(null);
   };
+
   const getStageColor = (stage: string) => {
     switch (stage) {
       case 'prospecting': return 'info';
@@ -119,11 +128,13 @@ const OpportunityTracking: React.FC = () => {
       default: return 'default';
     }
   };
+
   const totalValue = opportunities.reduce((sum, opp) => sum + opp.amount, 0);
   const weightedValue = opportunities.reduce((sum, opp) => sum + (opp.amount * opp.probability / 100), 0);
   const avgProbability = opportunities.length > 0 
     ? opportunities.reduce((sum, opp) => sum + opp.probability, 0) / opportunities.length 
     : 0;
+
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -133,6 +144,7 @@ const OpportunityTracking: React.FC = () => {
       </Container>
     );
   }
+
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -140,6 +152,7 @@ const OpportunityTracking: React.FC = () => {
       </Container>
     );
   }
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
@@ -293,4 +306,5 @@ const OpportunityTracking: React.FC = () => {
     </Container>
   );
 };
+
 export default OpportunityTracking;

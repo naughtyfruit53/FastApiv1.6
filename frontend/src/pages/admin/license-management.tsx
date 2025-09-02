@@ -13,18 +13,8 @@ import {
   TableRow,
   IconButton,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  TableContainer,
-  Grid as Grid,
+  Grid,
   TextField,
 } from '@mui/material';
 import {
@@ -34,11 +24,12 @@ import {
   Security,
   Restore,
 } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { organizationService } from '../../services/authService';
 import adminService from '../../services/adminService';
 import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
+
 interface Organization {
   id: number;
   name: string;
@@ -51,26 +42,24 @@ interface Organization {
   created_at: string;
   company_details_completed: boolean;
 }
+
 const LicenseManagement: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
   // API calls using real service
   const { data: organizations, isLoading } = useQuery({
     queryKey: ['organizations'],
     queryFn: organizationService.getAllOrganizations
   });
-  const createLicenseMutation = useMutation({
-    mutationFn: organizationService.createLicense,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      setCreateDialogOpen(false);
-    }
-  });
+
+  const handleCreateLicense = () => {
     // License creation is handled by the modal
     queryClient.invalidateQueries({ queryKey: ['organizations'] });
   };
+
   const handleResetPassword = async (primary_email: string, orgName: string) => {
     try {
       // Add confirmation dialog for reset action
@@ -101,6 +90,7 @@ const LicenseManagement: React.FC = () => {
       );
     }
   };
+
   const getStatusChip = (status: string) => {
     const statusConfig = {
       active: { label: 'Active', color: 'success' as const },
@@ -112,11 +102,13 @@ const LicenseManagement: React.FC = () => {
                    { label: status, color: 'default' as const };
     return <Chip label={config.label} color={config.color} size="small" />;
   };
+
   const filteredOrganizations = organizations?.filter((org: Organization) =>
     org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     org.primary_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     org.subdomain.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -138,7 +130,7 @@ const LicenseManagement: React.FC = () => {
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" color="primary">
                 {organizations?.length || 0}
@@ -148,7 +140,7 @@ const LicenseManagement: React.FC = () => {
               </Typography>
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" color="success.main">
                 {organizations?.filter((org: Organization) => org.status === 'active').length || 0}
@@ -158,7 +150,7 @@ const LicenseManagement: React.FC = () => {
               </Typography>
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" color="info.main">
                 {organizations?.filter((org: Organization) => org.status === 'trial').length || 0}
@@ -168,7 +160,7 @@ const LicenseManagement: React.FC = () => {
               </Typography>
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" color="error.main">
                 {organizations?.filter((org: Organization) => org.status === 'suspended').length || 0}
@@ -183,7 +175,7 @@ const LicenseManagement: React.FC = () => {
       {/* Search Bar */}
       <Box sx={{ mb: 3 }}>
         <Grid container justifyContent="flex-start">
-          <Grid size={5}>
+          <Grid item xs={12} sm={5}>
             <TextField
               fullWidth
               label="Search by Name, Email, or Subdomain"
@@ -315,4 +307,5 @@ const LicenseManagement: React.FC = () => {
     </Container>
   );
 };
+
 export default LicenseManagement;

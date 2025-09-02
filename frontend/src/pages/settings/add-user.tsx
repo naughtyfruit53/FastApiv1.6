@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -10,66 +10,64 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormControlLabel,
-  Checkbox,
-  FormGroup,
   Alert,
   CircularProgress,
   Divider,
-  IconButton
-} from '@mui/material';
-import { ArrowBack, Person, Save, Cancel } from '@mui/icons-material';
-import { useRouter } from 'next/router';
-import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
-import { canManageUsers, isAppSuperAdmin } from '../../types/user.types';
+  IconButton,
+} from "@mui/material";
+import { ArrowBack, Person, Save, Cancel } from "@mui/icons-material";
+import { useRouter } from "next/router";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
+import { canManageUsers, isAppSuperAdmin } from "../../types/user.types";
 const AddUser: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    email: '',
-    full_name: '',
-    password: '',
-    role: 'standard_user',
-    department: '',
-    designation: '',
-    employee_id: '',
-    phone: ''
+    email: "",
+    full_name: "",
+    password: "",
+    role: "standard_user",
+    department: "",
+    designation: "",
+    employee_id: "",
+    phone: "",
   });
   // Get user info for authorization (no token here—moved to mutation)
   const canAddUser = canManageUsers(user);
   const isSuperAdmin = isAppSuperAdmin(user);
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      const token = localStorage.getItem('token'); // Moved here: Only runs on client during mutation
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const token = localStorage.getItem("token"); // Moved here: Only runs on client during mutation
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const response = await axios.post(
         `${API_BASE_URL}/api/v1/users/`,
         userData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+            "Content-Type": "application/json",
+          },
+        },
       );
       return response.data;
     },
     onSuccess: (data) => {
-      setSuccess('User created successfully!');
+      setSuccess("User created successfully!");
       setError(null);
       // Redirect to user management after 2 seconds
       setTimeout(() => {
-        router.push('/settings/user-management');
+        router.push("/settings/user-management");
       }, 2000);
     },
     onError: (error: any) => {
-      setError(error.response?.data?.detail || 'Failed to create user');
+      setError(error.response?.data?.detail || "Failed to create user");
       setSuccess(null);
-    }
+    },
   });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,32 +75,38 @@ const AddUser: React.FC = () => {
     setSuccess(null);
     // Basic validation
     if (!formData.email || !formData.full_name || !formData.password) {
-      setError('Please fill in all required fields');
+      setError("Please fill in all required fields");
       return;
     }
     // Password validation
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError("Password must be at least 8 characters long");
       return;
     }
     createUserMutation.mutate(formData);
   };
-  const handleInputChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: string } }) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: e.target.value
-    }));
-  };
+  const handleInputChange =
+    (field: string) =>
+    (
+      e:
+        | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+        | { target: { value: string } },
+    ) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: e.target.value,
+      }));
+    };
   const resetForm = () => {
     setFormData({
-      email: '',
-      full_name: '',
-      password: '',
-      role: 'standard_user',
-      department: '',
-      designation: '',
-      employee_id: '',
-      phone: ''
+      email: "",
+      full_name: "",
+      password: "",
+      role: "standard_user",
+      department: "",
+      designation: "",
+      employee_id: "",
+      phone: "",
     });
     setError(null);
     setSuccess(null);
@@ -112,11 +116,12 @@ const AddUser: React.FC = () => {
     return (
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          You don&apos;t have permission to add users. Only organization administrators can add users.
+          You don&apos;t have permission to add users. Only organization
+          administrators can add users.
         </Alert>
-        <Button 
-          startIcon={<ArrowBack />} 
-          onClick={() => router.push('/settings')}
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => router.push("/settings")}
           sx={{ mt: 2 }}
         >
           Back to Settings
@@ -126,8 +131,8 @@ const AddUser: React.FC = () => {
   }
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => router.push('/settings')} sx={{ mr: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+        <IconButton onClick={() => router.push("/settings")} sx={{ mr: 2 }}>
           <ArrowBack />
         </IconButton>
         <Typography variant="h4" component="h1">
@@ -146,19 +151,30 @@ const AddUser: React.FC = () => {
       )}
       <Paper sx={{ p: 4 }}>
         <form onSubmit={handleSubmit}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
+          >
             <Person sx={{ mr: 1 }} />
             User Information
           </Typography>
           <Divider sx={{ mb: 3 }} />
           {/* Basic Information */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+              mb: 3,
+            }}
+          >
             <TextField
               fullWidth
               label="Email *"
               type="email"
               value={formData.email}
-              onChange={handleInputChange('email')}
+              onChange={handleInputChange("email")}
               required
               helperText="User's login email address (username will be auto-generated)"
             />
@@ -166,17 +182,24 @@ const AddUser: React.FC = () => {
               fullWidth
               label="Full Name *"
               value={formData.full_name}
-              onChange={handleInputChange('full_name')}
+              onChange={handleInputChange("full_name")}
               required
             />
           </Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+              mb: 3,
+            }}
+          >
             <TextField
               fullWidth
               label="Password *"
               type="password"
               value={formData.password}
-              onChange={handleInputChange('password')}
+              onChange={handleInputChange("password")}
               required
               helperText="Minimum 8 characters"
             />
@@ -185,7 +208,7 @@ const AddUser: React.FC = () => {
               <Select
                 value={formData.role}
                 label="Role *"
-                onChange={handleInputChange('role')}
+                onChange={handleInputChange("role")}
               >
                 <MenuItem value="standard_user">Standard User</MenuItem>
                 <MenuItem value="admin">Admin</MenuItem>
@@ -196,40 +219,54 @@ const AddUser: React.FC = () => {
             </FormControl>
           </Box>
           {/* Additional Information */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+              mb: 4,
+            }}
+          >
             <TextField
               fullWidth
               label="Department"
               value={formData.department}
-              onChange={handleInputChange('department')}
+              onChange={handleInputChange("department")}
             />
             <TextField
               fullWidth
               label="Designation"
               value={formData.designation}
-              onChange={handleInputChange('designation')}
+              onChange={handleInputChange("designation")}
             />
           </Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+              mb: 4,
+            }}
+          >
             <TextField
               fullWidth
               label="Employee ID"
               value={formData.employee_id}
-              onChange={handleInputChange('employee_id')}
+              onChange={handleInputChange("employee_id")}
             />
             <TextField
               fullWidth
               label="Phone"
               value={formData.phone}
-              onChange={handleInputChange('phone')}
+              onChange={handleInputChange("phone")}
             />
           </Box>
           {/* Action Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
             <Button
               variant="outlined"
               startIcon={<Cancel />}
-              onClick={() => router.push('/settings')}
+              onClick={() => router.push("/settings")}
               disabled={createUserMutation.isPending}
             >
               Cancel
@@ -244,10 +281,16 @@ const AddUser: React.FC = () => {
             <Button
               type="submit"
               variant="contained"
-              startIcon={createUserMutation.isPending ? <CircularProgress size={20} /> : <Save />}
+              startIcon={
+                createUserMutation.isPending ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <Save />
+                )
+              }
               disabled={createUserMutation.isPending}
             >
-              {createUserMutation.isPending ? 'Creating...' : 'Create User'}
+              {createUserMutation.isPending ? "Creating..." : "Create User"}
             </Button>
           </Box>
         </form>

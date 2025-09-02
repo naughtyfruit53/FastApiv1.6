@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -26,70 +25,70 @@ import {
   Select,
   MenuItem,
   Card,
-  CardContent
-} from '@mui/material';
+  CardContent,
+} from "@mui/material";
 import {
   Add,
   Edit,
   Delete,
   Search,
   Category,
-  Inventory
-} from '@mui/icons-material';
+  Inventory,
+} from "@mui/icons-material";
 const CategoriesPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    parent_category_id: '',
-    is_active: true
+    name: "",
+    description: "",
+    parent_category_id: "",
+    is_active: true,
   });
   // Mock data for demonstration
   const categories = [
     {
       id: 1,
-      name: 'Electronics',
-      description: 'Electronic components and devices',
+      name: "Electronics",
+      description: "Electronic components and devices",
       parent_category: null,
       product_count: 25,
-      is_active: true
+      is_active: true,
     },
     {
       id: 2,
-      name: 'Components',
-      description: 'Electronic components',
-      parent_category: 'Electronics',
+      name: "Components",
+      description: "Electronic components",
+      parent_category: "Electronics",
       parent_category_id: 1,
       product_count: 15,
-      is_active: true
+      is_active: true,
     },
     {
       id: 3,
-      name: 'Cables',
-      description: 'Various types of cables',
-      parent_category: 'Electronics',
+      name: "Cables",
+      description: "Various types of cables",
+      parent_category: "Electronics",
       parent_category_id: 1,
       product_count: 8,
-      is_active: true
+      is_active: true,
     },
     {
       id: 4,
-      name: 'Hardware',
-      description: 'Hardware items and tools',
+      name: "Hardware",
+      description: "Hardware items and tools",
       parent_category: null,
       product_count: 12,
-      is_active: true
-    }
+      is_active: true,
+    },
   ];
   const resetForm = () => {
     setFormData({
-      name: '',
-      description: '',
-      parent_category_id: '',
-      is_active: true
+      name: "",
+      description: "",
+      parent_category_id: "",
+      is_active: true,
     });
   };
   const handleAddClick = () => {
@@ -99,38 +98,46 @@ const CategoriesPage: React.FC = () => {
   const handleEditClick = (category: any) => {
     setSelectedCategory(category);
     setFormData({
-      name: category.name || '',
-      description: category.description || '',
-      parent_category_id: category.parent_category_id || '',
-      is_active: category.is_active
+      name: category.name || "",
+      description: category.description || "",
+      parent_category_id: category.parent_category_id || "",
+      is_active: category.is_active,
     });
     setEditDialog(true);
   };
   const handleSubmit = () => {
     if (selectedCategory) {
       // TODO: Implement update functionality
-      console.log('Update category:', selectedCategory.id, formData);
+      console.log("Update category:", selectedCategory.id, formData);
     } else {
       // TODO: Implement create functionality
-      console.log('Create category:', formData);
+      console.log("Create category:", formData);
     }
     setAddDialog(false);
     setEditDialog(false);
   };
   const handleDeleteClick = (category: any) => {
     // TODO: Implement delete functionality
-    console.log('Delete category:', category.id);
+    console.log("Delete category:", category.id);
   };
-  const filteredCategories = categories.filter((category: any) =>
-    category.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCategories = categories.filter(
+    (category: any) =>
+      category.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      category.description?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   // Get parent categories for dropdown
-  const parentCategories = categories.filter(cat => !cat.parent_category_id);
+  const parentCategories = categories.filter((cat) => !cat.parent_category_id);
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4" component="h1">
             Categories
           </Typography>
@@ -144,15 +151,22 @@ const CategoriesPage: React.FC = () => {
         </Box>
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 3 }}>
-          Categories help organize your products for better inventory management and reporting.
-          You can create hierarchical categories with parent-child relationships.
+          Categories help organize your products for better inventory management
+          and reporting. You can create hierarchical categories with
+          parent-child relationships.
         </Alert>
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
                     <Typography color="textSecondary" gutterBottom>
                       Total Categories
@@ -161,7 +175,7 @@ const CategoriesPage: React.FC = () => {
                       {categories.length}
                     </Typography>
                   </Box>
-                  <Category sx={{ fontSize: 40, color: 'primary.main' }} />
+                  <Category sx={{ fontSize: 40, color: "primary.main" }} />
                 </Box>
               </CardContent>
             </Card>
@@ -169,16 +183,22 @@ const CategoriesPage: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
                     <Typography color="textSecondary" gutterBottom>
                       Active Categories
                     </Typography>
                     <Typography variant="h4" component="h2">
-                      {categories.filter(cat => cat.is_active).length}
+                      {categories.filter((cat) => cat.is_active).length}
                     </Typography>
                   </Box>
-                  <Category sx={{ fontSize: 40, color: 'success.main' }} />
+                  <Category sx={{ fontSize: 40, color: "success.main" }} />
                 </Box>
               </CardContent>
             </Card>
@@ -186,7 +206,13 @@ const CategoriesPage: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
                     <Typography color="textSecondary" gutterBottom>
                       Parent Categories
@@ -195,7 +221,7 @@ const CategoriesPage: React.FC = () => {
                       {parentCategories.length}
                     </Typography>
                   </Box>
-                  <Category sx={{ fontSize: 40, color: 'warning.main' }} />
+                  <Category sx={{ fontSize: 40, color: "warning.main" }} />
                 </Box>
               </CardContent>
             </Card>
@@ -203,16 +229,25 @@ const CategoriesPage: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
                     <Typography color="textSecondary" gutterBottom>
                       Total Products
                     </Typography>
                     <Typography variant="h4" component="h2">
-                      {categories.reduce((sum, cat) => sum + cat.product_count, 0)}
+                      {categories.reduce(
+                        (sum, cat) => sum + cat.product_count,
+                        0,
+                      )}
                     </Typography>
                   </Box>
-                  <Inventory sx={{ fontSize: 40, color: 'info.main' }} />
+                  <Inventory sx={{ fontSize: 40, color: "info.main" }} />
                 </Box>
               </CardContent>
             </Card>
@@ -225,7 +260,7 @@ const CategoriesPage: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
-              startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />
+              startAdornment: <Search sx={{ mr: 1, color: "action.active" }} />,
             }}
           />
         </Box>
@@ -246,7 +281,9 @@ const CategoriesPage: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={6} align="center">
                     <Box sx={{ py: 3 }}>
-                      <Category sx={{ fontSize: 48, color: 'action.disabled', mb: 2 }} />
+                      <Category
+                        sx={{ fontSize: 48, color: "action.disabled", mb: 2 }}
+                      />
                       <Typography variant="h6" color="textSecondary">
                         No categories found
                       </Typography>
@@ -260,14 +297,14 @@ const CategoriesPage: React.FC = () => {
                 filteredCategories.map((category: any) => (
                   <TableRow key={category.id}>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Category sx={{ mr: 2, color: 'primary.main' }} />
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Category sx={{ mr: 2, color: "primary.main" }} />
                         <Typography variant="body1" fontWeight="medium">
                           {category.name}
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{category.description || 'N/A'}</TableCell>
+                    <TableCell>{category.description || "N/A"}</TableCell>
                     <TableCell>
                       {category.parent_category ? (
                         <Chip
@@ -290,16 +327,24 @@ const CategoriesPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={category.is_active ? 'Active' : 'Inactive'}
-                        color={category.is_active ? 'success' : 'default'}
+                        label={category.is_active ? "Active" : "Inactive"}
+                        color={category.is_active ? "success" : "default"}
                         size="small"
                       />
                     </TableCell>
                     <TableCell>
-                      <IconButton size="small" color="primary" onClick={() => handleEditClick(category)}>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleEditClick(category)}
+                      >
                         <Edit />
                       </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDeleteClick(category)}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteClick(category)}
+                      >
                         <Delete />
                       </IconButton>
                     </TableCell>
@@ -310,14 +355,17 @@ const CategoriesPage: React.FC = () => {
           </Table>
         </TableContainer>
         {/* Add/Edit Category Dialog */}
-        <Dialog 
-          open={addDialog || editDialog} 
-          onClose={() => { setAddDialog(false); setEditDialog(false); }}
-          maxWidth="sm" 
+        <Dialog
+          open={addDialog || editDialog}
+          onClose={() => {
+            setAddDialog(false);
+            setEditDialog(false);
+          }}
+          maxWidth="sm"
           fullWidth
         >
           <DialogTitle>
-            {selectedCategory ? 'Edit Category' : 'Add New Category'}
+            {selectedCategory ? "Edit Category" : "Add New Category"}
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -326,7 +374,9 @@ const CategoriesPage: React.FC = () => {
                   fullWidth
                   label="Category Name *"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                 />
               </Grid>
               <Grid item xs={12}>
@@ -336,7 +386,12 @@ const CategoriesPage: React.FC = () => {
                   multiline
                   rows={3}
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                 />
               </Grid>
               <Grid item xs={12}>
@@ -345,7 +400,12 @@ const CategoriesPage: React.FC = () => {
                   <Select
                     value={formData.parent_category_id}
                     label="Parent Category"
-                    onChange={(e) => setFormData(prev => ({ ...prev, parent_category_id: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        parent_category_id: e.target.value,
+                      }))
+                    }
                   >
                     <MenuItem value="">
                       <em>None (Root Category)</em>
@@ -361,11 +421,16 @@ const CategoriesPage: React.FC = () => {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => { setAddDialog(false); setEditDialog(false); }}>
+            <Button
+              onClick={() => {
+                setAddDialog(false);
+                setEditDialog(false);
+              }}
+            >
               Cancel
             </Button>
             <Button onClick={handleSubmit} variant="contained">
-              {selectedCategory ? 'Update' : 'Create'}
+              {selectedCategory ? "Update" : "Create"}
             </Button>
           </DialogActions>
         </Dialog>

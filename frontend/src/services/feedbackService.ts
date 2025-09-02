@@ -1,6 +1,6 @@
 // Frontend service for customer feedback and service closure workflow API
 
-import api from '../lib/api';
+import api from "../lib/api";
 
 export interface CustomerFeedback {
   id: number;
@@ -129,10 +129,12 @@ export interface ClosureAnalytics {
 }
 
 class FeedbackService {
-  private readonly baseUrl = '/api/v1/feedback';
+  private readonly baseUrl = "/api/v1/feedback";
 
   // Customer Feedback Methods
-  async submitFeedback(feedbackData: CustomerFeedbackCreate): Promise<CustomerFeedback> {
+  async submitFeedback(
+    feedbackData: CustomerFeedbackCreate,
+  ): Promise<CustomerFeedback> {
     const response = await api.post(`${this.baseUrl}/feedback`, feedbackData);
     return response.data;
   }
@@ -140,17 +142,20 @@ class FeedbackService {
   async getFeedbackList(
     filters: FeedbackFilters = {},
     skip: number = 0,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<CustomerFeedback[]> {
     const params = new URLSearchParams({
       skip: skip.toString(),
       limit: limit.toString(),
-      ...Object.entries(filters).reduce((acc, [key, value]) => {
-        if (value !== undefined && value !== '') {
-          acc[key] = value.toString();
-        }
-        return acc;
-      }, {} as Record<string, string>)
+      ...Object.entries(filters).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined && value !== "") {
+            acc[key] = value.toString();
+          }
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     });
 
     const response = await api.get(`${this.baseUrl}/feedback?${params}`);
@@ -164,42 +169,56 @@ class FeedbackService {
 
   async updateFeedback(
     feedbackId: number,
-    updateData: Partial<CustomerFeedbackCreate>
+    updateData: Partial<CustomerFeedbackCreate>,
   ): Promise<CustomerFeedback> {
-    const response = await api.put(`${this.baseUrl}/feedback/${feedbackId}`, updateData);
+    const response = await api.put(
+      `${this.baseUrl}/feedback/${feedbackId}`,
+      updateData,
+    );
     return response.data;
   }
 
   async reviewFeedback(
     feedbackId: number,
-    responseNotes: string
+    responseNotes: string,
   ): Promise<CustomerFeedback> {
-    const response = await api.post(`${this.baseUrl}/feedback/${feedbackId}/review`, {
-      response_notes: responseNotes
-    });
+    const response = await api.post(
+      `${this.baseUrl}/feedback/${feedbackId}/review`,
+      {
+        response_notes: responseNotes,
+      },
+    );
     return response.data;
   }
 
   // Service Closure Methods
-  async createServiceClosure(closureData: ServiceClosureCreate): Promise<ServiceClosure> {
-    const response = await api.post(`${this.baseUrl}/service-closure`, closureData);
+  async createServiceClosure(
+    closureData: ServiceClosureCreate,
+  ): Promise<ServiceClosure> {
+    const response = await api.post(
+      `${this.baseUrl}/service-closure`,
+      closureData,
+    );
     return response.data;
   }
 
   async getServiceClosures(
     filters: ClosureFilters = {},
     skip: number = 0,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<ServiceClosure[]> {
     const params = new URLSearchParams({
       skip: skip.toString(),
       limit: limit.toString(),
-      ...Object.entries(filters).reduce((acc, [key, value]) => {
-        if (value !== undefined && value !== '') {
-          acc[key] = value.toString();
-        }
-        return acc;
-      }, {} as Record<string, string>)
+      ...Object.entries(filters).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined && value !== "") {
+            acc[key] = value.toString();
+          }
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     });
 
     const response = await api.get(`${this.baseUrl}/service-closure?${params}`);
@@ -207,68 +226,87 @@ class FeedbackService {
   }
 
   async getServiceClosureById(closureId: number): Promise<ServiceClosure> {
-    const response = await api.get(`${this.baseUrl}/service-closure/${closureId}`);
+    const response = await api.get(
+      `${this.baseUrl}/service-closure/${closureId}`,
+    );
     return response.data;
   }
 
   async approveServiceClosure(
     closureId: number,
-    approvalNotes?: string
+    approvalNotes?: string,
   ): Promise<ServiceClosure> {
-    const response = await api.post(`${this.baseUrl}/service-closure/${closureId}/approve`, {
-      approval_notes: approvalNotes
-    });
+    const response = await api.post(
+      `${this.baseUrl}/service-closure/${closureId}/approve`,
+      {
+        approval_notes: approvalNotes,
+      },
+    );
     return response.data;
   }
 
   async closeServiceTicket(
     closureId: number,
-    finalClosureNotes?: string
+    finalClosureNotes?: string,
   ): Promise<ServiceClosure> {
-    const response = await api.post(`${this.baseUrl}/service-closure/${closureId}/close`, {
-      final_closure_notes: finalClosureNotes
-    });
+    const response = await api.post(
+      `${this.baseUrl}/service-closure/${closureId}/close`,
+      {
+        final_closure_notes: finalClosureNotes,
+      },
+    );
     return response.data;
   }
 
   async reopenServiceTicket(
     closureId: number,
-    reopeningReason: string
+    reopeningReason: string,
   ): Promise<ServiceClosure> {
-    const response = await api.post(`${this.baseUrl}/service-closure/${closureId}/reopen`, {
-      reopening_reason: reopeningReason
-    });
+    const response = await api.post(
+      `${this.baseUrl}/service-closure/${closureId}/reopen`,
+      {
+        reopening_reason: reopeningReason,
+      },
+    );
     return response.data;
   }
 
   // Analytics Methods
   async getFeedbackAnalytics(days: number = 30): Promise<FeedbackAnalytics> {
-    const response = await api.get(`${this.baseUrl}/feedback/analytics/summary?days=${days}`);
+    const response = await api.get(
+      `${this.baseUrl}/feedback/analytics/summary?days=${days}`,
+    );
     return response.data;
   }
 
   async getClosureAnalytics(days: number = 30): Promise<ClosureAnalytics> {
-    const response = await api.get(`${this.baseUrl}/service-closure/analytics/summary?days=${days}`);
+    const response = await api.get(
+      `${this.baseUrl}/service-closure/analytics/summary?days=${days}`,
+    );
     return response.data;
   }
 
   // Utility Methods
   async getFeedbackByJobId(jobId: number): Promise<CustomerFeedback | null> {
     try {
-      const feedbackList = await this.getFeedbackList({ installation_job_id: jobId });
+      const feedbackList = await this.getFeedbackList({
+        installation_job_id: jobId,
+      });
       return feedbackList.length > 0 ? feedbackList[0] : null;
     } catch (error) {
-      console.error('Error fetching feedback by job ID:', error);
+      console.error("Error fetching feedback by job ID:", error);
       return null;
     }
   }
 
   async getClosureByJobId(jobId: number): Promise<ServiceClosure | null> {
     try {
-      const closureList = await this.getServiceClosures({ installation_job_id: jobId });
+      const closureList = await this.getServiceClosures({
+        installation_job_id: jobId,
+      });
       return closureList.length > 0 ? closureList[0] : null;
     } catch (error) {
-      console.error('Error fetching closure by job ID:', error);
+      console.error("Error fetching closure by job ID:", error);
       return null;
     }
   }
@@ -277,9 +315,12 @@ class FeedbackService {
   async triggerFeedbackRequest(jobId: number): Promise<void> {
     // This would trigger an automated feedback request
     // Could be called from the dispatch management system
-    const response = await api.post(`${this.baseUrl}/feedback/trigger-request`, {
-      installation_job_id: jobId
-    });
+    const response = await api.post(
+      `${this.baseUrl}/feedback/trigger-request`,
+      {
+        installation_job_id: jobId,
+      },
+    );
     return response.data;
   }
 
@@ -288,11 +329,11 @@ class FeedbackService {
     try {
       const feedback = await this.getFeedbackByJobId(jobId);
       const existingClosure = await this.getClosureByJobId(jobId);
-      
+
       // Business rules: feedback received and no existing closure
       return feedback !== null && existingClosure === null;
     } catch (error) {
-      console.error('Error checking closure eligibility:', error);
+      console.error("Error checking closure eligibility:", error);
       return false;
     }
   }
@@ -302,7 +343,4 @@ class FeedbackService {
 export const feedbackService = new FeedbackService();
 
 // Export types and service
-export {
-  FeedbackService,
-  feedbackService as default
-};
+export { FeedbackService, feedbackService as default };

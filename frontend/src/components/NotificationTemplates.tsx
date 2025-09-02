@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { 
+import React, { useState } from "react";
+import {
   Alert,
   Box,
   Button,
@@ -30,8 +30,8 @@ import {
   Tabs,
   TextField,
   Tooltip,
-  Typography
-} from '@mui/material';
+  Typography,
+} from "@mui/material";
 import {
   Add,
   Assignment,
@@ -41,10 +41,10 @@ import {
   Notifications,
   Email,
   Sms,
-  NotificationImportant
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+  NotificationImportant,
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 import {
   getNotificationTemplates,
   createNotificationTemplate,
@@ -58,8 +58,8 @@ import {
   TEMPLATE_TYPES,
   getChannelDisplayName,
   getTemplateTypeDisplayName,
-  notificationQueryKeys
-} from '../services/notificationService';
+  notificationQueryKeys,
+} from "../services/notificationService";
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -81,46 +81,48 @@ function TabPanel(props: TabPanelProps) {
 }
 const NotificationTemplates: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
-  const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] =
+    useState<NotificationTemplate | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [templateToDelete, setTemplateToDelete] = useState<NotificationTemplate | null>(null);
+  const [templateToDelete, setTemplateToDelete] =
+    useState<NotificationTemplate | null>(null);
   const queryClient = useQueryClient();
   // Form state for create/edit
   const [formData, setFormData] = useState<NotificationTemplateCreate>({
-    name: '',
-    description: '',
-    template_type: 'appointment_reminder',
-    channel: 'email',
-    subject: '',
-    body: '',
-    html_body: '',
-    trigger_event: '',
+    name: "",
+    description: "",
+    template_type: "appointment_reminder",
+    channel: "email",
+    subject: "",
+    body: "",
+    html_body: "",
+    trigger_event: "",
     variables: [],
-    is_active: true
+    is_active: true,
   });
-  
+
   // Reset form function
   const resetForm = () => {
     setFormData({
-      name: '',
-      description: '',
-      template_type: 'appointment_reminder',
-      channel: 'email',
-      subject: '',
-      body: '',
-      html_body: '',
-      trigger_event: '',
+      name: "",
+      description: "",
+      template_type: "appointment_reminder",
+      channel: "email",
+      subject: "",
+      body: "",
+      html_body: "",
+      trigger_event: "",
       variables: [],
-      is_active: true
+      is_active: true,
     });
   };
-  
+
   // Get templates data
-  const { 
-    data: templates = [], 
-    isLoading, 
-    error 
+  const {
+    data: templates = [],
+    isLoading,
+    error,
   } = useQuery({
     queryKey: notificationQueryKeys.templates(),
     queryFn: () => getNotificationTemplates(),
@@ -129,67 +131,86 @@ const NotificationTemplates: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: createNotificationTemplate,
     onSuccess: (_data) => {
-      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
+      queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.templates(),
+      });
       setIsCreateModalOpen(false);
       resetForm();
-      toast.success('Template created successfully');
+      toast.success("Template created successfully");
     },
     onError: (createError: any) => {
-      toast.error(createError.response?.data?.detail || 'Failed to create template');
-    }
+      toast.error(
+        createError.response?.data?.detail || "Failed to create template",
+      );
+    },
   });
   // Update template mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: NotificationTemplateUpdate }) =>
-      updateNotificationTemplate(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: NotificationTemplateUpdate;
+    }) => updateNotificationTemplate(id, data),
     onSuccess: (_data) => {
-      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
+      queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.templates(),
+      });
       setEditingTemplate(null);
       resetForm();
-      toast.success('Template updated successfully');
+      toast.success("Template updated successfully");
     },
     onError: (updateError: any) => {
-      toast.error(updateError.response?.data?.detail || 'Failed to update template');
-    }
+      toast.error(
+        updateError.response?.data?.detail || "Failed to update template",
+      );
+    },
   });
   // Delete template mutation
   const deleteMutation = useMutation({
     mutationFn: deleteNotificationTemplate,
     onSuccess: (_data) => {
-      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.templates() });
+      queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.templates(),
+      });
       setIsDeleteModalOpen(false);
       setTemplateToDelete(null);
-      toast.success('Template deleted successfully');
+      toast.success("Template deleted successfully");
     },
     onError: (deleteError: any) => {
-      toast.error(deleteError.response?.data?.detail || 'Failed to delete template');
-    }
+      toast.error(
+        deleteError.response?.data?.detail || "Failed to delete template",
+      );
+    },
   });
   // Test template mutation
   const testMutation = useMutation({
     mutationFn: ({ id, testData }: { id: number; testData: any }) =>
       testNotificationTemplate(id, testData),
     onSuccess: (data) => {
-      toast.success('Template test completed successfully');
-      console.log('Test result:', data);
+      toast.success("Template test completed successfully");
+      console.log("Test result:", data);
     },
     onError: (testError: any) => {
-      toast.error(testError.response?.data?.detail || 'Failed to test template');
-    }
+      toast.error(
+        testError.response?.data?.detail || "Failed to test template",
+      );
+    },
   });
   const handleEdit = (template: NotificationTemplate) => {
     setEditingTemplate(template);
     setFormData({
       name: template.name,
-      description: template.description || '',
+      description: template.description || "",
       template_type: template.template_type,
       channel: template.channel,
-      subject: template.subject || '',
+      subject: template.subject || "",
       body: template.body,
-      html_body: template.html_body || '',
-      trigger_event: template.trigger_event || '',
+      html_body: template.html_body || "",
+      trigger_event: template.trigger_event || "",
       variables: template.variables || [],
-      is_active: template.is_active
+      is_active: template.is_active,
     });
     setIsCreateModalOpen(true);
   };
@@ -214,33 +235,35 @@ const NotificationTemplates: React.FC = () => {
       id: template.id,
       testData: {
         variables: {
-          customer_name: 'John Doe',
-          appointment_date: '2024-01-15 10:00 AM',
-          service_type: 'AC Repair'
-        }
-      }
+          customer_name: "John Doe",
+          appointment_date: "2024-01-15 10:00 AM",
+          service_type: "AC Repair",
+        },
+      },
     });
   };
   const getChannelIcon = (channel: string) => {
     switch (channel) {
-      case 'email':
+      case "email":
         return <Email />;
-      case 'sms':
+      case "sms":
         return <Sms />;
-      case 'push':
+      case "push":
         return <NotificationImportant />;
-      case 'in_app':
+      case "in_app":
         return <Notifications />;
       default:
         return <Assignment />;
     }
   };
   // Filter templates by channel for tabs
-  const emailTemplates = templates.filter(t => t.channel === 'email');
-  const smsTemplates = templates.filter(t => t.channel === 'sms');
-  const pushTemplates = templates.filter(t => t.channel === 'push');
-  const inAppTemplates = templates.filter(t => t.channel === 'in_app');
-  const TemplateTable: React.FC<{ templates: NotificationTemplate[] }> = ({ templateList }) => (
+  const emailTemplates = templates.filter((t) => t.channel === "email");
+  const smsTemplates = templates.filter((t) => t.channel === "sms");
+  const pushTemplates = templates.filter((t) => t.channel === "push");
+  const inAppTemplates = templates.filter((t) => t.channel === "in_app");
+  const TemplateTable: React.FC<{ templates: NotificationTemplate[] }> = ({
+    templateList,
+  }) => (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
@@ -267,8 +290,10 @@ const NotificationTemplates: React.FC = () => {
                 </Box>
               </TableCell>
               <TableCell>
-                <Chip 
-                  label={getTemplateTypeDisplayName(template.template_type as any)} 
+                <Chip
+                  label={getTemplateTypeDisplayName(
+                    template.template_type as any,
+                  )}
                   size="small"
                   variant="outlined"
                 />
@@ -280,17 +305,17 @@ const NotificationTemplates: React.FC = () => {
                 </Box>
               </TableCell>
               <TableCell>
-                <Chip 
-                  label={template.is_active ? 'Active' : 'Inactive'}
-                  color={template.is_active ? 'success' : 'default'}
+                <Chip
+                  label={template.is_active ? "Active" : "Inactive"}
+                  color={template.is_active ? "success" : "default"}
                   size="small"
                 />
               </TableCell>
               <TableCell>
                 {template.variables && template.variables.length > 0 && (
-                  <Tooltip title={template.variables.join(', ')}>
-                    <Chip 
-                      label={`${template.variables.length} variables`} 
+                  <Tooltip title={template.variables.join(", ")}>
+                    <Chip
+                      label={`${template.variables.length} variables`}
                       size="small"
                       variant="outlined"
                     />
@@ -300,8 +325,8 @@ const NotificationTemplates: React.FC = () => {
               <TableCell>
                 <Box display="flex" gap={1}>
                   <Tooltip title="Test Template">
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={() => handleTest(template)}
                       disabled={testMutation.isPending}
                     >
@@ -309,13 +334,16 @@ const NotificationTemplates: React.FC = () => {
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Edit Template">
-                    <IconButton size="small" onClick={() => handleEdit(template)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEdit(template)}
+                    >
                       <Edit />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete Template">
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={() => handleDelete(template)}
                       color="error"
                     >
@@ -350,7 +378,12 @@ const NotificationTemplates: React.FC = () => {
     <Box>
       <Card>
         <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={3}
+          >
             <Typography variant="h5" component="h2">
               Notification Templates
             </Typography>
@@ -368,28 +401,28 @@ const NotificationTemplates: React.FC = () => {
             </Box>
           ) : (
             <Box>
-              <Tabs 
-                value={selectedTab} 
+              <Tabs
+                value={selectedTab}
                 onChange={(_, newValue) => setSelectedTab(newValue)}
-                sx={{ borderBottom: 1, borderColor: 'divider' }}
+                sx={{ borderBottom: 1, borderColor: "divider" }}
               >
-                <Tab 
-                  label={`Email (${emailTemplates.length})`} 
+                <Tab
+                  label={`Email (${emailTemplates.length})`}
                   icon={<Email />}
                   iconPosition="start"
                 />
-                <Tab 
-                  label={`SMS (${smsTemplates.length})`} 
+                <Tab
+                  label={`SMS (${smsTemplates.length})`}
                   icon={<Sms />}
                   iconPosition="start"
                 />
-                <Tab 
-                  label={`Push (${pushTemplates.length})`} 
+                <Tab
+                  label={`Push (${pushTemplates.length})`}
                   icon={<NotificationImportant />}
                   iconPosition="start"
                 />
-                <Tab 
-                  label={`In-App (${inAppTemplates.length})`} 
+                <Tab
+                  label={`In-App (${inAppTemplates.length})`}
                   icon={<Notifications />}
                   iconPosition="start"
                 />
@@ -411,14 +444,14 @@ const NotificationTemplates: React.FC = () => {
         </CardContent>
       </Card>
       {/* Create/Edit Template Modal */}
-      <Dialog 
-        open={isCreateModalOpen} 
+      <Dialog
+        open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>
-          {editingTemplate ? 'Edit Template' : 'Create Template'}
+          {editingTemplate ? "Edit Template" : "Create Template"}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -427,7 +460,9 @@ const NotificationTemplates: React.FC = () => {
                 fullWidth
                 label="Template Name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 required
               />
             </Grid>
@@ -437,9 +472,11 @@ const NotificationTemplates: React.FC = () => {
                 <Select
                   value={formData.template_type}
                   label="Template Type"
-                  onChange={(e) => setFormData({ ...formData, template_type: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, template_type: e.target.value })
+                  }
                 >
-                  {TEMPLATE_TYPES.map(type => (
+                  {TEMPLATE_TYPES.map((type) => (
                     <MenuItem key={type} value={type}>
                       {getTemplateTypeDisplayName(type)}
                     </MenuItem>
@@ -453,9 +490,11 @@ const NotificationTemplates: React.FC = () => {
                 <Select
                   value={formData.channel}
                   label="Channel"
-                  onChange={(e) => setFormData({ ...formData, channel: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, channel: e.target.value })
+                  }
                 >
-                  {NOTIFICATION_CHANNELS.map(channel => (
+                  {NOTIFICATION_CHANNELS.map((channel) => (
                     <MenuItem key={channel} value={channel}>
                       {getChannelDisplayName(channel)}
                     </MenuItem>
@@ -468,7 +507,9 @@ const NotificationTemplates: React.FC = () => {
                 control={
                   <Switch
                     checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, is_active: e.target.checked })
+                    }
                   />
                 }
                 label="Active"
@@ -479,18 +520,22 @@ const NotificationTemplates: React.FC = () => {
                 fullWidth
                 label="Description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 multiline
                 rows={2}
               />
             </Grid>
-            {formData.channel === 'email' && (
+            {formData.channel === "email" && (
               <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Subject"
                   value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subject: e.target.value })
+                  }
                 />
               </Grid>
             )}
@@ -499,20 +544,24 @@ const NotificationTemplates: React.FC = () => {
                 fullWidth
                 label="Message Body"
                 value={formData.body}
-                onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, body: e.target.value })
+                }
                 multiline
                 rows={4}
                 required
                 helperText="Use {variable_name} for dynamic content (e.g., {customer_name}, {appointment_date})"
               />
             </Grid>
-            {formData.channel === 'email' && (
+            {formData.channel === "email" && (
               <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="HTML Body (Optional)"
                   value={formData.html_body}
-                  onChange={(e) => setFormData({ ...formData, html_body: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, html_body: e.target.value })
+                  }
                   multiline
                   rows={4}
                   helperText="HTML version of the email for rich formatting"
@@ -524,7 +573,9 @@ const NotificationTemplates: React.FC = () => {
                 fullWidth
                 label="Trigger Event (Optional)"
                 value={formData.trigger_event}
-                onChange={(e) => setFormData({ ...formData, trigger_event: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, trigger_event: e.target.value })
+                }
                 helperText="Event that automatically triggers this notification (e.g., customer_interaction, appointment_scheduled)"
               />
             </Grid>
@@ -532,27 +583,30 @@ const NotificationTemplates: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={handleSubmit}
             variant="contained"
             disabled={createMutation.isPending || updateMutation.isPending}
           >
-            {editingTemplate ? 'Update' : 'Create'}
+            {editingTemplate ? "Update" : "Create"}
           </Button>
         </DialogActions>
       </Dialog>
       {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
+      <Dialog
+        open={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+      >
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the template "{templateToDelete?.name}"?
-            This action cannot be undone.
+            Are you sure you want to delete the template "
+            {templateToDelete?.name}"? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={confirmDelete}
             color="error"
             variant="contained"

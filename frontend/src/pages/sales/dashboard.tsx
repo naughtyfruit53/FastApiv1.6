@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -9,10 +9,15 @@ import {
   CardContent,
   Grid,
   Button,
-  CircularProgress
-} from '@mui/material';
-import { MonetizationOn, TrendingUp, People, Assessment } from '@mui/icons-material';
-import { crmService } from '../../services/crmService';
+  CircularProgress,
+} from "@mui/material";
+import {
+  MonetizationOn,
+  TrendingUp,
+  People,
+  Assessment,
+} from "@mui/icons-material";
+import { crmService } from "../../services/crmService";
 
 interface DashboardStats {
   totalRevenue: number;
@@ -26,7 +31,7 @@ const SalesDashboard: React.FC = () => {
     totalRevenue: 0,
     activeOpportunities: 0,
     newLeads: 0,
-    conversionRate: 0
+    conversionRate: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -37,28 +42,31 @@ const SalesDashboard: React.FC = () => {
         // Fetch basic data from API
         const [leads, opportunities] = await Promise.all([
           crmService.getLeads(0, 1000), // Get more leads for accurate count
-          crmService.getOpportunities(0, 1000) // Get more opportunities for accurate count
+          crmService.getOpportunities(0, 1000), // Get more opportunities for accurate count
         ]);
 
         // Calculate stats
         const totalRevenue = opportunities
-          .filter(opp => opp.stage === 'closed_won')
+          .filter((opp) => opp.stage === "closed_won")
           .reduce((sum, opp) => sum + opp.amount, 0);
-        
-        const activeOpportunities = opportunities.filter(opp => 
-          !['closed_won', 'closed_lost'].includes(opp.stage)
+
+        const activeOpportunities = opportunities.filter(
+          (opp) => !["closed_won", "closed_lost"].includes(opp.stage),
         ).length;
 
-        const newLeads = leads.filter(lead => lead.status === 'new').length;
-        
-        const convertedLeads = leads.filter(lead => lead.status === 'converted').length;
-        const conversionRate = leads.length > 0 ? (convertedLeads / leads.length) * 100 : 0;
+        const newLeads = leads.filter((lead) => lead.status === "new").length;
+
+        const convertedLeads = leads.filter(
+          (lead) => lead.status === "converted",
+        ).length;
+        const conversionRate =
+          leads.length > 0 ? (convertedLeads / leads.length) * 100 : 0;
 
         setStats({
           totalRevenue,
           activeOpportunities,
           newLeads,
-          conversionRate
+          conversionRate,
         });
       } catch (err) {
         console.error(msg, err);
@@ -80,7 +88,7 @@ const SalesDashboard: React.FC = () => {
         </Typography>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
@@ -88,7 +96,7 @@ const SalesDashboard: React.FC = () => {
             <Grid item xs={12} sm={6} md={3}>
               <Card>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <MonetizationOn color="primary" sx={{ mr: 1 }} />
                     <Typography variant="h6">Revenue</Typography>
                   </Box>
@@ -101,11 +109,11 @@ const SalesDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            
+
             <Grid item xs={12} sm={6} md={3}>
               <Card>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <TrendingUp color="success.main" sx={{ mr: 1 }} />
                     <Typography variant="h6">Opportunities</Typography>
                   </Box>
@@ -118,11 +126,11 @@ const SalesDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            
+
             <Grid item xs={12} sm={6} md={3}>
               <Card>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <People color="info.main" sx={{ mr: 1 }} />
                     <Typography variant="h6">Leads</Typography>
                   </Box>
@@ -135,11 +143,11 @@ const SalesDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            
+
             <Grid item xs={12} sm={6} md={3}>
               <Card>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <Assessment color="warning.main" sx={{ mr: 1 }} />
                     <Typography variant="h6">Conversion</Typography>
                   </Box>
@@ -166,36 +174,38 @@ const SalesDashboard: React.FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 <Grid item>
-                  <Button 
-                    variant="contained" 
-                    onClick={() => window.location.href = '/sales/leads'}
+                  <Button
+                    variant="contained"
+                    onClick={() => (window.location.href = "/sales/leads")}
                     startIcon={<People />}
                   >
                     Manage Leads
                   </Button>
                 </Grid>
                 <Grid item>
-                  <Button 
-                    variant="contained" 
-                    onClick={() => window.location.href = '/sales/opportunities'}
+                  <Button
+                    variant="contained"
+                    onClick={() =>
+                      (window.location.href = "/sales/opportunities")
+                    }
                     startIcon={<TrendingUp />}
                   >
                     Track Opportunities
                   </Button>
                 </Grid>
                 <Grid item>
-                  <Button 
-                    variant="outlined" 
-                    onClick={() => window.location.href = '/sales/pipeline'}
+                  <Button
+                    variant="outlined"
+                    onClick={() => (window.location.href = "/sales/pipeline")}
                     startIcon={<Assessment />}
                   >
                     View Pipeline
                   </Button>
                 </Grid>
                 <Grid item>
-                  <Button 
-                    variant="outlined" 
-                    onClick={() => window.location.href = '/sales/customers'}
+                  <Button
+                    variant="outlined"
+                    onClick={() => (window.location.href = "/sales/customers")}
                     startIcon={<People />}
                   >
                     Customer Database

@@ -1,5 +1,5 @@
 // frontend/src/components/ServiceAnalytics/ServiceAnalyticsDashboard.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Card,
@@ -9,43 +9,35 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  _Select,
-  _MenuItem,
-  _FormControl,
-  _InputLabel,
   Button,
-  _TextField,
   IconButton,
   Tooltip,
-  Chip
-} from '@mui/material';
+  Chip,
+} from "@mui/material";
 import {
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Download as DownloadIcon,
-  DateRange as DateRangeIcon
-} from '@mui/icons-material';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { 
-  serviceAnalyticsService, 
-  ReportPeriod, 
-  _AnalyticsDashboard,
+  DateRange as DateRangeIcon,
+} from "@mui/icons-material";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  serviceAnalyticsService,
+  ReportPeriod,
   AnalyticsRequest,
-  TechnicianOption,
-  CustomerOption
-} from '../../services/serviceAnalyticsService';
-import { useAuth } from '../../hooks/useAuth';
-import JobCompletionChart from './JobCompletionChart';
-import TechnicianPerformanceChart from './TechnicianPerformanceChart';
-import CustomerSatisfactionChart from './CustomerSatisfactionChart';
-import JobVolumeChart from './JobVolumeChart';
-import SLAComplianceChart from './SLAComplianceChart';
-import AnalyticsFilters from './AnalyticsFilters';
+} from "../../services/serviceAnalyticsService";
+import { useAuth } from "../../hooks/useAuth";
+import JobCompletionChart from "./JobCompletionChart";
+import TechnicianPerformanceChart from "./TechnicianPerformanceChart";
+import CustomerSatisfactionChart from "./CustomerSatisfactionChart";
+import JobVolumeChart from "./JobVolumeChart";
+import SLAComplianceChart from "./SLAComplianceChart";
+import AnalyticsFilters from "./AnalyticsFilters";
 interface ServiceAnalyticsDashboardProps {
   organizationId?: number;
 }
 const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
-  organizationId: propOrganizationId
+  organizationId: propOrganizationId,
 }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -53,7 +45,7 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
   const organizationId = propOrganizationId || user?.organization_id;
   // State for filters
   const [filters, setFilters] = useState<AnalyticsRequest>({
-    period: ReportPeriod.MONTH
+    period: ReportPeriod.MONTH,
   });
   const [showFilters, setShowFilters] = useState(false);
   // Query for dashboard data
@@ -61,46 +53,61 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
     data: dashboardData,
     isLoading,
     error,
-    refetch
+    refetch,
   } = useQuery({
-    queryKey: ['service-analytics-dashboard', organizationId, filters],
-    queryFn: () => serviceAnalyticsService.getAnalyticsDashboard(organizationId!, filters),
+    queryKey: ["service-analytics-dashboard", organizationId, filters],
+    queryFn: () =>
+      serviceAnalyticsService.getAnalyticsDashboard(organizationId!, filters),
     enabled: !!organizationId,
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-    staleTime: 2 * 60 * 1000 // Consider data stale after 2 minutes
+    staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
   });
   // Query for filter options
   const { data: technicians } = useQuery({
-    queryKey: ['analytics-technicians', organizationId],
-    queryFn: () => serviceAnalyticsService.getAvailableTechnicians(organizationId!),
-    enabled: !!organizationId
+    queryKey: ["analytics-technicians", organizationId],
+    queryFn: () =>
+      serviceAnalyticsService.getAvailableTechnicians(organizationId!),
+    enabled: !!organizationId,
   });
   const { data: customers } = useQuery({
-    queryKey: ['analytics-customers', organizationId],
-    queryFn: () => serviceAnalyticsService.getAvailableCustomers(organizationId!),
-    enabled: !!organizationId
+    queryKey: ["analytics-customers", organizationId],
+    queryFn: () =>
+      serviceAnalyticsService.getAvailableCustomers(organizationId!),
+    enabled: !!organizationId,
   });
   const handleFilterChange = (newFilters: AnalyticsRequest) => {
     setFilters(newFilters);
   };
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['service-analytics-dashboard'] });
+    queryClient.invalidateQueries({
+      queryKey: ["service-analytics-dashboard"],
+    });
     refetch();
   };
   const handleExport = async () => {
-    if (!organizationId) {return;}
+    if (!organizationId) {
+      return;
+    }
     try {
-      const blob = await serviceAnalyticsService.exportAnalyticsData(organizationId, {
-        format: 'csv',
-        metric_types: ['job_completion', 'technician_performance', 'customer_satisfaction', 'job_volume'],
-        filters: filters,
-        include_raw_data: false
-      });
+      const blob = await serviceAnalyticsService.exportAnalyticsData(
+        organizationId,
+        {
+          format: "csv",
+          metric_types: [
+            "job_completion",
+            "technician_performance",
+            "customer_satisfaction",
+            "job_volume",
+          ],
+          filters: filters,
+          include_raw_data: false,
+        },
+      );
       // Create download link
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `service-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `service-analytics-${new Date().toISOString().split("T")[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -118,7 +125,12 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
   }
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress size={60} />
         <Typography variant="h6" sx={{ ml: 2 }}>
           Loading analytics dashboard...
@@ -128,11 +140,14 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
   }
   if (error) {
     return (
-      <Alert severity="error" action={
-        <Button color="inherit" size="small" onClick={handleRefresh}>
-          Retry
-        </Button>
-      }>
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={handleRefresh}>
+            Retry
+          </Button>
+        }
+      >
         Failed to load analytics dashboard: {(error as Error).message}
       </Alert>
     );
@@ -147,15 +162,20 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
   return (
     <Box>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
         <Typography variant="h4" component="h1">
           Service Analytics Dashboard
         </Typography>
         <Box display="flex" gap={1}>
           <Tooltip title="Toggle Filters">
-            <IconButton 
+            <IconButton
               onClick={() => setShowFilters(!showFilters)}
-              color={showFilters ? 'primary' : 'default'}
+              color={showFilters ? "primary" : "default"}
             >
               <FilterIcon />
             </IconButton>
@@ -189,16 +209,16 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box display="flex" flexWrap="wrap" gap={2} alignItems="center">
-            <Chip 
+            <Chip
               icon={<DateRangeIcon />}
               label={`Period: ${dashboardData.report_period.toUpperCase()}`}
               color="primary"
             />
-            <Chip 
+            <Chip
               label={`${dashboardData.start_date} to ${dashboardData.end_date}`}
               variant="outlined"
             />
-            <Chip 
+            <Chip
               label={`Generated: ${new Date(dashboardData.generated_at).toLocaleString()}`}
               variant="outlined"
               size="small"
@@ -214,7 +234,9 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
         </Grid>
         {/* Customer Satisfaction Metrics */}
         <Grid item xs={12} md={6}>
-          <CustomerSatisfactionChart data={dashboardData.customer_satisfaction} />
+          <CustomerSatisfactionChart
+            data={dashboardData.customer_satisfaction}
+          />
         </Grid>
         {/* Job Volume Chart */}
         <Grid item xs={12} md={6}>
@@ -227,7 +249,9 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
         {/* Technician Performance - Full width if data available */}
         {dashboardData.technician_performance.length > 0 && (
           <Grid item xs={12}>
-            <TechnicianPerformanceChart data={dashboardData.technician_performance} />
+            <TechnicianPerformanceChart
+              data={dashboardData.technician_performance}
+            />
           </Grid>
         )}
       </Grid>
@@ -259,7 +283,10 @@ const ServiceAnalyticsDashboard: React.FC<ServiceAnalyticsDashboardProps> = ({
             <Grid item xs={12} sm={6} md={3}>
               <Box textAlign="center">
                 <Typography variant="h4" color="info.main">
-                  {dashboardData.customer_satisfaction.average_overall_rating.toFixed(1)}/5
+                  {dashboardData.customer_satisfaction.average_overall_rating.toFixed(
+                    1,
+                  )}
+                  /5
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Customer Rating

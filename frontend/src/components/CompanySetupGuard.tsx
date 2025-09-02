@@ -1,46 +1,57 @@
 // frontend/src/components/CompanySetupGuard.tsx
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useQuery } from '@tanstack/react-query';
-import { companyService } from '../services/authService';
-import { useAuth } from '../context/AuthContext';
-import CompanyDetailsModal from './CompanyDetailsModal';
-import { toast } from 'react-toastify';
-import StickyNotesPanel from './StickyNotes/StickyNotesPanel';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { useQuery } from "@tanstack/react-query";
+import { companyService } from "../services/authService";
+import { useAuth } from "../context/AuthContext";
+import CompanyDetailsModal from "./CompanyDetailsModal";
+import { toast } from "react-toastify";
+import StickyNotesPanel from "./StickyNotes/StickyNotesPanel";
 
 interface CompanySetupGuardProps {
   children: React.ReactNode;
 }
 
 const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();  // Use auth loading state
+  const { user, loading: authLoading } = useAuth(); // Use auth loading state
   const router = useRouter();
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [hasShownToast, setHasShownToast] = useState(false);
 
   // Skip company setup requirement for these routes
-  const exemptRoutes = ['/login', '/', '/password-reset', '/forgot-password'];
-  
+  const exemptRoutes = ["/login", "/", "/password-reset", "/forgot-password"];
+
   // Routes that should trigger company setup warning/blocking
   const restrictedRoutes = [
-    '/dashboard',
-    '/masters',
-    '/inventory',
-    '/stock',
-    '/products',
-    '/customers',
-    '/vendors',
-    '/vouchers'
+    "/dashboard",
+    "/masters",
+    "/inventory",
+    "/stock",
+    "/products",
+    "/customers",
+    "/vendors",
+    "/vouchers",
   ];
 
   const isExemptRoute = exemptRoutes.includes(router.pathname);
-  const isRestrictedRoute = restrictedRoutes.some(route => router.pathname.startsWith(route));
+  const isRestrictedRoute = restrictedRoutes.some((route) =>
+    router.pathname.startsWith(route),
+  );
 
   // Only enable query when auth is ready, token exists, and not exempt
-  const { data: company, isLoading: companyLoading, refetch: refetchCompany } = useQuery({
-    queryKey: ['company'],
+  const {
+    data: company,
+    isLoading: companyLoading,
+    refetch: refetchCompany,
+  } = useQuery({
+    queryKey: ["company"],
     queryFn: companyService.getCurrentCompany,
-    enabled: !!localStorage.getItem('token') && !!user && !user.is_super_admin && !isExemptRoute && !authLoading,
+    enabled:
+      !!localStorage.getItem("token") &&
+      !!user &&
+      !user.is_super_admin &&
+      !isExemptRoute &&
+      !authLoading,
     retry: 1,
   });
 
@@ -61,29 +72,45 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
     // Only show modal if company setup is actually required AND modal not already shown
     if (isCompanySetupRequired && !showCompanyModal) {
       setShowCompanyModal(true);
-      
+
       // Show appropriate toast notification based on route
       if (!hasShownToast) {
-        if (router.pathname === '/dashboard') {
-          toast.info('Welcome! Please complete your company setup to get started.', {
-            autoClose: 5000,
-            toastId: 'company-setup-welcome'
-          });
+        if (router.pathname === "/dashboard") {
+          toast.info(
+            "Welcome! Please complete your company setup to get started.",
+            {
+              autoClose: 5000,
+              toastId: "company-setup-welcome",
+            },
+          );
         } else if (isRestrictedRoute) {
-          toast.warning('Please complete your company setup to access this feature.', {
-            autoClose: 5000,
-            toastId: 'company-setup-required'
-          });
+          toast.warning(
+            "Please complete your company setup to access this feature.",
+            {
+              autoClose: 5000,
+              toastId: "company-setup-required",
+            },
+          );
         }
         setHasShownToast(true);
       }
     }
-    
+
     // If company data exists, ensure modal is hidden
     if (company && showCompanyModal) {
       setShowCompanyModal(false);
     }
-  }, [authLoading, user, isCompanySetupRequired, isRestrictedRoute, hasShownToast, isExemptRoute, companyLoading, company, showCompanyModal]);
+  }, [
+    authLoading,
+    user,
+    isCompanySetupRequired,
+    isRestrictedRoute,
+    hasShownToast,
+    isExemptRoute,
+    companyLoading,
+    company,
+    showCompanyModal,
+  ]);
 
   const handleCompanyModalClose = () => {
     if (isCompanySetupRequired) {
@@ -97,9 +124,12 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
     setShowCompanyModal(false);
     setHasShownToast(false);
     refetchCompany();
-    toast.success('Company details saved successfully! You can now access all features.', {
-      autoClose: 3000,
-    });
+    toast.success(
+      "Company details saved successfully! You can now access all features.",
+      {
+        autoClose: 3000,
+      },
+    );
   };
 
   // Don't render guard for super admins or exempt routes
@@ -126,7 +156,7 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
     <>
       {children}
       <StickyNotesPanel />
-      
+
       {/* Company setup modal - required if no company exists */}
       <CompanyDetailsModal
         open={showCompanyModal}

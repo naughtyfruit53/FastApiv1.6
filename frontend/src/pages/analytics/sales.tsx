@@ -1,8 +1,8 @@
 // pages/analytics/sales.tsx
 // Sales Analytics page
 
-import React from 'react';
-import { NextPage } from 'next';
+import React from "react";
+import { NextPage } from "next";
 import {
   Box,
   Container,
@@ -12,9 +12,14 @@ import {
   Grid,
   Paper,
   Alert,
-} from '@mui/material';
-import { BarChart, TrendingUp, Assessment, ShoppingCart } from '@mui/icons-material';
-import { useAuth } from '../../hooks/useAuth';
+} from "@mui/material";
+import {
+  BarChart,
+  TrendingUp,
+  Assessment,
+  ShoppingCart,
+} from "@mui/icons-material";
+import { useAuth } from "../../hooks/useAuth";
 
 const SalesAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
@@ -30,12 +35,18 @@ const SalesAnalyticsPage: NextPage = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ display: "flex", alignItems: "center", gap: 2 }}
+        >
           <BarChart color="primary" />
           Sales Analytics
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Analyze sales performance, trends, and key metrics to optimize your sales strategy.
+          Analyze sales performance, trends, and key metrics to optimize your
+          sales strategy.
         </Typography>
       </Box>
 
@@ -44,7 +55,7 @@ const SalesAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <TrendingUp color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Sales Trends</Typography>
@@ -60,7 +71,7 @@ const SalesAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Assessment color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Performance Metrics</Typography>
@@ -76,7 +87,7 @@ const SalesAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <ShoppingCart color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Product Analysis</Typography>
@@ -96,8 +107,9 @@ const SalesAnalyticsPage: NextPage = () => {
               Sales Analytics Dashboard
             </Typography>
             <Alert severity="info">
-              This is a placeholder for the Sales Analytics Dashboard. The actual implementation would include:
-              <ul style={{ marginTop: '8px', marginBottom: 0 }}>
+              This is a placeholder for the Sales Analytics Dashboard. The
+              actual implementation would include:
+              <ul style={{ marginTop: "8px", marginBottom: 0 }}>
                 <li>Sales performance charts and graphs</li>
                 <li>Revenue trends and forecasting</li>
                 <li>Product-wise sales analysis</li>

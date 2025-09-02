@@ -1,46 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  Grid, 
-  IconButton, 
-  Alert, 
-  CircularProgress, 
-  Container, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  Autocomplete, 
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Card,
-  CardContent
-} from '@mui/material';
-import { 
-  Add, 
-  Remove,
-  Visibility, 
-  Edit, 
-  Delete, 
-  Save,
-  Cancel
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../../lib/api';
-import { getProducts } from '../../../services/masterService';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { useForm, useFieldArray } from "react-hook-form";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  IconButton,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Autocomplete,
+} from "@mui/material";
+import { Add, Remove } from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "../../../lib/api";
+import { getProducts } from "../../../services/masterService";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 interface MaterialIssueItem {
   product_id: number;
   quantity: number;
@@ -63,136 +47,161 @@ interface MaterialIssue {
 }
 const defaultValues: MaterialIssue = {
   date: new Date().toISOString().slice(0, 10),
-  purpose: 'production',
+  purpose: "production",
   total_amount: 0,
   items: [
     {
       product_id: 0,
       quantity: 1,
-      unit: 'PCS',
+      unit: "PCS",
       unit_price: 0,
-      total_amount: 0
-    }
-  ]
+      total_amount: 0,
+    },
+  ],
 };
 const MaterialRequisition: React.FC = () => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
-  const [mode, setMode] = useState<'create' | 'edit' | 'view'>((queryMode as 'create' | 'edit' | 'view') || 'create');
-  const [selectedId, setSelectedId] = useState<number | null>(id ? Number(id) : null);
-  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; voucher: any } | null>(null);
+  const [mode, setMode] = useState<"create" | "edit" | "view">(
+    (queryMode as "create" | "edit" | "view") || "create",
+  );
+  const [selectedId, setSelectedId] = useState<number | null>(
+    id ? Number(id) : null,
+  );
+  const [contextMenu, setContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    voucher: any;
+  } | null>(null);
   const queryClient = useQueryClient();
-  const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<MaterialIssue>({
-    defaultValues
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<MaterialIssue>({
+    defaultValues,
   });
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'items'
+    name: "items",
   });
   // Fetch material issues
   const { data: issueList, isLoading: isLoadingList } = useQuery({
-    queryKey: ['material-issues'],
-    queryFn: () => api.get('/material-issues').then(res => res.data),
+    queryKey: ["material-issues"],
+    queryFn: () => api.get("/material-issues").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
-    queryKey: ['products'],
-    queryFn: getProducts
+    queryKey: ["products"],
+    queryFn: getProducts,
   });
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
-    queryKey: ['manufacturing-orders'],
-    queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
+    queryKey: ["manufacturing-orders"],
+    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
   });
   // Fetch specific material issue
   const { data: issueData, isLoading } = useQuery({
-    queryKey: ['material-issue', selectedId],
-    queryFn: () => api.get(`/material-issues/${selectedId}`).then(res => res.data),
-    enabled: !!selectedId
+    queryKey: ["material-issue", selectedId],
+    queryFn: () =>
+      api.get(`/material-issues/${selectedId}`).then((res) => res.data),
+    enabled: !!selectedId,
   });
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
-    queryKey: ['nextMaterialIssueNumber'],
-    queryFn: () => api.get('/material-issues/next-number').then(res => res.data),
-    enabled: mode === 'create',
+    queryKey: ["nextMaterialIssueNumber"],
+    queryFn: () =>
+      api.get("/material-issues/next-number").then((res) => res.data),
+    enabled: mode === "create",
   });
-  const sortedIssues = issueList ? [...issueList].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ) : [];
+  const sortedIssues = issueList
+    ? [...issueList].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+    : [];
   const latestIssues = sortedIssues.slice(0, 10);
   const productOptions = productList || [];
   useEffect(() => {
-    if (mode === 'create' && nextVoucherNumber) {
-      setValue('voucher_number', nextVoucherNumber);
+    if (mode === "create" && nextVoucherNumber) {
+      setValue("voucher_number", nextVoucherNumber);
     } else if (issueData) {
       reset(issueData);
-    } else if (mode === 'create') {
+    } else if (mode === "create") {
       reset(defaultValues);
     }
   }, [issueData, mode, reset, nextVoucherNumber, setValue]);
   // Calculate totals
   useEffect(() => {
-    const items = watch('items') || [];
-    const total = items.reduce((sum, item) => sum + (item.total_amount || 0), 0);
-    setValue('total_amount', total);
-  }, [watch('items'), setValue]);
+    const items = watch("items") || [];
+    const total = items.reduce(
+      (sum, item) => sum + (item.total_amount || 0),
+      0,
+    );
+    setValue("total_amount", total);
+  }, [watch("items"), setValue]);
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: MaterialIssue) => api.post('/material-issues', data),
+    mutationFn: (data: MaterialIssue) => api.post("/material-issues", data),
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ['material-issues'] });
-      setMode('create');
+      queryClient.invalidateQueries({ queryKey: ["material-issues"] });
+      setMode("create");
       setSelectedId(null);
       reset(defaultValues);
       const { data: newNextNumber } = await refetchNextNumber();
-      setValue('voucher_number', newNextNumber);
+      setValue("voucher_number", newNextNumber);
     },
     onError: (error: any) => {
       console.error(msg, err);
-    }
+    },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: MaterialIssue }) => 
+    mutationFn: ({ id, data }: { id: number; data: MaterialIssue }) =>
       api.put(`/material-issues/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['material-issues'] });
-      setMode('create');
+      queryClient.invalidateQueries({ queryKey: ["material-issues"] });
+      setMode("create");
       setSelectedId(null);
       reset(defaultValues);
     },
     onError: (error: any) => {
       console.error(msg, err);
-    }
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/material-issues/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['material-issues'] });
+      queryClient.invalidateQueries({ queryKey: ["material-issues"] });
     },
     onError: (error: any) => {
       console.error(msg, err);
-    }
+    },
   });
   const onSubmit = (data: MaterialIssue) => {
-    if (mode === 'create') {
+    if (mode === "create") {
       createMutation.mutate(data);
-    } else if (mode === 'edit' && selectedId) {
+    } else if (mode === "edit" && selectedId) {
       updateMutation.mutate({ id: selectedId, data });
     }
   };
   const handleEdit = (issue: any) => {
     setSelectedId(issue.id);
-    setMode('edit');
+    setMode("edit");
   };
   const handleView = (issue: any) => {
     setSelectedId(issue.id);
-    setMode('view');
+    setMode("view");
   };
   const handleContextMenuClose = () => {
     setContextMenu(null);
   };
   const handleDeleteIssue = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this material issue?')) {
+    if (
+      window.confirm("Are you sure you want to delete this material issue?")
+    ) {
       deleteMutation.mutate(id);
     }
   };
@@ -200,9 +209,9 @@ const MaterialRequisition: React.FC = () => {
     append({
       product_id: 0,
       quantity: 1,
-      unit: 'PCS',
+      unit: "PCS",
       unit_price: 0,
-      total_amount: 0
+      total_amount: 0,
     });
   };
   const removeItem = (index: number) => {
@@ -235,7 +244,9 @@ const MaterialRequisition: React.FC = () => {
               isLoading={isLoadingList}
             />
             <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>Recent Requisitions</Typography>
+              <Typography variant="h6" gutterBottom>
+                Recent Requisitions
+              </Typography>
               <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
                 <Table size="small" stickyHeader>
                   <TableHead>
@@ -249,11 +260,11 @@ const MaterialRequisition: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     {latestIssues.map((issue) => (
-                      <TableRow 
+                      <TableRow
                         key={issue.id}
                         hover
                         onClick={() => handleEdit(issue)}
-                        sx={{ cursor: 'pointer' }}
+                        sx={{ cursor: "pointer" }}
                         onContextMenu={(e) => {
                           e.preventDefault();
                           setContextMenu({
@@ -265,9 +276,15 @@ const MaterialRequisition: React.FC = () => {
                       >
                         <TableCell>{issue.voucher_number}</TableCell>
                         <TableCell>{issue.purpose}</TableCell>
-                        <TableCell>{issue.issued_to_department || 'N/A'}</TableCell>
-                        <TableCell>{issue.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                        <TableCell>{new Date(issue.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {issue.issued_to_department || "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          {issue.total_amount?.toFixed(2) || "0.00"}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(issue.date).toLocaleDateString()}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -281,96 +298,115 @@ const MaterialRequisition: React.FC = () => {
           <form onSubmit={handleSubmit(onSubmit)}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
-                {mode === 'create' ? 'Create Material Requisition' : 
-                 mode === 'edit' ? 'Edit Material Requisition' : 'View Material Requisition'}
+                {mode === "create"
+                  ? "Create Material Requisition"
+                  : mode === "edit"
+                    ? "Edit Material Requisition"
+                    : "View Material Requisition"}
               </Typography>
               <Grid container spacing={2}>
                 {/* Header Information */}
                 <Grid size={4}>
                   <TextField
-                    {...control.register('voucher_number')}
+                    {...control.register("voucher_number")}
                     label="Requisition Number"
                     fullWidth
                     disabled
                     size="small"
-                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
                   />
                 </Grid>
                 <Grid size={4}>
                   <TextField
-                    {...control.register('date', { required: true })}
+                    {...control.register("date", { required: true })}
                     label="Date"
                     type="date"
                     fullWidth
                     error={!!errors.date}
-                    disabled={mode === 'view'}
+                    disabled={mode === "view"}
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
                   />
                 </Grid>
                 <Grid size={4}>
                   <TextField
-                    {...control.register('purpose')}
+                    {...control.register("purpose")}
                     label="Purpose"
                     fullWidth
-                    disabled={mode === 'view'}
+                    disabled={mode === "view"}
                     size="small"
-                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
                   />
                 </Grid>
                 <Grid size={6}>
                   <Autocomplete
                     options={manufacturingOrders || []}
-                    getOptionLabel={(option) => `${option.voucher_number} - ${option.bom?.bom_name || 'Unknown'}`}
-                    value={manufacturingOrders?.find((mo: any) => mo.id === watch('manufacturing_order_id')) || null}
-                    onChange={(_, newValue) => setValue('manufacturing_order_id', newValue?.id || 0)}
-                    disabled={mode === 'view'}
+                    getOptionLabel={(option) =>
+                      `${option.voucher_number} - ${option.bom?.bom_name || "Unknown"}`
+                    }
+                    value={
+                      manufacturingOrders?.find(
+                        (mo: any) => mo.id === watch("manufacturing_order_id"),
+                      ) || null
+                    }
+                    onChange={(_, newValue) =>
+                      setValue("manufacturing_order_id", newValue?.id || 0)
+                    }
+                    disabled={mode === "view"}
                     renderInput={(params) => (
                       <TextField
                         {...params}
                         label="Manufacturing Order (Optional)"
                         size="small"
-                        sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                        sx={{ "& .MuiInputBase-root": { height: 27 } }}
                       />
                     )}
                   />
                 </Grid>
                 <Grid size={6}>
                   <TextField
-                    {...control.register('issued_to_department')}
+                    {...control.register("issued_to_department")}
                     label="Department"
                     fullWidth
-                    disabled={mode === 'view'}
+                    disabled={mode === "view"}
                     size="small"
-                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                 />
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
                 </Grid>
                 <Grid size={6}>
                   <TextField
-                    {...control.register('issued_to_employee')}
+                    {...control.register("issued_to_employee")}
                     label="Issued To (Employee)"
                     fullWidth
-                    disabled={mode === 'view'}
+                    disabled={mode === "view"}
                     size="small"
-                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                 />
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
                 </Grid>
                 <Grid size={6}>
                   <TextField
                     label="Total Amount"
-                    value={watch('total_amount')?.toFixed(2) || '0.00'}
+                    value={watch("total_amount")?.toFixed(2) || "0.00"}
                     fullWidth
                     disabled
                     size="small"
-                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                 />
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
                 </Grid>
                 {/* Items Section */}
                 <Grid size={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mt: 2,
+                      mb: 1,
+                    }}
+                  >
                     <Typography variant="h6">Items</Typography>
-                    {mode !== 'view' && (
+                    {mode !== "view" && (
                       <Button
                         variant="outlined"
                         size="small"
@@ -389,75 +425,103 @@ const MaterialRequisition: React.FC = () => {
                         <Grid size={4}>
                           <Autocomplete
                             options={productOptions}
-                            getOptionLabel={(option) => option.product_name || ''}
-                            value={productOptions.find((p: any) => p.id === watch(`items.${index}.product_id`)) || null}
+                            getOptionLabel={(option) =>
+                              option.product_name || ""
+                            }
+                            value={
+                              productOptions.find(
+                                (p: any) =>
+                                  p.id === watch(`items.${index}.product_id`),
+                              ) || null
+                            }
                             onChange={(_, newValue) => {
-                              setValue(`items.${index}.product_id`, newValue?.id || 0);
+                              setValue(
+                                `items.${index}.product_id`,
+                                newValue?.id || 0,
+                              );
                               if (newValue) {
-                                setValue(`items.${index}.unit`, newValue.unit || 'PCS');
-                                setValue(`items.${index}.unit_price`, newValue.unit_price || 0);
+                                setValue(
+                                  `items.${index}.unit`,
+                                  newValue.unit || "PCS",
+                                );
+                                setValue(
+                                  `items.${index}.unit_price`,
+                                  newValue.unit_price || 0,
+                                );
                                 updateItemTotal(index);
                               }
                             }}
-                            disabled={mode === 'view'}
+                            disabled={mode === "view"}
                             renderInput={(params) => (
                               <TextField
                                 {...params}
                                 label="Product"
                                 size="small"
-                             />
+                              />
                             )}
-                         />
+                          />
                         </Grid>
                         <Grid size={2}>
                           <TextField
-                            {...control.register(`items.${index}.quantity` as const, { 
-                              required: true, 
-                              min: 0.01,
-                              onChange: () => updateItemTotal(index)
-                            })}
+                            {...control.register(
+                              `items.${index}.quantity` as const,
+                              {
+                                required: true,
+                                min: 0.01,
+                                onChange: () => updateItemTotal(index),
+                              },
+                            )}
                             label="Quantity"
                             type="number"
                             fullWidth
                             size="small"
-                            disabled={mode === 'view'}
+                            disabled={mode === "view"}
                             InputProps={{ inputProps: { step: 0.01 } }}
-                         />
+                          />
                         </Grid>
                         <Grid size={1}>
                           <TextField
-                            {...control.register(`items.${index}.unit` as const)}
+                            {...control.register(
+                              `items.${index}.unit` as const,
+                            )}
                             label="Unit"
                             fullWidth
                             size="small"
-                            disabled={mode === 'view'}
-                         />
+                            disabled={mode === "view"}
+                          />
                         </Grid>
                         <Grid size={2}>
                           <TextField
-                            {...control.register(`items.${index}.unit_price` as const, { 
-                              min: 0,
-                              onChange: () => updateItemTotal(index)
-                            })}
+                            {...control.register(
+                              `items.${index}.unit_price` as const,
+                              {
+                                min: 0,
+                                onChange: () => updateItemTotal(index),
+                              },
+                            )}
                             label="Unit Price"
                             type="number"
                             fullWidth
                             size="small"
-                            disabled={mode === 'view'}
+                            disabled={mode === "view"}
                             InputProps={{ inputProps: { step: 0.01 } }}
-                         />
+                          />
                         </Grid>
                         <Grid size={2}>
                           <TextField
                             label="Total"
-                            value={watch(`items.${index}.total_amount`)?.toFixed(2) || '0.00'}
+                            value={
+                              watch(`items.${index}.total_amount`)?.toFixed(
+                                2,
+                              ) || "0.00"
+                            }
                             fullWidth
                             size="small"
                             disabled
-                         />
+                          />
                         </Grid>
                         <Grid size={1}>
-                          {mode !== 'view' && (
+                          {mode !== "view" && (
                             <IconButton
                               onClick={() => removeItem(index)}
                               color="error"
@@ -470,12 +534,14 @@ const MaterialRequisition: React.FC = () => {
                         </Grid>
                         <Grid size={12}>
                           <TextField
-                            {...control.register(`items.${index}.notes` as const)}
+                            {...control.register(
+                              `items.${index}.notes` as const,
+                            )}
                             label="Item Notes"
                             fullWidth
                             size="small"
-                            disabled={mode === 'view'}
-                         />
+                            disabled={mode === "view"}
+                          />
                         </Grid>
                       </Grid>
                     </Paper>
@@ -483,23 +549,30 @@ const MaterialRequisition: React.FC = () => {
                 ))}
                 <Grid size={12}>
                   <TextField
-                    {...control.register('notes')}
+                    {...control.register("notes")}
                     label="General Notes"
                     fullWidth
                     multiline
                     rows={2}
-                    disabled={mode === 'view'}
+                    disabled={mode === "view"}
                     size="small"
-                 />
+                  />
                 </Grid>
                 {/* Action Buttons */}
-                {mode !== 'view' && (
+                {mode !== "view" && (
                   <Grid size={12}>
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "flex-end",
+                        mt: 2,
+                      }}
+                    >
                       <Button
                         variant="outlined"
                         onClick={() => {
-                          setMode('create');
+                          setMode("create");
                           setSelectedId(null);
                           reset(defaultValues);
                         }}
@@ -509,12 +582,17 @@ const MaterialRequisition: React.FC = () => {
                       <Button
                         type="submit"
                         variant="contained"
-                        disabled={createMutation.isPending || updateMutation.isPending}
+                        disabled={
+                          createMutation.isPending || updateMutation.isPending
+                        }
                       >
-                        {createMutation.isPending || updateMutation.isPending ? (
+                        {createMutation.isPending ||
+                        updateMutation.isPending ? (
                           <CircularProgress size={20} />
+                        ) : mode === "create" ? (
+                          "Create Requisition"
                         ) : (
-                          mode === 'create' ? 'Create Requisition' : 'Update Requisition'
+                          "Update Requisition"
                         )}
                       </Button>
                     </Box>

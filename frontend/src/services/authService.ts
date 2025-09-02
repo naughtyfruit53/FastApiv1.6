@@ -1,122 +1,159 @@
 // frontend/src/services/authService.ts
 // Revised: frontend/src/services/authService.ts
 // frontend/src/services/authService.ts (Revised for detailed error handling in companyService)
-import api from '../lib/api';  // Use the api client
+import api from "../lib/api"; // Use the api client
 export const authService = {
   login: async (username: string, password: string): Promise<any> => {
     try {
-      console.log('[AuthService] Starting login process for:', username);
+      console.log("[AuthService] Starting login process for:", username);
       const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-      const response = await api.post('/auth/login', formData, {
+      formData.append("username", username);
+      formData.append("password", password);
+      const response = await api.post("/auth/login", formData, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded",
         },
       });
-      console.log('[AuthService] Login API response received:', {
+      console.log("[AuthService] Login API response received:", {
         hasToken: !!response.data.access_token,
         organizationId: response.data.organization_id,
         userRole: response.data.user_role,
-        mustChangePassword: response.data.must_change_password
+        mustChangePassword: response.data.must_change_password,
       });
       // Store token FIRST
-      localStorage.setItem('token', response.data.access_token);
+      localStorage.setItem("token", response.data.access_token);
       // Store refresh token if provided
       if (response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-        console.log('[AuthService] Stored refresh token');
+        localStorage.setItem("refresh_token", response.data.refresh_token);
+        console.log("[AuthService] Stored refresh token");
       }
       // Store authentication context data (NOT organization_id - that stays in memory)
       if (response.data.user_role) {
-        localStorage.setItem('user_role', response.data.user_role);
-        console.log('[AuthService] Stored user_role:', response.data.user_role);
+        localStorage.setItem("user_role", response.data.user_role);
+        console.log("[AuthService] Stored user_role:", response.data.user_role);
       }
-      localStorage.setItem('is_super_admin', response.data.user?.is_super_admin ? 'true' : 'false');
-      console.log('[AuthService] Stored is_super_admin:', response.data.user?.is_super_admin);
-      console.log('[AuthService] Organization context managed by backend session only');
-      console.log('[AuthService] Login complete - auth context established');
+      localStorage.setItem(
+        "is_super_admin",
+        response.data.user?.is_super_admin ? "true" : "false",
+      );
+      console.log(
+        "[AuthService] Stored is_super_admin:",
+        response.data.user?.is_super_admin,
+      );
+      console.log(
+        "[AuthService] Organization context managed by backend session only",
+      );
+      console.log("[AuthService] Login complete - auth context established");
       return response.data;
     } catch (error: any) {
-      console.error('[AuthService] Login failed:', error);
-      throw new Error(error.userMessage || 'Login failed');
+      console.error("[AuthService] Login failed:", error);
+      throw new Error(error.userMessage || "Login failed");
     }
   },
   loginWithEmail: async (email: string, password: string): Promise<any> => {
     try {
-      console.log('[AuthService] Starting email login process for:', email);
+      console.log("[AuthService] Starting email login process for:", email);
       const formData = new FormData();
-      formData.append('username', email);
-      formData.append('password', password);
-      const response = await api.post('/auth/login', formData, {
+      formData.append("username", email);
+      formData.append("password", password);
+      const response = await api.post("/auth/login", formData, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded",
         },
       });
-      console.log('[AuthService] Email login API response received:', {
+      console.log("[AuthService] Email login API response received:", {
         hasToken: !!response.data.access_token,
         organizationId: response.data.organization_id,
         userRole: response.data.user_role,
-        mustChangePassword: response.data.must_change_password
+        mustChangePassword: response.data.must_change_password,
       });
       // Store token FIRST
-      localStorage.setItem('token', response.data.access_token);
+      localStorage.setItem("token", response.data.access_token);
       // Store ALL authentication context data immediately after token
       // Store authentication context data (NOT organization_id - that stays in memory)
       if (response.data.user_role) {
-        localStorage.setItem('user_role', response.data.user_role);
-        console.log('[AuthService] Stored user_role:', response.data.user_role);
+        localStorage.setItem("user_role", response.data.user_role);
+        console.log("[AuthService] Stored user_role:", response.data.user_role);
       }
-      localStorage.setItem('is_super_admin', response.data.user?.is_super_admin ? 'true' : 'false');
-      console.log('[AuthService] Stored is_super_admin:', response.data.user?.is_super_admin);
-      console.log('[AuthService] Organization context managed by backend session only');
-      console.log('[AuthService] Email login complete - all context established');
+      localStorage.setItem(
+        "is_super_admin",
+        response.data.user?.is_super_admin ? "true" : "false",
+      );
+      console.log(
+        "[AuthService] Stored is_super_admin:",
+        response.data.user?.is_super_admin,
+      );
+      console.log(
+        "[AuthService] Organization context managed by backend session only",
+      );
+      console.log(
+        "[AuthService] Email login complete - all context established",
+      );
       return response.data;
     } catch (error: any) {
-      console.error('[AuthService] Email login failed:', error);
-      throw new Error(error.userMessage || 'Email login failed');
+      console.error("[AuthService] Email login failed:", error);
+      throw new Error(error.userMessage || "Email login failed");
     }
   },
   // NOTE: This method should only be called by AuthProvider for:
-  // 1. Initial user fetch on app mount 
+  // 1. Initial user fetch on app mount
   // 2. Manual user refresh operations
   // DO NOT call this directly from components - use useAuth() hook instead
   getCurrentUser: async (): Promise<any> => {
     try {
-      console.log('[AuthService] Fetching current user data');
-      const response = await api.get('/users/me');
-      console.log('[AuthService] User data received from /users/me:', {
+      console.log("[AuthService] Fetching current user data");
+      const response = await api.get("/users/me");
+      console.log("[AuthService] User data received from /users/me:", {
         id: response.data.id,
         email: response.data.email,
         role: response.data.role,
         is_super_admin: response.data.is_super_admin,
         organization_id: response.data.organization_id,
-        must_change_password: response.data.must_change_password
+        must_change_password: response.data.must_change_password,
       });
       // Organization context is managed by backend session only
-      console.log('[AuthService] Organization context from backend session:', response.data.organization_id);
+      console.log(
+        "[AuthService] Organization context from backend session:",
+        response.data.organization_id,
+      );
       // Store role information
       if (response.data.role) {
-        localStorage.setItem('user_role', response.data.role);
-        console.log('[AuthService] Updated user_role in localStorage:', response.data.role);
+        localStorage.setItem("user_role", response.data.role);
+        console.log(
+          "[AuthService] Updated user_role in localStorage:",
+          response.data.role,
+        );
       }
-      localStorage.setItem('is_super_admin', response.data.is_super_admin ? 'true' : 'false');
-      console.log('[AuthService] Updated is_super_admin in localStorage:', response.data.is_super_admin);
-      console.log('[AuthService] getCurrentUser complete - all localStorage updated');
+      localStorage.setItem(
+        "is_super_admin",
+        response.data.is_super_admin ? "true" : "false",
+      );
+      console.log(
+        "[AuthService] Updated is_super_admin in localStorage:",
+        response.data.is_super_admin,
+      );
+      console.log(
+        "[AuthService] getCurrentUser complete - all localStorage updated",
+      );
       return response.data;
     } catch (error: any) {
-      console.error('[AuthService] Failed to fetch current user:', error);
-      throw new Error(error.userMessage || 'Failed to fetch user information');
+      console.error("[AuthService] Failed to fetch current user:", error);
+      throw new Error(error.userMessage || "Failed to fetch user information");
     }
   },
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('is_super_admin');
-    window.location.href = '/';
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("is_super_admin");
+    window.location.href = "/";
   },
-  requestOTP: async (email: string, phone: string, deliveryMethod: string = 'auto', purpose: string = 'login'): Promise<any> => {
+  requestOTP: async (
+    email: string,
+    phone: string,
+    deliveryMethod: string = "auto",
+    purpose: string = "login",
+  ): Promise<any> => {
     try {
       const requestData: any = { email, purpose };
       if (phone) {
@@ -125,69 +162,79 @@ export const authService = {
       if (deliveryMethod) {
         requestData.delivery_method = deliveryMethod;
       }
-      const response = await api.post('/auth/otp/request', requestData);
+      const response = await api.post("/auth/otp/request", requestData);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to send OTP');
+      throw new Error(error.userMessage || "Failed to send OTP");
     }
   },
-  verifyOTP: async (email: string, otp: string, purpose: string = 'login'): Promise<any> => {
+  verifyOTP: async (
+    email: string,
+    otp: string,
+    purpose: string = "login",
+  ): Promise<any> => {
     try {
-      const response = await api.post('/auth/otp/verify', { email, otp, purpose });
+      const response = await api.post("/auth/otp/verify", {
+        email,
+        otp,
+        purpose,
+      });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'OTP verification failed');
+      throw new Error(error.userMessage || "OTP verification failed");
     }
   },
   refreshToken: async (): Promise<any> => {
     try {
-      console.log('[AuthService] Attempting to refresh token');
-      const refreshToken = localStorage.getItem('refresh_token');
+      console.log("[AuthService] Attempting to refresh token");
+      const refreshToken = localStorage.getItem("refresh_token");
       if (!refreshToken) {
-        throw new Error('No refresh token available');
+        throw new Error("No refresh token available");
       }
-      const response = await api.post('/auth/refresh-token', {
-        refresh_token: refreshToken
+      const response = await api.post("/auth/refresh-token", {
+        refresh_token: refreshToken,
       });
-      console.log('[AuthService] Token refresh successful');
+      console.log("[AuthService] Token refresh successful");
       // Update stored tokens
       if (response.data.access_token) {
-        localStorage.setItem('token', response.data.access_token);
+        localStorage.setItem("token", response.data.access_token);
       }
       if (response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
+        localStorage.setItem("refresh_token", response.data.refresh_token);
       }
       return response.data;
     } catch (error: any) {
-      console.error('[AuthService] Token refresh failed:', error);
+      console.error("[AuthService] Token refresh failed:", error);
       // Clear invalid tokens
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('is_super_admin');
-      throw new Error(error.userMessage || 'Token refresh failed');
+      localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_role");
+      localStorage.removeItem("is_super_admin");
+      throw new Error(error.userMessage || "Token refresh failed");
     }
   },
   isTokenValid: () => {
-    const token = localStorage.getItem('token');
-    if (!token) {return false;}
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return false;
+    }
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(token.split(".")[1]));
       const expiry = payload.exp * 1000; // Convert to milliseconds
       const now = Date.now();
       // Check if token expires in next 5 minutes
-      return expiry > now + (5 * 60 * 1000);
+      return expiry > now + 5 * 60 * 1000;
     } catch (error) {
-      console.error('[AuthService] Failed to parse token:', error);
+      console.error("[AuthService] Failed to parse token:", error);
       return false;
     }
   },
   setupAdminAccount: async (): Promise<any> => {
     try {
-      const response = await api.post('/auth/admin/setup');
+      const response = await api.post("/auth/admin/setup");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Admin setup failed');
+      throw new Error(error.userMessage || "Admin setup failed");
     }
   },
 };
@@ -203,7 +250,9 @@ export const voucherService = {
   },
   createVoucher: async (type: string, data: any, sendEmail = false) => {
     try {
-      const response = await api.post(`/${type}/`, data, { params: { send_email: sendEmail } });
+      const response = await api.post(`/${type}/`, data, {
+        params: { send_email: sendEmail },
+      });
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to create ${type}`);
@@ -233,46 +282,52 @@ export const voucherService = {
       throw new Error(error.userMessage || `Failed to delete ${type}`);
     }
   },
-  sendVoucherEmail: async (voucherType: string, voucherId: number, customEmail?: string) => {
-    let params = '';
+  sendVoucherEmail: async (
+    voucherType: string,
+    voucherId: number,
+    customEmail?: string,
+  ) => {
+    let params = "";
     if (customEmail) {
       params = `?custom_email=${customEmail}`;
     }
     try {
-      const response = await api.post(`/${voucherType}/${voucherId}/send-email${params}`);
+      const response = await api.post(
+        `/${voucherType}/${voucherId}/send-email${params}`,
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to send email');
+      throw new Error(error.userMessage || "Failed to send email");
     }
   },
   getSalesVouchers: async (params?: any) => {
-    return voucherService.getVouchers('sales-vouchers', params);
+    return voucherService.getVouchers("sales-vouchers", params);
   },
   // Purchase Order specific methods
   getPurchaseOrders: async (params?: any) => {
-    return voucherService.getVouchers('purchase-orders', params);
+    return voucherService.getVouchers("purchase-orders", params);
   },
   getPurchaseOrderById: async (id: number) => {
-    return voucherService.getVoucherById('purchase-orders', id);
+    return voucherService.getVoucherById("purchase-orders", id);
   },
   createPurchaseOrder: async (data: any, sendEmail = false) => {
-    return voucherService.createVoucher('purchase-orders', data, sendEmail);
+    return voucherService.createVoucher("purchase-orders", data, sendEmail);
   },
   updatePurchaseOrder: async (id: number, data: any) => {
-    return voucherService.updateVoucher('purchase-orders', id, data);
+    return voucherService.updateVoucher("purchase-orders", id, data);
   },
   // GRN specific methods
   getGrns: async (params?: any) => {
-    return voucherService.getVouchers('goods-receipt-notes', params);
+    return voucherService.getVouchers("goods-receipt-notes", params);
   },
   getGrnById: async (id: number) => {
-    return voucherService.getVoucherById('goods-receipt-notes', id);
+    return voucherService.getVoucherById("goods-receipt-notes", id);
   },
   createGrn: async (data: any, sendEmail = false) => {
-    return voucherService.createVoucher('goods-receipt-notes', data, sendEmail);
+    return voucherService.createVoucher("goods-receipt-notes", data, sendEmail);
   },
   updateGrn: async (id: number, data: any) => {
-    return voucherService.updateVoucher('goods-receipt-notes', id, data);
+    return voucherService.updateVoucher("goods-receipt-notes", id, data);
   },
   // Access to master data for vouchers
   getVendors: async (params?: any) => {
@@ -289,18 +344,18 @@ export const masterDataService = {
   getVendors: async ({ signal, params = {} } = {}) => {
     try {
       // Organization context is derived from backend session, no need to add manually
-      const response = await api.get('/vendors', { params, signal });
+      const response = await api.get("/vendors", { params, signal });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch vendors');
+      throw new Error(error.userMessage || "Failed to fetch vendors");
     }
   },
   createVendor: async (data: any) => {
     try {
-      const response = await api.post('/vendors', data);  // No trailing /
+      const response = await api.post("/vendors", data); // No trailing /
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to create vendor');
+      throw new Error(error.userMessage || "Failed to create vendor");
     }
   },
   updateVendor: async (id: number, data: any) => {
@@ -308,7 +363,7 @@ export const masterDataService = {
       const response = await api.put(`/vendors/${id}`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update vendor');
+      throw new Error(error.userMessage || "Failed to update vendor");
     }
   },
   deleteVendor: async (id: number) => {
@@ -316,24 +371,24 @@ export const masterDataService = {
       const response = await api.delete(`/vendors/${id}`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to delete vendor');
+      throw new Error(error.userMessage || "Failed to delete vendor");
     }
   },
   getCustomers: async ({ signal, params = {} } = {}) => {
     try {
       // Organization context is derived from backend session, no need to add manually
-      const response = await api.get('/customers', { params, signal });
+      const response = await api.get("/customers", { params, signal });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch customers');
+      throw new Error(error.userMessage || "Failed to fetch customers");
     }
   },
   createCustomer: async (data: any) => {
     try {
-      const response = await api.post('/customers', data);  // No trailing /
+      const response = await api.post("/customers", data); // No trailing /
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to create customer');
+      throw new Error(error.userMessage || "Failed to create customer");
     }
   },
   updateCustomer: async (id: number, data: any) => {
@@ -341,7 +396,7 @@ export const masterDataService = {
       const response = await api.put(`/customers/${id}`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update customer');
+      throw new Error(error.userMessage || "Failed to update customer");
     }
   },
   deleteCustomer: async (id: number) => {
@@ -349,24 +404,24 @@ export const masterDataService = {
       const response = await api.delete(`/customers/${id}`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to delete customer');
+      throw new Error(error.userMessage || "Failed to delete customer");
     }
   },
   getProducts: async ({ signal } = {}) => {
     try {
       // Organization context is derived from backend session, no need to add manually
-      const response = await api.get('/products', { signal });
+      const response = await api.get("/products", { signal });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch products');
+      throw new Error(error.userMessage || "Failed to fetch products");
     }
   },
   createProduct: async (data: any) => {
     try {
-      const response = await api.post('/products', data);  // No trailing /
+      const response = await api.post("/products", data); // No trailing /
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to create product');
+      throw new Error(error.userMessage || "Failed to create product");
     }
   },
   updateProduct: async (id: number, data: any) => {
@@ -374,7 +429,7 @@ export const masterDataService = {
       const response = await api.put(`/products/${id}`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update product');
+      throw new Error(error.userMessage || "Failed to update product");
     }
   },
   deleteProduct: async (id: number) => {
@@ -382,25 +437,25 @@ export const masterDataService = {
       const response = await api.delete(`/products/${id}`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to delete product');
+      throw new Error(error.userMessage || "Failed to delete product");
     }
   },
   getStock: async ({ signal, params = {} } = {}) => {
     try {
       // Organization context is derived from backend session, no need to add manually
-      const response = await api.get('/stock', { params, signal });
+      const response = await api.get("/stock", { params, signal });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch stock data');
+      throw new Error(error.userMessage || "Failed to fetch stock data");
     }
   },
   getLowStock: async ({ signal } = {}) => {
     try {
       // Organization context is derived from backend session, no need to add manually
-      const response = await api.get('/stock/low-stock', { signal });
+      const response = await api.get("/stock/low-stock", { signal });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch low stock data');
+      throw new Error(error.userMessage || "Failed to fetch low stock data");
     }
   },
   updateStock: async (productId: number, data: any) => {
@@ -408,64 +463,70 @@ export const masterDataService = {
       const response = await api.put(`/stock/product/${productId}`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update stock');
+      throw new Error(error.userMessage || "Failed to update stock");
     }
   },
-  adjustStock: async (productId: number, quantityChange: number, reason: string) => {
+  adjustStock: async (
+    productId: number,
+    quantityChange: number,
+    reason: string,
+  ) => {
     try {
       const response = await api.post(`/stock/adjust/${productId}`, null, {
-        params: { quantity_change: quantityChange, reason }
+        params: { quantity_change: quantityChange, reason },
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to adjust stock');
+      throw new Error(error.userMessage || "Failed to adjust stock");
     }
   },
-  bulkImportStock: async (file: File, mode: string = 'replace') => {
+  bulkImportStock: async (file: File, mode: string = "replace") => {
     try {
       // Ensure user is authenticated before attempting import
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
-        throw new Error('Authentication required. Please log in before importing inventory.');
+        throw new Error(
+          "Authentication required. Please log in before importing inventory.",
+        );
       }
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
       /**
        * @deprecated Use React user context instead - organization context is derived from backend session
        * Organization context is automatically managed by the backend via JWT token
        */
       const params = { mode };
-      console.log('Bulk import params:', params);
-      const response = await api.post('/stock/bulk', formData, {
+      console.log("Bulk import params:", params);
+      const response = await api.post("/stock/bulk", formData, {
         params,
         headers: {
-          'Content-Type': undefined,
+          "Content-Type": undefined,
         },
         transformRequest: (data) => data,
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to bulk import stock');
+      throw new Error(error.userMessage || "Failed to bulk import stock");
     }
   },
   downloadStockTemplate: async () => {
     try {
-      const response = await api.get('/stock/template/excel', {
-        responseType: 'blob',
+      const response = await api.get("/stock/template/excel", {
+        responseType: "blob",
       });
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = 'stock_template.xlsx';
+      link.download = "stock_template.xlsx";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to download stock template');
+      throw new Error(error.userMessage || "Failed to download stock template");
     }
   },
   exportStock: async (params?: any) => {
@@ -474,31 +535,33 @@ export const masterDataService = {
        * @deprecated Use React user context instead - organization context is derived from backend session
        * Organization context is automatically managed by the backend via JWT token
        */
-      const response = await api.get('/stock/export/excel', {
+      const response = await api.get("/stock/export/excel", {
         params,
-        responseType: 'blob',
+        responseType: "blob",
       });
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = 'stock_export.xlsx';
+      link.download = "stock_export.xlsx";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export stock');
+      throw new Error(error.userMessage || "Failed to export stock");
     }
   },
 };
 export const companyService = {
   getCurrentCompany: async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      console.log('[CompanyService] Skipping company fetch - no token available');
+      console.log(
+        "[CompanyService] Skipping company fetch - no token available",
+      );
       return null;
     }
     try {
@@ -506,16 +569,18 @@ export const companyService = {
        * @deprecated Use React user context instead - organization context is derived from backend session
        * Organization context is automatically managed by the backend via JWT token
        */
-      const response = await api.get('/companies/current');
-      console.log('[CompanyService] Company data received:', response.data);
+      const response = await api.get("/companies/current");
+      console.log("[CompanyService] Company data received:", response.data);
       return response.data;
     } catch (error: any) {
       if (error.status === 404 || error.isCompanySetupRequired) {
-        console.log('[CompanyService] Company setup required (404 or company missing)');
+        console.log(
+          "[CompanyService] Company setup required (404 or company missing)",
+        );
         return null;
       }
-      console.error('[CompanyService] Error fetching company:', error);
-      return null;  // Return null on error to avoid throwing
+      console.error("[CompanyService] Error fetching company:", error);
+      return null; // Return null on error to avoid throwing
     }
   },
   isCompanySetupRequired: async () => {
@@ -529,10 +594,10 @@ export const companyService = {
   },
   createCompany: async (data: any) => {
     try {
-      const response = await api.post('/companies/', data);
+      const response = await api.post("/companies/", data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to create company');
+      throw new Error(error.userMessage || "Failed to create company");
     }
   },
   updateCompany: async (id: number, data: any) => {
@@ -540,21 +605,25 @@ export const companyService = {
       const response = await api.put(`/companies/${id}`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update company');
+      throw new Error(error.userMessage || "Failed to update company");
     }
   },
   uploadLogo: async (companyId: number, file: File) => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      const response = await api.post(`/companies/${companyId}/logo`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      formData.append("file", file);
+      const response = await api.post(
+        `/companies/${companyId}/logo`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to upload logo');
+      throw new Error(error.userMessage || "Failed to upload logo");
     }
   },
   deleteLogo: async (companyId: number) => {
@@ -562,7 +631,7 @@ export const companyService = {
       const response = await api.delete(`/companies/${companyId}/logo`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to delete logo');
+      throw new Error(error.userMessage || "Failed to delete logo");
     }
   },
   getLogoUrl: (companyId: number) => {
@@ -571,18 +640,18 @@ export const companyService = {
   // Multi-company management methods
   getCompanies: async () => {
     try {
-      const response = await api.get('/companies/');
+      const response = await api.get("/companies/");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch companies');
+      throw new Error(error.userMessage || "Failed to fetch companies");
     }
   },
   getOrganizationInfo: async () => {
     try {
-      const response = await api.get('/organizations/current');
+      const response = await api.get("/organizations/current");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch organization info');
+      throw new Error(error.userMessage || "Failed to fetch organization info");
     }
   },
   getCompanyUsers: async (companyId: number) => {
@@ -590,195 +659,220 @@ export const companyService = {
       const response = await api.get(`/companies/${companyId}/users`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to fetch company users');
+      throw new Error(error.userMessage || "Failed to fetch company users");
     }
   },
-  assignUserToCompany: async (companyId: number, data: { user_id: number; company_id: number; is_company_admin: boolean }) => {
+  assignUserToCompany: async (
+    companyId: number,
+    data: { user_id: number; company_id: number; is_company_admin: boolean },
+  ) => {
     try {
       const response = await api.post(`/companies/${companyId}/users`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to assign user to company');
+      throw new Error(error.userMessage || "Failed to assign user to company");
     }
   },
-  updateUserCompanyAssignment: async (companyId: number, userId: number, updates: any) => {
+  updateUserCompanyAssignment: async (
+    companyId: number,
+    userId: number,
+    updates: any,
+  ) => {
     try {
-      const response = await api.put(`/companies/${companyId}/users/${userId}`, updates);
+      const response = await api.put(
+        `/companies/${companyId}/users/${userId}`,
+        updates,
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update user assignment');
+      throw new Error(error.userMessage || "Failed to update user assignment");
     }
   },
   removeUserFromCompany: async (companyId: number, userId: number) => {
     try {
-      const response = await api.delete(`/companies/${companyId}/users/${userId}`);
+      const response = await api.delete(
+        `/companies/${companyId}/users/${userId}`,
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to remove user from company');
+      throw new Error(
+        error.userMessage || "Failed to remove user from company",
+      );
     }
   },
 };
 export const reportsService = {
   getDashboardStats: async () => {
     try {
-      const response = await api.get('/reports/dashboard-stats');
+      const response = await api.get("/reports/dashboard-stats");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get dashboard stats');
+      throw new Error(error.userMessage || "Failed to get dashboard stats");
     }
   },
   getSalesReport: async (params?: any) => {
     try {
-      const response = await api.get('/reports/sales-report', { params });
+      const response = await api.get("/reports/sales-report", { params });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get sales report');
+      throw new Error(error.userMessage || "Failed to get sales report");
     }
   },
   getPurchaseReport: async (params?: any) => {
     try {
-      const response = await api.get('/reports/purchase-report', { params });
+      const response = await api.get("/reports/purchase-report", { params });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get purchase report');
+      throw new Error(error.userMessage || "Failed to get purchase report");
     }
   },
   getInventoryReport: async (lowStockOnly = false) => {
     try {
-      const response = await api.get('/reports/inventory-report', {
-        params: { low_stock_only: lowStockOnly }
+      const response = await api.get("/reports/inventory-report", {
+        params: { low_stock_only: lowStockOnly },
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get inventory report');
+      throw new Error(error.userMessage || "Failed to get inventory report");
     }
   },
-  getPendingOrders: async (orderType = 'all') => {
+  getPendingOrders: async (orderType = "all") => {
     try {
-      const response = await api.get('/reports/pending-orders', {
-        params: { order_type: orderType }
+      const response = await api.get("/reports/pending-orders", {
+        params: { order_type: orderType },
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get pending orders');
+      throw new Error(error.userMessage || "Failed to get pending orders");
     }
   },
   getCompleteLedger: async (params?: any) => {
     try {
-      const response = await api.get('/reports/complete-ledger', { params });
+      const response = await api.get("/reports/complete-ledger", { params });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get complete ledger');
+      throw new Error(error.userMessage || "Failed to get complete ledger");
     }
   },
   getOutstandingLedger: async (params?: any) => {
     try {
-      const response = await api.get('/reports/outstanding-ledger', { params });
+      const response = await api.get("/reports/outstanding-ledger", { params });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get outstanding ledger');
+      throw new Error(error.userMessage || "Failed to get outstanding ledger");
     }
   },
   // Export functions
   exportSalesReportExcel: async (params?: any) => {
     try {
-      const response = await api.get('/reports/sales-report/export/excel', { 
+      const response = await api.get("/reports/sales-report/export/excel", {
         params,
-        responseType: 'blob'
+        responseType: "blob",
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export sales report');
+      throw new Error(error.userMessage || "Failed to export sales report");
     }
   },
   exportPurchaseReportExcel: async (params?: any) => {
     try {
-      const response = await api.get('/reports/purchase-report/export/excel', { 
+      const response = await api.get("/reports/purchase-report/export/excel", {
         params,
-        responseType: 'blob'
+        responseType: "blob",
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export purchase report');
+      throw new Error(error.userMessage || "Failed to export purchase report");
     }
   },
   exportInventoryReportExcel: async (params?: any) => {
     try {
-      const response = await api.get('/reports/inventory-report/export/excel', { 
+      const response = await api.get("/reports/inventory-report/export/excel", {
         params,
-        responseType: 'blob'
+        responseType: "blob",
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export inventory report');
+      throw new Error(error.userMessage || "Failed to export inventory report");
     }
   },
   exportPendingOrdersExcel: async (params?: any) => {
     try {
-      const response = await api.get('/reports/pending-orders/export/excel', { 
+      const response = await api.get("/reports/pending-orders/export/excel", {
         params,
-        responseType: 'blob'
+        responseType: "blob",
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export pending orders report');
+      throw new Error(
+        error.userMessage || "Failed to export pending orders report",
+      );
     }
   },
   exportCompleteLedgerExcel: async (params?: any) => {
     try {
-      const response = await api.get('/reports/complete-ledger/export/excel', { 
+      const response = await api.get("/reports/complete-ledger/export/excel", {
         params,
-        responseType: 'blob'
+        responseType: "blob",
       });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export complete ledger');
+      throw new Error(error.userMessage || "Failed to export complete ledger");
     }
   },
   exportOutstandingLedgerExcel: async (params?: any) => {
     try {
-      const response = await api.get('/reports/outstanding-ledger/export/excel', { 
-        params,
-        responseType: 'blob'
-      });
+      const response = await api.get(
+        "/reports/outstanding-ledger/export/excel",
+        {
+          params,
+          responseType: "blob",
+        },
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to export outstanding ledger');
+      throw new Error(
+        error.userMessage || "Failed to export outstanding ledger",
+      );
     }
   },
 };
 export const organizationService = {
   createLicense: async (data: any) => {
     try {
-      const response = await api.post('/organizations/license/create', data);
+      const response = await api.post("/organizations/license/create", data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to create organization license');
+      throw new Error(
+        error.userMessage || "Failed to create organization license",
+      );
     }
   },
   getCurrentOrganization: async () => {
     try {
-      const response = await api.get('/organizations/current');
+      const response = await api.get("/organizations/current");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get current organization');
+      throw new Error(
+        error.userMessage || "Failed to get current organization",
+      );
     }
   },
   updateOrganization: async (data: any) => {
     try {
-      const response = await api.put('/organizations/current', data);
+      const response = await api.put("/organizations/current", data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update organization');
+      throw new Error(error.userMessage || "Failed to update organization");
     }
   },
   // Admin-only endpoints
   getAllOrganizations: async () => {
     try {
-      const response = await api.get('/organizations/');
+      const response = await api.get("/organizations/");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get organizations');
+      throw new Error(error.userMessage || "Failed to get organizations");
     }
   },
   getOrganization: async (id: number) => {
@@ -786,7 +880,7 @@ export const organizationService = {
       const response = await api.get(`/organizations/${id}`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get organization');
+      throw new Error(error.userMessage || "Failed to get organization");
     }
   },
   updateOrganizationById: async (id: number, data: any) => {
@@ -794,15 +888,23 @@ export const organizationService = {
       const response = await api.put(`/organizations/${id}`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update organization');
+      throw new Error(error.userMessage || "Failed to update organization");
     }
   },
 };
 export const passwordService = {
-  changePassword: async (currentPassword: string | null, newPassword: string, confirmPassword?: string) => {
+  changePassword: async (
+    currentPassword: string | null,
+    newPassword: string,
+    confirmPassword?: string,
+  ) => {
     try {
-      const payload: { new_password: string; current_password?: string; confirm_password?: string } = {
-        new_password: newPassword
+      const payload: {
+        new_password: string;
+        current_password?: string;
+        confirm_password?: string;
+      } = {
+        new_password: newPassword,
       };
       if (currentPassword) {
         payload.current_password = currentPassword;
@@ -810,40 +912,46 @@ export const passwordService = {
       if (confirmPassword) {
         payload.confirm_password = confirmPassword;
       }
-      const response = await api.post('/password/change', payload);
+      const response = await api.post("/password/change", payload);
       // Handle new token if provided in response (password change returns new JWT)
       if (response.data.access_token) {
-        console.log('[PasswordService] New token received after password change, updating storage');
-        localStorage.setItem('token', response.data.access_token);
+        console.log(
+          "[PasswordService] New token received after password change, updating storage",
+        );
+        localStorage.setItem("token", response.data.access_token);
       }
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to change password');
+      throw new Error(error.userMessage || "Failed to change password");
     }
   },
   forgotPassword: async (email: string) => {
     try {
-      const response = await api.post('/password/forgot', { email });
+      const response = await api.post("/password/forgot", { email });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to send password reset email');
+      throw new Error(
+        error.userMessage || "Failed to send password reset email",
+      );
     }
   },
   resetPassword: async (email: string, otp: string, newPassword: string) => {
     try {
-      const response = await api.post('/password/reset', {
+      const response = await api.post("/password/reset", {
         email,
         otp,
-        new_password: newPassword
+        new_password: newPassword,
       });
       // Handle new token if provided in response (password reset returns new JWT)
       if (response.data.access_token) {
-        console.log('[PasswordService] New token received after password reset, updating storage');
-        localStorage.setItem('token', response.data.access_token);
+        console.log(
+          "[PasswordService] New token received after password reset, updating storage",
+        );
+        localStorage.setItem("token", response.data.access_token);
       }
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to reset password');
+      throw new Error(error.userMessage || "Failed to reset password");
     }
   },
 };
@@ -851,18 +959,18 @@ export const userService = {
   // Organization user management (for org admins)
   getOrganizationUsers: async (params?: any) => {
     try {
-      const response = await api.get('/users/', { params });
+      const response = await api.get("/users/", { params });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get organization users');
+      throw new Error(error.userMessage || "Failed to get organization users");
     }
   },
   createUser: async (data: any) => {
     try {
-      const response = await api.post('/users/', data);
+      const response = await api.post("/users/", data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to create user');
+      throw new Error(error.userMessage || "Failed to create user");
     }
   },
   updateUser: async (id: number, data: any) => {
@@ -870,7 +978,7 @@ export const userService = {
       const response = await api.put(`/users/${id}`, data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update user');
+      throw new Error(error.userMessage || "Failed to update user");
     }
   },
   deleteUser: async (id: number) => {
@@ -878,7 +986,7 @@ export const userService = {
       const response = await api.delete(`/users/${id}`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to delete user');
+      throw new Error(error.userMessage || "Failed to delete user");
     }
   },
   resetUserPassword: async (userId: number) => {
@@ -886,15 +994,17 @@ export const userService = {
       const response = await api.post(`/auth/reset/${userId}/password`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to reset user password');
+      throw new Error(error.userMessage || "Failed to reset user password");
     }
   },
   toggleUserStatus: async (userId: number, isActive: boolean) => {
     try {
-      const response = await api.put(`/users/${userId}`, { is_active: isActive });
+      const response = await api.put(`/users/${userId}`, {
+        is_active: isActive,
+      });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to update user status');
+      throw new Error(error.userMessage || "Failed to update user status");
     }
   },
 };

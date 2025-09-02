@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Container,
   Paper,
@@ -13,8 +13,8 @@ import {
   Select,
   MenuItem,
   Button,
-} from '@mui/material';
-import { useForm, Controller } from 'react-hook-form';
+} from "@mui/material";
+import { useForm, Controller } from "react-hook-form";
 
 interface TestFormData {
   email: string;
@@ -32,30 +32,35 @@ interface TestFormData {
 
 const FloatingLabelsTest: React.FC = () => {
   const [formData, setFormData] = useState<TestFormData>({
-    email: '',
-    password: '',
-    full_name: '',
-    phone: '',
-    role: 'standard_user',
-    organization_name: '',
-    address: '',
-    city: '',
-    state: '',
-    pin_code: '',
-    gst_number: ''
+    email: "",
+    password: "",
+    full_name: "",
+    phone: "",
+    role: "standard_user",
+    organization_name: "",
+    address: "",
+    city: "",
+    state: "",
+    pin_code: "",
+    gst_number: "",
   });
 
-  const { control, handleSubmit, formState: { errors } } = useForm<TestFormData>({
-    defaultValues: formData
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<TestFormData>({
+    defaultValues: formData,
   });
 
-  const handleInputChange = (field: keyof TestFormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
-  };
+  const handleInputChange =
+    (field: keyof TestFormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    };
 
   const onSubmit = (data: TestFormData) => {
-    console.log('Form data:', data);
-    alert('Form submitted successfully! Check console for data.');
+    console.log("Form data:", data);
+    alert("Form submitted successfully! Check console for data.");
   };
 
   return (
@@ -63,10 +68,11 @@ const FloatingLabelsTest: React.FC = () => {
       <Typography variant="h3" gutterBottom align="center">
         Floating Labels Test Page
       </Typography>
-      
+
       <Typography variant="body1" gutterBottom align="center" sx={{ mb: 4 }}>
-        This page demonstrates the floating label behavior across all form components.
-        Watch how labels animate and float above fields when you focus or enter data.
+        This page demonstrates the floating label behavior across all form
+        components. Watch how labels animate and float above fields when you
+        focus or enter data.
       </Typography>
 
       <Grid container spacing={4}>
@@ -77,19 +83,20 @@ const FloatingLabelsTest: React.FC = () => {
               Login Form Style
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Uses react-hook-form with Controller for proper floating label behavior
+              Uses react-hook-form with Controller for proper floating label
+              behavior
             </Typography>
-            
+
             <Box component="form" onSubmit={handleSubmit(onSubmit)}>
               <Controller
                 name="email"
                 control={control}
                 rules={{
-                  required: 'Email is required',
+                  required: "Email is required",
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address'
-                  }
+                    message: "Invalid email address",
+                  },
                 }}
                 render={({ field }) => (
                   <TextField
@@ -108,7 +115,7 @@ const FloatingLabelsTest: React.FC = () => {
               <Controller
                 name="password"
                 control={control}
-                rules={{ required: 'Password is required' }}
+                rules={{ required: "Password is required" }}
                 render={({ field }) => (
                   <TextField
                     {...field}
@@ -140,7 +147,7 @@ const FloatingLabelsTest: React.FC = () => {
               fullWidth
               label="Full Name"
               value={formData.full_name}
-              onChange={handleInputChange('full_name')}
+              onChange={handleInputChange("full_name")}
               margin="normal"
             />
 
@@ -148,7 +155,7 @@ const FloatingLabelsTest: React.FC = () => {
               fullWidth
               label="Phone Number"
               value={formData.phone}
-              onChange={handleInputChange('phone')}
+              onChange={handleInputChange("phone")}
               margin="normal"
             />
 
@@ -156,7 +163,9 @@ const FloatingLabelsTest: React.FC = () => {
               <InputLabel>Role</InputLabel>
               <Select
                 value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, role: e.target.value }))
+                }
                 label="Role"
               >
                 <MenuItem value="standard_user">Standard User</MenuItem>
@@ -174,7 +183,8 @@ const FloatingLabelsTest: React.FC = () => {
               Organization Form Style
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Multi-field form layout demonstrating consistent floating label behavior
+              Multi-field form layout demonstrating consistent floating label
+              behavior
             </Typography>
 
             <Grid container spacing={2}>
@@ -183,7 +193,7 @@ const FloatingLabelsTest: React.FC = () => {
                   fullWidth
                   label="Organization Name"
                   value={formData.organization_name}
-                  onChange={handleInputChange('organization_name')}
+                  onChange={handleInputChange("organization_name")}
                   required
                 />
               </Grid>
@@ -192,7 +202,7 @@ const FloatingLabelsTest: React.FC = () => {
                   fullWidth
                   label="GST Number"
                   value={formData.gst_number}
-                  onChange={handleInputChange('gst_number')}
+                  onChange={handleInputChange("gst_number")}
                   placeholder="22AAAAA0000A1Z5"
                 />
               </Grid>
@@ -201,7 +211,7 @@ const FloatingLabelsTest: React.FC = () => {
                   fullWidth
                   label="Address"
                   value={formData.address}
-                  onChange={handleInputChange('address')}
+                  onChange={handleInputChange("address")}
                   required
                 />
               </Grid>
@@ -210,7 +220,7 @@ const FloatingLabelsTest: React.FC = () => {
                   fullWidth
                   label="City"
                   value={formData.city}
-                  onChange={handleInputChange('city')}
+                  onChange={handleInputChange("city")}
                   required
                 />
               </Grid>
@@ -219,7 +229,7 @@ const FloatingLabelsTest: React.FC = () => {
                   fullWidth
                   label="State"
                   value={formData.state}
-                  onChange={handleInputChange('state')}
+                  onChange={handleInputChange("state")}
                   required
                 />
               </Grid>
@@ -228,7 +238,7 @@ const FloatingLabelsTest: React.FC = () => {
                   fullWidth
                   label="PIN Code"
                   value={formData.pin_code}
-                  onChange={handleInputChange('pin_code')}
+                  onChange={handleInputChange("pin_code")}
                   required
                 />
               </Grid>
@@ -243,21 +253,54 @@ const FloatingLabelsTest: React.FC = () => {
         </Grid>
       </Grid>
 
-      <Box sx={{ mt: 4, p: 3, backgroundColor: 'background.paper', borderRadius: 1 }}>
+      <Box
+        sx={{
+          mt: 4,
+          p: 3,
+          backgroundColor: "background.paper",
+          borderRadius: 1,
+        }}
+      >
         <Typography variant="h6" gutterBottom>
           ✅ Floating Label Implementation Summary
         </Typography>
         <Typography variant="body2" component="div">
           <ul>
-            <li><strong>LoginForm.tsx</strong> - ✓ Uses proper floating labels with Controller</li>
-            <li><strong>AdminUserForm.tsx</strong> - ✓ Uses TextField with label prop</li>
-            <li><strong>OTPLogin.tsx</strong> - ✓ Uses TextField with label prop</li>
-            <li><strong>OrganizationForm.tsx</strong> - ✓ Uses TextField with label prop</li>
-            <li><strong>CompanyDetailsModal.tsx</strong> - ✓ Uses TextField with label prop</li>
-            <li><strong>AddUserDialog.tsx</strong> - ✓ Uses TextField with label prop (removed redundant "Optional" placeholders)</li>
-            <li><strong>AddProductModal.tsx</strong> - ✓ Uses TextField with label prop</li>
-            <li><strong>AddCustomerModal.tsx</strong> - ✓ Uses TextField with label prop</li>
-            <li><strong>All Autocomplete components</strong> - ✓ Use TextField with label prop in renderInput</li>
+            <li>
+              <strong>LoginForm.tsx</strong> - ✓ Uses proper floating labels
+              with Controller
+            </li>
+            <li>
+              <strong>AdminUserForm.tsx</strong> - ✓ Uses TextField with label
+              prop
+            </li>
+            <li>
+              <strong>OTPLogin.tsx</strong> - ✓ Uses TextField with label prop
+            </li>
+            <li>
+              <strong>OrganizationForm.tsx</strong> - ✓ Uses TextField with
+              label prop
+            </li>
+            <li>
+              <strong>CompanyDetailsModal.tsx</strong> - ✓ Uses TextField with
+              label prop
+            </li>
+            <li>
+              <strong>AddUserDialog.tsx</strong> - ✓ Uses TextField with label
+              prop (removed redundant "Optional" placeholders)
+            </li>
+            <li>
+              <strong>AddProductModal.tsx</strong> - ✓ Uses TextField with label
+              prop
+            </li>
+            <li>
+              <strong>AddCustomerModal.tsx</strong> - ✓ Uses TextField with
+              label prop
+            </li>
+            <li>
+              <strong>All Autocomplete components</strong> - ✓ Use TextField
+              with label prop in renderInput
+            </li>
           </ul>
         </Typography>
       </Box>

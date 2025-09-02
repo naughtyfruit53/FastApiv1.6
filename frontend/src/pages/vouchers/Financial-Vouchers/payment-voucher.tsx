@@ -8,6 +8,7 @@ import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
 import { useReferenceOptions } from '../../../utils/nameRefUtils';
+
 const PaymentVoucher: React.FC = () => {
   const config = getVoucherConfig('payment-voucher');
   const voucherStyles = getVoucherStyles();
@@ -57,6 +58,7 @@ const PaymentVoucher: React.FC = () => {
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
+
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
@@ -66,14 +68,17 @@ const PaymentVoucher: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
+
   // Payment voucher specific state
   const totalAmountValue = watch('total_amount');
   const selectedEntity = watch('entity'); // Now using entity instead of name_id/name_type
+
   // Get reference options including unpaid vouchers for the selected entity
   const referenceOptions = useReferenceOptions(
     selectedEntity?.id || null, 
     selectedEntity?.type || null
   );
+
   // Payment methods for payment vouchers
   const paymentMethods = [
     'Cash',
@@ -85,7 +90,9 @@ const PaymentVoucher: React.FC = () => {
     'UPI',
     'Net Banking'
   ];
+
   // Handle entity creation success
+  const handleEntityCreateSuccess = (newEntity: any) => {
     setValue('entity', {
       id: newEntity.id,
       name: newEntity.name,
@@ -95,6 +102,7 @@ const PaymentVoucher: React.FC = () => {
     });
     refreshMasterData();
   };
+
   // Combined list of all parties (customers + vendors + employees) for unified dropdown
   const allParties = [
     ...(customerList || []).map((customer: any) => ({
@@ -122,6 +130,7 @@ const PaymentVoucher: React.FC = () => {
       label: `${employee.name} (Employee)`
     }))
   ];
+
   // Index Content - Left Panel (40%)
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -182,6 +191,7 @@ const PaymentVoucher: React.FC = () => {
       </Table>
     </TableContainer>
   );
+
   // Form Content - Right Panel (60%)
   const formContent = (
     <Box>
@@ -211,7 +221,7 @@ const PaymentVoucher: React.FC = () => {
         }}
       >
         <Grid container spacing={2}>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('voucher_number')}
               label="Voucher Number"
@@ -224,7 +234,7 @@ const PaymentVoucher: React.FC = () => {
               }}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('date')}
               label="Date"
@@ -240,7 +250,7 @@ const PaymentVoucher: React.FC = () => {
               helperText={errors.date?.message as string}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <SearchableDropdown
               label="Party Name"
               options={allParties}
@@ -268,7 +278,7 @@ const PaymentVoucher: React.FC = () => {
               helperText={errors.entity?.message as string}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>Payment Method</InputLabel>
               <Select
@@ -286,7 +296,7 @@ const PaymentVoucher: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <Autocomplete
               freeSolo
               options={referenceOptions}
@@ -303,7 +313,7 @@ const PaymentVoucher: React.FC = () => {
               )}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('total_amount', {
                 required: 'Amount is required',
@@ -332,7 +342,7 @@ const PaymentVoucher: React.FC = () => {
               }}
             />
           </Grid>
-          <Grid size={12}>
+          <Grid item xs={12}>
             <TextField
               {...control.register('notes')}
               label="Notes"
@@ -345,7 +355,7 @@ const PaymentVoucher: React.FC = () => {
             />
           </Grid>
           {totalAmountValue > 0 && (
-            <Grid size={12}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Amount in Words"
@@ -358,7 +368,7 @@ const PaymentVoucher: React.FC = () => {
             </Grid>
           )}
           {/* Action buttons - removed Generate PDF */}
-          <Grid size={12}>
+          <Grid item xs={12}>
             <Box display="flex" gap={2}>
               {mode !== 'view' && (
                 <Button
@@ -384,6 +394,7 @@ const PaymentVoucher: React.FC = () => {
       </Box>
     </Box>
   );
+
   if (isLoading) {
     return (
       <Container>
@@ -393,6 +404,7 @@ const PaymentVoucher: React.FC = () => {
       </Container>
     );
   }
+
   return (
     <>
       <VoucherLayout
@@ -440,4 +452,5 @@ const PaymentVoucher: React.FC = () => {
     </>
   );
 };
+
 export default PaymentVoucher;

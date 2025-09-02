@@ -1,6 +1,6 @@
 // src/services/notificationWorkflow.ts
 // Workflow integration utilities for triggering notifications from other modules
-import api from '../lib/api';
+import api from "../lib/api";
 export interface WorkflowNotificationTrigger {
   trigger_event: string;
   context_data: Record<string, any>;
@@ -20,7 +20,7 @@ export interface SLANotificationContext {
   sla_id: number;
   job_id: number;
   customer_id: number;
-  breach_type: 'warning' | 'critical' | 'overdue';
+  breach_type: "warning" | "critical" | "overdue";
   time_remaining?: number;
   expected_completion?: string;
 }
@@ -36,101 +36,113 @@ export interface FeedbackNotificationContext {
 // Notification workflow triggers for different modules
 export class NotificationWorkflow {
   // Job Management Notifications
-  static async triggerJobAssignment(context: JobNotificationContext): Promise<void> {
+  static async triggerJobAssignment(
+    context: JobNotificationContext,
+  ): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'job_assignment',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "job_assignment",
         context_data: {
           ...context,
-          notification_type: 'job_assignment',
+          notification_type: "job_assignment",
           subject: `New Job Assignment: ${context.job_title || `Job #${context.job_id}`}`,
-          message: `You have been assigned to ${context.job_title || `job #${context.job_id}`} for ${context.customer_name || 'a customer'}.`
-        }
+          message: `You have been assigned to ${context.job_title || `job #${context.job_id}`} for ${context.customer_name || "a customer"}.`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger job assignment notification:', error);
+      console.error("Failed to trigger job assignment notification:", error);
     }
   }
-  static async triggerJobUpdate(context: JobNotificationContext & { update_type: string; details?: string }): Promise<void> {
+  static async triggerJobUpdate(
+    context: JobNotificationContext & { update_type: string; details?: string },
+  ): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'job_update',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "job_update",
         context_data: {
           ...context,
-          notification_type: 'job_update',
+          notification_type: "job_update",
           subject: `Job Update: ${context.job_title || `Job #${context.job_id}`}`,
-          message: `Job ${context.job_id} has been updated: ${context.update_type}. ${context.details || ''}`
-        }
+          message: `Job ${context.job_id} has been updated: ${context.update_type}. ${context.details || ""}`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger job update notification:', error);
+      console.error("Failed to trigger job update notification:", error);
     }
   }
-  static async triggerJobCompletion(context: JobNotificationContext): Promise<void> {
+  static async triggerJobCompletion(
+    context: JobNotificationContext,
+  ): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'job_completion',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "job_completion",
         context_data: {
           ...context,
-          notification_type: 'service_completion',
+          notification_type: "service_completion",
           subject: `Job Completed: ${context.job_title || `Job #${context.job_id}`}`,
-          message: `Job ${context.job_id} for ${context.customer_name || 'customer'} has been completed successfully.`
-        }
+          message: `Job ${context.job_id} for ${context.customer_name || "customer"} has been completed successfully.`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger job completion notification:', error);
+      console.error("Failed to trigger job completion notification:", error);
     }
   }
   // SLA Management Notifications
-  static async triggerSLABreach(context: SLANotificationContext): Promise<void> {
+  static async triggerSLABreach(
+    context: SLANotificationContext,
+  ): Promise<void> {
     try {
       const urgencyMap = {
-        warning: 'SLA Warning',
-        critical: 'SLA Critical',
-        overdue: 'SLA Breach'
+        warning: "SLA Warning",
+        critical: "SLA Critical",
+        overdue: "SLA Breach",
       };
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'sla_breach',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "sla_breach",
         context_data: {
           ...context,
-          notification_type: 'sla_breach',
+          notification_type: "sla_breach",
           subject: `${urgencyMap[context.breach_type]}: Job #${context.job_id}`,
-          message: `Job ${context.job_id} is ${context.breach_type === 'overdue' ? 'overdue' : `approaching SLA deadline (${context.time_remaining || 'soon'})`}.`
-        }
+          message: `Job ${context.job_id} is ${context.breach_type === "overdue" ? "overdue" : `approaching SLA deadline (${context.time_remaining || "soon"})`}.`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger SLA breach notification:', error);
+      console.error("Failed to trigger SLA breach notification:", error);
     }
   }
   // Feedback Management Notifications
-  static async triggerFeedbackRequest(context: FeedbackNotificationContext): Promise<void> {
+  static async triggerFeedbackRequest(
+    context: FeedbackNotificationContext,
+  ): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'feedback_request',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "feedback_request",
         context_data: {
           ...context,
-          notification_type: 'feedback_request',
+          notification_type: "feedback_request",
           subject: `Feedback Request: Job #${context.job_id}`,
-          message: `Please provide feedback for the completed service job #${context.job_id}.`
-        }
+          message: `Please provide feedback for the completed service job #${context.job_id}.`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger feedback request notification:', error);
+      console.error("Failed to trigger feedback request notification:", error);
     }
   }
-  static async triggerFeedbackReceived(context: FeedbackNotificationContext): Promise<void> {
+  static async triggerFeedbackReceived(
+    context: FeedbackNotificationContext,
+  ): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'feedback_received',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "feedback_received",
         context_data: {
           ...context,
-          notification_type: 'follow_up',
+          notification_type: "follow_up",
           subject: `Feedback Received: Job #${context.job_id}`,
-          message: `New feedback received for job #${context.job_id} from ${context.customer_name || 'customer'}${context.rating ? ` (Rating: ${context.rating}/5)` : ''}.`
-        }
+          message: `New feedback received for job #${context.job_id} from ${context.customer_name || "customer"}${context.rating ? ` (Rating: ${context.rating}/5)` : ""}.`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger feedback received notification:', error);
+      console.error("Failed to trigger feedback received notification:", error);
     }
   }
   // Appointment Management Notifications
@@ -144,17 +156,20 @@ export class NotificationWorkflow {
     location?: string;
   }): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'appointment_reminder',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "appointment_reminder",
         context_data: {
           ...context,
-          notification_type: 'appointment_reminder',
-          subject: `Appointment Reminder: ${context.service_type || 'Service'} on ${new Date(context.appointment_date).toLocaleDateString()}`,
-          message: `Reminder: You have an appointment scheduled for ${context.service_type || 'service'} on ${new Date(context.appointment_date).toLocaleString()}.`
-        }
+          notification_type: "appointment_reminder",
+          subject: `Appointment Reminder: ${context.service_type || "Service"} on ${new Date(context.appointment_date).toLocaleDateString()}`,
+          message: `Reminder: You have an appointment scheduled for ${context.service_type || "service"} on ${new Date(context.appointment_date).toLocaleString()}.`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger appointment reminder notification:', error);
+      console.error(
+        "Failed to trigger appointment reminder notification:",
+        error,
+      );
     }
   }
   // Dispatch Management Notifications
@@ -167,51 +182,53 @@ export class NotificationWorkflow {
     location?: string;
   }): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'dispatch_update',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "dispatch_update",
         context_data: {
           ...context,
-          notification_type: 'job_update',
+          notification_type: "job_update",
           subject: `Dispatch Update: Job #${context.job_id}`,
-          message: `Dispatch status updated for job #${context.job_id}: ${context.status}${context.eta ? ` (ETA: ${context.eta})` : ''}.`
-        }
+          message: `Dispatch status updated for job #${context.job_id}: ${context.status}${context.eta ? ` (ETA: ${context.eta})` : ""}.`,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger dispatch update notification:', error);
+      console.error("Failed to trigger dispatch update notification:", error);
     }
   }
   // System Notifications
   static async triggerSystemAlert(context: {
     alert_type: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
+    severity: "low" | "medium" | "high" | "critical";
     message: string;
     affected_users?: number[];
     organization_id?: number;
   }): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
-        trigger_event: 'system_alert',
+      await api.post("/api/v1/notifications/trigger", {
+        trigger_event: "system_alert",
         context_data: {
           ...context,
-          notification_type: 'system',
+          notification_type: "system",
           subject: `System Alert: ${context.alert_type}`,
-          message: context.message
-        }
+          message: context.message,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger system alert notification:', error);
+      console.error("Failed to trigger system alert notification:", error);
     }
   }
   // Batch notification utilities
-  static async triggerBatchNotifications(triggers: WorkflowNotificationTrigger[]): Promise<void> {
+  static async triggerBatchNotifications(
+    triggers: WorkflowNotificationTrigger[],
+  ): Promise<void> {
     try {
       await Promise.all(
-        triggers.map(trigger => 
-          api.post('/api/v1/notifications/trigger', trigger)
-        )
+        triggers.map((trigger) =>
+          api.post("/api/v1/notifications/trigger", trigger),
+        ),
       );
     } catch (error) {
-      console.error('Failed to trigger batch notifications:', error);
+      console.error("Failed to trigger batch notifications:", error);
     }
   }
   // Utility method to trigger custom notifications
@@ -219,20 +236,20 @@ export class NotificationWorkflow {
     eventType: string,
     subject: string,
     message: string,
-    context: Record<string, any> = {}
+    context: Record<string, any> = {},
   ): Promise<void> {
     try {
-      await api.post('/api/v1/notifications/trigger', {
+      await api.post("/api/v1/notifications/trigger", {
         trigger_event: eventType,
         context_data: {
           ...context,
           subject,
           message,
-          custom_trigger: true
-        }
+          custom_trigger: true,
+        },
       });
     } catch (error) {
-      console.error('Failed to trigger custom notification:', error);
+      console.error("Failed to trigger custom notification:", error);
     }
   }
 }
@@ -261,17 +278,19 @@ export const integrateNotificationsWithModule = (moduleName: string): any => {
         `${moduleName}_${eventType}`,
         context.subject || `${moduleName} Event`,
         context.message || `Event triggered in ${moduleName}`,
-        { ...context, module: moduleName }
+        { ...context, module: moduleName },
       );
     },
     // Batch trigger for multiple events
-    triggerBatch: (events: Array<{ eventType: string; context: Record<string, any> }>) => {
-      const triggers = events.map(event => ({
+    triggerBatch: (
+      events: Array<{ eventType: string; context: Record<string, any> }>,
+    ) => {
+      const triggers = events.map((event) => ({
         trigger_event: `${moduleName}_${event.eventType}`,
-        context_data: { ...event.context, module: moduleName }
+        context_data: { ...event.context, module: moduleName },
       }));
       return NotificationWorkflow.triggerBatchNotifications(triggers);
-    }
+    },
   };
 };
 export default NotificationWorkflow;

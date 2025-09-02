@@ -1,14 +1,36 @@
 // Contra Voucher Page - Refactored using VoucherLayout
-import React from 'react';
-import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem} from '@mui/material';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-import VoucherListModal from '../../../components/VoucherListModal';
-import VoucherLayout from '../../../components/VoucherLayout';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
+import React from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import VoucherListModal from "../../../components/VoucherListModal";
+import VoucherLayout from "../../../components/VoucherLayout";
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import {
+  getVoucherConfig,
+  getVoucherStyles,
+  parseRateField,
+} from "../../../utils/voucherUtils";
 const ContraVoucher: React.FC = () => {
-  const config = getVoucherConfig('contra-voucher');
+  const config = getVoucherConfig("contra-voucher");
   const voucherStyles = getVoucherStyles();
   const {
     // State
@@ -64,26 +86,26 @@ const ContraVoucher: React.FC = () => {
     // Load the selected voucher into the form
     reset(voucher);
     // Set the form with the voucher data
-    Object.keys(voucher).forEach(key => {
+    Object.keys(voucher).forEach((key) => {
       setValue(key, voucher[key]);
     });
   };
   // Bank account options (these would typically come from a master data service)
   const bankAccounts = [
-    'Bank Account 1',
-    'Bank Account 2', 
-    'Cash Account',
-    'Petty Cash',
-    'Current Account - SBI',
-    'Savings Account - HDFC',
-    'Fixed Deposit Account'
+    "Bank Account 1",
+    "Bank Account 2",
+    "Cash Account",
+    "Petty Cash",
+    "Current Account - SBI",
+    "Savings Account - HDFC",
+    "Fixed Deposit Account",
   ];
   // Transfer types for contra vouchers
   const transferTypes = [
-    'Bank to Bank',
-    'Bank to Cash',
-    'Cash to Bank',
-    'Cash to Cash'
+    "Bank to Bank",
+    "Bank to Cash",
+    "Cash to Bank",
+    "Cash to Cash",
   ];
   // Index Content - Left Panel (40%)
   const indexContent = (
@@ -91,37 +113,69 @@ const ContraVoucher: React.FC = () => {
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Type</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
-            <TableCell align="right" sx={{ fontSize: 12, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Voucher No.
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Date
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Type
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Amount
+            </TableCell>
+            <TableCell
+              align="right"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 0, width: 40 }}
+            ></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {(sortedVouchers?.length === 0) ? (
+          {sortedVouchers?.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">No contra vouchers available</TableCell>
+              <TableCell colSpan={5} align="center">
+                No contra vouchers available
+              </TableCell>
             </TableRow>
           ) : (
             sortedVouchers?.slice(0, 7).map((voucher: any) => (
-              <TableRow 
-                key={voucher.id} 
+              <TableRow
+                key={voucher.id}
                 hover
-                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
-                sx={{ cursor: 'pointer' }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  handleContextMenu(e, voucher);
+                }}
+                sx={{ cursor: "pointer" }}
               >
-                <TableCell align="center" sx={{ fontSize: 11, p: 1 }} onClick={() => handleVoucherClick(voucher)}>
+                <TableCell
+                  align="center"
+                  sx={{ fontSize: 11, p: 1 }}
+                  onClick={() => handleVoucherClick(voucher)}
+                >
                   {voucher.voucher_number}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
                   {new Date(voucher.date).toLocaleDateString()}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  {voucher.transfer_type || 'N/A'}
+                  {voucher.transfer_type || "N/A"}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.amount?.toFixed(2) || '0.00'}
+                  ₹{voucher.amount?.toFixed(2) || "0.00"}
                 </TableCell>
                 <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
                   <VoucherContextMenu
@@ -146,15 +200,31 @@ const ContraVoucher: React.FC = () => {
   const formContent = (
     <Box>
       {/* Header Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
-          Contra Voucher - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        <Typography
+          variant="h6"
+          sx={{
+            fontSize: 18,
+            fontWeight: "bold",
+            textAlign: "center",
+            flex: 1,
+          }}
+        >
+          Contra Voucher -{" "}
+          {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
         </Typography>
         <VoucherHeaderActions
           mode={mode}
           voucherType="Contra Voucher"
           voucherRoute="/vouchers/Financial-Vouchers/contra-voucher"
-          currentId={watch('id')}
+          currentId={watch("id")}
         />
       </Box>
       {(createMutation.isPending || updateMutation.isPending) && (
@@ -162,31 +232,31 @@ const ContraVoucher: React.FC = () => {
           <CircularProgress />
         </Box>
       )}
-      <Box 
-        component="form" 
-        onSubmit={handleSubmit(handleSubmitForm)} 
-        sx={{ 
+      <Box
+        component="form"
+        onSubmit={handleSubmit(handleSubmitForm)}
+        sx={{
           mt: 2,
-          ...voucherStyles.formContainer
+          ...voucherStyles.formContainer,
         }}
       >
         <Grid container spacing={2}>
           <Grid size={6}>
             <TextField
-              {...control.register('voucher_number')}
+              {...control.register("voucher_number")}
               label="Voucher Number"
               fullWidth
               disabled={true}
               sx={voucherStyles.centerField}
               InputProps={{
                 readOnly: true,
-                style: { textAlign: 'center', fontWeight: 'bold' }
+                style: { textAlign: "center", fontWeight: "bold" },
               }}
             />
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('date')}
+              {...control.register("date")}
               label="Date"
               type="date"
               fullWidth
@@ -195,7 +265,7 @@ const ContraVoucher: React.FC = () => {
               InputLabelProps={{
                 shrink: true,
               }}
-              inputProps={{ style: { textAlign: 'center' } }}
+              inputProps={{ style: { textAlign: "center" } }}
               error={!!errors.date}
               helperText={errors.date?.message?.toString()}
             />
@@ -204,9 +274,9 @@ const ContraVoucher: React.FC = () => {
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>Transfer Type</InputLabel>
               <Select
-                {...control.register('transfer_type')}
-                value={watch('transfer_type') || ''}
-                onChange={(e) => setValue('transfer_type', e.target.value)}
+                {...control.register("transfer_type")}
+                value={watch("transfer_type") || ""}
+                onChange={(e) => setValue("transfer_type", e.target.value)}
                 error={!!errors.transfer_type}
                 required
               >
@@ -220,10 +290,10 @@ const ContraVoucher: React.FC = () => {
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('amount', {
-                required: 'Amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' },
-                setValueAs: (value) => parseRateField(value)
+              {...control.register("amount", {
+                required: "Amount is required",
+                min: { value: 0.01, message: "Amount must be greater than 0" },
+                setValueAs: (value) => parseRateField(value),
               })}
               label="Amount"
               type="number"
@@ -233,17 +303,17 @@ const ContraVoucher: React.FC = () => {
               helperText={errors.amount?.message?.toString()}
               sx={{
                 ...voucherStyles.rateField,
-                ...voucherStyles.centerField
+                ...voucherStyles.centerField,
               }}
               InputProps={{
-                inputProps: { 
+                inputProps: {
                   step: "0.01",
-                  style: { textAlign: 'center' }
-                }
+                  style: { textAlign: "center" },
+                },
               }}
               onChange={(e) => {
                 const value = parseRateField(e.target.value);
-                setValue('amount', value);
+                setValue("amount", value);
               }}
             />
           </Grid>
@@ -251,9 +321,9 @@ const ContraVoucher: React.FC = () => {
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>From Account</InputLabel>
               <Select
-                {...control.register('from_account')}
-                value={watch('from_account') || ''}
-                onChange={(e) => setValue('from_account', e.target.value)}
+                {...control.register("from_account")}
+                value={watch("from_account") || ""}
+                onChange={(e) => setValue("from_account", e.target.value)}
                 error={!!errors.from_account}
                 required
               >
@@ -269,9 +339,9 @@ const ContraVoucher: React.FC = () => {
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>To Account</InputLabel>
               <Select
-                {...control.register('to_account')}
-                value={watch('to_account') || ''}
-                onChange={(e) => setValue('to_account', e.target.value)}
+                {...control.register("to_account")}
+                value={watch("to_account") || ""}
+                onChange={(e) => setValue("to_account", e.target.value)}
                 error={!!errors.to_account}
                 required
               >
@@ -285,7 +355,7 @@ const ContraVoucher: React.FC = () => {
           </Grid>
           <Grid size={12}>
             <TextField
-              {...control.register('reference')}
+              {...control.register("reference")}
               label="Reference"
               fullWidth
               disabled={isViewMode}
@@ -296,7 +366,7 @@ const ContraVoucher: React.FC = () => {
           </Grid>
           <Grid size={12}>
             <TextField
-              {...control.register('description')}
+              {...control.register("description")}
               label="Description"
               multiline
               rows={3}
@@ -315,7 +385,7 @@ const ContraVoucher: React.FC = () => {
                 value={getAmountInWords(totalAmount)}
                 disabled
                 InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+                inputProps={{ style: { fontSize: 14, textAlign: "center" } }}
                 size="small"
               />
             </Grid>
@@ -323,12 +393,14 @@ const ContraVoucher: React.FC = () => {
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
-              {mode !== 'view' && (
+              {mode !== "view" && (
                 <Button
                   type="submit"
                   variant="contained"
                   color="success"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                   sx={{ fontSize: 12 }}
                 >
                   Save
@@ -350,7 +422,12 @@ const ContraVoucher: React.FC = () => {
   if (isLoading) {
     return (
       <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress />
         </Box>
       </Container>

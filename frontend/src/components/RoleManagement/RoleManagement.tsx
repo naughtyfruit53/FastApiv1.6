@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { 
+import React, { useState, useEffect } from "react";
+import {
   Alert,
   Box,
   Button,
@@ -27,8 +27,8 @@ import {
   TableHead,
   TableRow,
   Tabs,
-  Typography
-} from '@mui/material';
+  Typography,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -38,10 +38,10 @@ import {
   Settings as SettingsIcon,
   Assignment as AssignmentIcon,
   AdminPanelSettings as AdminIcon,
-  Visibility as ViewIcon
-} from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
-import { rbacService } from '../../services/rbacService';
+  Visibility as ViewIcon,
+} from "@mui/icons-material";
+import { useAuth } from "../../context/AuthContext";
+import { rbacService } from "../../services/rbacService";
 import {
   ServiceRole,
   ServiceRoleWithPermissions,
@@ -49,13 +49,11 @@ import {
   UserWithServiceRoles,
   ServiceRoleType,
   ROLE_BADGE_COLORS,
-  MODULE_DISPLAY_NAMES,
-  PERMISSION_DISPLAY_NAMES
-} from '../../types/rbac.types';
-import { canManageUsers } from '../../types/user.types';
-import RoleFormDialog from './RoleFormDialog';
-import UserRoleAssignmentDialog from './UserRoleAssignmentDialog';
-import PermissionMatrixDialog from './PermissionMatrixDialog';
+} from "../../types/rbac.types";
+import { canManageUsers } from "../../types/user.types";
+import RoleFormDialog from "./RoleFormDialog";
+import UserRoleAssignmentDialog from "./UserRoleAssignmentDialog";
+import PermissionMatrixDialog from "./PermissionMatrixDialog";
 interface RoleManagementProps {
   organizationId: number;
 }
@@ -88,20 +86,25 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
   const [error, setError] = useState<string | null>(null);
   // Dialog states
   const [roleFormOpen, setRoleFormOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<ServiceRoleWithPermissions | null>(null);
+  const [editingRole, setEditingRole] =
+    useState<ServiceRoleWithPermissions | null>(null);
   const [userAssignmentOpen, setUserAssignmentOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithServiceRoles | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithServiceRoles | null>(
+    null,
+  );
   const [permissionMatrixOpen, setPermissionMatrixOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<ServiceRole | null>(null);
   // Filters
   const [showInactiveRoles, setShowInactiveRoles] = useState(false);
-  const [filterByRole, setFilterByRole] = useState<ServiceRoleType | 'all'>('all');
+  const [filterByRole, setFilterByRole] = useState<ServiceRoleType | "all">(
+    "all",
+  );
   // Check permissions
   const canManage = canManageUsers(user);
   useEffect(() => {
     if (!canManage) {
-      setError('Insufficient permissions to access role management');
+      setError("Insufficient permissions to access role management");
       setLoading(false);
       return;
     }
@@ -113,12 +116,12 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
       setError(null);
       const [rolesData, permissionsData] = await Promise.all([
         rbacService.getRolesWithPermissions(organizationId),
-        rbacService.getPermissions()
+        rbacService.getPermissions(),
       ]);
       setRoles(rolesData);
       setPermissions(permissionsData);
     } catch (err: any) {
-      setError(err.message || 'Failed to load role management data');
+      setError(err.message || "Failed to load role management data");
     } finally {
       setLoading(false);
     }
@@ -129,7 +132,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
       // This would typically come from the user management service
       setUsers([]);
     } catch (err: any) {
-      console.warn('Failed to load users:', err);
+      console.warn("Failed to load users:", err);
     }
   };
   const handleCreateRole = () => {
@@ -145,14 +148,16 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
     setDeleteDialogOpen(true);
   };
   const confirmDeleteRole = async () => {
-    if (!roleToDelete) {return;}
+    if (!roleToDelete) {
+      return;
+    }
     try {
       await rbacService.deleteRole(roleToDelete.id);
       await loadData();
       setDeleteDialogOpen(false);
       setRoleToDelete(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to delete role');
+      setError(err.message || "Failed to delete role");
     }
   };
   const handleRoleSubmit = async (roleData: any) => {
@@ -166,7 +171,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
       setRoleFormOpen(false);
       setEditingRole(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to save role');
+      setError(err.message || "Failed to save role");
     }
   };
   const handleUserAssignment = (user: UserWithServiceRoles) => {
@@ -175,12 +180,15 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
   };
   const handleAssignRoles = async (userId: number, roleIds: number[]) => {
     try {
-      await rbacService.assignRolesToUser(userId, { user_id: userId, role_ids: roleIds });
+      await rbacService.assignRolesToUser(userId, {
+        user_id: userId,
+        role_ids: roleIds,
+      });
       await loadUsers();
       setUserAssignmentOpen(false);
       setSelectedUser(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to assign roles');
+      setError(err.message || "Failed to assign roles");
     }
   };
   const handleRemoveRole = async (userId: number, roleId: number) => {
@@ -188,7 +196,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
       await rbacService.removeRoleFromUser(userId, roleId);
       await loadUsers();
     } catch (err: any) {
-      setError(err.message || 'Failed to remove role');
+      setError(err.message || "Failed to remove role");
     }
   };
   const handleInitializeDefaults = async () => {
@@ -196,7 +204,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
       await rbacService.initializeDefaultRoles(organizationId);
       await loadData();
     } catch (err: any) {
-      setError(err.message || 'Failed to initialize default roles');
+      setError(err.message || "Failed to initialize default roles");
     }
   };
   const getRoleIcon = (roleType: ServiceRoleType) => {
@@ -213,9 +221,13 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
         return <SecurityIcon />;
     }
   };
-  const filteredRoles = roles.filter(role => {
-    if (!showInactiveRoles && !role.is_active) {return false;}
-    if (filterByRole !== 'all' && role.name !== filterByRole) {return false;}
+  const filteredRoles = roles.filter((role) => {
+    if (!showInactiveRoles && !role.is_active) {
+      return false;
+    }
+    if (filterByRole !== "all" && role.name !== filterByRole) {
+      return false;
+    }
     return true;
   });
   if (!canManage) {
@@ -229,18 +241,25 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
   }
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
         <CircularProgress />
       </Box>
     );
   }
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h4" component="h1">
           Service CRM Role Management
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="outlined"
             onClick={handleInitializeDefaults}
@@ -262,8 +281,11 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
           {error}
         </Alert>
       )}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)}>
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+        <Tabs
+          value={currentTab}
+          onChange={(_, newValue) => setCurrentTab(newValue)}
+        >
           <Tab label="Role Overview" />
           <Tab label="User Assignments" />
           <Tab label="Permission Matrix" />
@@ -271,7 +293,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
       </Box>
       <TabPanel value={currentTab} index={0}>
         {/* Role Overview Tab */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ mb: 3, display: "flex", gap: 2, alignItems: "center" }}>
           <FormControlLabel
             control={
               <Switch
@@ -285,11 +307,13 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
             <InputLabel>Filter by Role</InputLabel>
             <Select
               value={filterByRole}
-              onChange={(e) => setFilterByRole(e.target.value as ServiceRoleType | 'all')}
+              onChange={(e) =>
+                setFilterByRole(e.target.value as ServiceRoleType | "all")
+              }
               label="Filter by Role"
             >
               <MenuItem value="all">All Roles</MenuItem>
-              {Object.values(ServiceRoleType).map(role => (
+              {Object.values(ServiceRoleType).map((role) => (
                 <MenuItem key={role} value={role}>
                   {role.charAt(0).toUpperCase() + role.slice(1)}
                 </MenuItem>
@@ -302,7 +326,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
             <Grid item xs={12} md={6} lg={4} key={role.id}>
               <Card>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     {getRoleIcon(role.name)}
                     <Typography variant="h6" sx={{ ml: 1, flexGrow: 1 }}>
                       {role.display_name}
@@ -314,7 +338,11 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
                     />
                   </Box>
                   {role.description && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
                       {role.description}
                     </Typography>
                   )}
@@ -323,7 +351,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
                       Permissions: {role.permissions.length}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: "flex", gap: 1 }}>
                     <Tooltip title="Edit Role">
                       <IconButton
                         size="small"
@@ -350,15 +378,14 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
           ))}
         </Grid>
         {filteredRoles.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Box sx={{ textAlign: "center", py: 4 }}>
             <Typography variant="h6" color="text.secondary">
               No roles found
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {roles.length === 0 
-                ? 'Create your first service role or initialize default roles.'
-                : 'Try adjusting the filters or create a new role.'
-              }
+              {roles.length === 0
+                ? "Create your first service role or initialize default roles."
+                : "Try adjusting the filters or create a new role."}
             </Typography>
           </Box>
         )}
@@ -393,10 +420,10 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
               ) : (
                 users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell>{user.full_name || 'Unknown'}</TableCell>
+                    <TableCell>{user.full_name || "Unknown"}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                         {user.service_roles.map((role) => (
                           <Chip
                             key={role.id}
@@ -453,7 +480,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
                   <Typography variant="h6" sx={{ mb: 2 }}>
                     {role.display_name}
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {role.permissions.slice(0, 6).map((permission) => (
                       <Chip
                         key={permission.id}
@@ -491,7 +518,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
           open={userAssignmentOpen}
           onClose={() => setUserAssignmentOpen(false)}
           user={selectedUser}
-          availableRoles={roles.filter(r => r.is_active)}
+          availableRoles={roles.filter((r) => r.is_active)}
           onAssign={handleAssignRoles}
           onRemove={handleRemoveRole}
         />
@@ -503,12 +530,15 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ organizationId }) => {
         permissions={permissions}
       />
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
         <DialogTitle>Delete Role</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the role "{roleToDelete?.display_name}"?
-            This action cannot be undone.
+            Are you sure you want to delete the role "
+            {roleToDelete?.display_name}"? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>

@@ -1,24 +1,29 @@
 // Revised: frontend/src/pages/admin/organizations/[id].tsx
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
-import Chip from '@mui/material/Chip';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import Snackbar from '@mui/material/Snackbar';
-import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { toast } from 'react-toastify';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
+import Grid from "@mui/material/Grid";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from "@mui/material/Alert";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Snackbar from "@mui/material/Snackbar";
+import {
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Delete as DeleteIcon,
+} from "@mui/icons-material";
+import { toast } from "react-toastify";
+import axios from "axios";
 interface Organization {
   id: number;
   name: string;
@@ -64,7 +69,7 @@ const OrganizationDetailPage: React.FC = () => {
   const [pincodeLoading, setPincodeLoading] = useState(false);
   useEffect(() => {
     if (id) {
-// fetchOrganization is defined later in this file
+      // fetchOrganization is defined later in this file
       fetchOrganization();
     }
   }, [id]);
@@ -74,27 +79,27 @@ const OrganizationDetailPage: React.FC = () => {
      * The organization context is automatically managed by the backend session
      */
     if (organization) {
-      console.log('Organization details loaded:', organization.id);
+      console.log("Organization details loaded:", organization.id);
       // Organization context is managed by backend session only
     }
   }, [organization]);
   const fetchOrganization = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`/api/v1/organizations/${id}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       if (!response.ok) {
         if (response.status === 401) {
           // Handle unauthorized - perhaps redirect to login
-          router.push('/login');
+          router.push("/login");
           return;
         }
         if (response.status === 404) {
-          setError('Organization not found');
+          setError("Organization not found");
           return;
         }
         throw new Error(`Failed to fetch organization: ${response.statusText}`);
@@ -105,7 +110,11 @@ const OrganizationDetailPage: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error(msg, err);
-      setError(error instanceof Error ? error.message : 'Failed to load organization details');
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load organization details",
+      );
     } finally {
       setLoading(false);
     }
@@ -121,24 +130,24 @@ const OrganizationDetailPage: React.FC = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`/api/v1/organizations/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(editedOrg),
       });
       if (!response.ok) {
-        throw new Error('Failed to update organization');
+        throw new Error("Failed to update organization");
       }
       const updatedOrg = await response.json();
       setOrganization(updatedOrg);
       setEditing(false);
-      toast.success('Organization updated successfully');
+      toast.success("Organization updated successfully");
     } catch (err) {
-      toast.error('Failed to update organization');
+      toast.error("Failed to update organization");
       console.error(msg, err);
     } finally {
       setSaving(false);
@@ -146,15 +155,15 @@ const OrganizationDetailPage: React.FC = () => {
   };
   const handleDelete = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`/api/v1/organizations/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       if (!response.ok) {
-        let errorMessage = 'Failed to delete organization';
+        let errorMessage = "Failed to delete organization";
         try {
           const errorData = await response.json();
           errorMessage = errorData.detail || errorData.message || errorMessage;
@@ -165,8 +174,8 @@ const OrganizationDetailPage: React.FC = () => {
         toast.error(errorMessage);
         return;
       }
-      toast.success('Organization deleted successfully');
-      router.push('/admin/license-management');
+      toast.success("Organization deleted successfully");
+      router.push("/admin/license-management");
     } catch (error: any) {
       toast.error(error.message);
       console.error(msg, err);
@@ -174,7 +183,10 @@ const OrganizationDetailPage: React.FC = () => {
       setOpenDeleteDialog(false);
     }
   };
-  const handleInputChange = (field: keyof Organization, value: string | number) => {
+  const handleInputChange = (
+    field: keyof Organization,
+    value: string | number,
+  ) => {
     if (editedOrg) {
       setEditedOrg({
         ...editedOrg,
@@ -183,18 +195,18 @@ const OrganizationDetailPage: React.FC = () => {
     }
   };
   const handlePincodeChange = async (value: string) => {
-    handleInputChange('pin_code', value);
+    handleInputChange("pin_code", value);
     if (value.length === 6 && editing) {
       setPincodeLoading(true);
       try {
         const response = await axios.get(`/api/v1/pincode/lookup/${value}`);
         const { city, state, state_code } = response.data;
-        handleInputChange('city', city);
-        handleInputChange('state', state);
-        handleInputChange('state_code', state_code);
+        handleInputChange("city", city);
+        handleInputChange("state", state);
+        handleInputChange("state_code", state_code);
       } catch (err) {
         console.error(msg, err);
-        toast.error('Failed to autofill city and state from PIN code');
+        toast.error("Failed to autofill city and state from PIN code");
       } finally {
         setPincodeLoading(false);
       }
@@ -202,60 +214,80 @@ const OrganizationDetailPage: React.FC = () => {
   };
   const handleResetPassword = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`/api/v1/password/admin-reset`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ user_email: organization?.primary_email }),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to reset password');
+        throw new Error(errorData.detail || "Failed to reset password");
       }
       const data = await response.json();
       setResetPassword(data.new_password);
       setOpenResetDialog(false);
       setResetSnackbarOpen(true);
-      toast.success('Password reset successfully');
+      toast.success("Password reset successfully");
     } catch (err) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reset password');
+      toast.error(
+        error instanceof Error ? error.message : "Failed to reset password",
+      );
       console.error(msg, err);
     }
   };
-  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'default' => {
+  const getStatusColor = (
+    status: string,
+  ): "success" | "error" | "warning" | "default" => {
     switch (status) {
-      case 'active': return 'success';
-      case 'suspended': return 'error';
-      case 'trial': return 'warning';
-      default: return 'default';
+      case "active":
+        return "success";
+      case "suspended":
+        return "error";
+      case "trial":
+        return "warning";
+      default:
+        return "default";
     }
   };
-  if (loading) {return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-      <CircularProgress />
-    </Box>
-  );}
-  if (error || !organization) {return (
-    <Box p={3}>
-      <Alert severity="error">
-        {error || 'Organization not found'}
-      </Alert>
-      <Button
-        variant="contained"
-        onClick={() => router.push('/admin/organizations')}
-        sx={{ mt: 2 }}
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="200px"
       >
-        Back to Organizations
-      </Button>
-    </Box>
-  );}
+        <CircularProgress />
+      </Box>
+    );
+  }
+  if (error || !organization) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">{error || "Organization not found"}</Alert>
+        <Button
+          variant="contained"
+          onClick={() => router.push("/admin/organizations")}
+          sx={{ mt: 2 }}
+        >
+          Back to Organizations
+        </Button>
+      </Box>
+    );
+  }
   const currentOrg = editing ? editedOrg! : organization;
   return (
     <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
         <Typography variant="h4" component="h1">
           Organization Details
         </Typography>
@@ -296,7 +328,7 @@ const OrganizationDetailPage: React.FC = () => {
                 disabled={saving}
                 sx={{ mr: 1 }}
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? "Saving..." : "Save"}
               </Button>
               <Button
                 variant="outlined"
@@ -324,7 +356,7 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Organization Name"
                     value={currentOrg.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                     disabled={!editing}
                   />
                 </Grid>
@@ -333,7 +365,9 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Subdomain"
                     value={currentOrg.subdomain}
-                    onChange={(e) => handleInputChange('subdomain', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("subdomain", e.target.value)
+                    }
                     disabled={!editing}
                     helperText="Used for subdomain-specific access"
                   />
@@ -352,8 +386,10 @@ const OrganizationDetailPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Business Type"
-                    value={currentOrg.business_type || ''}
-                    onChange={(e) => handleInputChange('business_type', e.target.value)}
+                    value={currentOrg.business_type || ""}
+                    onChange={(e) =>
+                      handleInputChange("business_type", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -361,8 +397,10 @@ const OrganizationDetailPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Industry"
-                    value={currentOrg.industry || ''}
-                    onChange={(e) => handleInputChange('industry', e.target.value)}
+                    value={currentOrg.industry || ""}
+                    onChange={(e) =>
+                      handleInputChange("industry", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -370,8 +408,10 @@ const OrganizationDetailPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Website"
-                    value={currentOrg.website || ''}
-                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    value={currentOrg.website || ""}
+                    onChange={(e) =>
+                      handleInputChange("website", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -381,8 +421,10 @@ const OrganizationDetailPage: React.FC = () => {
                     label="Description"
                     multiline
                     rows={3}
-                    value={currentOrg.description || ''}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    value={currentOrg.description || ""}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -403,7 +445,9 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Primary Email"
                     value={currentOrg.primary_email}
-                    onChange={(e) => handleInputChange('primary_email', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("primary_email", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -412,7 +456,9 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Primary Phone"
                     value={currentOrg.primary_phone}
-                    onChange={(e) => handleInputChange('primary_phone', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("primary_phone", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -421,7 +467,9 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Address Line 1"
                     value={currentOrg.address1}
-                    onChange={(e) => handleInputChange('address1', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("address1", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -429,8 +477,10 @@ const OrganizationDetailPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Address Line 2"
-                    value={currentOrg.address2 || ''}
-                    onChange={(e) => handleInputChange('address2', e.target.value)}
+                    value={currentOrg.address2 || ""}
+                    onChange={(e) =>
+                      handleInputChange("address2", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -442,7 +492,9 @@ const OrganizationDetailPage: React.FC = () => {
                     onChange={(e) => handlePincodeChange(e.target.value)}
                     disabled={!editing}
                     InputProps={{
-                      endAdornment: pincodeLoading ? <CircularProgress size={20} /> : null,
+                      endAdornment: pincodeLoading ? (
+                        <CircularProgress size={20} />
+                      ) : null,
                     }}
                   />
                 </Grid>
@@ -451,7 +503,7 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="City"
                     value={currentOrg.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    onChange={(e) => handleInputChange("city", e.target.value)}
                     disabled={!editing}
                   />
                 </Grid>
@@ -460,7 +512,7 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="State"
                     value={currentOrg.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    onChange={(e) => handleInputChange("state", e.target.value)}
                     disabled={!editing}
                   />
                 </Grid>
@@ -469,7 +521,9 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Country"
                     value={currentOrg.country}
-                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("country", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -489,8 +543,10 @@ const OrganizationDetailPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="GST Number"
-                    value={currentOrg.gst_number || ''}
-                    onChange={(e) => handleInputChange('gst_number', e.target.value)}
+                    value={currentOrg.gst_number || ""}
+                    onChange={(e) =>
+                      handleInputChange("gst_number", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -498,8 +554,10 @@ const OrganizationDetailPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="PAN Number"
-                    value={currentOrg.pan_number || ''}
-                    onChange={(e) => handleInputChange('pan_number', e.target.value)}
+                    value={currentOrg.pan_number || ""}
+                    onChange={(e) =>
+                      handleInputChange("pan_number", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -507,8 +565,10 @@ const OrganizationDetailPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="CIN Number"
-                    value={currentOrg.cin_number || ''}
-                    onChange={(e) => handleInputChange('cin_number', e.target.value)}
+                    value={currentOrg.cin_number || ""}
+                    onChange={(e) =>
+                      handleInputChange("cin_number", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -517,7 +577,9 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Plan Type"
                     value={currentOrg.plan_type}
-                    onChange={(e) => handleInputChange('plan_type', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("plan_type", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -527,7 +589,9 @@ const OrganizationDetailPage: React.FC = () => {
                     label="Max Users"
                     type="number"
                     value={currentOrg.max_users}
-                    onChange={(e) => handleInputChange('max_users', parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleInputChange("max_users", parseInt(e.target.value))
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -537,7 +601,12 @@ const OrganizationDetailPage: React.FC = () => {
                     label="Storage Limit (GB)"
                     type="number"
                     value={currentOrg.storage_limit_gb}
-                    onChange={(e) => handleInputChange('storage_limit_gb', parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "storage_limit_gb",
+                        parseInt(e.target.value),
+                      )
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -546,7 +615,9 @@ const OrganizationDetailPage: React.FC = () => {
                     fullWidth
                     label="Currency"
                     value={currentOrg.currency}
-                    onChange={(e) => handleInputChange('currency', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("currency", e.target.value)
+                    }
                     disabled={!editing}
                   />
                 </Grid>
@@ -556,15 +627,13 @@ const OrganizationDetailPage: React.FC = () => {
         </Grid>
       </Grid>
       {/* Reset Password Confirmation Dialog */}
-      <Dialog
-        open={openResetDialog}
-        onClose={() => setOpenResetDialog(false)}
-      >
+      <Dialog open={openResetDialog} onClose={() => setOpenResetDialog(false)}>
         <DialogTitle>Reset Password</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to reset the password for this organization's admin?
-            The new password will be emailed and also shown here for manual sharing.
+            Are you sure you want to reset the password for this organization's
+            admin? The new password will be emailed and also shown here for
+            manual sharing.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -581,9 +650,13 @@ const OrganizationDetailPage: React.FC = () => {
         open={resetSnackbarOpen}
         autoHideDuration={null}
         onClose={() => setResetSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
         action={
-          <Button color="secondary" size="small" onClick={() => setResetSnackbarOpen(false)}>
+          <Button
+            color="secondary"
+            size="small"
+            onClick={() => setResetSnackbarOpen(false)}
+          >
             Close
           </Button>
         }
@@ -600,7 +673,8 @@ const OrganizationDetailPage: React.FC = () => {
         <DialogTitle>Delete License</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete this organization's license? This action cannot be undone.
+            Are you sure you want to delete this organization's license? This
+            action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>

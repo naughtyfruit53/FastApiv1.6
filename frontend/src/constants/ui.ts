@@ -7,7 +7,7 @@ export const UI_CONSTANTS = {
     MEDIUM: 40,
     LARGE: 56,
   },
-  
+
   // Common spacing values
   SPACING: {
     XS: 4,
@@ -16,7 +16,7 @@ export const UI_CONSTANTS = {
     LG: 24,
     XL: 32,
   },
-  
+
   // Common breakpoints
   BREAKPOINTS: {
     XS: 600,
@@ -24,16 +24,16 @@ export const UI_CONSTANTS = {
     MD: 1200,
     LG: 1536,
   },
-  
+
   // Common font sizes
   FONT_SIZE: {
-    XS: '0.75rem',    // 12px
-    SM: '0.875rem',   // 14px
-    MD: '1rem',       // 16px
-    LG: '1.125rem',   // 18px
-    XL: '1.25rem',    // 20px
+    XS: "0.75rem", // 12px
+    SM: "0.875rem", // 14px
+    MD: "1rem", // 16px
+    LG: "1.125rem", // 18px
+    XL: "1.25rem", // 20px
   },
-  
+
   // Common component widths
   WIDTH: {
     DROPDOWN_MIN: 180,
@@ -49,37 +49,37 @@ export type UIConstants = typeof UI_CONSTANTS;
 // Common sx styles for reuse
 export const COMMON_STYLES = {
   smallInput: {
-    '& .MuiInputBase-root': { 
-      height: UI_CONSTANTS.INPUT_HEIGHT.SMALL 
-    }
+    "& .MuiInputBase-root": {
+      height: UI_CONSTANTS.INPUT_HEIGHT.SMALL,
+    },
   },
-  
+
   centeredText: {
-    textAlign: 'center' as const,
+    textAlign: "center" as const,
   },
-  
+
   boldText: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
-  
+
   // Dropdown styles from voucherUtils
   voucherDropdown: {
     minWidth: UI_CONSTANTS.WIDTH.VOUCHER_MIN,
-    '& .MuiSelect-select': {
+    "& .MuiSelect-select": {
       minWidth: UI_CONSTANTS.WIDTH.VOUCHER_MIN - 20,
-      textOverflow: 'ellipsis',
-      overflow: 'hidden',
-      whiteSpace: 'nowrap'
-    }
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+    },
   },
-  
+
   referenceDropdown: {
     minWidth: UI_CONSTANTS.WIDTH.REFERENCE_MIN,
-    '& .MuiSelect-select': {
+    "& .MuiSelect-select": {
       minWidth: UI_CONSTANTS.WIDTH.REFERENCE_MIN - 20,
-      textOverflow: 'ellipsis',
-      overflow: 'hidden',
-      whiteSpace: 'nowrap'
-    }
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+    },
   },
 } as const;

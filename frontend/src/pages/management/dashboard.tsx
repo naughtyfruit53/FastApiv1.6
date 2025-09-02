@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Card,
@@ -14,28 +14,25 @@ import {
   CircularProgress,
   Alert,
   Chip,
-  Divider,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper
-} from '@mui/material';
+} from "@mui/material";
 import {
   TrendingUp,
-  TrendingDown,
   Analytics,
   AccountBalance,
   People,
   Inventory,
   Assessment,
   Download,
-  Refresh
-} from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+  Refresh,
+} from "@mui/icons-material";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 interface DashboardData {
   period: string;
   date_range: {
@@ -73,19 +70,24 @@ interface DashboardData {
   };
 }
 const ManagementDashboard: React.FC = () => {
-  const [period, setPeriod] = useState<string>('month');
+  const [period, setPeriod] = useState<string>("month");
   const [refreshKey, setRefreshKey] = useState<number>(0);
   // Fetch dashboard data
-  const { data: dashboardData, isLoading, error, refetch } = useQuery<DashboardData>({
-    queryKey: ['management-dashboard', period, refreshKey],
+  const {
+    data: dashboardData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<DashboardData>({
+    queryKey: ["management-dashboard", period, refreshKey],
     queryFn: async () => {
       const response = await axios.get(
         `/api/v1/management-reports/executive-dashboard?period=${period}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
+        },
       );
       return response.data;
     },
@@ -95,7 +97,7 @@ const ManagementDashboard: React.FC = () => {
     setPeriod(event.target.value);
   };
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
     refetch();
   };
   const handleExportExcel = async () => {
@@ -104,16 +106,16 @@ const ManagementDashboard: React.FC = () => {
         `/api/v1/management-reports/export/executive-dashboard?format=excel&period=${period}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-          responseType: 'blob',
-        }
+          responseType: "blob",
+        },
       );
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `executive_dashboard_${period}.xlsx`);
+      link.setAttribute("download", `executive_dashboard_${period}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -123,9 +125,9 @@ const ManagementDashboard: React.FC = () => {
     }
   };
   const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
@@ -137,10 +139,10 @@ const ManagementDashboard: React.FC = () => {
     title: string;
     value: string | number;
     icon: React.ReactNode;
-    color: 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info';
+    color: "primary" | "secondary" | "success" | "error" | "warning" | "info";
     subtitle?: string;
   }> = ({ title, value, icon, color, subtitle }) => (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={{ height: "100%" }}>
       <CardContent>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box>
@@ -156,16 +158,19 @@ const ManagementDashboard: React.FC = () => {
               </Typography>
             )}
           </Box>
-          <Box color={`${color}.main`}>
-            {icon}
-          </Box>
+          <Box color={`${color}.main`}>{icon}</Box>
         </Box>
       </CardContent>
     </Card>
   );
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
@@ -173,7 +178,8 @@ const ManagementDashboard: React.FC = () => {
   if (error) {
     return (
       <Alert severity="error">
-        Failed to load management dashboard. Please check your permissions and try again.
+        Failed to load management dashboard. Please check your permissions and
+        try again.
       </Alert>
     );
   }
@@ -187,7 +193,12 @@ const ManagementDashboard: React.FC = () => {
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
         <Typography variant="h4" component="h1">
           Executive Management Dashboard
         </Typography>
@@ -222,7 +233,8 @@ const ManagementDashboard: React.FC = () => {
       </Box>
       {/* Date Range */}
       <Typography variant="body2" color="textSecondary" mb={3}>
-        Reporting Period: {dashboardData.date_range.start_date} to {dashboardData.date_range.end_date}
+        Reporting Period: {dashboardData.date_range.start_date} to{" "}
+        {dashboardData.date_range.end_date}
       </Typography>
       {/* Revenue Metrics */}
       <Typography variant="h6" gutterBottom>
@@ -241,7 +253,9 @@ const ManagementDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={4}>
           <MetricCard
             title="Average Sale Value"
-            value={formatCurrency(dashboardData.revenue_metrics.average_sale_value)}
+            value={formatCurrency(
+              dashboardData.revenue_metrics.average_sale_value,
+            )}
             icon={<AccountBalance fontSize="large" />}
             color="primary"
           />
@@ -251,7 +265,11 @@ const ManagementDashboard: React.FC = () => {
             title="Gross Profit"
             value={formatCurrency(dashboardData.profitability.gross_profit)}
             icon={<Analytics fontSize="large" />}
-            color={dashboardData.profitability.gross_profit >= 0 ? 'success' : 'error'}
+            color={
+              dashboardData.profitability.gross_profit >= 0
+                ? "success"
+                : "error"
+            }
             subtitle={`${formatPercentage(dashboardData.profitability.profit_margin)} margin`}
           />
         </Grid>
@@ -281,9 +299,15 @@ const ManagementDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={4}>
           <MetricCard
             title="Stock Health"
-            value={formatPercentage(dashboardData.inventory_metrics.stock_health_percentage)}
+            value={formatPercentage(
+              dashboardData.inventory_metrics.stock_health_percentage,
+            )}
             icon={<Inventory fontSize="large" />}
-            color={dashboardData.inventory_metrics.stock_health_percentage >= 80 ? 'success' : 'warning'}
+            color={
+              dashboardData.inventory_metrics.stock_health_percentage >= 80
+                ? "success"
+                : "warning"
+            }
             subtitle={`${dashboardData.inventory_metrics.low_stock_items} low stock items`}
           />
         </Grid>
@@ -312,40 +336,48 @@ const ManagementDashboard: React.FC = () => {
                     <TableRow>
                       <TableCell>Pending Receivables</TableCell>
                       <TableCell align="right">
-                        {formatCurrency(dashboardData.cash_flow.pending_receivables)}
+                        {formatCurrency(
+                          dashboardData.cash_flow.pending_receivables,
+                        )}
                       </TableCell>
                       <TableCell align="center">
-                        <Chip 
-                          label="To Receive" 
-                          color="success" 
-                          size="small" 
-                        />
+                        <Chip label="To Receive" color="success" size="small" />
                       </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell>Pending Payables</TableCell>
                       <TableCell align="right">
-                        {formatCurrency(dashboardData.cash_flow.pending_payables)}
+                        {formatCurrency(
+                          dashboardData.cash_flow.pending_payables,
+                        )}
                       </TableCell>
                       <TableCell align="center">
-                        <Chip 
-                          label="To Pay" 
-                          color="warning" 
-                          size="small" 
-                        />
+                        <Chip label="To Pay" color="warning" size="small" />
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><strong>Net Position</strong></TableCell>
+                      <TableCell>
+                        <strong>Net Position</strong>
+                      </TableCell>
                       <TableCell align="right">
                         <strong>
-                          {formatCurrency(dashboardData.cash_flow.net_outstanding)}
+                          {formatCurrency(
+                            dashboardData.cash_flow.net_outstanding,
+                          )}
                         </strong>
                       </TableCell>
                       <TableCell align="center">
                         <Chip
-                          label={dashboardData.cash_flow.net_outstanding >= 0 ? "Positive" : "Negative"}
-                          color={dashboardData.cash_flow.net_outstanding >= 0 ? "success" : "error"}
+                          label={
+                            dashboardData.cash_flow.net_outstanding >= 0
+                              ? "Positive"
+                              : "Negative"
+                          }
+                          color={
+                            dashboardData.cash_flow.net_outstanding >= 0
+                              ? "success"
+                              : "error"
+                          }
                           size="small"
                         />
                       </TableCell>
@@ -357,7 +389,7 @@ const ManagementDashboard: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%' }}>
+          <Card sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Quick Actions
@@ -367,7 +399,7 @@ const ManagementDashboard: React.FC = () => {
                   variant="outlined"
                   startIcon={<Assessment />}
                   fullWidth
-                  onClick={() => window.location.href = '/reports'}
+                  onClick={() => (window.location.href = "/reports")}
                 >
                   View Detailed Reports
                 </Button>
@@ -375,7 +407,7 @@ const ManagementDashboard: React.FC = () => {
                   variant="outlined"
                   startIcon={<Analytics />}
                   fullWidth
-                  onClick={() => window.location.href = '/analytics'}
+                  onClick={() => (window.location.href = "/analytics")}
                 >
                   Business Intelligence
                 </Button>
@@ -383,7 +415,7 @@ const ManagementDashboard: React.FC = () => {
                   variant="outlined"
                   startIcon={<People />}
                   fullWidth
-                  onClick={() => window.location.href = '/customers'}
+                  onClick={() => (window.location.href = "/customers")}
                 >
                   Customer Management
                 </Button>

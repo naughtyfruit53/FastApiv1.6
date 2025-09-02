@@ -1,5 +1,5 @@
 // SortableTable component for requirement #3 - Table Sorting on Header Click
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -10,10 +10,10 @@ import {
   TableSortLabel,
   Paper,
   Box,
-  Typography
-} from '@mui/material';
-import { visuallyHidden } from '@mui/utils';
-export type Order = 'asc' | 'desc';
+  Typography,
+} from "@mui/material";
+import { visuallyHidden } from "@mui/utils";
+export type Order = "asc" | "desc";
 export interface HeadCell<T> {
   id: keyof T;
   label: string;
@@ -21,7 +21,7 @@ export interface HeadCell<T> {
   disablePadding?: boolean;
   sortable?: boolean;
   width?: string | number;
-  align?: 'left' | 'right' | 'center';
+  align?: "left" | "right" | "center";
   render?: (_value: any, _row: T) => React.ReactNode;
 }
 interface SortableTableProps<T> {
@@ -42,22 +42,31 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   const aVal = a[orderBy];
   const bVal = b[orderBy];
   // Handle null/undefined values
-  if (bVal === null && aVal === null) {return 0;}
-  if (bVal == null) {return -1;}
-  if (aVal == null) {return 1;}
+  if (bVal === null && aVal === null) {
+    return 0;
+  }
+  if (bVal == null) {
+    return -1;
+  }
+  if (aVal == null) {
+    return 1;
+  }
   // Handle different types
-  if (typeof aVal === 'number' && typeof bVal === 'number') {
+  if (typeof aVal === "number" && typeof bVal === "number") {
     return bVal - aVal;
   }
-  if (typeof aVal === 'string' && typeof bVal === 'string') {
-    return bVal.localeCompare(aVal, undefined, { numeric: true, sensitivity: 'base' });
+  if (typeof aVal === "string" && typeof bVal === "string") {
+    return bVal.localeCompare(aVal, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
   }
   // Handle dates
   if (aVal instanceof Date && bVal instanceof Date) {
     return bVal.getTime() - aVal.getTime();
   }
   // Handle date strings
-  if (typeof aVal === 'string' && typeof bVal === 'string') {
+  if (typeof aVal === "string" && typeof bVal === "string") {
     const aDate = new Date(aVal);
     const bDate = new Date(bVal);
     if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
@@ -65,14 +74,23 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
     }
   }
   // Default string comparison
-  return String(bVal).localeCompare(String(aVal), undefined, { numeric: true, sensitivity: 'base' });
+  return String(bVal).localeCompare(String(aVal), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
 }
-function getComparator<T>(order: Order, orderBy: keyof T): (_a: T, _b: T) => number {
-  return order === 'desc'
+function getComparator<T>(
+  order: Order,
+  orderBy: keyof T,
+): (_a: T, _b: T) => number {
+  return order === "desc"
     ? (_a, _b) => descendingComparator(_a, _b, orderBy)
     : (_a, _b) => -descendingComparator(_a, _b, orderBy);
 }
-function stableSort<T>(array: readonly T[], comparator: (_a: T, _b: T) => number) {
+function stableSort<T>(
+  array: readonly T[],
+  comparator: (_a: T, _b: T) => number,
+) {
   const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -101,25 +119,27 @@ function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
         {headCells.map((headCell) => (
           <TableCell
             key={String(headCell.id)}
-            align={headCell.align || (headCell.numeric ? 'right' : 'left')}
-            padding={headCell.disablePadding ? 'none' : 'normal'}
+            align={headCell.align || (headCell.numeric ? "right" : "left")}
+            padding={headCell.disablePadding ? "none" : "normal"}
             sortDirection={orderBy === headCell.id ? order : false}
-            sx={{ 
-              fontWeight: 'bold',
+            sx={{
+              fontWeight: "bold",
               width: headCell.width,
-              backgroundColor: 'grey.50'
+              backgroundColor: "grey.50",
             }}
           >
             {headCell.sortable !== false ? (
               <TableSortLabel
                 active={orderBy === headCell.id}
-                direction={orderBy === headCell.id ? order : 'asc'}
+                direction={orderBy === headCell.id ? order : "asc"}
                 onClick={createSortHandler(headCell.id)}
               >
                 {headCell.label}
                 {orderBy === headCell.id ? (
                   <Box component="span" sx={visuallyHidden}>
-                    {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                    {order === "desc"
+                      ? "sorted descending"
+                      : "sorted ascending"}
                   </Box>
                 ) : null}
               </TableSortLabel>
@@ -129,7 +149,10 @@ function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
           </TableCell>
         ))}
         {hasActions && (
-          <TableCell align="center" sx={{ fontWeight: 'bold', backgroundColor: 'grey.50' }}>
+          <TableCell
+            align="center"
+            sx={{ fontWeight: "bold", backgroundColor: "grey.50" }}
+          >
             Actions
           </TableCell>
         )}
@@ -142,36 +165,40 @@ function SortableTable<T>({
   headCells,
   title,
   defaultOrderBy,
-  defaultOrder = 'asc',
+  defaultOrder = "asc",
   onRowClick,
   dense = false,
   stickyHeader = false,
   maxHeight,
-  emptyMessage = 'No data available',
+  emptyMessage = "No data available",
   loading = false,
-  actions
+  actions,
 }: SortableTableProps<T>) {
   const [order, setOrder] = useState<Order>(defaultOrder);
-  const [orderBy, setOrderBy] = useState<keyof T>(defaultOrderBy || headCells[0]?.id);
+  const [orderBy, setOrderBy] = useState<keyof T>(
+    defaultOrderBy || headCells[0]?.id,
+  );
   const handleRequestSort = (property: keyof T) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
   };
   const sortedData = useMemo(() => {
-    if (!data?.length) {return [];}
+    if (!data?.length) {
+      return [];
+    }
     return stableSort(data, getComparator(order, orderBy));
   }, [data, order, orderBy]);
   const hasActions = Boolean(actions);
   if (loading) {
     return (
-      <Paper sx={{ p: 3, textAlign: 'center' }}>
+      <Paper sx={{ p: 3, textAlign: "center" }}>
         <Typography>Loading...</Typography>
       </Paper>
     );
   }
   return (
-    <Paper sx={{ width: '100%', mb: 2 }}>
+    <Paper sx={{ width: "100%", mb: 2 }}>
       {title && (
         <Box sx={{ p: 2 }}>
           <Typography variant="h6" component="div">
@@ -182,7 +209,7 @@ function SortableTable<T>({
       <TableContainer sx={{ maxHeight }}>
         <Table
           stickyHeader={stickyHeader}
-          size={dense ? 'small' : 'medium'}
+          size={dense ? "small" : "medium"}
           aria-label="sortable table"
         >
           <SortableTableHead
@@ -195,14 +222,12 @@ function SortableTable<T>({
           <TableBody>
             {sortedData.length === 0 ? (
               <TableRow>
-                <TableCell 
-                  colSpan={headCells.length + (hasActions ? 1 : 0)} 
+                <TableCell
+                  colSpan={headCells.length + (hasActions ? 1 : 0)}
                   align="center"
                   sx={{ py: 3 }}
                 >
-                  <Typography color="textSecondary">
-                    {emptyMessage}
-                  </Typography>
+                  <Typography color="textSecondary">{emptyMessage}</Typography>
                 </TableCell>
               </TableRow>
             ) : (
@@ -211,27 +236,28 @@ function SortableTable<T>({
                   hover={Boolean(onRowClick)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   key={index}
-                  sx={{ 
-                    cursor: onRowClick ? 'pointer' : 'default',
-                    '&:hover': onRowClick ? { backgroundColor: 'action.hover' } : {}
+                  sx={{
+                    cursor: onRowClick ? "pointer" : "default",
+                    "&:hover": onRowClick
+                      ? { backgroundColor: "action.hover" }
+                      : {},
                   }}
                 >
                   {headCells.map((headCell) => (
                     <TableCell
                       key={String(headCell.id)}
-                      align={headCell.align || (headCell.numeric ? 'right' : 'left')}
-                      padding={headCell.disablePadding ? 'none' : 'normal'}
-                    >
-                      {headCell.render 
-                        ? headCell.render(row[headCell.id], row)
-                        : String(row[headCell.id] ?? '')
+                      align={
+                        headCell.align || (headCell.numeric ? "right" : "left")
                       }
+                      padding={headCell.disablePadding ? "none" : "normal"}
+                    >
+                      {headCell.render
+                        ? headCell.render(row[headCell.id], row)
+                        : String(row[headCell.id] ?? "")}
                     </TableCell>
                   ))}
                   {hasActions && (
-                    <TableCell align="center">
-                      {actions!(row)}
-                    </TableCell>
+                    <TableCell align="center">{actions!(row)}</TableCell>
                   )}
                 </TableRow>
               ))

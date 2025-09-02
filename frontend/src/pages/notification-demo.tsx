@@ -1,6 +1,6 @@
 // src/pages/notification-demo.tsx
 // Demo page to showcase notification components
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -10,20 +10,14 @@ import {
   Button,
   Card,
   CardContent,
-  Divider,
-  Alert
-} from '@mui/material';
-import {
-  Notifications,
-  Settings,
-  Send,
-  Dashboard
-} from '@mui/icons-material';
-import NotificationBell from '../components/NotificationBell';
-import NotificationSettingsModal from '../components/NotificationSettingsModal';
-import AlertsFeed from '../components/AlertsFeed';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ToastContainer } from 'react-toastify';
+  Alert,
+} from "@mui/material";
+import { Notifications, Settings, Send, Dashboard } from "@mui/icons-material";
+import NotificationBell from "../components/NotificationBell";
+import NotificationSettingsModal from "../components/NotificationSettingsModal";
+import AlertsFeed from "../components/AlertsFeed";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ToastContainer } from "react-toastify";
 // Create a query client for the demo
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,8 +46,9 @@ const NotificationDemo: React.FC = () => {
             Service CRM Vertical Slice Implementation
           </Typography>
           <Alert severity="info" sx={{ mt: 2 }}>
-            This demo showcases the complete notification system including real-time alerts, 
-            user preferences, and workflow integration for the Service CRM platform.
+            This demo showcases the complete notification system including
+            real-time alerts, user preferences, and workflow integration for the
+            Service CRM platform.
           </Alert>
         </Box>
         <Grid container spacing={4}>
@@ -61,20 +56,38 @@ const NotificationDemo: React.FC = () => {
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <Notifications sx={{ mr: 1 }} />
                   <Typography variant="h5" component="h2">
                     Notification Bell
                   </Typography>
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Real-time notification dropdown with unread count badge and quick actions.
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  Real-time notification dropdown with unread count badge and
+                  quick actions.
                 </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    p: 3,
+                    bgcolor: "grey.50",
+                    borderRadius: 1,
+                  }}
+                >
                   <NotificationBell onSettingsClick={handleOpenSettings} />
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Click the bell icon to view notifications. Badge shows unread count.
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 1, display: "block" }}
+                >
+                  Click the bell icon to view notifications. Badge shows unread
+                  count.
                 </Typography>
               </CardContent>
             </Card>
@@ -83,14 +96,19 @@ const NotificationDemo: React.FC = () => {
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <Settings sx={{ mr: 1 }} />
                   <Typography variant="h5" component="h2">
                     Notification Settings
                   </Typography>
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Comprehensive user preference management for all notification types and channels.
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  Comprehensive user preference management for all notification
+                  types and channels.
                 </Typography>
                 <Button
                   variant="contained"
@@ -100,8 +118,13 @@ const NotificationDemo: React.FC = () => {
                 >
                   Open Settings Modal
                 </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Configure notification preferences for email, SMS, push, and in-app alerts.
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 1, display: "block" }}
+                >
+                  Configure notification preferences for email, SMS, push, and
+                  in-app alerts.
                 </Typography>
               </CardContent>
             </Card>
@@ -110,16 +133,21 @@ const NotificationDemo: React.FC = () => {
           <Grid item xs={12}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <Dashboard sx={{ mr: 1 }} />
                   <Typography variant="h5" component="h2">
                     Alerts Feed
                   </Typography>
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Real-time alerts and notifications feed with filtering, bulk actions, and priority indicators.
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 3 }}
+                >
+                  Real-time alerts and notifications feed with filtering, bulk
+                  actions, and priority indicators.
                 </Typography>
-                <AlertsFeed 
+                <AlertsFeed
                   showFilters={true}
                   maxHeight={400}
                   autoRefresh={true}
@@ -136,8 +164,11 @@ const NotificationDemo: React.FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
-                    <Notifications color="primary" sx={{ fontSize: 40, mb: 1 }} />
+                  <Box sx={{ textAlign: "center", p: 2 }}>
+                    <Notifications
+                      color="primary"
+                      sx={{ fontSize: 40, mb: 1 }}
+                    />
                     <Typography variant="subtitle2" gutterBottom>
                       Multi-Channel Notifications
                     </Typography>
@@ -147,7 +178,7 @@ const NotificationDemo: React.FC = () => {
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
+                  <Box sx={{ textAlign: "center", p: 2 }}>
                     <Settings color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="subtitle2" gutterBottom>
                       User Preferences
@@ -158,7 +189,7 @@ const NotificationDemo: React.FC = () => {
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
+                  <Box sx={{ textAlign: "center", p: 2 }}>
                     <Send color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="subtitle2" gutterBottom>
                       Workflow Integration
@@ -169,7 +200,7 @@ const NotificationDemo: React.FC = () => {
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
+                  <Box sx={{ textAlign: "center", p: 2 }}>
                     <Dashboard color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="subtitle2" gutterBottom>
                       Real-Time Updates
@@ -190,11 +221,18 @@ const NotificationDemo: React.FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="success.main" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="success.main"
+                    gutterBottom
+                  >
                     ✅ Completed Backend Features
                   </Typography>
                   <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    <li>SQLAlchemy models (NotificationTemplate, NotificationLog, NotificationPreference)</li>
+                    <li>
+                      SQLAlchemy models (NotificationTemplate, NotificationLog,
+                      NotificationPreference)
+                    </li>
                     <li>FastAPI endpoints for CRUD operations</li>
                     <li>User preference management API</li>
                     <li>Multi-channel notification service</li>
@@ -204,7 +242,11 @@ const NotificationDemo: React.FC = () => {
                   </ul>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="success.main" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="success.main"
+                    gutterBottom
+                  >
                     ✅ Completed Frontend Features
                   </Typography>
                   <ul style={{ margin: 0, paddingLeft: 20 }}>

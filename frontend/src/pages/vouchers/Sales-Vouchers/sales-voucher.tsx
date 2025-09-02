@@ -113,7 +113,7 @@ const SalesVoucherPage: React.FC = () => {
     { id: null, name: 'Add New Customer...' }
   ];
   // Stock data state for items
-const [setStockLoading] = useState<{[key: number]: boolean}>();
+  const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
   // Sales Voucher specific handlers
   const handleAddItem = () => {
     append({
@@ -148,12 +148,13 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
           handleGeneratePDF(response);
         }
       }
-    } catch (err) {
-      console.error(msg, err);
+    } catch (error: any) {
+      console.error("Error saving voucher:", error);
       alert('Failed to save sales voucher. Please try again.');
     }
   };
   // Function to get stock color
+  const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {return 'error.main';}
     if (stock <= reorder) {return 'warning.main';}
     return 'success.main';
@@ -195,14 +196,6 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
   const handleVoucherClick = (voucher: any) => {
-    handleView(voucher.id);
-  };
-  // Enhanced handleEdit to use hook
-  const handleEditWithData = (voucher: any) => {
-    handleEdit(voucher.id);
-  };
-  // Enhanced handleView to use hook
-  const handleViewWithData = (voucher: any) => {
     handleView(voucher.id);
   };
   // Enhanced handleEdit to use hook
@@ -452,7 +445,7 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
                             type="number"
                             {...control.register(`items.${index}.unit_price`, { 
                               valueAsNumber: true,
-// TODO: Define or import enhancedRateUtils
+                              // TODO: Define or import enhancedRateUtils
                               setValueAs: (value) => enhancedRateUtils.parseRate(value)
                             })}
                             disabled={mode === 'view'}
@@ -467,7 +460,7 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
                               style: { textAlign: 'center' }
                             }}
                             onChange={(e) => {
-// TODO: Define or import enhancedRateUtils
+                              // TODO: Define or import enhancedRateUtils
                               const value = enhancedRateUtils.parseRate(e.target.value);
                               setValue(`items.${index}.unit_price`, value);
                             }}

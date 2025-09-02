@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -9,25 +9,28 @@ import {
   TextField,
   Button,
   Alert,
-  CircularProgress
-} from '@mui/material';
-import { Grid } from '@mui/material';
-import { passwordService } from '../services/authService';
-import { useAuth } from '../context/AuthContext';
-import { getDisplayRole } from '../types/user.types';
+  CircularProgress,
+} from "@mui/material";
+import { Grid } from "@mui/material";
+import { passwordService } from "../services/authService";
+import { useAuth } from "../context/AuthContext";
+import { getDisplayRole } from "../types/user.types";
 
 const ProfilePage: React.FC = () => {
   const { user, loading } = useAuth();
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (loading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+      <Container
+        maxWidth="md"
+        sx={{ mt: 4, display: "flex", justifyContent: "center" }}
+      >
         <CircularProgress />
       </Container>
     );
@@ -49,25 +52,32 @@ const ProfilePage: React.FC = () => {
     setSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
+      setError("New passwords do not match");
       return;
     }
 
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError("Password must be at least 8 characters long");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const response = await passwordService.changePassword(currentPassword, newPassword);
-      setSuccess(response.message || 'Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      const response = await passwordService.changePassword(
+        currentPassword,
+        newPassword,
+      );
+      setSuccess(response.message || "Password changed successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err: any) {
-      console.error('Password change error:', err); // Log full error for debugging
-      setError(err.userMessage || err.message || 'Failed to change password. Please try again.');
+      console.error("Password change error:", err); // Log full error for debugging
+      setError(
+        err.userMessage ||
+          err.message ||
+          "Failed to change password. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -79,31 +89,33 @@ const ProfilePage: React.FC = () => {
         <Typography variant="h5" gutterBottom>
           Profile Settings
         </Typography>
-        
+
         <Box sx={{ mb: 4 }}>
           <Typography variant="subtitle1">User Information</Typography>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid
               size={{
                 xs: 12,
-                sm: 6
-              }}>
+                sm: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 label="Email"
-                value={user?.email || ''}
+                value={user?.email || ""}
                 disabled
               />
             </Grid>
             <Grid
               size={{
                 xs: 12,
-                sm: 6
-              }}>
+                sm: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 label="Role"
-                value={getDisplayRole(user?.role || '', user?.is_super_admin)}
+                value={getDisplayRole(user?.role || "", user?.is_super_admin)}
                 disabled
               />
             </Grid>
@@ -114,9 +126,17 @@ const ProfilePage: React.FC = () => {
           <Typography variant="subtitle1" gutterBottom>
             Change Password
           </Typography>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-          
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {success}
+            </Alert>
+          )}
+
           <Grid container spacing={2}>
             <Grid size={12}>
               <TextField
@@ -157,7 +177,7 @@ const ProfilePage: React.FC = () => {
             sx={{ mt: 3 }}
             disabled={isSubmitting}
           >
-            {isSubmitting ? <CircularProgress size={24} /> : 'Change Password'}
+            {isSubmitting ? <CircularProgress size={24} /> : "Change Password"}
           </Button>
         </Box>
       </Paper>

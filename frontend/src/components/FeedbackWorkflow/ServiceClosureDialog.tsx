@@ -1,5 +1,5 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -24,16 +24,16 @@ import {
   Stepper,
   Step,
   StepLabel,
-  StepContent
-} from '@mui/material';
+  StepContent,
+} from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   Warning as WarningIcon,
   Assignment as AssignmentIcon,
   VerifiedUser as VerifiedUserIcon,
-  Lock as LockIcon
-} from '@mui/icons-material';
+  Lock as LockIcon,
+} from "@mui/icons-material";
 interface ServiceClosureDialogProps {
   open: boolean;
   onClose: () => void;
@@ -45,16 +45,36 @@ interface ServiceClosureDialogProps {
   userRole: string;
 }
 const CLOSURE_REASONS = [
-  { value: 'completed', label: 'Service Completed Successfully', icon: CheckCircleIcon, color: 'success' },
-  { value: 'cancelled', label: 'Service Cancelled', icon: CancelIcon, color: 'error' },
-  { value: 'customer_request', label: 'Customer Request', icon: AssignmentIcon, color: 'info' },
-  { value: 'no_show', label: 'Customer No-Show', icon: WarningIcon, color: 'warning' }
+  {
+    value: "completed",
+    label: "Service Completed Successfully",
+    icon: CheckCircleIcon,
+    color: "success",
+  },
+  {
+    value: "cancelled",
+    label: "Service Cancelled",
+    icon: CancelIcon,
+    color: "error",
+  },
+  {
+    value: "customer_request",
+    label: "Customer Request",
+    icon: AssignmentIcon,
+    color: "info",
+  },
+  {
+    value: "no_show",
+    label: "Customer No-Show",
+    icon: WarningIcon,
+    color: "warning",
+  },
 ];
 const CLOSURE_STATUS_CONFIG = {
-  pending: { label: 'Pending', color: 'warning', icon: WarningIcon },
-  approved: { label: 'Approved', color: 'info', icon: VerifiedUserIcon },
-  closed: { label: 'Closed', color: 'success', icon: CheckCircleIcon },
-  reopened: { label: 'Reopened', color: 'error', icon: CancelIcon }
+  pending: { label: "Pending", color: "warning", icon: WarningIcon },
+  approved: { label: "Approved", color: "info", icon: VerifiedUserIcon },
+  closed: { label: "Closed", color: "success", icon: CheckCircleIcon },
+  reopened: { label: "Reopened", color: "error", icon: CancelIcon },
 };
 export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
   open,
@@ -64,55 +84,62 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
   customerFeedbackId,
   onSubmit,
   currentClosure,
-  userRole
+  userRole,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [action, setAction] = useState<'create' | 'approve' | 'close' | 'reopen'>('create');
+  const [action, setAction] = useState<
+    "create" | "approve" | "close" | "reopen"
+  >("create");
   const [formData, setFormData] = useState({
-    closure_reason: 'completed',
-    closure_notes: '',
+    closure_reason: "completed",
+    closure_notes: "",
     requires_manager_approval: true,
-    approval_notes: '',
-    final_closure_notes: '',
+    approval_notes: "",
+    final_closure_notes: "",
     escalation_required: false,
-    escalation_reason: '',
-    reopening_reason: ''
+    escalation_reason: "",
+    reopening_reason: "",
   });
   const [error, setError] = useState<string | null>(null);
-  const isManager = userRole === 'manager' || userRole === 'admin';
-  const canApprove = isManager && currentClosure?.closure_status === 'pending';
-  const canClose = isManager && (currentClosure?.closure_status === 'approved' || currentClosure?.closure_status === 'pending');
-  const canReopen = isManager && currentClosure?.closure_status === 'closed';
-  const handleTextChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value
-    }));
-  };
+  const isManager = userRole === "manager" || userRole === "admin";
+  const canApprove = isManager && currentClosure?.closure_status === "pending";
+  const canClose =
+    isManager &&
+    (currentClosure?.closure_status === "approved" ||
+      currentClosure?.closure_status === "pending");
+  const canReopen = isManager && currentClosure?.closure_status === "closed";
+  const handleTextChange =
+    (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: event.target.value,
+      }));
+    };
   const handleSelectChange = (field: string) => (event: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: event.target.value
+      [field]: event.target.value,
     }));
   };
-  const handleSwitchChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.checked
-    }));
-  };
+  const handleSwitchChange =
+    (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: event.target.checked,
+      }));
+    };
   const getStepContent = () => {
     if (!currentClosure) {
       return 0; // Create new closure
     }
     switch (currentClosure.closure_status) {
-      case 'pending':
+      case "pending":
         return 1;
-      case 'approved':
+      case "approved":
         return 2;
-      case 'closed':
+      case "closed":
         return 3;
-      case 'reopened':
+      case "reopened":
         return 1; // Back to pending
       default:
         return 0;
@@ -124,7 +151,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
     try {
       let submitData: any;
       switch (action) {
-        case 'create':
+        case "create":
           submitData = {
             installation_job_id: installationJobId,
             completion_record_id: completionRecordId,
@@ -133,48 +160,50 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
             closure_notes: formData.closure_notes,
             requires_manager_approval: formData.requires_manager_approval,
             escalation_required: formData.escalation_required,
-            escalation_reason: formData.escalation_required ? formData.escalation_reason : undefined
+            escalation_reason: formData.escalation_required
+              ? formData.escalation_reason
+              : undefined,
           };
           break;
-        case 'approve':
+        case "approve":
           submitData = {
-            action: 'approve',
-            approval_notes: formData.approval_notes
+            action: "approve",
+            approval_notes: formData.approval_notes,
           };
           break;
-        case 'close':
+        case "close":
           submitData = {
-            action: 'close',
-            final_closure_notes: formData.final_closure_notes
+            action: "close",
+            final_closure_notes: formData.final_closure_notes,
           };
           break;
-        case 'reopen':
+        case "reopen":
           submitData = {
-            action: 'reopen',
-            reopening_reason: formData.reopening_reason
+            action: "reopen",
+            reopening_reason: formData.reopening_reason,
           };
           break;
       }
       await onSubmit(submitData);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to process service closure');
+      setError(err.message || "Failed to process service closure");
     } finally {
       setIsSubmitting(false);
     }
   };
   const resetForm = () => {
     setFormData({
-      closure_reason: 'completed',
-      closure_notes: '',
+      closure_reason: "completed",
+      closure_notes: "",
       requires_manager_approval: true,
-      approval_notes: '',
-      final_closure_notes: '',
+      approval_notes: "",
+      final_closure_notes: "",
       escalation_required: false,
-      escalation_reason: '',
-      reopening_reason: ''
+      escalation_reason: "",
+      reopening_reason: "",
     });
-    setAction('create');
+    setAction("create");
     setError(null);
   };
   const handleClose = () => {
@@ -184,28 +213,28 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
   const getDialogTitle = () => {
     if (currentClosure) {
       switch (action) {
-        case 'approve':
-          return 'Approve Service Closure';
-        case 'close':
-          return 'Close Service Ticket';
-        case 'reopen':
-          return 'Reopen Service Ticket';
+        case "approve":
+          return "Approve Service Closure";
+        case "close":
+          return "Close Service Ticket";
+        case "reopen":
+          return "Reopen Service Ticket";
         default:
-          return 'Service Closure Details';
+          return "Service Closure Details";
       }
     }
-    return 'Create Service Closure';
+    return "Create Service Closure";
   };
   const getSubmitButtonText = () => {
     switch (action) {
-      case 'approve':
-        return 'Approve Closure';
-      case 'close':
-        return 'Close Service';
-      case 'reopen':
-        return 'Reopen Service';
+      case "approve":
+        return "Approve Closure";
+      case "close":
+        return "Close Service";
+      case "reopen":
+        return "Reopen Service";
       default:
-        return 'Create Closure Request';
+        return "Create Closure Request";
     }
   };
   const renderWorkflowStepper = () => {
@@ -259,9 +288,21 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
           {currentClosure && (
             <Chip
               size="small"
-              label={CLOSURE_STATUS_CONFIG[currentClosure.closure_status as keyof typeof CLOSURE_STATUS_CONFIG]?.label}
-              color={CLOSURE_STATUS_CONFIG[currentClosure.closure_status as keyof typeof CLOSURE_STATUS_CONFIG]?.color as any}
-              icon={React.createElement(CLOSURE_STATUS_CONFIG[currentClosure.closure_status as keyof typeof CLOSURE_STATUS_CONFIG]?.icon)}
+              label={
+                CLOSURE_STATUS_CONFIG[
+                  currentClosure.closure_status as keyof typeof CLOSURE_STATUS_CONFIG
+                ]?.label
+              }
+              color={
+                CLOSURE_STATUS_CONFIG[
+                  currentClosure.closure_status as keyof typeof CLOSURE_STATUS_CONFIG
+                ]?.color as any
+              }
+              icon={React.createElement(
+                CLOSURE_STATUS_CONFIG[
+                  currentClosure.closure_status as keyof typeof CLOSURE_STATUS_CONFIG
+                ]?.icon,
+              )}
             />
           )}
         </Box>
@@ -285,30 +326,32 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                   <Box display="flex" gap={1} flexWrap="wrap">
                     {canApprove && (
                       <Button
-                        variant={action === 'approve' ? 'contained' : 'outlined'}
+                        variant={
+                          action === "approve" ? "contained" : "outlined"
+                        }
                         color="success"
                         startIcon={<VerifiedUserIcon />}
-                        onClick={() => setAction('approve')}
+                        onClick={() => setAction("approve")}
                       >
                         Approve
                       </Button>
                     )}
                     {canClose && (
                       <Button
-                        variant={action === 'close' ? 'contained' : 'outlined'}
+                        variant={action === "close" ? "contained" : "outlined"}
                         color="primary"
                         startIcon={<CheckCircleIcon />}
-                        onClick={() => setAction('close')}
+                        onClick={() => setAction("close")}
                       >
                         Close Service
                       </Button>
                     )}
                     {canReopen && (
                       <Button
-                        variant={action === 'reopen' ? 'contained' : 'outlined'}
+                        variant={action === "reopen" ? "contained" : "outlined"}
                         color="warning"
                         startIcon={<CancelIcon />}
-                        onClick={() => setAction('reopen')}
+                        onClick={() => setAction("reopen")}
                       >
                         Reopen
                       </Button>
@@ -326,13 +369,16 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                   <InputLabel>Closure Reason</InputLabel>
                   <Select
                     value={formData.closure_reason}
-                    onChange={handleSelectChange('closure_reason')}
+                    onChange={handleSelectChange("closure_reason")}
                     label="Closure Reason"
                   >
                     {CLOSURE_REASONS.map((reason) => (
                       <MenuItem key={reason.value} value={reason.value}>
                         <Box display="flex" alignItems="center" gap={1}>
-                          <reason.icon color={reason.color as any} fontSize="small" />
+                          <reason.icon
+                            color={reason.color as any}
+                            fontSize="small"
+                          />
                           {reason.label}
                         </Box>
                       </MenuItem>
@@ -345,7 +391,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                   control={
                     <Switch
                       checked={formData.requires_manager_approval}
-                      onChange={handleSwitchChange('requires_manager_approval')}
+                      onChange={handleSwitchChange("requires_manager_approval")}
                       color="primary"
                     />
                   }
@@ -365,7 +411,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                   label="Closure Notes"
                   placeholder="Describe the reason for closure..."
                   value={formData.closure_notes}
-                  onChange={handleTextChange('closure_notes')}
+                  onChange={handleTextChange("closure_notes")}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -373,7 +419,7 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                   control={
                     <Switch
                       checked={formData.escalation_required}
-                      onChange={handleSwitchChange('escalation_required')}
+                      onChange={handleSwitchChange("escalation_required")}
                       color="warning"
                     />
                   }
@@ -394,14 +440,14 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                     label="Escalation Reason"
                     placeholder="Explain why escalation is required..."
                     value={formData.escalation_reason}
-                    onChange={handleTextChange('escalation_reason')}
+                    onChange={handleTextChange("escalation_reason")}
                   />
                 </Grid>
               )}
             </>
           )}
           {/* Approval Form */}
-          {action === 'approve' && (
+          {action === "approve" && (
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -410,12 +456,12 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                 label="Approval Notes"
                 placeholder="Add notes about the approval..."
                 value={formData.approval_notes}
-                onChange={handleTextChange('approval_notes')}
+                onChange={handleTextChange("approval_notes")}
               />
             </Grid>
           )}
           {/* Final Closure Form */}
-          {action === 'close' && (
+          {action === "close" && (
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -424,12 +470,12 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                 label="Final Closure Notes"
                 placeholder="Add final notes before closing the service..."
                 value={formData.final_closure_notes}
-                onChange={handleTextChange('final_closure_notes')}
+                onChange={handleTextChange("final_closure_notes")}
               />
             </Grid>
           )}
           {/* Reopen Form */}
-          {action === 'reopen' && (
+          {action === "reopen" && (
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -438,13 +484,13 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                 label="Reopening Reason *"
                 placeholder="Explain why the service needs to be reopened..."
                 value={formData.reopening_reason}
-                onChange={handleTextChange('reopening_reason')}
+                onChange={handleTextChange("reopening_reason")}
                 required
               />
             </Grid>
           )}
           {/* Current Closure Details */}
-          {currentClosure && action === 'create' && (
+          {currentClosure && action === "create" && (
             <Grid item xs={12}>
               <Card>
                 <CardContent>
@@ -457,7 +503,9 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                         Reason
                       </Typography>
                       <Typography variant="body1">
-                        {CLOSURE_REASONS.find(r => r.value === currentClosure.closure_reason)?.label || currentClosure.closure_reason}
+                        {CLOSURE_REASONS.find(
+                          (r) => r.value === currentClosure.closure_reason,
+                        )?.label || currentClosure.closure_reason}
                       </Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
@@ -465,7 +513,9 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                         Created At
                       </Typography>
                       <Typography variant="body1">
-                        {new Date(currentClosure.created_at).toLocaleDateString()}
+                        {new Date(
+                          currentClosure.created_at,
+                        ).toLocaleDateString()}
                       </Typography>
                     </Grid>
                     {currentClosure.closure_notes && (
@@ -482,7 +532,8 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
                       <Grid item xs={12}>
                         <Alert severity="warning">
                           <Typography variant="body2">
-                            <strong>Escalation Required:</strong> {currentClosure.escalation_reason}
+                            <strong>Escalation Required:</strong>{" "}
+                            {currentClosure.escalation_reason}
                           </Typography>
                         </Alert>
                       </Grid>
@@ -498,17 +549,19 @@ export const ServiceClosureDialog: React.FC<ServiceClosureDialogProps> = ({
         <Button onClick={handleClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        {(action !== 'create' || !currentClosure) && (
+        {(action !== "create" || !currentClosure) && (
           <Button
             onClick={handleSubmit}
             variant="contained"
             disabled={
-              isSubmitting || 
-              (action === 'reopen' && !formData.reopening_reason.trim())
+              isSubmitting ||
+              (action === "reopen" && !formData.reopening_reason.trim())
             }
-            startIcon={isSubmitting ? <CircularProgress size={20} /> : <AssignmentIcon />}
+            startIcon={
+              isSubmitting ? <CircularProgress size={20} /> : <AssignmentIcon />
+            }
           >
-            {isSubmitting ? 'Processing...' : getSubmitButtonText()}
+            {isSubmitting ? "Processing..." : getSubmitButtonText()}
           </Button>
         )}
       </DialogActions>

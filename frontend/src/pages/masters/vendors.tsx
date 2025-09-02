@@ -1,6 +1,6 @@
 // Standalone Vendors Page - Extract from masters/index.tsx
-import React, { useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import {
   Box,
   Container,
@@ -17,54 +17,53 @@ import {
   IconButton,
   TextField,
   InputAdornment,
-  TableSortLabel
-} from '@mui/material';
+  TableSortLabel,
+} from "@mui/material";
 import {
   Add,
   Edit,
   Delete,
   Email,
   Phone,
-  Business,
-  Visibility,
   Search as SearchIcon,
-  ArrowUpward,
-  ArrowDownward
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { masterDataService } from '../../services/authService';
-import ExcelImportExport from '../../components/ExcelImportExport';
-import { bulkImportVendors } from '../../services/masterService';
-import { useAuth } from '../../context/AuthContext';
-import AddVendorModal from '../../components/AddVendorModal';
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { masterDataService } from "../../services/authService";
+import ExcelImportExport from "../../components/ExcelImportExport";
+import { bulkImportVendors } from "../../services/masterService";
+import { useAuth } from "../../context/AuthContext";
+import AddVendorModal from "../../components/AddVendorModal";
 const VendorsPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
   const { isOrgContextReady } = useAuth();
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [addVendorLoading, setAddVendorLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const queryClient = useQueryClient();
   const { data: vendors, isLoading } = useQuery({
-    queryKey: ['vendors'],
+    queryKey: ["vendors"],
     queryFn: () => masterDataService.getVendors(),
     enabled: isOrgContextReady,
   });
   // Debounced search and sorting
   const filteredAndSortedVendors = useMemo(() => {
-    if (!vendors) {return [];}
-    const filtered = vendors.filter((vendor: any) =>
-      vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!vendors) {
+      return [];
+    }
+    const filtered = vendors.filter(
+      (vendor: any) =>
+        vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     // Sort by name
-    if (sortBy === 'name') {
+    if (sortBy === "name") {
       filtered.sort((a: any, b: any) => {
-        const nameA = a.name?.toLowerCase() || '';
-        const nameB = b.name?.toLowerCase() || '';
-        if (sortOrder === 'asc') {
+        const nameA = a.name?.toLowerCase() || "";
+        const nameB = b.name?.toLowerCase() || "";
+        if (sortOrder === "asc") {
           return nameA.localeCompare(nameB);
         } else {
           return nameB.localeCompare(nameA);
@@ -74,7 +73,7 @@ const VendorsPage: React.FC = () => {
     return filtered;
   }, [vendors, searchTerm, sortBy, sortOrder]);
   const handleSort = () => {
-    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
   const handleVendorAdd = async (vendorData: any) => {
     setAddVendorLoading(true);
@@ -82,18 +81,20 @@ const VendorsPage: React.FC = () => {
       const response = await masterDataService.createVendor(vendorData);
       const newVendor = response;
       // Update query data immediately
-      queryClient.setQueryData(['vendors'], (old: any) => old ? [...old, newVendor] : [newVendor]);
-      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      queryClient.setQueryData(["vendors"], (old: any) =>
+        old ? [...old, newVendor] : [newVendor],
+      );
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
       setShowAddVendorModal(false);
-      alert('Vendor added successfully!');
+      alert("Vendor added successfully!");
     } catch (error: any) {
       console.error(msg, err);
-      let errorMsg = 'Error adding vendor';
+      let errorMsg = "Error adding vendor";
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          errorMsg = detail.map((err: any) => err.msg || err).join(', ');
-        } else if (typeof detail === 'string') {
+          errorMsg = detail.map((err: any) => err.msg || err).join(", ");
+        } else if (typeof detail === "string") {
           errorMsg = detail;
         }
       }
@@ -105,20 +106,22 @@ const VendorsPage: React.FC = () => {
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteVendor(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
     },
     onError: (error: any) => {
       console.error(msg, err);
-      setErrorMessage(error.response?.data?.detail || 'Failed to delete vendor');
-    }
+      setErrorMessage(
+        error.response?.data?.detail || "Failed to delete vendor",
+      );
+    },
   });
   const openAddVendorModal = useCallback(() => {
-    setErrorMessage('');
+    setErrorMessage("");
     setShowAddVendorModal(true);
   }, []);
   // Auto-open add modal if action=add in URL
   React.useEffect(() => {
-    if (action === 'add') {
+    if (action === "add") {
       openAddVendorModal();
     }
   }, [action, openAddVendorModal]);
@@ -129,7 +132,14 @@ const VendorsPage: React.FC = () => {
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4" component="h1" gutterBottom>
             Vendor Management
           </Typography>
@@ -144,7 +154,14 @@ const VendorsPage: React.FC = () => {
         </Box>
         {/* Vendors Table */}
         <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
             <Typography variant="h6">All Vendors</Typography>
             <ExcelImportExport
               data={vendors || []}
@@ -174,8 +191,8 @@ const VendorsPage: React.FC = () => {
                 <TableRow>
                   <TableCell>
                     <TableSortLabel
-                      active={sortBy === 'name'}
-                      direction={sortBy === 'name' ? sortOrder : 'asc'}
+                      active={sortBy === "name"}
+                      direction={sortBy === "name" ? sortOrder : "asc"}
                       onClick={handleSort}
                     >
                       Name
@@ -203,31 +220,45 @@ const VendorsPage: React.FC = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Phone sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Phone
+                          sx={{ fontSize: 16, mr: 1, color: "text.secondary" }}
+                        />
                         {item.contact_number}
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Email sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        {item.email || 'N/A'}
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Email
+                          sx={{ fontSize: 16, mr: 1, color: "text.secondary" }}
+                        />
+                        {item.email || "N/A"}
                       </Box>
                     </TableCell>
-                    <TableCell>{item.city}, {item.state}</TableCell>
-                    <TableCell>{item.gst_number || 'N/A'}</TableCell>
+                    <TableCell>
+                      {item.city}, {item.state}
+                    </TableCell>
+                    <TableCell>{item.gst_number || "N/A"}</TableCell>
                     <TableCell>
                       <Chip
-                        label={item.is_active ? 'Active' : 'Inactive'}
-                        color={item.is_active ? 'success' : 'default'}
+                        label={item.is_active ? "Active" : "Inactive"}
+                        color={item.is_active ? "success" : "default"}
                         size="small"
                       />
                     </TableCell>
                     <TableCell>
-                      <IconButton disabled size="small" title="Edit functionality temporarily disabled">
+                      <IconButton
+                        disabled
+                        size="small"
+                        title="Edit functionality temporarily disabled"
+                      >
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => deleteItemMutation.mutate(item.id)} size="small" color="error">
+                      <IconButton
+                        onClick={() => deleteItemMutation.mutate(item.id)}
+                        size="small"
+                        color="error"
+                      >
                         <Delete />
                       </IconButton>
                     </TableCell>

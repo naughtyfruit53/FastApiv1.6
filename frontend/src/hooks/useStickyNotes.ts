@@ -1,11 +1,17 @@
 // frontend/src/hooks/useStickyNotes.ts
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { stickyNotesService, StickyNote, UserSettings } from '../services/stickyNotesService';
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import {
+  stickyNotesService,
+  StickyNote,
+  UserSettings,
+} from "../services/stickyNotesService";
 export const useStickyNotes = (): any => {
   const { user } = useAuth();
   const [notes, setNotes] = useState<StickyNote[]>([]);
-  const [userSettings, setUserSettings] = useState<UserSettings>({ sticky_notes_enabled: false });
+  const [userSettings, setUserSettings] = useState<UserSettings>({
+    sticky_notes_enabled: false,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetchUserSettings = async () => {
@@ -13,7 +19,7 @@ export const useStickyNotes = (): any => {
       const settings = await stickyNotesService.getUserSettings();
       setUserSettings(settings);
     } catch (err) {
-      console.error('Error fetching user settings:', err);
+      console.error("Error fetching user settings:", err);
       // Use disabled settings if fetch fails to prevent unauthorized fetches
       setUserSettings({ sticky_notes_enabled: false });
     }
@@ -25,8 +31,8 @@ export const useStickyNotes = (): any => {
       setNotes(notesData);
       setError(null);
     } catch (err) {
-      console.error('Error fetching notes:', err);
-      setError('Failed to load sticky notes');
+      console.error("Error fetching notes:", err);
+      setError("Failed to load sticky notes");
     } finally {
       setLoading(false);
     }
@@ -34,12 +40,12 @@ export const useStickyNotes = (): any => {
   const toggleStickyNotes = async (enabled: boolean) => {
     try {
       const updatedSettings = await stickyNotesService.updateUserSettings({
-        sticky_notes_enabled: enabled
+        sticky_notes_enabled: enabled,
       });
       setUserSettings(updatedSettings);
       return updatedSettings;
     } catch (err) {
-      console.error('Error updating user settings:', err);
+      console.error("Error updating user settings:", err);
       throw err;
     }
   };
@@ -62,7 +68,7 @@ export const useStickyNotes = (): any => {
     error,
     fetchNotes,
     toggleStickyNotes,
-    refreshSettings: fetchUserSettings
+    refreshSettings: fetchUserSettings,
   };
 };
 export default useStickyNotes;

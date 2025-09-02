@@ -1,7 +1,12 @@
 // src/services/entityService.ts
 // Unified Entity service for Customer + Vendor + Employee + ExpenseAccount management
-import api from '../lib/api';
-import {Entity, EntityType, EntityOption, ENTITY_CONFIGS} from '../types/entity.types';
+import api from "../lib/api";
+import {
+  Entity,
+  EntityType,
+  EntityOption,
+  ENTITY_CONFIGS,
+} from "../types/entity.types";
 interface QueryFunctionContext {
   queryKey: any[];
   signal?: AbortSignal;
@@ -9,29 +14,34 @@ interface QueryFunctionContext {
 /**
  * Get all entities of a specific type
  */
-export const getEntitiesByType = async (entityType: EntityType, { signal }: { signal?: AbortSignal } = {}) => {
+export const getEntitiesByType = async (
+  entityType: EntityType,
+  { signal }: { signal?: AbortSignal } = {},
+) => {
   const config = ENTITY_CONFIGS[entityType];
   const response = await api.get(config.endpoint, { signal });
   return response.data.map((entity: any) => ({
     ...entity,
-    type: entityType
+    type: entityType,
   }));
 };
 /**
  * Get all entities across all types (unified)
  */
-export const getAllEntities = async ({ signal }: { signal?: AbortSignal } = {}): Promise<Entity[]> => {
+export const getAllEntities = async ({
+  signal,
+}: { signal?: AbortSignal } = {}): Promise<Entity[]> => {
   try {
     const [customers, vendors] = await Promise.all([
-      getEntitiesByType('Customer', { signal }).catch(() => []),
-      getEntitiesByType('Vendor', { signal }).catch(() => [])
+      getEntitiesByType("Customer", { signal }).catch(() => []),
+      getEntitiesByType("Vendor", { signal }).catch(() => []),
       // Future: Add Employee and ExpenseAccount when endpoints are available
       // getEntitiesByType('Employee', { signal }).catch(() => []),
       // getEntitiesByType('ExpenseAccount', { signal }).catch(() => [])
     ]);
     return [...customers, ...vendors];
   } catch (error) {
-    console.error('Error fetching entities:', error);
+    console.error("Error fetching entities:", error);
     return [];
   }
 };
@@ -39,22 +49,22 @@ export const getAllEntities = async ({ signal }: { signal?: AbortSignal } = {}):
  * Convert entities to form-compatible options
  */
 export const entitiesToOptions = (entities: Entity[]): EntityOption[] => {
-  return entities.map(entity => ({
+  return entities.map((entity) => ({
     id: entity.id,
     name: entity.name,
     type: entity.type,
     label: `${entity.name} (${entity.type})`,
     value: entity.id,
-    originalData: entity
+    originalData: entity,
   }));
 };
 /**
  * Search entities across all types
  */
 export const searchEntities = async (
-  searchTerm: string, 
-  entityTypes: EntityType[] = ['Customer', 'Vendor'],
-  { signal }: { signal?: AbortSignal } = {}
+  searchTerm: string,
+  entityTypes: EntityType[] = ["Customer", "Vendor"],
+  { signal }: { signal?: AbortSignal } = {},
 ): Promise<EntityOption[]> => {
   try {
     const searchPromises = entityTypes.map(async (type) => {
@@ -63,20 +73,20 @@ export const searchEntities = async (
         params: {
           search: searchTerm,
           limit: 10,
-          active_only: true
+          active_only: true,
         },
-        signal
+        signal,
       });
       return response.data.map((entity: any) => ({
         ...entity,
-        type
+        type,
       }));
     });
     const results = await Promise.all(searchPromises);
     const allEntities = results.flat();
     return entitiesToOptions(allEntities);
   } catch (error) {
-    console.error('Error searching entities:', error);
+    console.error("Error searching entities:", error);
     return [];
   }
 };
@@ -84,16 +94,16 @@ export const searchEntities = async (
  * Get entity by ID and type
  */
 export const getEntityById = async (
-  id: number, 
+  id: number,
   entityType: EntityType,
-  { signal }: { signal?: AbortSignal } = {}
+  { signal }: { signal?: AbortSignal } = {},
 ): Promise<Entity | null> => {
   try {
     const config = ENTITY_CONFIGS[entityType];
     const response = await api.get(`${config.endpoint}/${id}`, { signal });
     return {
       ...response.data,
-      type: entityType
+      type: entityType,
     };
   } catch (error) {
     console.error(`Error fetching ${entityType} with ID ${id}:`, error);
@@ -105,13 +115,13 @@ export const getEntityById = async (
  */
 export const createEntity = async (
   entityType: EntityType,
-  data: Partial<Entity>
+  data: Partial<Entity>,
 ): Promise<Entity> => {
   const config = ENTITY_CONFIGS[entityType];
   const response = await api.post(config.endpoint, data);
   return {
     ...response.data,
-    type: entityType
+    type: entityType,
   };
 };
 /**
@@ -120,13 +130,13 @@ export const createEntity = async (
 export const updateEntity = async (
   id: number,
   entityType: EntityType,
-  data: Partial<Entity>
+  data: Partial<Entity>,
 ): Promise<Entity> => {
   const config = ENTITY_CONFIGS[entityType];
   const response = await api.put(`${config.endpoint}/${id}`, data);
   return {
     ...response.data,
-    type: entityType
+    type: entityType,
   };
 };
 /**
@@ -134,7 +144,7 @@ export const updateEntity = async (
  */
 export const deleteEntity = async (
   id: number,
-  entityType: EntityType
+  entityType: EntityType,
 ): Promise<void> => {
   const config = ENTITY_CONFIGS[entityType];
   await api.delete(`${config.endpoint}/${id}`);
@@ -145,18 +155,20 @@ export const deleteEntity = async (
 export const getEntityBalance = async (
   id: number,
   entityType: EntityType,
-  { signal }: { signal?: AbortSignal } = {}
-): any =>  {
+  { signal }: { signal?: AbortSignal } = {},
+): any => {
   try {
-    const params = entityType === 'Customer' ? { customer_id: id } : { vendor_id: id };
-    const response = await api.get('/reports/outstanding-ledger', {
+    const params =
+      entityType === "Customer" ? { customer_id: id } : { vendor_id: id };
+    const response = await api.get("/reports/outstanding-ledger", {
       params,
-      signal
+      signal,
     });
     const balances = response.data?.outstanding_balances || [];
-    return balances.find((balance: any) => 
-      (entityType === 'Customer' && balance.customer_id === id) ||
-      (entityType === 'Vendor' && balance.vendor_id === id)
+    return balances.find(
+      (balance: any) =>
+        (entityType === "Customer" && balance.customer_id === id) ||
+        (entityType === "Vendor" && balance.vendor_id === id),
     );
   } catch (error) {
     console.error(`Error fetching balance for ${entityType} ${id}:`, error);
@@ -164,7 +176,9 @@ export const getEntityBalance = async (
   }
 };
 // Legacy compatibility functions (to maintain existing code)
-export const getVendors = ({ signal }: QueryFunctionContext = { queryKey: [] }) => 
-  getEntitiesByType('Vendor', { signal });
-export const getCustomers = ({ signal }: QueryFunctionContext = { queryKey: [] }) => 
-  getEntitiesByType('Customer', { signal });
+export const getVendors = (
+  { signal }: QueryFunctionContext = { queryKey: [] },
+) => getEntitiesByType("Vendor", { signal });
+export const getCustomers = (
+  { signal }: QueryFunctionContext = { queryKey: [] },
+) => getEntitiesByType("Customer", { signal });

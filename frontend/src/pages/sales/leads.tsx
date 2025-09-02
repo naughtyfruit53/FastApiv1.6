@@ -1,5 +1,5 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -13,7 +13,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Button,
   IconButton,
   Chip,
@@ -24,19 +23,18 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
-} from '@mui/material';
+  MenuItem,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
   Visibility as ViewIcon,
-  PersonAdd as PersonAddIcon,
   Phone as PhoneIcon,
-  Email as EmailIcon
-} from '@mui/icons-material';
-import AddLeadModal from '../../components/AddLeadModal';
-import { crmService } from '../../services/crmService';
+  Email as EmailIcon,
+} from "@mui/icons-material";
+import AddLeadModal from "../../components/AddLeadModal";
+import { crmService } from "../../services/crmService";
 interface Lead {
   id: number;
   first_name: string;
@@ -55,8 +53,8 @@ interface Lead {
 const LeadManagement: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [openDialog, setOpenDialog] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +66,8 @@ const LeadManagement: React.FC = () => {
       const leadsData = await crmService.getLeads();
       setLeads(leadsData);
     } catch (err) {
-      console.error('Error fetching leads:', err);
-      setError('Failed to load leads. Please try again.');
+      console.error("Error fetching leads:", err);
+      setError("Failed to load leads. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +82,7 @@ const LeadManagement: React.FC = () => {
       await fetchLeads(); // Refresh the list
       setOpenDialog(false);
     } catch (err) {
-      console.error('Error adding lead:', err);
+      console.error("Error adding lead:", err);
       throw err; // Let the modal handle the error
     } finally {
       setAddLoading(false);
@@ -92,29 +90,48 @@ const LeadManagement: React.FC = () => {
   };
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'new': return 'primary';
-      case 'contacted': return 'info';
-      case 'qualified': return 'warning';
-      case 'proposal_sent': return 'secondary';
-      case 'negotiation': return 'error';
-      case 'converted': return 'success';
-      case 'lost': return 'default';
-      case 'disqualified': return 'error';
-      default: return 'default';
+      case "new":
+        return "primary";
+      case "contacted":
+        return "info";
+      case "qualified":
+        return "warning";
+      case "proposal_sent":
+        return "secondary";
+      case "negotiation":
+        return "error";
+      case "converted":
+        return "success";
+      case "lost":
+        return "default";
+      case "disqualified":
+        return "error";
+      default:
+        return "default";
     }
   };
-  const filteredLeads = leads.filter(lead => {
-    const fullName = `${lead.first_name || ''} ${lead.last_name || ''}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
-                         (lead.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (lead.company || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
+  const filteredLeads = leads.filter((lead) => {
+    const fullName =
+      `${lead.first_name || ""} ${lead.last_name || ""}`.toLowerCase();
+    const matchesSearch =
+      fullName.includes(searchTerm.toLowerCase()) ||
+      (lead.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.company || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4" component="h1">
             Lead Management
           </Typography>
@@ -134,9 +151,7 @@ const LeadManagement: React.FC = () => {
                 <Typography variant="h6" color="primary">
                   Total Leads
                 </Typography>
-                <Typography variant="h4">
-                  {leads.length}
-                </Typography>
+                <Typography variant="h4">{leads.length}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -147,7 +162,7 @@ const LeadManagement: React.FC = () => {
                   Qualified
                 </Typography>
                 <Typography variant="h4" color="success.main">
-                  {leads.filter(l => l.status === 'qualified').length}
+                  {leads.filter((l) => l.status === "qualified").length}
                 </Typography>
               </CardContent>
             </Card>
@@ -159,7 +174,7 @@ const LeadManagement: React.FC = () => {
                   In Progress
                 </Typography>
                 <Typography variant="h4" color="info.main">
-                  {leads.filter(l => l.status === 'contacted').length}
+                  {leads.filter((l) => l.status === "contacted").length}
                 </Typography>
               </CardContent>
             </Card>
@@ -171,14 +186,19 @@ const LeadManagement: React.FC = () => {
                   Avg. Score
                 </Typography>
                 <Typography variant="h4" color="warning.main">
-                  {leads.length > 0 ? Math.round(leads.reduce((sum, l) => sum + l.score, 0) / leads.length) : 0}
+                  {leads.length > 0
+                    ? Math.round(
+                        leads.reduce((sum, l) => sum + l.score, 0) /
+                          leads.length,
+                      )
+                    : 0}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
         {/* Filters */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
           <TextField
             placeholder="Search leads..."
             variant="outlined"
@@ -221,7 +241,7 @@ const LeadManagement: React.FC = () => {
         )}
         {/* Loading Display */}
         {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
             <CircularProgress />
           </Box>
         )}
@@ -247,7 +267,7 @@ const LeadManagement: React.FC = () => {
                     <TableRow key={lead.id}>
                       <TableCell>
                         <Typography variant="subtitle2">
-                          {`${lead.first_name || ''} ${lead.last_name || ''}`}
+                          {`${lead.first_name || ""} ${lead.last_name || ""}`}
                         </Typography>
                         {lead.job_title && (
                           <Typography variant="caption" color="text.secondary">
@@ -257,34 +277,61 @@ const LeadManagement: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                            <EmailIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                            <Typography variant="body2">{lead.email}</Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              mb: 0.5,
+                            }}
+                          >
+                            <EmailIcon
+                              sx={{
+                                fontSize: 16,
+                                mr: 0.5,
+                                color: "text.secondary",
+                              }}
+                            />
+                            <Typography variant="body2">
+                              {lead.email}
+                            </Typography>
                           </Box>
                           {lead.phone && (
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <PhoneIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                              <Typography variant="body2">{lead.phone}</Typography>
+                            <Box sx={{ display: "flex", alignItems: "center" }}>
+                              <PhoneIcon
+                                sx={{
+                                  fontSize: 16,
+                                  mr: 0.5,
+                                  color: "text.secondary",
+                                }}
+                              />
+                              <Typography variant="body2">
+                                {lead.phone}
+                              </Typography>
                             </Box>
                           )}
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {lead.company || '-'}
+                          {lead.company || "-"}
                         </Typography>
                       </TableCell>
                       <TableCell>{lead.source}</TableCell>
                       <TableCell>
-                        <Chip 
-                          label={lead.status.replace('_', ' ').toUpperCase()} 
+                        <Chip
+                          label={lead.status.replace("_", " ").toUpperCase()}
                           color={getStatusColor(lead.status) as any}
                           size="small"
-                          sx={{ textTransform: 'capitalize' }}
+                          sx={{ textTransform: "capitalize" }}
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color={lead.score >= 80 ? 'success.main' : 'text.primary'}>
+                        <Typography
+                          variant="body2"
+                          color={
+                            lead.score >= 80 ? "success.main" : "text.primary"
+                          }
+                        >
                           {lead.score}%
                         </Typography>
                       </TableCell>
@@ -306,8 +353,15 @@ const LeadManagement: React.FC = () => {
                   {filteredLeads.length === 0 && !loading && (
                     <TableRow>
                       <TableCell colSpan={8} align="center">
-                        <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
-                          No leads found. {leads.length === 0 ? 'Start by adding your first lead!' : 'Try adjusting your search filters.'}
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ py: 4 }}
+                        >
+                          No leads found.{" "}
+                          {leads.length === 0
+                            ? "Start by adding your first lead!"
+                            : "Try adjusting your search filters."}
                         </Typography>
                       </TableCell>
                     </TableRow>

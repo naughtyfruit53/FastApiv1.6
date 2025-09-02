@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -14,10 +14,10 @@ import {
   CircularProgress,
   Stepper,
   Step,
-  StepLabel
-} from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { passwordService } from '../services/authService';
+  StepLabel,
+} from "@mui/material";
+import { useForm } from "react-hook-form";
+import { passwordService } from "../services/authService";
 
 interface ForgotPasswordModalProps {
   open: boolean;
@@ -38,18 +38,18 @@ interface ResetPasswordFormData {
 const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   open,
   onClose,
-  onSuccess
+  onSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const [email, setEmail] = useState('');
-  
+  const [email, setEmail] = useState("");
+
   const {
     register: registerForgot,
     handleSubmit: handleSubmitForgot,
     formState: { errors: errorsForgot },
-    reset: resetForgot
+    reset: resetForgot,
   } = useForm<ForgotPasswordFormData>();
 
   const {
@@ -57,17 +57,17 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     handleSubmit: handleSubmitReset,
     formState: { errors: errorsReset },
     reset: resetReset,
-    watch
+    watch,
   } = useForm<ResetPasswordFormData>();
 
-  const newPassword = watch('newPassword');
+  const newPassword = watch("newPassword");
 
   const handleClose = () => {
     resetForgot();
     resetReset();
     setError(null);
     setStep(0);
-    setEmail('');
+    setEmail("");
     onClose();
   };
 
@@ -80,7 +80,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setEmail(data.email);
       setStep(1);
     } catch (err: any) {
-      setError(err.message || 'Failed to send password reset email');
+      setError(err.message || "Failed to send password reset email");
     } finally {
       setLoading(false);
     }
@@ -100,13 +100,13 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         handleClose();
       }, 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password');
+      setError(err.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }
   };
 
-  const steps = ['Request Reset', 'Verify & Reset', 'Complete'];
+  const steps = ["Request Reset", "Verify & Reset", "Complete"];
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -130,7 +130,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           {step === 0 && (
             <>
               <Typography variant="body2" sx={{ mb: 2 }}>
-                Enter your email address and we&apos;ll send you an OTP to reset your password.
+                Enter your email address and we&apos;ll send you an OTP to reset
+                your password.
               </Typography>
               <form onSubmit={handleSubmitForgot(onSubmitForgotPassword)}>
                 <TextField
@@ -138,12 +139,12 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   label="Email Address"
                   type="email"
                   margin="normal"
-                  {...registerForgot('email', {
-                    required: 'Email is required',
+                  {...registerForgot("email", {
+                    required: "Email is required",
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address'
-                    }
+                      message: "Invalid email address",
+                    },
                   })}
                   error={!!errorsForgot.email}
                   helperText={errorsForgot.email?.message}
@@ -156,20 +157,20 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           {step === 1 && (
             <>
               <Alert severity="info" sx={{ mb: 2 }}>
-                An OTP has been sent to <strong>{email}</strong>. 
-                Please check your email and enter the OTP below along with your new password.
+                An OTP has been sent to <strong>{email}</strong>. Please check
+                your email and enter the OTP below along with your new password.
               </Alert>
               <form onSubmit={handleSubmitReset(onSubmitResetPassword)}>
                 <TextField
                   fullWidth
                   label="OTP Code"
                   margin="normal"
-                  {...registerReset('otp', {
-                    required: 'OTP is required',
+                  {...registerReset("otp", {
+                    required: "OTP is required",
                     pattern: {
                       value: /^\d{6}$/,
-                      message: 'OTP must be 6 digits'
-                    }
+                      message: "OTP must be 6 digits",
+                    },
                   })}
                   error={!!errorsReset.otp}
                   helperText={errorsReset.otp?.message}
@@ -181,12 +182,12 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   label="New Password"
                   type="password"
                   margin="normal"
-                  {...registerReset('newPassword', {
-                    required: 'New password is required',
+                  {...registerReset("newPassword", {
+                    required: "New password is required",
                     minLength: {
                       value: 8,
-                      message: 'Password must be at least 8 characters long'
-                    }
+                      message: "Password must be at least 8 characters long",
+                    },
                   })}
                   error={!!errorsReset.newPassword}
                   helperText={errorsReset.newPassword?.message}
@@ -198,13 +199,13 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   label="Confirm New Password"
                   type="password"
                   margin="normal"
-                  {...registerReset('confirmPassword', {
-                    required: 'Please confirm your new password',
+                  {...registerReset("confirmPassword", {
+                    required: "Please confirm your new password",
                     validate: (value) => {
                       if (value !== newPassword) {
-                        return 'Passwords do not match';
+                        return "Passwords do not match";
                       }
-                    }
+                    },
                   })}
                   error={!!errorsReset.confirmPassword}
                   helperText={errorsReset.confirmPassword?.message}
@@ -220,7 +221,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 Password reset successfully!
               </Typography>
               <Typography variant="body2">
-                You can now log in with your new password. This window will close automatically.
+                You can now log in with your new password. This window will
+                close automatically.
               </Typography>
             </Alert>
           )}
@@ -244,10 +246,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         )}
         {step === 1 && (
           <>
-            <Button
-              onClick={() => setStep(0)}
-              disabled={loading}
-            >
+            <Button onClick={() => setStep(0)} disabled={loading}>
               Back
             </Button>
             <Button

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * Migration Management Page
- * 
+ *
  * Main page for managing data migrations and integrations.
  * Only accessible to super admins.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -30,27 +30,22 @@ import {
   DialogContent,
   DialogActions,
   Tooltip,
-  LinearProgress
-} from '@mui/material';
-import {
-  Add,
-  CloudUpload,
-  Timeline,
-  Settings,
-  Refresh,
-  Delete,
-  Edit,
-  PlayArrow,
-  Stop,
-  Undo,
-  History,
-  Integration
-} from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
-import { useRouter } from 'next/router';
-import MigrationWizard from '../../components/MigrationWizard';
-import IntegrationDashboard from '../../components/IntegrationDashboard';
-import axios from 'axios';
+  LinearProgress,
+} from "@mui/material";
+import Add from "@mui/icons-material/Add";
+import CloudUpload from "@mui/icons-material/CloudUpload";
+import Timeline from "@mui/icons-material/Timeline";
+import Refresh from "@mui/icons-material/Refresh";
+import Delete from "@mui/icons-material/Delete";
+import Edit from "@mui/icons-material/Edit";
+import PlayArrow from "@mui/icons-material/PlayArrow";
+import Undo from "@mui/icons-material/Undo";
+import IntegrationInstructions from "@mui/icons-material/IntegrationInstructions"; // Using as Integration
+import { useAuth } from "../../context/AuthContext";
+import { useRouter } from "next/router";
+import MigrationWizard from "../../components/MigrationWizard";
+import IntegrationDashboard from "../../components/IntegrationDashboard";
+import axios from "axios";
 interface MigrationJob {
   id: number;
   job_name: string;
@@ -79,20 +74,20 @@ const MigrationManagement: React.FC = () => {
   const isSuperAdmin = user?.is_super_admin;
   useEffect(() => {
     if (!isSuperAdmin) {
-      router.push('/settings'); // Redirect if not super admin
+      router.push("/settings"); // Redirect if not super admin
       return;
     }
-// loadMigrationJobs is defined later in this file
+    // loadMigrationJobs is defined later in this file
     loadMigrationJobs();
   }, [isSuperAdmin, router]);
   const loadMigrationJobs = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/migration/jobs');
+      const response = await axios.get("/api/v1/migration/jobs");
       setMigrationJobs(response.data);
-    } catch (err) {
-      console.error(msg, err);
-      setError('Failed to load migration jobs');
+    } catch (error: any) {
+      console.error("Error loading migration jobs:", error);
+      setError("Failed to load migration jobs");
     } finally {
       setLoading(false);
     }
@@ -103,43 +98,43 @@ const MigrationManagement: React.FC = () => {
       await loadMigrationJobs();
       setDeleteDialogOpen(false);
       setJobToDelete(null);
-    } catch (err) {
-      console.error(msg, err);
-      setError('Failed to delete migration job');
+    } catch (error: any) {
+      console.error("Error deleting migration job:", error);
+      setError("Failed to delete migration job");
     }
   };
   const executeJob = async (jobId: number) => {
     try {
       await axios.post(`/api/v1/migration/jobs/${jobId}/execute`);
       await loadMigrationJobs();
-    } catch (err) {
-      console.error(msg, err);
-      setError('Failed to execute migration job');
+    } catch (error: any) {
+      console.error("Error executing migration job:", error);
+      setError("Failed to execute migration job");
     }
   };
   const rollbackJob = async (jobId: number) => {
     try {
       await axios.post(`/api/v1/migration/jobs/${jobId}/rollback`);
       await loadMigrationJobs();
-    } catch (err) {
-      console.error(msg, err);
-      setError('Failed to rollback migration job');
+    } catch (error: any) {
+      console.error("Error rolling back migration job:", error);
+      setError("Failed to rollback migration job");
     }
   };
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
-        return 'success';
-      case 'running':
-        return 'info';
-      case 'failed':
-        return 'error';
-      case 'draft':
-        return 'default';
-      case 'approved':
-        return 'primary';
+      case "completed":
+        return "success";
+      case "running":
+        return "info";
+      case "failed":
+        return "error";
+      case "draft":
+        return "default";
+      case "approved":
+        return "primary";
       default:
-        return 'default';
+        return "default";
     }
   };
   const openWizard = (jobId?: number) => {
@@ -155,18 +150,26 @@ const MigrationManagement: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          Access denied. Only super administrators can access migration management.
+          Access denied. Only super administrators can access migration
+          management.
         </Alert>
       </Container>
     );
   }
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+        }}
+      >
         <Typography variant="h4" component="h1">
           Migration & Integration Management
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="outlined"
             startIcon={<Timeline />}
@@ -206,7 +209,10 @@ const MigrationManagement: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" color="success.main">
-                {migrationJobs.filter(job => job.status === 'completed').length}
+                {
+                  migrationJobs.filter((job) => job.status === "completed")
+                    .length
+                }
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Completed
@@ -218,7 +224,7 @@ const MigrationManagement: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" color="info.main">
-                {migrationJobs.filter(job => job.status === 'running').length}
+                {migrationJobs.filter((job) => job.status === "running").length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Running
@@ -230,7 +236,7 @@ const MigrationManagement: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" color="error.main">
-                {migrationJobs.filter(job => job.status === 'failed').length}
+                {migrationJobs.filter((job) => job.status === "failed").length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Failed
@@ -241,7 +247,14 @@ const MigrationManagement: React.FC = () => {
       </Grid>
       {/* Migration Jobs Table */}
       <Paper sx={{ mb: 4 }}>
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box
+          sx={{
+            p: 2,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography variant="h6">Migration Jobs</Typography>
           <Button
             startIcon={<Refresh />}
@@ -252,7 +265,7 @@ const MigrationManagement: React.FC = () => {
           </Button>
         </Box>
         {loading ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Box sx={{ p: 4, textAlign: "center" }}>
             <CircularProgress />
           </Box>
         ) : (
@@ -274,7 +287,9 @@ const MigrationManagement: React.FC = () => {
                   <TableRow key={job.id}>
                     <TableCell>
                       <Box>
-                        <Typography variant="subtitle2">{job.job_name}</Typography>
+                        <Typography variant="subtitle2">
+                          {job.job_name}
+                        </Typography>
                         {job.description && (
                           <Typography variant="caption" color="text.secondary">
                             {job.description}
@@ -283,18 +298,22 @@ const MigrationManagement: React.FC = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip label={job.source_type} size="small" variant="outlined" />
+                      <Chip
+                        label={job.source_type}
+                        size="small"
+                        variant="outlined"
+                      />
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                         {job.data_types.map((type) => (
                           <Chip key={type} label={type} size="small" />
                         ))}
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={job.status} 
+                      <Chip
+                        label={job.status}
                         color={getStatusColor(job.status) as any}
                         size="small"
                       />
@@ -312,7 +331,7 @@ const MigrationManagement: React.FC = () => {
                           </Typography>
                         </Box>
                       ) : (
-                        '-'
+                        "-"
                       )}
                     </TableCell>
                     <TableCell>
@@ -321,7 +340,7 @@ const MigrationManagement: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Box sx={{ display: "flex", gap: 1 }}>
                         <Tooltip title="Open Wizard">
                           <IconButton
                             size="small"
@@ -330,7 +349,7 @@ const MigrationManagement: React.FC = () => {
                             <Edit />
                           </IconButton>
                         </Tooltip>
-                        {job.status === 'approved' && (
+                        {job.status === "approved" && (
                           <Tooltip title="Execute Migration">
                             <IconButton
                               size="small"
@@ -341,7 +360,7 @@ const MigrationManagement: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         )}
-                        {job.status === 'completed' && (
+                        {job.status === "completed" && (
                           <Tooltip title="Rollback Migration">
                             <IconButton
                               size="small"
@@ -370,9 +389,10 @@ const MigrationManagement: React.FC = () => {
                 ))}
                 {migrationJobs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                    <TableCell colSpan={7} sx={{ textAlign: "center", py: 4 }}>
                       <Typography color="text.secondary">
-                        No migration jobs found. Click "New Migration" to create one.
+                        No migration jobs found. Click "New Migration" to create
+                        one.
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -414,7 +434,7 @@ const MigrationManagement: React.FC = () => {
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Integration />}
+              startIcon={<IntegrationInstructions />}
               onClick={() => setDashboardOpen(true)}
               sx={{ py: 2 }}
             >
@@ -442,14 +462,14 @@ const MigrationManagement: React.FC = () => {
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the migration job "{jobToDelete?.job_name}"? 
-            This action cannot be undone.
+            Are you sure you want to delete the migration job "
+            {jobToDelete?.job_name}"? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            color="error" 
+          <Button
+            color="error"
             onClick={() => jobToDelete && deleteJob(jobToDelete)}
           >
             Delete

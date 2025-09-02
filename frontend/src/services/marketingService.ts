@@ -1,6 +1,6 @@
 // frontend/src/services/marketingService.ts
 
-import api from '../lib/api';
+import api from "../lib/api";
 
 export interface Campaign {
   id: number;
@@ -56,7 +56,7 @@ export interface MarketingAnalytics {
 }
 
 class MarketingService {
-  private endpoint = '/marketing';
+  private endpoint = "/marketing";
 
   /**
    * Get marketing analytics dashboard data
@@ -66,7 +66,7 @@ class MarketingService {
       const response = await api.get(`${this.endpoint}/analytics`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching marketing analytics:', error);
+      console.error("Error fetching marketing analytics:", error);
       throw error;
     }
   }
@@ -74,14 +74,17 @@ class MarketingService {
   /**
    * Get all campaigns
    */
-  async getCampaigns(skip: number = 0, limit: number = 100): Promise<Campaign[]> {
+  async getCampaigns(
+    skip: number = 0,
+    limit: number = 100,
+  ): Promise<Campaign[]> {
     try {
       const response = await api.get(`${this.endpoint}/campaigns`, {
-        params: { skip, limit }
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching campaigns:', error);
+      console.error("Error fetching campaigns:", error);
       throw error;
     }
   }
@@ -104,10 +107,13 @@ class MarketingService {
    */
   async createCampaign(campaignData: any): Promise<Campaign> {
     try {
-      const response = await api.post(`${this.endpoint}/campaigns`, campaignData);
+      const response = await api.post(
+        `${this.endpoint}/campaigns`,
+        campaignData,
+      );
       return response.data;
     } catch (error) {
-      console.error('Error creating campaign:', error);
+      console.error("Error creating campaign:", error);
       throw error;
     }
   }
@@ -117,7 +123,10 @@ class MarketingService {
    */
   async updateCampaign(id: number, campaignData: any): Promise<Campaign> {
     try {
-      const response = await api.put(`${this.endpoint}/campaigns/${id}`, campaignData);
+      const response = await api.put(
+        `${this.endpoint}/campaigns/${id}`,
+        campaignData,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error updating campaign ${id}:`, error);
@@ -140,14 +149,17 @@ class MarketingService {
   /**
    * Get all promotions
    */
-  async getPromotions(skip: number = 0, limit: number = 100): Promise<Promotion[]> {
+  async getPromotions(
+    skip: number = 0,
+    limit: number = 100,
+  ): Promise<Promotion[]> {
     try {
       const response = await api.get(`${this.endpoint}/promotions`, {
-        params: { skip, limit }
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching promotions:', error);
+      console.error("Error fetching promotions:", error);
       throw error;
     }
   }
@@ -170,10 +182,13 @@ class MarketingService {
    */
   async createPromotion(promotionData: any): Promise<Promotion> {
     try {
-      const response = await api.post(`${this.endpoint}/promotions`, promotionData);
+      const response = await api.post(
+        `${this.endpoint}/promotions`,
+        promotionData,
+      );
       return response.data;
     } catch (error) {
-      console.error('Error creating promotion:', error);
+      console.error("Error creating promotion:", error);
       throw error;
     }
   }
@@ -183,7 +198,10 @@ class MarketingService {
    */
   async updatePromotion(id: number, promotionData: any): Promise<Promotion> {
     try {
-      const response = await api.put(`${this.endpoint}/promotions/${id}`, promotionData);
+      const response = await api.put(
+        `${this.endpoint}/promotions/${id}`,
+        promotionData,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error updating promotion ${id}:`, error);
@@ -208,7 +226,9 @@ class MarketingService {
    */
   async getCampaignPerformance(id: number): Promise<any> {
     try {
-      const response = await api.get(`${this.endpoint}/campaigns/${id}/performance`);
+      const response = await api.get(
+        `${this.endpoint}/campaigns/${id}/performance`,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error fetching campaign performance for ${id}:`, error);
@@ -221,7 +241,9 @@ class MarketingService {
    */
   async getPromotionAnalytics(id: number): Promise<any> {
     try {
-      const response = await api.get(`${this.endpoint}/promotions/${id}/analytics`);
+      const response = await api.get(
+        `${this.endpoint}/promotions/${id}/analytics`,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error fetching promotion analytics for ${id}:`, error);

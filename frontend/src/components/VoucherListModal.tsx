@@ -1,6 +1,6 @@
 // frontend/src/components/VoucherListModal.tsx
 // Reusable modal component for displaying voucher lists with clickable functionality
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Modal,
   Box,
@@ -17,9 +17,9 @@ import {
   Grid,
   Chip,
   IconButton,
-} from '@mui/material';
-import { Close, Search } from '@mui/icons-material';
-import VoucherContextMenu from './VoucherContextMenu';
+} from "@mui/material";
+import { Close, Search } from "@mui/icons-material";
+import VoucherContextMenu from "./VoucherContextMenu";
 interface VoucherListModalProps {
   open: boolean;
   onClose: () => void;
@@ -46,18 +46,27 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
   customerList = [],
   vendorList = [],
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; voucher: any } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [contextMenu, setContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    voucher: any;
+  } | null>(null);
   // Filter vouchers based on search criteria
   const filteredVouchers = vouchers.filter((voucher) => {
-    const matchesSearch = searchTerm === '' || 
-      voucher.voucher_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      searchTerm === "" ||
+      voucher.voucher_number
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       voucher.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       voucher.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFromDate = fromDate === '' || new Date(voucher.date) >= new Date(fromDate);
-    const matchesToDate = toDate === '' || new Date(voucher.date) <= new Date(toDate);
+    const matchesFromDate =
+      fromDate === "" || new Date(voucher.date) >= new Date(fromDate);
+    const matchesToDate =
+      toDate === "" || new Date(voucher.date) <= new Date(toDate);
     return matchesSearch && matchesFromDate && matchesToDate;
   });
   const handleContextMenu = (event: React.MouseEvent, voucher: any) => {
@@ -73,46 +82,60 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
   };
   const handleVoucherClick = (voucher: any, event: React.MouseEvent) => {
     // Don't trigger if right-click (context menu)
-    if (event.button === 2) {return;}
+    if (event.button === 2) {
+      return;
+    }
     onVoucherClick(voucher);
     onClose(); // Close modal after selection
   };
   const getEntityName = (voucher: any) => {
     if (voucher.customer_id && customerList.length > 0) {
-      return customerList.find((c: any) => c.id === voucher.customer_id)?.name || 'N/A';
+      return (
+        customerList.find((c: any) => c.id === voucher.customer_id)?.name ||
+        "N/A"
+      );
     }
     if (voucher.vendor_id && vendorList.length > 0) {
-      return vendorList.find((v: any) => v.id === voucher.vendor_id)?.name || 'N/A';
+      return (
+        vendorList.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"
+      );
     }
-    return 'N/A';
+    return "N/A";
   };
   const formatDate = (dateString: string) => {
-    if (!dateString) {return 'N/A';}
+    if (!dateString) {
+      return "N/A";
+    }
     return new Date(dateString).toLocaleDateString();
   };
   const modalStyle = {
-    position: 'absolute' as const,
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: '90%',
+    position: "absolute" as const,
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: "90%",
     maxWidth: 1000,
-    bgcolor: 'background.paper',
+    bgcolor: "background.paper",
     boxShadow: 24,
     p: 4,
     borderRadius: 2,
-    maxHeight: '90vh',
-    overflow: 'auto',
+    maxHeight: "90vh",
+    overflow: "auto",
   };
   return (
     <>
       <Modal open={open} onClose={onClose}>
         <Box sx={modalStyle}>
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              All {voucherType}
-            </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6">All {voucherType}</Typography>
             <IconButton onClick={onClose}>
               <Close />
             </IconButton>
@@ -127,7 +150,9 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                 fullWidth
                 placeholder="Voucher number, reference, notes..."
                 InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
+                  startAdornment: (
+                    <Search sx={{ mr: 1, color: "text.secondary" }} />
+                  ),
                 }}
               />
             </Grid>
@@ -155,12 +180,12 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
               <Button
                 variant="outlined"
                 onClick={() => {
-                  setSearchTerm('');
-                  setFromDate('');
-                  setToDate('');
+                  setSearchTerm("");
+                  setFromDate("");
+                  setToDate("");
                 }}
                 fullWidth
-                sx={{ height: '56px' }}
+                sx={{ height: "56px" }}
               >
                 Clear
               </Button>
@@ -179,10 +204,30 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Voucher No.</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Date</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Customer</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Amount</TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 15, fontWeight: "bold" }}
+                  >
+                    Voucher No.
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 15, fontWeight: "bold" }}
+                  >
+                    Date
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 15, fontWeight: "bold" }}
+                  >
+                    Customer
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 15, fontWeight: "bold" }}
+                  >
+                    Amount
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -193,9 +238,9 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                     onClick={(e) => handleVoucherClick(voucher, e)}
                     onContextMenu={(e) => handleContextMenu(e, voucher)}
                     sx={{
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: 'action.hover',
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor: "action.hover",
                       },
                     }}
                   >
@@ -204,10 +249,14 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                         {voucher.voucher_number}
                       </Typography>
                     </TableCell>
-                    <TableCell align="center">{formatDate(voucher.date)}</TableCell>
-                    <TableCell align="center">{getEntityName(voucher)}</TableCell>
                     <TableCell align="center">
-                      ₹{voucher.total_amount?.toLocaleString() || '0'}
+                      {formatDate(voucher.date)}
+                    </TableCell>
+                    <TableCell align="center">
+                      {getEntityName(voucher)}
+                    </TableCell>
+                    <TableCell align="center">
+                      ₹{voucher.total_amount?.toLocaleString() || "0"}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -233,7 +282,9 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
           onView={onView || (() => {})}
           onEdit={onEdit || (() => {})}
           onDelete={onDelete || (() => {})}
-          onPrint={onGeneratePDF ? () => onGeneratePDF(contextMenu.voucher) : undefined}
+          onPrint={
+            onGeneratePDF ? () => onGeneratePDF(contextMenu.voucher) : undefined
+          }
           open={true}
           onClose={handleCloseContextMenu}
           anchorReference="anchorPosition"

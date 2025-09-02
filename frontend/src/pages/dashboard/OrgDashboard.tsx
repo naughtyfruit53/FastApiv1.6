@@ -1,17 +1,17 @@
 // frontend/src/pages/dashboard/OrgDashboard.tsx
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Grid, Card, CardContent, Chip, IconButton, Divider, Alert } from '@mui/material';
+import React, { useState, useEffect } from "react";
+import { Box, Typography, Chip, Alert } from "@mui/material";
 import {
   Business,
   People,
   Inventory,
   AttachMoney,
   TrendingUp,
-} from '@mui/icons-material';
-import adminService from '../../services/adminService';
-import MetricCard from '../../components/MetricCard';
-import DashboardLayout from '../../components/DashboardLayout';
-import ModernLoading from '../../components/ModernLoading';
+} from "@mui/icons-material";
+import adminService from "../../services/adminService";
+import MetricCard from "../../components/MetricCard";
+import DashboardLayout from "../../components/DashboardLayout";
+import ModernLoading from "../../components/ModernLoading";
 interface OrgStatistics {
   total_products: number;
   total_customers: number;
@@ -35,37 +35,33 @@ const OrgDashboard: React.FC = () => {
       const data = await adminService.getOrgStatistics();
       setStatistics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
   if (loading) {
     return (
-      <DashboardLayout 
-        title="Organization Dashboard"
-      >
-        <ModernLoading 
-          type="skeleton" 
-          skeletonType="dashboard" 
+      <DashboardLayout title="Organization Dashboard">
+        <ModernLoading
+          type="skeleton"
+          skeletonType="dashboard"
           count={6}
-          message="Loading dashboard metrics..." 
+          message="Loading dashboard metrics..."
         />
       </DashboardLayout>
     );
   }
   if (error) {
     return (
-      <DashboardLayout 
-        title="Organization Dashboard"
-      >
-        <Alert 
+      <DashboardLayout title="Organization Dashboard">
+        <Alert
           severity="error"
-          sx={{ 
-            borderRadius: 'var(--radius-lg)',
-            '& .MuiAlert-message': {
-              fontSize: 'var(--font-size-sm)'
-            }
+          sx={{
+            borderRadius: "var(--radius-lg)",
+            "& .MuiAlert-message": {
+              fontSize: "var(--font-size-sm)",
+            },
           }}
         >
           Error loading dashboard: {error}
@@ -75,16 +71,14 @@ const OrgDashboard: React.FC = () => {
   }
   if (!statistics) {
     return (
-      <DashboardLayout 
-        title="Organization Dashboard"
-      >
-        <Alert 
+      <DashboardLayout title="Organization Dashboard">
+        <Alert
           severity="info"
-          sx={{ 
-            borderRadius: 'var(--radius-lg)',
-            '& .MuiAlert-message': {
-              fontSize: 'var(--font-size-sm)'
-            }
+          sx={{
+            borderRadius: "var(--radius-lg)",
+            "& .MuiAlert-message": {
+              fontSize: "var(--font-size-sm)",
+            },
           }}
         >
           No statistics available
@@ -94,82 +88,80 @@ const OrgDashboard: React.FC = () => {
   }
   const statsCards = [
     {
-      title: 'Total Products',
+      title: "Total Products",
       value: statistics.total_products ?? 0,
       icon: <Inventory />,
-      color: 'primary' as const,
-      description: 'Products in inventory',
+      color: "primary" as const,
+      description: "Products in inventory",
       trend: {
         value: 12,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Total Customers',
+      title: "Total Customers",
       value: statistics.total_customers ?? 0,
       icon: <People />,
-      color: 'success' as const,
-      description: 'Active customers',
+      color: "success" as const,
+      description: "Active customers",
       trend: {
         value: 8,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Total Vendors',
+      title: "Total Vendors",
       value: statistics.total_vendors ?? 0,
       icon: <Business />,
-      color: 'info' as const,
-      description: 'Registered vendors',
+      color: "info" as const,
+      description: "Registered vendors",
       trend: {
         value: 3,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Active Users',
+      title: "Active Users",
       value: statistics.active_users ?? 0,
       icon: <People />,
-      color: 'warning' as const,
-      description: 'Users in organization',
+      color: "warning" as const,
+      description: "Users in organization",
       trend: {
         value: 5,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Monthly Sales',
+      title: "Monthly Sales",
       value: `$${(statistics.monthly_sales ?? 0).toLocaleString()}`,
       icon: <AttachMoney />,
-      color: 'success' as const,
-      description: 'Sales in last 30 days',
+      color: "success" as const,
+      description: "Sales in last 30 days",
       trend: {
         value: 15,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Inventory Value',
+      title: "Inventory Value",
       value: `$${(statistics.inventory_value ?? 0).toLocaleString()}`,
       icon: <TrendingUp />,
-      color: 'primary' as const,
-      description: 'Current stock value',
+      color: "primary" as const,
+      description: "Current stock value",
       trend: {
         value: 7,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
-    }
+        period: "vs last month",
+        direction: "up" as const,
+      },
+    },
   ];
   return (
-    <DashboardLayout 
-      title="Organization Dashboard"
-    >
+    <DashboardLayout title="Organization Dashboard">
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
         {statsCards.map((stat, index) => (
           <MetricCard
@@ -184,28 +176,25 @@ const OrgDashboard: React.FC = () => {
         ))}
       </Box>
       <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
-        <Paper 
-          className="modern-card"
-          sx={{ p: 3 }}
-        >
+        <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             Subscription Plan
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Chip 
-              label={statistics.plan_type?.toUpperCase() ?? 'N/A'} 
-              color={statistics.plan_type === 'trial' ? 'warning' : 'primary'}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+            <Chip
+              label={statistics.plan_type?.toUpperCase() ?? "N/A"}
+              color={statistics.plan_type === "trial" ? "warning" : "primary"}
               variant="filled"
-              sx={{ 
+              sx={{
                 fontWeight: 600,
-                '&.MuiChip-colorPrimary': {
-                  backgroundColor: 'var(--primary-600)',
-                  color: 'white'
+                "&.MuiChip-colorPrimary": {
+                  backgroundColor: "var(--primary-600)",
+                  color: "white",
                 },
-                '&.MuiChip-colorWarning': {
-                  backgroundColor: 'var(--warning-500)',
-                  color: 'white'
-                }
+                "&.MuiChip-colorWarning": {
+                  backgroundColor: "var(--warning-500)",
+                  color: "white",
+                },
               }}
             />
           </Box>
@@ -213,10 +202,7 @@ const OrgDashboard: React.FC = () => {
             Storage Used: {statistics.storage_used_gb ?? 0} GB
           </Typography>
         </Paper>
-        <Paper 
-          className="modern-card"
-          sx={{ p: 3 }}
-        >
+        <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             Recent Activity
           </Typography>
@@ -225,21 +211,23 @@ const OrgDashboard: React.FC = () => {
           </Typography>
         </Paper>
       </Box>
-      <Paper 
-        className="modern-card"
-        sx={{ p: 4 }}
-      >
-        <Typography variant="h6" className="modern-card-title" gutterBottom sx={{ mb: 3 }}>
+      <Paper className="modern-card" sx={{ p: 4 }}>
+        <Typography
+          variant="h6"
+          className="modern-card-title"
+          gutterBottom
+          sx={{ mb: 3 }}
+        >
           Organization Overview
         </Typography>
         <Box className="modern-grid cols-3">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                color: 'var(--primary-600)',
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="h3"
+              sx={{
+                color: "var(--primary-600)",
                 fontWeight: 700,
-                mb: 1
+                mb: 1,
               }}
             >
               {statistics.total_products ?? 0}
@@ -248,13 +236,13 @@ const OrgDashboard: React.FC = () => {
               Total Products
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                color: 'var(--secondary-600)',
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="h3"
+              sx={{
+                color: "var(--secondary-600)",
                 fontWeight: 700,
-                mb: 1
+                mb: 1,
               }}
             >
               {statistics.active_users ?? 0}
@@ -263,19 +251,20 @@ const OrgDashboard: React.FC = () => {
               Active Users
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                color: 'var(--success-600)',
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="h3"
+              sx={{
+                color: "var(--success-600)",
                 fontWeight: 700,
-                mb: 1
+                mb: 1,
               }}
             >
-              {statistics.monthly_sales !== undefined && statistics.monthly_sales !== null
+              {statistics.monthly_sales !== undefined &&
+              statistics.monthly_sales !== null
                 ? Math.round((statistics.monthly_sales / 100000) * 100)
-                : 0
-              }%
+                : 0}
+              %
             </Typography>
             <Typography variant="body2" color="textSecondary">
               Monthly Growth

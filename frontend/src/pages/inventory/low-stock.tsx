@@ -1,7 +1,11 @@
 // frontend/src/pages/inventory/low-stock.tsx
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getLowStockReport, getProductMovements, getLastVendorForProduct } from '../../services/stockService';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getLowStockReport,
+  getProductMovements,
+  getLastVendorForProduct,
+} from "../../services/stockService";
 import {
   Container,
   Typography,
@@ -23,10 +27,14 @@ import {
   DialogContent,
   DialogActions,
   Button,
-} from '@mui/material';
-import { MoreVert, History as HistoryIcon, ShoppingCart as PurchaseIcon } from '@mui/icons-material';
-import { useRouter } from 'next/router';
-import { useAuth } from '../../context/AuthContext';
+} from "@mui/material";
+import {
+  MoreVert,
+  History as HistoryIcon,
+  ShoppingCart as PurchaseIcon,
+} from "@mui/icons-material";
+import { useRouter } from "next/router";
+import { useAuth } from "../../context/AuthContext";
 const LowStockReport: React.FC = () => {
   const router = useRouter();
   const { isOrgContextReady } = useAuth();
@@ -35,12 +43,17 @@ const LowStockReport: React.FC = () => {
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuProductId, setMenuProductId] = useState<number | null>(null);
   const { data: lowStockItems, isLoading } = useQuery({
-    queryKey: ['lowStock'],
+    queryKey: ["lowStock"],
     queryFn: getLowStockReport,
     enabled: isOrgContextReady,
   });
-  if (isLoading) {return <Typography>Loading low stock report...</Typography>;}
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, productId: number) => {
+  if (isLoading) {
+    return <Typography>Loading low stock report...</Typography>;
+  }
+  const handleMenuClick = (
+    event: React.MouseEvent<HTMLElement>,
+    productId: number,
+  ) => {
     setMenuAnchorEl(event.currentTarget);
     setMenuProductId(productId);
   };
@@ -59,7 +72,9 @@ const LowStockReport: React.FC = () => {
   const handleCreatePurchaseOrder = async () => {
     if (menuProductId) {
       const lastVendor = await getLastVendorForProduct(menuProductId);
-      router.push(`/vouchers/Purchase-Vouchers/purchase-order?productId=${menuProductId}${lastVendor ? `&vendorId=${lastVendor.id}` : ''}`);
+      router.push(
+        `/vouchers/Purchase-Vouchers/purchase-order?productId=${menuProductId}${lastVendor ? `&vendorId=${lastVendor.id}` : ""}`,
+      );
     }
     handleMenuClose();
   };
@@ -69,7 +84,9 @@ const LowStockReport: React.FC = () => {
         Low Stock Report
       </Typography>
       {lowStockItems?.length === 0 ? (
-        <Alert severity="success">No low stock items found. All items are above reorder levels.</Alert>
+        <Alert severity="success">
+          No low stock items found. All items are above reorder levels.
+        </Alert>
       ) : (
         <TableContainer component={Paper}>
           <Table>
@@ -86,15 +103,24 @@ const LowStockReport: React.FC = () => {
             </TableHead>
             <TableBody>
               {lowStockItems?.map((item) => (
-                <TableRow key={item.product_id} sx={{ backgroundColor: 'warning.light' }}>
+                <TableRow
+                  key={item.product_id}
+                  sx={{ backgroundColor: "warning.light" }}
+                >
                   <TableCell>{item.product_name}</TableCell>
-                  <TableCell>{item.quantity} {item.unit}</TableCell>
+                  <TableCell>
+                    {item.quantity} {item.unit}
+                  </TableCell>
                   <TableCell>{item.reorder_level}</TableCell>
                   <TableCell>{item.quantity - item.reorder_level}</TableCell>
-                  <TableCell>{item.suggested_order_quantity || item.reorder_level * 2}</TableCell>
-                  <TableCell>{item.location || '-'}</TableCell>
                   <TableCell>
-                    <IconButton onClick={(e) => handleMenuClick(e, item.product_id)}>
+                    {item.suggested_order_quantity || item.reorder_level * 2}
+                  </TableCell>
+                  <TableCell>{item.location || "-"}</TableCell>
+                  <TableCell>
+                    <IconButton
+                      onClick={(e) => handleMenuClick(e, item.product_id)}
+                    >
                       <MoreVert />
                     </IconButton>
                   </TableCell>
@@ -111,16 +137,25 @@ const LowStockReport: React.FC = () => {
         onClose={handleMenuClose}
       >
         <MenuItem onClick={handleShowMovement}>
-          <ListItemIcon><HistoryIcon /></ListItemIcon>
+          <ListItemIcon>
+            <HistoryIcon />
+          </ListItemIcon>
           <ListItemText>Show Movement</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleCreatePurchaseOrder}>
-          <ListItemIcon><PurchaseIcon /></ListItemIcon>
+          <ListItemIcon>
+            <PurchaseIcon />
+          </ListItemIcon>
           <ListItemText>Create Purchase Order</ListItemText>
         </MenuItem>
       </Menu>
       {/* Movements Dialog */}
-      <Dialog open={movementsDialogOpen} onClose={() => setMovementsDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={movementsDialogOpen}
+        onClose={() => setMovementsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Stock Movements</DialogTitle>
         <DialogContent>
           <TableContainer>
@@ -137,16 +172,20 @@ const LowStockReport: React.FC = () => {
               <TableBody>
                 {selectedMovements.map((movement) => (
                   <TableRow key={movement.id}>
-                    <TableCell>{new Date(movement.transaction_date).toLocaleString()}</TableCell>
+                    <TableCell>
+                      {new Date(movement.transaction_date).toLocaleString()}
+                    </TableCell>
                     <TableCell>{movement.transaction_type}</TableCell>
                     <TableCell>{movement.quantity}</TableCell>
-                    <TableCell>{movement.reference_number || '-'}</TableCell>
-                    <TableCell>{movement.notes || '-'}</TableCell>
+                    <TableCell>{movement.reference_number || "-"}</TableCell>
+                    <TableCell>{movement.notes || "-"}</TableCell>
                   </TableRow>
                 ))}
                 {selectedMovements.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">No movements found</TableCell>
+                    <TableCell colSpan={5} align="center">
+                      No movements found
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>

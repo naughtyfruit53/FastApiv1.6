@@ -1,5 +1,5 @@
 // frontend/src/components/AddUserDialog.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -22,10 +22,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Divider
-} from '@mui/material';
-import { PersonAdd as PersonAddIcon, ExpandMore } from '@mui/icons-material';
-import { toast } from 'react-toastify';
+  Divider,
+} from "@mui/material";
+import { PersonAdd as PersonAddIcon, ExpandMore } from "@mui/icons-material";
+import { toast } from "react-toastify";
 
 interface AddUserDialogProps {
   open: boolean;
@@ -50,51 +50,55 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
   onClose,
   organizationId,
   organizationName,
-  onSuccess
+  onSuccess,
 }) => {
   const [formData, setFormData] = useState<UserFormData>({
-    email: '',
-    full_name: '',
-    password: '',
-    confirm_password: '',
-    role: 'standard_user',
-    phone: '',
-    department: ''
+    email: "",
+    full_name: "",
+    password: "",
+    confirm_password: "",
+    role: "standard_user",
+    phone: "",
+    department: "",
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<UserFormData>>({});
   const [assignedModules, setAssignedModules] = useState({
-    "CRM": true,
-    "ERP": true,
-    "HR": true,
-    "Inventory": true,
-    "Service": true,
-    "Analytics": true,
-    "Finance": true
+    CRM: true,
+    ERP: true,
+    HR: true,
+    Inventory: true,
+    Service: true,
+    Analytics: true,
+    Finance: true,
   });
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   const roles = [
-    { value: 'standard_user', label: 'Standard User' },
-    { value: 'admin', label: 'Admin' },
-    { value: 'org_admin', label: 'Organization Admin' }
+    { value: "standard_user", label: "Standard User" },
+    { value: "admin", label: "Admin" },
+    { value: "org_admin", label: "Organization Admin" },
   ];
 
   // Check current user role for permission to assign modules
   React.useEffect(() => {
-    const role = localStorage.getItem('user_role');
+    const role = localStorage.getItem("user_role");
     setCurrentUserRole(role);
   }, []);
 
   // Check if current user can assign modules (HR role or org admin)
   const canAssignModules = (): boolean => {
-    return currentUserRole === 'HR' || currentUserRole === 'org_admin' || currentUserRole === 'admin';
+    return (
+      currentUserRole === "HR" ||
+      currentUserRole === "org_admin" ||
+      currentUserRole === "admin"
+    );
   };
 
   const handleModuleChange = (module: string, enabled: boolean) => {
-    setAssignedModules(prev => ({
+    setAssignedModules((prev) => ({
       ...prev,
-      [module]: enabled
+      [module]: enabled,
     }));
   };
 
@@ -103,31 +107,31 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
     // Email validation
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     // Full name validation
     if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Full name is required';
+      newErrors.full_name = "Full name is required";
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
+      newErrors.password = "Password must be at least 8 characters long";
     }
 
     // Confirm password validation
     if (formData.password !== formData.confirm_password) {
-      newErrors.confirm_password = 'Passwords do not match';
+      newErrors.confirm_password = "Passwords do not match";
     }
 
     // Role validation
     if (!formData.role) {
-      newErrors.role = 'Role is required';
+      newErrors.role = "Role is required";
     }
 
     setErrors(newErrors);
@@ -135,29 +139,29 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
   };
 
   const handleInputChange = (field: keyof UserFormData, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
 
     // Clear error for this field when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: undefined
+        [field]: undefined,
       }));
     }
   };
 
   const handleClose = () => {
     setFormData({
-      email: '',
-      full_name: '',
-      password: '',
-      confirm_password: '',
-      role: 'standard_user',
-      phone: '',
-      department: ''
+      email: "",
+      full_name: "",
+      password: "",
+      confirm_password: "",
+      role: "standard_user",
+      phone: "",
+      department: "",
     });
     setErrors({});
     setLoading(false);
@@ -179,21 +183,21 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
         role: formData.role,
         phone: formData.phone?.trim() || undefined,
         department: formData.department?.trim() || undefined,
-        organization_id: organizationId
+        organization_id: organizationId,
       };
 
-      const response = await fetch('/api/v1/users/', {
-        method: 'POST',
+      const response = await fetch("/api/v1/users/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || 'Failed to add user');
+        throw new Error(error.detail || "Failed to add user");
       }
 
       const newUser = await response.json();
@@ -201,59 +205,66 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       // If current user can assign modules and has permission, update user modules
       if (canAssignModules()) {
         try {
-          const moduleResponse = await fetch(`/api/v1/organizations/${organizationId}/users/${newUser.id}/modules`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          const moduleResponse = await fetch(
+            `/api/v1/organizations/${organizationId}/users/${newUser.id}/modules`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              body: JSON.stringify({ assigned_modules: assignedModules }),
             },
-            body: JSON.stringify({ assigned_modules: assignedModules }),
-          });
+          );
 
           if (!moduleResponse.ok) {
-            console.warn('Failed to assign modules to user, but user was created successfully');
+            console.warn(
+              "Failed to assign modules to user, but user was created successfully",
+            );
           }
         } catch (moduleError) {
-          console.warn('Module assignment failed:', moduleError);
+          console.warn("Module assignment failed:", moduleError);
           // Don't fail the entire operation if module assignment fails
         }
       }
 
       toast.success(`User "${formData.full_name}" added successfully`);
-      
+
       if (onSuccess) {
         onSuccess();
       }
-      
+
       handleClose();
     } catch (err) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add user');
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add user",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const isFormValid = formData.email && formData.full_name && formData.password && 
-                     formData.confirm_password && formData.role &&
-                     formData.password === formData.confirm_password;
+  const isFormValid =
+    formData.email &&
+    formData.full_name &&
+    formData.password &&
+    formData.confirm_password &&
+    formData.role &&
+    formData.password === formData.confirm_password;
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-    >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <PersonAddIcon color="primary" />
         Add User to {organizationName}
       </DialogTitle>
-      
+
       <DialogContent>
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2">
-            Add a new user to the organization "{organizationName}". The user will receive 
-            login credentials and access based on their assigned role.
+            Add a new user to the organization "{organizationName}". The user
+            will receive login credentials and access based on their assigned
+            role.
           </Typography>
         </Alert>
 
@@ -264,7 +275,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               label="Email Address"
               type="email"
               value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
+              onChange={(e) => handleInputChange("email", e.target.value)}
               error={Boolean(errors.email)}
               helperText={errors.email}
               disabled={loading}
@@ -277,7 +288,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               fullWidth
               label="Full Name"
               value={formData.full_name}
-              onChange={(e) => handleInputChange('full_name', e.target.value)}
+              onChange={(e) => handleInputChange("full_name", e.target.value)}
               error={Boolean(errors.full_name)}
               helperText={errors.full_name}
               disabled={loading}
@@ -291,9 +302,9 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               label="Password"
               type="password"
               value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
+              onChange={(e) => handleInputChange("password", e.target.value)}
               error={Boolean(errors.password)}
-              helperText={errors.password || 'Minimum 8 characters'}
+              helperText={errors.password || "Minimum 8 characters"}
               disabled={loading}
               required
             />
@@ -305,7 +316,9 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               label="Confirm Password"
               type="password"
               value={formData.confirm_password}
-              onChange={(e) => handleInputChange('confirm_password', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("confirm_password", e.target.value)
+              }
               error={Boolean(errors.confirm_password)}
               helperText={errors.confirm_password}
               disabled={loading}
@@ -318,7 +331,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               <InputLabel>Role</InputLabel>
               <Select
                 value={formData.role}
-                onChange={(e) => handleInputChange('role', e.target.value)}
+                onChange={(e) => handleInputChange("role", e.target.value)}
                 label="Role"
                 disabled={loading}
               >
@@ -336,7 +349,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               fullWidth
               label="Phone Number"
               value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
               disabled={loading}
             />
           </Grid>
@@ -346,7 +359,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               fullWidth
               label="Department"
               value={formData.department}
-              onChange={(e) => handleInputChange('department', e.target.value)}
+              onChange={(e) => handleInputChange("department", e.target.value)}
               disabled={loading}
             />
           </Grid>
@@ -361,7 +374,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
                 <Typography variant="h6">Module Assignment</Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
                   Select which modules this user should have access to:
                 </Typography>
                 <FormGroup row>
@@ -371,13 +388,15 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
                       control={
                         <Checkbox
                           checked={enabled}
-                          onChange={(e) => handleModuleChange(module, e.target.checked)}
+                          onChange={(e) =>
+                            handleModuleChange(module, e.target.checked)
+                          }
                           color="primary"
                           disabled={loading}
                         />
                       }
                       label={module}
-                      sx={{ minWidth: '150px' }}
+                      sx={{ minWidth: "150px" }}
                     />
                   ))}
                 </FormGroup>
@@ -391,27 +410,34 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
             <strong>Role Permissions:</strong>
           </Typography>
           <ul>
-            <li><strong>Standard User:</strong> Basic access to view and create records</li>
-            <li><strong>Admin:</strong> Full access to manage organization data</li>
-            <li><strong>Organization Admin:</strong> Complete control including user management</li>
+            <li>
+              <strong>Standard User:</strong> Basic access to view and create
+              records
+            </li>
+            <li>
+              <strong>Admin:</strong> Full access to manage organization data
+            </li>
+            <li>
+              <strong>Organization Admin:</strong> Complete control including
+              user management
+            </li>
           </ul>
         </Box>
       </DialogContent>
 
       <DialogActions>
-        <Button 
-          onClick={handleClose} 
-          disabled={loading}
-        >
+        <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
         <Button
           onClick={handleAddUser}
           variant="contained"
           disabled={!isFormValid || loading}
-          startIcon={loading ? <CircularProgress size={16} /> : <PersonAddIcon />}
+          startIcon={
+            loading ? <CircularProgress size={16} /> : <PersonAddIcon />
+          }
         >
-          {loading ? 'Adding User...' : 'Add User'}
+          {loading ? "Adding User..." : "Add User"}
         </Button>
       </DialogActions>
     </Dialog>

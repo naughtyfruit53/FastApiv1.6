@@ -1,16 +1,38 @@
 // Non-Sales Credit Note Page - Refactored using VoucherLayout
-import React from 'react';
-import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem} from '@mui/material';
-import AddCustomerModal from '../../../components/AddCustomerModal';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-import VoucherListModal from '../../../components/VoucherListModal';
-import VoucherLayout from '../../../components/VoucherLayout';
-import SearchableDropdown from '../../../components/SearchableDropdown';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
+import React from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
+import AddCustomerModal from "../../../components/AddCustomerModal";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import VoucherListModal from "../../../components/VoucherListModal";
+import VoucherLayout from "../../../components/VoucherLayout";
+import SearchableDropdown from "../../../components/SearchableDropdown";
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import {
+  getVoucherConfig,
+  getVoucherStyles,
+  parseRateField,
+} from "../../../utils/voucherUtils";
 const NonSalesCreditNote: React.FC = () => {
-  const config = getVoucherConfig('non-sales-credit-note');
+  const config = getVoucherConfig("non-sales-credit-note");
   const voucherStyles = getVoucherStyles();
   const {
     // State
@@ -70,7 +92,7 @@ const NonSalesCreditNote: React.FC = () => {
     // Load the selected voucher into the form
     reset(voucher);
     // Set the form with the voucher data
-    Object.keys(voucher).forEach(key => {
+    Object.keys(voucher).forEach((key) => {
       setValue(key, voucher[key]);
     });
   };
@@ -80,70 +102,102 @@ const NonSalesCreditNote: React.FC = () => {
       id: customer.id,
       name: customer.name,
       email: customer.email,
-      type: 'Customer',
+      type: "Customer",
       value: customer.id,
-      label: `${customer.name} (Customer)`
+      label: `${customer.name} (Customer)`,
     })),
     ...(vendorList || []).map((vendor: any) => ({
       id: vendor.id,
       name: vendor.name,
       email: vendor.email,
-      type: 'Vendor',
+      type: "Vendor",
       value: vendor.id,
-      label: `${vendor.name} (Vendor)`
-    }))
+      label: `${vendor.name} (Vendor)`,
+    })),
   ];
   // Credit note reasons
   const creditNoteReasons = [
-    'Product Return',
-    'Defective Product',
-    'Wrong Product Shipped',
-    'Pricing Error',
-    'Customer Dissatisfaction',
-    'Promotional Adjustment',
-    'Volume Discount',
-    'Settlement Discount',
-    'Other'
+    "Product Return",
+    "Defective Product",
+    "Wrong Product Shipped",
+    "Pricing Error",
+    "Customer Dissatisfaction",
+    "Promotional Adjustment",
+    "Volume Discount",
+    "Settlement Discount",
+    "Other",
   ];
   // Get selected entity from form
-  const selectedEntity = watch('entity');
+  const selectedEntity = watch("entity");
   // Index Content - Left Panel (40%)
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Credit Note No.</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Party</TableCell>
-            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
-            <TableCell align="right" sx={{ fontSize: 12, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Credit Note No.
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Date
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Party
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+            >
+              Amount
+            </TableCell>
+            <TableCell
+              align="right"
+              sx={{ fontSize: 12, fontWeight: "bold", p: 0, width: 40 }}
+            ></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {(sortedVouchers?.length === 0) ? (
+          {sortedVouchers?.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">No credit notes available</TableCell>
+              <TableCell colSpan={5} align="center">
+                No credit notes available
+              </TableCell>
             </TableRow>
           ) : (
             sortedVouchers?.slice(0, 7).map((voucher: any) => (
-              <TableRow 
-                key={voucher.id} 
+              <TableRow
+                key={voucher.id}
                 hover
-                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
-                sx={{ cursor: 'pointer' }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  handleContextMenu(e, voucher);
+                }}
+                sx={{ cursor: "pointer" }}
               >
-                <TableCell align="center" sx={{ fontSize: 11, p: 1 }} onClick={() => handleVoucherClick(voucher)}>
+                <TableCell
+                  align="center"
+                  sx={{ fontSize: 11, p: 1 }}
+                  onClick={() => handleVoucherClick(voucher)}
+                >
                   {voucher.credit_note_number || voucher.voucher_number}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
                   {new Date(voucher.date).toLocaleDateString()}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  {voucher.entity?.name || voucher.customer?.name || 'N/A'}
+                  {voucher.entity?.name || voucher.customer?.name || "N/A"}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.total_amount?.toFixed(2) || '0.00'}
+                  ₹{voucher.total_amount?.toFixed(2) || "0.00"}
                 </TableCell>
                 <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
                   <VoucherContextMenu
@@ -168,9 +222,25 @@ const NonSalesCreditNote: React.FC = () => {
   const formContent = (
     <Box>
       {/* Header Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
-          Non Sales Credit Note - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        <Typography
+          variant="h6"
+          sx={{
+            fontSize: 18,
+            fontWeight: "bold",
+            textAlign: "center",
+            flex: 1,
+          }}
+        >
+          Non Sales Credit Note -{" "}
+          {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
         </Typography>
         <VoucherHeaderActions
           mode={mode}
@@ -184,31 +254,31 @@ const NonSalesCreditNote: React.FC = () => {
           <CircularProgress />
         </Box>
       )}
-      <Box 
-        component="form" 
-        onSubmit={handleSubmit(handleSubmitForm)} 
-        sx={{ 
+      <Box
+        component="form"
+        onSubmit={handleSubmit(handleSubmitForm)}
+        sx={{
           mt: 2,
-          ...voucherStyles.formContainer
+          ...voucherStyles.formContainer,
         }}
       >
         <Grid container spacing={2}>
           <Grid size={6}>
             <TextField
-              {...control.register('credit_note_number')}
+              {...control.register("credit_note_number")}
               label="Credit Note Number"
               fullWidth
               disabled={true}
               sx={voucherStyles.centerField}
               InputProps={{
                 readOnly: true,
-                style: { textAlign: 'center', fontWeight: 'bold' }
+                style: { textAlign: "center", fontWeight: "bold" },
               }}
             />
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('date')}
+              {...control.register("date")}
               label="Date"
               type="date"
               fullWidth
@@ -217,7 +287,7 @@ const NonSalesCreditNote: React.FC = () => {
               InputLabelProps={{
                 shrink: true,
               }}
-              inputProps={{ style: { textAlign: 'center' } }}
+              inputProps={{ style: { textAlign: "center" } }}
               error={!!errors.date}
               helperText={errors.date?.message as string}
             />
@@ -228,14 +298,14 @@ const NonSalesCreditNote: React.FC = () => {
               options={allParties}
               value={selectedEntity?.id || null}
               onChange={(value) => {
-                const party = allParties.find(p => p.id === value);
+                const party = allParties.find((p) => p.id === value);
                 if (party) {
-                  setValue('entity', {
+                  setValue("entity", {
                     id: party.id,
                     name: party.name,
                     type: party.type,
                     value: party.id,
-                    label: party.name
+                    label: party.name,
                   });
                 }
               }}
@@ -254,9 +324,9 @@ const NonSalesCreditNote: React.FC = () => {
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>Reason</InputLabel>
               <Select
-                {...control.register('reason')}
-                value={watch('reason') || ''}
-                onChange={(e) => setValue('reason', e.target.value)}
+                {...control.register("reason")}
+                value={watch("reason") || ""}
+                onChange={(e) => setValue("reason", e.target.value)}
                 error={!!errors.reason}
                 sx={{ height: 56 }} // Match height with Party Name field
               >
@@ -270,7 +340,7 @@ const NonSalesCreditNote: React.FC = () => {
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('reference_number')}
+              {...control.register("reference_number")}
               label="Reference Number"
               fullWidth
               disabled={isViewMode}
@@ -281,10 +351,10 @@ const NonSalesCreditNote: React.FC = () => {
           </Grid>
           <Grid size={6}>
             <TextField
-              {...control.register('total_amount', {
-                required: 'Amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' },
-                setValueAs: (value) => parseRateField(value)
+              {...control.register("total_amount", {
+                required: "Amount is required",
+                min: { value: 0.01, message: "Amount must be greater than 0" },
+                setValueAs: (value) => parseRateField(value),
               })}
               label="Credit Amount"
               type="number"
@@ -294,23 +364,23 @@ const NonSalesCreditNote: React.FC = () => {
               helperText={errors.total_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
-                ...voucherStyles.centerField
+                ...voucherStyles.centerField,
               }}
               InputProps={{
-                inputProps: { 
+                inputProps: {
                   step: "0.01",
-                  style: { textAlign: 'center' }
-                }
+                  style: { textAlign: "center" },
+                },
               }}
               onChange={(e) => {
                 const value = parseRateField(e.target.value);
-                setValue('total_amount', value);
+                setValue("total_amount", value);
               }}
             />
           </Grid>
           <Grid size={12}>
             <TextField
-              {...control.register('description')}
+              {...control.register("description")}
               label="Description"
               multiline
               rows={4}
@@ -329,7 +399,7 @@ const NonSalesCreditNote: React.FC = () => {
                 value={getAmountInWords(totalAmount)}
                 disabled
                 InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+                inputProps={{ style: { fontSize: 14, textAlign: "center" } }}
                 size="small"
               />
             </Grid>
@@ -337,12 +407,14 @@ const NonSalesCreditNote: React.FC = () => {
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
-              {mode !== 'view' && (
+              {mode !== "view" && (
                 <Button
                   type="submit"
                   variant="contained"
                   color="success"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                   sx={{ fontSize: 12 }}
                 >
                   Save
@@ -364,7 +436,12 @@ const NonSalesCreditNote: React.FC = () => {
   if (isLoading) {
     return (
       <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress />
         </Box>
       </Container>

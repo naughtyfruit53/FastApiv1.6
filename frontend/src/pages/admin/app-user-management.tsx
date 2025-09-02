@@ -1,5 +1,5 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -19,19 +19,12 @@ import {
   DialogActions,
   Alert,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Switch,
-  FormControlLabel,
   Tooltip,
   TableContainer,
   Grid as Grid,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add,
-  Edit,
   Delete,
   Lock,
   LockOpen,
@@ -39,10 +32,10 @@ import {
   AdminPanelSettings,
   Security,
   AccountCircle,
-  Shield
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+  Shield,
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../context/AuthContext";
 interface AppUser {
   id: number;
   email: string;
@@ -71,124 +64,130 @@ const AppUserManagement: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
-    email: '',
-    password: '',
-    full_name: '',
-    department: '',
-    designation: '',
-    phone: ''
+    email: "",
+    password: "",
+    full_name: "",
+    department: "",
+    designation: "",
+    phone: "",
   });
   // Check if current user is the god account
-  const isGodAccount = user?.email === 'naughty@grok.com';
+  const isGodAccount = user?.email === "naughty@grok.com";
   const queryClient = useQueryClient();
   const { data: appUsers } = useQuery({
-    queryKey: ['appUsers'],
+    queryKey: ["appUsers"],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/app-users/', {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/v1/app-users/", {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch app users');
+        throw new Error("Failed to fetch app users");
       }
       const data = await response.json();
       return data as AppUser[];
-    }
+    },
   });
   const createUserMutation = useMutation({
     mutationFn: async (data: CreateUserData) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/app-users/', {
-        method: 'POST',
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/v1/app-users/", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...data,
-          role: 'super_admin'
-        })
+          role: "super_admin",
+        }),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create user');
+        throw new Error(errorData.detail || "Failed to create user");
       }
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appUsers'] });
+      queryClient.invalidateQueries({ queryKey: ["appUsers"] });
       setCreateDialogOpen(false);
       setCreateUserData({
-        email: '',
-        password: '',
-        full_name: '',
-        department: '',
-        designation: '',
-        phone: ''
+        email: "",
+        password: "",
+        full_name: "",
+        department: "",
+        designation: "",
+        phone: "",
       });
-    }
+    },
   });
   const toggleUserStatusMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/app-users/${userId}/toggle-status`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `/api/v1/app-users/${userId}/toggle-status`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to toggle user status');
+        throw new Error(errorData.detail || "Failed to toggle user status");
       }
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appUsers'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ["appUsers"] });
+    },
   });
   const resetPasswordMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/app-users/${userId}/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `/api/v1/app-users/${userId}/reset-password`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to reset password');
+        throw new Error(errorData.detail || "Failed to reset password");
       }
       return response.json();
-    }
+    },
   });
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`/api/v1/app-users/${userId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to delete user');
+        throw new Error(errorData.detail || "Failed to delete user");
       }
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appUsers'] });
+      queryClient.invalidateQueries({ queryKey: ["appUsers"] });
       setDeleteDialogOpen(false);
       setSelectedUser(null);
-    }
+    },
   });
   const handleCreateUser = () => {
     createUserMutation.mutate(createUserData);
@@ -199,19 +198,23 @@ const AppUserManagement: React.FC = () => {
   const handleResetPassword = (userId: number) => {
     resetPasswordMutation.mutate(userId, {
       onSuccess: (result) => {
-        alert(`Password reset successfully. New password: ${result.new_password}`);
-      }
+        alert(
+          `Password reset successfully. New password: ${result.new_password}`,
+        );
+      },
     });
   };
   const handleDeleteUser = () => {
-    if (!selectedUser) {return;}
+    if (!selectedUser) {
+      return;
+    }
     deleteUserMutation.mutate(selectedUser.id);
   };
   const getStatusChip = (isActive: boolean) => {
     return (
       <Chip
-        label={isActive ? 'Active' : 'Inactive'}
-        color={isActive ? 'success' : 'default'}
+        label={isActive ? "Active" : "Inactive"}
+        color={isActive ? "success" : "default"}
         size="small"
       />
     );
@@ -220,12 +223,13 @@ const AppUserManagement: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          Access denied. App User Management is restricted to the primary super admin.
+          Access denied. App User Management is restricted to the primary super
+          admin.
         </Alert>
       </Container>
     );
   }
-// TODO: Define or import loading
+  // TODO: Define or import loading
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -235,8 +239,19 @@ const AppUserManagement: React.FC = () => {
   }
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ display: "flex", alignItems: "center" }}
+        >
           <AdminPanelSettings sx={{ mr: 2 }} />
           App User Management
         </Typography>
@@ -254,7 +269,11 @@ const AppUserManagement: React.FC = () => {
         </Alert>
       )}
       <Paper sx={{ mb: 3, p: 2 }}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ display: "flex", alignItems: "center" }}
+        >
           <Security sx={{ mr: 1 }} />
           App-Level User Overview
         </Typography>
@@ -262,9 +281,10 @@ const AppUserManagement: React.FC = () => {
           <Grid
             size={{
               xs: 12,
-              sm: 4
-            }}>
-            <Box sx={{ textAlign: 'center' }}>
+              sm: 4,
+            }}
+          >
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="primary">
                 {appUsers?.length || 0}
               </Typography>
@@ -276,11 +296,12 @@ const AppUserManagement: React.FC = () => {
           <Grid
             size={{
               xs: 12,
-              sm: 4
-            }}>
-            <Box sx={{ textAlign: 'center' }}>
+              sm: 4,
+            }}
+          >
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="success.main">
-                {appUsers?.filter(u => u.is_active).length || 0}
+                {appUsers?.filter((u) => u.is_active).length || 0}
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 Active Users
@@ -290,9 +311,10 @@ const AppUserManagement: React.FC = () => {
           <Grid
             size={{
               xs: 12,
-              sm: 4
-            }}>
-            <Box sx={{ textAlign: 'center' }}>
+              sm: 4,
+            }}
+          >
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="info.main">
                 1
               </Typography>
@@ -320,8 +342,8 @@ const AppUserManagement: React.FC = () => {
             {appUsers?.map((appUser) => (
               <TableRow key={appUser.id}>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <AccountCircle sx={{ mr: 1, color: 'primary.main' }} />
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <AccountCircle sx={{ mr: 1, color: "primary.main" }} />
                     <Box>
                       <Typography variant="body2" fontWeight="medium">
                         {appUser.full_name}
@@ -330,9 +352,9 @@ const AppUserManagement: React.FC = () => {
                         @{appUser.username}
                       </Typography>
                     </Box>
-                    {appUser.email === 'naughty@grok.com' && (
+                    {appUser.email === "naughty@grok.com" && (
                       <Tooltip title="God Account - Cannot be deleted">
-                        <Shield sx={{ ml: 1, color: 'gold' }} />
+                        <Shield sx={{ ml: 1, color: "gold" }} />
                       </Tooltip>
                     )}
                   </Box>
@@ -341,7 +363,7 @@ const AppUserManagement: React.FC = () => {
                 <TableCell>
                   <Chip label="Super Admin" color="primary" size="small" />
                 </TableCell>
-                <TableCell>{appUser.department || '-'}</TableCell>
+                <TableCell>{appUser.department || "-"}</TableCell>
                 <TableCell>{getStatusChip(appUser.is_active)}</TableCell>
                 <TableCell>
                   {new Date(appUser.created_at).toLocaleDateString()}
@@ -355,13 +377,13 @@ const AppUserManagement: React.FC = () => {
                   >
                     <RestartAlt />
                   </IconButton>
-                  {appUser.email !== 'naughty@grok.com' && (
+                  {appUser.email !== "naughty@grok.com" && (
                     <>
                       <IconButton
                         size="small"
-                        color={appUser.is_active ? 'warning' : 'success'}
+                        color={appUser.is_active ? "warning" : "success"}
                         onClick={() => handleToggleUserStatus(appUser.id)}
-                        title={appUser.is_active ? 'Deactivate' : 'Activate'}
+                        title={appUser.is_active ? "Deactivate" : "Activate"}
                       >
                         {appUser.is_active ? <Lock /> : <LockOpen />}
                       </IconButton>
@@ -385,7 +407,12 @@ const AppUserManagement: React.FC = () => {
         </Table>
       </TableContainer>
       {/* Create User Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Create New App User</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -395,7 +422,12 @@ const AppUserManagement: React.FC = () => {
                 label="Email"
                 type="email"
                 value={createUserData.email}
-                onChange={(e) => setCreateUserData({ ...createUserData, email: e.target.value })}
+                onChange={(e) =>
+                  setCreateUserData({
+                    ...createUserData,
+                    email: e.target.value,
+                  })
+                }
                 required
               />
             </Grid>
@@ -405,7 +437,12 @@ const AppUserManagement: React.FC = () => {
                 label="Password"
                 type="password"
                 value={createUserData.password}
-                onChange={(e) => setCreateUserData({ ...createUserData, password: e.target.value })}
+                onChange={(e) =>
+                  setCreateUserData({
+                    ...createUserData,
+                    password: e.target.value,
+                  })
+                }
                 required
                 helperText="User will be forced to change password on first login"
               />
@@ -415,32 +452,49 @@ const AppUserManagement: React.FC = () => {
                 fullWidth
                 label="Full Name"
                 value={createUserData.full_name}
-                onChange={(e) => setCreateUserData({ ...createUserData, full_name: e.target.value })}
+                onChange={(e) =>
+                  setCreateUserData({
+                    ...createUserData,
+                    full_name: e.target.value,
+                  })
+                }
                 required
               />
             </Grid>
             <Grid
               size={{
                 xs: 12,
-                sm: 6
-              }}>
+                sm: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 label="Department"
                 value={createUserData.department}
-                onChange={(e) => setCreateUserData({ ...createUserData, department: e.target.value })}
+                onChange={(e) =>
+                  setCreateUserData({
+                    ...createUserData,
+                    department: e.target.value,
+                  })
+                }
               />
             </Grid>
             <Grid
               size={{
                 xs: 12,
-                sm: 6
-              }}>
+                sm: 6,
+              }}
+            >
               <TextField
                 fullWidth
                 label="Designation"
                 value={createUserData.designation}
-                onChange={(e) => setCreateUserData({ ...createUserData, designation: e.target.value })}
+                onChange={(e) =>
+                  setCreateUserData({
+                    ...createUserData,
+                    designation: e.target.value,
+                  })
+                }
               />
             </Grid>
             <Grid size={12}>
@@ -448,7 +502,12 @@ const AppUserManagement: React.FC = () => {
                 fullWidth
                 label="Phone"
                 value={createUserData.phone}
-                onChange={(e) => setCreateUserData({ ...createUserData, phone: e.target.value })}
+                onChange={(e) =>
+                  setCreateUserData({
+                    ...createUserData,
+                    phone: e.target.value,
+                  })
+                }
               />
             </Grid>
           </Grid>
@@ -461,14 +520,19 @@ const AppUserManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
       {/* Delete User Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
         <DialogTitle>Delete App User</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete <strong>{selectedUser?.full_name}</strong> ({selectedUser?.email})?
+            Are you sure you want to delete{" "}
+            <strong>{selectedUser?.full_name}</strong> ({selectedUser?.email})?
           </Typography>
           <Alert severity="warning" sx={{ mt: 2 }}>
-            This action cannot be undone. The user will lose all access to the application.
+            This action cannot be undone. The user will lose all access to the
+            application.
           </Alert>
         </DialogContent>
         <DialogActions>

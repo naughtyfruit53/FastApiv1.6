@@ -1,6 +1,6 @@
 // Standalone Customers Page - Extract from masters/index.tsx
-import React, { useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import {
   Box,
   Container,
@@ -17,34 +17,32 @@ import {
   IconButton,
   TextField,
   InputAdornment,
-  TableSortLabel
-} from '@mui/material';
+  TableSortLabel,
+} from "@mui/material";
 import {
   Add,
   Edit,
   Delete,
   Email,
   Phone,
-  Person,
-  Visibility,
   Analytics,
-  Search as SearchIcon
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { masterDataService } from '../../services/authService';
-import ExcelImportExport from '../../components/ExcelImportExport';
-import { bulkImportCustomers } from '../../services/masterService';
-import { useAuth } from '../../context/AuthContext';
-import AddCustomerModal from '../../components/AddCustomerModal';
-import CustomerAnalyticsModal from '../../components/CustomerAnalyticsModal';
+  Search as SearchIcon,
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { masterDataService } from "../../services/authService";
+import ExcelImportExport from "../../components/ExcelImportExport";
+import { bulkImportCustomers } from "../../services/masterService";
+import { useAuth } from "../../context/AuthContext";
+import AddCustomerModal from "../../components/AddCustomerModal";
+import CustomerAnalyticsModal from "../../components/CustomerAnalyticsModal";
 const CustomersPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
   const { isOrgContextReady } = useAuth();
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [addCustomerLoading, setAddCustomerLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [analyticsModal, setAnalyticsModal] = useState<{
     open: boolean;
     customerId?: number;
@@ -52,24 +50,29 @@ const CustomersPage: React.FC = () => {
   }>({ open: false });
   const queryClient = useQueryClient();
   const { data: customers, isLoading } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ["customers"],
     queryFn: () => masterDataService.getCustomers(),
     enabled: isOrgContextReady,
   });
   // Debounced search and sorting
   const filteredAndSortedCustomers = useMemo(() => {
-    if (!customers) {return [];}
-    const filtered = customers.filter((customer: any) =>
-      customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!customers) {
+      return [];
+    }
+    const filtered = customers.filter(
+      (customer: any) =>
+        customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.contact_person
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()),
     );
     // Sort by name
-    if (sortBy === 'name') {
+    if (sortBy === "name") {
       filtered.sort((a: any, b: any) => {
-        const nameA = a.name?.toLowerCase() || '';
-        const nameB = b.name?.toLowerCase() || '';
-        if (sortOrder === 'asc') {
+        const nameA = a.name?.toLowerCase() || "";
+        const nameB = b.name?.toLowerCase() || "";
+        if (sortOrder === "asc") {
           return nameA.localeCompare(nameB);
         } else {
           return nameB.localeCompare(nameA);
@@ -79,7 +82,7 @@ const CustomersPage: React.FC = () => {
     return filtered;
   }, [customers, searchTerm, sortBy, sortOrder]);
   const handleSort = () => {
-    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
   const handleCustomerAdd = async (customerData: any) => {
     setAddCustomerLoading(true);
@@ -87,18 +90,20 @@ const CustomersPage: React.FC = () => {
       const response = await masterDataService.createCustomer(customerData);
       const newCustomer = response;
       // Update query data immediately
-      queryClient.setQueryData(['customers'], (old: any) => old ? [...old, newCustomer] : [newCustomer]);
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.setQueryData(["customers"], (old: any) =>
+        old ? [...old, newCustomer] : [newCustomer],
+      );
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       setShowAddCustomerModal(false);
-      alert('Customer added successfully!');
+      alert("Customer added successfully!");
     } catch (error: any) {
       console.error(msg, err);
-      let errorMsg = 'Error adding customer';
+      let errorMsg = "Error adding customer";
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          errorMsg = detail.map((err: any) => err.msg || err).join(', ');
-        } else if (typeof detail === 'string') {
+          errorMsg = detail.map((err: any) => err.msg || err).join(", ");
+        } else if (typeof detail === "string") {
           errorMsg = detail;
         }
       }
@@ -110,20 +115,22 @@ const CustomersPage: React.FC = () => {
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteCustomer(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
     onError: (error: any) => {
       console.error(msg, err);
-      setErrorMessage(error.response?.data?.detail || 'Failed to delete customer');
-    }
+      setErrorMessage(
+        error.response?.data?.detail || "Failed to delete customer",
+      );
+    },
   });
   const openAddCustomerModal = useCallback(() => {
-    setErrorMessage('');
+    setErrorMessage("");
     setShowAddCustomerModal(true);
   }, []);
   // Auto-open add modal if action=add in URL
   React.useEffect(() => {
-    if (action === 'add') {
+    if (action === "add") {
       openAddCustomerModal();
     }
   }, [action, openAddCustomerModal]);
@@ -134,7 +141,14 @@ const CustomersPage: React.FC = () => {
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4" component="h1" gutterBottom>
             Customer Management
           </Typography>
@@ -149,7 +163,14 @@ const CustomersPage: React.FC = () => {
         </Box>
         {/* Customers Table */}
         <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
             <Typography variant="h6">All Customers</Typography>
             <ExcelImportExport
               data={customers || []}
@@ -179,8 +200,8 @@ const CustomersPage: React.FC = () => {
                 <TableRow>
                   <TableCell>
                     <TableSortLabel
-                      active={sortBy === 'name'}
-                      direction={sortBy === 'name' ? sortOrder : 'asc'}
+                      active={sortBy === "name"}
+                      direction={sortBy === "name" ? sortOrder : "asc"}
                       onClick={handleSort}
                     >
                       Name
@@ -208,43 +229,59 @@ const CustomersPage: React.FC = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Phone sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Phone
+                          sx={{ fontSize: 16, mr: 1, color: "text.secondary" }}
+                        />
                         {item.contact_number}
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Email sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        {item.email || 'N/A'}
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Email
+                          sx={{ fontSize: 16, mr: 1, color: "text.secondary" }}
+                        />
+                        {item.email || "N/A"}
                       </Box>
                     </TableCell>
-                    <TableCell>{item.city}, {item.state}</TableCell>
-                    <TableCell>{item.gst_number || 'N/A'}</TableCell>
+                    <TableCell>
+                      {item.city}, {item.state}
+                    </TableCell>
+                    <TableCell>{item.gst_number || "N/A"}</TableCell>
                     <TableCell>
                       <Chip
-                        label={item.is_active ? 'Active' : 'Inactive'}
-                        color={item.is_active ? 'success' : 'default'}
+                        label={item.is_active ? "Active" : "Inactive"}
+                        color={item.is_active ? "success" : "default"}
                         size="small"
                       />
                     </TableCell>
                     <TableCell>
-                      <IconButton 
-                        size="small" 
+                      <IconButton
+                        size="small"
                         title="View Analytics"
-                        onClick={() => setAnalyticsModal({
-                          open: true,
-                          customerId: item.id,
-                          customerName: item.name
-                        })}
+                        onClick={() =>
+                          setAnalyticsModal({
+                            open: true,
+                            customerId: item.id,
+                            customerName: item.name,
+                          })
+                        }
                         color="info"
                       >
                         <Analytics />
                       </IconButton>
-                      <IconButton disabled size="small" title="Edit functionality temporarily disabled">
+                      <IconButton
+                        disabled
+                        size="small"
+                        title="Edit functionality temporarily disabled"
+                      >
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => deleteItemMutation.mutate(item.id)} size="small" color="error">
+                      <IconButton
+                        onClick={() => deleteItemMutation.mutate(item.id)}
+                        size="small"
+                        color="error"
+                      >
                         <Delete />
                       </IconButton>
                     </TableCell>

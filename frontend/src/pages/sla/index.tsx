@@ -1,5 +1,5 @@
 // frontend/src/pages/sla/index.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -25,22 +25,23 @@ import {
   InputLabel,
   Select,
   MenuItem,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add,
   Edit,
   Delete,
   Refresh,
   Warning,
-  CheckCircle,
-  Schedule,
-  TrendingUp,
   Assessment,
   Policy,
-  Timeline,
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {slaService, SLAPolicy, SLAPolicyCreate, SLAPolicyUpdate} from '../../services/slaService';
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  slaService,
+  SLAPolicy,
+  SLAPolicyCreate,
+  SLAPolicyUpdate,
+} from "../../services/slaService";
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -56,11 +57,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`sla-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -74,10 +71,10 @@ const SLAManagement: React.FC = () => {
   const organizationId = 1; // This should come from auth context
   // Form state for policy dialog
   const [policyForm, setPolicyForm] = useState<SLAPolicyCreate>({
-    name: '',
-    description: '',
-    priority: '',
-    ticket_type: '',
+    name: "",
+    description: "",
+    priority: "",
+    ticket_type: "",
     response_time_hours: 2,
     resolution_time_hours: 24,
     escalation_enabled: true,
@@ -91,28 +88,24 @@ const SLAManagement: React.FC = () => {
     isLoading: policiesLoading,
     refetch: refetchPolicies,
   } = useQuery({
-    queryKey: ['sla-policies', organizationId],
+    queryKey: ["sla-policies", organizationId],
     queryFn: () => slaService.getPolicies(organizationId),
   });
-  const {
-    data: metrics,
-    isLoading: metricsLoading,
-  } = useQuery({
-    queryKey: ['sla-metrics', organizationId],
-    queryFn: () => slaService.getSLAMetrics(organizationId, undefined, undefined, 30),
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ["sla-metrics", organizationId],
+    queryFn: () =>
+      slaService.getSLAMetrics(organizationId, undefined, undefined, 30),
   });
-  const {
-    data: breachedSLAs = [],
-    isLoading: breachedLoading,
-  } = useQuery({
-    queryKey: ['breached-slas', organizationId],
+  const { data: breachedSLAs = [], isLoading: breachedLoading } = useQuery({
+    queryKey: ["breached-slas", organizationId],
     queryFn: () => slaService.getBreachedSLAs(organizationId, 20),
   });
   // Mutations
   const createPolicyMutation = useMutation({
-    mutationFn: (policy: SLAPolicyCreate) => slaService.createPolicy(organizationId, policy),
+    mutationFn: (policy: SLAPolicyCreate) =>
+      slaService.createPolicy(organizationId, policy),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sla-policies'] });
+      queryClient.invalidateQueries({ queryKey: ["sla-policies"] });
       setPolicyDialog(false);
       resetForm();
     },
@@ -121,7 +114,7 @@ const SLAManagement: React.FC = () => {
     mutationFn: ({ id, policy }: { id: number; policy: SLAPolicyUpdate }) =>
       slaService.updatePolicy(organizationId, id, policy),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sla-policies'] });
+      queryClient.invalidateQueries({ queryKey: ["sla-policies"] });
       setPolicyDialog(false);
       resetForm();
     },
@@ -129,7 +122,7 @@ const SLAManagement: React.FC = () => {
   const deletePolicyMutation = useMutation({
     mutationFn: (id: number) => slaService.deletePolicy(organizationId, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sla-policies'] });
+      queryClient.invalidateQueries({ queryKey: ["sla-policies"] });
       setDeleteDialog(false);
       setSelectedPolicy(null);
     },
@@ -147,9 +140,9 @@ const SLAManagement: React.FC = () => {
     setSelectedPolicy(policy);
     setPolicyForm({
       name: policy.name,
-      description: policy.description || '',
-      priority: policy.priority || '',
-      ticket_type: policy.ticket_type || '',
+      description: policy.description || "",
+      priority: policy.priority || "",
+      ticket_type: policy.ticket_type || "",
       response_time_hours: policy.response_time_hours,
       resolution_time_hours: policy.resolution_time_hours,
       escalation_enabled: policy.escalation_enabled,
@@ -165,17 +158,20 @@ const SLAManagement: React.FC = () => {
   };
   const handleSubmitPolicy = () => {
     if (selectedPolicy) {
-      updatePolicyMutation.mutate({ id: selectedPolicy.id, policy: policyForm });
+      updatePolicyMutation.mutate({
+        id: selectedPolicy.id,
+        policy: policyForm,
+      });
     } else {
       createPolicyMutation.mutate(policyForm);
     }
   };
   const resetForm = () => {
     setPolicyForm({
-      name: '',
-      description: '',
-      priority: '',
-      ticket_type: '',
+      name: "",
+      description: "",
+      priority: "",
+      ticket_type: "",
       response_time_hours: 2,
       resolution_time_hours: 24,
       escalation_enabled: true,
@@ -186,24 +182,35 @@ const SLAManagement: React.FC = () => {
   };
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
-      case 'urgent': return 'error';
-      case 'high': return 'warning';
-      case 'medium': return 'info';
-      case 'low': return 'success';
-      default: return 'default';
+      case "urgent":
+        return "error";
+      case "high":
+        return "warning";
+      case "medium":
+        return "info";
+      case "low":
+        return "success";
+      default:
+        return "default";
     }
   };
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'met': return 'success';
-      case 'breached': return 'error';
-      case 'pending': return 'warning';
-      default: return 'default';
+      case "met":
+        return "success";
+      case "breached":
+        return "error";
+      case "pending":
+        return "warning";
+      default:
+        return "default";
     }
   };
   // Render summary cards
   const renderSummaryCards = () => {
-    if (!metrics) {return null;}
+    if (!metrics) {
+      return null;
+    }
     return (
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
@@ -215,9 +222,7 @@ const SLAManagement: React.FC = () => {
               <Typography variant="h4" component="div">
                 {metrics.total_tickets}
               </Typography>
-              <Typography variant="body2">
-                Last 30 days
-              </Typography>
+              <Typography variant="body2">Last 30 days</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -227,7 +232,15 @@ const SLAManagement: React.FC = () => {
               <Typography color="textSecondary" gutterBottom>
                 Response SLA
               </Typography>
-              <Typography variant="h4" component="div" color={metrics.response_sla_percentage >= 95 ? 'success.main' : 'warning.main'}>
+              <Typography
+                variant="h4"
+                component="div"
+                color={
+                  metrics.response_sla_percentage >= 95
+                    ? "success.main"
+                    : "warning.main"
+                }
+              >
                 {metrics.response_sla_percentage.toFixed(1)}%
               </Typography>
               <Typography variant="body2">
@@ -242,7 +255,15 @@ const SLAManagement: React.FC = () => {
               <Typography color="textSecondary" gutterBottom>
                 Resolution SLA
               </Typography>
-              <Typography variant="h4" component="div" color={metrics.resolution_sla_percentage >= 95 ? 'success.main' : 'warning.main'}>
+              <Typography
+                variant="h4"
+                component="div"
+                color={
+                  metrics.resolution_sla_percentage >= 95
+                    ? "success.main"
+                    : "warning.main"
+                }
+              >
                 {metrics.resolution_sla_percentage.toFixed(1)}%
               </Typography>
               <Typography variant="body2">
@@ -257,12 +278,16 @@ const SLAManagement: React.FC = () => {
               <Typography color="textSecondary" gutterBottom>
                 Escalated Tickets
               </Typography>
-              <Typography variant="h4" component="div" color={metrics.escalated_tickets > 0 ? 'error.main' : 'success.main'}>
+              <Typography
+                variant="h4"
+                component="div"
+                color={
+                  metrics.escalated_tickets > 0 ? "error.main" : "success.main"
+                }
+              >
                 {metrics.escalated_tickets}
               </Typography>
-              <Typography variant="body2">
-                Requiring attention
-              </Typography>
+              <Typography variant="body2">Requiring attention</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -271,7 +296,14 @@ const SLAManagement: React.FC = () => {
   };
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+        }}
+      >
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
             SLA Management
@@ -285,21 +317,23 @@ const SLAManagement: React.FC = () => {
           startIcon={<Refresh />}
           onClick={() => {
             refetchPolicies();
-            queryClient.invalidateQueries({ queryKey: ['sla-metrics'] });
-            queryClient.invalidateQueries({ queryKey: ['breached-slas'] });
+            queryClient.invalidateQueries({ queryKey: ["sla-metrics"] });
+            queryClient.invalidateQueries({ queryKey: ["breached-slas"] });
           }}
         >
           Refresh
         </Button>
       </Box>
       {/* Summary Cards */}
-      <Box sx={{ mb: 4 }}>
-        {renderSummaryCards()}
-      </Box>
+      <Box sx={{ mb: 4 }}>{renderSummaryCards()}</Box>
       {/* SLA Tabs */}
       <Paper sx={{ mb: 4 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="SLA management tabs">
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="SLA management tabs"
+          >
             <Tab label="SLA Policies" icon={<Policy />} />
             <Tab label="Performance Dashboard" icon={<Assessment />} />
             <Tab label="Breached SLAs" icon={<Warning />} />
@@ -307,7 +341,7 @@ const SLAManagement: React.FC = () => {
         </Box>
         <TabPanel value={tabValue} index={0}>
           {/* SLA Policies Tab */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
             <Typography variant="h6">SLA Policies</Typography>
             <Button
               variant="contained"
@@ -337,7 +371,12 @@ const SLAManagement: React.FC = () => {
                       <Box>
                         <Typography variant="body1">{policy.name}</Typography>
                         {policy.is_default && (
-                          <Chip label="Default" size="small" color="primary" sx={{ mt: 0.5 }} />
+                          <Chip
+                            label="Default"
+                            size="small"
+                            color="primary"
+                            sx={{ mt: 0.5 }}
+                          />
                         )}
                       </Box>
                     </TableCell>
@@ -349,24 +388,31 @@ const SLAManagement: React.FC = () => {
                           color={getPriorityColor(policy.priority) as any}
                         />
                       ) : (
-                        'All'
+                        "All"
                       )}
                     </TableCell>
-                    <TableCell>{policy.ticket_type || 'All'}</TableCell>
+                    <TableCell>{policy.ticket_type || "All"}</TableCell>
                     <TableCell>{policy.response_time_hours}h</TableCell>
                     <TableCell>{policy.resolution_time_hours}h</TableCell>
                     <TableCell>
                       <Chip
-                        label={policy.is_active ? 'Active' : 'Inactive'}
+                        label={policy.is_active ? "Active" : "Inactive"}
                         size="small"
-                        color={policy.is_active ? 'success' : 'default'}
+                        color={policy.is_active ? "success" : "default"}
                       />
                     </TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleEditPolicy(policy)} size="small">
+                      <IconButton
+                        onClick={() => handleEditPolicy(policy)}
+                        size="small"
+                      >
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => handleDeletePolicy(policy)} size="small" color="error">
+                      <IconButton
+                        onClick={() => handleDeletePolicy(policy)}
+                        size="small"
+                        color="error"
+                      >
                         <Delete />
                       </IconButton>
                     </TableCell>
@@ -390,7 +436,7 @@ const SLAManagement: React.FC = () => {
                       Average Response Time
                     </Typography>
                     <Typography variant="h4" color="primary">
-                      {metrics.avg_response_time_hours?.toFixed(1) || 'N/A'}h
+                      {metrics.avg_response_time_hours?.toFixed(1) || "N/A"}h
                     </Typography>
                   </CardContent>
                 </Card>
@@ -402,7 +448,7 @@ const SLAManagement: React.FC = () => {
                       Average Resolution Time
                     </Typography>
                     <Typography variant="h4" color="primary">
-                      {metrics.avg_resolution_time_hours?.toFixed(1) || 'N/A'}h
+                      {metrics.avg_resolution_time_hours?.toFixed(1) || "N/A"}h
                     </Typography>
                   </CardContent>
                 </Card>
@@ -440,31 +486,41 @@ const SLAManagement: React.FC = () => {
                         <Chip
                           label={tracking.response_status}
                           size="small"
-                          color={getStatusColor(tracking.response_status) as any}
+                          color={
+                            getStatusColor(tracking.response_status) as any
+                          }
                         />
                       </TableCell>
                       <TableCell>
                         <Chip
                           label={tracking.resolution_status}
                           size="small"
-                          color={getStatusColor(tracking.resolution_status) as any}
+                          color={
+                            getStatusColor(tracking.resolution_status) as any
+                          }
                         />
                       </TableCell>
                       <TableCell>
-                        {tracking.response_breach_hours && tracking.response_breach_hours > 0
+                        {tracking.response_breach_hours &&
+                        tracking.response_breach_hours > 0
                           ? `+${tracking.response_breach_hours.toFixed(1)}h`
-                          : 'On time'}
+                          : "On time"}
                       </TableCell>
                       <TableCell>
-                        {tracking.resolution_breach_hours && tracking.resolution_breach_hours > 0
+                        {tracking.resolution_breach_hours &&
+                        tracking.resolution_breach_hours > 0
                           ? `+${tracking.resolution_breach_hours.toFixed(1)}h`
-                          : 'On time'}
+                          : "On time"}
                       </TableCell>
                       <TableCell>
                         {tracking.escalation_triggered ? (
-                          <Chip label={`Level ${tracking.escalation_level}`} size="small" color="error" />
+                          <Chip
+                            label={`Level ${tracking.escalation_level}`}
+                            size="small"
+                            color="error"
+                          />
                         ) : (
-                          'No'
+                          "No"
                         )}
                       </TableCell>
                     </TableRow>
@@ -476,9 +532,14 @@ const SLAManagement: React.FC = () => {
         </TabPanel>
       </Paper>
       {/* Policy Create/Edit Dialog */}
-      <Dialog open={policyDialog} onClose={() => setPolicyDialog(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={policyDialog}
+        onClose={() => setPolicyDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
-          {selectedPolicy ? 'Edit SLA Policy' : 'Create SLA Policy'}
+          {selectedPolicy ? "Edit SLA Policy" : "Create SLA Policy"}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -487,7 +548,9 @@ const SLAManagement: React.FC = () => {
                 fullWidth
                 label="Policy Name"
                 value={policyForm.name}
-                onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
+                onChange={(e) =>
+                  setPolicyForm({ ...policyForm, name: e.target.value })
+                }
                 required
               />
             </Grid>
@@ -496,7 +559,9 @@ const SLAManagement: React.FC = () => {
                 <InputLabel>Priority</InputLabel>
                 <Select
                   value={policyForm.priority}
-                  onChange={(e) => setPolicyForm({ ...policyForm, priority: e.target.value })}
+                  onChange={(e) =>
+                    setPolicyForm({ ...policyForm, priority: e.target.value })
+                  }
                 >
                   <MenuItem value="">All Priorities</MenuItem>
                   <MenuItem value="low">Low</MenuItem>
@@ -511,7 +576,9 @@ const SLAManagement: React.FC = () => {
                 fullWidth
                 label="Description"
                 value={policyForm.description}
-                onChange={(e) => setPolicyForm({ ...policyForm, description: e.target.value })}
+                onChange={(e) =>
+                  setPolicyForm({ ...policyForm, description: e.target.value })
+                }
                 multiline
                 rows={2}
               />
@@ -522,9 +589,16 @@ const SLAManagement: React.FC = () => {
                 label="Response Time"
                 type="number"
                 value={policyForm.response_time_hours}
-                onChange={(e) => setPolicyForm({ ...policyForm, response_time_hours: Number(e.target.value) })}
+                onChange={(e) =>
+                  setPolicyForm({
+                    ...policyForm,
+                    response_time_hours: Number(e.target.value),
+                  })
+                }
                 InputProps={{
-                  endAdornment: <InputAdornment position="end">hours</InputAdornment>,
+                  endAdornment: (
+                    <InputAdornment position="end">hours</InputAdornment>
+                  ),
                 }}
                 required
               />
@@ -535,9 +609,16 @@ const SLAManagement: React.FC = () => {
                 label="Resolution Time"
                 type="number"
                 value={policyForm.resolution_time_hours}
-                onChange={(e) => setPolicyForm({ ...policyForm, resolution_time_hours: Number(e.target.value) })}
+                onChange={(e) =>
+                  setPolicyForm({
+                    ...policyForm,
+                    resolution_time_hours: Number(e.target.value),
+                  })
+                }
                 InputProps={{
-                  endAdornment: <InputAdornment position="end">hours</InputAdornment>,
+                  endAdornment: (
+                    <InputAdornment position="end">hours</InputAdornment>
+                  ),
                 }}
                 required
               />
@@ -548,9 +629,16 @@ const SLAManagement: React.FC = () => {
                 label="Escalation Threshold"
                 type="number"
                 value={policyForm.escalation_threshold_percent}
-                onChange={(e) => setPolicyForm({ ...policyForm, escalation_threshold_percent: Number(e.target.value) })}
+                onChange={(e) =>
+                  setPolicyForm({
+                    ...policyForm,
+                    escalation_threshold_percent: Number(e.target.value),
+                  })
+                }
                 InputProps={{
-                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  endAdornment: (
+                    <InputAdornment position="end">%</InputAdornment>
+                  ),
                 }}
               />
             </Grid>
@@ -560,7 +648,12 @@ const SLAManagement: React.FC = () => {
                   control={
                     <Switch
                       checked={policyForm.escalation_enabled}
-                      onChange={(e) => setPolicyForm({ ...policyForm, escalation_enabled: e.target.checked })}
+                      onChange={(e) =>
+                        setPolicyForm({
+                          ...policyForm,
+                          escalation_enabled: e.target.checked,
+                        })
+                      }
                     />
                   }
                   label="Enable Escalation"
@@ -569,7 +662,12 @@ const SLAManagement: React.FC = () => {
                   control={
                     <Switch
                       checked={policyForm.is_active}
-                      onChange={(e) => setPolicyForm({ ...policyForm, is_active: e.target.checked })}
+                      onChange={(e) =>
+                        setPolicyForm({
+                          ...policyForm,
+                          is_active: e.target.checked,
+                        })
+                      }
                     />
                   }
                   label="Active"
@@ -578,7 +676,12 @@ const SLAManagement: React.FC = () => {
                   control={
                     <Switch
                       checked={policyForm.is_default}
-                      onChange={(e) => setPolicyForm({ ...policyForm, is_default: e.target.checked })}
+                      onChange={(e) =>
+                        setPolicyForm({
+                          ...policyForm,
+                          is_default: e.target.checked,
+                        })
+                      }
                     />
                   }
                   label="Default Policy"
@@ -592,9 +695,11 @@ const SLAManagement: React.FC = () => {
           <Button
             onClick={handleSubmitPolicy}
             variant="contained"
-            disabled={createPolicyMutation.isPending || updatePolicyMutation.isPending}
+            disabled={
+              createPolicyMutation.isPending || updatePolicyMutation.isPending
+            }
           >
-            {selectedPolicy ? 'Update' : 'Create'}
+            {selectedPolicy ? "Update" : "Create"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -603,14 +708,16 @@ const SLAManagement: React.FC = () => {
         <DialogTitle>Delete SLA Policy</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the SLA policy "{selectedPolicy?.name}"?
-            This action cannot be undone.
+            Are you sure you want to delete the SLA policy "
+            {selectedPolicy?.name}"? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialog(false)}>Cancel</Button>
           <Button
-            onClick={() => selectedPolicy && deletePolicyMutation.mutate(selectedPolicy.id)}
+            onClick={() =>
+              selectedPolicy && deletePolicyMutation.mutate(selectedPolicy.id)
+            }
             color="error"
             variant="contained"
             disabled={deletePolicyMutation.isPending}

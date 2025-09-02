@@ -1,6 +1,6 @@
 // src/components/EntitySelector.tsx
 // Unified Entity selection component for Customer + Vendor + Employee + ExpenseAccount
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Autocomplete,
   TextField,
@@ -12,14 +12,24 @@ import {
   Select,
   MenuItem,
   InputAdornment,
-  CircularProgress
-} from '@mui/material';
-import { Add, Person, Business, Badge, AccountBalance } from '@mui/icons-material';
-import { Controller, Control } from 'react-hook-form';
-import {useEntityOptions} from '../hooks/useEntity';
-import { EntityType, EntityOption, ENTITY_CONFIGS } from '../types/entity.types';
-import AddVendorModal from './AddVendorModal';
-import AddCustomerModal from './AddCustomerModal';
+  CircularProgress,
+} from "@mui/material";
+import {
+  Add,
+  Person,
+  Business,
+  Badge,
+  AccountBalance,
+} from "@mui/icons-material";
+import { Controller, Control } from "react-hook-form";
+import { useEntityOptions } from "../hooks/useEntity";
+import {
+  EntityType,
+  EntityOption,
+  ENTITY_CONFIGS,
+} from "../types/entity.types";
+import AddVendorModal from "./AddVendorModal";
+import AddCustomerModal from "./AddCustomerModal";
 interface EntitySelectorProps {
   name: string;
   control: Control<any>;
@@ -34,13 +44,13 @@ interface EntitySelectorProps {
 }
 const getEntityIcon = (entityType: EntityType) => {
   switch (entityType) {
-    case 'Customer':
+    case "Customer":
       return <Person fontSize="small" />;
-    case 'Vendor':
+    case "Vendor":
       return <Business fontSize="small" />;
-    case 'Employee':
+    case "Employee":
       return <Badge fontSize="small" />;
-    case 'ExpenseAccount':
+    case "ExpenseAccount":
       return <AccountBalance fontSize="small" />;
     default:
       return <Person fontSize="small" />;
@@ -49,28 +59,34 @@ const getEntityIcon = (entityType: EntityType) => {
 const EntitySelector: React.FC<EntitySelectorProps> = ({
   name,
   control,
-  label = 'Select Entity',
+  label = "Select Entity",
   required = false,
-  entityTypes = ['Customer', 'Vendor'],
+  entityTypes = ["Customer", "Vendor"],
   allowTypeSelection = true,
   onEntityCreated,
   disabled = false,
   error = false,
-  helperText
+  helperText,
 }) => {
-  const [selectedEntityType, setSelectedEntityType] = useState<EntityType>(entityTypes[0]);
+  const [selectedEntityType, setSelectedEntityType] = useState<EntityType>(
+    entityTypes[0],
+  );
   const [showAddModal, setShowAddModal] = useState(false);
-  const [addModalType, setAddModalType] = useState<'Customer' | 'Vendor'>('Customer');
+  const [addModalType, setAddModalType] = useState<"Customer" | "Vendor">(
+    "Customer",
+  );
   const { options, isLoading } = useEntityOptions(
-    allowTypeSelection ? [selectedEntityType] : entityTypes
+    allowTypeSelection ? [selectedEntityType] : entityTypes,
   );
   const handleAddNew = () => {
-    if (selectedEntityType === 'Customer' || selectedEntityType === 'Vendor') {
+    if (selectedEntityType === "Customer" || selectedEntityType === "Vendor") {
       setAddModalType(selectedEntityType);
       setShowAddModal(true);
     } else {
       // For Employee and ExpenseAccount, we can add these modals later
-      alert(`Create ${selectedEntityType} functionality will be implemented soon`);
+      alert(
+        `Create ${selectedEntityType} functionality will be implemented soon`,
+      );
     }
   };
   const handleEntityCreated = async (newEntity: any) => {
@@ -88,8 +104,8 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
       type: selectedEntityType,
       label: `Add New ${selectedEntityType}...`,
       value: -1,
-      originalData: null
-    } as EntityOption
+      originalData: null,
+    } as EntityOption,
   ];
   return (
     <Box>
@@ -100,7 +116,9 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
             <InputLabel>Type</InputLabel>
             <Select
               value={selectedEntityType}
-              onChange={(e) => setSelectedEntityType(e.target.value as EntityType)}
+              onChange={(e) =>
+                setSelectedEntityType(e.target.value as EntityType)
+              }
               label="Type"
               disabled={disabled}
             >
@@ -125,12 +143,17 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
               <Autocomplete
                 {...field}
                 options={enhancedOptions}
-                getOptionLabel={(option) => 
-                  typeof option === 'string' ? option : (option?.label || '')
+                getOptionLabel={(option) =>
+                  typeof option === "string" ? option : option?.label || ""
                 }
                 renderOption={(props, option) => (
                   <Box component="li" {...props}>
-                    <Box display="flex" alignItems="center" gap={1} width="100%">
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={1}
+                      width="100%"
+                    >
                       {option.id === -1 ? (
                         <>
                           <Add fontSize="small" color="primary" />
@@ -145,7 +168,10 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
                             <Typography variant="body2">
                               {option.name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {option.type}
                             </Typography>
                           </Box>
@@ -161,7 +187,7 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
                       key={option.id}
                       label={option.name}
                       size="small"
-                      color={option.type === 'Customer' ? 'success' : 'primary'}
+                      color={option.type === "Customer" ? "success" : "primary"}
                     />
                   ))
                 }
@@ -190,28 +216,32 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
                       ),
                       endAdornment: (
                         <>
-                          {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {isLoading ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
                           {params.InputProps.endAdornment}
                         </>
                       ),
                     }}
                   />
                 )}
-                isOptionEqualToValue={(option, value) => option.id === value?.id}
+                isOptionEqualToValue={(option, value) =>
+                  option.id === value?.id
+                }
               />
             )}
           />
         </Box>
       </Box>
       {/* Add Entity Modals */}
-      {addModalType === 'Customer' && (
+      {addModalType === "Customer" && (
         <AddCustomerModal
           open={showAddModal}
           onClose={() => setShowAddModal(false)}
           onAdd={handleEntityCreated}
         />
       )}
-      {addModalType === 'Vendor' && (
+      {addModalType === "Vendor" && (
         <AddVendorModal
           open={showAddModal}
           onClose={() => setShowAddModal(false)}

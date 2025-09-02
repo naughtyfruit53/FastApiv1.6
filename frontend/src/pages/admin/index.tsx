@@ -1,46 +1,47 @@
-'use client';
+"use client";
 // fastapi_migration/frontend/src/pages/admin/index.tsx
-import React from 'react';
-import Link from 'next/link';
-import { 
-  Container, 
-  Typography, 
-  Button, 
+import React from "react";
+import Link from "next/link";
+import {
+  Container,
+  Typography,
+  Button,
   Box,
   Chip,
   Paper,
   Grid as Grid,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Security,
   Business,
   AdminPanelSettings,
-  Dashboard
-} from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+  Dashboard,
+} from "@mui/icons-material";
+import { useAuth } from "../../context/AuthContext";
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const isGodAccount = user?.email === 'naughty@grok.com';
-  const isSuperAdmin = user?.is_super_admin || user?.role === 'super_admin';
+  const isGodAccount = user?.email === "naughty@grok.com";
+  const isSuperAdmin = user?.is_super_admin || user?.role === "super_admin";
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Admin Dashboard
       </Typography>
       <Typography variant="body1" color="textSecondary" paragraph>
-        Welcome to the administration panel. Select a module below to manage the application.
+        Welcome to the administration panel. Select a module below to manage the
+        application.
       </Typography>
       <Grid container spacing={3}>
         {/* License Management */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper>
             <Box sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Security sx={{ mr: 2, color: 'primary.main' }} />
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Security sx={{ mr: 2, color: "primary.main" }} />
                 <Typography variant="h6">License Management</Typography>
               </Box>
               <Typography variant="body2" color="textSecondary" paragraph>
-                Create new organization licenses and view existing licenses. 
+                Create new organization licenses and view existing licenses.
                 Restricted to license creation and viewing only.
               </Typography>
               <Link href="/admin/license-management" passHref>
@@ -55,13 +56,13 @@ const AdminDashboard: React.FC = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper>
             <Box sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Business sx={{ mr: 2, color: 'primary.main' }} />
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Business sx={{ mr: 2, color: "primary.main" }} />
                 <Typography variant="h6">Manage Organizations</Typography>
               </Box>
               <Typography variant="body2" color="textSecondary" paragraph>
-                Full organization management including password resets, status changes, 
-                and data operations.
+                Full organization management including password resets, status
+                changes, and data operations.
               </Typography>
               <Link href="/admin/manage-organizations" passHref>
                 <Button variant="contained" fullWidth>
@@ -76,14 +77,19 @@ const AdminDashboard: React.FC = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Paper>
               <Box sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <AdminPanelSettings sx={{ mr: 2, color: 'warning.main' }} />
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <AdminPanelSettings sx={{ mr: 2, color: "warning.main" }} />
                   <Typography variant="h6">App User Management</Typography>
-                  <Chip label="Restricted" color="warning" size="small" sx={{ ml: 1 }} />
+                  <Chip
+                    label="Restricted"
+                    color="warning"
+                    size="small"
+                    sx={{ ml: 1 }}
+                  />
                 </Box>
                 <Typography variant="body2" color="textSecondary" paragraph>
-                  Manage app-level users (superadmins and admins). 
-                  Only accessible to the primary super admin.
+                  Manage app-level users (superadmins and admins). Only
+                  accessible to the primary super admin.
                 </Typography>
                 <Link href="/admin/app-user-management" passHref>
                   <Button variant="contained" color="warning" fullWidth>
@@ -98,12 +104,16 @@ const AdminDashboard: React.FC = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper>
             <Box sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Dashboard sx={{ mr: 2, color: 'primary.main' }} />
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Dashboard sx={{ mr: 2, color: "primary.main" }} />
                 <Typography variant="h6">Dashboard</Typography>
               </Box>
               <Typography variant="body2" color="textSecondary" paragraph>
-                View {isSuperAdmin ? 'app-level statistics and metrics' : 'organization dashboard'}.
+                View{" "}
+                {isSuperAdmin
+                  ? "app-level statistics and metrics"
+                  : "organization dashboard"}
+                .
               </Typography>
               <Link href="/dashboard" passHref>
                 <Button variant="outlined" fullWidth>
@@ -115,26 +125,21 @@ const AdminDashboard: React.FC = () => {
         </Grid>
       </Grid>
       {/* Access Information */}
-      <Box sx={{ mt: 4, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+      <Box sx={{ mt: 4, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
         <Typography variant="h6" gutterBottom>
           Your Access Level
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {isSuperAdmin && (
-            <Chip label="App Super Admin" color="primary" />
-          )}
-          {isGodAccount && (
-            <Chip label="God Account" color="warning" />
-          )}
-          <Chip label={`Role: ${user?.role || 'Unknown'}`} variant="outlined" />
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          {isSuperAdmin && <Chip label="App Super Admin" color="primary" />}
+          {isGodAccount && <Chip label="God Account" color="warning" />}
+          <Chip label={`Role: ${user?.role || "Unknown"}`} variant="outlined" />
         </Box>
         <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-          {isGodAccount 
+          {isGodAccount
             ? "You have full access to all administrative functions including app user management."
-            : isSuperAdmin 
-            ? "You can manage licenses and organizations but cannot manage app-level users."
-            : "You have limited administrative access based on your role."
-          }
+            : isSuperAdmin
+              ? "You can manage licenses and organizations but cannot manage app-level users."
+              : "You have limited administrative access based on your role."}
         </Typography>
       </Box>
     </Container>

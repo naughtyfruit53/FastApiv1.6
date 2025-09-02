@@ -1,14 +1,18 @@
 // components/ExcelImportExport.tsx
-'use client';
-import React from 'react';
-import { Button, Box } from '@mui/material';
-import { exportToExcel, importFromExcel } from '../lib/excelUtils';
+"use client";
+import React from "react";
+import { Button, Box } from "@mui/material";
+import { exportToExcel, importFromExcel } from "../lib/excelUtils";
 interface ExcelImportExportProps {
   data: any[];
   entity: string;
   onImport: (_importedData: any[]) => void;
 }
-const ExcelImportExport: React.FC<ExcelImportExportProps> = ({ data, entity, onImport }) => {
+const ExcelImportExport: React.FC<ExcelImportExportProps> = ({
+  data,
+  entity,
+  onImport,
+}) => {
   const handleExport = () => {
     exportToExcel(data, entity);
   };
@@ -20,7 +24,7 @@ const ExcelImportExport: React.FC<ExcelImportExportProps> = ({ data, entity, onI
     }
   };
   return (
-    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+    <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
       <Button variant="outlined" onClick={handleExport}>
         Export {entity} to Excel
       </Button>

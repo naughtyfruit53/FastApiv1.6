@@ -1,5 +1,5 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -21,14 +21,14 @@ import {
   Divider,
   Grid,
   Card,
-  CardContent
-} from '@mui/material';
+  CardContent,
+} from "@mui/material";
 import {
   Feedback as FeedbackIcon,
   Star as StarIcon,
   ThumbUp as ThumbUpIcon,
-  ThumbDown as ThumbDownIcon
-} from '@mui/icons-material';
+  ThumbDown as ThumbDownIcon,
+} from "@mui/icons-material";
 interface CustomerFeedbackModalProps {
   open: boolean;
   onClose: () => void;
@@ -38,16 +38,16 @@ interface CustomerFeedbackModalProps {
   onSubmit: (_feedbackData: any) => Promise<void>;
 }
 const SATISFACTION_LEVELS = [
-  { value: 'very_satisfied', label: 'Very Satisfied', color: '#4caf50' },
-  { value: 'satisfied', label: 'Satisfied', color: '#8bc34a' },
-  { value: 'neutral', label: 'Neutral', color: '#ff9800' },
-  { value: 'dissatisfied', label: 'Dissatisfied', color: '#f44336' },
-  { value: 'very_dissatisfied', label: 'Very Dissatisfied', color: '#d32f2f' }
+  { value: "very_satisfied", label: "Very Satisfied", color: "#4caf50" },
+  { value: "satisfied", label: "Satisfied", color: "#8bc34a" },
+  { value: "neutral", label: "Neutral", color: "#ff9800" },
+  { value: "dissatisfied", label: "Dissatisfied", color: "#f44336" },
+  { value: "very_dissatisfied", label: "Very Dissatisfied", color: "#d32f2f" },
 ];
 const CONTACT_METHODS = [
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'sms', label: 'SMS' }
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "sms", label: "SMS" },
 ];
 export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
   open,
@@ -55,7 +55,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
   installationJobId,
   customerId,
   completionRecordId,
-  onSubmit
+  onSubmit,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -64,43 +64,46 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
     technician_rating: 0,
     timeliness_rating: 0,
     communication_rating: 0,
-    feedback_comments: '',
-    improvement_suggestions: '',
+    feedback_comments: "",
+    improvement_suggestions: "",
     would_recommend: true,
-    satisfaction_level: 'satisfied',
+    satisfaction_level: "satisfied",
     follow_up_preferred: false,
-    preferred_contact_method: 'email',
-    survey_responses: {}
+    preferred_contact_method: "email",
+    survey_responses: {},
   });
   const [error, setError] = useState<string | null>(null);
-  const handleRatingChange = (field: string) => (event: any, value: number | null) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value || 0
-    }));
-  };
-  const handleTextChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value
-    }));
-  };
+  const handleRatingChange =
+    (field: string) => (event: any, value: number | null) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value || 0,
+      }));
+    };
+  const handleTextChange =
+    (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: event.target.value,
+      }));
+    };
   const handleSelectChange = (field: string) => (event: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: event.target.value
+      [field]: event.target.value,
     }));
   };
-  const handleSwitchChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.checked
-    }));
-  };
+  const handleSwitchChange =
+    (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: event.target.checked,
+      }));
+    };
   const handleSubmit = async () => {
     setError(null);
     if (formData.overall_rating === 0) {
-      setError('Please provide an overall rating');
+      setError("Please provide an overall rating");
       return;
     }
     setIsSubmitting(true);
@@ -109,12 +112,12 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
         installation_job_id: installationJobId,
         customer_id: customerId,
         completion_record_id: completionRecordId,
-        ...formData
+        ...formData,
       };
       await onSubmit(feedbackData);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to submit feedback');
+      setError(err.message || "Failed to submit feedback");
     } finally {
       setIsSubmitting(false);
     }
@@ -126,13 +129,13 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
       technician_rating: 0,
       timeliness_rating: 0,
       communication_rating: 0,
-      feedback_comments: '',
-      improvement_suggestions: '',
+      feedback_comments: "",
+      improvement_suggestions: "",
       would_recommend: true,
-      satisfaction_level: 'satisfied',
+      satisfaction_level: "satisfied",
       follow_up_preferred: false,
-      preferred_contact_method: 'email',
-      survey_responses: {}
+      preferred_contact_method: "email",
+      survey_responses: {},
     });
     setError(null);
   };
@@ -140,7 +143,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
     resetForm();
     onClose();
   };
-  
+
   return (
     <Dialog
       open={open}
@@ -175,13 +178,15 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                 <Box display="flex" alignItems="center" gap={2}>
                   <Rating
                     value={formData.overall_rating}
-                    onChange={handleRatingChange('overall_rating')}
+                    onChange={handleRatingChange("overall_rating")}
                     size="large"
                     icon={<StarIcon fontSize="inherit" />}
                     emptyIcon={<StarIcon fontSize="inherit" />}
                   />
                   <Typography variant="body2" color="text.secondary">
-                    {formData.overall_rating > 0 ? `${formData.overall_rating}/5` : 'Please rate'}
+                    {formData.overall_rating > 0
+                      ? `${formData.overall_rating}/5`
+                      : "Please rate"}
                   </Typography>
                 </Box>
               </CardContent>
@@ -200,7 +205,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   </Typography>
                   <Rating
                     value={formData.service_quality_rating}
-                    onChange={handleRatingChange('service_quality_rating')}
+                    onChange={handleRatingChange("service_quality_rating")}
                     size="small"
                   />
                 </Box>
@@ -212,7 +217,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   </Typography>
                   <Rating
                     value={formData.technician_rating}
-                    onChange={handleRatingChange('technician_rating')}
+                    onChange={handleRatingChange("technician_rating")}
                     size="small"
                   />
                 </Box>
@@ -224,7 +229,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   </Typography>
                   <Rating
                     value={formData.timeliness_rating}
-                    onChange={handleRatingChange('timeliness_rating')}
+                    onChange={handleRatingChange("timeliness_rating")}
                     size="small"
                   />
                 </Box>
@@ -236,7 +241,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   </Typography>
                   <Rating
                     value={formData.communication_rating}
-                    onChange={handleRatingChange('communication_rating')}
+                    onChange={handleRatingChange("communication_rating")}
                     size="small"
                   />
                 </Box>
@@ -249,7 +254,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
               <InputLabel>Satisfaction Level</InputLabel>
               <Select
                 value={formData.satisfaction_level}
-                onChange={handleSelectChange('satisfaction_level')}
+                onChange={handleSelectChange("satisfaction_level")}
                 label="Satisfaction Level"
               >
                 {SATISFACTION_LEVELS.map((level) => (
@@ -274,7 +279,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
               control={
                 <Switch
                   checked={formData.would_recommend}
-                  onChange={handleSwitchChange('would_recommend')}
+                  onChange={handleSwitchChange("would_recommend")}
                   color="primary"
                 />
               }
@@ -299,7 +304,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
               label="Feedback Comments"
               placeholder="Please share your thoughts about the service..."
               value={formData.feedback_comments}
-              onChange={handleTextChange('feedback_comments')}
+              onChange={handleTextChange("feedback_comments")}
             />
           </Grid>
           {/* Improvement Suggestions */}
@@ -311,7 +316,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
               label="Suggestions for Improvement"
               placeholder="How can we improve our service?"
               value={formData.improvement_suggestions}
-              onChange={handleTextChange('improvement_suggestions')}
+              onChange={handleTextChange("improvement_suggestions")}
             />
           </Grid>
           <Grid item xs={12}>
@@ -328,7 +333,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
               control={
                 <Switch
                   checked={formData.follow_up_preferred}
-                  onChange={handleSwitchChange('follow_up_preferred')}
+                  onChange={handleSwitchChange("follow_up_preferred")}
                   color="primary"
                 />
               }
@@ -341,7 +346,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                 <InputLabel>Preferred Contact Method</InputLabel>
                 <Select
                   value={formData.preferred_contact_method}
-                  onChange={handleSelectChange('preferred_contact_method')}
+                  onChange={handleSelectChange("preferred_contact_method")}
                   label="Preferred Contact Method"
                 >
                   {CONTACT_METHODS.map((method) => (
@@ -363,9 +368,11 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
           onClick={handleSubmit}
           variant="contained"
           disabled={isSubmitting || formData.overall_rating === 0}
-          startIcon={isSubmitting ? <CircularProgress size={20} /> : <FeedbackIcon />}
+          startIcon={
+            isSubmitting ? <CircularProgress size={20} /> : <FeedbackIcon />
+          }
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+          {isSubmitting ? "Submitting..." : "Submit Feedback"}
         </Button>
       </DialogActions>
     </Dialog>

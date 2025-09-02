@@ -1,6 +1,6 @@
 // src/components/NotificationLogs.tsx
 // Component for viewing notification history and logs
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Card,
@@ -33,8 +33,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon
-} from '@mui/material';
+  ListItemIcon,
+} from "@mui/material";
 import {
   Visibility,
   Email,
@@ -49,9 +49,9 @@ import {
   Schedule,
   CheckCircle,
   Error as ErrorIcon,
-  Warning
-} from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
+  Warning,
+} from "@mui/icons-material";
+import { useQuery } from "@tanstack/react-query";
 import {
   getNotificationLogs,
   getNotificationLog,
@@ -62,9 +62,9 @@ import {
   getChannelDisplayName,
   getStatusDisplayName,
   getStatusColor,
-  notificationQueryKeys
-} from '../services/notificationService';
-import { format } from 'date-fns';
+  notificationQueryKeys,
+} from "../services/notificationService";
+import { format } from "date-fns";
 const NotificationLogs: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -72,91 +72,95 @@ const NotificationLogs: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   // Filter state
   const [filters, setFilters] = useState({
-    recipient_type: '',
-    status: '',
-    channel: '',
-    search: ''
+    recipient_type: "",
+    status: "",
+    channel: "",
+    search: "",
   });
   // Analytics state
   // Get notification logs
-  const { 
-    data: logs = [], 
+  const {
+    data: logs = [],
     isLoading: logsLoading,
     error: logsError,
-    refetch: refetchLogs
+    refetch: refetchLogs,
   } = useQuery({
     queryKey: notificationQueryKeys.logsFiltered({
       ...filters,
       limit: rowsPerPage,
-      offset: page * rowsPerPage
+      offset: page * rowsPerPage,
     }),
-    queryFn: () => getNotificationLogs({
-      recipient_type: filters.recipient_type || undefined,
-      status: filters.status as any || undefined,
-      channel: filters.channel as any || undefined,
-      limit: rowsPerPage,
-      offset: page * rowsPerPage
-    }),
+    queryFn: () =>
+      getNotificationLogs({
+        recipient_type: filters.recipient_type || undefined,
+        status: (filters.status as any) || undefined,
+        channel: (filters.channel as any) || undefined,
+        limit: rowsPerPage,
+        offset: page * rowsPerPage,
+      }),
   });
   // Get analytics
   const analyticsDays = 30; // Default to 30 days for analytics
-  const { 
-    data: analytics,
-    isLoading: _analyticsLoading 
-  } = useQuery({
+  const { data: analytics, isLoading: _analyticsLoading } = useQuery({
     queryKey: notificationQueryKeys.analytics(analyticsDays),
     queryFn: () => getNotificationAnalytics(analyticsDays),
   });
   // Get detailed log when modal opens
-  const { 
-    data: logDetail,
-    isLoading: logDetailLoading 
-  } = useQuery({
+  const { data: logDetail, isLoading: logDetailLoading } = useQuery({
     queryKey: notificationQueryKeys.log(selectedLog?.id || 0),
     queryFn: () => getNotificationLog(selectedLog!.id),
-    enabled: !!selectedLog
+    enabled: !!selectedLog,
   });
   const handleViewDetails = (log: NotificationLog) => {
     setSelectedLog(log);
     setIsDetailModalOpen(true);
   };
   const handleFilterChange = (field: string, value: string) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    setFilters((prev) => ({ ...prev, [field]: value }));
     setPage(0); // Reset to first page when filtering
   };
   const resetFilters = () => {
     setFilters({
-      recipient_type: '',
-      status: '',
-      channel: '',
-      search: ''
+      recipient_type: "",
+      status: "",
+      channel: "",
+      search: "",
     });
     setPage(0);
   };
   const getChannelIcon = (channel: string) => {
     switch (channel) {
-      case 'email': return <Email fontSize="small" />;
-      case 'sms': return <Sms fontSize="small" />;
-      case 'push': return <NotificationImportant fontSize="small" />;
-      case 'in_app': return <Notifications fontSize="small" />;
-      default: return <Notifications fontSize="small" />;
+      case "email":
+        return <Email fontSize="small" />;
+      case "sms":
+        return <Sms fontSize="small" />;
+      case "push":
+        return <NotificationImportant fontSize="small" />;
+      case "in_app":
+        return <Notifications fontSize="small" />;
+      default:
+        return <Notifications fontSize="small" />;
     }
   };
   const getRecipientTypeIcon = (type: string) => {
-    return type === 'customer' ? <Person fontSize="small" /> : <Group fontSize="small" />;
+    return type === "customer" ? (
+      <Person fontSize="small" />
+    ) : (
+      <Group fontSize="small" />
+    );
   };
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM dd, yyyy HH:mm');
+    return format(new Date(dateString), "MMM dd, yyyy HH:mm");
   };
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'sent':
-      case 'delivered':
+      case "sent":
+      case "delivered":
         return <CheckCircle fontSize="small" color="success" />;
-      case 'failed':
-      case 'bounced':
+      case "failed":
+      case "bounced":
         return <ErrorIcon fontSize="small" color="error" />;
-      case 'pending':
+      case "pending":
         return <Schedule fontSize="small" color="warning" />;
       default:
         return <Warning fontSize="small" />;
@@ -177,9 +181,17 @@ const NotificationLogs: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
                   <Box>
-                    <Typography color="text.secondary" gutterBottom variant="body2">
+                    <Typography
+                      color="text.secondary"
+                      gutterBottom
+                      variant="body2"
+                    >
                       Total Notifications
                     </Typography>
                     <Typography variant="h5">
@@ -194,15 +206,29 @@ const NotificationLogs: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
                   <Box>
-                    <Typography color="text.secondary" gutterBottom variant="body2">
+                    <Typography
+                      color="text.secondary"
+                      gutterBottom
+                      variant="body2"
+                    >
                       Success Rate
                     </Typography>
                     <Typography variant="h5">
-                      {analytics.total_notifications > 0 
-                        ? Math.round(((analytics.status_breakdown?.delivered || 0) + (analytics.status_breakdown?.sent || 0)) / analytics.total_notifications * 100)
-                        : 0}%
+                      {analytics.total_notifications > 0
+                        ? Math.round(
+                            (((analytics.status_breakdown?.delivered || 0) +
+                              (analytics.status_breakdown?.sent || 0)) /
+                              analytics.total_notifications) *
+                              100,
+                          )
+                        : 0}
+                      %
                     </Typography>
                   </Box>
                   <CheckCircle color="success" />
@@ -213,9 +239,17 @@ const NotificationLogs: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
                   <Box>
-                    <Typography color="text.secondary" gutterBottom variant="body2">
+                    <Typography
+                      color="text.secondary"
+                      gutterBottom
+                      variant="body2"
+                    >
                       Email Notifications
                     </Typography>
                     <Typography variant="h5">
@@ -230,13 +264,22 @@ const NotificationLogs: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
                   <Box>
-                    <Typography color="text.secondary" gutterBottom variant="body2">
+                    <Typography
+                      color="text.secondary"
+                      gutterBottom
+                      variant="body2"
+                    >
                       Failed Notifications
                     </Typography>
                     <Typography variant="h5">
-                      {(analytics.status_breakdown?.failed || 0) + (analytics.status_breakdown?.bounced || 0)}
+                      {(analytics.status_breakdown?.failed || 0) +
+                        (analytics.status_breakdown?.bounced || 0)}
                     </Typography>
                   </Box>
                   <ErrorIcon color="error" />
@@ -249,7 +292,12 @@ const NotificationLogs: React.FC = () => {
       {/* Main Content */}
       <Card>
         <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={3}
+          >
             <Typography variant="h5" component="h2">
               Notification Logs
             </Typography>
@@ -269,10 +317,12 @@ const NotificationLogs: React.FC = () => {
                 <Select
                   value={filters.channel}
                   label="Channel"
-                  onChange={(e) => handleFilterChange('channel', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("channel", e.target.value)
+                  }
                 >
                   <MenuItem value="">All Channels</MenuItem>
-                  {NOTIFICATION_CHANNELS.map(channel => (
+                  {NOTIFICATION_CHANNELS.map((channel) => (
                     <MenuItem key={channel} value={channel}>
                       {getChannelDisplayName(channel)}
                     </MenuItem>
@@ -286,10 +336,10 @@ const NotificationLogs: React.FC = () => {
                 <Select
                   value={filters.status}
                   label="Status"
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  onChange={(e) => handleFilterChange("status", e.target.value)}
                 >
                   <MenuItem value="">All Statuses</MenuItem>
-                  {NOTIFICATION_STATUSES.map(status => (
+                  {NOTIFICATION_STATUSES.map((status) => (
                     <MenuItem key={status} value={status}>
                       {getStatusDisplayName(status)}
                     </MenuItem>
@@ -303,7 +353,9 @@ const NotificationLogs: React.FC = () => {
                 <Select
                   value={filters.recipient_type}
                   label="Recipient Type"
-                  onChange={(e) => handleFilterChange('recipient_type', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("recipient_type", e.target.value)
+                  }
                 >
                   <MenuItem value="">All Types</MenuItem>
                   <MenuItem value="customer">Customer</MenuItem>
@@ -318,7 +370,7 @@ const NotificationLogs: React.FC = () => {
                 size="small"
                 label="Search recipient"
                 value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
                 placeholder="Search by email, name..."
               />
             </Grid>
@@ -364,7 +416,10 @@ const NotificationLogs: React.FC = () => {
                               <Typography variant="body2">
                                 {log.recipient_identifier}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {log.recipient_type}
                               </Typography>
                             </Box>
@@ -390,11 +445,18 @@ const NotificationLogs: React.FC = () => {
                           <Box>
                             {log.subject && (
                               <Typography variant="body2" fontWeight="medium">
-                                {log.subject.length > 50 ? `${log.subject.substring(0, 50)}...` : log.subject}
+                                {log.subject.length > 50
+                                  ? `${log.subject.substring(0, 50)}...`
+                                  : log.subject}
                               </Typography>
                             )}
-                            <Typography variant="caption" color="text.secondary">
-                              {log.content.length > 80 ? `${log.content.substring(0, 80)}...` : log.content}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {log.content.length > 80
+                                ? `${log.content.substring(0, 80)}...`
+                                : log.content}
                             </Typography>
                           </Box>
                         </TableCell>
@@ -405,7 +467,10 @@ const NotificationLogs: React.FC = () => {
                                 {formatDate(log.sent_at)}
                               </Typography>
                               {log.delivered_at && (
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
                                   Delivered: {formatDate(log.delivered_at)}
                                 </Typography>
                               )}
@@ -418,8 +483,8 @@ const NotificationLogs: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Tooltip title="View Details">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               onClick={() => handleViewDetails(log)}
                             >
                               <Visibility />
@@ -457,8 +522,8 @@ const NotificationLogs: React.FC = () => {
         </CardContent>
       </Card>
       {/* Detail Modal */}
-      <Dialog 
-        open={isDetailModalOpen} 
+      <Dialog
+        open={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         maxWidth="md"
         fullWidth
@@ -477,7 +542,8 @@ const NotificationLogs: React.FC = () => {
                     Recipient
                   </Typography>
                   <Typography gutterBottom>
-                    {logDetail.recipient_identifier} ({logDetail.recipient_type})
+                    {logDetail.recipient_identifier} ({logDetail.recipient_type}
+                    )
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -515,17 +581,15 @@ const NotificationLogs: React.FC = () => {
                     <Typography variant="subtitle2" color="text.secondary">
                       Subject
                     </Typography>
-                    <Typography gutterBottom>
-                      {logDetail.subject}
-                    </Typography>
+                    <Typography gutterBottom>{logDetail.subject}</Typography>
                   </Grid>
                 )}
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Content
                   </Typography>
-                  <Paper sx={{ p: 2, bgcolor: 'grey.50', mt: 1 }}>
-                    <Typography style={{ whiteSpace: 'pre-wrap' }}>
+                  <Paper sx={{ p: 2, bgcolor: "grey.50", mt: 1 }}>
+                    <Typography style={{ whiteSpace: "pre-wrap" }}>
                       {logDetail.content}
                     </Typography>
                   </Paper>
@@ -545,14 +609,20 @@ const NotificationLogs: React.FC = () => {
                     <Typography variant="subtitle2" color="text.secondary">
                       Context Data
                     </Typography>
-                    <Paper sx={{ p: 2, bgcolor: 'grey.50', mt: 1 }}>
-                      <pre>{JSON.stringify(logDetail.context_data, null, 2)}</pre>
+                    <Paper sx={{ p: 2, bgcolor: "grey.50", mt: 1 }}>
+                      <pre>
+                        {JSON.stringify(logDetail.context_data, null, 2)}
+                      </pre>
                     </Paper>
                   </Grid>
                 )}
                 {/* Timeline */}
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     Timeline
                   </Typography>
                   <List dense>

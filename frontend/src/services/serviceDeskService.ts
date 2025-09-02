@@ -1,6 +1,6 @@
 // frontend/src/services/serviceDeskService.ts
 
-import api from '../lib/api';
+import api from "../lib/api";
 
 export interface Ticket {
   id: number;
@@ -61,7 +61,7 @@ export interface SLAPolicy {
 }
 
 class ServiceDeskService {
-  private endpoint = '/service-desk';
+  private endpoint = "/service-desk";
 
   /**
    * Get Service Desk analytics dashboard data
@@ -71,7 +71,7 @@ class ServiceDeskService {
       const response = await api.get(`${this.endpoint}/analytics`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching Service Desk analytics:', error);
+      console.error("Error fetching Service Desk analytics:", error);
       throw error;
     }
   }
@@ -79,15 +79,21 @@ class ServiceDeskService {
   /**
    * Get all tickets
    */
-  async getTickets(skip: number = 0, limit: number = 100, status?: string): Promise<Ticket[]> {
+  async getTickets(
+    skip: number = 0,
+    limit: number = 100,
+    status?: string,
+  ): Promise<Ticket[]> {
     try {
       const params: any = { skip, limit };
-      if (status) {params.status = status;}
-      
+      if (status) {
+        params.status = status;
+      }
+
       const response = await api.get(`${this.endpoint}/tickets`, { params });
       return response.data;
     } catch (error) {
-      console.error('Error fetching tickets:', error);
+      console.error("Error fetching tickets:", error);
       throw error;
     }
   }
@@ -113,7 +119,7 @@ class ServiceDeskService {
       const response = await api.post(`${this.endpoint}/tickets`, ticketData);
       return response.data;
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      console.error("Error creating ticket:", error);
       throw error;
     }
   }
@@ -123,7 +129,10 @@ class ServiceDeskService {
    */
   async updateTicket(id: number, ticketData: any): Promise<Ticket> {
     try {
-      const response = await api.put(`${this.endpoint}/tickets/${id}`, ticketData);
+      const response = await api.put(
+        `${this.endpoint}/tickets/${id}`,
+        ticketData,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error updating ticket ${id}:`, error);
@@ -148,7 +157,9 @@ class ServiceDeskService {
    */
   async assignTicket(id: number, userId: number): Promise<Ticket> {
     try {
-      const response = await api.put(`${this.endpoint}/tickets/${id}/assign`, { assigned_to: userId });
+      const response = await api.put(`${this.endpoint}/tickets/${id}/assign`, {
+        assigned_to: userId,
+      });
       return response.data;
     } catch (error) {
       console.error(`Error assigning ticket ${id}:`, error);
@@ -161,7 +172,9 @@ class ServiceDeskService {
    */
   async closeTicket(id: number, resolution: string): Promise<Ticket> {
     try {
-      const response = await api.put(`${this.endpoint}/tickets/${id}/close`, { resolution });
+      const response = await api.put(`${this.endpoint}/tickets/${id}/close`, {
+        resolution,
+      });
       return response.data;
     } catch (error) {
       console.error(`Error closing ticket ${id}:`, error);
@@ -172,14 +185,17 @@ class ServiceDeskService {
   /**
    * Get chatbot conversations
    */
-  async getChatbotConversations(skip: number = 0, limit: number = 100): Promise<ChatbotConversation[]> {
+  async getChatbotConversations(
+    skip: number = 0,
+    limit: number = 100,
+  ): Promise<ChatbotConversation[]> {
     try {
       const response = await api.get(`${this.endpoint}/chatbot/conversations`, {
-        params: { skip, limit }
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching chatbot conversations:', error);
+      console.error("Error fetching chatbot conversations:", error);
       throw error;
     }
   }
@@ -187,12 +203,19 @@ class ServiceDeskService {
   /**
    * Get conversation by session ID
    */
-  async getConversationBySession(sessionId: string): Promise<ChatbotConversation[]> {
+  async getConversationBySession(
+    sessionId: string,
+  ): Promise<ChatbotConversation[]> {
     try {
-      const response = await api.get(`${this.endpoint}/chatbot/conversations/${sessionId}`);
+      const response = await api.get(
+        `${this.endpoint}/chatbot/conversations/${sessionId}`,
+      );
       return response.data;
     } catch (error) {
-      console.error(`Error fetching conversation for session ${sessionId}:`, error);
+      console.error(
+        `Error fetching conversation for session ${sessionId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -200,15 +223,18 @@ class ServiceDeskService {
   /**
    * Send message to chatbot
    */
-  async sendChatbotMessage(sessionId: string, message: string): Promise<ChatbotConversation> {
+  async sendChatbotMessage(
+    sessionId: string,
+    message: string,
+  ): Promise<ChatbotConversation> {
     try {
       const response = await api.post(`${this.endpoint}/chatbot/message`, {
         session_id: sessionId,
-        message: message
+        message: message,
       });
       return response.data;
     } catch (error) {
-      console.error('Error sending chatbot message:', error);
+      console.error("Error sending chatbot message:", error);
       throw error;
     }
   }
@@ -219,7 +245,7 @@ class ServiceDeskService {
   async escalateToHuman(sessionId: string): Promise<Ticket> {
     try {
       const response = await api.post(`${this.endpoint}/chatbot/escalate`, {
-        session_id: sessionId
+        session_id: sessionId,
       });
       return response.data;
     } catch (error) {
@@ -236,7 +262,7 @@ class ServiceDeskService {
       const response = await api.get(`${this.endpoint}/sla-policies`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching SLA policies:', error);
+      console.error("Error fetching SLA policies:", error);
       throw error;
     }
   }
@@ -246,7 +272,9 @@ class ServiceDeskService {
    */
   async getTicketSLA(ticketId: number): Promise<any> {
     try {
-      const response = await api.get(`${this.endpoint}/tickets/${ticketId}/sla`);
+      const response = await api.get(
+        `${this.endpoint}/tickets/${ticketId}/sla`,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error fetching SLA for ticket ${ticketId}:`, error);

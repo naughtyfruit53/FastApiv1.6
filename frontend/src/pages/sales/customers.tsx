@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -22,8 +22,8 @@ import {
   InputAdornment,
   Alert,
   CircularProgress,
-  Tooltip
-} from '@mui/material';
+  Tooltip,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -31,9 +31,9 @@ import {
   Visibility as ViewIcon,
   Business as BusinessIcon,
   Analytics as AnalyticsIcon,
-  Link as LinkIcon
-} from '@mui/icons-material';
-import { useRouter } from 'next/router';
+  Link as LinkIcon,
+} from "@mui/icons-material";
+import { useRouter } from "next/router";
 
 interface Customer {
   id: number;
@@ -44,7 +44,7 @@ interface Customer {
   address: string;
   city: string;
   state: string;
-  status: 'active' | 'inactive' | 'prospect';
+  status: "active" | "inactive" | "prospect";
   created_at: string;
 }
 
@@ -53,7 +53,7 @@ const SalesCustomerDatabase: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Mock data - in production this would link to master customers
   useEffect(() => {
@@ -61,51 +61,51 @@ const SalesCustomerDatabase: React.FC = () => {
       try {
         setLoading(true);
         // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
         const mockData: Customer[] = [
           {
             id: 1,
-            name: 'TechCorp Ltd',
-            contact_person: 'John Smith',
-            email: 'john.smith@techcorp.com',
-            phone: '+1-555-0123',
-            address: '123 Tech Street',
-            city: 'San Francisco',
-            state: 'CA',
-            status: 'active',
-            created_at: '2022-03-10'
+            name: "TechCorp Ltd",
+            contact_person: "John Smith",
+            email: "john.smith@techcorp.com",
+            phone: "+1-555-0123",
+            address: "123 Tech Street",
+            city: "San Francisco",
+            state: "CA",
+            status: "active",
+            created_at: "2022-03-10",
           },
           {
             id: 2,
-            name: 'Global Systems Inc',
-            contact_person: 'Mike Wilson',
-            email: 'mike.wilson@globalsystems.com',
-            phone: '+1-555-0124',
-            address: '456 Business Ave',
-            city: 'New York',
-            state: 'NY',
-            status: 'active',
-            created_at: '2021-07-15'
+            name: "Global Systems Inc",
+            contact_person: "Mike Wilson",
+            email: "mike.wilson@globalsystems.com",
+            phone: "+1-555-0124",
+            address: "456 Business Ave",
+            city: "New York",
+            state: "NY",
+            status: "active",
+            created_at: "2021-07-15",
           },
           {
             id: 3,
-            name: 'Manufacturing Co',
-            contact_person: 'Lisa Davis',
-            email: 'lisa.davis@manufacturing.com',
-            phone: '+1-555-0125',
-            address: '789 Industrial Blvd',
-            city: 'Detroit',
-            state: 'MI',
-            status: 'prospect',
-            created_at: '2024-01-10'
-          }
+            name: "Manufacturing Co",
+            contact_person: "Lisa Davis",
+            email: "lisa.davis@manufacturing.com",
+            phone: "+1-555-0125",
+            address: "789 Industrial Blvd",
+            city: "Detroit",
+            state: "MI",
+            status: "prospect",
+            created_at: "2024-01-10",
+          },
         ];
-        
+
         setCustomers(mockData);
       } catch (err) {
-        setError('Failed to load customers');
-        console.error('Error fetching customers:', err);
+        setError("Failed to load customers");
+        console.error("Error fetching customers:", err);
       } finally {
         setLoading(false);
       }
@@ -114,23 +114,30 @@ const SalesCustomerDatabase: React.FC = () => {
     fetchCustomers();
   }, []);
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.contact_person.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCustomers = customers.filter(
+    (customer) =>
+      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.contact_person
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'success';
-      case 'prospect': return 'primary';
-      case 'inactive': return 'default';
-      default: return 'default';
+      case "active":
+        return "success";
+      case "prospect":
+        return "primary";
+      case "inactive":
+        return "default";
+      default:
+        return "default";
     }
   };
 
   const handleGoToMasterCustomers = () => {
-    router.push('/customers');
+    router.push("/customers");
   };
 
   const handleViewCustomerAnalytics = (customerId: number) => {
@@ -140,7 +147,12 @@ const SalesCustomerDatabase: React.FC = () => {
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress size={40} />
         </Box>
       </Container>
@@ -163,9 +175,16 @@ const SalesCustomerDatabase: React.FC = () => {
 
       {/* Integration Notice */}
       <Alert severity="info" sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography>
-            This customer database is unified with Master Data. Changes made here will reflect in the master customer records.
+            This customer database is unified with Master Data. Changes made
+            here will reflect in the master customer records.
           </Typography>
           <Button
             variant="outlined"
@@ -186,9 +205,7 @@ const SalesCustomerDatabase: React.FC = () => {
               <Typography color="textSecondary" gutterBottom>
                 Total Customers
               </Typography>
-              <Typography variant="h4">
-                {customers.length}
-              </Typography>
+              <Typography variant="h4">{customers.length}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -199,7 +216,7 @@ const SalesCustomerDatabase: React.FC = () => {
                 Active Customers
               </Typography>
               <Typography variant="h4" color="success.main">
-                {customers.filter(c => c.status === 'active').length}
+                {customers.filter((c) => c.status === "active").length}
               </Typography>
             </CardContent>
           </Card>
@@ -211,7 +228,7 @@ const SalesCustomerDatabase: React.FC = () => {
                 Prospects
               </Typography>
               <Typography variant="h4" color="primary.main">
-                {customers.filter(c => c.status === 'prospect').length}
+                {customers.filter((c) => c.status === "prospect").length}
               </Typography>
             </CardContent>
           </Card>
@@ -223,7 +240,13 @@ const SalesCustomerDatabase: React.FC = () => {
                 This Month
               </Typography>
               <Typography variant="h4">
-                {customers.filter(c => new Date(c.created_at).getMonth() === new Date().getMonth()).length}
+                {
+                  customers.filter(
+                    (c) =>
+                      new Date(c.created_at).getMonth() ===
+                      new Date().getMonth(),
+                  ).length
+                }
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 New customers
@@ -234,7 +257,14 @@ const SalesCustomerDatabase: React.FC = () => {
       </Grid>
 
       {/* Actions Bar */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <TextField
           placeholder="Search customers..."
           value={searchTerm}
@@ -248,11 +278,11 @@ const SalesCustomerDatabase: React.FC = () => {
           }}
           sx={{ width: 300 }}
         />
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="outlined"
             startIcon={<AnalyticsIcon />}
-            onClick={() => router.push('/sales/customer-analytics')}
+            onClick={() => router.push("/sales/customer-analytics")}
           >
             View Analytics
           </Button>
@@ -285,11 +315,9 @@ const SalesCustomerDatabase: React.FC = () => {
             {filteredCustomers.map((customer) => (
               <TableRow key={customer.id} hover>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <BusinessIcon sx={{ mr: 1, color: 'primary.main' }} />
-                    <Typography variant="subtitle2">
-                      {customer.name}
-                    </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <BusinessIcon sx={{ mr: 1, color: "primary.main" }} />
+                    <Typography variant="subtitle2">{customer.name}</Typography>
                   </Box>
                 </TableCell>
                 <TableCell>{customer.contact_person}</TableCell>
@@ -299,33 +327,39 @@ const SalesCustomerDatabase: React.FC = () => {
                   {customer.city}, {customer.state}
                 </TableCell>
                 <TableCell>
-                  <Chip 
+                  <Chip
                     label={customer.status}
                     color={getStatusColor(customer.status) as any}
                     size="small"
                   />
                 </TableCell>
-                <TableCell>{new Date(customer.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  {new Date(customer.created_at).toLocaleDateString()}
+                </TableCell>
                 <TableCell align="center">
                   <Tooltip title="View Details">
-                    <IconButton 
-                      size="small" 
-                      onClick={() => router.push(`/customers?action=view&id=${customer.id}`)}
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        router.push(`/customers?action=view&id=${customer.id}`)
+                      }
                     >
                       <ViewIcon />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Edit Customer">
-                    <IconButton 
-                      size="small" 
-                      onClick={() => router.push(`/customers?action=edit&id=${customer.id}`)}
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        router.push(`/customers?action=edit&id=${customer.id}`)
+                      }
                     >
                       <EditIcon />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Customer Analytics">
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={() => handleViewCustomerAnalytics(customer.id)}
                     >
                       <AnalyticsIcon />
@@ -339,10 +373,12 @@ const SalesCustomerDatabase: React.FC = () => {
       </TableContainer>
 
       {/* Integration Footer */}
-      <Box sx={{ mt: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+      <Box sx={{ mt: 3, p: 2, backgroundColor: "grey.50", borderRadius: 1 }}>
         <Typography variant="body2" color="textSecondary">
-          <strong>Note:</strong> This customer database is integrated with the Master Data management system. 
-          All customer records are synchronized and any changes made here will be reflected in master data and vice versa.
+          <strong>Note:</strong> This customer database is integrated with the
+          Master Data management system. All customer records are synchronized
+          and any changes made here will be reflected in master data and vice
+          versa.
         </Typography>
       </Box>
     </Container>

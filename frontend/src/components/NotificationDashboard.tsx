@@ -1,6 +1,6 @@
 // src/components/NotificationDashboard.tsx
 // Main dashboard component for notification management
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -8,16 +8,12 @@ import {
   Tabs,
   Tab,
   Typography,
-  AppBar
-} from '@mui/material';
-import {
-  Create,
-  Send,
-  History
-} from '@mui/icons-material';
-import NotificationTemplates from './NotificationTemplates';
-import SendNotification from './SendNotification';
-import NotificationLogs from './NotificationLogs';
+  AppBar,
+} from "@mui/material";
+import { Create, Send, History } from "@mui/icons-material";
+import NotificationTemplates from "./NotificationTemplates";
+import SendNotification from "./SendNotification";
+import NotificationLogs from "./NotificationLogs";
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -52,7 +48,7 @@ const NotificationDashboard: React.FC = () => {
           Manage notification templates, send messages, and view delivery logs
         </Typography>
       </Box>
-      <Paper sx={{ width: '100%' }}>
+      <Paper sx={{ width: "100%" }}>
         <AppBar position="static" color="default" elevation={0}>
           <Tabs
             value={selectedTab}
@@ -60,25 +56,25 @@ const NotificationDashboard: React.FC = () => {
             variant="fullWidth"
             indicatorColor="primary"
             textColor="primary"
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
+            sx={{ borderBottom: 1, borderColor: "divider" }}
           >
             <Tab
               label="Templates"
               icon={<Create />}
               iconPosition="start"
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: "none" }}
             />
             <Tab
               label="Send Notifications"
               icon={<Send />}
               iconPosition="start"
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: "none" }}
             />
             <Tab
               label="Logs & History"
               icon={<History />}
               iconPosition="start"
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: "none" }}
             />
           </Tabs>
         </AppBar>

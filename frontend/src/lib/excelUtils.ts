@@ -1,24 +1,27 @@
 // lib/excelUtils.ts
-import ExcelJS from 'exceljs';  // New library for creating/reading Excel files
-import saveAs from 'file-saver';  // Library to handle file downloads in the browser
+import ExcelJS from "exceljs"; // New library for creating/reading Excel files
+import saveAs from "file-saver"; // Library to handle file downloads in the browser
 // Function to export data (array of objects) to an Excel file
-export const exportToExcel = async (data: any[], filename: string): Promise<void> => {
+export const exportToExcel = async (
+  data: any[],
+  filename: string,
+): Promise<void> => {
   // Create a new Excel workbook
   const workbook = new ExcelJS.Workbook();
   // Add a worksheet to it
-  const worksheet = workbook.addWorksheet('Sheet1');
+  const worksheet = workbook.addWorksheet("Sheet1");
   // If there's data, add headers (column names) as the first row
   if (data.length > 0) {
-    worksheet.addRow(Object.keys(data[0]));  // e.g., ['id', 'name', 'price']
+    worksheet.addRow(Object.keys(data[0])); // e.g., ['id', 'name', 'price']
     // Then add each row of data
-    data.forEach(item => {
-      worksheet.addRow(Object.values(item));  // e.g., [1, 'Product A', 10.99]
+    data.forEach((item) => {
+      worksheet.addRow(Object.values(item)); // e.g., [1, 'Product A', 10.99]
     });
   }
   // Generate the Excel file as a buffer (binary data)
   const buffer = await workbook.xlsx.writeBuffer();
   // Create a Blob (file-like object) from the buffer
-  const blob = new Blob([buffer], { type: 'application/octet-stream' });
+  const blob = new Blob([buffer], { type: "application/octet-stream" });
   // Trigger download with the given filename
   saveAs(blob, `${filename}.xlsx`);
 };
@@ -34,7 +37,7 @@ export const importFromExcel = async (file: File): Promise<any[]> => {
   const worksheet = workbook.getWorksheet(1);
   const json: any[] = [];
   if (!worksheet) {
-    throw new Error('No worksheet found in the Excel file');
+    throw new Error("No worksheet found in the Excel file");
   }
   // Get headers from the first row
   const headers = worksheet.getRow(1).values as string[];
@@ -45,11 +48,11 @@ export const importFromExcel = async (file: File): Promise<any[]> => {
       // Loop through each cell in the row
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         if (headers[colNumber]) {
-          rowData[headers[colNumber]] = cell.value;  // Map cell value to header key
+          rowData[headers[colNumber]] = cell.value; // Map cell value to header key
         }
       });
-      json.push(rowData);  // Add the row object to the result array
+      json.push(rowData); // Add the row object to the result array
     }
   });
-  return json;  // Return array of objects (e.g., [{id:1, name:'Product A'}, ...])
+  return json; // Return array of objects (e.g., [{id:1, name:'Product A'}, ...])
 };

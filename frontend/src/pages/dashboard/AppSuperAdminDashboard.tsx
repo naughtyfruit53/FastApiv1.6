@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Grid, Card, CardContent, Chip, IconButton, Divider, Alert } from '@mui/material';
+import React, { useState, useEffect } from "react";
+import { Box, Typography, Chip, Alert } from "@mui/material";
 import {
   Business,
   People,
@@ -9,13 +9,13 @@ import {
   MonitorHeart,
   Storage,
   Timeline,
-} from '@mui/icons-material';
-import adminService from '../../services/adminService';
-import MetricCard from '../../components/MetricCard';
-import DashboardLayout from '../../components/DashboardLayout';
-import ModernLoading from '../../components/ModernLoading';
-import StickyNotesPanel from '../../components/StickyNotes/StickyNotesPanel';
-import { useStickyNotes } from '../../hooks/useStickyNotes';
+} from "@mui/icons-material";
+import adminService from "../../services/adminService";
+import MetricCard from "../../components/MetricCard";
+import DashboardLayout from "../../components/DashboardLayout";
+import ModernLoading from "../../components/ModernLoading";
+import StickyNotesPanel from "../../components/StickyNotes/StickyNotesPanel";
+import { useStickyNotes } from "../../hooks/useStickyNotes";
 interface AppStatistics {
   total_licenses_issued: number;
   active_organizations: number;
@@ -49,46 +49,52 @@ const AppSuperAdminDashboard: React.FC = () => {
       const totalActiveUsers = data.total_active_users || 0;
       const enhancedData = {
         ...data,
-        total_storage_used_gb: data.total_storage_used_gb || totalLicenses * 0.5,
-        average_users_per_org: data.average_users_per_org || (totalLicenses > 0 ? Math.round(totalActiveUsers / totalLicenses) : 0),
+        total_storage_used_gb:
+          data.total_storage_used_gb || totalLicenses * 0.5,
+        average_users_per_org:
+          data.average_users_per_org ||
+          (totalLicenses > 0
+            ? Math.round(totalActiveUsers / totalLicenses)
+            : 0),
         failed_login_attempts: data.failed_login_attempts || 0,
-        recent_new_orgs: data.recent_new_orgs || Math.round(data.new_licenses_this_month / 4)
+        recent_new_orgs:
+          data.recent_new_orgs || Math.round(data.new_licenses_this_month / 4),
       };
       setStatistics(enhancedData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
   if (loading) {
     return (
-      <DashboardLayout 
+      <DashboardLayout
         title="Super Admin Dashboard"
         subtitle="Monitor platform-wide metrics and system health"
       >
-        <ModernLoading 
-          type="skeleton" 
-          skeletonType="dashboard" 
+        <ModernLoading
+          type="skeleton"
+          skeletonType="dashboard"
           count={9}
-          message="Loading platform metrics..." 
+          message="Loading platform metrics..."
         />
       </DashboardLayout>
     );
   }
   if (error) {
     return (
-      <DashboardLayout 
+      <DashboardLayout
         title="Super Admin Dashboard"
         subtitle="Monitor platform-wide metrics and system health"
       >
-        <Alert 
+        <Alert
           severity="error"
-          sx={{ 
-            borderRadius: 'var(--radius-lg)',
-            '& .MuiAlert-message': {
-              fontSize: 'var(--font-size-sm)'
-            }
+          sx={{
+            borderRadius: "var(--radius-lg)",
+            "& .MuiAlert-message": {
+              fontSize: "var(--font-size-sm)",
+            },
           }}
         >
           Error loading dashboard: {error}
@@ -101,99 +107,106 @@ const AppSuperAdminDashboard: React.FC = () => {
   }
   const statsCards = [
     {
-      title: 'Total Licenses Issued',
+      title: "Total Licenses Issued",
       value: statistics.total_licenses_issued,
       icon: <Business />,
-      color: 'primary' as const,
-      description: 'Total organization licenses created',
+      color: "primary" as const,
+      description: "Total organization licenses created",
       trend: {
         value: 8,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Active Organizations',
+      title: "Active Organizations",
       value: statistics.active_organizations,
       icon: <Business />,
-      color: 'success' as const,
-      description: 'Organizations with active status',
+      color: "success" as const,
+      description: "Organizations with active status",
       trend: {
         value: 12,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Trial Organizations',
+      title: "Trial Organizations",
       value: statistics.trial_organizations,
       icon: <Business />,
-      color: 'warning' as const,
-      description: 'Organizations on trial plans',
+      color: "warning" as const,
+      description: "Organizations on trial plans",
       trend: {
         value: 5,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Total Active Users',
+      title: "Total Active Users",
       value: statistics.total_active_users,
       icon: <People />,
-      color: 'info' as const,
-      description: 'Active users across all organizations',
+      color: "info" as const,
+      description: "Active users across all organizations",
       trend: {
         value: 15,
-        period: 'vs last month',
-        direction: 'up' as const
-      }
+        period: "vs last month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'Super Admins',
+      title: "Super Admins",
       value: statistics.super_admins_count,
       icon: <AdminPanelSettings />,
-      color: 'warning' as const,
-      description: 'App-level administrators'
+      color: "warning" as const,
+      description: "App-level administrators",
     },
     {
-      title: 'New Licenses (30d)',
+      title: "New Licenses (30d)",
       value: statistics.new_licenses_this_month,
       icon: <TrendingUp />,
-      color: 'success' as const,
-      description: 'Licenses created in last 30 days',
+      color: "success" as const,
+      description: "Licenses created in last 30 days",
       trend: {
         value: 22,
-        period: 'vs previous month',
-        direction: 'up' as const
-      }
+        period: "vs previous month",
+        direction: "up" as const,
+      },
     },
     {
-      title: 'System Health',
+      title: "System Health",
       value: statistics.system_health.uptime,
       icon: <MonitorHeart />,
-      color: statistics.system_health.status === 'healthy' ? 'success' as const : 'error' as const,
-      description: 'System uptime percentage'
+      color:
+        statistics.system_health.status === "healthy"
+          ? ("success" as const)
+          : ("error" as const),
+      description: "System uptime percentage",
     },
     {
-      title: 'Total Storage Used',
+      title: "Total Storage Used",
       value: `${statistics.total_storage_used_gb?.toFixed(1) || 0} GB`,
       icon: <Storage />,
-      color: 'info' as const,
-      description: 'Aggregate storage across all organizations'
+      color: "info" as const,
+      description: "Aggregate storage across all organizations",
     },
     {
-      title: 'Avg Users per Org',
+      title: "Avg Users per Org",
       value: statistics.average_users_per_org || 0,
       icon: <Timeline />,
-      color: 'primary' as const,
-      description: 'Average active users per organization'
-    }
+      color: "primary" as const,
+      description: "Average active users per organization",
+    },
   ];
-  const activationRate = statistics.total_licenses_issued > 0 
-    ? Math.round((statistics.active_organizations / statistics.total_licenses_issued) * 100)
-    : 0;
+  const activationRate =
+    statistics.total_licenses_issued > 0
+      ? Math.round(
+          (statistics.active_organizations / statistics.total_licenses_issued) *
+            100,
+        )
+      : 0;
   return (
-    <DashboardLayout 
+    <DashboardLayout
       title="Super Admin Dashboard"
       subtitle="Monitor platform-wide metrics and system health"
     >
@@ -216,23 +229,23 @@ const AppSuperAdminDashboard: React.FC = () => {
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             License Plan Distribution
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
             {Object.entries(statistics.plan_breakdown).map(([plan, count]) => (
               <Chip
                 key={plan}
                 label={`${plan}: ${count}`}
-                color={plan === 'trial' ? 'warning' : 'primary'}
+                color={plan === "trial" ? "warning" : "primary"}
                 variant="filled"
-                sx={{ 
+                sx={{
                   fontWeight: 500,
-                  '&.MuiChip-colorPrimary': {
-                    backgroundColor: 'var(--primary-600)',
-                    color: 'white'
+                  "&.MuiChip-colorPrimary": {
+                    backgroundColor: "var(--primary-600)",
+                    color: "white",
                   },
-                  '&.MuiChip-colorWarning': {
-                    backgroundColor: 'var(--warning-500)',
-                    color: 'white'
-                  }
+                  "&.MuiChip-colorWarning": {
+                    backgroundColor: "var(--warning-500)",
+                    color: "white",
+                  },
                 }}
               />
             ))}
@@ -242,24 +255,29 @@ const AppSuperAdminDashboard: React.FC = () => {
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             System Status
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Security sx={{ color: 'var(--success-600)', mr: 1 }} />
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+            <Security sx={{ color: "var(--success-600)", mr: 1 }} />
             <Typography>
-              Status: <Chip 
-                label={statistics.system_health.status} 
-                color={statistics.system_health.status === 'healthy' ? 'success' : 'error'}
+              Status:{" "}
+              <Chip
+                label={statistics.system_health.status}
+                color={
+                  statistics.system_health.status === "healthy"
+                    ? "success"
+                    : "error"
+                }
                 size="small"
                 variant="filled"
                 sx={{
                   fontWeight: 500,
-                  '&.MuiChip-colorSuccess': {
-                    backgroundColor: 'var(--success-600)',
-                    color: 'white'
+                  "&.MuiChip-colorSuccess": {
+                    backgroundColor: "var(--success-600)",
+                    color: "white",
                   },
-                  '&.MuiChip-colorError': {
-                    backgroundColor: 'var(--error-600)',
-                    color: 'white'
-                  }
+                  "&.MuiChip-colorError": {
+                    backgroundColor: "var(--error-600)",
+                    color: "white",
+                  },
                 }}
               />
             </Typography>
@@ -270,17 +288,22 @@ const AppSuperAdminDashboard: React.FC = () => {
         </Paper>
       </Box>
       <Paper className="modern-card" sx={{ p: 4 }}>
-        <Typography variant="h6" className="modern-card-title" gutterBottom sx={{ mb: 3 }}>
+        <Typography
+          variant="h6"
+          className="modern-card-title"
+          gutterBottom
+          sx={{ mb: 3 }}
+        >
           Platform Growth Overview
         </Typography>
         <Box className="modern-grid cols-3">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                color: 'var(--primary-600)',
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="h3"
+              sx={{
+                color: "var(--primary-600)",
                 fontWeight: 700,
-                mb: 1
+                mb: 1,
               }}
             >
               {statistics.total_licenses_issued}
@@ -289,13 +312,13 @@ const AppSuperAdminDashboard: React.FC = () => {
               Total Organizations
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                color: 'var(--secondary-600)',
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="h3"
+              sx={{
+                color: "var(--secondary-600)",
                 fontWeight: 700,
-                mb: 1
+                mb: 1,
               }}
             >
               {statistics.total_active_users}
@@ -304,13 +327,13 @@ const AppSuperAdminDashboard: React.FC = () => {
               Platform Users
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                color: 'var(--success-600)',
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="h3"
+              sx={{
+                color: "var(--success-600)",
                 fontWeight: 700,
-                mb: 1
+                mb: 1,
               }}
             >
               {activationRate}%

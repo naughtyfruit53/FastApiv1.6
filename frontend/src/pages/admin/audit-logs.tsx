@@ -1,8 +1,8 @@
 // pages/admin/audit-logs.tsx
 // Company Audit Logs page
 
-import React from 'react';
-import { NextPage } from 'next';
+import React from "react";
+import { NextPage } from "next";
 import {
   Box,
   Container,
@@ -12,10 +12,10 @@ import {
   CardContent,
   Grid,
   Paper,
-} from '@mui/material';
-import { History, Security, Person, Business } from '@mui/icons-material';
-import { useAuth } from '../../hooks/useAuth';
-import { isOrgSuperAdmin, canManageUsers } from '../../types/user.types';
+} from "@mui/material";
+import { History, Security, Person, Business } from "@mui/icons-material";
+import { useAuth } from "../../hooks/useAuth";
+import { isOrgSuperAdmin, canManageUsers } from "../../types/user.types";
 
 const AuditLogsPage: NextPage = () => {
   const { user } = useAuth();
@@ -26,7 +26,8 @@ const AuditLogsPage: NextPage = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          Access Denied: You don&apos;t have permission to view audit logs. Only organization super admins can access audit trails.
+          Access Denied: You don&apos;t have permission to view audit logs. Only
+          organization super admins can access audit trails.
         </Alert>
       </Container>
     );
@@ -35,12 +36,18 @@ const AuditLogsPage: NextPage = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ display: "flex", alignItems: "center", gap: 2 }}
+        >
           <History color="primary" />
           Company Audit Logs
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          View and monitor all system activities, user actions, and security events for your organization.
+          View and monitor all system activities, user actions, and security
+          events for your organization.
         </Typography>
       </Box>
 
@@ -49,7 +56,7 @@ const AuditLogsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Person color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">User Activities</Typography>
@@ -65,7 +72,7 @@ const AuditLogsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Security color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Security Events</Typography>
@@ -81,7 +88,7 @@ const AuditLogsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Business color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Business Operations</Typography>
@@ -101,11 +108,18 @@ const AuditLogsPage: NextPage = () => {
               Audit Trail
             </Typography>
             <Alert severity="info">
-              This is a placeholder for the Company Audit Logs interface. The actual implementation would display:
-              <ul style={{ marginTop: '8px', marginBottom: 0 }}>
-                <li>Searchable audit trail with timestamps and user information</li>
-                <li>Filterable events by type, user, date range, and severity</li>
-                <li>Detailed event logs with before/after values for data changes</li>
+              This is a placeholder for the Company Audit Logs interface. The
+              actual implementation would display:
+              <ul style={{ marginTop: "8px", marginBottom: 0 }}>
+                <li>
+                  Searchable audit trail with timestamps and user information
+                </li>
+                <li>
+                  Filterable events by type, user, date range, and severity
+                </li>
+                <li>
+                  Detailed event logs with before/after values for data changes
+                </li>
                 <li>Export functionality for compliance and reporting</li>
                 <li>Real-time monitoring of critical security events</li>
                 <li>Integration with backend audit logging system</li>

@@ -1,8 +1,8 @@
 // frontend/src/pages/analytics/purchase.tsx
 // Purchase Analytics page
 
-import React from 'react';
-import { NextPage } from 'next';
+import React from "react";
+import { NextPage } from "next";
 import {
   Box,
   Container,
@@ -12,9 +12,14 @@ import {
   Grid,
   Paper,
   Alert,
-} from '@mui/material';
-import { ShoppingCart, TrendingDown, Assessment, LocalShipping } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+} from "@mui/material";
+import {
+  ShoppingCart,
+  TrendingDown,
+  Assessment,
+  LocalShipping,
+} from "@mui/icons-material";
+import { useAuth } from "../../context/AuthContext";
 
 const PurchaseAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
@@ -22,7 +27,9 @@ const PurchaseAnalyticsPage: NextPage = () => {
   if (!user) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">Please log in to access purchase analytics.</Alert>
+        <Alert severity="error">
+          Please log in to access purchase analytics.
+        </Alert>
       </Container>
     );
   }
@@ -30,12 +37,18 @@ const PurchaseAnalyticsPage: NextPage = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ display: "flex", alignItems: "center", gap: 2 }}
+        >
           <ShoppingCart color="primary" />
           Purchase Analytics
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Monitor and analyze procurement activities, vendor performance, and cost optimization opportunities.
+          Monitor and analyze procurement activities, vendor performance, and
+          cost optimization opportunities.
         </Typography>
       </Box>
 
@@ -44,7 +57,7 @@ const PurchaseAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <TrendingDown color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Cost Trends</Typography>
@@ -60,7 +73,7 @@ const PurchaseAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Assessment color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Vendor Performance</Typography>
@@ -76,7 +89,7 @@ const PurchaseAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <LocalShipping color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Procurement Efficiency</Typography>
@@ -96,8 +109,9 @@ const PurchaseAnalyticsPage: NextPage = () => {
               Purchase Analytics Dashboard
             </Typography>
             <Alert severity="info">
-              This is a placeholder for the Purchase Analytics Dashboard. The actual implementation would include:
-              <ul style={{ marginTop: '8px', marginBottom: 0 }}>
+              This is a placeholder for the Purchase Analytics Dashboard. The
+              actual implementation would include:
+              <ul style={{ marginTop: "8px", marginBottom: 0 }}>
                 <li>Purchase volume and cost analysis</li>
                 <li>Vendor performance scorecards</li>
                 <li>Category-wise spending analysis</li>

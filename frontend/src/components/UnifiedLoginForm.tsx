@@ -1,7 +1,7 @@
 // frontend/src/components/UnifiedLoginForm.tsx
-'use client';
-import React, { useState } from 'react';
-import { 
+"use client";
+import React, { useState } from "react";
+import {
   Box,
   Card,
   CardContent,
@@ -16,11 +16,11 @@ import {
   InputAdornment,
   Stepper,
   Step,
-  StepLabel
-} from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { useForm, Controller } from 'react-hook-form';
-import { authService } from '../services/authService';
+  StepLabel,
+} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { useForm, Controller } from "react-hook-form";
+import { authService } from "../services/authService";
 interface UnifiedLoginFormProps {
   onLogin: (_token: string, _loginResponse?: any) => void;
 }
@@ -32,57 +32,71 @@ interface LoginFormData {
 }
 const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [useOTP, setUseOTP] = useState(false);
   const [otpStep, setOtpStep] = useState(0); // 0: credentials, 1: OTP entry
   const [otpSent, setOtpSent] = useState(false);
-const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm<LoginFormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setValue,
+  } = useForm<LoginFormData>({
     defaultValues: {
-      email: '',
-      password: '',
-      phoneNumber: '',
-      otp: ''
-    }
+      email: "",
+      password: "",
+      phoneNumber: "",
+      otp: "",
+    },
   });
-  const email = watch('email');
+  const email = watch("email");
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
   const handleOTPToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
     setUseOTP(event.target.checked);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     if (!event.target.checked) {
       setOtpStep(0);
       setOtpSent(false);
-      setValue('otp', '');
-      setValue('phoneNumber', '');
+      setValue("otp", "");
+      setValue("phoneNumber", "");
     }
   };
   const requestOTP = async (email: string, phoneNumber: string) => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
       // Determine delivery method based on phone number
-      const deliveryMethod = phoneNumber ? 'auto' : 'email';
-      const response = await authService.requestOTP(email, phoneNumber, deliveryMethod);
-      setSuccess(response.delivery_method 
-        ? `OTP sent via ${response.delivery_method}. Please check your messages.`
-        : `OTP sent to ${email}. Please check your email.`);
+      const deliveryMethod = phoneNumber ? "auto" : "email";
+      const response = await authService.requestOTP(
+        email,
+        phoneNumber,
+        deliveryMethod,
+      );
+      setSuccess(
+        response.delivery_method
+          ? `OTP sent via ${response.delivery_method}. Please check your messages.`
+          : `OTP sent to ${email}. Please check your email.`,
+      );
       setOtpSent(true);
       setOtpStep(1);
     } catch (error: any) {
-      setError(error.response?.data?.detail || 'Failed to send OTP. Please try again.');
+      setError(
+        error.response?.data?.detail || "Failed to send OTP. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     try {
       if (useOTP) {
         if (!otpSent) {
@@ -92,7 +106,7 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
         } else {
           // Step 2: Verify OTP and login
           const response = await authService.verifyOTP(data.email, data.otp);
-          setSuccess('Login successful!');
+          setSuccess("Login successful!");
           // Add flag to indicate OTP login (so password change is not mandatory)
           response.otp_login = true;
           // Call parent callback with token and response
@@ -101,15 +115,21 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
       } else {
         // Standard email/password login
         // Clear any existing invalid token before login attempt
-        localStorage.removeItem('token');
-        const response = await authService.loginWithEmail(data.email, data.password);
+        localStorage.removeItem("token");
+        const response = await authService.loginWithEmail(
+          data.email,
+          data.password,
+        );
         onLogin(response.access_token, response);
       }
     } catch (error: any) {
-      const errorMessage = error.message || error.response?.data?.detail || 'Login failed. Please check your credentials.';
+      const errorMessage =
+        error.message ||
+        error.response?.data?.detail ||
+        "Login failed. Please check your credentials.";
       setError(errorMessage);
       // Clear potentially invalid token on failure
-      localStorage.removeItem('token');
+      localStorage.removeItem("token");
     } finally {
       setLoading(false);
     }
@@ -117,20 +137,20 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
   const handleBackToCredentials = () => {
     setOtpStep(0);
     setOtpSent(false);
-    setError('');
-    setSuccess('');
-    setValue('otp', '');
+    setError("");
+    setSuccess("");
+    setValue("otp", "");
   };
   const handleResendOTP = async () => {
-    const phoneNumber = watch('phoneNumber');
+    const phoneNumber = watch("phoneNumber");
     await requestOTP(email, phoneNumber);
   };
-  const steps = ['Login Details', 'Verify OTP'];
+  const steps = ["Login Details", "Verify OTP"];
   return (
     <Card>
       <CardContent sx={{ p: 4 }}>
         <Typography variant="h5" component="h2" gutterBottom align="center">
-          {useOTP ? 'OTP Login' : 'Login'}
+          {useOTP ? "OTP Login" : "Login"}
         </Typography>
         {useOTP && (
           <Stepper activeStep={otpStep} sx={{ mt: 2, mb: 3 }}>
@@ -157,11 +177,11 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
             name="email"
             control={control}
             rules={{
-              required: 'Email is required',
+              required: "Email is required",
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Invalid email address'
-              }
+                message: "Invalid email address",
+              },
             }}
             render={({ field }) => (
               <TextField
@@ -172,8 +192,8 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
                 variant="outlined"
                 slotProps={{
                   inputLabel: {
-                    shrink: field.value ? true : undefined
-                  }
+                    shrink: field.value ? true : undefined,
+                  },
                 }}
                 error={!!errors.email}
                 helperText={errors.email?.message}
@@ -190,19 +210,19 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
               name="password"
               control={control}
               rules={{
-                required: 'Password is required'
+                required: "Password is required",
               }}
               render={({ field }) => (
                 <TextField
                   {...field}
                   fullWidth
                   label="Password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   variant="outlined"
                   slotProps={{
                     inputLabel: {
-                      shrink: field.value ? true : undefined
-                    }
+                      shrink: field.value ? true : undefined,
+                    },
                   }}
                   InputProps={{
                     endAdornment: (
@@ -233,8 +253,9 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
               rules={{
                 pattern: {
                   value: /^[\+]?[1-9][\d]{0,15}$/,
-                  message: 'Enter a valid phone number with country code (e.g., +91XXXXXXXXXX)'
-                }
+                  message:
+                    "Enter a valid phone number with country code (e.g., +91XXXXXXXXXX)",
+                },
               }}
               render={({ field }) => (
                 <TextField
@@ -246,11 +267,14 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
                   placeholder="+91XXXXXXXXXX"
                   slotProps={{
                     inputLabel: {
-                      shrink: field.value ? true : undefined
-                    }
+                      shrink: field.value ? true : undefined,
+                    },
                   }}
                   error={!!errors.phoneNumber}
-                  helperText={errors.phoneNumber?.message || "Include country code for WhatsApp OTP, or leave blank for email OTP"}
+                  helperText={
+                    errors.phoneNumber?.message ||
+                    "Include country code for WhatsApp OTP, or leave blank for email OTP"
+                  }
                   margin="normal"
                   autoComplete="tel"
                 />
@@ -263,11 +287,11 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
               name="otp"
               control={control}
               rules={{
-                required: 'OTP is required',
+                required: "OTP is required",
                 pattern: {
                   value: /^\d{6}$/,
-                  message: 'OTP must be 6 digits'
-                }
+                  message: "OTP must be 6 digits",
+                },
               }}
               render={({ field }) => (
                 <TextField
@@ -275,12 +299,12 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
                   fullWidth
                   label="OTP Code"
                   type="text"
-                  inputProps={{ maxLength: 6, pattern: '[0-9]*' }}
+                  inputProps={{ maxLength: 6, pattern: "[0-9]*" }}
                   variant="outlined"
                   slotProps={{
                     inputLabel: {
-                      shrink: field.value ? true : undefined
-                    }
+                      shrink: field.value ? true : undefined,
+                    },
                   }}
                   error={!!errors.otp}
                   helperText={errors.otp?.message}
@@ -315,12 +339,14 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
             >
               {loading ? (
                 <CircularProgress size={24} />
+              ) : useOTP ? (
+                "Send OTP"
               ) : (
-                useOTP ? 'Send OTP' : 'Login'
+                "Login"
               )}
             </Button>
           ) : (
-            <Box sx={{ mt: 3, mb: 2, display: 'flex', gap: 2 }}>
+            <Box sx={{ mt: 3, mb: 2, display: "flex", gap: 2 }}>
               <Button
                 variant="outlined"
                 onClick={handleBackToCredentials}
@@ -335,7 +361,7 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
                 disabled={loading}
                 sx={{ flex: 1 }}
               >
-                {loading ? <CircularProgress size={24} /> : 'Verify & Login'}
+                {loading ? <CircularProgress size={24} /> : "Verify & Login"}
               </Button>
             </Box>
           )}
@@ -352,11 +378,15 @@ const { control, handleSubmit, formState: { errors }, watch, setValue} = useForm
             </Button>
           )}
         </Box>
-        <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 2 }}>
-          {useOTP 
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          align="center"
+          sx={{ mt: 2 }}
+        >
+          {useOTP
             ? "Enter your email and optional phone number to receive an OTP for secure login."
-            : "Use your email and password to login, or try OTP authentication for enhanced security."
-          }
+            : "Use your email and password to login, or try OTP authentication for enhanced security."}
         </Typography>
       </CardContent>
     </Card>

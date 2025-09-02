@@ -1,33 +1,33 @@
 // frontend/src/types/rbac.types.ts
 /**
  * Service CRM RBAC Types
- * 
+ *
  * TypeScript type definitions for Role-Based Access Control
  * in the Service CRM module.
  */
 // Enums matching backend
 export enum ServiceRoleType {
-  ADMIN = 'admin',
-  MANAGER = 'manager',
-  SUPPORT = 'support',
-  VIEWER = 'viewer'
+  ADMIN = "admin",
+  MANAGER = "manager",
+  SUPPORT = "support",
+  VIEWER = "viewer",
 }
 export enum ServiceModule {
-  SERVICE = 'service',
-  TECHNICIAN = 'technician',
-  APPOINTMENT = 'appointment',
-  CUSTOMER_SERVICE = 'customer_service',
-  WORK_ORDER = 'work_order',
-  SERVICE_REPORTS = 'service_reports',
-  CRM_ADMIN = 'crm_admin'
+  SERVICE = "service",
+  TECHNICIAN = "technician",
+  APPOINTMENT = "appointment",
+  CUSTOMER_SERVICE = "customer_service",
+  WORK_ORDER = "work_order",
+  SERVICE_REPORTS = "service_reports",
+  CRM_ADMIN = "crm_admin",
 }
 export enum ServiceAction {
-  CREATE = 'create',
-  READ = 'read',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  EXPORT = 'export',
-  ADMIN = 'admin'
+  CREATE = "create",
+  READ = "read",
+  UPDATE = "update",
+  DELETE = "delete",
+  EXPORT = "export",
+  ADMIN = "admin",
 }
 // Service Permission Types
 export interface ServicePermission {
@@ -171,111 +171,120 @@ export interface UserRoleAssignmentProps {
 export interface RolePermissionMatrixProps {
   roles: ServiceRoleWithPermissions[];
   permissions: ServicePermission[];
-  onPermissionToggle: (_roleId: number, _permissionId: number, _granted: boolean) => void;
+  onPermissionToggle: (
+    _roleId: number,
+    _permissionId: number,
+    _granted: boolean,
+  ) => void;
   loading?: boolean;
 }
 // Service Role Defaults
-export const SERVICE_ROLE_DEFAULTS: Record<ServiceRoleType, Partial<ServiceRoleCreate>> = {
+export const SERVICE_ROLE_DEFAULTS: Record<
+  ServiceRoleType,
+  Partial<ServiceRoleCreate>
+> = {
   [ServiceRoleType.ADMIN]: {
     name: ServiceRoleType.ADMIN,
-    display_name: 'Service Admin',
-    description: 'Full access to all service CRM functionality'
+    display_name: "Service Admin",
+    description: "Full access to all service CRM functionality",
   },
   [ServiceRoleType.MANAGER]: {
     name: ServiceRoleType.MANAGER,
-    display_name: 'Service Manager',
-    description: 'Manage services, technicians, and appointments'
+    display_name: "Service Manager",
+    description: "Manage services, technicians, and appointments",
   },
   [ServiceRoleType.SUPPORT]: {
     name: ServiceRoleType.SUPPORT,
-    display_name: 'Support Agent',
-    description: 'Handle customer service and basic operations'
+    display_name: "Support Agent",
+    description: "Handle customer service and basic operations",
   },
   [ServiceRoleType.VIEWER]: {
     name: ServiceRoleType.VIEWER,
-    display_name: 'Viewer',
-    description: 'Read-only access to service information'
-  }
+    display_name: "Viewer",
+    description: "Read-only access to service information",
+  },
 };
 // Permission Display Names
 export const PERMISSION_DISPLAY_NAMES: Record<string, string> = {
   // Service Management
-  'service_create': 'Create Services',
-  'service_read': 'View Services',
-  'service_update': 'Update Services',
-  'service_delete': 'Delete Services',
+  service_create: "Create Services",
+  service_read: "View Services",
+  service_update: "Update Services",
+  service_delete: "Delete Services",
   // Technician Management
-  'technician_create': 'Create Technicians',
-  'technician_read': 'View Technicians',
-  'technician_update': 'Update Technicians',
-  'technician_delete': 'Delete Technicians',
+  technician_create: "Create Technicians",
+  technician_read: "View Technicians",
+  technician_update: "Update Technicians",
+  technician_delete: "Delete Technicians",
   // Appointment Management
-  'appointment_create': 'Create Appointments',
-  'appointment_read': 'View Appointments',
-  'appointment_update': 'Update Appointments',
-  'appointment_delete': 'Cancel Appointments',
+  appointment_create: "Create Appointments",
+  appointment_read: "View Appointments",
+  appointment_update: "Update Appointments",
+  appointment_delete: "Cancel Appointments",
   // Customer Service
-  'customer_service_create': 'Create Customer Records',
-  'customer_service_read': 'View Customer Records',
-  'customer_service_update': 'Update Customer Records',
-  'customer_service_delete': 'Delete Customer Records',
+  customer_service_create: "Create Customer Records",
+  customer_service_read: "View Customer Records",
+  customer_service_update: "Update Customer Records",
+  customer_service_delete: "Delete Customer Records",
   // Work Orders
-  'work_order_create': 'Create Work Orders',
-  'work_order_read': 'View Work Orders',
-  'work_order_update': 'Update Work Orders',
-  'work_order_delete': 'Delete Work Orders',
+  work_order_create: "Create Work Orders",
+  work_order_read: "View Work Orders",
+  work_order_update: "Update Work Orders",
+  work_order_delete: "Delete Work Orders",
   // Reports
-  'service_reports_read': 'View Service Reports',
-  'service_reports_export': 'Export Service Reports',
+  service_reports_read: "View Service Reports",
+  service_reports_export: "Export Service Reports",
   // CRM Admin
-  'crm_admin': 'CRM Administration',
-  'crm_settings': 'CRM Settings'
+  crm_admin: "CRM Administration",
+  crm_settings: "CRM Settings",
 };
 // Module Display Names
 export const MODULE_DISPLAY_NAMES: Record<ServiceModule, string> = {
-  [ServiceModule.SERVICE]: 'Service Management',
-  [ServiceModule.TECHNICIAN]: 'Technician Management',
-  [ServiceModule.APPOINTMENT]: 'Appointment Management',
-  [ServiceModule.CUSTOMER_SERVICE]: 'Customer Service',
-  [ServiceModule.WORK_ORDER]: 'Work Orders',
-  [ServiceModule.SERVICE_REPORTS]: 'Service Reports',
-  [ServiceModule.CRM_ADMIN]: 'CRM Administration'
+  [ServiceModule.SERVICE]: "Service Management",
+  [ServiceModule.TECHNICIAN]: "Technician Management",
+  [ServiceModule.APPOINTMENT]: "Appointment Management",
+  [ServiceModule.CUSTOMER_SERVICE]: "Customer Service",
+  [ServiceModule.WORK_ORDER]: "Work Orders",
+  [ServiceModule.SERVICE_REPORTS]: "Service Reports",
+  [ServiceModule.CRM_ADMIN]: "CRM Administration",
 };
 // Role Badge Colors (for UI display)
 export const ROLE_BADGE_COLORS: Record<ServiceRoleType, string> = {
-  [ServiceRoleType.ADMIN]: 'error', // Red
-  [ServiceRoleType.MANAGER]: 'warning', // Orange
-  [ServiceRoleType.SUPPORT]: 'info', // Blue
-  [ServiceRoleType.VIEWER]: 'success' // Green
+  [ServiceRoleType.ADMIN]: "error", // Red
+  [ServiceRoleType.MANAGER]: "warning", // Orange
+  [ServiceRoleType.SUPPORT]: "info", // Blue
+  [ServiceRoleType.VIEWER]: "success", // Green
 };
 // Permission checking helper functions
 export const hasServicePermission = (
   userRoles: ServiceRole[],
   requiredPermission: string,
-  allRoles: ServiceRoleWithPermissions[]
+  allRoles: ServiceRoleWithPermissions[],
 ): boolean => {
   for (const userRole of userRoles) {
-    const roleWithPermissions = allRoles.find(r => r.id === userRole.id);
+    const roleWithPermissions = allRoles.find((r) => r.id === userRole.id);
     if (roleWithPermissions) {
       const hasPermission = roleWithPermissions.permissions.some(
-        p => p.name === requiredPermission && p.is_active
+        (p) => p.name === requiredPermission && p.is_active,
       );
-      if (hasPermission) {return true;}
+      if (hasPermission) {
+        return true;
+      }
     }
   }
   return false;
 };
 export const getUserServicePermissions = (
   userRoles: ServiceRole[],
-  allRoles: ServiceRoleWithPermissions[]
+  allRoles: ServiceRoleWithPermissions[],
 ): string[] => {
   const permissions = new Set<string>();
   for (const userRole of userRoles) {
-    const roleWithPermissions = allRoles.find(r => r.id === userRole.id);
+    const roleWithPermissions = allRoles.find((r) => r.id === userRole.id);
     if (roleWithPermissions) {
       roleWithPermissions.permissions
-        .filter(p => p.is_active)
-        .forEach(p => permissions.add(p.name));
+        .filter((p) => p.is_active)
+        .forEach((p) => permissions.add(p.name));
     }
   }
   return Array.from(permissions);
@@ -283,75 +292,76 @@ export const getUserServicePermissions = (
 // Service permission constants (matching backend)
 export const SERVICE_PERMISSIONS = {
   // Service Management
-  SERVICE_CREATE: 'service_create',
-  SERVICE_READ: 'service_read',
-  SERVICE_UPDATE: 'service_update',
-  SERVICE_DELETE: 'service_delete',
+  SERVICE_CREATE: "service_create",
+  SERVICE_READ: "service_read",
+  SERVICE_UPDATE: "service_update",
+  SERVICE_DELETE: "service_delete",
   // Technician Management
-  TECHNICIAN_CREATE: 'technician_create',
-  TECHNICIAN_READ: 'technician_read',
-  TECHNICIAN_UPDATE: 'technician_update',
-  TECHNICIAN_DELETE: 'technician_delete',
+  TECHNICIAN_CREATE: "technician_create",
+  TECHNICIAN_READ: "technician_read",
+  TECHNICIAN_UPDATE: "technician_update",
+  TECHNICIAN_DELETE: "technician_delete",
   // Appointment Management
-  APPOINTMENT_CREATE: 'appointment_create',
-  APPOINTMENT_READ: 'appointment_read',
-  APPOINTMENT_UPDATE: 'appointment_update',
-  APPOINTMENT_DELETE: 'appointment_delete',
+  APPOINTMENT_CREATE: "appointment_create",
+  APPOINTMENT_READ: "appointment_read",
+  APPOINTMENT_UPDATE: "appointment_update",
+  APPOINTMENT_DELETE: "appointment_delete",
   // Customer Service
-  CUSTOMER_SERVICE_CREATE: 'customer_service_create',
-  CUSTOMER_SERVICE_READ: 'customer_service_read',
-  CUSTOMER_SERVICE_UPDATE: 'customer_service_update',
-  CUSTOMER_SERVICE_DELETE: 'customer_service_delete',
+  CUSTOMER_SERVICE_CREATE: "customer_service_create",
+  CUSTOMER_SERVICE_READ: "customer_service_read",
+  CUSTOMER_SERVICE_UPDATE: "customer_service_update",
+  CUSTOMER_SERVICE_DELETE: "customer_service_delete",
   // Work Orders
-  WORK_ORDER_CREATE: 'work_order_create',
-  WORK_ORDER_READ: 'work_order_read',
-  WORK_ORDER_UPDATE: 'work_order_update',
-  WORK_ORDER_DELETE: 'work_order_delete',
+  WORK_ORDER_CREATE: "work_order_create",
+  WORK_ORDER_READ: "work_order_read",
+  WORK_ORDER_UPDATE: "work_order_update",
+  WORK_ORDER_DELETE: "work_order_delete",
   // Reports
-  SERVICE_REPORTS_READ: 'service_reports_read',
-  SERVICE_REPORTS_EXPORT: 'service_reports_export',
+  SERVICE_REPORTS_READ: "service_reports_read",
+  SERVICE_REPORTS_EXPORT: "service_reports_export",
   // CRM Admin
-  CRM_ADMIN: 'crm_admin',
-  CRM_SETTINGS: 'crm_settings',
+  CRM_ADMIN: "crm_admin",
+  CRM_SETTINGS: "crm_settings",
   // Finance & Accounting
-  FINANCE_DASHBOARD_READ: 'finance_dashboard_read',
-  FINANCE_ACCOUNTS_CREATE: 'finance_accounts_create',
-  FINANCE_ACCOUNTS_READ: 'finance_accounts_read',
-  FINANCE_ACCOUNTS_UPDATE: 'finance_accounts_update',
-  FINANCE_ACCOUNTS_DELETE: 'finance_accounts_delete',
+  FINANCE_DASHBOARD_READ: "finance_dashboard_read",
+  FINANCE_ACCOUNTS_CREATE: "finance_accounts_create",
+  FINANCE_ACCOUNTS_READ: "finance_accounts_read",
+  FINANCE_ACCOUNTS_UPDATE: "finance_accounts_update",
+  FINANCE_ACCOUNTS_DELETE: "finance_accounts_delete",
   // General Ledger
-  GL_ENTRY_CREATE: 'gl_entry_create',
-  GL_ENTRY_READ: 'gl_entry_read',
-  GL_ENTRY_UPDATE: 'gl_entry_update',
-  GL_ENTRY_DELETE: 'gl_entry_delete',
-  GL_RECONCILE: 'gl_reconcile',
+  GL_ENTRY_CREATE: "gl_entry_create",
+  GL_ENTRY_READ: "gl_entry_read",
+  GL_ENTRY_UPDATE: "gl_entry_update",
+  GL_ENTRY_DELETE: "gl_entry_delete",
+  GL_RECONCILE: "gl_reconcile",
   // Cost Centers
-  COST_CENTER_CREATE: 'cost_center_create',
-  COST_CENTER_READ: 'cost_center_read',
-  COST_CENTER_UPDATE: 'cost_center_update',
-  COST_CENTER_DELETE: 'cost_center_delete',
-  COST_CENTER_BUDGET: 'cost_center_budget',
+  COST_CENTER_CREATE: "cost_center_create",
+  COST_CENTER_READ: "cost_center_read",
+  COST_CENTER_UPDATE: "cost_center_update",
+  COST_CENTER_DELETE: "cost_center_delete",
+  COST_CENTER_BUDGET: "cost_center_budget",
   // Bank Management
-  BANK_ACCOUNT_CREATE: 'bank_account_create',
-  BANK_ACCOUNT_READ: 'bank_account_read',
-  BANK_ACCOUNT_UPDATE: 'bank_account_update',
-  BANK_ACCOUNT_DELETE: 'bank_account_delete',
-  BANK_RECONCILIATION: 'bank_reconciliation',
+  BANK_ACCOUNT_CREATE: "bank_account_create",
+  BANK_ACCOUNT_READ: "bank_account_read",
+  BANK_ACCOUNT_UPDATE: "bank_account_update",
+  BANK_ACCOUNT_DELETE: "bank_account_delete",
+  BANK_RECONCILIATION: "bank_reconciliation",
   // Financial Reports
-  FINANCIAL_REPORTS_READ: 'financial_reports_read',
-  FINANCIAL_REPORTS_EXPORT: 'financial_reports_export',
-  TRIAL_BALANCE_READ: 'trial_balance_read',
-  PROFIT_LOSS_READ: 'profit_loss_read',
-  BALANCE_SHEET_READ: 'balance_sheet_read',
-  CASH_FLOW_READ: 'cash_flow_read',
+  FINANCIAL_REPORTS_READ: "financial_reports_read",
+  FINANCIAL_REPORTS_EXPORT: "financial_reports_export",
+  TRIAL_BALANCE_READ: "trial_balance_read",
+  PROFIT_LOSS_READ: "profit_loss_read",
+  BALANCE_SHEET_READ: "balance_sheet_read",
+  CASH_FLOW_READ: "cash_flow_read",
   // Financial Analytics
-  FINANCE_ANALYTICS_READ: 'finance_analytics_read',
-  FINANCE_KPI_CREATE: 'finance_kpi_create',
-  FINANCE_KPI_READ: 'finance_kpi_read',
-  FINANCE_KPI_UPDATE: 'finance_kpi_update',
-  FINANCE_KPI_DELETE: 'finance_kpi_delete',
+  FINANCE_ANALYTICS_READ: "finance_analytics_read",
+  FINANCE_KPI_CREATE: "finance_kpi_create",
+  FINANCE_KPI_READ: "finance_kpi_read",
+  FINANCE_KPI_UPDATE: "finance_kpi_update",
+  FINANCE_KPI_DELETE: "finance_kpi_delete",
   // Finance Admin
-  FINANCE_ADMIN: 'finance_admin',
-  FINANCE_SETTINGS: 'finance_settings'
+  FINANCE_ADMIN: "finance_admin",
+  FINANCE_SETTINGS: "finance_settings",
 } as const;
-export type ServicePermissionType = typeof SERVICE_PERMISSIONS[keyof typeof SERVICE_PERMISSIONS];
+export type ServicePermissionType =
+  (typeof SERVICE_PERMISSIONS)[keyof typeof SERVICE_PERMISSIONS];

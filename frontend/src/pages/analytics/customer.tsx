@@ -1,7 +1,7 @@
 // pages/analytics/customer.tsx
 // Customer Analytics page - Business intelligence and customer insights
-import React from 'react';
-import { NextPage } from 'next';
+import React from "react";
+import { NextPage } from "next";
 import {
   Box,
   Container,
@@ -10,18 +10,19 @@ import {
   CardContent,
   Grid,
   Alert,
-} from '@mui/material';
-import { Analytics, TrendingUp, People, Assessment } from '@mui/icons-material';
-import { useAuth } from '../../hooks/useAuth';
-import CustomerAnalytics from '../../components/CustomerAnalytics';
-import { canManageUsers } from '../../types/user.types';
+} from "@mui/material";
+import { Analytics, TrendingUp, People, Assessment } from "@mui/icons-material";
+import { useAuth } from "../../hooks/useAuth";
+import CustomerAnalytics from "../../components/CustomerAnalytics";
+import { canManageUsers } from "../../types/user.types";
 const CustomerAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
   if (!user || !canManageUsers(user)) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          Access Denied: You don&apos;t have permission to view customer analytics.
+          Access Denied: You don&apos;t have permission to view customer
+          analytics.
         </Alert>
       </Container>
     );
@@ -29,12 +30,18 @@ const CustomerAnalyticsPage: NextPage = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ display: "flex", alignItems: "center", gap: 2 }}
+        >
           <Analytics color="primary" />
           Customer Analytics
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Business intelligence and customer insights to help you understand your customer base and improve business decisions.
+          Business intelligence and customer insights to help you understand
+          your customer base and improve business decisions.
         </Typography>
       </Box>
       <Grid container spacing={3}>
@@ -42,7 +49,7 @@ const CustomerAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <People color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Customer Insights</Typography>
@@ -57,7 +64,7 @@ const CustomerAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <TrendingUp color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Purchase Trends</Typography>
@@ -72,7 +79,7 @@ const CustomerAnalyticsPage: NextPage = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Assessment color="primary" fontSize="large" />
                 <Box>
                   <Typography variant="h6">Performance Metrics</Typography>

@@ -1,5 +1,5 @@
 // frontend/src/pages/finance-dashboard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -19,19 +19,17 @@ import {
   TableRow,
   Chip,
   IconButton,
-  Button
-} from '@mui/material';
+  Button,
+} from "@mui/material";
 import {
   TrendingUp,
-  TrendingDown,
   AccountBalance,
   Payment,
-  Receipt,
   Analytics,
   Refresh,
-  Download
-} from '@mui/icons-material';
-import {Doughnut, Bar} from 'react-chartjs-2';
+  Download,
+} from "@mui/icons-material";
+import { Doughnut, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,9 +40,9 @@ import {
   Tooltip,
   Legend,
   ArcElement,
-  BarElement
-} from 'chart.js';
-import axios from 'axios';
+  BarElement,
+} from "chart.js";
+import axios from "axios";
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -55,7 +53,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   ArcElement,
-  BarElement
+  BarElement,
 );
 interface FinancialRatios {
   current_ratio: number;
@@ -126,14 +124,14 @@ const FinanceDashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/finance/analytics/dashboard', {
-        headers: { Authorization: `Bearer ${token}` }
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/finance/analytics/dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       setData(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch dashboard data');
+      setError(err.response?.data?.detail || "Failed to fetch dashboard data");
     } finally {
       setLoading(false);
     }
@@ -145,11 +143,11 @@ const FinanceDashboard: React.FC = () => {
     setActiveTab(newValue);
   };
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(amount);
   };
   const formatPercentage = (value: number) => {
@@ -157,51 +155,61 @@ const FinanceDashboard: React.FC = () => {
   };
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
   }
   if (error) {
     return (
-      <Alert severity="error" action={
-        <Button color="inherit" size="small" onClick={fetchDashboardData}>
-          Retry
-        </Button>
-      }>
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={fetchDashboardData}>
+            Retry
+          </Button>
+        }
+      >
         {error}
       </Alert>
     );
   }
-  if (!data) {return null;}
+  if (!data) {
+    return null;
+  }
   // Chart data for cash flow
   const cashFlowChartData = {
-    labels: ['Inflow', 'Outflow'],
+    labels: ["Inflow", "Outflow"],
     datasets: [
       {
         data: [data.cash_flow.inflow, data.cash_flow.outflow],
-        backgroundColor: ['#4caf50', '#f44336'],
-        borderWidth: 1
-      }
-    ]
+        backgroundColor: ["#4caf50", "#f44336"],
+        borderWidth: 1,
+      },
+    ],
   };
   // Chart data for cost center performance
   const costCenterChartData = {
-    labels: data.cost_centers.map(cc => cc.name),
+    labels: data.cost_centers.map((cc) => cc.name),
     datasets: [
       {
-        label: 'Budget',
-        data: data.cost_centers.map(cc => cc.budget),
-        backgroundColor: '#2196f3',
-        borderWidth: 1
+        label: "Budget",
+        data: data.cost_centers.map((cc) => cc.budget),
+        backgroundColor: "#2196f3",
+        borderWidth: 1,
       },
       {
-        label: 'Actual',
-        data: data.cost_centers.map(cc => cc.actual),
-        backgroundColor: '#ff9800',
-        borderWidth: 1
-      }
-    ]
+        label: "Actual",
+        data: data.cost_centers.map((cc) => cc.actual),
+        backgroundColor: "#ff9800",
+        borderWidth: 1,
+      },
+    ],
   };
   return (
     <Box sx={{ p: 3 }}>
@@ -291,8 +299,12 @@ const FinanceDashboard: React.FC = () => {
         </Grid>
       </Grid>
       {/* Tabs for detailed views */}
-      <Paper sx={{ width: '100%' }}>
-        <Tabs value={activeTab} onChange={handleTabChange} aria-label="finance dashboard tabs">
+      <Paper sx={{ width: "100%" }}>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          aria-label="finance dashboard tabs"
+        >
           <Tab label="Cash Flow" />
           <Tab label="Cost Centers" />
           <Tab label="KPIs" />
@@ -334,9 +346,13 @@ const FinanceDashboard: React.FC = () => {
                     </Box>
                     <Box display="flex" justifyContent="space-between" mb={1}>
                       <Typography variant="h6">Net Flow:</Typography>
-                      <Typography 
-                        variant="h6" 
-                        color={data.cash_flow.net_flow >= 0 ? 'success.main' : 'error.main'}
+                      <Typography
+                        variant="h6"
+                        color={
+                          data.cash_flow.net_flow >= 0
+                            ? "success.main"
+                            : "error.main"
+                        }
                       >
                         {formatCurrency(data.cash_flow.net_flow)}
                       </Typography>
@@ -372,13 +388,31 @@ const FinanceDashboard: React.FC = () => {
                     {data.cost_centers.map((cc, index) => (
                       <TableRow key={index}>
                         <TableCell>{cc.name}</TableCell>
-                        <TableCell align="right">{formatCurrency(cc.budget)}</TableCell>
-                        <TableCell align="right">{formatCurrency(cc.actual)}</TableCell>
-                        <TableCell align="right">{formatPercentage(cc.variance_percent)}</TableCell>
+                        <TableCell align="right">
+                          {formatCurrency(cc.budget)}
+                        </TableCell>
+                        <TableCell align="right">
+                          {formatCurrency(cc.actual)}
+                        </TableCell>
+                        <TableCell align="right">
+                          {formatPercentage(cc.variance_percent)}
+                        </TableCell>
                         <TableCell align="right">
                           <Chip
-                            label={cc.variance_percent > 10 ? 'Over Budget' : cc.variance_percent < -10 ? 'Under Budget' : 'On Track'}
-                            color={cc.variance_percent > 10 ? 'error' : cc.variance_percent < -10 ? 'warning' : 'success'}
+                            label={
+                              cc.variance_percent > 10
+                                ? "Over Budget"
+                                : cc.variance_percent < -10
+                                  ? "Under Budget"
+                                  : "On Track"
+                            }
+                            color={
+                              cc.variance_percent > 10
+                                ? "error"
+                                : cc.variance_percent < -10
+                                  ? "warning"
+                                  : "success"
+                            }
                             size="small"
                           />
                         </TableCell>
@@ -416,18 +450,30 @@ const FinanceDashboard: React.FC = () => {
                         <TableCell>
                           <Chip label={kpi.category} size="small" />
                         </TableCell>
-                        <TableCell align="right">{kpi.value.toFixed(2)}</TableCell>
                         <TableCell align="right">
-                          {kpi.target ? kpi.target.toFixed(2) : 'N/A'}
+                          {kpi.value.toFixed(2)}
+                        </TableCell>
+                        <TableCell align="right">
+                          {kpi.target ? kpi.target.toFixed(2) : "N/A"}
                         </TableCell>
                         <TableCell align="right">
                           {kpi.variance ? (
-                            <Typography color={kpi.variance >= 0 ? 'success.main' : 'error.main'}>
+                            <Typography
+                              color={
+                                kpi.variance >= 0
+                                  ? "success.main"
+                                  : "error.main"
+                              }
+                            >
                               {formatPercentage(kpi.variance)}
                             </Typography>
-                          ) : 'N/A'}
+                          ) : (
+                            "N/A"
+                          )}
                         </TableCell>
-                        <TableCell>{new Date(kpi.period_end).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {new Date(kpi.period_end).toLocaleDateString()}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

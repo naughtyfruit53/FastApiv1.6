@@ -1,7 +1,7 @@
 // Revised: v1/frontend/src/types/reset.types.ts
 
 export interface ResetOTPRequest {
-  scope: 'organization' | 'all_organizations';
+  scope: "organization" | "all_organizations";
   organization_id?: number;
 }
 

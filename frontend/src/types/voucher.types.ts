@@ -2,7 +2,7 @@
 // TypeScript types for voucher system
 export interface VoucherPageConfig {
   voucherType: string;
-  entityType: 'purchase' | 'sales' | 'financial';
+  entityType: "purchase" | "sales" | "financial";
   endpoint: string;
   nextNumberEndpoint: string;
   hasItems: boolean;
@@ -72,7 +72,7 @@ export interface FinancialVoucher extends VoucherBase {
   payment_method?: string;
   receipt_method?: string;
   name_id?: number | null;
-  name_type?: 'Vendor' | 'Customer';
+  name_type?: "Vendor" | "Customer";
 }
 export interface VoucherFormData extends VoucherBase {
   items?: VoucherItem[];
@@ -84,7 +84,7 @@ export interface VoucherFormData extends VoucherBase {
   receipt_method?: string;
   payment_terms?: string;
   name_id?: number | null;
-  name_type?: 'Vendor' | 'Customer';
+  name_type?: "Vendor" | "Customer";
 }
 export interface VoucherListResponse {
   items: VoucherBase[];

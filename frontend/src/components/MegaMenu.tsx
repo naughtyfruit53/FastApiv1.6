@@ -91,11 +91,13 @@ import { useQuery } from '@tanstack/react-query';
 import { companyService } from '../services/authService';
 import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
+
 interface MegaMenuProps {
   user?: any;
   onLogout: () => void;
   isVisible?: boolean;
 }
+
 const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
@@ -108,6 +110,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const [filteredMenuItems, setFilteredMenuItems] = useState<any[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
   // Common button style for enhanced UI/UX
   const modernButtonStyle = {
     mx: 1,
@@ -127,6 +130,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       transform: 'translateY(0) scale(0.98)',
     }
   };
+
   // Query for company data to show logo
   const { data: companyData } = useQuery({
     queryKey: ['company'],
@@ -135,6 +139,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     retry: false,
     staleTime: 0, // 5 minutes
   });
+
   // Query for current organization (to get enabled_modules)
   const { data: organizationData } = useQuery({
     queryKey: ['currentOrganization'],
@@ -151,9 +156,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       });
     },
     onError: (error) => {
-      console.error(msg, err);
+      console.error('Error fetching organization data:', error);
     }
   });
+
   // Query for current user's service permissions
   const { data: userPermissions = [] } = useQuery({
     queryKey: ['userServicePermissions'],
@@ -165,20 +171,18 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       console.log('User permissions fetched:', data);
     }
   });
+
   // Add keyboard event listener for Escape key
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (anchorEl) {
-// handleMenuClose is defined later in this file
           handleMenuClose();
         }
         if (userMenuAnchor) {
-// handleUserMenuClose is defined later in this file
           handleUserMenuClose();
         }
         if (subAnchorEl) {
-// handleSubClose is defined later in this file
           handleSubClose();
         }
       }
@@ -188,6 +192,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [anchorEl, userMenuAnchor, subAnchorEl]);
+
   // Click outside to close search results
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -201,44 +206,51 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [searchRef]);
+
   // Don't render if not visible
   if (!isVisible) {
     return null;
   }
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
     setAnchorEl(event.currentTarget);
     setActiveMenu(menuName);
     setSelectedSection(null);
   };
+
   const handleSubClick = (event: React.MouseEvent<HTMLElement>, category: any) => {
     setSubAnchorEl(event.currentTarget);
     setActiveSubCategory(category);
   };
+
   const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setUserMenuAnchor(event.currentTarget);
   };
+
   const navigateTo = (path: string) => {
     router.push(path);
-// handleMenuClose is defined later in this file
     handleMenuClose();
-// handleSubClose is defined later in this file
     handleSubClose();
   };
+
   // Enhanced logo navigation function
   const navigateToHome = () => {
     router.push('/dashboard');
-// handleMenuClose is defined later in this file
     handleMenuClose();
   };
+
   // Check user roles using proper utility functions
   const isSuperAdmin = isAppSuperAdmin(user);
+
   // Service permission helper functions
   const hasServicePermission = (permission: string): boolean => {
     return userPermissions.includes(permission);
   };
+
   const hasAnyServicePermission = (permissions: string[]): boolean => {
     return permissions.some(permission => userPermissions.includes(permission));
   };
+
   const canAccessService = (): boolean => {
     const hasAccess = hasAnyServicePermission([
       SERVICE_PERMISSIONS.SERVICE_READ,
@@ -252,12 +264,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return hasAccess;
   };
+
   const canAccessServiceReports = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.SERVICE_REPORTS_READ);
   };
+
   const canAccessCRMAdmin = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
   };
+
   // Helper to check if a module is enabled for the organization
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) {return true;} // Super admins see all
@@ -268,33 +283,40 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return enabled;
   };
+
   const openDemoMode = () => {
     // Navigate to demo page
     router.push('/demo');
-// handleMenuClose is defined later in this file
     handleMenuClose();
   };
+
   const requestModuleActivation = () => {
     // In production, this could open a support ticket form or email client
     window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
   };
+
   const handleSubClose = () => {
     setSubAnchorEl(null);
     setActiveSubCategory(null);
   };
+
   const handleUserMenuClose = () => {
     setUserMenuAnchor(null);
   };
+
   const handleMenuClose = () => {
     setAnchorEl(null);
     setActiveMenu(null);
     setSelectedSection(null);
   };
+
+  const handleCreateLicense = () => {
     // For now, we'll use a state to control the modal
     // In a full implementation, this would be managed by parent component
     setCreateLicenseModalOpen(true);
     handleMenuClose();
   };
+
   const menuItems = {
     // Master Data - Restored as top-level menu with direct navigation
     masterData: {
@@ -808,6 +830,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       ]
     }
   };
+
   // Create main menu sections dynamically
   const mainMenuSections = isSuperAdmin
     ? [
@@ -837,11 +860,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
         { title: 'Email', subSections: menuItems.email.sections }
       ];
+
   menuItems.menu = {
     title: 'Menu',
     icon: <MenuIcon />,
     sections: mainMenuSections
   };
+
   const flattenMenuItems = (menu: any) => {
     let items = [];
     menu.sections.forEach(section => {
@@ -857,6 +882,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     });
     return items;
   };
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (query.length >= 2) {
@@ -867,6 +893,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       setFilteredMenuItems([]);
     }
   };
+
   const renderMegaMenu = () => {
     if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {
       return null;
@@ -1015,6 +1042,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       </Menu>
     );
   };
+
   const renderSubMenu = () => {
     if (!activeSubCategory) {return null;}
     return (
@@ -1077,6 +1105,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       </Menu>
     );
   };
+
   const renderSearchResults = () => {
     if (filteredMenuItems.length === 0) {return null;}
     return (
@@ -1100,6 +1129,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       </Menu>
     );
   };
+
   return (
     <>
       <AppBar

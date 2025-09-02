@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogTitle,
@@ -15,9 +15,9 @@ import {
   Box,
   Grid,
   Chip,
-  InputAdornment
-} from '@mui/material';
-import { useForm, Controller } from 'react-hook-form';
+  InputAdornment,
+} from "@mui/material";
+import { useForm, Controller } from "react-hook-form";
 interface AddOpportunityModalProps {
   open: boolean;
   onClose: () => void;
@@ -39,63 +39,69 @@ interface OpportunityFormData {
   assigned_to_id?: number;
 }
 const opportunityStages = [
-  'prospecting',
-  'qualification',
-  'needs_analysis',
-  'proposal',
-  'negotiation',
-  'closed_won',
-  'closed_lost'
+  "prospecting",
+  "qualification",
+  "needs_analysis",
+  "proposal",
+  "negotiation",
+  "closed_won",
+  "closed_lost",
 ];
 const opportunitySources = [
-  'Website',
-  'Social Media',
-  'Email Campaign',
-  'Cold Call',
-  'Referral',
-  'Trade Show',
-  'Partner',
-  'Lead Conversion',
-  'Existing Customer',
-  'Other'
+  "Website",
+  "Social Media",
+  "Email Campaign",
+  "Cold Call",
+  "Referral",
+  "Trade Show",
+  "Partner",
+  "Lead Conversion",
+  "Existing Customer",
+  "Other",
 ];
 const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
   open,
   onClose,
   onAdd,
-  loading = false
+  loading = false,
 }) => {
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<OpportunityFormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<OpportunityFormData>({
     defaultValues: {
-      name: '',
-      account_name: '',
-      contact_name: '',
+      name: "",
+      account_name: "",
+      contact_name: "",
       amount: 0,
       probability: 50,
-      stage: 'prospecting',
-      source: 'Website',
-      close_date: '',
-      description: '',
-      next_step: '',
+      stage: "prospecting",
+      source: "Website",
+      close_date: "",
+      description: "",
+      next_step: "",
       lead_id: undefined,
-      assigned_to_id: undefined
-    }
+      assigned_to_id: undefined,
+    },
   });
   React.useEffect(() => {
     if (open) {
       reset({
-        name: '',
-        account_name: '',
-        contact_name: '',
+        name: "",
+        account_name: "",
+        contact_name: "",
         amount: 0,
         probability: 50,
-        stage: 'prospecting',
-        source: 'Website',
-        close_date: '',
-        description: '',
-        next_step: '',
+        stage: "prospecting",
+        source: "Website",
+        close_date: "",
+        description: "",
+        next_step: "",
         lead_id: undefined,
-        assigned_to_id: undefined
+        assigned_to_id: undefined,
       });
     }
   }, [open, reset]);
@@ -104,11 +110,11 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
       // Remove empty fields to match backend schema
       const cleanData = Object.fromEntries(
         Object.entries(opportunityData).filter(([key, value]) => {
-          if (key === 'amount' || key === 'probability') {
+          if (key === "amount" || key === "probability") {
             return value !== undefined && value !== null;
           }
-          return value !== undefined && value !== null && value !== '';
-        })
+          return value !== undefined && value !== null && value !== "";
+        }),
       );
       await onAdd(cleanData);
       reset();
@@ -125,14 +131,22 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
   };
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case 'prospecting': return 'info';
-      case 'qualification': return 'warning';
-      case 'needs_analysis': return 'secondary';
-      case 'proposal': return 'primary';
-      case 'negotiation': return 'error';
-      case 'closed_won': return 'success';
-      case 'closed_lost': return 'default';
-      default: return 'default';
+      case "prospecting":
+        return "info";
+      case "qualification":
+        return "warning";
+      case "needs_analysis":
+        return "secondary";
+      case "proposal":
+        return "primary";
+      case "negotiation":
+        return "error";
+      case "closed_won":
+        return "success";
+      case "closed_lost":
+        return "default";
+      default:
+        return "default";
     }
   };
   return (
@@ -154,9 +168,12 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('name', { 
-                    required: 'Opportunity name is required',
-                    minLength: { value: 3, message: 'Name must be at least 3 characters' }
+                  {...register("name", {
+                    required: "Opportunity name is required",
+                    minLength: {
+                      value: 3,
+                      message: "Name must be at least 3 characters",
+                    },
                   })}
                   label="Opportunity Name"
                   fullWidth
@@ -167,7 +184,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('account_name')}
+                  {...register("account_name")}
                   label="Account Name"
                   fullWidth
                   disabled={loading}
@@ -175,7 +192,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('contact_name')}
+                  {...register("contact_name")}
                   label="Contact Name"
                   fullWidth
                   disabled={loading}
@@ -183,9 +200,9 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('amount', { 
-                    required: 'Amount is required',
-                    min: { value: 0, message: 'Amount must be positive' }
+                  {...register("amount", {
+                    required: "Amount is required",
+                    min: { value: 0, message: "Amount must be positive" },
                   })}
                   label="Opportunity Value"
                   type="number"
@@ -194,17 +211,25 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   helperText={errors.amount?.message}
                   disabled={loading}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: (
+                      <InputAdornment position="start">$</InputAdornment>
+                    ),
                   }}
                   inputProps={{ min: 0 }}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('probability', {
-                    required: 'Probability is required',
-                    min: { value: 0, message: 'Probability must be at least 0%' },
-                    max: { value: 100, message: 'Probability must be at most 100%' }
+                  {...register("probability", {
+                    required: "Probability is required",
+                    min: {
+                      value: 0,
+                      message: "Probability must be at least 0%",
+                    },
+                    max: {
+                      value: 100,
+                      message: "Probability must be at most 100%",
+                    },
                   })}
                   label="Probability"
                   type="number"
@@ -213,7 +238,9 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   helperText={errors.probability?.message}
                   disabled={loading}
                   InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">%</InputAdornment>
+                    ),
                   }}
                   inputProps={{ min: 0, max: 100 }}
                 />
@@ -224,21 +251,17 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   <Controller
                     name="stage"
                     control={control}
-                    rules={{ required: 'Stage is required' }}
+                    rules={{ required: "Stage is required" }}
                     render={({ field }) => (
-                      <Select
-                        {...field}
-                        label="Stage"
-                        error={!!errors.stage}
-                      >
+                      <Select {...field} label="Stage" error={!!errors.stage}>
                         {opportunityStages.map((stage) => (
                           <MenuItem key={stage} value={stage}>
-                            <Chip 
-                              label={stage.replace('_', ' ').toUpperCase()} 
-                              size="small" 
+                            <Chip
+                              label={stage.replace("_", " ").toUpperCase()}
+                              size="small"
                               color={getStageColor(stage) as any}
                               variant="outlined"
-                              sx={{ textTransform: 'capitalize' }}
+                              sx={{ textTransform: "capitalize" }}
                             />
                           </MenuItem>
                         ))}
@@ -246,7 +269,11 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                     )}
                   />
                   {errors.stage && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, ml: 2 }}
+                    >
                       {errors.stage.message}
                     </Typography>
                   )}
@@ -258,13 +285,9 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   <Controller
                     name="source"
                     control={control}
-                    rules={{ required: 'Source is required' }}
+                    rules={{ required: "Source is required" }}
                     render={({ field }) => (
-                      <Select
-                        {...field}
-                        label="Source"
-                        error={!!errors.source}
-                      >
+                      <Select {...field} label="Source" error={!!errors.source}>
                         {opportunitySources.map((source) => (
                           <MenuItem key={source} value={source}>
                             {source}
@@ -274,7 +297,11 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                     )}
                   />
                   {errors.source && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, ml: 2 }}
+                    >
                       {errors.source.message}
                     </Typography>
                   )}
@@ -282,8 +309,8 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('close_date', { 
-                    required: 'Expected close date is required' 
+                  {...register("close_date", {
+                    required: "Expected close date is required",
                   })}
                   label="Expected Close Date"
                   type="date"
@@ -304,7 +331,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('description')}
+                  {...register("description")}
                   label="Description"
                   multiline
                   rows={3}
@@ -315,7 +342,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('next_step')}
+                  {...register("next_step")}
                   label="Next Step"
                   fullWidth
                   disabled={loading}
@@ -325,7 +352,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               {/* Optional Reference Fields */}
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('lead_id')}
+                  {...register("lead_id")}
                   label="Lead ID (if converted from lead)"
                   type="number"
                   fullWidth
@@ -335,7 +362,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('assigned_to_id')}
+                  {...register("assigned_to_id")}
                   label="Assigned To (User ID)"
                   type="number"
                   fullWidth
@@ -347,20 +374,16 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={handleClose} 
-            disabled={loading}
-            color="inherit"
-          >
+          <Button onClick={handleClose} disabled={loading} color="inherit">
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
+          <Button
+            type="submit"
+            variant="contained"
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? 'Adding...' : 'Add Opportunity'}
+            {loading ? "Adding..." : "Add Opportunity"}
           </Button>
         </DialogActions>
       </form>

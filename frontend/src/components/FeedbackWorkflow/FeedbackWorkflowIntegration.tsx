@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Button,
   IconButton,
@@ -9,22 +9,23 @@ import {
   MenuItem,
   Divider,
   ListItemIcon,
-  ListItemText
-} from '@mui/material';
+  ListItemText,
+} from "@mui/material";
 import {
   MoreVert as MoreVertIcon,
   Feedback as FeedbackIcon,
   Assignment as AssignmentIcon,
   Star as StarIcon,
   CheckCircle as CheckCircleIcon,
-  Schedule as ScheduleIcon
-} from '@mui/icons-material';
+  Schedule as ScheduleIcon,
+} from "@mui/icons-material";
 
 import {
   CustomerFeedbackModal,
-  ServiceClosureDialog
-} from './FeedbackWorkflow';
-import { feedbackService } from '../services/feedbackService';
+  ServiceClosureDialog,
+} from "./FeedbackWorkflow";
+
+import { feedbackService } from "../../services/feedbackService";
 
 interface FeedbackWorkflowIntegrationProps {
   installationJob: any;
@@ -33,12 +34,9 @@ interface FeedbackWorkflowIntegrationProps {
   userRole: string;
 }
 
-export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationProps> = ({
-  installationJob,
-  completionRecord,
-  onWorkflowUpdate,
-  userRole
-}) => {
+export const FeedbackWorkflowIntegration: React.FC<
+  FeedbackWorkflowIntegrationProps
+> = ({ installationJob, completionRecord, onWorkflowUpdate, userRole }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [closureDialogOpen, setClosureDialogOpen] = useState(false);
@@ -46,9 +44,9 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
   const [existingClosure, setExistingClosure] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const isCustomer = userRole === 'customer';
-  const isManager = userRole === 'manager' || userRole === 'admin';
-  const isCompleted = completionRecord?.completion_status === 'completed';
+  const isCustomer = userRole === "customer";
+  const isManager = userRole === "manager" || userRole === "admin";
+  const isCompleted = completionRecord?.completion_status === "completed";
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -63,12 +61,12 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
     try {
       const [feedback, closure] = await Promise.all([
         feedbackService.getFeedbackByJobId(installationJob.id),
-        feedbackService.getClosureByJobId(installationJob.id)
+        feedbackService.getClosureByJobId(installationJob.id),
       ]);
       setExistingFeedback(feedback);
       setExistingClosure(closure);
     } catch (err) {
-      console.error(msg, err);
+      console.error('Error loading data:', err);
     } finally {
       setLoading(false);
     }
@@ -92,65 +90,105 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
       onWorkflowUpdate?.();
       setFeedbackModalOpen(false);
     } catch (err) {
-      console.error(msg, err);
-      throw error;
+      console.error('Error submitting feedback:', err);
+      throw new Error('Failed to submit feedback');
     }
   };
 
   const handleServiceClosureAction = async (actionData: any) => {
     try {
-      if (actionData.action === 'approve') {
+      if (actionData.action === "approve") {
         await feedbackService.approveServiceClosure(
           existingClosure.id,
-          actionData.approval_notes
+          actionData.approval_notes,
         );
-      } else if (actionData.action === 'close') {
+      } else if (actionData.action === "close") {
         await feedbackService.closeServiceTicket(
           existingClosure.id,
-          actionData.final_closure_notes
+          actionData.final_closure_notes,
         );
-      } else if (actionData.action === 'reopen') {
+      } else if (actionData.action === "reopen") {
         await feedbackService.reopenServiceTicket(
           existingClosure.id,
-          actionData.reopening_reason
+          actionData.reopening_reason,
         );
       } else {
         // Create new closure
         await feedbackService.createServiceClosure(actionData);
       }
-      
+
       onWorkflowUpdate?.();
       setClosureDialogOpen(false);
     } catch (err) {
-      console.error(msg, err);
-      throw error;
+      console.error('Error handling closure action:', err);
+      throw new Error('Failed to handle closure action');
     }
   };
 
   const getFeedbackStatus = () => {
-    if (!existingFeedback) {return null;}
-    
+    if (!existingFeedback) {
+      return null;
+    }
+
     const statusConfig = {
-      submitted: { label: 'Feedback Submitted', color: 'info', icon: FeedbackIcon },
-      reviewed: { label: 'Feedback Reviewed', color: 'warning', icon: StarIcon },
-      responded: { label: 'Feedback Responded', color: 'success', icon: CheckCircleIcon },
-      closed: { label: 'Feedback Closed', color: 'default', icon: CheckCircleIcon }
+      submitted: {
+        label: "Feedback Submitted",
+        color: "info",
+        icon: FeedbackIcon,
+      },
+      reviewed: {
+        label: "Feedback Reviewed",
+        color: "warning",
+        icon: StarIcon,
+      },
+      responded: {
+        label: "Feedback Responded",
+        color: "success",
+        icon: CheckCircleIcon,
+      },
+      closed: {
+        label: "Feedback Closed",
+        color: "default",
+        icon: CheckCircleIcon,
+      },
     };
 
-    return statusConfig[existingFeedback.feedback_status as keyof typeof statusConfig];
+    return statusConfig[
+      existingFeedback.feedback_status as keyof typeof statusConfig
+    ];
   };
 
   const getClosureStatus = () => {
-    if (!existingClosure) {return null;}
-    
+    if (!existingClosure) {
+      return null;
+    }
+
     const statusConfig = {
-      pending: { label: 'Closure Pending', color: 'warning', icon: ScheduleIcon },
-      approved: { label: 'Closure Approved', color: 'info', icon: CheckCircleIcon },
-      closed: { label: 'Service Closed', color: 'success', icon: CheckCircleIcon },
-      reopened: { label: 'Service Reopened', color: 'error', icon: AssignmentIcon }
+      pending: {
+        label: "Closure Pending",
+        color: "warning",
+        icon: ScheduleIcon,
+      },
+      approved: {
+        label: "Closure Approved",
+        color: "info",
+        icon: CheckCircleIcon,
+      },
+      closed: {
+        label: "Service Closed",
+        color: "success",
+        icon: CheckCircleIcon,
+      },
+      reopened: {
+        label: "Service Reopened",
+        color: "error",
+        icon: AssignmentIcon,
+      },
     };
 
-    return statusConfig[existingClosure.closure_status as keyof typeof statusConfig];
+    return statusConfig[
+      existingClosure.closure_status as keyof typeof statusConfig
+    ];
   };
 
   // Show status indicators if data exists
@@ -159,26 +197,30 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
 
   if (feedbackStatus || closureStatus) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         {feedbackStatus && (
           <Tooltip title={feedbackStatus.label}>
             <Button
               size="small"
               color={feedbackStatus.color as any}
-              startIcon={React.createElement(feedbackStatus.icon, { fontSize: 'small' })}
+              startIcon={React.createElement(feedbackStatus.icon, {
+                fontSize: "small",
+              })}
               onClick={handleOpenFeedbackModal}
             >
               {existingFeedback.overall_rating}/5
             </Button>
           </Tooltip>
         )}
-        
+
         {closureStatus && (
           <Tooltip title={closureStatus.label}>
             <Button
               size="small"
               color={closureStatus.color as any}
-              startIcon={React.createElement(closureStatus.icon, { fontSize: 'small' })}
+              startIcon={React.createElement(closureStatus.icon, {
+                fontSize: "small",
+              })}
               onClick={handleOpenClosureDialog}
             >
               {closureStatus.label}
@@ -186,11 +228,7 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
           </Tooltip>
         )}
 
-        <IconButton
-          size="small"
-          onClick={handleMenuOpen}
-          disabled={loading}
-        >
+        <IconButton size="small" onClick={handleMenuOpen} disabled={loading}>
           <MoreVertIcon fontSize="small" />
         </IconButton>
 
@@ -225,7 +263,7 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
                   <AssignmentIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText>
-                  {existingClosure ? 'Manage Closure' : 'Create Closure'}
+                  {existingClosure ? "Manage Closure" : "Create Closure"}
                 </ListItemText>
               </MenuItem>
             </>
@@ -257,7 +295,7 @@ export const FeedbackWorkflowIntegration: React.FC<FeedbackWorkflowIntegrationPr
 
   // Show action buttons for new workflow
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       {isCustomer && isCompleted && (
         <Button
           size="small"

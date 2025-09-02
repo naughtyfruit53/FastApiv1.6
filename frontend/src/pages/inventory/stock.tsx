@@ -1,10 +1,13 @@
 // frontend/src/pages/inventory/stock.tsx
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { masterDataService, companyService } from '../../services/authService';  // Assuming masterDataService is masterService
-import { getProductMovements, getLastVendorForProduct } from '../../services/stockService';
-import { useAuth } from '../../context/AuthContext';
-import { useRouter } from 'next/router';
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { masterDataService, companyService } from "../../services/authService"; // Assuming masterDataService is masterService
+import {
+  getProductMovements,
+  getLastVendorForProduct,
+} from "../../services/stockService";
+import { useAuth } from "../../context/AuthContext";
+import { useRouter } from "next/router";
 import {
   Box,
   Container,
@@ -32,8 +35,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  CircularProgress
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add,
   Edit,
@@ -44,12 +46,12 @@ import {
   MoreVert,
   History as HistoryIcon,
   ShoppingCart as PurchaseIcon,
-} from '@mui/icons-material';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import { toast } from 'react-toastify';
+} from "@mui/icons-material";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import { toast } from "react-toastify";
 // Type declaration for jsPDF autoTable extension
-declare module 'jspdf' {
+declare module "jspdf" {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
@@ -58,7 +60,7 @@ const StockManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const { user, isOrgContextReady } = useAuth(); // Get organization context readiness
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [showZero, setShowZero] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
@@ -69,7 +71,11 @@ const StockManagement: React.FC = () => {
   const [selectedMovements, setSelectedMovements] = useState<any[]>([]);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuProductId, setMenuProductId] = useState<number | null>(null);
-  const [manualFormData, setManualFormData] = useState({ product_id: 0, quantity: 0, unit: '' });
+  const [manualFormData, setManualFormData] = useState({
+    product_id: 0,
+    quantity: 0,
+    unit: "",
+  });
   const [editFormData, setEditFormData] = useState({ quantity: 0 });
   // Params object for stock fetch - service will clean invalid values from queryKey[1]
   const stockParams = {
@@ -78,39 +84,43 @@ const StockManagement: React.FC = () => {
     // Add if you have low_stock_only or product_id states
   };
   // Only fetch stock data if organization context is ready
-const { data: stockData,error: stockError } = useQuery({
-    queryKey: ['stock', stockParams],
-    queryFn: () => masterDataService.getStock(),  // Fix the function call
+  const { data: stockData, error: stockError } = useQuery({
+    queryKey: ["stock", stockParams],
+    queryFn: () => masterDataService.getStock(), // Fix the function call
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
   const { data: products } = useQuery({
-    queryKey: ['products'],
+    queryKey: ["products"],
     queryFn: () => masterDataService.getProducts(),
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
   const { data: companyData } = useQuery({
-    queryKey: ['company'],
+    queryKey: ["company"],
     queryFn: companyService.getCurrentCompany,
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
   const updateStockMutation = useMutation({
-    mutationFn: (data: any) => masterDataService.updateStock(data.product_id, data),
+    mutationFn: (data: any) =>
+      masterDataService.updateStock(data.product_id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stock'] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
       setEditDialogOpen(false);
       setManualDialogOpen(false);
-    }
+    },
   });
   const bulkImportMutation = useMutation({
-    mutationFn: ({ file, mode }: { file: File; mode: 'add' | 'replace' }) => masterDataService.bulkImportStock(file, mode),
+    mutationFn: ({ file, mode }: { file: File; mode: "add" | "replace" }) =>
+      masterDataService.bulkImportStock(file, mode),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stock'] });
-      alert('Stock import completed successfully.');
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      alert("Stock import completed successfully.");
     },
     onError: (error: any) => {
       console.error(msg, err);
-      alert(`Import failed: ${error.userMessage || 'Please check the file format and required columns.'}`);
-    }
+      alert(
+        `Import failed: ${error.userMessage || "Please check the file format and required columns."}`,
+      );
+    },
   });
   const handleEditStock = (stock: any) => {
     setSelectedStock(stock);
@@ -119,10 +129,13 @@ const { data: stockData,error: stockError } = useQuery({
   };
   const handleSaveEdit = () => {
     if (!selectedStock || !selectedStock.product_id) {
-      toast.error('Invalid stock selection. Please try again.');
+      toast.error("Invalid stock selection. Please try again.");
       return;
     }
-    updateStockMutation.mutate({ product_id: selectedStock.product_id, quantity: editFormData.quantity });
+    updateStockMutation.mutate({
+      product_id: selectedStock.product_id,
+      quantity: editFormData.quantity,
+    });
   };
   const handleManualEntry = () => {
     setManualDialogOpen(true);
@@ -134,19 +147,19 @@ const { data: stockData,error: stockError } = useQuery({
     masterDataService.downloadStockTemplate();
   };
   const handleImportClick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.xlsx, .xls';
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx, .xls";
     input.onchange = (e: any) => {
       const file = e.target.files[0];
       if (file) {
         setSelectedFile(file);
-        setImportDialogOpen(true);  // Show prompt
+        setImportDialogOpen(true); // Show prompt
       }
     };
     input.click();
   };
-  const handleImportConfirm = (mode: 'add' | 'replace') => {
+  const handleImportConfirm = (mode: "add" | "replace") => {
     if (selectedFile) {
       bulkImportMutation.mutate({ file: selectedFile, mode });
     }
@@ -155,15 +168,22 @@ const { data: stockData,error: stockError } = useQuery({
   };
   const handleExport = async () => {
     try {
-      await masterDataService.exportStock({ search: searchText, show_zero: showZero });
+      await masterDataService.exportStock({
+        search: searchText,
+        show_zero: showZero,
+      });
     } catch (err) {
-      alert('Failed to export stock data. Please try again.');
+      alert("Failed to export stock data. Please try again.");
     }
   };
   const handlePrint = () => {
-    generateStockReport('stock_report.pdf', companyData, stockData);
+    generateStockReport("stock_report.pdf", companyData, stockData);
   };
-  const generateStockReport = (filePath: string, companyData: any, items: any[]) => {
+  const generateStockReport = (
+    filePath: string,
+    companyData: any,
+    items: any[],
+  ) => {
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text("Stock Report", 14, 20);
@@ -175,7 +195,17 @@ const { data: stockData,error: stockError } = useQuery({
     yPosition += 20;
     doc.autoTable({
       startY: yPosition,
-      head: [['S.No', 'Product Name', 'Quantity', 'Unit Price', 'Total Value', 'Reorder Level', 'Last Updated']],
+      head: [
+        [
+          "S.No",
+          "Product Name",
+          "Quantity",
+          "Unit Price",
+          "Total Value",
+          "Reorder Level",
+          "Last Updated",
+        ],
+      ],
       body: items.map((item, idx) => [
         idx + 1,
         item.product_name,
@@ -183,31 +213,34 @@ const { data: stockData,error: stockError } = useQuery({
         item.unit_price,
         item.total_value,
         item.reorder_level,
-        item.last_updated
+        item.last_updated,
       ]),
-      theme: 'striped',
+      theme: "striped",
       styles: { cellPadding: 2, fontSize: 10 },
-      headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] }
+      headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
     });
     doc.save(filePath);
   };
   const resetForm = () => {
-    setManualFormData({ product_id: 0, quantity: 0, unit: '' });
+    setManualFormData({ product_id: 0, quantity: 0, unit: "" });
     setEditFormData({ quantity: 0 });
   };
   // Handle ESC key for canceling import dialog
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setImportDialogOpen(false);
       }
     };
-    window.addEventListener('keydown', handleEsc);
+    window.addEventListener("keydown", handleEsc);
     return () => {
-      window.removeEventListener('keydown', handleEsc);
+      window.removeEventListener("keydown", handleEsc);
     };
   }, []);
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, productId: number) => {
+  const handleMenuClick = (
+    event: React.MouseEvent<HTMLElement>,
+    productId: number,
+  ) => {
     setMenuAnchorEl(event.currentTarget);
     setMenuProductId(productId);
   };
@@ -226,7 +259,9 @@ const { data: stockData,error: stockError } = useQuery({
   const handleCreatePurchaseOrder = async () => {
     if (menuProductId) {
       const lastVendor = await getLastVendorForProduct(menuProductId);
-      router.push(`/vouchers/Purchase-Vouchers/purchase-order?productId=${menuProductId}${lastVendor ? `&vendorId=${lastVendor.id}` : ''}`);
+      router.push(
+        `/vouchers/Purchase-Vouchers/purchase-order?productId=${menuProductId}${lastVendor ? `&vendorId=${lastVendor.id}` : ""}`,
+      );
     }
     handleMenuClose();
   };
@@ -238,7 +273,7 @@ const { data: stockData,error: stockError } = useQuery({
         </Typography>
         {/* Show loading or error states before organization context is ready */}
         {!isOrgContextReady && (
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Paper sx={{ p: 3, textAlign: "center" }}>
             <Typography variant="h6" color="text.secondary">
               Loading organization context...
             </Typography>
@@ -249,19 +284,35 @@ const { data: stockData,error: stockError } = useQuery({
         )}
         {/* Show error message if there's a stock loading error */}
         {isOrgContextReady && stockError && (
-          <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'error.light', color: 'error.contrastText' }}>
-            <Typography variant="h6">
-              Unable to load stock data
-            </Typography>
+          <Paper
+            sx={{
+              p: 3,
+              textAlign: "center",
+              backgroundColor: "error.light",
+              color: "error.contrastText",
+            }}
+          >
+            <Typography variant="h6">Unable to load stock data</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
-              {(stockError as any)?.userMessage || stockError?.message || 'Please check your organization setup and try again.'}
+              {(stockError as any)?.userMessage ||
+                stockError?.message ||
+                "Please check your organization setup and try again."}
             </Typography>
           </Paper>
         )}
         {/* Only show main interface when organization context is ready */}
         {isOrgContextReady && (
           <>
-            <Paper sx={{ p: 2, mb: 2, position: 'sticky', top: 0, zIndex: 1000, backgroundColor: 'white' }}>
+            <Paper
+              sx={{
+                p: 2,
+                mb: 2,
+                position: "sticky",
+                top: 0,
+                zIndex: 1000,
+                backgroundColor: "white",
+              }}
+            >
               <Grid container spacing={2} alignItems="center">
                 <Grid size={{ xs: 12, md: 4 }}>
                   <TextField
@@ -272,7 +323,12 @@ const { data: stockData,error: stockError } = useQuery({
                       endAdornment: (
                         <InputAdornment position="end">
                           <FormControlLabel
-                            control={<Checkbox checked={showZero} onChange={(e) => setShowZero(e.target.checked)} />}
+                            control={
+                              <Checkbox
+                                checked={showZero}
+                                onChange={(e) => setShowZero(e.target.checked)}
+                              />
+                            }
                             label="Zero Stock"
                             labelPlacement="start"
                             sx={{ mr: 0 }}
@@ -283,42 +339,52 @@ const { data: stockData,error: stockError } = useQuery({
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 8 }}>
-                  <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ flexWrap: 'nowrap' }}>
-                    <Button 
-                      variant="contained" 
-                      startIcon={<Add />} 
-                      onClick={handleManualEntry} 
-                      sx={{ minWidth: '120px' }}
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="flex-end"
+                    sx={{ flexWrap: "nowrap" }}
+                  >
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={handleManualEntry}
+                      sx={{ minWidth: "120px" }}
                       disabled={!user?.organization_id}
                     >
                       Manual Entry
                     </Button>
-                    <Button variant="contained" startIcon={<GetApp />} onClick={handleDownloadTemplate} sx={{ minWidth: '120px' }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<GetApp />}
+                      onClick={handleDownloadTemplate}
+                      sx={{ minWidth: "120px" }}
+                    >
                       Download Template
                     </Button>
-                    <Button 
-                      variant="contained" 
-                      startIcon={<Publish />} 
-                      onClick={handleImportClick} 
-                      sx={{ minWidth: '120px' }}
+                    <Button
+                      variant="contained"
+                      startIcon={<Publish />}
+                      onClick={handleImportClick}
+                      sx={{ minWidth: "120px" }}
                       disabled={!user?.organization_id}
                     >
                       Import
                     </Button>
-                    <Button 
-                      variant="contained" 
-                      startIcon={<GetApp />} 
-                      onClick={handleExport} 
-                      sx={{ minWidth: '120px' }}
+                    <Button
+                      variant="contained"
+                      startIcon={<GetApp />}
+                      onClick={handleExport}
+                      sx={{ minWidth: "120px" }}
                       disabled={!user?.organization_id}
                     >
                       Export
                     </Button>
-                    <Button 
-                      variant="contained" 
-                      startIcon={<Print />} 
-                      onClick={handlePrint} 
-                      sx={{ minWidth: '120px' }}
+                    <Button
+                      variant="contained"
+                      startIcon={<Print />}
+                      onClick={handlePrint}
+                      sx={{ minWidth: "120px" }}
                       disabled={!user?.organization_id}
                     >
                       Print Stock
@@ -327,12 +393,15 @@ const { data: stockData,error: stockError } = useQuery({
                 </Grid>
               </Grid>
             </Paper>
-            <Box sx={{ 
-              overflowY: 'auto', 
-              maxHeight: 'calc(100vh - 200px)', /* Adjust based on header heights */
-              position: 'relative',
-              zIndex: 1
-            }}>
+            <Box
+              sx={{
+                overflowY: "auto",
+                maxHeight:
+                  "calc(100vh - 200px)" /* Adjust based on header heights */,
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
               <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
@@ -348,21 +417,39 @@ const { data: stockData,error: stockError } = useQuery({
                   </TableHead>
                   <TableBody>
                     {stockData?.map((stock: any) => (
-                      <TableRow key={stock.id} sx={{ backgroundColor: stock.quantity <= stock.reorder_level ? 'yellow.main' : 'inherit' }}>
+                      <TableRow
+                        key={stock.id}
+                        sx={{
+                          backgroundColor:
+                            stock.quantity <= stock.reorder_level
+                              ? "yellow.main"
+                              : "inherit",
+                        }}
+                      >
                         <TableCell>{stock.product_name}</TableCell>
-                        <TableCell>{stock.quantity} {stock.unit}</TableCell>
+                        <TableCell>
+                          {stock.quantity} {stock.unit}
+                        </TableCell>
                         <TableCell>{stock.unit_price}</TableCell>
                         <TableCell>{stock.total_value}</TableCell>
                         <TableCell>{stock.reorder_level}</TableCell>
                         <TableCell>{stock.last_updated}</TableCell>
                         <TableCell>
-                          <IconButton onClick={() => alert(`Details: {stock.description}`)}>
+                          <IconButton
+                            onClick={() =>
+                              alert(`Details: {stock.description}`)
+                            }
+                          >
                             <Visibility />
                           </IconButton>
                           <IconButton onClick={() => handleEditStock(stock)}>
                             <Edit />
                           </IconButton>
-                          <IconButton onClick={(e) => handleMenuClick(e, stock.product_id)}>
+                          <IconButton
+                            onClick={(e) =>
+                              handleMenuClick(e, stock.product_id)
+                            }
+                          >
                             <MoreVert />
                           </IconButton>
                         </TableCell>
@@ -382,16 +469,25 @@ const { data: stockData,error: stockError } = useQuery({
         onClose={handleMenuClose}
       >
         <MuiMenuItem onClick={handleShowMovement}>
-          <ListItemIcon><HistoryIcon /></ListItemIcon>
+          <ListItemIcon>
+            <HistoryIcon />
+          </ListItemIcon>
           <ListItemText>Show Movement</ListItemText>
         </MuiMenuItem>
         <MuiMenuItem onClick={handleCreatePurchaseOrder}>
-          <ListItemIcon><PurchaseIcon /></ListItemIcon>
+          <ListItemIcon>
+            <PurchaseIcon />
+          </ListItemIcon>
           <ListItemText>Create Purchase Order</ListItemText>
         </MuiMenuItem>
       </Menu>
       {/* Movements Dialog */}
-      <Dialog open={movementsDialogOpen} onClose={() => setMovementsDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={movementsDialogOpen}
+        onClose={() => setMovementsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Stock Movements</DialogTitle>
         <DialogContent>
           <TableContainer>
@@ -408,16 +504,20 @@ const { data: stockData,error: stockError } = useQuery({
               <TableBody>
                 {selectedMovements.map((movement) => (
                   <TableRow key={movement.id}>
-                    <TableCell>{new Date(movement.transaction_date).toLocaleString()}</TableCell>
+                    <TableCell>
+                      {new Date(movement.transaction_date).toLocaleString()}
+                    </TableCell>
                     <TableCell>{movement.transaction_type}</TableCell>
                     <TableCell>{movement.quantity}</TableCell>
-                    <TableCell>{movement.reference_number || '-'}</TableCell>
-                    <TableCell>{movement.notes || '-'}</TableCell>
+                    <TableCell>{movement.reference_number || "-"}</TableCell>
+                    <TableCell>{movement.notes || "-"}</TableCell>
                   </TableRow>
                 ))}
                 {selectedMovements.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">No movements found</TableCell>
+                    <TableCell colSpan={5} align="center">
+                      No movements found
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -436,7 +536,9 @@ const { data: stockData,error: stockError } = useQuery({
             label="Quantity"
             type="number"
             value={editFormData.quantity}
-            onChange={(e) => setEditFormData({ quantity: parseFloat(e.target.value) })}
+            onChange={(e) =>
+              setEditFormData({ quantity: parseFloat(e.target.value) })
+            }
             fullWidth
           />
         </DialogContent>
@@ -446,7 +548,10 @@ const { data: stockData,error: stockError } = useQuery({
         </DialogActions>
       </Dialog>
       {/* Manual Entry Dialog */}
-      <Dialog open={manualDialogOpen} onClose={() => setManualDialogOpen(false)}>
+      <Dialog
+        open={manualDialogOpen}
+        onClose={() => setManualDialogOpen(false)}
+      >
         <DialogTitle>Manual Stock Entry</DialogTitle>
         <DialogContent>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -454,12 +559,20 @@ const { data: stockData,error: stockError } = useQuery({
             <Select
               value={manualFormData.product_id}
               onChange={(e) => {
-                const product = products.find((p: any) => p.id === e.target.value);
-                setManualFormData({ ...manualFormData, product_id: product.id, unit: product.unit });
+                const product = products.find(
+                  (p: any) => p.id === e.target.value,
+                );
+                setManualFormData({
+                  ...manualFormData,
+                  product_id: product.id,
+                  unit: product.unit,
+                });
               }}
             >
               {products?.map((p: any) => (
-                <MenuItem key={p.id} value={p.id}>{p.product_name}</MenuItem>
+                <MenuItem key={p.id} value={p.id}>
+                  {p.product_name}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -467,7 +580,12 @@ const { data: stockData,error: stockError } = useQuery({
             label="Quantity"
             type="number"
             value={manualFormData.quantity}
-            onChange={(e) => setManualFormData({ ...manualFormData, quantity: parseFloat(e.target.value) })}
+            onChange={(e) =>
+              setManualFormData({
+                ...manualFormData,
+                quantity: parseFloat(e.target.value),
+              })
+            }
             fullWidth
             sx={{ mb: 2 }}
           />
@@ -484,23 +602,38 @@ const { data: stockData,error: stockError } = useQuery({
         </DialogActions>
       </Dialog>
       {/* Import Mode Prompt Dialog */}
-      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Import Stock</DialogTitle>
         <DialogContent>
           <Typography>Existing stock found. Do you want to:</Typography>
           <Grid container spacing={2} sx={{ mt: 2 }}>
             <Grid size={{ xs: 6 }}>
-              <Button variant="contained" color="primary" fullWidth onClick={() => handleImportConfirm('replace')}>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={() => handleImportConfirm("replace")}
+              >
                 Replace Stock
               </Button>
             </Grid>
             <Grid size={{ xs: 6 }}>
-              <Button variant="contained" color="primary" fullWidth onClick={() => handleImportConfirm('add')}>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={() => handleImportConfirm("add")}
+              >
                 Add to Stock
               </Button>
             </Grid>
           </Grid>
-          <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Box sx={{ textAlign: "center", mt: 2 }}>
             <Button variant="text" onClick={() => setImportDialogOpen(false)}>
               Cancel
             </Button>

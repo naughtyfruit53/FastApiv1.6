@@ -1,6 +1,6 @@
-'use client';
-import React, { useState } from 'react';
-import { 
+"use client";
+import React, { useState } from "react";
+import {
   Box,
   Card,
   CardContent,
@@ -8,11 +8,11 @@ import {
   Button,
   Typography,
   Alert,
-  CircularProgress
-} from '@mui/material';
-import { useForm, Controller } from 'react-hook-form';
+  CircularProgress,
+} from "@mui/material";
+import { useForm, Controller } from "react-hook-form";
 
-import { authService } from '../services/authService';
+import { authService } from "../services/authService";
 interface LoginFormProps {
   onLogin: (_token: string, _loginResponse?: any) => void;
 }
@@ -22,23 +22,33 @@ interface LoginFormData {
 }
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const [error, setError] = useState("");
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
     defaultValues: {
-      email: '',
-      password: ''
-    }
+      email: "",
+      password: "",
+    },
   });
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const response = await authService.loginWithEmail(data.email, data.password);
+      const response = await authService.loginWithEmail(
+        data.email,
+        data.password,
+      );
       // Store user info - removed redundant localStorage sets since AuthContext handles it
       onLogin(response.access_token, response);
     } catch (loginError: any) {
       // Better error handling to prevent flicker
-      const errorMessage = loginError.message || loginError.response?.data?.detail || 'Login failed. Please check your credentials.';
+      const errorMessage =
+        loginError.message ||
+        loginError.response?.data?.detail ||
+        "Login failed. Please check your credentials.";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -60,11 +70,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             name="email"
             control={control}
             rules={{
-              required: 'Email is required',
+              required: "Email is required",
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Invalid email address'
-              }
+                message: "Invalid email address",
+              },
             }}
             render={({ field }) => (
               <TextField
@@ -75,8 +85,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                 variant="outlined"
                 slotProps={{
                   inputLabel: {
-                    shrink: field.value ? true : undefined
-                  }
+                    shrink: field.value ? true : undefined,
+                  },
                 }}
                 error={!!errors.email}
                 helperText={errors.email?.message}
@@ -90,7 +100,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             name="password"
             control={control}
             rules={{
-              required: 'Password is required'
+              required: "Password is required",
             }}
             render={({ field }) => (
               <TextField
@@ -101,8 +111,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                 variant="outlined"
                 slotProps={{
                   inputLabel: {
-                    shrink: field.value ? true : undefined
-                  }
+                    shrink: field.value ? true : undefined,
+                  },
                 }}
                 error={!!errors.password}
                 helperText={errors.password?.message}
@@ -118,11 +128,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             sx={{ mt: 3, mb: 2 }}
             disabled={loading}
           >
-            {loading ? <CircularProgress size={24} /> : 'Login'}
+            {loading ? <CircularProgress size={24} /> : "Login"}
           </Button>
         </Box>
         <Typography variant="body2" color="textSecondary" align="center">
-          Use your email and password to login, or try OTP authentication for enhanced security.
+          Use your email and password to login, or try OTP authentication for
+          enhanced security.
         </Typography>
       </CardContent>
     </Card>

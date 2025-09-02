@@ -1,5 +1,5 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -24,12 +24,11 @@ import {
   TextField,
   Alert,
   CircularProgress,
-  Tooltip
-} from '@mui/material';
+  Tooltip,
+} from "@mui/material";
 import {
   MoreVert,
   Add,
-  Pause,
   PlayArrow,
   Block,
   Delete,
@@ -37,11 +36,10 @@ import {
   Business,
   Warning,
   CheckCircle,
-  Email
-} from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+} from "@mui/icons-material";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 interface Organization {
   id: number;
   name: string;
@@ -60,75 +58,99 @@ const OrganizationsPage: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [actionDialog, setActionDialog] = useState(false);
-  const [actionType, setActionType] = useState<'suspend' | 'pause' | 'reactivate' | 'delete' | 'reset' | null>(null);
-  const [confirmationText, setConfirmationText] = useState('');
+  const [actionType, setActionType] = useState<
+    "suspend" | "pause" | "reactivate" | "delete" | "reset" | null
+  >(null);
+  const [confirmationText, setConfirmationText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   // Get user info for authorization
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
-  const isSuperAdmin = userRole === 'super_admin';
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const userRole =
+    typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+  const isSuperAdmin = userRole === "super_admin";
   // Fetch organizations
   const { data: organizations, isLoading } = useQuery({
-    queryKey: ['organizations'],
+    queryKey: ["organizations"],
     queryFn: async () => {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await axios.get(`${API_BASE_URL}/api/v1/organizations/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/organizations/`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       return response.data as Organization[];
     },
-    enabled: !!token
+    enabled: !!token,
   });
   // Organization action mutations
   const orgActionMutation = useMutation({
-    mutationFn: async ({ orgId, action, data }: { orgId: number; action: string; data?: any }) => {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      let endpoint = '';
-      let method = 'POST';
+    mutationFn: async ({
+      orgId,
+      action,
+      data,
+    }: {
+      orgId: number;
+      action: string;
+      data?: any;
+    }) => {
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      let endpoint = "";
+      let method = "POST";
       switch (action) {
-        case 'suspend':
+        case "suspend":
           endpoint = `/api/v1/settings/organization/${orgId}/suspend`;
           break;
-        case 'reactivate':
+        case "reactivate":
           endpoint = `/api/v1/settings/organization/${orgId}/activate`;
           break;
-        case 'delete':
+        case "delete":
           endpoint = `/api/v1/organizations/${orgId}`;
-          method = 'DELETE';
+          method = "DELETE";
           break;
-        case 'reset':
+        case "reset":
           endpoint = `/api/v1/settings/reset/entity`;
           data = { entity_id: orgId, confirm: true };
           break;
         default:
-          throw new Error('Invalid action');
+          throw new Error("Invalid action");
       }
       const response = await axios({
         method,
         url: `${API_BASE_URL}${endpoint}`,
         data,
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
       setSuccess(`Organization ${variables.action} completed successfully`);
       setActionDialog(false);
       setSelectedOrg(null);
       setActionType(null);
-      setConfirmationText('');
+      setConfirmationText("");
       // Send confirmation email for reset action
-      if (variables.action === 'reset') {
-        setSuccess('Organization reset completed. Confirmation email sent to organization admin.');
+      if (variables.action === "reset") {
+        setSuccess(
+          "Organization reset completed. Confirmation email sent to organization admin.",
+        );
       }
     },
     onError: (error: any) => {
-      setError(error.response?.data?.detail || `Failed to ${actionType} organization`);
-    }
+      setError(
+        error.response?.data?.detail || `Failed to ${actionType} organization`,
+      );
+    },
   });
-  const handleContextMenu = (event: React.MouseEvent<HTMLButtonElement>, org: Organization) => {
+  const handleContextMenu = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    org: Organization,
+  ) => {
     event.preventDefault();
     setAnchorEl(event.currentTarget);
     setSelectedOrg(org);
@@ -137,49 +159,60 @@ const OrganizationsPage: React.FC = () => {
     setAnchorEl(null);
     setSelectedOrg(null);
   };
-  const handleAction = (action: 'suspend' | 'pause' | 'reactivate' | 'delete' | 'reset') => {
+  const handleAction = (
+    action: "suspend" | "pause" | "reactivate" | "delete" | "reset",
+  ) => {
     setActionType(action);
     setActionDialog(true);
     handleCloseMenu();
   };
   const confirmAction = () => {
-    if (!selectedOrg || !actionType) {return;}
+    if (!selectedOrg || !actionType) {
+      return;
+    }
     // For reset action, require confirmation text
-    if (actionType === 'reset' && confirmationText !== 'RESET') {
-      setError('Please type &apos;RESET&apos; to confirm this action');
+    if (actionType === "reset" && confirmationText !== "RESET") {
+      setError("Please type &apos;RESET&apos; to confirm this action");
       return;
     }
     // For delete action, require confirmation text
-    if (actionType === 'delete' && confirmationText !== selectedOrg.name) {
-      setError(`Please type &quot;${selectedOrg.name}&quot; to confirm deletion`);
+    if (actionType === "delete" && confirmationText !== selectedOrg.name) {
+      setError(
+        `Please type &quot;${selectedOrg.name}&quot; to confirm deletion`,
+      );
       return;
     }
     const actionData: any = {};
-    if (actionType === 'suspend') {
-      actionData.reason = 'Administrative action';
+    if (actionType === "suspend") {
+      actionData.reason = "Administrative action";
     }
     orgActionMutation.mutate({
       orgId: selectedOrg.id,
       action: actionType,
-      data: actionData
+      data: actionData,
     });
   };
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'active': return 'success';
-      case 'suspended': return 'error';
-      case 'trial': return 'warning';
-      case 'expired': return 'default';
-      default: return 'default';
+      case "active":
+        return "success";
+      case "suspended":
+        return "error";
+      case "trial":
+        return "warning";
+      case "expired":
+        return "default";
+      default:
+        return "default";
     }
   };
   const getActionAvailability = (org: Organization) => {
     const status = org.status.toLowerCase();
     return {
-      suspend: status === 'active',
-      reactivate: status === 'suspended' || status === 'expired',
+      suspend: status === "active",
+      reactivate: status === "suspended" || status === "expired",
       delete: true,
-      reset: true
+      reset: true,
     };
   };
   // Check authorization
@@ -187,9 +220,10 @@ const OrganizationsPage: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
-          You don&apos;t have permission to manage organizations. Only platform super administrators can access this page.
+          You don&apos;t have permission to manage organizations. Only platform
+          super administrators can access this page.
         </Alert>
-        <Button onClick={() => router.push('/settings')} sx={{ mt: 2 }}>
+        <Button onClick={() => router.push("/settings")} sx={{ mt: 2 }}>
           Back to Settings
         </Button>
       </Container>
@@ -198,7 +232,14 @@ const OrganizationsPage: React.FC = () => {
   if (isLoading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: 400,
+          }}
+        >
           <CircularProgress />
         </Box>
       </Container>
@@ -206,14 +247,21 @@ const OrganizationsPage: React.FC = () => {
   }
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h4" component="h1">
           Organizations Management
         </Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={() => router.push('/admin/organizations/create')}
+          onClick={() => router.push("/admin/organizations/create")}
         >
           Add Organization
         </Button>
@@ -224,7 +272,11 @@ const OrganizationsPage: React.FC = () => {
         </Alert>
       )}
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+          onClose={() => setSuccess(null)}
+        >
           {success}
         </Alert>
       )}
@@ -246,8 +298,8 @@ const OrganizationsPage: React.FC = () => {
             {organizations?.map((org: Organization) => (
               <TableRow key={org.id}>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Business sx={{ mr: 1, color: 'primary.main' }} />
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <Business sx={{ mr: 1, color: "primary.main" }} />
                     <Box>
                       <Typography variant="subtitle2">{org.name}</Typography>
                       <Typography variant="caption" color="textSecondary">
@@ -266,7 +318,9 @@ const OrganizationsPage: React.FC = () => {
                     label={org.status}
                     color={getStatusColor(org.status)}
                     size="small"
-                    icon={org.status === 'active' ? <CheckCircle /> : <Warning />}
+                    icon={
+                      org.status === "active" ? <CheckCircle /> : <Warning />
+                    }
                   />
                 </TableCell>
                 <TableCell>
@@ -310,22 +364,25 @@ const OrganizationsPage: React.FC = () => {
         {selectedOrg && (
           <>
             {getActionAvailability(selectedOrg).suspend && (
-              <MenuItem onClick={() => handleAction('suspend')}>
+              <MenuItem onClick={() => handleAction("suspend")}>
                 <Block sx={{ mr: 1 }} fontSize="small" />
                 Suspend
               </MenuItem>
             )}
             {getActionAvailability(selectedOrg).reactivate && (
-              <MenuItem onClick={() => handleAction('reactivate')}>
+              <MenuItem onClick={() => handleAction("reactivate")}>
                 <PlayArrow sx={{ mr: 1 }} fontSize="small" />
                 Reactivate
               </MenuItem>
             )}
-            <MenuItem onClick={() => handleAction('reset')}>
+            <MenuItem onClick={() => handleAction("reset")}>
               <RestartAlt sx={{ mr: 1 }} fontSize="small" />
               Reset Data
             </MenuItem>
-            <MenuItem onClick={() => handleAction('delete')} sx={{ color: 'error.main' }}>
+            <MenuItem
+              onClick={() => handleAction("delete")}
+              sx={{ color: "error.main" }}
+            >
               <Delete sx={{ mr: 1 }} fontSize="small" />
               Delete
             </MenuItem>
@@ -333,19 +390,27 @@ const OrganizationsPage: React.FC = () => {
         )}
       </Menu>
       {/* Action Confirmation Dialog */}
-      <Dialog open={actionDialog} onClose={() => setActionDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
-          <Warning sx={{ mr: 1, color: 'warning.main' }} />
-          Confirm {actionType?.charAt(0).toUpperCase()}{actionType?.slice(1)} Organization
+      <Dialog
+        open={actionDialog}
+        onClose={() => setActionDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
+          <Warning sx={{ mr: 1, color: "warning.main" }} />
+          Confirm {actionType?.charAt(0).toUpperCase()}
+          {actionType?.slice(1)} Organization
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to {actionType} the organization &quot;{selectedOrg?.name}&quot;?
+            Are you sure you want to {actionType} the organization &quot;
+            {selectedOrg?.name}&quot;?
           </DialogContentText>
-          {actionType === 'reset' && (
+          {actionType === "reset" && (
             <Box sx={{ mt: 2 }}>
               <Alert severity="error" sx={{ mb: 2 }}>
-                This will permanently delete ALL data for this organization and send a confirmation email to the organization admin.
+                This will permanently delete ALL data for this organization and
+                send a confirmation email to the organization admin.
               </Alert>
               <TextField
                 fullWidth
@@ -356,10 +421,11 @@ const OrganizationsPage: React.FC = () => {
               />
             </Box>
           )}
-          {actionType === 'delete' && (
+          {actionType === "delete" && (
             <Box sx={{ mt: 2 }}>
               <Alert severity="error" sx={{ mb: 2 }}>
-                This will permanently delete the organization and all its data. This action cannot be undone.
+                This will permanently delete the organization and all its data.
+                This action cannot be undone.
               </Alert>
               <TextField
                 fullWidth
@@ -375,12 +441,22 @@ const OrganizationsPage: React.FC = () => {
           <Button onClick={() => setActionDialog(false)}>Cancel</Button>
           <Button
             onClick={confirmAction}
-            color={actionType === 'delete' || actionType === 'reset' ? 'error' : 'primary'}
+            color={
+              actionType === "delete" || actionType === "reset"
+                ? "error"
+                : "primary"
+            }
             variant="contained"
             disabled={orgActionMutation.isPending}
-            startIcon={orgActionMutation.isPending ? <CircularProgress size={16} /> : undefined}
+            startIcon={
+              orgActionMutation.isPending ? (
+                <CircularProgress size={16} />
+              ) : undefined
+            }
           >
-            {orgActionMutation.isPending ? 'Processing...' : `${actionType?.charAt(0).toUpperCase()}${actionType?.slice(1)}`}
+            {orgActionMutation.isPending
+              ? "Processing..."
+              : `${actionType?.charAt(0).toUpperCase()}${actionType?.slice(1)}`}
           </Button>
         </DialogActions>
       </Dialog>

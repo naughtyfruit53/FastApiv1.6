@@ -1,5 +1,5 @@
 // Revised: v1/frontend/src/pages/settings/FactoryReset.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -12,34 +12,38 @@ import {
   DialogActions,
   TextField,
   Alert,
-  Divider,
-  Grid
-} from '@mui/material';
+  Grid,
+} from "@mui/material";
+import { RestartAlt, Warning, Security } from "@mui/icons-material";
+import { useAuth } from "../../context/AuthContext";
 import {
-  RestartAlt,
-  Warning,
-  Security
-} from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
-import { requestResetOTP, confirmReset } from '../../services/resetService';
-import { canFactoryReset, isAppSuperAdmin, isOrgSuperAdmin } from '../../types/user.types';
+  canFactoryReset,
+  isAppSuperAdmin,
+  isOrgSuperAdmin,
+} from "../../types/user.types";
 const FactoryReset: React.FC = () => {
   const { user } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetType, setResetType] = useState<'organization_data' | 'factory_default'>('organization_data');
+  const [resetType, setResetType] = useState<
+    "organization_data" | "factory_default"
+  >("organization_data");
   const isSuperAdmin = isAppSuperAdmin(user);
   const isOrgAdmin = isOrgSuperAdmin(user);
   const canReset = canFactoryReset(user);
   if (!canReset) {
     return (
       <Alert severity="error">
-        You don&apos;t have permission to access reset functionality. Only organization administrators and app super administrators can perform resets.
+        You don&apos;t have permission to access reset functionality. Only
+        organization administrators and app super administrators can perform
+        resets.
       </Alert>
     );
   }
-  const handleRequestOTP = async (type: 'organization_data' | 'factory_default') => {
+  const handleRequestOTP = async (
+    type: "organization_data" | "factory_default",
+  ) => {
     setResetType(type);
     setLoading(true);
     try {
@@ -55,7 +59,7 @@ const FactoryReset: React.FC = () => {
     try {
       // Success would be handled by the service
       setIsModalVisible(false);
-      setOtp('');
+      setOtp("");
     } catch (err) {
       console.error(msg, err);
     }
@@ -70,24 +74,26 @@ const FactoryReset: React.FC = () => {
         {/* Organization Super Admin - Reset All Data */}
         {isOrgAdmin && (
           <Grid size={{ xs: 12, md: 6 }}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Paper sx={{ p: 3, height: "100%" }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <RestartAlt color="warning" sx={{ mr: 1 }} />
                 <Typography variant="h6">Reset All Data</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Removes all business data (customers, vendors, products, stock, vouchers) 
-                from your organization while keeping users and organization settings intact.
+                Removes all business data (customers, vendors, products, stock,
+                vouchers) from your organization while keeping users and
+                organization settings intact.
               </Typography>
               <Alert severity="warning" sx={{ mb: 2 }}>
-                This action cannot be undone. All your business data will be permanently deleted.
+                This action cannot be undone. All your business data will be
+                permanently deleted.
               </Alert>
               <Button
                 variant="contained"
                 color="warning"
                 fullWidth
                 startIcon={<RestartAlt />}
-                onClick={() => handleRequestOTP('organization_data')}
+                onClick={() => handleRequestOTP("organization_data")}
                 disabled={loading}
               >
                 Reset All Data
@@ -98,25 +104,26 @@ const FactoryReset: React.FC = () => {
         {/* App Super Admin - Factory Default */}
         {isSuperAdmin && (
           <Grid size={{ xs: 12, md: 6 }}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Paper sx={{ p: 3, height: "100%" }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <Security color="error" sx={{ mr: 1 }} />
                 <Typography variant="h6">Factory Default</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Complete system reset that removes ALL organizations, licenses, users, 
-                and data. Resets the entire application to initial state.
+                Complete system reset that removes ALL organizations, licenses,
+                users, and data. Resets the entire application to initial state.
               </Typography>
               <Alert severity="error" sx={{ mb: 2 }}>
-                <strong>DANGER:</strong> This will delete everything in the system including 
-                all organizations and users. Only use for complete system recovery.
+                <strong>DANGER:</strong> This will delete everything in the
+                system including all organizations and users. Only use for
+                complete system recovery.
               </Alert>
               <Button
                 variant="contained"
                 color="error"
                 fullWidth
                 startIcon={<Security />}
-                onClick={() => handleRequestOTP('factory_default')}
+                onClick={() => handleRequestOTP("factory_default")}
                 disabled={loading}
               >
                 Factory Default
@@ -126,21 +133,25 @@ const FactoryReset: React.FC = () => {
         )}
       </Grid>
       {/* OTP Confirmation Dialog */}
-      <Dialog 
-        open={isModalVisible} 
+      <Dialog
+        open={isModalVisible}
         onClose={() => setIsModalVisible(false)}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             <Warning color="error" sx={{ mr: 1 }} />
-            Confirm {resetType === 'organization_data' ? 'Data Reset' : 'Factory Default'}
+            Confirm{" "}
+            {resetType === "organization_data"
+              ? "Data Reset"
+              : "Factory Default"}
           </Box>
         </DialogTitle>
         <DialogContent>
           <Alert severity="error" sx={{ mb: 2 }}>
-            An OTP has been sent to your email. Enter it below to confirm this irreversible action.
+            An OTP has been sent to your email. Enter it below to confirm this
+            irreversible action.
           </Alert>
           <TextField
             fullWidth
@@ -152,16 +163,14 @@ const FactoryReset: React.FC = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsModalVisible(false)}>
-            Cancel
-          </Button>
-          <Button 
+          <Button onClick={() => setIsModalVisible(false)}>Cancel</Button>
+          <Button
             onClick={handleConfirm}
             variant="contained"
             color="error"
             disabled={loading || otp.length !== 6}
           >
-            {loading ? 'Processing...' : 'Confirm Reset'}
+            {loading ? "Processing..." : "Confirm Reset"}
           </Button>
         </DialogActions>
       </Dialog>

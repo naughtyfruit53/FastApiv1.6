@@ -1,24 +1,46 @@
 // frontend/src/pages/vouchers/Pre-Sales-Voucher/quotation.tsx
 // Quotation Page - Refactored using shared DRY logic
-import React, { useMemo, useState, useEffect } from 'react';
-import {Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Fab} from '@mui/material';
-import {Add, Remove} from '@mui/icons-material';
-import AddCustomerModal from '../../../components/AddCustomerModal';
-import AddProductModal from '../../../components/AddProductModal';
-import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherLayout from '../../../components/VoucherLayout';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-import VoucherListModal from '../../../components/VoucherListModal';
-import StockDisplay from '../../../components/StockDisplay';
-import ProductAutocomplete from '../../../components/ProductAutocomplete';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {getVoucherConfig, GST_SLABS, getVoucherStyles} from '../../../utils/voucherUtils';
-import { getStock } from '../../../services/masterService';
-import { voucherService } from '../../../services/vouchersService';
-import api from '../../../lib/api';  // Import api for direct call
+import React, { useMemo, useState, useEffect } from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  IconButton,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Autocomplete,
+  Fab,
+} from "@mui/material";
+import { Add, Remove } from "@mui/icons-material";
+import AddCustomerModal from "../../../components/AddCustomerModal";
+import AddProductModal from "../../../components/AddProductModal";
+import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherLayout from "../../../components/VoucherLayout";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import VoucherListModal from "../../../components/VoucherListModal";
+import StockDisplay from "../../../components/StockDisplay";
+import ProductAutocomplete from "../../../components/ProductAutocomplete";
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import {
+  getVoucherConfig,
+  GST_SLABS,
+  getVoucherStyles,
+} from "../../../utils/voucherUtils";
+import { getStock } from "../../../services/masterService";
+import { voucherService } from "../../../services/vouchersService";
+import api from "../../../lib/api"; // Import api for direct call
 const QuotationPage: React.FC = () => {
-  const config = getVoucherConfig('quotation');
+  const config = getVoucherConfig("quotation");
   const voucherStyles = getVoucherStyles();
   const {
     // State
@@ -103,28 +125,32 @@ const QuotationPage: React.FC = () => {
   // Additional state for voucher list modal
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
   // Quotation specific state
-  const selectedCustomerId = watch('customer_id');
-  const selectedCustomer = customerList?.find((c: any) => c.id === selectedCustomerId);
+  const selectedCustomerId = watch("customer_id");
+  const selectedCustomer = customerList?.find(
+    (c: any) => c.id === selectedCustomerId,
+  );
   // Enhanced customer options with "Add New"
   const enhancedCustomerOptions = [
     ...(customerList || []),
-    { id: null, name: 'Add New Customer...' }
+    { id: null, name: "Add New Customer..." },
   ];
   // Stock data state for items
-  const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
+  const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>(
+    {},
+  );
   // Quotation specific handlers
   const handleAddItem = () => {
     append({
       product_id: null,
-      product_name: '',
+      product_name: "",
       quantity: 1,
       unit_price: 0,
       discount_percentage: 0,
       gst_rate: 18,
       amount: 0,
-      unit: '',
+      unit: "",
       current_stock: 0,
-      reorder_level: 0
+      reorder_level: 0,
     });
   };
   // Custom submit handler to prompt for PDF after save
@@ -135,27 +161,31 @@ const QuotationPage: React.FC = () => {
         data.total_amount = totalAmount;
       }
       let response;
-      if (mode === 'create') {
+      if (mode === "create") {
         response = await createMutation.mutateAsync(data);
-        if (confirm('Voucher created successfully. Generate PDF?')) {
+        if (confirm("Voucher created successfully. Generate PDF?")) {
           handleGeneratePDF(response);
         }
-      } else if (mode === 'edit') {
+      } else if (mode === "edit") {
         response = await updateMutation.mutateAsync(data);
-        if (confirm('Voucher updated successfully. Generate PDF?')) {
+        if (confirm("Voucher updated successfully. Generate PDF?")) {
           handleGeneratePDF(response);
         }
       }
     } catch (err) {
       console.error(msg, err);
-      alert('Failed to save quotation. Please try again.');
+      alert("Failed to save quotation. Please try again.");
     }
   };
   // Function to get stock color
   const getStockColor = (stock: number, reorder: number) => {
-    if (stock === 0) {return 'error.main';}
-    if (stock <= reorder) {return 'warning.main';}
-    return 'success.main';
+    if (stock === 0) {
+      return "error.main";
+    }
+    if (stock <= reorder) {
+      return "warning.main";
+    }
+    return "success.main";
   };
   // Memoize all selected products
   const selectedProducts = useMemo(() => {
@@ -163,34 +193,45 @@ const QuotationPage: React.FC = () => {
       const productId = watch(`items.${index}.product_id`);
       return productList?.find((p: any) => p.id === productId) || null;
     });
-  }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
+  }, [
+    fields.length,
+    productList,
+    ...fields.map((_, index) => watch(`items.${index}.product_id`)),
+  ]);
   // Effect to fetch stock when product changes
   useEffect(() => {
     fields.forEach((_, index) => {
       const productId = watch(`items.${index}.product_id`);
       if (productId) {
-        setStockLoading(prev => ({ ...prev, [index]: true }));
-        getStock({ queryKey: ['', { product_id: productId }] }).then(res => {
-          console.log('Stock Response for product ' + productId + ':', res);
-          const stockData = res[0] || { quantity: 0 };
-          setValue(`items.${index}.current_stock`, stockData.quantity);
-          setStockLoading(prev => ({ ...prev, [index]: false }));
-        }).catch(err => {
-          console.error('Failed to fetch stock:', err);
-          setStockLoading(prev => ({ ...prev, [index]: false }));
-        });
+        setStockLoading((prev) => ({ ...prev, [index]: true }));
+        getStock({ queryKey: ["", { product_id: productId }] })
+          .then((res) => {
+            console.log("Stock Response for product " + productId + ":", res);
+            const stockData = res[0] || { quantity: 0 };
+            setValue(`items.${index}.current_stock`, stockData.quantity);
+            setStockLoading((prev) => ({ ...prev, [index]: false }));
+          })
+          .catch((err) => {
+            console.error("Failed to fetch stock:", err);
+            setStockLoading((prev) => ({ ...prev, [index]: false }));
+          });
       } else {
         setValue(`items.${index}.current_stock`, 0);
-        setStockLoading(prev => ({ ...prev, [index]: false }));
+        setStockLoading((prev) => ({ ...prev, [index]: false }));
       }
     });
-  }, [fields.map(f => watch(`items.${fields.indexOf(f)}.product_id`)).join(','), setValue, fields.length]);
+  }, [
+    fields.map((f) => watch(`items.${fields.indexOf(f)}.product_id`)).join(","),
+    setValue,
+    fields.length,
+  ]);
   // Manual fetch for voucher number if not loaded
   useEffect(() => {
-    if (mode === 'create' && !nextVoucherNumber && !isLoading) {
-      voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
-        .then(number => setValue('voucher_number', number))
-        .catch(err => console.error('Failed to fetch voucher number:', err));
+    if (mode === "create" && !nextVoucherNumber && !isLoading) {
+      voucherService
+        .getNextVoucherNumber(config.nextNumberEndpoint)
+        .then((number) => setValue("voucher_number", number))
+        .catch((err) => console.error("Failed to fetch voucher number:", err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
   const handleVoucherClick = async (voucher: any) => {
@@ -199,12 +240,12 @@ const QuotationPage: React.FC = () => {
       const response = await api.get(`/quotations/${voucher.id}`);
       const fullVoucherData = response.data;
       // Load the complete voucher data into the form
-      setMode('view');
+      setMode("view");
       reset(fullVoucherData);
     } catch (err) {
       console.error(msg, err);
       // Fallback to available data
-      setMode('view');
+      setMode("view");
       reset(voucher);
     }
   };
@@ -213,7 +254,7 @@ const QuotationPage: React.FC = () => {
     try {
       const response = await api.get(`/quotations/${voucher.id}`);
       const fullVoucherData = response.data;
-      setMode('edit');
+      setMode("edit");
       reset(fullVoucherData);
     } catch (err) {
       console.error(msg, err);
@@ -225,7 +266,7 @@ const QuotationPage: React.FC = () => {
     try {
       const response = await api.get(`/quotations/${voucher.id}`);
       const fullVoucherData = response.data;
-      setMode('view');
+      setMode("view");
       reset(fullVoucherData);
     } catch (err) {
       console.error(msg, err);
@@ -239,34 +280,74 @@ const QuotationPage: React.FC = () => {
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
-              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Date</TableCell>
-              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Customer</TableCell>
-              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
-              <TableCell align="right" sx={{ fontSize: 15, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+              >
+                Voucher No.
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+              >
+                Date
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+              >
+                Customer
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+              >
+                Amount
+              </TableCell>
+              <TableCell
+                align="right"
+                sx={{ fontSize: 15, fontWeight: "bold", p: 0, width: 40 }}
+              ></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {latestVouchers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">No quotations available</TableCell>
+                <TableCell colSpan={5} align="center">
+                  No quotations available
+                </TableCell>
               </TableRow>
             ) : (
               latestVouchers.slice(0, 7).map((voucher: any) => (
-                <TableRow 
-                  key={voucher.id} 
-                  hover 
-                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
-                  sx={{ cursor: 'pointer' }}
+                <TableRow
+                  key={voucher.id}
+                  hover
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    handleContextMenu(e, voucher);
+                  }}
+                  sx={{ cursor: "pointer" }}
                 >
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 12, p: 1 }}
+                    onClick={() => handleViewWithData(voucher)}
+                  >
                     {voucher.voucher_number}
                   </TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                    {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
+                    {voucher.date
+                      ? new Date(voucher.date).toLocaleDateString()
+                      : "N/A"}
                   </TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{customerList?.find((c: any) => c.id === voucher.customer_id)?.name || 'N/A'}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                    {customerList?.find(
+                      (c: any) => c.id === voucher.customer_id,
+                    )?.name || "N/A"}
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                    ₹{voucher.total_amount?.toLocaleString() || "0"}
+                  </TableCell>
                   <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                     <VoucherContextMenu
                       voucher={voucher}
@@ -290,9 +371,17 @@ const QuotationPage: React.FC = () => {
   const formContent = (
     <Box>
       {/* Header Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold' }}>
-          {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
+          {config.voucherTitle} -{" "}
+          {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
         </Typography>
         <VoucherHeaderActions
           mode={mode}
@@ -301,19 +390,28 @@ const QuotationPage: React.FC = () => {
           currentId={selectedCustomerId}
         />
       </Box>
-      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        style={voucherStyles.formContainer}
+      >
         <Grid container spacing={1}>
           {/* Voucher Number */}
           <Grid size={6}>
             <TextField
               fullWidth
               label="Voucher Number"
-              {...control.register('voucher_number')}
+              {...control.register("voucher_number")}
               disabled
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14, textAlign: 'center', fontWeight: 'bold' } }}
+              inputProps={{
+                style: {
+                  fontSize: 14,
+                  textAlign: "center",
+                  fontWeight: "bold",
+                },
+              }}
               size="small"
-              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              sx={{ "& .MuiInputBase-root": { height: 27 } }}
             />
           </Grid>
           {/* Date */}
@@ -322,12 +420,19 @@ const QuotationPage: React.FC = () => {
               fullWidth
               label="Date"
               type="date"
-              {...control.register('date')}
-              disabled={mode === 'view'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: 'block', visibility: 'visible' } }}
-              inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+              {...control.register("date")}
+              disabled={mode === "view"}
+              InputLabelProps={{
+                shrink: true,
+                style: {
+                  fontSize: 12,
+                  display: "block",
+                  visibility: "visible",
+                },
+              }}
+              inputProps={{ style: { fontSize: 14, textAlign: "center" } }}
               size="small"
-              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              sx={{ "& .MuiInputBase-root": { height: 27 } }}
             />
           </Grid>
           {/* Customer, Reference, Payment Terms in one row */}
@@ -335,13 +440,13 @@ const QuotationPage: React.FC = () => {
             <Autocomplete
               size="small"
               options={enhancedCustomerOptions}
-              getOptionLabel={(option: any) => option?.name || ''}
+              getOptionLabel={(option: any) => option?.name || ""}
               value={selectedCustomer || null}
               onChange={(_, newValue) => {
                 if (newValue?.id === null) {
                   setShowAddCustomerModal(true);
                 } else {
-                  setValue('customer_id', newValue?.id || null);
+                  setValue("customer_id", newValue?.id || null);
                 }
               }}
               renderInput={(params) => (
@@ -349,72 +454,132 @@ const QuotationPage: React.FC = () => {
                   {...params}
                   label="Customer"
                   error={!!errors.customer_id}
-                  helperText={errors.customer_id ? 'Required' : ''}
+                  helperText={errors.customer_id ? "Required" : ""}
                   InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
                   inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
                   size="small"
-                  sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
                 />
               )}
-              disabled={mode === 'view'}
+              disabled={mode === "view"}
             />
           </Grid>
           <Grid size={4}>
             <TextField
               fullWidth
               label="Reference"
-              {...control.register('reference')}
-              disabled={mode === 'view'}
+              {...control.register("reference")}
+              disabled={mode === "view"}
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
               inputProps={{ style: { fontSize: 14 } }}
               size="small"
-              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              sx={{ "& .MuiInputBase-root": { height: 27 } }}
             />
           </Grid>
           <Grid size={4}>
             <TextField
               fullWidth
               label="Payment Terms"
-              {...control.register('payment_terms')}
-              disabled={mode === 'view'}
+              {...control.register("payment_terms")}
+              disabled={mode === "view"}
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
               inputProps={{ style: { fontSize: 14 } }}
               size="small"
-              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              sx={{ "& .MuiInputBase-root": { height: 27 } }}
             />
           </Grid>
           <Grid size={12}>
             <TextField
               fullWidth
               label="Notes"
-              {...control.register('notes')}
+              {...control.register("notes")}
               multiline
               rows={2}
-              disabled={mode === 'view'}
+              disabled={mode === "view"}
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
               inputProps={{ style: { fontSize: 14 } }}
               size="small"
             />
           </Grid>
           {/* Items section */}
-          <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 27 }}>
-            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold' }}>Items</Typography>
+          <Grid
+            size={12}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              height: 27,
+            }}
+          >
+            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>
+              Items
+            </Typography>
           </Grid>
           {/* Items Table */}
           <Grid size={12}>
-            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
+            <TableContainer
+              component={Paper}
+              sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}
+            >
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%' }}>Product</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: 80, textAlign: 'center' }}>Stock</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Rate</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Disc%</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>GST%</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
-                    {mode !== 'view' && (
-                      <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Action</TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        p: 1,
+                        width: "30%",
+                      }}
+                    >
+                      Product
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        p: 1,
+                        width: 80,
+                        textAlign: "center",
+                      }}
+                    >
+                      Stock
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        p: 1,
+                        textAlign: "right",
+                      }}
+                    >
+                      Qty
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        p: 1,
+                        textAlign: "right",
+                      }}
+                    >
+                      Rate
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
+                      Disc%
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
+                      GST%
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
+                      Amount
+                    </TableCell>
+                    {mode !== "view" && (
+                      <TableCell
+                        sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+                      >
+                        Action
+                      </TableCell>
                     )}
                   </TableRow>
                 </TableHead>
@@ -426,48 +591,84 @@ const QuotationPage: React.FC = () => {
                           <ProductAutocomplete
                             value={selectedProducts[index]}
                             onChange={(product) => {
-                              setValue(`items.${index}.product_id`, product?.id || null);
-                              setValue(`items.${index}.product_name`, product?.product_name || '');
-                              setValue(`items.${index}.unit_price`, product?.unit_price || 0);
-                              setValue(`items.${index}.gst_rate`, product?.gst_rate || 18);
-                              setValue(`items.${index}.unit`, product?.unit || '');
-                              setValue(`items.${index}.reorder_level`, product?.reorder_level || 0);
+                              setValue(
+                                `items.${index}.product_id`,
+                                product?.id || null,
+                              );
+                              setValue(
+                                `items.${index}.product_name`,
+                                product?.product_name || "",
+                              );
+                              setValue(
+                                `items.${index}.unit_price`,
+                                product?.unit_price || 0,
+                              );
+                              setValue(
+                                `items.${index}.gst_rate`,
+                                product?.gst_rate || 18,
+                              );
+                              setValue(
+                                `items.${index}.unit`,
+                                product?.unit || "",
+                              );
+                              setValue(
+                                `items.${index}.reorder_level`,
+                                product?.reorder_level || 0,
+                              );
                               // Stock fetch handled in useEffect
                             }}
-                            disabled={mode === 'view'}
+                            disabled={mode === "view"}
                             size="small"
                           />
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                        <TableCell sx={{ p: 1, textAlign: "center" }}>
                           {watch(`items.${index}.product_id`) ? (
-                            <StockDisplay 
+                            <StockDisplay
                               productId={watch(`items.${index}.product_id`)}
                               disabled={false}
                               showLabel={false}
                             />
                           ) : (
-                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: "text.disabled",
+                                fontSize: "0.7rem",
+                              }}
+                            >
                               -
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                        <TableCell sx={{ p: 1, textAlign: "right" }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "flex-end",
+                            }}
+                          >
                             <TextField
                               type="number"
-                              {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
-                              disabled={mode === 'view'}
+                              {...control.register(`items.${index}.quantity`, {
+                                valueAsNumber: true,
+                              })}
+                              disabled={mode === "view"}
                               size="small"
                               sx={{ width: 60 }}
                             />
-                            <Typography sx={{ ml: 1, fontSize: 12 }}>{watch(`items.${index}.unit`)}</Typography>
+                            <Typography sx={{ ml: 1, fontSize: 12 }}>
+                              {watch(`items.${index}.unit`)}
+                            </Typography>
                           </Box>
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                        <TableCell sx={{ p: 1, textAlign: "right" }}>
                           <TextField
                             type="number"
-                            {...control.register(`items.${index}.unit_price`, { valueAsNumber: true })}
-                            disabled={mode === 'view'}
+                            {...control.register(`items.${index}.unit_price`, {
+                              valueAsNumber: true,
+                            })}
+                            disabled={mode === "view"}
                             size="small"
                             sx={{ width: 80 }}
                           />
@@ -475,8 +676,11 @@ const QuotationPage: React.FC = () => {
                         <TableCell sx={{ p: 1 }}>
                           <TextField
                             type="number"
-                            {...control.register(`items.${index}.discount_percentage`, { valueAsNumber: true })}
-                            disabled={mode === 'view'}
+                            {...control.register(
+                              `items.${index}.discount_percentage`,
+                              { valueAsNumber: true },
+                            )}
+                            disabled={mode === "view"}
                             size="small"
                             sx={{ width: 60 }}
                           />
@@ -486,17 +690,25 @@ const QuotationPage: React.FC = () => {
                             size="small"
                             options={GST_SLABS}
                             value={watch(`items.${index}.gst_rate`) || 18}
-                            onChange={(_, value) => setValue(`items.${index}.gst_rate`, value || 18)}
+                            onChange={(_, value) =>
+                              setValue(`items.${index}.gst_rate`, value || 18)
+                            }
                             renderInput={(params) => (
-                              <TextField {...params} size="small" sx={{ width: 60 }} />
+                              <TextField
+                                {...params}
+                                size="small"
+                                sx={{ width: 60 }}
+                              />
                             )}
-                            disabled={mode === 'view'}
+                            disabled={mode === "view"}
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, fontSize: 14 }}>
-                          ₹{computedItems[index]?.amount?.toLocaleString() || '0'}
+                          ₹
+                          {computedItems[index]?.amount?.toLocaleString() ||
+                            "0"}
                         </TableCell>
-                        {mode !== 'view' && (
+                        {mode !== "view" && (
                           <TableCell sx={{ p: 1 }}>
                             <IconButton
                               size="small"
@@ -510,12 +722,22 @@ const QuotationPage: React.FC = () => {
                       </TableRow>
                       {/* Stock display below the row - only qty and unit */}
                       <TableRow>
-                        <TableCell colSpan={mode !== 'view' ? 7 : 6} sx={{ py: 0.5, pl: 2, bgcolor: 'action.hover' }}>
+                        <TableCell
+                          colSpan={mode !== "view" ? 7 : 6}
+                          sx={{ py: 0.5, pl: 2, bgcolor: "action.hover" }}
+                        >
                           {stockLoading[index] ? (
                             <CircularProgress size={12} />
                           ) : watch(`items.${index}.product_id`) ? (
-                            <Typography variant="caption" color={getStockColor(watch(`items.${index}.current_stock`), watch(`items.${index}.reorder_level`))}>
-                              {watch(`items.${index}.current_stock`)} {watch(`items.${index}.unit`)}
+                            <Typography
+                              variant="caption"
+                              color={getStockColor(
+                                watch(`items.${index}.current_stock`),
+                                watch(`items.${index}.reorder_level`),
+                              )}
+                            >
+                              {watch(`items.${index}.current_stock`)}{" "}
+                              {watch(`items.${index}.unit`)}
                             </Typography>
                           ) : null}
                         </TableCell>
@@ -525,8 +747,8 @@ const QuotationPage: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            {mode !== 'view' && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+            {mode !== "view" && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
                 <Fab color="primary" size="small" onClick={handleAddItem}>
                   <Add />
                 </Fab>
@@ -535,36 +757,70 @@ const QuotationPage: React.FC = () => {
           </Grid>
           {/* Totals */}
           <Grid size={12}>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
               <Box sx={{ minWidth: 300 }}>
                 <Grid container spacing={1}>
                   <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ textAlign: "right", fontSize: 14 }}
+                    >
                       Subtotal:
                     </Typography>
                   </Grid>
                   <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        textAlign: "right",
+                        fontSize: 14,
+                        fontWeight: "bold",
+                      }}
+                    >
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
                   <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ textAlign: "right", fontSize: 14 }}
+                    >
                       GST:
                     </Typography>
                   </Grid>
                   <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        textAlign: "right",
+                        fontSize: 14,
+                        fontWeight: "bold",
+                      }}
+                    >
                       ₹{totalGst.toLocaleString()}
                     </Typography>
                   </Grid>
                   <Grid size={6}>
-                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        textAlign: "right",
+                        fontSize: 16,
+                        fontWeight: "bold",
+                      }}
+                    >
                       Total:
                     </Typography>
                   </Grid>
                   <Grid size={6}>
-                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        textAlign: "right",
+                        fontSize: 16,
+                        fontWeight: "bold",
+                      }}
+                    >
                       ₹{totalAmount.toLocaleString()}
                     </Typography>
                   </Grid>
@@ -586,13 +842,15 @@ const QuotationPage: React.FC = () => {
           </Grid>
           {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              {mode !== 'view' && (
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  color="success" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
+            <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+              {mode !== "view" && (
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="success"
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                   sx={{ fontSize: 12 }}
                 >
                   Save
@@ -607,7 +865,12 @@ const QuotationPage: React.FC = () => {
   if (isLoading) {
     return (
       <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress />
         </Box>
       </Container>
@@ -644,21 +907,21 @@ const QuotationPage: React.FC = () => {
         }
       />
       {/* Modals */}
-      <AddCustomerModal 
+      <AddCustomerModal
         open={showAddCustomerModal}
         onClose={() => setShowAddCustomerModal(false)}
         onAdd={refreshMasterData}
         loading={addCustomerLoading}
         setLoading={setAddCustomerLoading}
       />
-      <AddProductModal 
+      <AddProductModal
         open={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
         onProductAdded={refreshMasterData}
         loading={addProductLoading}
         setLoading={setAddProductLoading}
       />
-      <AddShippingAddressModal 
+      <AddShippingAddressModal
         open={showShippingModal}
         onClose={() => setShowShippingModal(false)}
         loading={addShippingLoading}

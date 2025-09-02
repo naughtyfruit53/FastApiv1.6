@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -24,8 +24,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction
-} from '@mui/material';
+  ListItemSecondaryAction,
+} from "@mui/material";
 import {
   Preview,
   Send,
@@ -33,9 +33,9 @@ import {
   Refresh,
   Info,
   ContentCopy,
-  Add
-} from '@mui/icons-material';
-import { toast } from 'react-toastify';
+  Add,
+} from "@mui/icons-material";
+import { toast } from "react-toastify";
 interface EmailTemplate {
   id: number;
   name: string;
@@ -71,11 +71,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`template-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -84,55 +80,55 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   onClose,
   template,
   onSave,
-  onTest
+  onTest,
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState<Partial<EmailTemplate>>({
-    name: template?.name || '',
-    description: template?.description || '',
-    template_type: template?.template_type || 'exhibition_intro',
-    channel: template?.channel || 'email',
-    subject: template?.subject || '',
-    body: template?.body || '',
-    html_body: template?.html_body || '',
-    trigger_event: template?.trigger_event || '',
+    name: template?.name || "",
+    description: template?.description || "",
+    template_type: template?.template_type || "exhibition_intro",
+    channel: template?.channel || "email",
+    subject: template?.subject || "",
+    body: template?.body || "",
+    html_body: template?.html_body || "",
+    trigger_event: template?.trigger_event || "",
     variables: template?.variables || [],
-    is_active: template?.is_active ?? true
+    is_active: template?.is_active ?? true,
   });
-  const [newVariable, setNewVariable] = useState('');
+  const [newVariable, setNewVariable] = useState("");
   const [previewData] = useState<{ [key: string]: string }>({
-    prospect_name: 'John Smith',
-    company_name: 'TechCorp Solutions',
-    exhibition_name: 'Tech Expo 2024',
-    exhibition_location: 'Convention Center',
-    contact_person: 'Sarah Johnson',
-    contact_email: 'sarah@yourcompany.com',
-    contact_phone: '+1-555-0123'
+    prospect_name: "John Smith",
+    company_name: "TechCorp Solutions",
+    exhibition_name: "Tech Expo 2024",
+    exhibition_location: "Convention Center",
+    contact_person: "Sarah Johnson",
+    contact_email: "sarah@yourcompany.com",
+    contact_phone: "+1-555-0123",
   });
   const templateTypes = [
-    { value: 'exhibition_intro', label: 'Exhibition Introduction' },
-    { value: 'follow_up', label: 'Follow-up Email' },
-    { value: 'appointment_reminder', label: 'Appointment Reminder' },
-    { value: 'thank_you', label: 'Thank You Note' },
-    { value: 'proposal_sent', label: 'Proposal Sent' },
-    { value: 'meeting_request', label: 'Meeting Request' }
+    { value: "exhibition_intro", label: "Exhibition Introduction" },
+    { value: "follow_up", label: "Follow-up Email" },
+    { value: "appointment_reminder", label: "Appointment Reminder" },
+    { value: "thank_you", label: "Thank You Note" },
+    { value: "proposal_sent", label: "Proposal Sent" },
+    { value: "meeting_request", label: "Meeting Request" },
   ];
   const availableVariables = [
-    'prospect_name',
-    'company_name',
-    'designation',
-    'exhibition_name',
-    'exhibition_location',
-    'contact_person',
-    'contact_email',
-    'contact_phone',
-    'follow_up_date',
-    'meeting_time',
-    'proposal_link'
+    "prospect_name",
+    "company_name",
+    "designation",
+    "exhibition_name",
+    "exhibition_location",
+    "contact_person",
+    "contact_email",
+    "contact_phone",
+    "follow_up_date",
+    "meeting_time",
+    "proposal_link",
   ];
   const defaultTemplates = {
     exhibition_intro: {
-      subject: 'Great meeting you at {{exhibition_name}}!',
+      subject: "Great meeting you at {{exhibition_name}}!",
       body: `Hi {{prospect_name}},
 It was wonderful meeting you at {{exhibition_name}} in {{exhibition_location}}. I enjoyed our conversation about {{company_name}} and would love to continue our discussion.
 I believe our solutions could be a great fit for your needs. Would you be interested in scheduling a brief call to explore how we can help {{company_name}} achieve its goals?
@@ -150,73 +146,77 @@ Best regards,
     📧 {{contact_email}}<br>
     📞 {{contact_phone}}</p>
   </div>
-</div>`
-    }
+</div>`,
+    },
   };
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
   const handleInputChange = (field: keyof EmailTemplate, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
   const handleAddVariable = () => {
     if (newVariable && !formData.variables?.includes(newVariable)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        variables: [...(prev.variables || []), newVariable]
+        variables: [...(prev.variables || []), newVariable],
       }));
-      setNewVariable('');
+      setNewVariable("");
     }
   };
   const handleRemoveVariable = (variable: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      variables: prev.variables?.filter(v => v !== variable) || []
+      variables: prev.variables?.filter((v) => v !== variable) || [],
     }));
   };
-  
+
   const renderPreview = (text: string, isHtml: boolean = false) => {
     let processedText = text;
     // Replace variables with preview data
     Object.entries(previewData).forEach(([key, value]) => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
+      const regex = new RegExp(`{{${key}}}`, "g");
       processedText = processedText.replace(regex, value);
     });
     if (isHtml) {
       return <div dangerouslySetInnerHTML={{ __html: processedText }} />;
     }
     return (
-      <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+      <Typography
+        component="pre"
+        sx={{ whiteSpace: "pre-wrap", fontFamily: "inherit" }}
+      >
         {processedText}
       </Typography>
     );
   };
   const loadDefaultTemplate = () => {
-    const defaultTemplate = defaultTemplates[formData.template_type as keyof typeof defaultTemplates];
+    const defaultTemplate =
+      defaultTemplates[formData.template_type as keyof typeof defaultTemplates];
     if (defaultTemplate) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         ...defaultTemplate,
-        variables: [...(prev.variables || []), ...Object.keys(previewData)]
+        variables: [...(prev.variables || []), ...Object.keys(previewData)],
       }));
-      toast.success('Default template loaded');
+      toast.success("Default template loaded");
     }
   };
   const handleSave = () => {
     if (!formData.name || !formData.subject || !formData.body) {
-      toast.error('Please fill in required fields: Name, Subject, and Body');
+      toast.error("Please fill in required fields: Name, Subject, and Body");
       return;
     }
     onSave(formData);
-    toast.success('Email template saved successfully');
+    toast.success("Email template saved successfully");
   };
   const handleTest = () => {
     if (onTest) {
       onTest(formData);
-      toast.success('Test email sent');
+      toast.success("Test email sent");
     }
   };
   return (
@@ -224,7 +224,7 @@ Best regards,
       <DialogTitle>
         <Box display="flex" justifyContent="between" alignItems="center">
           <Typography variant="h6">
-            {template ? 'Edit Email Template' : 'Create Email Template'}
+            {template ? "Edit Email Template" : "Create Email Template"}
           </Typography>
           <Box>
             <Tooltip title="Load default template">
@@ -241,7 +241,7 @@ Best regards,
         </Box>
       </DialogTitle>
       <DialogContent sx={{ p: 0 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
           <Tabs value={activeTab} onChange={handleTabChange}>
             <Tab label="Template Settings" />
             <Tab label="Email Content" />
@@ -257,7 +257,7 @@ Best regards,
                 fullWidth
                 label="Template Name"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                onChange={(e) => handleInputChange("name", e.target.value)}
                 required
               />
             </Grid>
@@ -267,9 +267,11 @@ Best regards,
                 <Select
                   value={formData.template_type}
                   label="Template Type"
-                  onChange={(e) => handleInputChange('template_type', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("template_type", e.target.value)
+                  }
                 >
-                  {templateTypes.map(type => (
+                  {templateTypes.map((type) => (
                     <MenuItem key={type.value} value={type.value}>
                       {type.label}
                     </MenuItem>
@@ -282,7 +284,9 @@ Best regards,
                 fullWidth
                 label="Description"
                 value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
                 multiline
                 rows={2}
               />
@@ -292,7 +296,9 @@ Best regards,
                 fullWidth
                 label="Trigger Event"
                 value={formData.trigger_event}
-                onChange={(e) => handleInputChange('trigger_event', e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("trigger_event", e.target.value)
+                }
                 helperText="When should this template be automatically sent?"
               />
             </Grid>
@@ -302,7 +308,7 @@ Best regards,
                 <Select
                   value={formData.channel}
                   label="Channel"
-                  onChange={(e) => handleInputChange('channel', e.target.value)}
+                  onChange={(e) => handleInputChange("channel", e.target.value)}
                 >
                   <MenuItem value="email">Email</MenuItem>
                   <MenuItem value="sms">SMS</MenuItem>
@@ -320,7 +326,7 @@ Best regards,
                 fullWidth
                 label="Email Subject"
                 value={formData.subject}
-                onChange={(e) => handleInputChange('subject', e.target.value)}
+                onChange={(e) => handleInputChange("subject", e.target.value)}
                 required
                 helperText="Use {{variable_name}} for dynamic content"
               />
@@ -330,7 +336,7 @@ Best regards,
                 fullWidth
                 label="Email Body (Plain Text)"
                 value={formData.body}
-                onChange={(e) => handleInputChange('body', e.target.value)}
+                onChange={(e) => handleInputChange("body", e.target.value)}
                 multiline
                 rows={10}
                 required
@@ -342,7 +348,7 @@ Best regards,
                 fullWidth
                 label="Email Body (HTML)"
                 value={formData.html_body}
-                onChange={(e) => handleInputChange('html_body', e.target.value)}
+                onChange={(e) => handleInputChange("html_body", e.target.value)}
                 multiline
                 rows={10}
                 helperText="HTML version for rich formatting (optional)"
@@ -356,7 +362,8 @@ Best regards,
             Template Variables
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Variables allow you to personalize emails with dynamic content. Use the format &#123;&#123;variable_name&#125;&#125; in your template.
+            Variables allow you to personalize emails with dynamic content. Use
+            the format &#123;&#123;variable_name&#125;&#125; in your template.
           </Typography>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
@@ -365,19 +372,21 @@ Best regards,
                   Available Variables
                 </Typography>
                 <List dense>
-                  {availableVariables.map(variable => (
+                  {availableVariables.map((variable) => (
                     <ListItem key={variable}>
-                      <ListItemText 
+                      <ListItemText
                         primary={`{{${variable}}}`}
-                        secondary={previewData[variable] || 'Sample data not available'}
+                        secondary={
+                          previewData[variable] || "Sample data not available"
+                        }
                       />
                       <ListItemSecondaryAction>
                         <Tooltip title="Copy to clipboard">
-                          <IconButton 
+                          <IconButton
                             size="small"
                             onClick={() => {
                               navigator.clipboard.writeText(`{{${variable}}}`);
-                              toast.success('Variable copied to clipboard');
+                              toast.success("Variable copied to clipboard");
                             }}
                           >
                             <ContentCopy />
@@ -395,7 +404,7 @@ Best regards,
                   Used Variables
                 </Typography>
                 <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-                  {formData.variables?.map(variable => (
+                  {formData.variables?.map((variable) => (
                     <Chip
                       key={variable}
                       label={variable}
@@ -410,7 +419,7 @@ Best regards,
                     label="Add Variable"
                     value={newVariable}
                     onChange={(e) => setNewVariable(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddVariable()}
+                    onKeyPress={(e) => e.key === "Enter" && handleAddVariable()}
                   />
                   <Button
                     variant="outlined"
@@ -434,8 +443,12 @@ Best regards,
             This preview shows how the email will look with sample data.
           </Alert>
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Subject: {renderPreview(formData.subject || '')}
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              sx={{ fontWeight: "bold" }}
+            >
+              Subject: {renderPreview(formData.subject || "")}
             </Typography>
             <Divider sx={{ my: 2 }} />
             <Box sx={{ minHeight: 200 }}>
@@ -451,7 +464,7 @@ Best regards,
                   <Typography variant="subtitle2" gutterBottom>
                     Plain Text Preview:
                   </Typography>
-                  {renderPreview(formData.body || '')}
+                  {renderPreview(formData.body || "")}
                 </Box>
               )}
             </Box>
@@ -471,7 +484,7 @@ Best regards,
               onClick={() => {
                 // Toggle between HTML and plain text preview
                 // This is just a demo action
-                toast.info('Preview mode toggled');
+                toast.info("Preview mode toggled");
               }}
             >
               Toggle Preview Mode
@@ -480,15 +493,9 @@ Best regards,
         </TabPanel>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<Save />}
-          onClick={handleSave}
-        >
-          {template ? 'Update Template' : 'Create Template'}
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" startIcon={<Save />} onClick={handleSave}>
+          {template ? "Update Template" : "Create Template"}
         </Button>
       </DialogActions>
     </Dialog>
@@ -496,4 +503,3 @@ Best regards,
 };
 
 export default EmailTemplateEditor;
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Autocomplete,
   TextField,
@@ -11,9 +11,9 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
-  ListItemButton
-} from '@mui/material';
-import { Add, Search } from '@mui/icons-material';
+  ListItemButton,
+} from "@mui/material";
+import { Add, Search } from "@mui/icons-material";
 interface SearchableDropdownProps {
   options: any[];
   value: any;
@@ -47,10 +47,10 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   required = false,
   noOptionsText = "No options found",
   addNewText = "Add New",
-  searchFields = ['name'],
-  fullWidth = true
+  searchFields = ["name"],
+  fullWidth = true,
 }) => {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(options);
   const [showAddNew, setShowAddNew] = useState(false);
   // Filter options based on input value
@@ -60,16 +60,18 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       setShowAddNew(false);
       return;
     }
-    const filtered = options.filter(option => {
+    const filtered = options.filter((option) => {
       const searchTerm = inputValue.toLowerCase();
-      return searchFields.some(field => {
-        const fieldValue = option[field]?.toString().toLowerCase() || '';
+      return searchFields.some((field) => {
+        const fieldValue = option[field]?.toString().toLowerCase() || "";
         return fieldValue.includes(searchTerm);
       });
     });
     setFilteredOptions(filtered);
     // Show "Add New" option if no results found and onAddNew is provided
-    setShowAddNew(filtered.length === 0 && !!onAddNew && inputValue.trim().length > 0);
+    setShowAddNew(
+      filtered.length === 0 && !!onAddNew && inputValue.trim().length > 0,
+    );
   }, [inputValue, options, searchFields, onAddNew]);
   const handleOptionSelect = (option: any) => {
     onChange(getOptionValue(option));
@@ -82,22 +84,28 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   };
   const CustomPopper = (props: any) => {
     return (
-      <Popper {...props} style={{ width: props.anchorEl?.clientWidth || 'auto' }} placement="bottom-start">
-        <Paper elevation={3} sx={{ maxHeight: 300, overflow: 'auto' }}>
+      <Popper
+        {...props}
+        style={{ width: props.anchorEl?.clientWidth || "auto" }}
+        placement="bottom-start"
+      >
+        <Paper elevation={3} sx={{ maxHeight: 300, overflow: "auto" }}>
           <List dense>
             {filteredOptions.map((option, index) => (
               <ListItemButton
                 key={index}
                 onClick={() => handleOptionSelect(option)}
                 sx={{
-                  '&:hover': {
-                    backgroundColor: 'action.hover'
-                  }
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                  },
                 }}
               >
                 <ListItemText
                   primary={getOptionLabel(option)}
-                  secondary={option.email || option.code || option.description || ''}
+                  secondary={
+                    option.email || option.code || option.description || ""
+                  }
                 />
               </ListItemButton>
             ))}
@@ -105,7 +113,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
               <ListItemButton disabled>
                 <ListItemText
                   primary={noOptionsText}
-                  sx={{ color: 'text.secondary', fontStyle: 'italic' }}
+                  sx={{ color: "text.secondary", fontStyle: "italic" }}
                 />
               </ListItemButton>
             )}
@@ -115,19 +123,19 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                 <ListItemButton
                   onClick={handleAddNew}
                   sx={{
-                    backgroundColor: 'primary.light',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      backgroundColor: 'primary.main'
-                    }
+                    backgroundColor: "primary.light",
+                    color: "primary.contrastText",
+                    "&:hover": {
+                      backgroundColor: "primary.main",
+                    },
                   }}
                 >
-                  <ListItemIcon sx={{ color: 'inherit' }}>
+                  <ListItemIcon sx={{ color: "inherit" }}>
                     <Add />
                   </ListItemIcon>
                   <ListItemText
                     primary={`${addNewText} &quot;${inputValue}&quot;`}
-                    sx={{ fontWeight: 'medium' }}
+                    sx={{ fontWeight: "medium" }}
                   />
                 </ListItemButton>
               </>
@@ -142,7 +150,11 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       fullWidth={fullWidth}
       options={filteredOptions}
       getOptionLabel={getOptionLabel}
-      value={value ? options.find(option => getOptionValue(option) === value) || null : null}
+      value={
+        value
+          ? options.find((option) => getOptionValue(option) === value) || null
+          : null
+      }
       onChange={(event, newValue) => {
         if (newValue) {
           onChange(getOptionValue(newValue));
@@ -186,19 +198,17 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           InputProps={{
             ...params.InputProps,
             startAdornment: (
-              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ mr: 1, display: "flex", alignItems: "center" }}>
                 <Search color="action" fontSize="small" />
               </Box>
-            )
+            ),
           }}
         />
       )}
       renderOption={(props, option) => (
         <li {...props}>
           <Box>
-            <Typography variant="body2">
-              {getOptionLabel(option)}
-            </Typography>
+            <Typography variant="body2">{getOptionLabel(option)}</Typography>
             {(option.email || option.code || option.description) && (
               <Typography variant="caption" color="textSecondary">
                 {option.email || option.code || option.description}

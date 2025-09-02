@@ -25,9 +25,11 @@ import {
   Schedule as TimeIcon
 } from '@mui/icons-material';
 import { SLAComplianceMetrics } from '../../services/serviceAnalyticsService';
+
 interface SLAComplianceChartProps {
   data: SLAComplianceMetrics;
 }
+
 const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
   const getComplianceColor = (rate: number) => {
     if (rate >= 95) {return 'success';}
@@ -35,6 +37,8 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
     if (rate >= 70) {return 'warning';}
     return 'error';
   };
+
+  const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case 'urgent':
         return 'error';
@@ -48,18 +52,21 @@ const SLAComplianceChart: React.FC<SLAComplianceChartProps> = ({ data }) => {
         return 'default';
     }
   };
+
   const formatTime = (hours?: number) => {
     if (!hours) {return 'N/A';}
     if (hours < 1) {return `${(hours * 60).toFixed(0)}m`;}
     if (hours < 24) {return `${hours.toFixed(1)}h`;}
     return `${(hours / 24).toFixed(1)}d`;
   };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
     });
   };
+
   return (
     <Card>
       <CardHeader 

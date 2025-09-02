@@ -1,6 +1,7 @@
 import React from 'react';
 import {Typography, Container, Box, Alert, Grid, Card, CardContent, Chip} from '@mui/material';
 import { CheckCircle, Schedule, Build, Inventory } from '@mui/icons-material';
+
 const FinishedGoodsReceipt: React.FC = () => {
   // Mock data for demonstration
   const recentProduction = [
@@ -27,6 +28,7 @@ const FinishedGoodsReceipt: React.FC = () => {
       completionDate: null
     }
   ];
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'success';
@@ -35,8 +37,11 @@ const FinishedGoodsReceipt: React.FC = () => {
       default: return 'default';
     }
   };
+
+  const getCompletionPercentage = (produced: number, planned: number) => {
     return Math.min((produced / planned) * 100, 100);
   };
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -57,7 +62,7 @@ const FinishedGoodsReceipt: React.FC = () => {
         </Typography>
         <Grid container spacing={3}>
           {recentProduction.map((order) => (
-            <Grid size={{ xs: 12, md: 6 }} key={order.id}>
+            <Grid item xs={12} md={6} key={order.id}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -91,7 +96,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                     />
                   </Box> */}
                   <Grid container spacing={2}>
-                    <Grid size={6}>
+                    <Grid item xs={6}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <CheckCircle color="success" fontSize="small" />
                         <Typography variant="body2">
@@ -99,7 +104,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid size={6}>
+                    <Grid item xs={6}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Build color="error" fontSize="small" />
                         <Typography variant="body2">
@@ -125,7 +130,7 @@ const FinishedGoodsReceipt: React.FC = () => {
             Integration Points
           </Typography>
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid item xs={12} md={4}>
               <Card variant="outlined">
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -140,7 +145,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid item xs={12} md={4}>
               <Card variant="outlined">
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -155,7 +160,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid item xs={12} md={4}>
               <Card variant="outlined">
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -176,4 +181,5 @@ const FinishedGoodsReceipt: React.FC = () => {
     </Container>
   );
 };
+
 export default FinishedGoodsReceipt;

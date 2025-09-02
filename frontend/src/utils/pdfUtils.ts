@@ -1,12 +1,12 @@
 // Unified PDF generation utility for all voucher types
 // frontend/src/utils/pdfUtils.ts
-import pdfService from '../services/pdfService';
+import pdfService from "../services/pdfService";
 export interface VoucherPdfConfig {
   voucherType: string;
   voucherTitle: string;
   showItems?: boolean;
   showTaxDetails?: boolean;
-  entityType?: 'vendor' | 'customer';
+  entityType?: "vendor" | "customer";
 }
 export interface VoucherPdfData {
   voucher_number: string;
@@ -44,12 +44,15 @@ export interface VoucherPdfData {
 /**
  * Generate PDF for any voucher type using standardized configuration
  */
-export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: VoucherPdfConfig): Promise<void> => {
+export const generateVoucherPDF = async (
+  voucherData: VoucherPdfData,
+  config: VoucherPdfConfig,
+): Promise<void> => {
   try {
     // Check authorization before generating PDF
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      alert('You must be logged in to generate PDFs');
+      alert("You must be logged in to generate PDFs");
       return;
     }
     // Prepare standardized voucher data for the PDF service
@@ -61,19 +64,24 @@ export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: Vo
       total_amount: voucherData.total_amount || 0,
       items: voucherData.items || [],
       // Map party information based on entity type
-      party: config.entityType === 'vendor' && voucherData.vendor ? {
-        name: voucherData.vendor.name,
-        address: voucherData.vendor.address,
-        contact_number: voucherData.vendor.contact_number,
-        email: voucherData.vendor.email,
-        gstin: voucherData.vendor.gstin
-      } : config.entityType === 'customer' && voucherData.customer ? {
-        name: voucherData.customer.name,
-        address: voucherData.customer.address,
-        contact_number: voucherData.customer.contact_number,
-        email: voucherData.customer.email,
-        gstin: voucherData.customer.gstin
-      } : undefined,
+      party:
+        config.entityType === "vendor" && voucherData.vendor
+          ? {
+              name: voucherData.vendor.name,
+              address: voucherData.vendor.address,
+              contact_number: voucherData.vendor.contact_number,
+              email: voucherData.vendor.email,
+              gstin: voucherData.vendor.gstin,
+            }
+          : config.entityType === "customer" && voucherData.customer
+            ? {
+                name: voucherData.customer.name,
+                address: voucherData.customer.address,
+                contact_number: voucherData.customer.contact_number,
+                email: voucherData.customer.email,
+                gstin: voucherData.customer.gstin,
+              }
+            : undefined,
       // Include voucher-specific fields
       payment_method: voucherData.payment_method,
       receipt_method: voucherData.receipt_method,
@@ -81,22 +89,32 @@ export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: Vo
       from_account: voucherData.from_account,
       to_account: voucherData.to_account,
       ...Object.fromEntries(
-        Object.entries(voucherData).filter(([key]) => 
-          !['voucher_number', 'date', 'reference', 'notes', 'total_amount', 'items', 'vendor', 'customer'].includes(key)
-        )
-      )
+        Object.entries(voucherData).filter(
+          ([key]) =>
+            ![
+              "voucher_number",
+              "date",
+              "reference",
+              "notes",
+              "total_amount",
+              "items",
+              "vendor",
+              "customer",
+            ].includes(key),
+        ),
+      ),
     };
     const pdfOptions = {
       voucherType: config.voucherType,
       voucherTitle: config.voucherTitle,
-      filename: `${config.voucherTitle.replace(/\s+/g, '')}${voucherData.voucher_number?.replace(/[^a-zA-Z0-9]/g, '_') || 'Unknown'}.pdf`,
+      filename: `${config.voucherTitle.replace(/\s+/g, "")}${voucherData.voucher_number?.replace(/[^a-zA-Z0-9]/g, "_") || "Unknown"}.pdf`,
       showItems: config.showItems || false,
-      showTaxDetails: config.showTaxDetails || false
+      showTaxDetails: config.showTaxDetails || false,
     };
     await pdfService.generateVoucherPDF(pdfVoucherData, pdfOptions);
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    alert('Failed to generate PDF. Please try again.');
+    console.error("Error generating PDF:", error);
+    alert("Failed to generate PDF. Please try again.");
   }
 };
 /**
@@ -104,175 +122,175 @@ export const generateVoucherPDF = async (voucherData: VoucherPdfData, config: Vo
  */
 export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
   // Financial Vouchers
-  'payment-voucher': {
-    voucherType: 'payment-voucher',
-    voucherTitle: 'PAYMENT VOUCHER',
+  "payment-voucher": {
+    voucherType: "payment-voucher",
+    voucherTitle: "PAYMENT VOUCHER",
     showItems: false,
     showTaxDetails: false,
-    entityType: 'vendor'
+    entityType: "vendor",
   },
-  'receipt-voucher': {
-    voucherType: 'receipt-voucher',
-    voucherTitle: 'RECEIPT VOUCHER',
+  "receipt-voucher": {
+    voucherType: "receipt-voucher",
+    voucherTitle: "RECEIPT VOUCHER",
     showItems: false,
     showTaxDetails: false,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'journal-voucher': {
-    voucherType: 'journal-voucher',
-    voucherTitle: 'JOURNAL VOUCHER',
+  "journal-voucher": {
+    voucherType: "journal-voucher",
+    voucherTitle: "JOURNAL VOUCHER",
     showItems: false,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
-  'contra-voucher': {
-    voucherType: 'contra-voucher',
-    voucherTitle: 'CONTRA VOUCHER',
+  "contra-voucher": {
+    voucherType: "contra-voucher",
+    voucherTitle: "CONTRA VOUCHER",
     showItems: false,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
   // Purchase Vouchers
-  'purchase-voucher': {
-    voucherType: 'purchase-voucher',
-    voucherTitle: 'PURCHASE VOUCHER / BILL',
+  "purchase-voucher": {
+    voucherType: "purchase-voucher",
+    voucherTitle: "PURCHASE VOUCHER / BILL",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'vendor'
+    entityType: "vendor",
   },
-  'purchase-order': {
-    voucherType: 'purchase-order',
-    voucherTitle: 'PURCHASE ORDER',
+  "purchase-order": {
+    voucherType: "purchase-order",
+    voucherTitle: "PURCHASE ORDER",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'vendor'
+    entityType: "vendor",
   },
-  'grn': {
-    voucherType: 'grn',
-    voucherTitle: 'GOODS RECEIPT NOTE',
+  grn: {
+    voucherType: "grn",
+    voucherTitle: "GOODS RECEIPT NOTE",
     showItems: true,
     showTaxDetails: false,
-    entityType: 'vendor'
+    entityType: "vendor",
   },
-  'purchase-return': {
-    voucherType: 'purchase-return',
-    voucherTitle: 'PURCHASE RETURN',
+  "purchase-return": {
+    voucherType: "purchase-return",
+    voucherTitle: "PURCHASE RETURN",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'vendor'
+    entityType: "vendor",
   },
   // Sales Vouchers
-  'sales-voucher': {
-    voucherType: 'sales-voucher',
-    voucherTitle: 'SALES INVOICE',
+  "sales-voucher": {
+    voucherType: "sales-voucher",
+    voucherTitle: "SALES INVOICE",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'quotation': {
-    voucherType: 'quotation',
-    voucherTitle: 'QUOTATION',
+  quotation: {
+    voucherType: "quotation",
+    voucherTitle: "QUOTATION",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'proforma-invoice': {
-    voucherType: 'proforma-invoice',
-    voucherTitle: 'PROFORMA INVOICE',
+  "proforma-invoice": {
+    voucherType: "proforma-invoice",
+    voucherTitle: "PROFORMA INVOICE",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'sales-order': {
-    voucherType: 'sales-order',
-    voucherTitle: 'SALES ORDER',
+  "sales-order": {
+    voucherType: "sales-order",
+    voucherTitle: "SALES ORDER",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'delivery-challan': {
-    voucherType: 'delivery-challan',
-    voucherTitle: 'DELIVERY CHALLAN',
+  "delivery-challan": {
+    voucherType: "delivery-challan",
+    voucherTitle: "DELIVERY CHALLAN",
     showItems: true,
     showTaxDetails: false,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'sales-return': {
-    voucherType: 'sales-return',
-    voucherTitle: 'SALES RETURN',
+  "sales-return": {
+    voucherType: "sales-return",
+    voucherTitle: "SALES RETURN",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'credit-note': {
-    voucherType: 'credit-note',
-    voucherTitle: 'CREDIT NOTE',
+  "credit-note": {
+    voucherType: "credit-note",
+    voucherTitle: "CREDIT NOTE",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'customer'
+    entityType: "customer",
   },
-  'debit-note': {
-    voucherType: 'debit-note',
-    voucherTitle: 'DEBIT NOTE',
+  "debit-note": {
+    voucherType: "debit-note",
+    voucherTitle: "DEBIT NOTE",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'vendor'
+    entityType: "vendor",
   },
-  'non-sales-credit-note': {
-    voucherType: 'non-sales-credit-note',
-    voucherTitle: 'NON-SALES CREDIT NOTE',
+  "non-sales-credit-note": {
+    voucherType: "non-sales-credit-note",
+    voucherTitle: "NON-SALES CREDIT NOTE",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'customer'
+    entityType: "customer",
   },
   // Manufacturing Vouchers
-  'job-card': {
-    voucherType: 'job-card',
-    voucherTitle: 'JOB CARD',
+  "job-card": {
+    voucherType: "job-card",
+    voucherTitle: "JOB CARD",
     showItems: true,
     showTaxDetails: true,
-    entityType: 'vendor'
+    entityType: "vendor",
   },
-  'production-order': {
-    voucherType: 'production-order',
-    voucherTitle: 'PRODUCTION ORDER',
+  "production-order": {
+    voucherType: "production-order",
+    voucherTitle: "PRODUCTION ORDER",
     showItems: true,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
-  'work-order': {
-    voucherType: 'work-order',
-    voucherTitle: 'WORK ORDER',
+  "work-order": {
+    voucherType: "work-order",
+    voucherTitle: "WORK ORDER",
     showItems: true,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
-  'material-receipt': {
-    voucherType: 'material-receipt',
-    voucherTitle: 'MATERIAL RECEIPT',
+  "material-receipt": {
+    voucherType: "material-receipt",
+    voucherTitle: "MATERIAL RECEIPT",
     showItems: true,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
-  'material-requisition': {
-    voucherType: 'material-requisition',
-    voucherTitle: 'MATERIAL REQUISITION',
+  "material-requisition": {
+    voucherType: "material-requisition",
+    voucherTitle: "MATERIAL REQUISITION",
     showItems: true,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
-  'finished-good-receipt': {
-    voucherType: 'finished-good-receipt',
-    voucherTitle: 'FINISHED GOODS RECEIPT',
+  "finished-good-receipt": {
+    voucherType: "finished-good-receipt",
+    voucherTitle: "FINISHED GOODS RECEIPT",
     showItems: true,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
-  'manufacturing-journal': {
-    voucherType: 'manufacturing-journal',
-    voucherTitle: 'MANUFACTURING JOURNAL',
+  "manufacturing-journal": {
+    voucherType: "manufacturing-journal",
+    voucherTitle: "MANUFACTURING JOURNAL",
     showItems: false,
-    showTaxDetails: false
+    showTaxDetails: false,
   },
-  'stock-journal': {
-    voucherType: 'stock-journal',
-    voucherTitle: 'STOCK JOURNAL',
+  "stock-journal": {
+    voucherType: "stock-journal",
+    voucherTitle: "STOCK JOURNAL",
     showItems: true,
-    showTaxDetails: false
-  }
+    showTaxDetails: false,
+  },
 };
 /**
  * Get PDF configuration for a voucher type
@@ -283,9 +301,9 @@ export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
     console.warn(`No PDF configuration found for voucher type: ${voucherType}`);
     return {
       voucherType,
-      voucherTitle: voucherType.toUpperCase().replace(/-/g, ' '),
+      voucherTitle: voucherType.toUpperCase().replace(/-/g, " "),
       showItems: false,
-      showTaxDetails: false
+      showTaxDetails: false,
     };
   }
   return config;
@@ -295,24 +313,29 @@ export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
  * Can be used in any voucher component without requiring useVoucherPage hook
  */
 export const generateStandalonePDF = async (
-  voucherData: VoucherPdfData, 
-  voucherType: string, 
-  entityData?: { vendor?: any; customer?: any; employee?: any }
-): Promise<void> =>  {
+  voucherData: VoucherPdfData,
+  voucherType: string,
+  entityData?: { vendor?: any; customer?: any; employee?: any },
+): Promise<void> => {
   try {
-    console.log('[PDF] Generating standalone PDF for:', voucherType, voucherData);
+    console.log(
+      "[PDF] Generating standalone PDF for:",
+      voucherType,
+      voucherData,
+    );
     // Check authorization
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      alert('You must be logged in to generate PDFs');
+      alert("You must be logged in to generate PDFs");
       return;
     }
     // Get PDF configuration
     const pdfConfig = getVoucherPdfConfig(voucherType);
     // Prepare PDF data with entity information
     const pdfData: VoucherPdfData = {
-      voucher_number: voucherData.voucher_number || voucherData.job_number || 'Unknown',
-      date: voucherData.date || new Date().toISOString().split('T')[0],
+      voucher_number:
+        voucherData.voucher_number || voucherData.job_number || "Unknown",
+      date: voucherData.date || new Date().toISOString().split("T")[0],
       reference: voucherData.reference || voucherData.po_number,
       notes: voucherData.notes || voucherData.description,
       total_amount: voucherData.total_amount || voucherData.total_cost || 0,
@@ -332,13 +355,13 @@ export const generateStandalonePDF = async (
       expected_completion_date: voucherData.expected_completion_date,
       actual_completion_date: voucherData.actual_completion_date,
       materials_supplied_by: voucherData.materials_supplied_by,
-      quality_specifications: voucherData.quality_specifications
+      quality_specifications: voucherData.quality_specifications,
     };
     // Generate PDF
     await generateVoucherPDF(pdfData, pdfConfig);
-    console.log('[PDF] PDF generated successfully for:', voucherType);
+    console.log("[PDF] PDF generated successfully for:", voucherType);
   } catch (error) {
-    console.error('[PDF] Error generating standalone PDF:', error);
-    alert('Failed to generate PDF. Please try again.');
+    console.error("[PDF] Error generating standalone PDF:", error);
+    alert("Failed to generate PDF. Please try again.");
   }
 };

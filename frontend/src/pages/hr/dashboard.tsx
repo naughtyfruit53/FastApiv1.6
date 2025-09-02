@@ -1,8 +1,25 @@
 // pages/hr/dashboard.tsx
 // HR Dashboard with key metrics and overview
-import React, { useState, useEffect } from 'react';
-import { NextPage } from 'next';
-import { Box, Typography, Grid, Card, CardContent, Chip, Tab, Tabs, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
+import React, { useState, useEffect } from "react";
+import { NextPage } from "next";
+import {
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Chip,
+  Tab,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+} from "@mui/material";
 import {
   People as PeopleIcon,
   PersonAdd as PersonAddIcon,
@@ -12,10 +29,10 @@ import {
   Schedule as ScheduleIcon,
   TrendingUp as TrendingUpIcon,
   Warning as WarningIcon,
-} from '@mui/icons-material';
-import { useRouter } from 'next/router';
-import { useAuth } from '../../hooks/useAuth';
-import { hrService, HRDashboardData, HRActivity, HRTask } from '../../services';
+} from "@mui/icons-material";
+import { useRouter } from "next/router";
+import { useAuth } from "../../hooks/useAuth";
+import { hrService, HRDashboardData, HRActivity, HRTask } from "../../services";
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -31,25 +48,23 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`hr-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
 function a11yProps(index: number) {
   return {
     id: `hr-tab-${index}`,
-    'aria-controls': `hr-tabpanel-${index}`,
+    "aria-controls": `hr-tabpanel-${index}`,
   };
 }
 const HRDashboard: NextPage = () => {
   const router = useRouter();
-const { _user } = useAuth();
+  const { _user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [dashboardData, setDashboardData] = useState<HRDashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<HRDashboardData | null>(
+    null,
+  );
   const [recentActivities, setRecentActivities] = useState<HRActivity[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<HRTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,14 +79,14 @@ const { _user } = useAuth();
       const [dashboard, activities, tasks] = await Promise.all([
         hrService.getDashboardData(),
         hrService.getRecentActivities(5),
-        hrService.getUpcomingTasks(5)
+        hrService.getUpcomingTasks(5),
       ]);
       setDashboardData(dashboard);
       setRecentActivities(activities);
       setUpcomingTasks(tasks);
     } catch (err: any) {
-      console.error('Error fetching HR dashboard data:', err);
-      setError(err.userMessage || 'Failed to load dashboard data');
+      console.error("Error fetching HR dashboard data:", err);
+      setError(err.userMessage || "Failed to load dashboard data");
       // Fallback to empty data structure to prevent crashes
       setDashboardData({
         total_employees: 0,
@@ -94,48 +109,55 @@ const { _user } = useAuth();
   };
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'warning';
-      case 'completed':
-      case 'active':
-        return 'success';
-      case 'rejected':
-        return 'error';
+      case "pending":
+        return "warning";
+      case "completed":
+      case "active":
+        return "success";
+      case "rejected":
+        return "error";
       default:
-        return 'default';
+        return "default";
     }
   };
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'error';
-      case 'medium':
-        return 'warning';
-      case 'low':
-        return 'success';
+      case "high":
+        return "error";
+      case "medium":
+        return "warning";
+      case "low":
+        return "success";
       default:
-        return 'default';
+        return "default";
     }
   };
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+        }}
+      >
         <Typography variant="h4" component="h1">
           HR Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button 
-            variant="outlined" 
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
             startIcon={<PersonAddIcon />}
-            onClick={() => router.push('/hr/employees')}
+            onClick={() => router.push("/hr/employees")}
           >
             Manage Employees
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             startIcon={<AssessmentIcon />}
-            onClick={() => router.push('/hr/reports')}
+            onClick={() => router.push("/hr/reports")}
           >
             HR Reports
           </Button>
@@ -155,13 +177,23 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Total Employees
                   </Typography>
                   <Typography variant="h4">
-                    {loading ? <CircularProgress size={24} /> : dashboardData?.total_employees || 0}
+                    {loading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      dashboardData?.total_employees || 0
+                    )}
                   </Typography>
                 </Box>
                 <PeopleIcon color="primary" sx={{ fontSize: 40 }} />
@@ -172,13 +204,23 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Active Employees
                   </Typography>
                   <Typography variant="h4" color="success.main">
-                    {loading ? <CircularProgress size={24} /> : dashboardData?.active_employees || 0}
+                    {loading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      dashboardData?.active_employees || 0
+                    )}
                   </Typography>
                 </Box>
                 <TrendingUpIcon color="success" sx={{ fontSize: 40 }} />
@@ -189,13 +231,23 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     On Leave Today
                   </Typography>
                   <Typography variant="h4" color="warning.main">
-                    {loading ? <CircularProgress size={24} /> : dashboardData?.employees_on_leave || 0}
+                    {loading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      dashboardData?.employees_on_leave || 0
+                    )}
                   </Typography>
                 </Box>
                 <AccessTimeIcon color="warning" sx={{ fontSize: 40 }} />
@@ -206,13 +258,23 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Pending Approvals
                   </Typography>
                   <Typography variant="h4" color="error.main">
-                    {loading ? <CircularProgress size={24} /> : dashboardData?.pending_leave_approvals || 0}
+                    {loading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      dashboardData?.pending_leave_approvals || 0
+                    )}
                   </Typography>
                 </Box>
                 <ApprovalIcon color="error" sx={{ fontSize: 40 }} />
@@ -273,9 +335,13 @@ const { _user } = useAuth();
         </Grid>
       </Grid>
       {/* Tabs for detailed sections */}
-      <Paper sx={{ width: '100%', mb: 4 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="HR dashboard tabs">
+      <Paper sx={{ width: "100%", mb: 4 }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="HR dashboard tabs"
+          >
             <Tab label="Recent Activities" {...a11yProps(0)} />
             <Tab label="Upcoming Tasks" {...a11yProps(1)} />
             <Tab label="Quick Actions" {...a11yProps(2)} />
@@ -302,8 +368,8 @@ const { _user } = useAuth();
                     <TableCell>{activity.action}</TableCell>
                     <TableCell>{activity.date}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={activity.status} 
+                      <Chip
+                        label={activity.status}
                         color={getStatusColor(activity.status) as any}
                         size="small"
                       />
@@ -334,8 +400,8 @@ const { _user } = useAuth();
                     <TableCell>{task.task}</TableCell>
                     <TableCell>{task.due_date}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={task.priority} 
+                      <Chip
+                        label={task.priority}
                         color={getPriorityColor(task.priority) as any}
                         size="small"
                       />
@@ -357,7 +423,7 @@ const { _user } = useAuth();
                 variant="outlined"
                 fullWidth
                 startIcon={<PersonAddIcon />}
-                onClick={() => router.push('/hr/employees/new')}
+                onClick={() => router.push("/hr/employees/new")}
                 sx={{ py: 2 }}
               >
                 Add New Employee
@@ -368,7 +434,7 @@ const { _user } = useAuth();
                 variant="outlined"
                 fullWidth
                 startIcon={<ApprovalIcon />}
-                onClick={() => router.push('/hr/leaves/approvals')}
+                onClick={() => router.push("/hr/leaves/approvals")}
                 sx={{ py: 2 }}
               >
                 Review Leave Applications
@@ -379,7 +445,7 @@ const { _user } = useAuth();
                 variant="outlined"
                 fullWidth
                 startIcon={<ScheduleIcon />}
-                onClick={() => router.push('/hr/attendance')}
+                onClick={() => router.push("/hr/attendance")}
                 sx={{ py: 2 }}
               >
                 Attendance Management
@@ -390,7 +456,7 @@ const { _user } = useAuth();
                 variant="outlined"
                 fullWidth
                 startIcon={<AssessmentIcon />}
-                onClick={() => router.push('/hr/performance')}
+                onClick={() => router.push("/hr/performance")}
                 sx={{ py: 2 }}
               >
                 Performance Reviews
@@ -401,7 +467,7 @@ const { _user } = useAuth();
                 variant="outlined"
                 fullWidth
                 startIcon={<TrendingUpIcon />}
-                onClick={() => router.push('/hr/reports')}
+                onClick={() => router.push("/hr/reports")}
                 sx={{ py: 2 }}
               >
                 Generate Reports
@@ -412,7 +478,7 @@ const { _user } = useAuth();
                 variant="outlined"
                 fullWidth
                 startIcon={<WarningIcon />}
-                onClick={() => router.push('/hr/settings')}
+                onClick={() => router.push("/hr/settings")}
                 sx={{ py: 2 }}
               >
                 HR Settings
@@ -424,12 +490,14 @@ const { _user } = useAuth();
       {/* Alerts and Notifications */}
       <Box sx={{ mb: 4 }}>
         <Alert severity="info" sx={{ mb: 2 }}>
-          You have {dashboardData?.pending_leave_approvals || 0} pending leave applications that require your attention.
+          You have {dashboardData?.pending_leave_approvals || 0} pending leave
+          applications that require your attention.
         </Alert>
         {(dashboardData?.employees_in_probation || 0) > 0 && (
           <Alert severity="warning">
-            {dashboardData?.employees_in_probation || 0} employees are currently in their probation period. 
-            Review their progress and schedule confirmation meetings.
+            {dashboardData?.employees_in_probation || 0} employees are currently
+            in their probation period. Review their progress and schedule
+            confirmation meetings.
           </Alert>
         )}
       </Box>

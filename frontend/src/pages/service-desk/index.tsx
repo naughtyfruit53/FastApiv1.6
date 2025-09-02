@@ -1,5 +1,5 @@
 // frontend/src/pages/service-desk/index.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   Paper,
   Table,
   TableBody,
@@ -21,7 +20,7 @@ import {
   Typography,
   Chip,
   Grid,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -33,8 +32,8 @@ import {
   SmartToy as SmartToyIcon,
   Feedback as FeedbackIcon,
   CheckCircle as CheckCircleIcon,
-} from '@mui/icons-material';
-import { useAuth } from '@/context/AuthContext';
+} from "@mui/icons-material";
+import { useAuth } from "@/context/AuthContext";
 interface Ticket {
   id: number;
   ticket_number: string;
@@ -73,34 +72,34 @@ interface ServiceDeskAnalytics {
   first_contact_resolution_rate: number;
 }
 const ticketStatusColors: Record<string, string> = {
-  open: 'error',
-  in_progress: 'warning',
-  resolved: 'success',
-  closed: 'primary',
-  cancelled: 'default',
+  open: "error",
+  in_progress: "warning",
+  resolved: "success",
+  closed: "primary",
+  cancelled: "default",
 };
 const priorityColors: Record<string, string> = {
-  low: 'success',
-  medium: 'info',
-  high: 'warning',
-  urgent: 'error',
+  low: "success",
+  medium: "info",
+  high: "warning",
+  urgent: "error",
 };
 const conversationStatusColors: Record<string, string> = {
-  active: 'info',
-  escalated: 'warning',
-  resolved: 'success',
-  closed: 'default',
+  active: "info",
+  escalated: "warning",
+  resolved: "success",
+  closed: "default",
 };
 export default function ServiceDeskDashboard() {
-const { _user } = useAuth();
+  const { _user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [conversations, setConversations] = useState<ChatbotConversation[]>([]);
   const [analytics, setAnalytics] = useState<ServiceDeskAnalytics | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [openTicketDialog, setOpenTicketDialog] = useState(false);
-  const [selectedPriority, setSelectedPriority] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedPriority, setSelectedPriority] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
   useEffect(() => {
     loadServiceDeskData();
   }, []);
@@ -111,82 +110,82 @@ const { _user } = useAuth();
       const mockTickets: Ticket[] = [
         {
           id: 1,
-          ticket_number: 'TKT000001',
-          title: 'Software Installation Issue',
-          description: 'Unable to install the latest software update',
-          status: 'open',
-          priority: 'high',
-          ticket_type: 'support',
+          ticket_number: "TKT000001",
+          title: "Software Installation Issue",
+          description: "Unable to install the latest software update",
+          status: "open",
+          priority: "high",
+          ticket_type: "support",
           customer_id: 1,
-          customer_name: 'ABC Corp',
+          customer_name: "ABC Corp",
           assigned_to_id: 1,
-          assigned_to_name: 'John Smith',
-          created_at: '2024-08-27T09:00:00Z',
-          due_date: '2024-08-28T17:00:00Z',
+          assigned_to_name: "John Smith",
+          created_at: "2024-08-27T09:00:00Z",
+          due_date: "2024-08-28T17:00:00Z",
         },
         {
           id: 2,
-          ticket_number: 'TKT000002',
-          title: 'Printer Maintenance Request',
-          description: 'Regular maintenance for office printer',
-          status: 'in_progress',
-          priority: 'medium',
-          ticket_type: 'maintenance',
+          ticket_number: "TKT000002",
+          title: "Printer Maintenance Request",
+          description: "Regular maintenance for office printer",
+          status: "in_progress",
+          priority: "medium",
+          ticket_type: "maintenance",
           customer_id: 2,
-          customer_name: 'XYZ Inc',
+          customer_name: "XYZ Inc",
           assigned_to_id: 2,
-          assigned_to_name: 'Jane Doe',
-          created_at: '2024-08-26T14:30:00Z',
-          due_date: '2024-08-29T12:00:00Z',
+          assigned_to_name: "Jane Doe",
+          created_at: "2024-08-26T14:30:00Z",
+          due_date: "2024-08-29T12:00:00Z",
         },
         {
           id: 3,
-          ticket_number: 'TKT000003',
-          title: 'Network Configuration',
-          description: 'Setup new network configuration',
-          status: 'resolved',
-          priority: 'low',
-          ticket_type: 'installation',
+          ticket_number: "TKT000003",
+          title: "Network Configuration",
+          description: "Setup new network configuration",
+          status: "resolved",
+          priority: "low",
+          ticket_type: "installation",
           customer_id: 3,
-          customer_name: 'Tech Solutions',
+          customer_name: "Tech Solutions",
           assigned_to_id: 1,
-          assigned_to_name: 'John Smith',
-          created_at: '2024-08-25T10:15:00Z',
+          assigned_to_name: "John Smith",
+          created_at: "2024-08-25T10:15:00Z",
         },
       ];
       const mockConversations: ChatbotConversation[] = [
         {
           id: 1,
-          conversation_id: 'conv_001',
-          customer_name: 'Sarah Johnson',
-          channel: 'web_chat',
-          status: 'active',
-          intent: 'product_inquiry',
+          conversation_id: "conv_001",
+          customer_name: "Sarah Johnson",
+          channel: "web_chat",
+          status: "active",
+          intent: "product_inquiry",
           escalated_to_human: false,
-          started_at: '2024-08-27T10:30:00Z',
-          last_message_at: '2024-08-27T10:35:00Z',
+          started_at: "2024-08-27T10:30:00Z",
+          last_message_at: "2024-08-27T10:35:00Z",
         },
         {
           id: 2,
-          conversation_id: 'conv_002',
-          customer_name: 'Mike Brown',
-          channel: 'whatsapp',
-          status: 'escalated',
-          intent: 'support_request',
+          conversation_id: "conv_002",
+          customer_name: "Mike Brown",
+          channel: "whatsapp",
+          status: "escalated",
+          intent: "support_request",
           escalated_to_human: true,
-          started_at: '2024-08-27T09:15:00Z',
-          last_message_at: '2024-08-27T09:45:00Z',
+          started_at: "2024-08-27T09:15:00Z",
+          last_message_at: "2024-08-27T09:45:00Z",
         },
         {
           id: 3,
-          conversation_id: 'conv_003',
-          customer_name: 'Lisa Davis',
-          channel: 'web_chat',
-          status: 'resolved',
-          intent: 'billing_inquiry',
+          conversation_id: "conv_003",
+          customer_name: "Lisa Davis",
+          channel: "web_chat",
+          status: "resolved",
+          intent: "billing_inquiry",
           escalated_to_human: false,
-          started_at: '2024-08-27T08:00:00Z',
-          last_message_at: '2024-08-27T08:15:00Z',
+          started_at: "2024-08-27T08:00:00Z",
+          last_message_at: "2024-08-27T08:15:00Z",
         },
       ];
       const mockAnalytics: ServiceDeskAnalytics = {
@@ -219,22 +218,26 @@ const { _user } = useAuth();
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPriority = !selectedPriority || ticket.priority === selectedPriority;
+    const matchesPriority =
+      !selectedPriority || ticket.priority === selectedPriority;
     const matchesStatus = !selectedStatus || ticket.status === selectedStatus;
     return matchesSearch && matchesPriority && matchesStatus;
   });
-  const filteredConversations = conversations.filter((conv) =>
-    conv.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.conversation_id.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredConversations = conversations.filter(
+    (conv) =>
+      conv.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      conv.conversation_id.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   const renderAnalyticsCards = () => {
-    if (!analytics) {return null;}
+    if (!analytics) {
+      return null;
+    }
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <SupportIcon color="primary" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -254,7 +257,7 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <ScheduleIcon color="warning" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -274,7 +277,7 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <FeedbackIcon color="success" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
@@ -294,17 +297,18 @@ const { _user } = useAuth();
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <ChatIcon color="info" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Active Chats
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {conversations.filter(c => c.status === 'active').length}
+                    {conversations.filter((c) => c.status === "active").length}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {conversations.filter(c => c.escalated_to_human).length} escalated
+                    {conversations.filter((c) => c.escalated_to_human).length}{" "}
+                    escalated
                   </Typography>
                 </Box>
               </Box>
@@ -344,7 +348,7 @@ const { _user } = useAuth();
               <TableCell>{ticket.customer_name}</TableCell>
               <TableCell>
                 <Chip
-                  label={ticket.status.replace('_', ' ')}
+                  label={ticket.status.replace("_", " ")}
                   color={ticketStatusColors[ticket.status] as any}
                   size="small"
                 />
@@ -357,16 +361,22 @@ const { _user } = useAuth();
                   variant="outlined"
                 />
               </TableCell>
-              <TableCell>{ticket.assigned_to_name || 'Unassigned'}</TableCell>
+              <TableCell>{ticket.assigned_to_name || "Unassigned"}</TableCell>
               <TableCell>
                 {ticket.due_date ? (
-                  <Typography 
+                  <Typography
                     variant="body2"
-                    color={new Date(ticket.due_date) < new Date() ? 'error' : 'textSecondary'}
+                    color={
+                      new Date(ticket.due_date) < new Date()
+                        ? "error"
+                        : "textSecondary"
+                    }
                   >
                     {new Date(ticket.due_date).toLocaleDateString()}
                   </Typography>
-                ) : '-'}
+                ) : (
+                  "-"
+                )}
               </TableCell>
               <TableCell>
                 {new Date(ticket.created_at).toLocaleDateString()}
@@ -385,22 +395,28 @@ const { _user } = useAuth();
             <ListItem>
               <ListItemAvatar>
                 <Avatar>
-                  {conversation.escalated_to_human ? <PersonIcon /> : <SmartToyIcon />}
+                  {conversation.escalated_to_human ? (
+                    <PersonIcon />
+                  ) : (
+                    <SmartToyIcon />
+                  )}
                 </Avatar>
               </ListItemAvatar>
               <ListItemText
                 primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography variant="body1">
-                      {conversation.customer_name || 'Anonymous'}
+                      {conversation.customer_name || "Anonymous"}
                     </Typography>
                     <Chip
                       label={conversation.status}
-                      color={conversationStatusColors[conversation.status] as any}
+                      color={
+                        conversationStatusColors[conversation.status] as any
+                      }
                       size="small"
                     />
                     <Chip
-                      label={conversation.channel.replace('_', ' ')}
+                      label={conversation.channel.replace("_", " ")}
                       variant="outlined"
                       size="small"
                     />
@@ -409,22 +425,25 @@ const { _user } = useAuth();
                 secondary={
                   <Box>
                     <Typography variant="body2" color="textSecondary">
-                      Intent: {conversation.intent?.replace('_', ' ') || 'Unknown'}
+                      Intent:{" "}
+                      {conversation.intent?.replace("_", " ") || "Unknown"}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
-                      Started: {new Date(conversation.started_at).toLocaleString()}
-                      {conversation.last_message_at && 
-                        ` • Last message: ${new Date(conversation.last_message_at).toLocaleString()}`
-                      }
+                      Started:{" "}
+                      {new Date(conversation.started_at).toLocaleString()}
+                      {conversation.last_message_at &&
+                        ` • Last message: ${new Date(conversation.last_message_at).toLocaleString()}`}
                     </Typography>
                   </Box>
                 }
               />
-              {conversation.status === 'resolved' && (
+              {conversation.status === "resolved" && (
                 <CheckCircleIcon color="success" />
               )}
             </ListItem>
-            {index < filteredConversations.length - 1 && <Divider variant="inset" component="li" />}
+            {index < filteredConversations.length - 1 && (
+              <Divider variant="inset" component="li" />
+            )}
           </React.Fragment>
         ))}
       </List>
@@ -432,11 +451,18 @@ const { _user } = useAuth();
   );
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h4" component="h1">
           Service Desk Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -444,10 +470,7 @@ const { _user } = useAuth();
           >
             Create Ticket
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<AssessmentIcon />}
-          >
+          <Button variant="outlined" startIcon={<AssessmentIcon />}>
             Reports
           </Button>
         </Box>
@@ -455,13 +478,16 @@ const { _user } = useAuth();
       {renderAnalyticsCards()}
       <Card>
         <CardContent>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={currentTab}
+              onChange={(_, newValue) => setCurrentTab(newValue)}
+            >
               <Tab label="Tickets" />
               <Tab label="Chatbot Conversations" />
             </Tabs>
           </Box>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
             <TextField
               placeholder="Search..."
               value={searchTerm}
@@ -522,11 +548,7 @@ const { _user } = useAuth();
           <Box sx={{ pt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <TextField
-                  label="Title"
-                  fullWidth
-                  required
-                />
+                <TextField label="Title" fullWidth required />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
@@ -569,19 +591,17 @@ const { _user } = useAuth();
                 />
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  label="Description"
-                  multiline
-                  rows={4}
-                  fullWidth
-                />
+                <TextField label="Description" multiline rows={4} fullWidth />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenTicketDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setOpenTicketDialog(false)}>
+          <Button
+            variant="contained"
+            onClick={() => setOpenTicketDialog(false)}
+          >
             Create Ticket
           </Button>
         </DialogActions>

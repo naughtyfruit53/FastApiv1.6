@@ -10,6 +10,7 @@ import VoucherLayout from '../../../components/VoucherLayout';
 import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import {getVoucherConfig, numberToWords, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
+
 const ReceiptVoucher: React.FC = () => {
   const config = getVoucherConfig('receipt-voucher');
   const voucherStyles = getVoucherStyles();
@@ -64,13 +65,17 @@ const ReceiptVoucher: React.FC = () => {
     handleAddVendor,
     handleAddCustomer,
   } = useVoucherPage(config);
+  
   // Watch form values
   const watchedValues = watch();
   const totalAmount = watchedValues?.total_amount || 0;
+  
   // Combined name options for autocomplete
+  const allParties = [
     ...(vendorList || []).map((v: any) => ({ ...v, type: 'Vendor' })),
     ...(customerList || []).map((c: any) => ({ ...c, type: 'Customer' }))
   ];
+  
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
@@ -80,25 +85,7 @@ const ReceiptVoucher: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
-  // Combined list of all parties (customers + vendors) for unified dropdown
-  const allParties = [
-    ...(customerList || []).map((customer: any) => ({
-      id: customer.id,
-      name: customer.name,
-      email: customer.email,
-      type: 'Customer',
-      value: customer.id,
-      label: `${customer.name} (Customer)`
-    })),
-    ...(vendorList || []).map((vendor: any) => ({
-      id: vendor.id,
-      name: vendor.name,
-      email: vendor.email,
-      type: 'Vendor',
-      value: vendor.id,
-      label: `${vendor.name} (Vendor)`
-    }))
-  ];
+  
   // Payment methods for receipt vouchers
   const paymentMethods = [
     'Cash',
@@ -110,9 +97,11 @@ const ReceiptVoucher: React.FC = () => {
     'UPI',
     'Net Banking'
   ];
+  
   // Get selected entity from form
   const selectedEntity = watch('entity');
   const isViewMode = mode === 'view';
+  
   // Index Content - Left Panel (40%)
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -170,6 +159,7 @@ const ReceiptVoucher: React.FC = () => {
       </Table>
     </TableContainer>
   );
+  
   // Form Content - Right Panel (60%)
   const formContent = (
     <Box>
@@ -199,7 +189,7 @@ const ReceiptVoucher: React.FC = () => {
         }}
       >
         <Grid container spacing={2}>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('voucher_number')}
               label="Voucher Number"
@@ -212,7 +202,7 @@ const ReceiptVoucher: React.FC = () => {
               }}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('date')}
               label="Date"
@@ -228,7 +218,7 @@ const ReceiptVoucher: React.FC = () => {
               helperText={errors.date?.message as string}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <SearchableDropdown
               label="Party Name"
               options={allParties}
@@ -256,7 +246,7 @@ const ReceiptVoucher: React.FC = () => {
               helperText={errors.entity?.message as string}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <FormControl fullWidth disabled={isViewMode}>
               <InputLabel>Payment Method</InputLabel>
               <Select
@@ -274,7 +264,7 @@ const ReceiptVoucher: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('reference')}
               label="Reference"
@@ -284,7 +274,7 @@ const ReceiptVoucher: React.FC = () => {
               helperText={errors.reference?.message as string}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('total_amount', {
                 required: 'Amount is required',
@@ -313,7 +303,7 @@ const ReceiptVoucher: React.FC = () => {
               }}
             />
           </Grid>
-          <Grid size={12}>
+          <Grid item xs={12}>
             <TextField
               {...control.register('notes')}
               label="Notes"
@@ -326,7 +316,7 @@ const ReceiptVoucher: React.FC = () => {
             />
           </Grid>
           {totalAmount > 0 && (
-            <Grid size={12}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Amount in Words"
@@ -339,7 +329,7 @@ const ReceiptVoucher: React.FC = () => {
             </Grid>
           )}
           {/* Action buttons - removed Generate PDF */}
-          <Grid size={12}>
+          <Grid item xs={12}>
             <Box display="flex" gap={2}>
               {mode !== 'view' && (
                 <Button
@@ -365,6 +355,7 @@ const ReceiptVoucher: React.FC = () => {
       </Box>
     </Box>
   );
+
   if (isLoading) {
     return (
       <Container>
@@ -374,6 +365,7 @@ const ReceiptVoucher: React.FC = () => {
       </Container>
     );
   }
+
   return (
     <>
       <VoucherLayout
@@ -441,4 +433,5 @@ const ReceiptVoucher: React.FC = () => {
     </>
   );
 };
+
 export default ReceiptVoucher;

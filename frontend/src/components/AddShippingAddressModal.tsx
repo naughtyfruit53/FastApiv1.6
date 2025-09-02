@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -11,16 +11,18 @@ import {
   Grid,
   Alert,
   InputAdornment,
-} from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { usePincodeLookup } from '../hooks/usePincodeLookup';
-import debounce from 'lodash/debounce';
+} from "@mui/material";
+import { useForm } from "react-hook-form";
+import { usePincodeLookup } from "../hooks/usePincodeLookup";
+import { debounce } from "lodash";
+
 interface AddShippingAddressModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (_data: any) => Promise<void>;
   loading?: boolean;
 }
+
 interface ShippingAddressFormData {
   address1: string;
   address2?: string;
@@ -30,69 +32,104 @@ interface ShippingAddressFormData {
   state_code: string;
   country: string;
 }
-const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({ 
-  open, 
-  onClose, 
-  onAdd, 
-  loading = false 
+
+const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
+  open,
+  onClose,
+  onAdd,
+  loading = false,
 }) => {
-  const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<ShippingAddressFormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<ShippingAddressFormData>({
     defaultValues: {
-      address1: '',
-      address2: '',
-      city: '',
-      state: '',
-      pin_code: '',
-      state_code: '',
-      country: 'India',
-    }
+      address1: "",
+      address2: "",
+      city: "",
+      state: "",
+      pin_code: "",
+      state_code: "",
+      country: "India",
+    },
   });
-  const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError, clearData } = usePincodeLookup();
+
+  const {
+    lookupPincode,
+    pincodeData,
+    loading: pincodeLoading,
+    error: pincodeError,
+    clearData,
+  } = usePincodeLookup();
+
   // Auto-populate address fields when pincode data is available
   useEffect(() => {
     if (pincodeData) {
-      console.log('Auto-populating fields with PIN data:', pincodeData);
-      setValue('city', pincodeData.city, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-      setValue('state', pincodeData.state, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-      setValue('state_code', pincodeData.state_code, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      console.log("Auto-populating fields with PIN data:", pincodeData);
+      setValue("city", pincodeData.city, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      setValue("state", pincodeData.state, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      setValue("state_code", pincodeData.state_code, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
     }
   }, [pincodeData, setValue]);
+
   // Debounced lookup function
   const debouncedLookup = useCallback(
     debounce((pin: string) => {
-      console.log('Executing debounced lookup for PIN:', pin);
+      console.log("Executing debounced lookup for PIN:", pin);
       lookupPincode(pin);
     }, 500),
-    [lookupPincode]
+    [lookupPincode],
   );
+
   // Handle PIN change
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const pin = e.target.value;
-    console.log('PIN field onChange triggered, value:', pin);
+    console.log("PIN field onChange triggered, value:", pin);
     if (pin && /^\d{6}$/.test(pin)) {
       debouncedLookup(pin);
     } else {
       clearData();
     }
   };
+
   // Handle form submission
   const onSubmit = async (shippingData: ShippingAddressFormData) => {
     try {
       const cleanData = Object.fromEntries(
-        Object.entries(shippingData).filter(([_key, value]) => value && value.trim() !== '')
+        Object.entries(shippingData).filter(
+          ([_key, value]) => value && value.trim() !== "",
+        ),
       );
       await onAdd(cleanData);
       reset();
       onClose();
     } catch (err) {
-      console.error(msg, err);
+      console.error('Error adding address:', err);
     }
   };
+
   const handleClose = () => {
     reset();
     clearData();
     onClose();
   };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -101,37 +138,39 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Grid container spacing={2}>
-            <Grid size={12}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Address Line 1"
-                {...register('address1', { required: 'Address is required' })}
+                {...register("address1", { required: "Address is required" })}
                 error={!!errors.address1}
                 helperText={errors.address1?.message}
                 margin="normal"
               />
             </Grid>
-            <Grid size={12}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Address Line 2"
-                {...register('address2')}
+                {...register("address2")}
                 margin="normal"
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 label="PIN Code *"
-                {...register('pin_code', { 
-                  required: 'PIN code is required',
+                {...register("pin_code", {
+                  required: "PIN code is required",
                   pattern: {
                     value: /^\d{6}$/,
-                    message: 'Please enter a valid 6-digit PIN code'
-                  }
+                    message: "Please enter a valid 6-digit PIN code",
+                  },
                 })}
                 error={!!errors.pin_code}
-                helperText={errors.pin_code?.message || (pincodeError && pincodeError)}
+                helperText={
+                  errors.pin_code?.message || (pincodeError && pincodeError)
+                }
                 margin="normal"
                 InputProps={{
                   endAdornment: pincodeLoading ? (
@@ -143,11 +182,11 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                 onChange={handlePinChange}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 label="City"
-                {...register('city', { required: 'City is required' })}
+                {...register("city", { required: "City is required" })}
                 error={!!errors.city}
                 helperText={errors.city?.message}
                 margin="normal"
@@ -155,15 +194,15 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                   readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('city') || !!pincodeData,
+                  shrink: !!watch("city") || !!pincodeData,
                 }}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 label="State"
-                {...register('state', { required: 'State is required' })}
+                {...register("state", { required: "State is required" })}
                 error={!!errors.state}
                 helperText={errors.state?.message}
                 margin="normal"
@@ -171,20 +210,22 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                   readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state') || !!pincodeData,
+                  shrink: !!watch("state") || !!pincodeData,
                 }}
                 sx={{
-                  '& .MuiInputBase-root': {
-                    height: '40px',
+                  "& .MuiInputBase-root": {
+                    height: "40px",
                   },
                 }}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="State Code"
-                {...register('state_code', { required: 'State code is required' })}
+                {...register("state_code", {
+                  required: "State code is required",
+                })}
                 error={!!errors.state_code}
                 helperText={errors.state_code?.message}
                 margin="normal"
@@ -192,22 +233,22 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
                   readOnly: !!pincodeData,
                 }}
                 InputLabelProps={{
-                  shrink: !!watch('state_code') || !!pincodeData,
+                  shrink: !!watch("state_code") || !!pincodeData,
                 }}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Country"
-                {...register('country', { required: 'Country is required' })}
+                {...register("country", { required: "Country is required" })}
                 error={!!errors.country}
                 helperText={errors.country?.message}
                 margin="normal"
               />
             </Grid>
             {pincodeError && (
-              <Grid size={12}>
+              <Grid item xs={12}>
                 <Alert severity="warning" sx={{ mt: 1 }}>
                   {pincodeError}
                 </Alert>
@@ -225,11 +266,12 @@ const AddShippingAddressModal: React.FC<AddShippingAddressModalProps> = ({
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? 'Adding...' : 'Add Address'}
+            {loading ? "Adding..." : "Add Address"}
           </Button>
         </DialogActions>
       </form>
     </Dialog>
   );
 };
+
 export default AddShippingAddressModal;

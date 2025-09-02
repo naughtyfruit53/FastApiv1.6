@@ -1,6 +1,6 @@
 // frontend/src/services/crmService.ts
 
-import api from '../lib/api';
+import api from "../lib/api";
 
 export interface Lead {
   id: number;
@@ -67,7 +67,7 @@ export interface Customer {
 }
 
 class CRMService {
-  private endpoint = '/crm';
+  private endpoint = "/crm";
 
   /**
    * Get CRM analytics dashboard data
@@ -77,7 +77,7 @@ class CRMService {
       const response = await api.get(`${this.endpoint}/analytics`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching CRM analytics:', error);
+      console.error("Error fetching CRM analytics:", error);
       throw error;
     }
   }
@@ -88,11 +88,11 @@ class CRMService {
   async getLeads(skip: number = 0, limit: number = 100): Promise<Lead[]> {
     try {
       const response = await api.get(`${this.endpoint}/leads`, {
-        params: { skip, limit }
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching leads:', error);
+      console.error("Error fetching leads:", error);
       throw error;
     }
   }
@@ -118,7 +118,7 @@ class CRMService {
       const response = await api.post(`${this.endpoint}/leads`, leadData);
       return response.data;
     } catch (error) {
-      console.error('Error creating lead:', error);
+      console.error("Error creating lead:", error);
       throw error;
     }
   }
@@ -151,14 +151,17 @@ class CRMService {
   /**
    * Get all opportunities
    */
-  async getOpportunities(skip: number = 0, limit: number = 100): Promise<Opportunity[]> {
+  async getOpportunities(
+    skip: number = 0,
+    limit: number = 100,
+  ): Promise<Opportunity[]> {
     try {
       const response = await api.get(`${this.endpoint}/opportunities`, {
-        params: { skip, limit }
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching opportunities:', error);
+      console.error("Error fetching opportunities:", error);
       throw error;
     }
   }
@@ -181,10 +184,13 @@ class CRMService {
    */
   async createOpportunity(opportunityData: any): Promise<Opportunity> {
     try {
-      const response = await api.post(`${this.endpoint}/opportunities`, opportunityData);
+      const response = await api.post(
+        `${this.endpoint}/opportunities`,
+        opportunityData,
+      );
       return response.data;
     } catch (error) {
-      console.error('Error creating opportunity:', error);
+      console.error("Error creating opportunity:", error);
       throw error;
     }
   }
@@ -192,9 +198,15 @@ class CRMService {
   /**
    * Update opportunity
    */
-  async updateOpportunity(id: number, opportunityData: any): Promise<Opportunity> {
+  async updateOpportunity(
+    id: number,
+    opportunityData: any,
+  ): Promise<Opportunity> {
     try {
-      const response = await api.put(`${this.endpoint}/opportunities/${id}`, opportunityData);
+      const response = await api.put(
+        `${this.endpoint}/opportunities/${id}`,
+        opportunityData,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error updating opportunity ${id}:`, error);
@@ -217,14 +229,17 @@ class CRMService {
   /**
    * Get all customers
    */
-  async getCustomers(skip: number = 0, limit: number = 100): Promise<Customer[]> {
+  async getCustomers(
+    skip: number = 0,
+    limit: number = 100,
+  ): Promise<Customer[]> {
     try {
-      const response = await api.get('/customers', {
-        params: { skip, limit }
+      const response = await api.get("/customers", {
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching customers:', error);
+      console.error("Error fetching customers:", error);
       throw error;
     }
   }
@@ -232,9 +247,15 @@ class CRMService {
   /**
    * Convert lead to opportunity
    */
-  async convertLeadToOpportunity(leadId: number, opportunityData: any): Promise<Opportunity> {
+  async convertLeadToOpportunity(
+    leadId: number,
+    opportunityData: any,
+  ): Promise<Opportunity> {
     try {
-      const response = await api.post(`${this.endpoint}/leads/${leadId}/convert`, opportunityData);
+      const response = await api.post(
+        `${this.endpoint}/leads/${leadId}/convert`,
+        opportunityData,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error converting lead ${leadId} to opportunity:`, error);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogTitle,
@@ -14,9 +14,9 @@ import {
   CircularProgress,
   Box,
   Grid,
-  Chip
-} from '@mui/material';
-import { useForm, Controller } from 'react-hook-form';
+  Chip,
+} from "@mui/material";
+import { useForm, Controller } from "react-hook-form";
 interface AddLeadModalProps {
   open: boolean;
   onClose: () => void;
@@ -44,76 +44,82 @@ interface LeadFormData {
   notes?: string;
 }
 const leadSources = [
-  'Website',
-  'Social Media',
-  'Email Campaign',
-  'Cold Call',
-  'Referral',
-  'Trade Show',
-  'Partner',
-  'Advertisement',
-  'Direct Mail',
-  'Other'
+  "Website",
+  "Social Media",
+  "Email Campaign",
+  "Cold Call",
+  "Referral",
+  "Trade Show",
+  "Partner",
+  "Advertisement",
+  "Direct Mail",
+  "Other",
 ];
 const leadStatuses = [
-  'new',
-  'contacted',
-  'qualified',
-  'proposal_sent',
-  'negotiation',
-  'converted',
-  'lost',
-  'disqualified'
+  "new",
+  "contacted",
+  "qualified",
+  "proposal_sent",
+  "negotiation",
+  "converted",
+  "lost",
+  "disqualified",
 ];
 const AddLeadModal: React.FC<AddLeadModalProps> = ({
   open,
   onClose,
   onAdd,
-  loading = false
+  loading = false,
 }) => {
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<LeadFormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<LeadFormData>({
     defaultValues: {
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      company: '',
-      job_title: '',
-      website: '',
-      address: '',
-      city: '',
-      state: '',
-      postal_code: '',
-      country: '',
-      source: 'Website',
-      status: 'new',
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      company: "",
+      job_title: "",
+      website: "",
+      address: "",
+      city: "",
+      state: "",
+      postal_code: "",
+      country: "",
+      source: "Website",
+      status: "new",
       score: 0,
       estimated_value: 0,
-      expected_close_date: '',
-      notes: ''
-    }
+      expected_close_date: "",
+      notes: "",
+    },
   });
   React.useEffect(() => {
     if (open) {
       reset({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        company: '',
-        job_title: '',
-        website: '',
-        address: '',
-        city: '',
-        state: '',
-        postal_code: '',
-        country: '',
-        source: 'Website',
-        status: 'new',
+        first_name: "",
+        last_name: "",
+        email: "",
+        phone: "",
+        company: "",
+        job_title: "",
+        website: "",
+        address: "",
+        city: "",
+        state: "",
+        postal_code: "",
+        country: "",
+        source: "Website",
+        status: "new",
         score: 0,
         estimated_value: 0,
-        expected_close_date: '',
-        notes: ''
+        expected_close_date: "",
+        notes: "",
       });
     }
   }, [open, reset]);
@@ -122,11 +128,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       // Remove empty fields to match backend schema
       const cleanData = Object.fromEntries(
         Object.entries(leadData).filter(([key, value]) => {
-          if (key === 'score' || key === 'estimated_value') {
+          if (key === "score" || key === "estimated_value") {
             return value !== undefined && value !== null;
           }
-          return value !== undefined && value !== null && value !== '';
-        })
+          return value !== undefined && value !== null && value !== "";
+        }),
       );
       await onAdd(cleanData);
       reset();
@@ -160,9 +166,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('first_name', { 
-                    required: 'First name is required',
-                    minLength: { value: 2, message: 'First name must be at least 2 characters' }
+                  {...register("first_name", {
+                    required: "First name is required",
+                    minLength: {
+                      value: 2,
+                      message: "First name must be at least 2 characters",
+                    },
                   })}
                   label="First Name"
                   fullWidth
@@ -173,9 +182,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('last_name', { 
-                    required: 'Last name is required',
-                    minLength: { value: 2, message: 'Last name must be at least 2 characters' }
+                  {...register("last_name", {
+                    required: "Last name is required",
+                    minLength: {
+                      value: 2,
+                      message: "Last name must be at least 2 characters",
+                    },
                   })}
                   label="Last Name"
                   fullWidth
@@ -186,12 +198,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('email', { 
-                    required: 'Email is required',
+                  {...register("email", {
+                    required: "Email is required",
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address'
-                    }
+                      message: "Invalid email address",
+                    },
                   })}
                   label="Email"
                   type="email"
@@ -203,7 +215,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('phone')}
+                  {...register("phone")}
                   label="Phone"
                   fullWidth
                   disabled={loading}
@@ -217,7 +229,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('company')}
+                  {...register("company")}
                   label="Company"
                   fullWidth
                   disabled={loading}
@@ -225,7 +237,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  {...register('job_title')}
+                  {...register("job_title")}
                   label="Job Title"
                   fullWidth
                   disabled={loading}
@@ -233,7 +245,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('website')}
+                  {...register("website")}
                   label="Website"
                   fullWidth
                   disabled={loading}
@@ -247,7 +259,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('address')}
+                  {...register("address")}
                   label="Address"
                   fullWidth
                   disabled={loading}
@@ -255,7 +267,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
-                  {...register('city')}
+                  {...register("city")}
                   label="City"
                   fullWidth
                   disabled={loading}
@@ -263,7 +275,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
-                  {...register('state')}
+                  {...register("state")}
                   label="State"
                   fullWidth
                   disabled={loading}
@@ -271,7 +283,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
-                  {...register('postal_code')}
+                  {...register("postal_code")}
                   label="Postal Code"
                   fullWidth
                   disabled={loading}
@@ -279,7 +291,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('country')}
+                  {...register("country")}
                   label="Country"
                   fullWidth
                   disabled={loading}
@@ -297,13 +309,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   <Controller
                     name="source"
                     control={control}
-                    rules={{ required: 'Source is required' }}
+                    rules={{ required: "Source is required" }}
                     render={({ field }) => (
-                      <Select
-                        {...field}
-                        label="Source"
-                        error={!!errors.source}
-                      >
+                      <Select {...field} label="Source" error={!!errors.source}>
                         {leadSources.map((source) => (
                           <MenuItem key={source} value={source}>
                             {source}
@@ -313,7 +321,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     )}
                   />
                   {errors.source && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, ml: 2 }}
+                    >
                       {errors.source.message}
                     </Typography>
                   )}
@@ -325,20 +337,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   <Controller
                     name="status"
                     control={control}
-                    rules={{ required: 'Status is required' }}
+                    rules={{ required: "Status is required" }}
                     render={({ field }) => (
-                      <Select
-                        {...field}
-                        label="Status"
-                        error={!!errors.status}
-                      >
+                      <Select {...field} label="Status" error={!!errors.status}>
                         {leadStatuses.map((status) => (
                           <MenuItem key={status} value={status}>
-                            <Chip 
-                              label={status.replace('_', ' ').toUpperCase()} 
-                              size="small" 
+                            <Chip
+                              label={status.replace("_", " ").toUpperCase()}
+                              size="small"
                               variant="outlined"
-                              sx={{ textTransform: 'capitalize' }}
+                              sx={{ textTransform: "capitalize" }}
                             />
                           </MenuItem>
                         ))}
@@ -346,7 +354,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     )}
                   />
                   {errors.status && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, ml: 2 }}
+                    >
                       {errors.status.message}
                     </Typography>
                   )}
@@ -354,9 +366,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
-                  {...register('score', {
-                    min: { value: 0, message: 'Score must be at least 0' },
-                    max: { value: 100, message: 'Score must be at most 100' }
+                  {...register("score", {
+                    min: { value: 0, message: "Score must be at least 0" },
+                    max: { value: 100, message: "Score must be at most 100" },
                   })}
                   label="Lead Score (0-100)"
                   type="number"
@@ -369,8 +381,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
-                  {...register('estimated_value', {
-                    min: { value: 0, message: 'Value must be positive' }
+                  {...register("estimated_value", {
+                    min: { value: 0, message: "Value must be positive" },
                   })}
                   label="Estimated Value"
                   type="number"
@@ -383,7 +395,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
-                  {...register('expected_close_date')}
+                  {...register("expected_close_date")}
                   label="Expected Close Date"
                   type="date"
                   fullWidth
@@ -395,7 +407,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  {...register('notes')}
+                  {...register("notes")}
                   label="Notes"
                   multiline
                   rows={3}
@@ -407,20 +419,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={handleClose} 
-            disabled={loading}
-            color="inherit"
-          >
+          <Button onClick={handleClose} disabled={loading} color="inherit">
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
+          <Button
+            type="submit"
+            variant="contained"
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? 'Adding...' : 'Add Lead'}
+            {loading ? "Adding..." : "Add Lead"}
           </Button>
         </DialogActions>
       </form>

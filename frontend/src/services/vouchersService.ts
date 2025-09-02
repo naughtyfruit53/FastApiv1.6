@@ -1,11 +1,16 @@
 // src/services/vouchersService.ts
 // frontend/src/services/vouchersService.ts
-import api from '../lib/api';
+import api from "../lib/api";
 export const voucherService = {
   // Generic Voucher Methods
-  getVouchers: async (type: string, params?: Record<string, any>): Promise<any> => {
-    const endpoint = `/${type}`;  // Use type directly since it's already plural
-    console.log(`[voucherService] Fetching vouchers from endpoint: ${endpoint}`);
+  getVouchers: async (
+    type: string,
+    params?: Record<string, any>,
+  ): Promise<any> => {
+    const endpoint = `/${type}`; // Use type directly since it's already plural
+    console.log(
+      `[voucherService] Fetching vouchers from endpoint: ${endpoint}`,
+    );
     const response = await api.get(endpoint, { params });
     console.log(`[voucherService] Received data for ${type}:`, response.data);
     return response.data;
@@ -16,13 +21,23 @@ export const voucherService = {
     const response = await api.get(endpoint);
     return response.data;
   },
-  createVoucher: async (type: string, data: Record<string, any>, sendEmail: boolean = false): Promise<any> => {
+  createVoucher: async (
+    type: string,
+    data: Record<string, any>,
+    sendEmail: boolean = false,
+  ): Promise<any> => {
     const endpoint = `/${type}`;
     console.log(`[voucherService] Creating voucher at: ${endpoint}`);
-    const response = await api.post(endpoint, data, { params: { send_email: sendEmail } });
+    const response = await api.post(endpoint, data, {
+      params: { send_email: sendEmail },
+    });
     return response.data;
   },
-  updateVoucher: async (type: string, id: number, data: Record<string, any>): Promise<any> => {
+  updateVoucher: async (
+    type: string,
+    id: number,
+    data: Record<string, any>,
+  ): Promise<any> => {
     const endpoint = `/${type}/${id}`;
     console.log(`[voucherService] Updating voucher at: ${endpoint}`);
     const response = await api.put(endpoint, data);
@@ -38,11 +53,19 @@ export const voucherService = {
     const response = await api.get(`/purchase-vouchers/${id}`);
     return response.data;
   },
-  createPurchaseVoucher: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
-    const response = await api.post(`/purchase-vouchers`, data, { params: { send_email: sendEmail } });
+  createPurchaseVoucher: async (
+    data: Record<string, any>,
+    sendEmail: boolean,
+  ): Promise<any> => {
+    const response = await api.post(`/purchase-vouchers`, data, {
+      params: { send_email: sendEmail },
+    });
     return response.data;
   },
-  updatePurchaseVoucher: async (id: number, data: Record<string, any>): Promise<any> => {
+  updatePurchaseVoucher: async (
+    id: number,
+    data: Record<string, any>,
+  ): Promise<any> => {
     const response = await api.put(`/purchase-vouchers/${id}`, data);
     return response.data;
   },
@@ -51,11 +74,19 @@ export const voucherService = {
     const response = await api.get(`/purchase-orders/${id}`);
     return response.data;
   },
-  createPurchaseOrder: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
-    const response = await api.post(`/purchase-orders`, data, { params: { send_email: sendEmail } });
+  createPurchaseOrder: async (
+    data: Record<string, any>,
+    sendEmail: boolean,
+  ): Promise<any> => {
+    const response = await api.post(`/purchase-orders`, data, {
+      params: { send_email: sendEmail },
+    });
     return response.data;
   },
-  updatePurchaseOrder: async (id: number, data: Record<string, any>): Promise<any> => {
+  updatePurchaseOrder: async (
+    id: number,
+    data: Record<string, any>,
+  ): Promise<any> => {
     const response = await api.put(`/purchase-orders/${id}`, data);
     return response.data;
   },
@@ -64,8 +95,13 @@ export const voucherService = {
     const response = await api.get(`/goods-receipt-notes/${id}`);
     return response.data;
   },
-  createGrn: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
-    const response = await api.post(`/goods-receipt-notes`, data, { params: { send_email: sendEmail } });
+  createGrn: async (
+    data: Record<string, any>,
+    sendEmail: boolean,
+  ): Promise<any> => {
+    const response = await api.post(`/goods-receipt-notes`, data, {
+      params: { send_email: sendEmail },
+    });
     return response.data;
   },
   updateGrn: async (id: number, data: Record<string, any>): Promise<any> => {
@@ -77,29 +113,40 @@ export const voucherService = {
     const response = await api.get(`/purchase-returns/${id}`);
     return response.data;
   },
-  createRejectionIn: async (data: Record<string, any>, sendEmail: boolean): Promise<any> => {
-    const response = await api.post(`/purchase-returns`, data, { params: { send_email: sendEmail } });
+  createRejectionIn: async (
+    data: Record<string, any>,
+    sendEmail: boolean,
+  ): Promise<any> => {
+    const response = await api.post(`/purchase-returns`, data, {
+      params: { send_email: sendEmail },
+    });
     return response.data;
   },
-  updateRejectionIn: async (id: number, data: Record<string, any>): Promise<any> => {
+  updateRejectionIn: async (
+    id: number,
+    data: Record<string, any>,
+  ): Promise<any> => {
     const response = await api.put(`/purchase-returns/${id}`, data);
     return response.data;
   },
   // Enhanced service methods for voucher actions
-getEmailRecipient: (voucher: Record<string, any>, voucherType: string): any => {
+  getEmailRecipient: (
+    voucher: Record<string, any>,
+    voucherType: string,
+  ): any => {
     const type = voucherType.toLowerCase();
-    if (type === 'purchase' && voucher.vendor) {
+    if (type === "purchase" && voucher.vendor) {
       return {
         name: voucher.vendor.name,
         email: voucher.vendor.email,
-        type: 'vendor',
+        type: "vendor",
       };
     }
-    if (type === 'sales' && voucher.customer) {
+    if (type === "sales" && voucher.customer) {
       return {
         name: voucher.customer.name,
         email: voucher.customer.email,
-        type: 'customer',
+        type: "customer",
       };
     }
     return null;
@@ -108,8 +155,8 @@ getEmailRecipient: (voucher: Record<string, any>, voucherType: string): any => {
     try {
       const response = await api.post(`/${voucherType}/${id}/send-email`);
       return response.data;
-    } catch (error) {
-      console.error('Error sending voucher email:', error);
+    } catch (error: any) {
+      console.error("Error sending voucher email:", error);
       throw error;
     }
   },
@@ -117,17 +164,21 @@ getEmailRecipient: (voucher: Record<string, any>, voucherType: string): any => {
     try {
       const response = await api.delete(`/${voucherType}/${id}`);
       return response.data;
-    } catch (error) {
-      console.error('Error deleting voucher:', error);
+    } catch (error: any) {
+      console.error("Error deleting voucher:", error);
       throw error;
     }
   },
-getVoucherActions: (voucher: Record<string, any>, voucherType: string): any => {
+  getVoucherActions: (
+    voucher: Record<string, any>,
+    voucherType: string,
+  ): any => {
     const recipient = voucherService.getEmailRecipient(voucher, voucherType);
     return {
       canView: true,
       canEdit: true,
-      canDelete: voucher.status !== 'approved' && voucher.status !== 'confirmed',
+      canDelete:
+        voucher.status !== "approved" && voucher.status !== "confirmed",
       canPrint: true,
       canEmail: Boolean(recipient?.email),
       emailRecipient: recipient,

@@ -22,6 +22,8 @@ import {
   Typography,
   Chip,
   Grid,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { voucherService, reportsService } from '../../services/authService';
@@ -30,7 +32,6 @@ import { generateVoucherPDF, getVoucherPdfConfig } from '../../utils/pdfUtils';
 import MegaMenu from '../../components/MegaMenu';
 import VoucherContextMenu from '../../components/VoucherContextMenu';
 import VoucherListModal from '../../components/VoucherListModal';
-import Grid from '@mui/material/Grid';
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -118,7 +119,7 @@ const VoucherManagement: React.FC = () => {
       const pdfConfig = getVoucherPdfConfig(voucherType);
       await generateVoucherPDF(voucherData, pdfConfig);
     } catch (error: any) {
-      console.error(msg, err);
+      console.error("Error generating PDF:", error);
       alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
     }
   };
@@ -152,7 +153,7 @@ const VoucherManagement: React.FC = () => {
         }
         alert('Voucher deleted successfully');
       } catch (error: any) {
-        console.error(msg, err);
+        console.error("Error deleting voucher:", error);
         alert(`Error deleting voucher: ${error.response?.data?.detail || error.message || 'Unknown error'}`);
       }
     }
@@ -185,7 +186,7 @@ const VoucherManagement: React.FC = () => {
     enabled: tabValue === 1
   });
   // Financial vouchers queries
-  const { data: financialVouchers, isLoading, refetch: refetchFinancialVouchers } = useQuery({
+  const { data: financialVouchers, isLoading: financialLoading, refetch: refetchFinancialVouchers } = useQuery({
     queryKey: ['financialVouchers'],
     queryFn: async () => {
       const [payments, receipts, journals, contras] = await Promise.all([
@@ -199,7 +200,7 @@ const VoucherManagement: React.FC = () => {
     enabled: tabValue === 2
   });
   // Internal vouchers queries  
-const { data: internalVouchers, isLoading:refetch: refetchInternalVouchers } = useQuery({
+  const { data: internalVouchers, isLoading: internalLoading, refetch: refetchInternalVouchers } = useQuery({
     queryKey: ['internalVouchers'],
     queryFn: async () => {
       const [manufacturing, stock] = await Promise.all([
@@ -391,13 +392,13 @@ const { data: internalVouchers, isLoading:refetch: refetchInternalVouchers } = u
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Financial Vouchers</Typography>
             </Box>
-            {renderVoucherTable(voucherTypes[2].vouchers, 'Financial', false)}
+            {renderVoucherTable(voucherTypes[2].vouchers, 'Financial', financialLoading)}
           </TabPanel>
           <TabPanel value={tabValue} index={3}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6">Internal Vouchers</Typography>
             </Box>
-            {renderVoucherTable(voucherTypes[3].vouchers, 'Internal', false)}
+            {renderVoucherTable(voucherTypes[3].vouchers, 'Internal', internalLoading)}
           </TabPanel>
         </Paper>
         {/* Summary */}

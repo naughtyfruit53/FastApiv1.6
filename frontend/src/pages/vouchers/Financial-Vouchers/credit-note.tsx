@@ -1,15 +1,36 @@
 // Credit Note Page - Refactored using shared DRY logic with 40:60 split layout
-import React from 'react';
-import {Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Paper, Table, TableBody, TableCell, TableHead, TableRow} from '@mui/material';
-import {Add} from '@mui/icons-material';
-import AddCustomerModal from '../../../components/AddCustomerModal';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-import VoucherListModal from '../../../components/VoucherListModal';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {getVoucherConfig, getVoucherStyles} from '../../../utils/voucherUtils';
+import React from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  Alert,
+  CircularProgress,
+  Container,
+  Autocomplete,
+  InputAdornment,
+  Tooltip,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@mui/material";
+import { Add } from "@mui/icons-material";
+import AddCustomerModal from "../../../components/AddCustomerModal";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import VoucherListModal from "../../../components/VoucherListModal";
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import {
+  getVoucherConfig,
+  getVoucherStyles,
+} from "../../../utils/voucherUtils";
 const CreditNotePage: React.FC = () => {
-  const config = getVoucherConfig('credit-note');
+  const config = getVoucherConfig("credit-note");
   const voucherStyles = getVoucherStyles();
   const {
     // State
@@ -68,13 +89,13 @@ const CreditNotePage: React.FC = () => {
     // Load the selected voucher into the form
     reset(voucher);
     // Set the form with the voucher data
-    Object.keys(voucher).forEach(key => {
+    Object.keys(voucher).forEach((key) => {
       setValue(key, voucher[key]);
     });
   };
   // Handle customer creation success
   const handleCustomerCreated = async (newCustomer: any): Promise<void> => {
-    setValue('customer_id', newCustomer.id);
+    setValue("customer_id", newCustomer.id);
     refreshMasterData();
   };
   return (
@@ -82,8 +103,22 @@ const CreditNotePage: React.FC = () => {
       <Grid container spacing={3}>
         {/* Left side - Voucher List (40%) */}
         <Grid size={{ xs: 12, md: 5 }}>
-          <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Paper
+            sx={{
+              p: 2,
+              height: "calc(100vh - 120px)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
               <Typography variant="h6">Credit Notes</Typography>
               <VoucherHeaderActions
                 mode="create"
@@ -93,11 +128,11 @@ const CreditNotePage: React.FC = () => {
               />
             </Box>
             {isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                 <CircularProgress />
               </Box>
             ) : (
-              <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+              <Box sx={{ flexGrow: 1, overflow: "auto" }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
@@ -109,25 +144,33 @@ const CreditNotePage: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {sortedVouchers.slice(0, 7).map((voucher: any, index: number) => (
-                      <TableRow 
-                        key={voucher.id}
-                        onClick={() => handleVoucherClick(voucher)}
-                        onContextMenu={(e) => handleContextMenu(e, voucher)}
-                        sx={{ 
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: 'action.hover' }
-                        }}
-                      >
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{voucher.voucher_number}</TableCell>
-                        <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {customerList?.find((c: any) => c.id === voucher.customer_id)?.name || 'N/A'}
-                        </TableCell>
-                        <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                      </TableRow>
-                    ))}
+                    {sortedVouchers
+                      .slice(0, 7)
+                      .map((voucher: any, index: number) => (
+                        <TableRow
+                          key={voucher.id}
+                          onClick={() => handleVoucherClick(voucher)}
+                          onContextMenu={(e) => handleContextMenu(e, voucher)}
+                          sx={{
+                            cursor: "pointer",
+                            "&:hover": { bgcolor: "action.hover" },
+                          }}
+                        >
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{voucher.voucher_number}</TableCell>
+                          <TableCell>
+                            {new Date(voucher.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {customerList?.find(
+                              (c: any) => c.id === voucher.customer_id,
+                            )?.name || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            ₹{voucher.total_amount?.toFixed(2) || "0.00"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </Box>
@@ -136,16 +179,28 @@ const CreditNotePage: React.FC = () => {
         </Grid>
         {/* Right side - Voucher Form (60%) */}
         <Grid size={{ xs: 12, md: 7 }}>
-          <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Paper sx={{ p: 3, height: "calc(100vh - 120px)", overflow: "auto" }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
               <Typography variant="h6">
-                {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Credit Note
+                {mode === "create"
+                  ? "Create"
+                  : mode === "edit"
+                    ? "Edit"
+                    : "View"}{" "}
+                Credit Note
               </Typography>
-              {mode !== 'create' && (
+              {mode !== "create" && (
                 <Box>
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
+                  <Button
+                    variant="outlined"
+                    size="small"
                     onClick={() => handleGeneratePDF()}
                     sx={{ mr: 1 }}
                   >
@@ -159,31 +214,31 @@ const CreditNotePage: React.FC = () => {
                 <CircularProgress />
               </Box>
             )}
-            <Box 
-              component="form" 
-              onSubmit={handleSubmit(handleSubmitForm)} 
-              sx={{ 
+            <Box
+              component="form"
+              onSubmit={handleSubmit(handleSubmitForm)}
+              sx={{
                 mt: 3,
-                ...voucherStyles.formContainer
+                ...voucherStyles.formContainer,
               }}
             >
               <Grid container spacing={3}>
                 <Grid size={6}>
                   <TextField
-                    {...control.register('voucher_number')}
+                    {...control.register("voucher_number")}
                     label="Credit Note Number"
                     fullWidth
                     disabled={true}
                     sx={voucherStyles.centerField}
                     InputProps={{
                       readOnly: true,
-                      style: { textAlign: 'center', fontWeight: 'bold' }
+                      style: { textAlign: "center", fontWeight: "bold" },
                     }}
                   />
                 </Grid>
                 <Grid size={6}>
                   <TextField
-                    {...control.register('date')}
+                    {...control.register("date")}
                     label="Date"
                     type="date"
                     fullWidth
@@ -195,10 +250,14 @@ const CreditNotePage: React.FC = () => {
                 <Grid size={12}>
                   <Autocomplete
                     options={customerList || []}
-                    getOptionLabel={(option) => option.name || ''}
-                    value={customerList?.find((c: any) => c.id === watch('customer_id')) || null}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={
+                      customerList?.find(
+                        (c: any) => c.id === watch("customer_id"),
+                      ) || null
+                    }
                     onChange={(_, newValue) => {
-                      setValue('customer_id', newValue?.id || null);
+                      setValue("customer_id", newValue?.id || null);
                     }}
                     renderInput={(params) => (
                       <TextField
@@ -216,8 +275,10 @@ const CreditNotePage: React.FC = () => {
                                 <Tooltip title="Add New Customer">
                                   <Button
                                     size="small"
-                                    onClick={() => setShowAddCustomerModal(true)}
-                                    sx={{ minWidth: 'auto', p: 0.5 }}
+                                    onClick={() =>
+                                      setShowAddCustomerModal(true)
+                                    }
+                                    sx={{ minWidth: "auto", p: 0.5 }}
                                   >
                                     <Add fontSize="small" />
                                   </Button>
@@ -234,7 +295,7 @@ const CreditNotePage: React.FC = () => {
                 </Grid>
                 <Grid size={6}>
                   <TextField
-                    {...control.register('total_amount')}
+                    {...control.register("total_amount")}
                     label="Total Amount"
                     type="number"
                     fullWidth
@@ -242,13 +303,15 @@ const CreditNotePage: React.FC = () => {
                     disabled={isViewMode}
                     sx={voucherStyles.centerField}
                     InputProps={{
-                      startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                      startAdornment: (
+                        <InputAdornment position="start">₹</InputAdornment>
+                      ),
                     }}
                   />
                 </Grid>
                 <Grid size={6}>
                   <TextField
-                    {...control.register('reference')}
+                    {...control.register("reference")}
                     label="Reference"
                     fullWidth
                     disabled={isViewMode}
@@ -257,7 +320,7 @@ const CreditNotePage: React.FC = () => {
                 </Grid>
                 <Grid size={12}>
                   <TextField
-                    {...control.register('notes')}
+                    {...control.register("notes")}
                     label="Notes"
                     fullWidth
                     multiline
@@ -276,13 +339,21 @@ const CreditNotePage: React.FC = () => {
                 )}
                 {!isViewMode && (
                   <Grid size={12}>
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "flex-end",
+                      }}
+                    >
                       <Button
                         type="submit"
                         variant="contained"
-                        disabled={createMutation.isPending || updateMutation.isPending}
+                        disabled={
+                          createMutation.isPending || updateMutation.isPending
+                        }
                       >
-                        {mode === 'create' ? 'Create' : 'Update'} Credit Note
+                        {mode === "create" ? "Create" : "Update"} Credit Note
                       </Button>
                     </Box>
                   </Grid>

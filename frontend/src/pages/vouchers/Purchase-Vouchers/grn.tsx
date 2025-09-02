@@ -118,13 +118,13 @@ const GoodsReceiptNotePage: React.FC = () => {
   const [selectedVoucherType, setSelectedVoucherType] = useState<'purchase-voucher' | 'purchase-order' | null>(null);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
   // Fetch purchase orders
-  const { data: purchaseOrdersData, refetch } = useQuery({
+  const { data: purchaseOrdersData, refetch: refetchOrders } = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: () => api.get('/purchase-orders').then(res => res.data),
     enabled: isOrgContextReady,
   });
   // Fetch purchase vouchers
-const { data: purchaseVouchersData, refetch:} = useQuery({
+  const { data: purchaseVouchersData, refetch: refetchVouchers } = useQuery({
     queryKey: ['purchase-vouchers'],
     queryFn: () => api.get('/purchase-vouchers').then(res => res.data),
     enabled: isOrgContextReady,
@@ -224,8 +224,8 @@ const { data: purchaseVouchersData, refetch:} = useQuery({
           handleGeneratePDF(response);
         }
       }
-    } catch (err) {
-      console.error(msg, err);
+    } catch (error: any) {
+      console.error("Error saving voucher:", error);
       alert('Failed to save goods receipt note. Please try again.');
     }
   };

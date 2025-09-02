@@ -118,7 +118,7 @@ const PurchaseVoucherPage: React.FC = () => {
     { id: null, name: 'Add New Vendor...' }
   ];
   // Stock data state for items
-const [setStockLoading] = useState<{[key: number]: boolean}>();
+  const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
   // Fetch company details
   const { data: company } = useQuery({
     queryKey: ['company'],
@@ -158,12 +158,13 @@ const [setStockLoading] = useState<{[key: number]: boolean}>();
           handleGeneratePDF(response);
         }
       }
-    } catch (err) {
-      console.error(msg, err);
+    } catch (error: any) {
+      console.error("Error saving voucher:", error);
       alert('Failed to save purchase voucher. Please try again.');
     }
   };
   // Function to get stock color
+  const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {return 'error.main';}
     if (stock <= reorder) {return 'warning.main';}
     return 'success.main';

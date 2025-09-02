@@ -1,6 +1,6 @@
 // frontend/src/services/hrService.ts
 
-import api from '../lib/api';
+import api from "../lib/api";
 
 export interface HRDashboardData {
   total_employees: number;
@@ -53,7 +53,7 @@ export interface Employee {
 }
 
 class HRService {
-  private endpoint = '/hr';
+  private endpoint = "/hr";
 
   /**
    * Get HR dashboard data
@@ -63,7 +63,7 @@ class HRService {
       const response = await api.get(`${this.endpoint}/dashboard`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching HR dashboard data:', error);
+      console.error("Error fetching HR dashboard data:", error);
       throw error;
     }
   }
@@ -74,11 +74,11 @@ class HRService {
   async getRecentActivities(limit: number = 10): Promise<HRActivity[]> {
     try {
       const response = await api.get(`${this.endpoint}/recent-activities`, {
-        params: { limit }
+        params: { limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching HR activities:', error);
+      console.error("Error fetching HR activities:", error);
       throw error;
     }
   }
@@ -89,11 +89,11 @@ class HRService {
   async getUpcomingTasks(limit: number = 10): Promise<HRTask[]> {
     try {
       const response = await api.get(`${this.endpoint}/upcoming-tasks`, {
-        params: { limit }
+        params: { limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching HR tasks:', error);
+      console.error("Error fetching HR tasks:", error);
       throw error;
     }
   }
@@ -101,14 +101,17 @@ class HRService {
   /**
    * Get all employees
    */
-  async getEmployees(skip: number = 0, limit: number = 100): Promise<Employee[]> {
+  async getEmployees(
+    skip: number = 0,
+    limit: number = 100,
+  ): Promise<Employee[]> {
     try {
       const response = await api.get(`${this.endpoint}/employees`, {
-        params: { skip, limit }
+        params: { skip, limit },
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error("Error fetching employees:", error);
       throw error;
     }
   }
@@ -131,10 +134,13 @@ class HRService {
    */
   async createEmployee(employeeData: any): Promise<Employee> {
     try {
-      const response = await api.post(`${this.endpoint}/employees`, employeeData);
+      const response = await api.post(
+        `${this.endpoint}/employees`,
+        employeeData,
+      );
       return response.data;
     } catch (error) {
-      console.error('Error creating employee:', error);
+      console.error("Error creating employee:", error);
       throw error;
     }
   }
@@ -144,7 +150,10 @@ class HRService {
    */
   async updateEmployee(id: number, employeeData: any): Promise<Employee> {
     try {
-      const response = await api.put(`${this.endpoint}/employees/${id}`, employeeData);
+      const response = await api.put(
+        `${this.endpoint}/employees/${id}`,
+        employeeData,
+      );
       return response.data;
     } catch (error) {
       console.error(`Error updating employee ${id}:`, error);

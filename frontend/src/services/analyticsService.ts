@@ -1,5 +1,5 @@
 // frontend/src/services/analyticsService.ts
-import api from '../lib/api';
+import api from "../lib/api";
 export interface CustomerAnalyticsData {
   customer_id: number;
   customer_name: string;
@@ -51,61 +51,69 @@ export interface DashboardMetrics {
 }
 export const analyticsService = {
   getCustomerAnalytics: async (
-    customerId: number, 
+    customerId: number,
     includeRecentInteractions: boolean = true,
-    recentInteractionsLimit: number = 5
+    recentInteractionsLimit: number = 5,
   ): Promise<CustomerAnalyticsData> => {
     try {
-      const response = await api.get(`/analytics/customers/${customerId}/analytics`, {
-        params: {
-          include_recent_interactions: includeRecentInteractions,
-          recent_interactions_limit: recentInteractionsLimit,
+      const response = await api.get(
+        `/analytics/customers/${customerId}/analytics`,
+        {
+          params: {
+            include_recent_interactions: includeRecentInteractions,
+            recent_interactions_limit: recentInteractionsLimit,
+          },
         },
-      });
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get customer analytics');
+      throw new Error(error.userMessage || "Failed to get customer analytics");
     }
   },
   getSegmentAnalytics: async (
     segmentName: string,
     includeTimeline: boolean = true,
-    timelineDays: number = 30
+    timelineDays: number = 30,
   ): Promise<SegmentAnalyticsData> => {
     try {
-      const response = await api.get(`/analytics/segments/${segmentName}/analytics`, {
-        params: {
-          include_timeline: includeTimeline,
-          timeline_days: timelineDays,
+      const response = await api.get(
+        `/analytics/segments/${segmentName}/analytics`,
+        {
+          params: {
+            include_timeline: includeTimeline,
+            timeline_days: timelineDays,
+          },
         },
-      });
+      );
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get segment analytics');
+      throw new Error(error.userMessage || "Failed to get segment analytics");
     }
   },
   getDashboardMetrics: async (): Promise<DashboardMetrics> => {
     try {
-      const response = await api.get('/analytics/dashboard/metrics');
+      const response = await api.get("/analytics/dashboard/metrics");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get dashboard metrics');
+      throw new Error(error.userMessage || "Failed to get dashboard metrics");
     }
   },
   getAvailableSegments: async (): Promise<string[]> => {
     try {
-      const response = await api.get('/analytics/segments');
+      const response = await api.get("/analytics/segments");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get available segments');
+      throw new Error(error.userMessage || "Failed to get available segments");
     }
   },
   getOrganizationSummary: async () => {
     try {
-      const response = await api.get('/analytics/organization/summary');
+      const response = await api.get("/analytics/organization/summary");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || 'Failed to get organization analytics summary');
+      throw new Error(
+        error.userMessage || "Failed to get organization analytics summary",
+      );
     }
-  }
+  },
 };

@@ -3,7 +3,7 @@
  * SLA Management Service
  * Handles API calls for SLA policies and tracking
  */
-import api from '../lib/api';
+import api from "../lib/api";
 // Types for SLA Management
 export interface SLAPolicy {
   id: number;
@@ -32,8 +32,8 @@ export interface SLATracking {
   resolution_deadline: string;
   first_response_at?: string;
   resolved_at?: string;
-  response_status: 'pending' | 'met' | 'breached';
-  resolution_status: 'pending' | 'met' | 'breached';
+  response_status: "pending" | "met" | "breached";
+  resolution_status: "pending" | "met" | "breached";
   escalation_triggered: boolean;
   escalation_triggered_at?: string;
   escalation_level: number;
@@ -73,163 +73,271 @@ export interface SLAPolicyCreate {
 export type SLAPolicyUpdate = Partial<SLAPolicyCreate>;
 export const slaService = {
   // SLA Policy Management
-  getPolicies: async (organizationId: number, isActive?: boolean): Promise<SLAPolicy[]> => {
+  getPolicies: async (
+    organizationId: number,
+    isActive?: boolean,
+  ): Promise<SLAPolicy[]> => {
     try {
       const params = new URLSearchParams();
       if (isActive !== undefined) {
-        params.append('is_active', isActive.toString());
+        params.append("is_active", isActive.toString());
       }
-      const response = await api.get(`/api/v1/sla/organizations/${organizationId}/policies?${params.toString()}`);
+      const response = await api.get(
+        `/api/v1/sla/organizations/${organizationId}/policies?${params.toString()}`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching SLA policies:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to fetch SLA policies');
+      console.error("Error fetching SLA policies:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to fetch SLA policies",
+      );
     }
   },
-  getPolicy: async (organizationId: number, policyId: number): Promise<SLAPolicy> => {
+  getPolicy: async (
+    organizationId: number,
+    policyId: number,
+  ): Promise<SLAPolicy> => {
     try {
-      const response = await api.get(`/api/v1/sla/organizations/${organizationId}/policies/${policyId}`);
+      const response = await api.get(
+        `/api/v1/sla/organizations/${organizationId}/policies/${policyId}`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching SLA policy:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to fetch SLA policy');
+      console.error("Error fetching SLA policy:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to fetch SLA policy",
+      );
     }
   },
-  createPolicy: async (organizationId: number, policy: SLAPolicyCreate): Promise<SLAPolicy> => {
+  createPolicy: async (
+    organizationId: number,
+    policy: SLAPolicyCreate,
+  ): Promise<SLAPolicy> => {
     try {
-      const response = await api.post(`/api/v1/sla/organizations/${organizationId}/policies`, policy);
+      const response = await api.post(
+        `/api/v1/sla/organizations/${organizationId}/policies`,
+        policy,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error creating SLA policy:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to create SLA policy');
+      console.error("Error creating SLA policy:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to create SLA policy",
+      );
     }
   },
-  updatePolicy: async (organizationId: number, policyId: number, policy: SLAPolicyUpdate): Promise<SLAPolicy> => {
+  updatePolicy: async (
+    organizationId: number,
+    policyId: number,
+    policy: SLAPolicyUpdate,
+  ): Promise<SLAPolicy> => {
     try {
-      const response = await api.put(`/api/v1/sla/organizations/${organizationId}/policies/${policyId}`, policy);
+      const response = await api.put(
+        `/api/v1/sla/organizations/${organizationId}/policies/${policyId}`,
+        policy,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error updating SLA policy:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to update SLA policy');
+      console.error("Error updating SLA policy:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to update SLA policy",
+      );
     }
   },
-  deletePolicy: async (organizationId: number, policyId: number): Promise<void> => {
+  deletePolicy: async (
+    organizationId: number,
+    policyId: number,
+  ): Promise<void> => {
     try {
-      await api.delete(`/api/v1/sla/organizations/${organizationId}/policies/${policyId}`);
+      await api.delete(
+        `/api/v1/sla/organizations/${organizationId}/policies/${policyId}`,
+      );
     } catch (error: any) {
-      console.error('Error deleting SLA policy:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to delete SLA policy');
+      console.error("Error deleting SLA policy:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to delete SLA policy",
+      );
     }
   },
   // SLA Tracking
-  assignSLAToTicket: async (organizationId: number, ticketId: number, forceRecreate?: boolean): Promise<any> => {
+  assignSLAToTicket: async (
+    organizationId: number,
+    ticketId: number,
+    forceRecreate?: boolean,
+  ): Promise<any> => {
     try {
       const params = new URLSearchParams();
       if (forceRecreate) {
-        params.append('force_recreate', 'true');
+        params.append("force_recreate", "true");
       }
-      const response = await api.post(`/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/sla?${params.toString()}`);
+      const response = await api.post(
+        `/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/sla?${params.toString()}`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error assigning SLA to ticket:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to assign SLA to ticket');
+      console.error("Error assigning SLA to ticket:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to assign SLA to ticket",
+      );
     }
   },
-  getTicketSLA: async (organizationId: number, ticketId: number): Promise<SLATrackingWithPolicy> => {
+  getTicketSLA: async (
+    organizationId: number,
+    ticketId: number,
+  ): Promise<SLATrackingWithPolicy> => {
     try {
-      const response = await api.get(`/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/sla`);
+      const response = await api.get(
+        `/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/sla`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching ticket SLA:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to fetch ticket SLA');
+      console.error("Error fetching ticket SLA:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to fetch ticket SLA",
+      );
     }
   },
-  updateSLATracking: async (organizationId: number, trackingId: number, update: any): Promise<SLATracking> => {
+  updateSLATracking: async (
+    organizationId: number,
+    trackingId: number,
+    update: any,
+  ): Promise<SLATracking> => {
     try {
-      const response = await api.put(`/api/v1/sla/organizations/${organizationId}/tracking/${trackingId}`, update);
+      const response = await api.put(
+        `/api/v1/sla/organizations/${organizationId}/tracking/${trackingId}`,
+        update,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error updating SLA tracking:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to update SLA tracking');
+      console.error("Error updating SLA tracking:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to update SLA tracking",
+      );
     }
   },
   // SLA Monitoring
-  getBreachedSLAs: async (organizationId: number, limit?: number): Promise<SLATracking[]> => {
+  getBreachedSLAs: async (
+    organizationId: number,
+    limit?: number,
+  ): Promise<SLATracking[]> => {
     try {
       const params = new URLSearchParams();
       if (limit) {
-        params.append('limit', limit.toString());
+        params.append("limit", limit.toString());
       }
-      const response = await api.get(`/api/v1/sla/organizations/${organizationId}/sla/breached?${params.toString()}`);
+      const response = await api.get(
+        `/api/v1/sla/organizations/${organizationId}/sla/breached?${params.toString()}`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching breached SLAs:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to fetch breached SLAs');
+      console.error("Error fetching breached SLAs:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to fetch breached SLAs",
+      );
     }
   },
-  getEscalationCandidates: async (organizationId: number): Promise<SLATracking[]> => {
+  getEscalationCandidates: async (
+    organizationId: number,
+  ): Promise<SLATracking[]> => {
     try {
-      const response = await api.get(`/api/v1/sla/organizations/${organizationId}/sla/escalation-candidates`);
+      const response = await api.get(
+        `/api/v1/sla/organizations/${organizationId}/sla/escalation-candidates`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching escalation candidates:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to fetch escalation candidates');
+      console.error("Error fetching escalation candidates:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to fetch escalation candidates",
+      );
     }
   },
-  triggerEscalation: async (organizationId: number, trackingId: number): Promise<any> => {
+  triggerEscalation: async (
+    organizationId: number,
+    trackingId: number,
+  ): Promise<any> => {
     try {
-      const response = await api.post(`/api/v1/sla/organizations/${organizationId}/tracking/${trackingId}/escalate`);
+      const response = await api.post(
+        `/api/v1/sla/organizations/${organizationId}/tracking/${trackingId}/escalate`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error triggering escalation:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to trigger escalation');
+      console.error("Error triggering escalation:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to trigger escalation",
+      );
     }
   },
   // SLA Analytics
   getSLAMetrics: async (
-    organizationId: number, 
-    startDate?: string, 
-    endDate?: string, 
-    days?: number
+    organizationId: number,
+    startDate?: string,
+    endDate?: string,
+    days?: number,
   ): Promise<SLAMetrics> => {
     try {
       const params = new URLSearchParams();
-      if (startDate) {params.append('start_date', startDate);}
-      if (endDate) {params.append('end_date', endDate);}
-      if (days) {params.append('days', days.toString());}
-      const response = await api.get(`/api/v1/sla/organizations/${organizationId}/sla/metrics?${params.toString()}`);
+      if (startDate) {
+        params.append("start_date", startDate);
+      }
+      if (endDate) {
+        params.append("end_date", endDate);
+      }
+      if (days) {
+        params.append("days", days.toString());
+      }
+      const response = await api.get(
+        `/api/v1/sla/organizations/${organizationId}/sla/metrics?${params.toString()}`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching SLA metrics:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to fetch SLA metrics');
+      console.error("Error fetching SLA metrics:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to fetch SLA metrics",
+      );
     }
   },
   // Ticket Processing
-  processTicketResponse: async (organizationId: number, ticketId: number, responseTime?: string): Promise<any> => {
+  processTicketResponse: async (
+    organizationId: number,
+    ticketId: number,
+    responseTime?: string,
+  ): Promise<any> => {
     try {
       const params = new URLSearchParams();
       if (responseTime) {
-        params.append('response_time', responseTime);
+        params.append("response_time", responseTime);
       }
-      const response = await api.post(`/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/response?${params.toString()}`);
+      const response = await api.post(
+        `/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/response?${params.toString()}`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error processing ticket response:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to process ticket response');
+      console.error("Error processing ticket response:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to process ticket response",
+      );
     }
   },
-  processTicketResolution: async (organizationId: number, ticketId: number, resolutionTime?: string): Promise<any> => {
+  processTicketResolution: async (
+    organizationId: number,
+    ticketId: number,
+    resolutionTime?: string,
+  ): Promise<any> => {
     try {
       const params = new URLSearchParams();
       if (resolutionTime) {
-        params.append('resolution_time', resolutionTime);
+        params.append("resolution_time", resolutionTime);
       }
-      const response = await api.post(`/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/resolution?${params.toString()}`);
+      const response = await api.post(
+        `/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/resolution?${params.toString()}`,
+      );
       return response.data;
     } catch (error: any) {
-      console.error('Error processing ticket resolution:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to process ticket resolution');
+      console.error("Error processing ticket resolution:", error);
+      throw new Error(
+        error.response?.data?.detail || "Failed to process ticket resolution",
+      );
     }
-  }
+  },
 };
 export default slaService;

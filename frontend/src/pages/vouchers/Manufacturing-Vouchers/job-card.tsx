@@ -1,24 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  Grid, 
-  IconButton, 
-  Alert, 
-  CircularProgress, 
-  Container, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  Autocomplete, 
+import React, { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  IconButton,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Autocomplete,
   FormControl,
   InputLabel,
   Select,
@@ -32,21 +30,12 @@ import {
   Tab,
   Accordion,
   AccordionSummary,
-  AccordionDetails
-} from '@mui/material';
-import { 
-  Add, 
-  Remove,
-  Visibility, 
-  Edit, 
-  Delete, 
-  Save,
-  Cancel,
-  ExpandMore
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../../lib/api';
-import { getProducts, getVendors } from '../../../services/masterService';
+  AccordionDetails,
+} from "@mui/material";
+import { Add, Remove, Save, Cancel, ExpandMore } from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "../../../lib/api";
+import { getProducts, getVendors } from "../../../services/masterService";
 interface JobCardSuppliedMaterial {
   product_id: number;
   quantity_supplied: number;
@@ -91,37 +80,37 @@ interface JobCardVoucher {
   received_outputs: JobCardReceivedOutput[];
 }
 const defaultValues: Partial<JobCardVoucher> = {
-  voucher_number: '',
-  date: new Date().toISOString().split('T')[0],
-  job_type: 'outsourcing',
-  materials_supplied_by: 'company',
-  job_status: 'planned',
+  voucher_number: "",
+  date: new Date().toISOString().split("T")[0],
+  job_type: "outsourcing",
+  materials_supplied_by: "company",
+  job_status: "planned",
   quality_check_required: true,
-  status: 'draft',
+  status: "draft",
   total_amount: 0,
   supplied_materials: [],
-  received_outputs: []
+  received_outputs: [],
 };
 const jobTypeOptions = [
-  { value: 'outsourcing', label: 'Outsourcing' },
-  { value: 'subcontracting', label: 'Subcontracting' },
-  { value: 'processing', label: 'Processing' }
+  { value: "outsourcing", label: "Outsourcing" },
+  { value: "subcontracting", label: "Subcontracting" },
+  { value: "processing", label: "Processing" },
 ];
 const jobStatusOptions = [
-  { value: 'planned', label: 'Planned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' }
+  { value: "planned", label: "Planned" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 const materialsSuppliedByOptions = [
-  { value: 'company', label: 'Company' },
-  { value: 'vendor', label: 'Vendor' },
-  { value: 'mixed', label: 'Mixed' }
+  { value: "company", label: "Company" },
+  { value: "vendor", label: "Vendor" },
+  { value: "mixed", label: "Mixed" },
 ];
 const qualityStatusOptions = [
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'rework', label: 'Rework Required' }
+  { value: "accepted", label: "Accepted" },
+  { value: "rejected", label: "Rejected" },
+  { value: "rework", label: "Rework Required" },
 ];
 function TabPanel({ children, value, index, ...other }: any) {
   return (
@@ -137,130 +126,140 @@ function TabPanel({ children, value, index, ...other }: any) {
   );
 }
 export default function JobCardVoucher() {
-  const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const queryClient = useQueryClient();
-  const { control, handleSubmit, watch, setValue, reset, formState } = useForm<JobCardVoucher>({
-    defaultValues
-  });
+  const { control, handleSubmit, watch, setValue, reset, formState } =
+    useForm<JobCardVoucher>({
+      defaultValues,
+    });
   const {
     fields: materialFields,
     append: appendMaterial,
-    remove: removeMaterial
+    remove: removeMaterial,
   } = useFieldArray({
     control,
-    name: 'supplied_materials'
+    name: "supplied_materials",
   });
   const {
     fields: outputFields,
     append: appendOutput,
-    remove: removeOutput
+    remove: removeOutput,
   } = useFieldArray({
     control,
-    name: 'received_outputs'
+    name: "received_outputs",
   });
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
-    queryKey: ['job-card-vouchers'],
-    queryFn: () => api.get('/job-card-vouchers').then(res => res.data),
+    queryKey: ["job-card-vouchers"],
+    queryFn: () => api.get("/job-card-vouchers").then((res) => res.data),
   });
   // Fetch vendors
   const { data: vendorList } = useQuery({
-    queryKey: ['vendors'],
-    queryFn: getVendors
+    queryKey: ["vendors"],
+    queryFn: getVendors,
   });
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
-    queryKey: ['manufacturing-orders'],
-    queryFn: () => api.get('/manufacturing-orders').then(res => res.data),
+    queryKey: ["manufacturing-orders"],
+    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
-    queryKey: ['products'],
-    queryFn: getProducts
+    queryKey: ["products"],
+    queryFn: getProducts,
   });
   // Fetch specific voucher
-const { data: voucherData} = useQuery({
-    queryKey: ['job-card-voucher', selectedId],
-    queryFn: () => api.get(`/job-card-vouchers/${selectedId}`).then(res => res.data),
-    enabled: !!selectedId
+  const { data: voucherData } = useQuery({
+    queryKey: ["job-card-voucher", selectedId],
+    queryFn: () =>
+      api.get(`/job-card-vouchers/${selectedId}`).then((res) => res.data),
+    enabled: !!selectedId,
   });
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
-    queryKey: ['nextJobCardNumber'],
-    queryFn: () => api.get('/job-card-vouchers/next-number').then(res => res.data),
-    enabled: mode === 'create',
+    queryKey: ["nextJobCardNumber"],
+    queryFn: () =>
+      api.get("/job-card-vouchers/next-number").then((res) => res.data),
+    enabled: mode === "create",
   });
-  const sortedVouchers = voucherList ? [...voucherList].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ) : [];
+  const sortedVouchers = voucherList
+    ? [...voucherList].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+    : [];
   const latestVouchers = sortedVouchers.slice(0, 10);
   const productOptions = productList || [];
   const vendorOptions = vendorList || [];
   const manufacturingOrderOptions = manufacturingOrders || [];
   useEffect(() => {
-    if (mode === 'create' && nextVoucherNumber) {
-      setValue('voucher_number', nextVoucherNumber);
+    if (mode === "create" && nextVoucherNumber) {
+      setValue("voucher_number", nextVoucherNumber);
     } else if (voucherData) {
       reset(voucherData);
-    } else if (mode === 'create') {
+    } else if (mode === "create") {
       reset(defaultValues);
     }
   }, [voucherData, mode, reset, nextVoucherNumber, setValue]);
   // Calculate totals
   useEffect(() => {
-    const suppliedMaterials = watch('supplied_materials') || [];
-    const receivedOutputs = watch('received_outputs') || [];
-    const suppliedValue = suppliedMaterials.reduce((sum, item) => 
-      sum + (item.quantity_supplied * item.unit_rate), 0);
-    const outputValue = receivedOutputs.reduce((sum, item) => 
-      sum + (item.quantity_received * item.unit_rate), 0);
+    const suppliedMaterials = watch("supplied_materials") || [];
+    const receivedOutputs = watch("received_outputs") || [];
+    const suppliedValue = suppliedMaterials.reduce(
+      (sum, item) => sum + item.quantity_supplied * item.unit_rate,
+      0,
+    );
+    const outputValue = receivedOutputs.reduce(
+      (sum, item) => sum + item.quantity_received * item.unit_rate,
+      0,
+    );
     // Net job work value
     const total = outputValue - suppliedValue;
-    setValue('total_amount', total);
-  }, [watch('supplied_materials'), watch('received_outputs'), setValue]);
+    setValue("total_amount", total);
+  }, [watch("supplied_materials"), watch("received_outputs"), setValue]);
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: JobCardVoucher) => api.post('/job-card-vouchers', data),
+    mutationFn: (data: JobCardVoucher) => api.post("/job-card-vouchers", data),
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ['job-card-vouchers'] });
-      setMode('create');
+      queryClient.invalidateQueries({ queryKey: ["job-card-vouchers"] });
+      setMode("create");
       setSelectedId(null);
       reset(defaultValues);
       const { data: newNextNumber } = await refetchNextNumber();
-      setValue('voucher_number', newNextNumber);
+      setValue("voucher_number", newNextNumber);
     },
     onError: (error: any) => {
       console.error(msg, err);
-    }
+    },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: JobCardVoucher }) => 
+    mutationFn: ({ id, data }: { id: number; data: JobCardVoucher }) =>
       api.put(`/job-card-vouchers/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['job-card-vouchers'] });
-      setMode('create');
+      queryClient.invalidateQueries({ queryKey: ["job-card-vouchers"] });
+      setMode("create");
       setSelectedId(null);
       reset(defaultValues);
     },
     onError: (error: any) => {
       console.error(msg, err);
-    }
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/job-card-vouchers/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['job-card-vouchers'] });
+      queryClient.invalidateQueries({ queryKey: ["job-card-vouchers"] });
       if (selectedId) {
         setSelectedId(null);
-        setMode('create');
+        setMode("create");
         reset(defaultValues);
       }
-    }
+    },
   });
   const onSubmit = (data: JobCardVoucher) => {
-    if (mode === 'edit' && selectedId) {
+    if (mode === "edit" && selectedId) {
       updateMutation.mutate({ id: selectedId, data });
     } else {
       createMutation.mutate(data);
@@ -268,19 +267,19 @@ const { data: voucherData} = useQuery({
   };
   const handleEdit = (voucher: JobCardVoucher) => {
     setSelectedId(voucher.id!);
-    setMode('edit');
+    setMode("edit");
   };
   const handleView = (voucher: JobCardVoucher) => {
     setSelectedId(voucher.id!);
-    setMode('view');
+    setMode("view");
   };
   const handleDelete = (voucherId: number) => {
-    if (window.confirm('Are you sure you want to delete this voucher?')) {
+    if (window.confirm("Are you sure you want to delete this voucher?")) {
       deleteMutation.mutate(voucherId);
     }
   };
   const handleCancel = () => {
-    setMode('create');
+    setMode("create");
     setSelectedId(null);
     reset(defaultValues);
   };
@@ -288,22 +287,27 @@ const { data: voucherData} = useQuery({
     appendMaterial({
       product_id: 0,
       quantity_supplied: 0,
-      unit: '',
-      unit_rate: 0
+      unit: "",
+      unit_rate: 0,
     });
   };
   const addOutput = () => {
     appendOutput({
       product_id: 0,
       quantity_received: 0,
-      unit: '',
-      unit_rate: 0
+      unit: "",
+      unit_rate: 0,
     });
   };
   if (isLoading) {
     return (
       <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="200px"
+        >
           <CircularProgress />
         </Box>
       </Container>
@@ -319,7 +323,12 @@ const { data: voucherData} = useQuery({
         <Grid size={{ xs: 12, md: 5 }}>
           <Card>
             <CardContent>
-              <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
+              <Box
+                display="flex"
+                justifyContent="between"
+                alignItems="center"
+                mb={2}
+              >
                 <Typography variant="h6">Recent Vouchers</Typography>
                 {/* VoucherHeaderActions commented out  */}
               </Box>
@@ -339,11 +348,13 @@ const { data: voucherData} = useQuery({
                     {latestVouchers.map((voucher, index) => (
                       <TableRow key={voucher.id}>
                         <TableCell>{voucher.voucher_number}</TableCell>
-                        <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {new Date(voucher.date).toLocaleDateString()}
+                        </TableCell>
                         <TableCell>{voucher.vendor?.name}</TableCell>
                         <TableCell>
-                          <Chip 
-                            label={voucher.job_type} 
+                          <Chip
+                            label={voucher.job_type}
                             size="small"
                             color="primary"
                           />
@@ -377,15 +388,20 @@ const { data: voucherData} = useQuery({
         <Grid size={{ xs: 12, md: 7 }}>
           <Card>
             <CardContent>
-              <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
+              <Box
+                display="flex"
+                justifyContent="between"
+                alignItems="center"
+                mb={2}
+              >
                 <Typography variant="h6">
-                  {mode === 'create' && 'Create Job Card Voucher'}
-                  {mode === 'edit' && 'Edit Job Card Voucher'}
-                  {mode === 'view' && 'View Job Card Voucher'}
+                  {mode === "create" && "Create Job Card Voucher"}
+                  {mode === "edit" && "Edit Job Card Voucher"}
+                  {mode === "view" && "View Job Card Voucher"}
                 </Typography>
-                {mode !== 'create' && (
-                  <Button 
-                    variant="outlined" 
+                {mode !== "create" && (
+                  <Button
+                    variant="outlined"
                     onClick={handleCancel}
                     startIcon={<Cancel />}
                   >
@@ -419,9 +435,9 @@ const { data: voucherData} = useQuery({
                     <FormControl fullWidth>
                       <InputLabel>Job Type</InputLabel>
                       <Select
-                        value={watch('job_type')}
-                        onChange={(e) => setValue('job_type', e.target.value)}
-                        disabled={mode === 'view'}
+                        value={watch("job_type")}
+                        onChange={(e) => setValue("job_type", e.target.value)}
+                        disabled={mode === "view"}
                       >
                         {jobTypeOptions.map((option) => (
                           <MenuItem key={option.value} value={option.value}>
@@ -434,34 +450,53 @@ const { data: voucherData} = useQuery({
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
                       options={vendorOptions}
-                      getOptionLabel={(option) => option.name || ''}
-                      value={vendorOptions.find((vendor: any) => vendor.id === watch('vendor_id')) || null}
-                      onChange={(_, newValue) => setValue('vendor_id', newValue?.id || 0)}
+                      getOptionLabel={(option) => option.name || ""}
+                      value={
+                        vendorOptions.find(
+                          (vendor: any) => vendor.id === watch("vendor_id"),
+                        ) || null
+                      }
+                      onChange={(_, newValue) =>
+                        setValue("vendor_id", newValue?.id || 0)
+                      }
                       renderInput={(params) => (
                         <TextField {...params} label="Vendor" required />
                       )}
-                      disabled={mode === 'view'}
+                      disabled={mode === "view"}
                     />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
                       options={manufacturingOrderOptions}
-                      getOptionLabel={(option) => option.voucher_number || ''}
-                      value={manufacturingOrderOptions.find((mo: any) => mo.id === watch('manufacturing_order_id')) || null}
-                      onChange={(_, newValue) => setValue('manufacturing_order_id', newValue?.id || undefined)}
+                      getOptionLabel={(option) => option.voucher_number || ""}
+                      value={
+                        manufacturingOrderOptions.find(
+                          (mo: any) =>
+                            mo.id === watch("manufacturing_order_id"),
+                        ) || null
+                      }
+                      onChange={(_, newValue) =>
+                        setValue(
+                          "manufacturing_order_id",
+                          newValue?.id || undefined,
+                        )
+                      }
                       renderInput={(params) => (
-                        <TextField {...params} label="Manufacturing Order (Optional)" />
+                        <TextField
+                          {...params}
+                          label="Manufacturing Order (Optional)"
+                        />
                       )}
-                      disabled={mode === 'view'}
+                      disabled={mode === "view"}
                     />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Job Status</InputLabel>
                       <Select
-                        value={watch('job_status')}
-                        onChange={(e) => setValue('job_status', e.target.value)}
-                        disabled={mode === 'view'}
+                        value={watch("job_status")}
+                        onChange={(e) => setValue("job_status", e.target.value)}
+                        disabled={mode === "view"}
                       >
                         {jobStatusOptions.map((option) => (
                           <MenuItem key={option.value} value={option.value}>
@@ -482,30 +517,32 @@ const { data: voucherData} = useQuery({
                       <Grid size={12}>
                         <TextField
                           label="Job Description"
-                          {...control.register('job_description')}
+                          {...control.register("job_description")}
                           fullWidth
                           required
                           multiline
                           rows={3}
-                          disabled={mode === 'view'}
+                          disabled={mode === "view"}
                         />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Job Category"
-                          {...control.register('job_category')}
+                          {...control.register("job_category")}
                           fullWidth
                           placeholder="e.g., Machining, Assembly, Finishing"
-                          disabled={mode === 'view'}
+                          disabled={mode === "view"}
                         />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <FormControl fullWidth>
                           <InputLabel>Materials Supplied By</InputLabel>
                           <Select
-                            value={watch('materials_supplied_by')}
-                            onChange={(e) => setValue('materials_supplied_by', e.target.value)}
-                            disabled={mode === 'view'}
+                            value={watch("materials_supplied_by")}
+                            onChange={(e) =>
+                              setValue("materials_supplied_by", e.target.value)
+                            }
+                            disabled={mode === "view"}
                           >
                             {materialsSuppliedByOptions.map((option) => (
                               <MenuItem key={option.value} value={option.value}>
@@ -519,38 +556,38 @@ const { data: voucherData} = useQuery({
                         <TextField
                           label="Expected Completion Date"
                           type="date"
-                          {...control.register('expected_completion_date')}
+                          {...control.register("expected_completion_date")}
                           fullWidth
                           InputLabelProps={{ shrink: true }}
-                          disabled={mode === 'view'}
+                          disabled={mode === "view"}
                         />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Actual Completion Date"
                           type="date"
-                          {...control.register('actual_completion_date')}
+                          {...control.register("actual_completion_date")}
                           fullWidth
                           InputLabelProps={{ shrink: true }}
-                          disabled={mode === 'view'}
+                          disabled={mode === "view"}
                         />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Transport Mode"
-                          {...control.register('transport_mode')}
+                          {...control.register("transport_mode")}
                           fullWidth
-                          disabled={mode === 'view'}
+                          disabled={mode === "view"}
                         />
                       </Grid>
                       <Grid size={12}>
                         <TextField
                           label="Delivery Address"
-                          {...control.register('delivery_address')}
+                          {...control.register("delivery_address")}
                           fullWidth
                           multiline
                           rows={2}
-                          disabled={mode === 'view'}
+                          disabled={mode === "view"}
                         />
                       </Grid>
                     </Grid>
@@ -567,9 +604,14 @@ const { data: voucherData} = useQuery({
                         <FormControlLabel
                           control={
                             <Checkbox
-                              checked={watch('quality_check_required')}
-                              onChange={(e) => setValue('quality_check_required', e.target.checked)}
-                              disabled={mode === 'view'}
+                              checked={watch("quality_check_required")}
+                              onChange={(e) =>
+                                setValue(
+                                  "quality_check_required",
+                                  e.target.checked,
+                                )
+                              }
+                              disabled={mode === "view"}
                             />
                           }
                           label="Quality Check Required"
@@ -578,11 +620,11 @@ const { data: voucherData} = useQuery({
                       <Grid size={12}>
                         <TextField
                           label="Quality Specifications"
-                          {...control.register('quality_specifications')}
+                          {...control.register("quality_specifications")}
                           fullWidth
                           multiline
                           rows={3}
-                          disabled={mode === 'view'}
+                          disabled={mode === "view"}
                         />
                       </Grid>
                     </Grid>
@@ -590,13 +632,16 @@ const { data: voucherData} = useQuery({
                 </Accordion>
                 {/* Materials and Outputs Tabs  */}
                 <Box mt={3}>
-                  <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+                  <Tabs
+                    value={activeTab}
+                    onChange={(_, newValue) => setActiveTab(newValue)}
+                  >
                     <Tab label="Supplied Materials" />
                     <Tab label="Received Outputs" />
                   </Tabs>
                   {/* Supplied Materials Tab  */}
                   <TabPanel value={activeTab} index={0}>
-                    {mode !== 'view' && (
+                    {mode !== "view" && (
                       <Box mb={2}>
                         <Button
                           variant="outlined"
@@ -618,7 +663,7 @@ const { data: voucherData} = useQuery({
                             <TableCell>Value</TableCell>
                             <TableCell>Batch</TableCell>
                             <TableCell>Supply Date</TableCell>
-                            {mode !== 'view' && <TableCell>Actions</TableCell>}
+                            {mode !== "view" && <TableCell>Actions</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -627,17 +672,34 @@ const { data: voucherData} = useQuery({
                               <TableCell>
                                 <Autocomplete
                                   options={productOptions}
-                                  getOptionLabel={(option) => option.name || ''}
-                                  value={productOptions.find((p: any) => p.id === watch(`supplied_materials.${index}.product_id`)) || null}
+                                  getOptionLabel={(option) => option.name || ""}
+                                  value={
+                                    productOptions.find(
+                                      (p: any) =>
+                                        p.id ===
+                                        watch(
+                                          `supplied_materials.${index}.product_id`,
+                                        ),
+                                    ) || null
+                                  }
                                   onChange={(_, newValue) => {
-                                    setValue(`supplied_materials.${index}.product_id`, newValue?.id || 0);
-                                    setValue(`supplied_materials.${index}.unit`, newValue?.unit || '');
-                                    setValue(`supplied_materials.${index}.unit_rate`, newValue?.price || 0);
+                                    setValue(
+                                      `supplied_materials.${index}.product_id`,
+                                      newValue?.id || 0,
+                                    );
+                                    setValue(
+                                      `supplied_materials.${index}.unit`,
+                                      newValue?.unit || "",
+                                    );
+                                    setValue(
+                                      `supplied_materials.${index}.unit_rate`,
+                                      newValue?.price || 0,
+                                    );
                                   }}
                                   renderInput={(params) => (
                                     <TextField {...params} size="small" />
                                   )}
-                                  disabled={mode === 'view'}
+                                  disabled={mode === "view"}
                                   sx={{ minWidth: 150 }}
                                 />
                               </TableCell>
@@ -645,18 +707,32 @@ const { data: voucherData} = useQuery({
                                 <TextField
                                   type="number"
                                   size="small"
-                                  value={watch(`supplied_materials.${index}.quantity_supplied`)}
-                                  onChange={(e) => setValue(`supplied_materials.${index}.quantity_supplied`, parseFloat(e.target.value) || 0)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `supplied_materials.${index}.quantity_supplied`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `supplied_materials.${index}.quantity_supplied`,
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 80 }}
                                 />
                               </TableCell>
                               <TableCell>
                                 <TextField
                                   size="small"
-                                  value={watch(`supplied_materials.${index}.unit`)}
-                                  onChange={(e) => setValue(`supplied_materials.${index}.unit`, e.target.value)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `supplied_materials.${index}.unit`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `supplied_materials.${index}.unit`,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 70 }}
                                 />
                               </TableCell>
@@ -664,23 +740,45 @@ const { data: voucherData} = useQuery({
                                 <TextField
                                   type="number"
                                   size="small"
-                                  value={watch(`supplied_materials.${index}.unit_rate`)}
-                                  onChange={(e) => setValue(`supplied_materials.${index}.unit_rate`, parseFloat(e.target.value) || 0)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `supplied_materials.${index}.unit_rate`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `supplied_materials.${index}.unit_rate`,
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 80 }}
                                 />
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">
-                                  ₹{((watch(`supplied_materials.${index}.quantity_supplied`) || 0) * (watch(`supplied_materials.${index}.unit_rate`) || 0)).toFixed(2)}
+                                  ₹
+                                  {(
+                                    (watch(
+                                      `supplied_materials.${index}.quantity_supplied`,
+                                    ) || 0) *
+                                    (watch(
+                                      `supplied_materials.${index}.unit_rate`,
+                                    ) || 0)
+                                  ).toFixed(2)}
                                 </Typography>
                               </TableCell>
                               <TableCell>
                                 <TextField
                                   size="small"
-                                  value={watch(`supplied_materials.${index}.batch_number`)}
-                                  onChange={(e) => setValue(`supplied_materials.${index}.batch_number`, e.target.value)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `supplied_materials.${index}.batch_number`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `supplied_materials.${index}.batch_number`,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 100 }}
                                 />
                               </TableCell>
@@ -688,13 +786,20 @@ const { data: voucherData} = useQuery({
                                 <TextField
                                   type="date"
                                   size="small"
-                                  value={watch(`supplied_materials.${index}.supply_date`)}
-                                  onChange={(e) => setValue(`supplied_materials.${index}.supply_date`, e.target.value)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `supplied_materials.${index}.supply_date`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `supplied_materials.${index}.supply_date`,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 120 }}
                                 />
                               </TableCell>
-                              {mode !== 'view' && (
+                              {mode !== "view" && (
                                 <TableCell>
                                   <IconButton
                                     onClick={() => removeMaterial(index)}
@@ -713,7 +818,7 @@ const { data: voucherData} = useQuery({
                   </TabPanel>
                   {/* Received Outputs Tab  */}
                   <TabPanel value={activeTab} index={1}>
-                    {mode !== 'view' && (
+                    {mode !== "view" && (
                       <Box mb={2}>
                         <Button
                           variant="outlined"
@@ -735,7 +840,7 @@ const { data: voucherData} = useQuery({
                             <TableCell>Value</TableCell>
                             <TableCell>Quality</TableCell>
                             <TableCell>Receipt Date</TableCell>
-                            {mode !== 'view' && <TableCell>Actions</TableCell>}
+                            {mode !== "view" && <TableCell>Actions</TableCell>}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -744,17 +849,34 @@ const { data: voucherData} = useQuery({
                               <TableCell>
                                 <Autocomplete
                                   options={productOptions}
-                                  getOptionLabel={(option) => option.name || ''}
-                                  value={productOptions.find((p: any) => p.id === watch(`received_outputs.${index}.product_id`)) || null}
+                                  getOptionLabel={(option) => option.name || ""}
+                                  value={
+                                    productOptions.find(
+                                      (p: any) =>
+                                        p.id ===
+                                        watch(
+                                          `received_outputs.${index}.product_id`,
+                                        ),
+                                    ) || null
+                                  }
                                   onChange={(_, newValue) => {
-                                    setValue(`received_outputs.${index}.product_id`, newValue?.id || 0);
-                                    setValue(`received_outputs.${index}.unit`, newValue?.unit || '');
-                                    setValue(`received_outputs.${index}.unit_rate`, newValue?.price || 0);
+                                    setValue(
+                                      `received_outputs.${index}.product_id`,
+                                      newValue?.id || 0,
+                                    );
+                                    setValue(
+                                      `received_outputs.${index}.unit`,
+                                      newValue?.unit || "",
+                                    );
+                                    setValue(
+                                      `received_outputs.${index}.unit_rate`,
+                                      newValue?.price || 0,
+                                    );
                                   }}
                                   renderInput={(params) => (
                                     <TextField {...params} size="small" />
                                   )}
-                                  disabled={mode === 'view'}
+                                  disabled={mode === "view"}
                                   sx={{ minWidth: 150 }}
                                 />
                               </TableCell>
@@ -762,18 +884,32 @@ const { data: voucherData} = useQuery({
                                 <TextField
                                   type="number"
                                   size="small"
-                                  value={watch(`received_outputs.${index}.quantity_received`)}
-                                  onChange={(e) => setValue(`received_outputs.${index}.quantity_received`, parseFloat(e.target.value) || 0)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `received_outputs.${index}.quantity_received`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `received_outputs.${index}.quantity_received`,
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 80 }}
                                 />
                               </TableCell>
                               <TableCell>
                                 <TextField
                                   size="small"
-                                  value={watch(`received_outputs.${index}.unit`)}
-                                  onChange={(e) => setValue(`received_outputs.${index}.unit`, e.target.value)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `received_outputs.${index}.unit`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `received_outputs.${index}.unit`,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 70 }}
                                 />
                               </TableCell>
@@ -781,27 +917,54 @@ const { data: voucherData} = useQuery({
                                 <TextField
                                   type="number"
                                   size="small"
-                                  value={watch(`received_outputs.${index}.unit_rate`)}
-                                  onChange={(e) => setValue(`received_outputs.${index}.unit_rate`, parseFloat(e.target.value) || 0)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `received_outputs.${index}.unit_rate`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `received_outputs.${index}.unit_rate`,
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 80 }}
                                 />
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">
-                                  ₹{((watch(`received_outputs.${index}.quantity_received`) || 0) * (watch(`received_outputs.${index}.unit_rate`) || 0)).toFixed(2)}
+                                  ₹
+                                  {(
+                                    (watch(
+                                      `received_outputs.${index}.quantity_received`,
+                                    ) || 0) *
+                                    (watch(
+                                      `received_outputs.${index}.unit_rate`,
+                                    ) || 0)
+                                  ).toFixed(2)}
                                 </Typography>
                               </TableCell>
                               <TableCell>
                                 <Select
                                   size="small"
-                                  value={watch(`received_outputs.${index}.quality_status`) || ''}
-                                  onChange={(e) => setValue(`received_outputs.${index}.quality_status`, e.target.value)}
-                                  disabled={mode === 'view'}
+                                  value={
+                                    watch(
+                                      `received_outputs.${index}.quality_status`,
+                                    ) || ""
+                                  }
+                                  onChange={(e) =>
+                                    setValue(
+                                      `received_outputs.${index}.quality_status`,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 100 }}
                                 >
                                   {qualityStatusOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
+                                    <MenuItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
                                       {option.label}
                                     </MenuItem>
                                   ))}
@@ -811,13 +974,20 @@ const { data: voucherData} = useQuery({
                                 <TextField
                                   type="date"
                                   size="small"
-                                  value={watch(`received_outputs.${index}.receipt_date`)}
-                                  onChange={(e) => setValue(`received_outputs.${index}.receipt_date`, e.target.value)}
-                                  disabled={mode === 'view'}
+                                  value={watch(
+                                    `received_outputs.${index}.receipt_date`,
+                                  )}
+                                  onChange={(e) =>
+                                    setValue(
+                                      `received_outputs.${index}.receipt_date`,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={mode === "view"}
                                   sx={{ width: 120 }}
                                 />
                               </TableCell>
-                              {mode !== 'view' && (
+                              {mode !== "view" && (
                                 <TableCell>
                                   <IconButton
                                     onClick={() => removeOutput(index)}
@@ -840,31 +1010,34 @@ const { data: voucherData} = useQuery({
                   <Grid size={12}>
                     <TextField
                       label="Notes"
-                      {...control.register('notes')}
+                      {...control.register("notes")}
                       fullWidth
                       multiline
                       rows={3}
-                      disabled={mode === 'view'}
+                      disabled={mode === "view"}
                     />
                   </Grid>
                 </Grid>
                 {/* Total Amount  */}
                 <Box display="flex" justifyContent="flex-end" mt={2}>
                   <Typography variant="h6">
-                    Net Job Work Value: ₹{(watch('total_amount') || 0).toFixed(2)}
+                    Net Job Work Value: ₹
+                    {(watch("total_amount") || 0).toFixed(2)}
                   </Typography>
                 </Box>
                 {/* Action Buttons  */}
-                {mode !== 'view' && (
+                {mode !== "view" && (
                   <Box mt={3} display="flex" gap={2}>
                     <Button
                       type="submit"
                       variant="contained"
                       color="primary"
-                      disabled={createMutation.isPending || updateMutation.isPending}
+                      disabled={
+                        createMutation.isPending || updateMutation.isPending
+                      }
                       startIcon={<Save />}
                     >
-                      {mode === 'edit' ? 'Update' : 'Create'} Voucher
+                      {mode === "edit" ? "Update" : "Create"} Voucher
                     </Button>
                     <Button
                       variant="outlined"

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,19 +19,23 @@ import {
   MenuItem,
   Tabs,
   Tab,
-} from '@mui/material';
-import Grid from '@mui/material/Grid';
-import { CloudUpload, Description, Delete as DeleteIcon } from '@mui/icons-material';
-import { useForm, Controller } from 'react-hook-form';
-import { usePincodeLookup } from '../hooks/usePincodeLookup';
-import api from '../lib/api';
+} from "@mui/material";
+import Grid from "@mui/material/Grid";
+import {
+  CloudUpload,
+  Description,
+  Delete as DeleteIcon,
+} from "@mui/icons-material";
+import { useForm, Controller } from "react-hook-form";
+import { usePincodeLookup } from "../hooks/usePincodeLookup";
+import api from "../lib/api";
 interface AddEmployeeModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (_data: any) => Promise<void>;
   loading?: boolean;
   initialData?: any;
-  mode: 'create' | 'edit';
+  mode: "create" | "edit";
 }
 interface EmployeeFormData {
   full_name: string;
@@ -80,15 +84,21 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     useRef<HTMLInputElement>(null),
   ];
   const [documents, setDocuments] = useState<
-    Array<{ file: File | null; type: string; extractedData?: any; loading: boolean; error?: string }>
+    Array<{
+      file: File | null;
+      type: string;
+      extractedData?: any;
+      loading: boolean;
+      error?: string;
+    }>
   >(
     Array.from({ length: 5 }, () => ({
       file: null,
-      type: '',
+      type: "",
       extractedData: null,
       loading: false,
       error: undefined,
-    }))
+    })),
   );
   const [tabValue, setTabValue] = useState(0);
   const {
@@ -101,21 +111,27 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     control,
   } = useForm<EmployeeFormData>({
     defaultValues: initialData || {
-      full_name: '',
-      email: '',
-      phone: '',
-      employee_code: '',
-      employee_type: 'permanent',
-      gender: '',
-      country: 'India',
+      full_name: "",
+      email: "",
+      phone: "",
+      employee_code: "",
+      employee_type: "permanent",
+      gender: "",
+      country: "India",
     },
   });
-  const { lookupPincode, pincodeData, loading: pincodeLoading, error: pincodeError, clearData } = usePincodeLookup();
-  const watchedPincode = watch('pin_code');
+  const {
+    lookupPincode,
+    pincodeData,
+    loading: pincodeLoading,
+    error: pincodeError,
+    clearData,
+  } = usePincodeLookup();
+  const watchedPincode = watch("pin_code");
   useEffect(() => {
     if (pincodeData) {
-      setValue('city', pincodeData.city);
-      setValue('state', pincodeData.state);
+      setValue("city", pincodeData.city);
+      setValue("state", pincodeData.state);
     }
   }, [pincodeData, setValue]);
   useEffect(() => {
@@ -130,42 +146,58 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   }, [watchedPincode, lookupPincode, clearData]);
   const handleDocumentUpload = async (index: number, file: File) => {
     const updatedDocs = [...documents];
-    updatedDocs[index] = { ...updatedDocs[index], loading: true, error: undefined };
+    updatedDocs[index] = {
+      ...updatedDocs[index],
+      loading: true,
+      error: undefined,
+    };
     setDocuments(updatedDocs);
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('document_type', updatedDocs[index].type || 'general');
-      const response: { data: { success: boolean; extracted_data?: any; detail?: string } } = await api.post(
-        '/pdf-extraction/extract/employee',
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }
-      );
+      formData.append("file", file);
+      formData.append("document_type", updatedDocs[index].type || "general");
+      const response: {
+        data: { success: boolean; extracted_data?: any; detail?: string };
+      } = await api.post("/pdf-extraction/extract/employee", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       if (response.data.success) {
         const extractedData = response.data.extracted_data;
         Object.entries(extractedData).forEach(([key, value]) => {
-          if (value) {setValue(key as keyof EmployeeFormData, value as string);}
+          if (value) {
+            setValue(key as keyof EmployeeFormData, value as string);
+          }
         });
-        updatedDocs[index] = { ...updatedDocs[index], file, extractedData, loading: false };
+        updatedDocs[index] = {
+          ...updatedDocs[index],
+          file,
+          extractedData,
+          loading: false,
+        };
       } else {
-        throw new globalThis.Error(response.data.detail || 'Extraction failed');
+        throw new globalThis.Error(response.data.detail || "Extraction failed");
       }
     } catch (error: any) {
       updatedDocs[index] = {
         ...updatedDocs[index],
         loading: false,
-        error: error.message || 'Failed to process document',
+        error: error.message || "Failed to process document",
       };
     }
     setDocuments(updatedDocs);
   };
-  const handleFileChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    index: number,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type !== 'application/pdf') {return alert('Please upload a PDF file');}
-      if (file.size > 10 * 1024 * 1024) {return alert('File size should be less than 10MB');}
+      if (file.type !== "application/pdf") {
+        return alert("Please upload a PDF file");
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        return alert("File size should be less than 10MB");
+      }
       handleDocumentUpload(index, file);
     }
   };
@@ -174,7 +206,13 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   };
   const removeDocument = (index: number) => {
     const updatedDocs = [...documents];
-    updatedDocs[index] = { file: null, type: '', extractedData: null, loading: false, error: undefined };
+    updatedDocs[index] = {
+      file: null,
+      type: "",
+      extractedData: null,
+      loading: false,
+      error: undefined,
+    };
     setDocuments(updatedDocs);
   };
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -192,17 +230,20 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           formData.append(`document_types_${index}`, doc.type);
         }
       });
-      const endpoint = mode === 'create' ? '/hr/employees' : `/hr/employees/${initialData?.id}`;
-      const method = mode === 'create' ? 'post' : 'put';
+      const endpoint =
+        mode === "create"
+          ? "/hr/employees"
+          : `/hr/employees/${initialData?.id}`;
+      const method = mode === "create" ? "post" : "put";
       const response = await api[method](endpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       await onAdd(response.data);
       reset();
       onClose();
     } catch (error: any) {
       console.error(msg, err);
-      alert(error.response?.data?.detail || 'Failed to save employee');
+      alert(error.response?.data?.detail || "Failed to save employee");
     }
   };
   const handleClose = () => {
@@ -211,18 +252,20 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     setDocuments(
       Array.from({ length: 5 }, () => ({
         file: null,
-        type: '',
+        type: "",
         extractedData: null,
         loading: false,
         error: undefined,
-      }))
+      })),
     );
     onClose();
   };
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Typography variant="h6">{mode === 'create' ? 'Add New Employee' : 'Edit Employee'}</Typography>
+        <Typography variant="h6">
+          {mode === "create" ? "Add New Employee" : "Edit Employee"}
+        </Typography>
       </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
@@ -238,7 +281,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Full Name *"
-                  {...register('full_name', { required: 'Full name is required' })}
+                  {...register("full_name", {
+                    required: "Full name is required",
+                  })}
                   error={!!errors.full_name}
                   helperText={errors.full_name?.message}
                   margin="normal"
@@ -249,7 +294,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   fullWidth
                   label="Email *"
                   type="email"
-                  {...register('email', { required: 'Email is required' })}
+                  {...register("email", { required: "Email is required" })}
                   error={!!errors.email}
                   helperText={errors.email?.message}
                   margin="normal"
@@ -259,7 +304,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Phone Number"
-                  {...register('phone')}
+                  {...register("phone")}
                   margin="normal"
                 />
               </Grid>
@@ -268,7 +313,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   fullWidth
                   label="Date of Birth"
                   type="date"
-                  {...register('date_of_birth')}
+                  {...register("date_of_birth")}
                   InputLabelProps={{ shrink: true }}
                   margin="normal"
                 />
@@ -284,7 +329,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                         <MenuItem value="male">Male</MenuItem>
                         <MenuItem value="female">Female</MenuItem>
                         <MenuItem value="other">Other</MenuItem>
-                        <MenuItem value="prefer_not_to_say">Prefer not to say</MenuItem>
+                        <MenuItem value="prefer_not_to_say">
+                          Prefer not to say
+                        </MenuItem>
                       </Select>
                     )}
                   />
@@ -298,7 +345,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Employee Code *"
-                  {...register('employee_code', { required: 'Employee code is required' })}
+                  {...register("employee_code", {
+                    required: "Employee code is required",
+                  })}
                   error={!!errors.employee_code}
                   helperText={errors.employee_code?.message}
                   margin="normal"
@@ -326,7 +375,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   fullWidth
                   label="Hire Date"
                   type="date"
-                  {...register('hire_date')}
+                  {...register("hire_date")}
                   InputLabelProps={{ shrink: true }}
                   margin="normal"
                 />
@@ -335,7 +384,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Job Title"
-                  {...register('job_title')}
+                  {...register("job_title")}
                   margin="normal"
                 />
               </Grid>
@@ -343,7 +392,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Department"
-                  {...register('department')}
+                  {...register("department")}
                   margin="normal"
                 />
               </Grid>
@@ -351,7 +400,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Work Location"
-                  {...register('work_location')}
+                  {...register("work_location")}
                   margin="normal"
                 />
               </Grid>
@@ -360,7 +409,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   fullWidth
                   label="Reporting Manager ID"
                   type="number"
-                  {...register('reporting_manager_id')}
+                  {...register("reporting_manager_id")}
                   margin="normal"
                 />
               </Grid>
@@ -372,7 +421,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="PAN Number"
-                  {...register('pan_number')}
+                  {...register("pan_number")}
                   margin="normal"
                 />
               </Grid>
@@ -380,7 +429,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Aadhaar Number"
-                  {...register('aadhaar_number')}
+                  {...register("aadhaar_number")}
                   margin="normal"
                 />
               </Grid>
@@ -388,7 +437,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Passport Number"
-                  {...register('passport_number')}
+                  {...register("passport_number")}
                   margin="normal"
                 />
               </Grid>
@@ -396,7 +445,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Driving License"
-                  {...register('driving_license')}
+                  {...register("driving_license")}
                   margin="normal"
                 />
               </Grid>
@@ -404,7 +453,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Bank Account Number"
-                  {...register('bank_account_number')}
+                  {...register("bank_account_number")}
                   margin="normal"
                 />
               </Grid>
@@ -412,7 +461,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Bank Name"
-                  {...register('bank_name')}
+                  {...register("bank_name")}
                   margin="normal"
                 />
               </Grid>
@@ -420,7 +469,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="IFSC Code"
-                  {...register('ifsc_code')}
+                  {...register("ifsc_code")}
                   margin="normal"
                 />
               </Grid>
@@ -428,7 +477,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Bank Branch"
-                  {...register('bank_branch')}
+                  {...register("bank_branch")}
                   margin="normal"
                 />
               </Grid>
@@ -437,7 +486,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   Upload Documents (up to 5 PDFs)
                 </Typography>
                 {documents.map((doc, index) => (
-                  <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
+                  <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: "grey.50" }}>
                     <Box display="flex" alignItems="center" gap={2}>
                       <FormControl fullWidth>
                         <InputLabel>Document Type</InputLabel>
@@ -453,28 +502,46 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                           <MenuItem value="aadhaar">Aadhaar</MenuItem>
                           <MenuItem value="pan">PAN</MenuItem>
                           <MenuItem value="passport">Passport</MenuItem>
-                          <MenuItem value="driving_license">Driving License</MenuItem>
-                          <MenuItem value="bank_passbook">Bank Passbook</MenuItem>
+                          <MenuItem value="driving_license">
+                            Driving License
+                          </MenuItem>
+                          <MenuItem value="bank_passbook">
+                            Bank Passbook
+                          </MenuItem>
                           <MenuItem value="other">Other</MenuItem>
                         </Select>
                       </FormControl>
-                      <Button variant="outlined" startIcon={<CloudUpload />} onClick={() => triggerUpload(index)}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<CloudUpload />}
+                        onClick={() => triggerUpload(index)}
+                      >
                         Upload PDF
                       </Button>
                       <input
                         ref={fileInputRefs[index]}
                         type="file"
                         accept=".pdf"
-                        style={{ display: 'none' }}
+                        style={{ display: "none" }}
                         onChange={(e) => handleFileChange(index, e)}
                       />
                     </Box>
                     {doc.loading && <LinearProgress sx={{ mt: 1 }} />}
                     {doc.file && (
-                      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          mt: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
                         <Description />
                         <Typography>{doc.file.name}</Typography>
-                        <IconButton color="error" onClick={() => removeDocument(index)}>
+                        <IconButton
+                          color="error"
+                          onClick={() => removeDocument(index)}
+                        >
                           <DeleteIcon />
                         </IconButton>
                       </Box>
@@ -486,7 +553,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                     )}
                     {doc.extractedData && (
                       <Alert severity="success" sx={{ mt: 1 }}>
-                        Extracted: {Object.keys(doc.extractedData).join(', ')}
+                        Extracted: {Object.keys(doc.extractedData).join(", ")}
                       </Alert>
                     )}
                   </Paper>
@@ -500,7 +567,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Address Line 1"
-                  {...register('address_line1')}
+                  {...register("address_line1")}
                   margin="normal"
                 />
               </Grid>
@@ -508,7 +575,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Address Line 2"
-                  {...register('address_line2')}
+                  {...register("address_line2")}
                   margin="normal"
                 />
               </Grid>
@@ -516,12 +583,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="PIN Code"
-                  {...register('pin_code')}
+                  {...register("pin_code")}
                   error={!!pincodeError}
                   helperText={pincodeError}
                   margin="normal"
                   InputProps={{
-                    endAdornment: pincodeLoading ? <CircularProgress size={16} /> : null,
+                    endAdornment: pincodeLoading ? (
+                      <CircularProgress size={16} />
+                    ) : null,
                   }}
                 />
               </Grid>
@@ -529,7 +598,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="City"
-                  {...register('city')}
+                  {...register("city")}
                   margin="normal"
                   InputProps={{ readOnly: !!pincodeData }}
                 />
@@ -538,7 +607,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="State"
-                  {...register('state')}
+                  {...register("state")}
                   margin="normal"
                   InputProps={{ readOnly: !!pincodeData }}
                 />
@@ -547,7 +616,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Country"
-                  {...register('country')}
+                  {...register("country")}
                   margin="normal"
                 />
               </Grid>
@@ -555,7 +624,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Emergency Contact Name"
-                  {...register('emergency_contact_name')}
+                  {...register("emergency_contact_name")}
                   margin="normal"
                 />
               </Grid>
@@ -563,7 +632,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Emergency Contact Phone"
-                  {...register('emergency_contact_phone')}
+                  {...register("emergency_contact_phone")}
                   margin="normal"
                 />
               </Grid>
@@ -571,7 +640,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <TextField
                   fullWidth
                   label="Emergency Contact Relation"
-                  {...register('emergency_contact_relation')}
+                  {...register("emergency_contact_relation")}
                   margin="normal"
                 />
               </Grid>
@@ -583,7 +652,13 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? <CircularProgress size={20} /> : mode === 'create' ? 'Add Employee' : 'Update Employee'}
+            {loading ? (
+              <CircularProgress size={20} />
+            ) : mode === "create" ? (
+              "Add Employee"
+            ) : (
+              "Update Employee"
+            )}
           </Button>
         </DialogActions>
       </form>

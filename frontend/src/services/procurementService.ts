@@ -1,5 +1,5 @@
 // frontend/src/services/procurementService.ts
-import api from '../lib/api';
+import api from "../lib/api";
 
 export interface RFQItem {
   item_code: string;
@@ -71,13 +71,23 @@ export const procurementService = {
   // RFQ Management
   async getRFQs(params: GetRFQsParams = {}): Promise<RFQ[]> {
     const queryParams = new URLSearchParams();
-    
-    if (params.skip !== undefined) {queryParams.append('skip', params.skip.toString());}
-    if (params.limit !== undefined) {queryParams.append('limit', params.limit.toString());}
-    if (params.status) {queryParams.append('status', params.status);}
-    if (params.search) {queryParams.append('search', params.search);}
 
-    const response = await api.get(`/api/v1/procurement/rfqs?${queryParams.toString()}`);
+    if (params.skip !== undefined) {
+      queryParams.append("skip", params.skip.toString());
+    }
+    if (params.limit !== undefined) {
+      queryParams.append("limit", params.limit.toString());
+    }
+    if (params.status) {
+      queryParams.append("status", params.status);
+    }
+    if (params.search) {
+      queryParams.append("search", params.search);
+    }
+
+    const response = await api.get(
+      `/api/v1/procurement/rfqs?${queryParams.toString()}`,
+    );
     return response.data;
   },
 
@@ -87,7 +97,7 @@ export const procurementService = {
   },
 
   async createRFQ(data: CreateRFQRequest): Promise<RFQ> {
-    const response = await api.post('/api/v1/procurement/rfqs', data);
+    const response = await api.post("/api/v1/procurement/rfqs", data);
     return response.data;
   },
 
@@ -103,14 +113,14 @@ export const procurementService = {
   // RFQ Status Management
   async sendRFQ(id: number, vendorIds: number[]): Promise<RFQ> {
     const response = await api.post(`/api/v1/procurement/rfqs/${id}/send`, {
-      vendor_ids: vendorIds
+      vendor_ids: vendorIds,
     });
     return response.data;
   },
 
   async cancelRFQ(id: number, reason?: string): Promise<RFQ> {
     const response = await api.post(`/api/v1/procurement/rfqs/${id}/cancel`, {
-      reason
+      reason,
     });
     return response.data;
   },
@@ -118,11 +128,17 @@ export const procurementService = {
   // Vendor Quotations
   async getQuotations(rfqId?: number, vendorId?: number): Promise<any[]> {
     const queryParams = new URLSearchParams();
-    
-    if (rfqId !== undefined) {queryParams.append('rfq_id', rfqId.toString());}
-    if (vendorId !== undefined) {queryParams.append('vendor_id', vendorId.toString());}
 
-    const response = await api.get(`/api/v1/procurement/quotations?${queryParams.toString()}`);
+    if (rfqId !== undefined) {
+      queryParams.append("rfq_id", rfqId.toString());
+    }
+    if (vendorId !== undefined) {
+      queryParams.append("vendor_id", vendorId.toString());
+    }
+
+    const response = await api.get(
+      `/api/v1/procurement/quotations?${queryParams.toString()}`,
+    );
     return response.data;
   },
 
@@ -132,15 +148,17 @@ export const procurementService = {
   },
 
   async selectQuotation(id: number): Promise<any> {
-    const response = await api.post(`/api/v1/procurement/quotations/${id}/select`);
+    const response = await api.post(
+      `/api/v1/procurement/quotations/${id}/select`,
+    );
     return response.data;
   },
 
   // Analytics
   async getDashboard(): Promise<any> {
-    const response = await api.get('/api/v1/procurement/dashboard');
+    const response = await api.get("/api/v1/procurement/dashboard");
     return response.data;
-  }
+  },
 };
 
 export default procurementService;

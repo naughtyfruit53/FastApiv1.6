@@ -1,14 +1,14 @@
 // Revised: v1/frontend/src/utils/apiUtils.ts
-import axios from 'axios';
+import axios from "axios";
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 // Add token interceptor
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -20,25 +20,37 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized - redirect to login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem("token");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 export const handleApiError = (error: unknown): string => {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const apiError = error as { response?: { data?: { message?: string; detail?: string } } };
-    return apiError.response?.data?.message || apiError.response?.data?.detail || 'An error occurred';
-  } else if (typeof error === 'object' && error !== null && 'request' in error) {
-    return 'No response received from server';
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const apiError = error as {
+      response?: { data?: { message?: string; detail?: string } };
+    };
+    return (
+      apiError.response?.data?.message ||
+      apiError.response?.data?.detail ||
+      "An error occurred"
+    );
+  } else if (
+    typeof error === "object" &&
+    error !== null &&
+    "request" in error
+  ) {
+    return "No response received from server";
   } else if (error instanceof Error) {
-    return error.message || 'Unknown error';
+    return error.message || "Unknown error";
   } else {
-    return 'Unknown error';
+    return "Unknown error";
   }
 };
-export const getApiParams = (params: Record<string, unknown>): URLSearchParams => {
+export const getApiParams = (
+  params: Record<string, unknown>,
+): URLSearchParams => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
@@ -50,10 +62,10 @@ export const getApiParams = (params: Record<string, unknown>): URLSearchParams =
 export const uploadStockBulk = async (file: File): Promise<any> => {
   try {
     const formData = new FormData();
-    formData.append('file', file); // Ensure field name matches backend expectation ('file')
-    const response = await api.post('/stock/bulk', formData, {
+    formData.append("file", file); // Ensure field name matches backend expectation ('file')
+    const response = await api.post("/stock/bulk", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
     return response.data;

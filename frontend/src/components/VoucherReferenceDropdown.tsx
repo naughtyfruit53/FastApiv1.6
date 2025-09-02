@@ -1,9 +1,19 @@
 // frontend/src/components/VoucherReferenceDropdown.tsx
 // Reference column dropdown component for voucher types
-import React, { useState, useEffect } from 'react';
-import { Box, Select, MenuItem, FormControl, InputLabel, Typography } from '@mui/material';
-import { getReferenceVoucherOptions, getVoucherConfig } from '../utils/voucherUtils';
-import api from '../lib/api';
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Typography,
+} from "@mui/material";
+import {
+  getReferenceVoucherOptions,
+  getVoucherConfig,
+} from "../utils/voucherUtils";
+import api from "../lib/api";
 interface VoucherReferenceDropdownProps {
   voucherType: string;
   value?: {
@@ -24,7 +34,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
   value = {},
   onChange,
   disabled = false,
-  onReferenceSelected
+  onReferenceSelected,
 }) => {
   const [referenceOptions, setReferenceOptions] = useState<any[]>([]);
   const [loadingReferences, setLoadingReferences] = useState(false);
@@ -46,19 +56,25 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
     setError(null);
     try {
       const typeConfig = getVoucherConfig(referenceType as any);
-      const response = await api.get(`${typeConfig.endpoint}?limit=100&sort=desc`);
+      const response = await api.get(
+        `${typeConfig.endpoint}?limit=100&sort=desc`,
+      );
       if (response.data) {
-        const documents = Array.isArray(response.data) ? response.data : [response.data];
-        setReferenceOptions(documents.map((doc: any) => ({
-          id: doc.id,
-          label: `${doc.voucher_number || doc.number}`,
-          value: doc.id,
-          data: doc
-        })));
+        const documents = Array.isArray(response.data)
+          ? response.data
+          : [response.data];
+        setReferenceOptions(
+          documents.map((doc: any) => ({
+            id: doc.id,
+            label: `${doc.voucher_number || doc.number}`,
+            value: doc.id,
+            data: doc,
+          })),
+        );
       }
     } catch (err) {
-      console.error('Error fetching reference documents:', err);
-      setError('Failed to load reference documents');
+      console.error("Error fetching reference documents:", err);
+      setError("Failed to load reference documents");
       setReferenceOptions([]);
     } finally {
       setLoadingReferences(false);
@@ -68,7 +84,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
     onChange({
       referenceType: newType,
       referenceId: undefined,
-      referenceNumber: undefined
+      referenceNumber: undefined,
     });
     setReferenceOptions([]);
   };
@@ -77,7 +93,8 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
       const newReference = {
         referenceType: value.referenceType,
         referenceId: selectedOption.value,
-        referenceNumber: selectedOption.data.voucher_number || selectedOption.data.number
+        referenceNumber:
+          selectedOption.data.voucher_number || selectedOption.data.number,
       };
       onChange(newReference);
       // Call callback with full reference data for auto-population
@@ -88,17 +105,17 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
       onChange({
         referenceType: value.referenceType,
         referenceId: undefined,
-        referenceNumber: undefined
+        referenceNumber: undefined,
       });
     }
   };
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box sx={{ width: "100%" }}>
       <Grid container spacing={2}>
         {/* Reference Type Selection */}
         <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small">
-            <InputLabel 
+            <InputLabel
               id="reference-type-label"
               style={{ fontSize: 12 }}
               shrink
@@ -107,16 +124,16 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
             </InputLabel>
             <Select
               labelId="reference-type-label"
-              value={value.referenceType || ''}
+              value={value.referenceType || ""}
               onChange={(e) => handleTypeChange(e.target.value)}
               disabled={disabled}
               label="Reference Type"
-              sx={{ 
+              sx={{
                 height: 27,
-                '& .MuiSelect-select': { 
+                "& .MuiSelect-select": {
                   fontSize: 14,
-                  textAlign: 'center'
-                }
+                  textAlign: "center",
+                },
               }}
             >
               {allowedTypes.map((type) => (
@@ -133,27 +150,35 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
             <Autocomplete
               size="small"
               options={referenceOptions}
-              value={referenceOptions.find(opt => opt.value === value.referenceId) || null}
+              value={
+                referenceOptions.find(
+                  (opt) => opt.value === value.referenceId,
+                ) || null
+              }
               onChange={(_, newValue) => handleDocumentChange(newValue)}
               disabled={disabled || loadingReferences}
               loading={loadingReferences}
-              getOptionLabel={(option) => option.label || ''}
-              isOptionEqualToValue={(option, value) => option.value === value.value}
+              getOptionLabel={(option) => option.label || ""}
+              isOptionEqualToValue={(option, value) =>
+                option.value === value.value
+              }
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={config.referenceConfig?.label || 'Reference Document'}
+                  label={config.referenceConfig?.label || "Reference Document"}
                   InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                  inputProps={{ 
+                  inputProps={{
                     ...params.inputProps,
-                    style: { fontSize: 14, textAlign: 'center' }
+                    style: { fontSize: 14, textAlign: "center" },
                   }}
-                  sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
                       <>
-                        {loadingReferences ? <CircularProgress color="inherit" size={20} /> : null}
+                        {loadingReferences ? (
+                          <CircularProgress color="inherit" size={20} />
+                        ) : null}
                         {params.InputProps.endAdornment}
                       </>
                     ),
@@ -168,11 +193,13 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
                 </Box>
               )}
               noOptionsText={
-                value.referenceType 
-                  ? `No ${allowedTypes.find(t => t.value === value.referenceType)?.label || 'documents'} found`
-                  : 'Select reference type first'
+                value.referenceType
+                  ? `No ${allowedTypes.find((t) => t.value === value.referenceType)?.label || "documents"} found`
+                  : "Select reference type first"
               }
-              PopperComponent={(props) => <Popper {...props} sx={{ width: '400px !important' }} />}
+              PopperComponent={(props) => (
+                <Popper {...props} sx={{ width: "400px !important" }} />
+              )}
             />
           </Grid>
         )}
@@ -185,14 +212,14 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
       )}
       {/* Selected Reference Info */}
       {value.referenceId && value.referenceNumber && (
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            mt: 1, 
-            fontSize: 12, 
-            textAlign: 'center',
-            color: 'primary.main',
-            fontWeight: 'medium'
+        <Typography
+          variant="body2"
+          sx={{
+            mt: 1,
+            fontSize: 12,
+            textAlign: "center",
+            color: "primary.main",
+            fontWeight: "medium",
           }}
         >
           Referenced: {value.referenceNumber}

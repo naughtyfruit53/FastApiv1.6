@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { ReactNode } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+import React, { ReactNode } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface RoleGateProps {
   allowedRoles: string[];
@@ -14,15 +14,16 @@ const RoleGate: React.FC<RoleGateProps> = ({ allowedRoles, children }) => {
   const router = useRouter();
 
   if (!user) {
-    router.push('/login');
+    router.push("/login");
     return null;
   }
 
   // Check if user has super admin privileges or their role is in allowed roles
-  const hasAccess = user.is_super_admin === true || allowedRoles.includes(user.role);
-  
+  const hasAccess =
+    user.is_super_admin === true || allowedRoles.includes(user.role);
+
   if (!hasAccess) {
-    router.push('/login');
+    router.push("/login");
     return null;
   }
 

@@ -1,5 +1,5 @@
-import {useState} from 'react';
-import uiConfig from '../config/ui-config.json';
+import { useState } from "react";
+import uiConfig from "../config/ui-config.json";
 interface UIConfig {
   tooltips: Record<string, any>;
   help_text: Record<string, any>;
@@ -15,7 +15,7 @@ interface UseUIConfigReturn {
 }
 /**
  * Hook to access centralized UI configuration including tooltips, help text, and messages
- * 
+ *
  * @example
  * const { getTooltip, getHelpText } = useUIConfig();
  * const tooltip = getTooltip('masters.products.name');
@@ -24,13 +24,13 @@ interface UseUIConfigReturn {
 export const useUIConfig = (): UseUIConfigReturn => {
   const [config] = useState<UIConfig>(uiConfig);
   const getNestedValue = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
+    return path.split(".").reduce((current, key) => {
       return current && current[key] !== undefined ? current[key] : null;
     }, obj);
   };
   const getTooltip = (path: string): string => {
     const tooltip = getNestedValue(config.tooltips, path);
-    return tooltip || '';
+    return tooltip || "";
   };
   const getHelpText = (path: string): any => {
     const helpText = getNestedValue(config.help_text, path);
@@ -38,18 +38,18 @@ export const useUIConfig = (): UseUIConfigReturn => {
   };
   const getErrorMessage = (path: string): string => {
     const errorMsg = getNestedValue(config.error_messages, path);
-    return errorMsg || 'An error occurred';
+    return errorMsg || "An error occurred";
   };
   const getSuccessMessage = (path: string): string => {
     const successMsg = getNestedValue(config.success_messages, path);
-    return successMsg || 'Operation completed successfully';
+    return successMsg || "Operation completed successfully";
   };
   return {
     getTooltip,
     getHelpText,
     getErrorMessage,
     getSuccessMessage,
-    config
+    config,
   };
 };
 export default useUIConfig;

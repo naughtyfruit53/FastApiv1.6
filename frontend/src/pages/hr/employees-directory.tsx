@@ -1,5 +1,5 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -26,8 +26,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Avatar
-} from '@mui/material';
+  Avatar,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -35,8 +35,8 @@ import {
   Visibility as ViewIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
-  Business as BusinessIcon
-} from '@mui/icons-material';
+  Business as BusinessIcon,
+} from "@mui/icons-material";
 interface Employee {
   id: number;
   employee_id: string;
@@ -51,72 +51,93 @@ interface Employee {
 }
 const EmployeeDirectory: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
   const [openDialog, setOpenDialog] = useState(false);
   // Mock data for demonstration
   useEffect(() => {
     const mockEmployees: Employee[] = [
       {
         id: 1,
-        employee_id: 'EMP001',
-        name: 'John Smith',
-        email: 'john.smith@company.com',
-        phone: '+1234567890',
-        department: 'Engineering',
-        designation: 'Senior Developer',
-        status: 'active',
-        hire_date: '2023-01-15',
-        salary: 75000
+        employee_id: "EMP001",
+        name: "John Smith",
+        email: "john.smith@company.com",
+        phone: "+1234567890",
+        department: "Engineering",
+        designation: "Senior Developer",
+        status: "active",
+        hire_date: "2023-01-15",
+        salary: 75000,
       },
       {
         id: 2,
-        employee_id: 'EMP002',
-        name: 'Sarah Johnson',
-        email: 'sarah.johnson@company.com',
-        phone: '+1234567891',
-        department: 'Marketing',
-        designation: 'Marketing Manager',
-        status: 'active',
-        hire_date: '2023-03-10',
-        salary: 65000
+        employee_id: "EMP002",
+        name: "Sarah Johnson",
+        email: "sarah.johnson@company.com",
+        phone: "+1234567891",
+        department: "Marketing",
+        designation: "Marketing Manager",
+        status: "active",
+        hire_date: "2023-03-10",
+        salary: 65000,
       },
       {
         id: 3,
-        employee_id: 'EMP003',
-        name: 'Michael Brown',
-        email: 'michael.brown@company.com',
-        phone: '+1234567892',
-        department: 'Finance',
-        designation: 'Financial Analyst',
-        status: 'active',
-        hire_date: '2023-02-20',
-        salary: 55000
-      }
+        employee_id: "EMP003",
+        name: "Michael Brown",
+        email: "michael.brown@company.com",
+        phone: "+1234567892",
+        department: "Finance",
+        designation: "Financial Analyst",
+        status: "active",
+        hire_date: "2023-02-20",
+        salary: 55000,
+      },
     ];
     setEmployees(mockEmployees);
   }, []);
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'default';
-      case 'terminated': return 'error';
-      case 'on_leave': return 'warning';
-      default: return 'default';
+      case "active":
+        return "success";
+      case "inactive":
+        return "default";
+      case "terminated":
+        return "error";
+      case "on_leave":
+        return "warning";
+      default:
+        return "default";
     }
   };
-  const departments = ['Engineering', 'Marketing', 'Finance', 'HR', 'Sales', 'Operations'];
-  const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.employee_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
+  const departments = [
+    "Engineering",
+    "Marketing",
+    "Finance",
+    "HR",
+    "Sales",
+    "Operations",
+  ];
+  const filteredEmployees = employees.filter((employee) => {
+    const matchesSearch =
+      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.employee_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment =
+      departmentFilter === "all" || employee.department === departmentFilter;
     return matchesSearch && matchesDepartment;
   });
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4" component="h1">
             Employee Directory
           </Typography>
@@ -136,9 +157,7 @@ const EmployeeDirectory: React.FC = () => {
                 <Typography variant="h6" color="primary">
                   Total Employees
                 </Typography>
-                <Typography variant="h4">
-                  {employees.length}
-                </Typography>
+                <Typography variant="h4">{employees.length}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -149,7 +168,7 @@ const EmployeeDirectory: React.FC = () => {
                   Active
                 </Typography>
                 <Typography variant="h4" color="success.main">
-                  {employees.filter(e => e.status === 'active').length}
+                  {employees.filter((e) => e.status === "active").length}
                 </Typography>
               </CardContent>
             </Card>
@@ -173,14 +192,22 @@ const EmployeeDirectory: React.FC = () => {
                   Avg. Salary
                 </Typography>
                 <Typography variant="h4" color="warning.main">
-                  ${employees.length > 0 ? Math.round(employees.reduce((sum, e) => sum + e.salary, 0) / employees.length / 1000) : 0}K
+                  $
+                  {employees.length > 0
+                    ? Math.round(
+                        employees.reduce((sum, e) => sum + e.salary, 0) /
+                          employees.length /
+                          1000,
+                      )
+                    : 0}
+                  K
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
         {/* Filters */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
           <TextField
             placeholder="Search employees..."
             variant="outlined"
@@ -204,8 +231,10 @@ const EmployeeDirectory: React.FC = () => {
               label="Department"
             >
               <MenuItem value="all">All Departments</MenuItem>
-              {departments.map(dept => (
-                <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+              {departments.map((dept) => (
+                <MenuItem key={dept} value={dept}>
+                  {dept}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -230,11 +259,16 @@ const EmployeeDirectory: React.FC = () => {
                 {filteredEmployees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                          {employee.name.split(' ').map(n => n[0]).join('')}
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Avatar sx={{ mr: 2, bgcolor: "primary.main" }}>
+                          {employee.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
                         </Avatar>
-                        <Typography variant="subtitle2">{employee.name}</Typography>
+                        <Typography variant="subtitle2">
+                          {employee.name}
+                        </Typography>
                       </Box>
                     </TableCell>
                     <TableCell>
@@ -244,26 +278,54 @@ const EmployeeDirectory: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                          <EmailIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                          <Typography variant="body2">{employee.email}</Typography>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            mb: 0.5,
+                          }}
+                        >
+                          <EmailIcon
+                            sx={{
+                              fontSize: 16,
+                              mr: 0.5,
+                              color: "text.secondary",
+                            }}
+                          />
+                          <Typography variant="body2">
+                            {employee.email}
+                          </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <PhoneIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                          <Typography variant="body2">{employee.phone}</Typography>
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          <PhoneIcon
+                            sx={{
+                              fontSize: 16,
+                              mr: 0.5,
+                              color: "text.secondary",
+                            }}
+                          />
+                          <Typography variant="body2">
+                            {employee.phone}
+                          </Typography>
                         </Box>
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <BusinessIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <BusinessIcon
+                          sx={{
+                            fontSize: 16,
+                            mr: 0.5,
+                            color: "text.secondary",
+                          }}
+                        />
                         {employee.department}
                       </Box>
                     </TableCell>
                     <TableCell>{employee.designation}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={employee.status} 
+                      <Chip
+                        label={employee.status}
                         color={getStatusColor(employee.status) as any}
                         size="small"
                       />
@@ -284,18 +346,26 @@ const EmployeeDirectory: React.FC = () => {
           </TableContainer>
         </Card>
         {/* Add Employee Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={openDialog}
+          onClose={() => setOpenDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>Add New Employee</DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Employee management functionality is under development. Contact your administrator to enable full HR features.
+                Employee management functionality is under development. Contact
+                your administrator to enable full HR features.
               </Typography>
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenDialog(false)}>Close</Button>
-            <Button variant="contained" disabled>Add Employee</Button>
+            <Button variant="contained" disabled>
+              Add Employee
+            </Button>
           </DialogActions>
         </Dialog>
       </Box>

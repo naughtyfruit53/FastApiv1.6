@@ -1,5 +1,5 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -7,15 +7,10 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
-  CircularProgress
-} from '@mui/material';
-import {
-  Download,
-  Print,
-  TableChart,
-  Description
-} from '@mui/icons-material';
-import { saveAs } from 'file-saver';
+  CircularProgress,
+} from "@mui/material";
+import { Download, Print, TableChart, Description } from "@mui/icons-material";
+import { saveAs } from "file-saver";
 interface ExportPrintToolbarProps {
   onExportExcel?: () => Promise<Blob | void>;
   onExportCSV?: () => Promise<Blob | void>;
@@ -36,9 +31,11 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
   showPrint = true,
   disabled = false,
   loading = false,
-  filename = 'report'
+  filename = "report",
 }) => {
-  const [exportAnchorEl, setExportAnchorEl] = useState<null | HTMLElement>(null);
+  const [exportAnchorEl, setExportAnchorEl] = useState<null | HTMLElement>(
+    null,
+  );
   const [isExporting, setIsExporting] = useState(false);
   const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setExportAnchorEl(event.currentTarget);
@@ -47,7 +44,9 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
     setExportAnchorEl(null);
   };
   const handleExcelExport = async () => {
-    if (!onExportExcel) {return;}
+    if (!onExportExcel) {
+      return;
+    }
     setIsExporting(true);
     try {
       const blob = await onExportExcel();
@@ -63,7 +62,9 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
     }
   };
   const handleCSVExport = async () => {
-    if (!onExportCSV) {return;}
+    if (!onExportCSV) {
+      return;
+    }
     setIsExporting(true);
     try {
       const blob = await onExportCSV();
@@ -86,13 +87,20 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       window.print();
     }
   };
-  const hasExportOptions = (showExcel && onExportExcel) || (showCSV && onExportCSV);
+  const hasExportOptions =
+    (showExcel && onExportExcel) || (showCSV && onExportCSV);
   return (
-    <Box sx={{ display: 'flex', gap: 1 }}>
+    <Box sx={{ display: "flex", gap: 1 }}>
       {hasExportOptions && (
         <>
           <Button
-            startIcon={loading || isExporting ? <CircularProgress size={16} /> : <Download />}
+            startIcon={
+              loading || isExporting ? (
+                <CircularProgress size={16} />
+              ) : (
+                <Download />
+              )
+            }
             size="small"
             variant="outlined"
             onClick={handleExportClick}
@@ -106,12 +114,12 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
             open={Boolean(exportAnchorEl)}
             onClose={handleExportClose}
             anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'left',
+              vertical: "bottom",
+              horizontal: "left",
             }}
             transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
+              vertical: "top",
+              horizontal: "left",
             }}
           >
             {showExcel && onExportExcel && (

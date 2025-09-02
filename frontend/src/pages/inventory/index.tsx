@@ -1,5 +1,5 @@
 // pages/inventory/index.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -14,17 +14,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Checkbox,
-  FormControlLabel,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputAdornment,
-  Stack,
   Grid as Grid,
   Alert,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add,
   Edit,
@@ -34,20 +26,20 @@ import {
   TrendingDown,
   Inventory,
   SwapHoriz,
-  Visibility
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { masterDataService } from '../../services/authService';
-import ExcelImportExport from '../../components/ExcelImportExport';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Button from '@mui/material/Button';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+  Visibility,
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { masterDataService } from "../../services/authService";
+import ExcelImportExport from "../../components/ExcelImportExport";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Button from "@mui/material/Button";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -63,20 +55,16 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`inventory-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
 const InventoryManagement: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
-const [] = useState({ email: 'demo@example.com', role: 'admin' });
+  const [] = useState({ email: "demo@example.com", role: "admin" });
   const [adjustmentDialog, setAdjustmentDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [adjustment, setAdjustment] = useState({ quantity: '', reason: '' });
+  const [adjustment, setAdjustment] = useState({ quantity: "", reason: "" });
   const queryClient = useQueryClient();
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -85,41 +73,52 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
     // Handle logout
   };
   // Fetch data from APIs
-  const { data: stock, isLoading: stockLoading, refetch: refetchStock } = useQuery({
-    queryKey: ['stock'],
+  const {
+    data: stock,
+    isLoading: stockLoading,
+    refetch: refetchStock,
+  } = useQuery({
+    queryKey: ["stock"],
     queryFn: () => masterDataService.getStock(),
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
-    queryKey: ['lowStock'],
+    queryKey: ["lowStock"],
     queryFn: masterDataService.getLowStock,
-    enabled: tabValue === 1
+    enabled: tabValue === 1,
   });
   // Stock adjustment mutation
   const adjustStockMutation = useMutation({
-    mutationFn: ({ productId, quantityChange, reason }: { productId: number, quantityChange: number, reason: string }) =>
-      masterDataService.adjustStock(productId, quantityChange, reason),
+    mutationFn: ({
+      productId,
+      quantityChange,
+      reason,
+    }: {
+      productId: number;
+      quantityChange: number;
+      reason: string;
+    }) => masterDataService.adjustStock(productId, quantityChange, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['stock']});
-      queryClient.invalidateQueries({queryKey: ['lowStock']});
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      queryClient.invalidateQueries({ queryKey: ["lowStock"] });
       setAdjustmentDialog(false);
-      setAdjustment({ quantity: '', reason: '' });
+      setAdjustment({ quantity: "", reason: "" });
       setSelectedProduct(null);
-    }
+    },
   });
-  
+
   // Stock import mutation
   const importStockMutation = useMutation({
     mutationFn: masterDataService.bulkImportStock,
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['stock']});
-      queryClient.invalidateQueries({queryKey: ['lowStock']});
-    }
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      queryClient.invalidateQueries({ queryKey: ["lowStock"] });
+    },
   });
   const handleImportStock = (importedData: any[]) => {
     // Convert imported data back to a format the API expects
     // This is a temporary workaround for the type mismatch
-    console.log('Imported stock data:', importedData);
+    console.log("Imported stock data:", importedData);
     // For now, just refetch stock data instead of sending to API
     refetchStock();
   };
@@ -128,7 +127,7 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
       adjustStockMutation.mutate({
         productId: selectedProduct.product_id,
         quantityChange: parseFloat(adjustment.quantity),
-        reason: adjustment.reason
+        reason: adjustment.reason,
       });
     }
   };
@@ -136,15 +135,22 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
     setSelectedProduct(product);
     setAdjustmentDialog(true);
   };
-  const renderStockTable = (stockItems: any[], showLowStockOnly = false, isLoading = false) => {
+  const renderStockTable = (
+    stockItems: any[],
+    showLowStockOnly = false,
+    isLoading = false,
+  ) => {
     if (isLoading) {
       return <Typography>Loading stock data...</Typography>;
     }
     if (!stockItems || stockItems.length === 0) {
       return <Typography>No stock data available.</Typography>;
     }
-    const filteredItems = showLowStockOnly 
-      ? stockItems.filter(item => item.is_low_stock || (item.quantity <= (item.reorder_level || 0)))
+    const filteredItems = showLowStockOnly
+      ? stockItems.filter(
+          (item) =>
+            item.is_low_stock || item.quantity <= (item.reorder_level || 0),
+        )
       : stockItems;
     return (
       <TableContainer component={Paper}>
@@ -166,33 +172,46 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
               <TableRow key={item.product_id || item.id}>
                 <TableCell>{item.product_name}</TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
                     {item.quantity}
                     {item.quantity <= (item.reorder_level || 0) && (
-                      <Warning sx={{ color: 'orange', ml: 1 }} />
+                      <Warning sx={{ color: "orange", ml: 1 }} />
                     )}
                   </Box>
                 </TableCell>
                 <TableCell>{item.unit}</TableCell>
-                <TableCell>₹{(item.unit_price || 0).toLocaleString()}</TableCell>
-                <TableCell>₹{(item.total_value || (item.quantity * (item.unit_price || 0))).toLocaleString()}</TableCell>
+                <TableCell>
+                  ₹{(item.unit_price || 0).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  ₹
+                  {(
+                    item.total_value || item.quantity * (item.unit_price || 0)
+                  ).toLocaleString()}
+                </TableCell>
                 <TableCell>{item.reorder_level || 0}</TableCell>
                 <TableCell>
                   <Chip
                     label={
-                      item.quantity <= (item.reorder_level || 0) ? 'Low Stock' : 
-                      item.quantity === 0 ? 'Out of Stock' : 'Normal'
+                      item.quantity <= (item.reorder_level || 0)
+                        ? "Low Stock"
+                        : item.quantity === 0
+                          ? "Out of Stock"
+                          : "Normal"
                     }
                     color={
-                      item.quantity === 0 ? 'error' :
-                      item.quantity <= (item.reorder_level || 0) ? 'warning' : 'success'
+                      item.quantity === 0
+                        ? "error"
+                        : item.quantity <= (item.reorder_level || 0)
+                          ? "warning"
+                          : "success"
                     }
                     size="small"
                   />
                 </TableCell>
                 <TableCell>
-                  <IconButton 
-                    size="small" 
+                  <IconButton
+                    size="small"
                     color="primary"
                     onClick={() => openAdjustmentDialog(item)}
                   >
@@ -217,38 +236,42 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
       return <Typography>Loading inventory summary...</Typography>;
     }
     const totalItems = stock.length;
-    const totalValue = stock.reduce((sum: number, item: any) => 
-      sum + (item.total_value || (item.quantity * (item.unit_price || 0))), 0
+    const totalValue = stock.reduce(
+      (sum: number, item: any) =>
+        sum + (item.total_value || item.quantity * (item.unit_price || 0)),
+      0,
     );
-    const lowStockItems = stock.filter((item: any) => 
-      item.quantity <= (item.reorder_level || 0)
+    const lowStockItems = stock.filter(
+      (item: any) => item.quantity <= (item.reorder_level || 0),
     ).length;
-    const outOfStockItems = stock.filter((item: any) => item.quantity === 0).length;
+    const outOfStockItems = stock.filter(
+      (item: any) => item.quantity === 0,
+    ).length;
     const cards = [
       {
-        title: 'Total Items',
+        title: "Total Items",
         value: totalItems,
-        color: '#1976D2',
-        icon: <Inventory />
+        color: "#1976D2",
+        icon: <Inventory />,
       },
       {
-        title: 'Total Value',
+        title: "Total Value",
         value: `₹${totalValue.toLocaleString()}`,
-        color: '#2E7D32',
-        icon: <TrendingUp />
+        color: "#2E7D32",
+        icon: <TrendingUp />,
       },
       {
-        title: 'Low Stock Items',
+        title: "Low Stock Items",
         value: lowStockItems,
-        color: '#F57C00',
-        icon: <Warning />
+        color: "#F57C00",
+        icon: <Warning />,
       },
       {
-        title: 'Out of Stock',
+        title: "Out of Stock",
         value: outOfStockItems,
-        color: '#D32F2F',
-        icon: <TrendingDown />
-      }
+        color: "#D32F2F",
+        icon: <TrendingDown />,
+      },
     ];
     return (
       <Grid container spacing={3}>
@@ -256,7 +279,13 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
                     <Typography color="textSecondary" gutterBottom>
                       {card.title}
@@ -265,9 +294,7 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
                       {card.value}
                     </Typography>
                   </Box>
-                  <Box sx={{ color: card.color }}>
-                    {card.icon}
-                  </Box>
+                  <Box sx={{ color: card.color }}>{card.icon}</Box>
                 </Box>
               </CardContent>
             </Card>
@@ -279,7 +306,14 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 4,
+          }}
+        >
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
               Inventory Management
@@ -297,13 +331,15 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
           </Button>
         </Box>
         {/* Summary Cards */}
-        <Box sx={{ mb: 4 }}>
-          {renderSummaryCards()}
-        </Box>
+        <Box sx={{ mb: 4 }}>{renderSummaryCards()}</Box>
         {/* Inventory Tabs */}
         <Paper sx={{ mb: 4 }}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={tabValue} onChange={handleTabChange} aria-label="inventory tabs">
+          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              aria-label="inventory tabs"
+            >
               <Tab label="Current Stock" />
               <Tab label="Low Stock Alert" />
               <Tab label="Stock Movements" />
@@ -311,13 +347,19 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
             </Tabs>
           </Box>
           <TabPanel value={tabValue} index={0}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}
+            >
               <Typography variant="h6">Current Stock Levels</Typography>
               <Button variant="contained" startIcon={<Add />}>
                 Add Stock Entry
               </Button>
             </Box>
-            <ExcelImportExport data={stock || []} entity="Stock" onImport={handleImportStock} />
+            <ExcelImportExport
+              data={stock || []}
+              entity="Stock"
+              onImport={handleImportStock}
+            />
             {renderStockTable(stock || [], false, stockLoading)}
           </TabPanel>
           <TabPanel value={tabValue} index={1}>
@@ -327,10 +369,16 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
               </Alert>
               <Typography variant="h6">Low Stock Alert</Typography>
             </Box>
-            {renderStockTable(lowStock || stock || [], true, lowStockLoading || stockLoading)}
+            {renderStockTable(
+              lowStock || stock || [],
+              true,
+              lowStockLoading || stockLoading,
+            )}
           </TabPanel>
           <TabPanel value={tabValue} index={2}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}
+            >
               <Typography variant="h6">Stock Movements</Typography>
               <Button variant="contained" startIcon={<SwapHoriz />}>
                 View All Movements
@@ -339,7 +387,9 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
             <Typography>Stock movement tracking coming soon...</Typography>
           </TabPanel>
           <TabPanel value={tabValue} index={3}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}
+            >
               <Typography variant="h6">Stock Valuation Report</Typography>
               <Button variant="contained" startIcon={<TrendingUp />}>
                 Generate Report
@@ -350,7 +400,12 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
         </Paper>
       </Container>
       {/* Stock Adjustment Dialog */}
-      <Dialog open={adjustmentDialog} onClose={() => setAdjustmentDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={adjustmentDialog}
+        onClose={() => setAdjustmentDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Adjust Stock: {selectedProduct?.product_name}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
@@ -361,7 +416,9 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
             label="Quantity Change"
             placeholder="Enter positive or negative number"
             value={adjustment.quantity}
-            onChange={(e) => setAdjustment(prev => ({ ...prev, quantity: e.target.value }))}
+            onChange={(e) =>
+              setAdjustment((prev) => ({ ...prev, quantity: e.target.value }))
+            }
             type="number"
             sx={{ mb: 2 }}
             helperText="Use negative numbers to decrease stock, positive to increase"
@@ -371,23 +428,29 @@ const [] = useState({ email: 'demo@example.com', role: 'admin' });
             label="Reason"
             placeholder="Reason for adjustment"
             value={adjustment.reason}
-            onChange={(e) => setAdjustment(prev => ({ ...prev, reason: e.target.value }))}
+            onChange={(e) =>
+              setAdjustment((prev) => ({ ...prev, reason: e.target.value }))
+            }
             multiline
             rows={3}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAdjustmentDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleAdjustStock} 
+          <Button
+            onClick={handleAdjustStock}
             variant="contained"
-            disabled={!adjustment.quantity || !adjustment.reason || adjustStockMutation.isPending}
+            disabled={
+              !adjustment.quantity ||
+              !adjustment.reason ||
+              adjustStockMutation.isPending
+            }
           >
-            {adjustStockMutation.isPending ? 'Adjusting...' : 'Adjust Stock'}
+            {adjustStockMutation.isPending ? "Adjusting..." : "Adjust Stock"}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 };
-export default InventoryManagement; 
+export default InventoryManagement;

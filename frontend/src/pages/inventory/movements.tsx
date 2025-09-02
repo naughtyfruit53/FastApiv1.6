@@ -1,7 +1,7 @@
 // frontend/src/pages/inventory/movements.tsx
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getStockMovements } from '../../services/stockService';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getStockMovements } from "../../services/stockService";
 import {
   Container,
   Typography,
@@ -16,19 +16,24 @@ import {
   FormControlLabel,
   Checkbox,
   Grid,
-} from '@mui/material';
-import { Search } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+} from "@mui/material";
+import { Search } from "@mui/icons-material";
+import { useAuth } from "../../context/AuthContext";
 const StockMovements: React.FC = () => {
   const { isOrgContextReady } = useAuth();
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [showOnlyRecent, setShowOnlyRecent] = useState(true);
   const { data: movements, isLoading } = useQuery({
-    queryKey: ['stockMovements', { search: searchText, recent: showOnlyRecent }],
+    queryKey: [
+      "stockMovements",
+      { search: searchText, recent: showOnlyRecent },
+    ],
     queryFn: ({ queryKey }) => getStockMovements(queryKey[1]),
     enabled: isOrgContextReady,
   });
-  if (isLoading) {return <Typography>Loading stock movements...</Typography>;}
+  if (isLoading) {
+    return <Typography>Loading stock movements...</Typography>;
+  }
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
@@ -49,7 +54,12 @@ const StockMovements: React.FC = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <FormControlLabel
-              control={<Checkbox checked={showOnlyRecent} onChange={(e) => setShowOnlyRecent(e.target.checked)} />}
+              control={
+                <Checkbox
+                  checked={showOnlyRecent}
+                  onChange={(e) => setShowOnlyRecent(e.target.checked)}
+                />
+              }
               label="Show only recent movements (last 30 days)"
             />
           </Grid>
@@ -70,17 +80,21 @@ const StockMovements: React.FC = () => {
           <TableBody>
             {movements?.map((movement) => (
               <TableRow key={movement.id}>
-                <TableCell>{new Date(movement.transaction_date).toLocaleString()}</TableCell>
+                <TableCell>
+                  {new Date(movement.transaction_date).toLocaleString()}
+                </TableCell>
                 <TableCell>{movement.product_name}</TableCell>
                 <TableCell>{movement.transaction_type}</TableCell>
                 <TableCell>{movement.quantity}</TableCell>
-                <TableCell>{movement.reference_number || '-'}</TableCell>
-                <TableCell>{movement.notes || '-'}</TableCell>
+                <TableCell>{movement.reference_number || "-"}</TableCell>
+                <TableCell>{movement.notes || "-"}</TableCell>
               </TableRow>
             ))}
             {movements?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">No movements found</TableCell>
+                <TableCell colSpan={6} align="center">
+                  No movements found
+                </TableCell>
               </TableRow>
             )}
           </TableBody>

@@ -1,5 +1,5 @@
 // frontend/src/components/AlertsFeed.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Card,
@@ -20,8 +20,8 @@ import {
   MenuItem,
   Grid,
   Badge,
-  Collapse
-} from '@mui/material';
+  Collapse,
+} from "@mui/material";
 import {
   Notifications,
   Warning,
@@ -35,18 +35,18 @@ import {
   FilterList,
   Refresh,
   MarkEmailRead,
-  Delete
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+  Delete,
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 import {
   getNotificationLogs,
   notificationQueryKeys,
   NotificationLog,
   getChannelDisplayName,
   getStatusDisplayName,
-  NOTIFICATION_STATUSES
-} from '../services/notificationService';
+  NOTIFICATION_STATUSES,
+} from "../services/notificationService";
 
 interface AlertsFeedProps {
   showFilters?: boolean;
@@ -66,13 +66,13 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
   showFilters = true,
   maxHeight = 600,
   autoRefresh = true,
-  refreshInterval = 30000
+  refreshInterval = 30000,
 }) => {
   const [filters, setFilters] = useState<AlertFilters>({
-    status: 'all',
-    channel: 'all',
-    type: 'all',
-    timeRange: 'all'
+    status: "all",
+    channel: "all",
+    type: "all",
+    timeRange: "all",
   });
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   const [selectedAlerts, setSelectedAlerts] = useState<Set<number>>(new Set());
@@ -82,13 +82,13 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
   const getQueryParams = () => {
     const params: any = {
       limit: 50,
-      recipient_type: 'user'
+      recipient_type: "user",
     };
 
-    if (filters.status !== 'all') {
+    if (filters.status !== "all") {
       params.status = filters.status;
     }
-    if (filters.channel !== 'all') {
+    if (filters.channel !== "all") {
       params.channel = filters.channel;
     }
 
@@ -96,7 +96,12 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
   };
 
   // Fetch alerts/notifications
-  const { data: alerts = [], isLoading, error, refetch } = useQuery({
+  const {
+    data: alerts = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: notificationQueryKeys.logsFiltered(getQueryParams()),
     queryFn: () => getNotificationLogs(getQueryParams()),
     refetchInterval: autoRefresh ? refreshInterval : false,
@@ -106,45 +111,48 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
   const markAsReadMutation = useMutation({
     mutationFn: async (alertIds: number[]) => {
       // TODO: Implement mark as read API
-      console.log('Marking alerts as read:', alertIds);
+      console.log("Marking alerts as read:", alertIds);
       return Promise.resolve();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.logs() });
       setSelectedAlerts(new Set());
-      toast.success('Alerts marked as read');
+      toast.success("Alerts marked as read");
     },
     onError: () => {
-      toast.error('Failed to mark alerts as read');
-    }
+      toast.error("Failed to mark alerts as read");
+    },
   });
 
   // Delete alerts mutation
   const deleteAlertsMutation = useMutation({
     mutationFn: async (alertIds: number[]) => {
       // TODO: Implement delete alerts API
-      console.log('Deleting alerts:', alertIds);
+      console.log("Deleting alerts:", alertIds);
       return Promise.resolve();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.logs() });
       setSelectedAlerts(new Set());
-      toast.success('Alerts deleted');
+      toast.success("Alerts deleted");
     },
     onError: () => {
-      toast.error('Failed to delete alerts');
-    }
+      toast.error("Failed to delete alerts");
+    },
   });
 
-  const handleFilterChange = (filterType: keyof AlertFilters, value: string) => {
-    setFilters(prev => ({
+  const handleFilterChange = (
+    filterType: keyof AlertFilters,
+    value: string,
+  ) => {
+    setFilters((prev) => ({
       ...prev,
-      [filterType]: value
+      [filterType]: value,
     }));
   };
 
   const handleSelectAlert = (alertId: number) => {
-    setSelectedAlerts(prev => {
+    setSelectedAlerts((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(alertId)) {
         newSet.delete(alertId);
@@ -159,7 +167,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
     if (selectedAlerts.size === alerts.length) {
       setSelectedAlerts(new Set());
     } else {
-      setSelectedAlerts(new Set(alerts.map(alert => alert.id)));
+      setSelectedAlerts(new Set(alerts.map((alert) => alert.id)));
     }
   };
 
@@ -177,23 +185,23 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
 
   const getAlertIcon = (alert: NotificationLog) => {
     const triggerEvent = alert.trigger_event;
-    
+
     switch (triggerEvent) {
-      case 'sla_breach':
+      case "sla_breach":
         return <Warning color="error" />;
-      case 'job_assignment':
+      case "job_assignment":
         return <Assignment color="primary" />;
-      case 'job_update':
+      case "job_update":
         return <Update color="info" />;
-      case 'job_completion':
+      case "job_completion":
         return <CheckCircle color="success" />;
-      case 'feedback_request':
+      case "feedback_request":
         return <Feedback color="primary" />;
       default:
         switch (alert.status) {
-          case 'failed':
+          case "failed":
             return <Error color="error" />;
-          case 'delivered':
+          case "delivered":
             return <CheckCircle color="success" />;
           default:
             return <Info color="primary" />;
@@ -203,26 +211,26 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
 
   const getAlertPriority = (alert: NotificationLog) => {
     const triggerEvent = alert.trigger_event;
-    
+
     switch (triggerEvent) {
-      case 'sla_breach':
-        return 'high';
-      case 'job_assignment':
-      case 'feedback_request':
-        return 'medium';
+      case "sla_breach":
+        return "high";
+      case "job_assignment":
+      case "feedback_request":
+        return "medium";
       default:
-        return 'low';
+        return "low";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'error';
-      case 'medium':
-        return 'warning';
+      case "high":
+        return "error";
+      case "medium":
+        return "warning";
       default:
-        return 'default';
+        return "default";
     }
   };
 
@@ -234,20 +242,35 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
 
-    if (diffInMinutes < 1) {return 'Just now';}
-    if (diffInMinutes < 60) {return `${diffInMinutes}m ago`;}
-    if (diffInHours < 24) {return `${diffInHours}h ago`;}
-    if (diffInDays < 7) {return `${diffInDays}d ago`;}
+    if (diffInMinutes < 1) {
+      return "Just now";
+    }
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    }
+    if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    }
+    if (diffInDays < 7) {
+      return `${diffInDays}d ago`;
+    }
     return date.toLocaleDateString();
   };
 
-  const unreadCount = alerts.filter(alert => !alert.opened_at).length;
+  const unreadCount = alerts.filter((alert) => !alert.opened_at).length;
 
   return (
     <Card>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Typography variant="h6" component="div">
               Alerts & Notifications
             </Typography>
@@ -257,11 +280,11 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
               </Badge>
             )}
           </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
             {showFilters && (
               <IconButton
                 onClick={() => setShowFiltersPanel(!showFiltersPanel)}
-                color={showFiltersPanel ? 'primary' : 'default'}
+                color={showFiltersPanel ? "primary" : "default"}
               >
                 <FilterList />
               </IconButton>
@@ -273,12 +296,19 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
         </Box>
 
         {selectedAlerts.size > 0 && (
-          <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ mb: 2, p: 2, bgcolor: "action.hover", borderRadius: 1 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <Typography variant="body2">
-                {selectedAlerts.size} alert{selectedAlerts.size !== 1 ? 's' : ''} selected
+                {selectedAlerts.size} alert
+                {selectedAlerts.size !== 1 ? "s" : ""} selected
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: "flex", gap: 1 }}>
                 <Button
                   size="small"
                   startIcon={<MarkEmailRead />}
@@ -302,7 +332,16 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
         )}
 
         <Collapse in={showFiltersPanel}>
-          <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+          <Box
+            sx={{
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 1,
+            }}
+          >
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 3 }}>
                 <TextField
@@ -310,11 +349,11 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   fullWidth
                   label="Status"
                   value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  onChange={(e) => handleFilterChange("status", e.target.value)}
                   size="small"
                 >
                   <MenuItem value="all">All Statuses</MenuItem>
-                  {NOTIFICATION_STATUSES.map(status => (
+                  {NOTIFICATION_STATUSES.map((status) => (
                     <MenuItem key={status} value={status}>
                       {getStatusDisplayName(status)}
                     </MenuItem>
@@ -327,7 +366,9 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   fullWidth
                   label="Channel"
                   value={filters.channel}
-                  onChange={(e) => handleFilterChange('channel', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("channel", e.target.value)
+                  }
                   size="small"
                 >
                   <MenuItem value="all">All Channels</MenuItem>
@@ -343,7 +384,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   fullWidth
                   label="Type"
                   value={filters.type}
-                  onChange={(e) => handleFilterChange('type', e.target.value)}
+                  onChange={(e) => handleFilterChange("type", e.target.value)}
                   size="small"
                 >
                   <MenuItem value="all">All Types</MenuItem>
@@ -359,7 +400,9 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   fullWidth
                   label="Time Range"
                   value={filters.timeRange}
-                  onChange={(e) => handleFilterChange('timeRange', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("timeRange", e.target.value)
+                  }
                   size="small"
                 >
                   <MenuItem value="all">All Time</MenuItem>
@@ -373,7 +416,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
         </Collapse>
 
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
             <CircularProgress />
           </Box>
         ) : error ? (
@@ -381,8 +424,10 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
             Failed to load alerts. Please try again.
           </Alert>
         ) : alerts.length === 0 ? (
-          <Box sx={{ textAlign: 'center', p: 4 }}>
-            <Notifications sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+          <Box sx={{ textAlign: "center", p: 4 }}>
+            <Notifications
+              sx={{ fontSize: 48, color: "text.disabled", mb: 2 }}
+            />
             <Typography variant="h6" color="text.secondary">
               No alerts found
             </Typography>
@@ -391,7 +436,7 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ maxHeight, overflow: 'auto' }}>
+          <Box sx={{ maxHeight, overflow: "auto" }}>
             <List sx={{ p: 0 }}>
               {alerts.map((alert, index) => {
                 const priority = getAlertPriority(alert);
@@ -402,13 +447,22 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                   <React.Fragment key={alert.id}>
                     <ListItem
                       sx={{
-                        backgroundColor: isSelected ? 'action.selected' : isUnread ? 'action.hover' : 'transparent',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'action.focus',
+                        backgroundColor: isSelected
+                          ? "action.selected"
+                          : isUnread
+                            ? "action.hover"
+                            : "transparent",
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor: "action.focus",
                         },
                         borderLeft: 4,
-                        borderLeftColor: priority === 'high' ? 'error.main' : priority === 'medium' ? 'warning.main' : 'transparent'
+                        borderLeftColor:
+                          priority === "high"
+                            ? "error.main"
+                            : priority === "medium"
+                              ? "warning.main"
+                              : "transparent",
                       }}
                       onClick={() => handleSelectAlert(alert.id)}
                     >
@@ -417,8 +471,12 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                           sx={{
                             width: 40,
                             height: 40,
-                            bgcolor: getPriorityColor(priority) === 'error' ? 'error.main' : 
-                                   getPriorityColor(priority) === 'warning' ? 'warning.main' : 'primary.main'
+                            bgcolor:
+                              getPriorityColor(priority) === "error"
+                                ? "error.main"
+                                : getPriorityColor(priority) === "warning"
+                                  ? "warning.main"
+                                  : "primary.main",
                           }}
                         >
                           {getAlertIcon(alert)}
@@ -426,29 +484,44 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                       </ListItemIcon>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                            }}
+                          >
                             <Typography
                               variant="subtitle2"
                               sx={{
-                                fontWeight: isUnread ? 'bold' : 'normal',
+                                fontWeight: isUnread ? "bold" : "normal",
                                 flex: 1,
-                                mr: 1
+                                mr: 1,
                               }}
                             >
-                              {alert.subject || `${alert.trigger_event?.replace('_', ' ').toUpperCase()} Notification`}
+                              {alert.subject ||
+                                `${alert.trigger_event?.replace("_", " ").toUpperCase()} Notification`}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                gap: 0.5,
+                                flexWrap: "wrap",
+                              }}
+                            >
                               <Chip
-                                label={getChannelDisplayName(alert.channel as any)}
+                                label={getChannelDisplayName(
+                                  alert.channel as any,
+                                )}
                                 size="small"
                                 variant="outlined"
-                                sx={{ fontSize: '0.7rem', height: 20 }}
+                                sx={{ fontSize: "0.7rem", height: 20 }}
                               />
                               <Chip
                                 label={priority.toUpperCase()}
                                 size="small"
                                 color={getPriorityColor(priority) as any}
-                                sx={{ fontSize: '0.7rem', height: 20 }}
+                                sx={{ fontSize: "0.7rem", height: 20 }}
                               />
                             </Box>
                           </Box>
@@ -459,30 +532,53 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
                               variant="body2"
                               color="text.secondary"
                               sx={{
-                                display: '-webkit-box',
+                                display: "-webkit-box",
                                 WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                mb: 0.5
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                mb: 0.5,
                               }}
                             >
                               {alert.content}
                             </Typography>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
                                 <AccessTime sx={{ fontSize: 14 }} />
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
                                   {formatTimeAgo(alert.created_at)}
                                 </Typography>
                               </Box>
                               <Chip
-                                label={getStatusDisplayName(alert.status as any)}
+                                label={getStatusDisplayName(
+                                  alert.status as any,
+                                )}
                                 size="small"
                                 sx={{
-                                  fontSize: '0.6rem',
+                                  fontSize: "0.6rem",
                                   height: 16,
                                 }}
-                                color={alert.status === 'delivered' ? 'success' : alert.status === 'failed' ? 'error' : 'default'}
+                                color={
+                                  alert.status === "delivered"
+                                    ? "success"
+                                    : alert.status === "failed"
+                                      ? "error"
+                                      : "default"
+                                }
                               />
                             </Box>
                           </Box>
@@ -498,13 +594,18 @@ const AlertsFeed: React.FC<AlertsFeedProps> = ({
         )}
 
         {alerts.length > 0 && (
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleSelectAll}
-            >
-              {selectedAlerts.size === alerts.length ? 'Deselect All' : 'Select All'}
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Button variant="outlined" size="small" onClick={handleSelectAll}>
+              {selectedAlerts.size === alerts.length
+                ? "Deselect All"
+                : "Select All"}
             </Button>
             <Typography variant="caption" color="text.secondary">
               Showing {alerts.length} alerts
