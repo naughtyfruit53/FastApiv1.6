@@ -1,4 +1,6 @@
 // frontend/src/types/rbac.types.ts
+/* eslint-disable no-unused-vars */ // Disable no-unused-vars for enum members, as they are exported types used elsewhere
+
 /**
  * Service CRM RBAC Types
  *
@@ -154,7 +156,7 @@ export interface RoleFormProps {
   role?: ServiceRoleWithPermissions;
   permissions: ServicePermission[];
   organizationId: number;
-  onSubmit: (_data: ServiceRoleCreate | ServiceRoleUpdate) => void;
+  onSubmit: (data: ServiceRoleCreate | ServiceRoleUpdate) => void;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -164,17 +166,17 @@ export interface UserRoleAssignmentProps {
   userFullName?: string;
   currentRoles: ServiceRole[];
   availableRoles: ServiceRole[];
-  onAssign: (_roleIds: number[]) => void;
-  onRemove: (_roleId: number) => void;
+  onAssign: (roleIds: number[]) => void;
+  onRemove: (roleId: number) => void;
   loading?: boolean;
 }
 export interface RolePermissionMatrixProps {
   roles: ServiceRoleWithPermissions[];
   permissions: ServicePermission[];
   onPermissionToggle: (
-    _roleId: number,
-    _permissionId: number,
-    _granted: boolean,
+    roleId: number,
+    permissionId: number,
+    granted: boolean,
   ) => void;
   loading?: boolean;
 }
@@ -191,54 +193,20 @@ export const SERVICE_ROLE_DEFAULTS: Record<
   [ServiceRoleType.MANAGER]: {
     name: ServiceRoleType.MANAGER,
     display_name: "Service Manager",
-    description: "Manage services, technicians, and appointments",
+    description: "Management access to service CRM",
   },
   [ServiceRoleType.SUPPORT]: {
     name: ServiceRoleType.SUPPORT,
-    display_name: "Support Agent",
-    description: "Handle customer service and basic operations",
+    display_name: "Support Staff",
+    description: "Operational access to service tickets and tasks",
   },
   [ServiceRoleType.VIEWER]: {
     name: ServiceRoleType.VIEWER,
     display_name: "Viewer",
-    description: "Read-only access to service information",
+    description: "Read-only access to service CRM data",
   },
 };
-// Permission Display Names
-export const PERMISSION_DISPLAY_NAMES: Record<string, string> = {
-  // Service Management
-  service_create: "Create Services",
-  service_read: "View Services",
-  service_update: "Update Services",
-  service_delete: "Delete Services",
-  // Technician Management
-  technician_create: "Create Technicians",
-  technician_read: "View Technicians",
-  technician_update: "Update Technicians",
-  technician_delete: "Delete Technicians",
-  // Appointment Management
-  appointment_create: "Create Appointments",
-  appointment_read: "View Appointments",
-  appointment_update: "Update Appointments",
-  appointment_delete: "Cancel Appointments",
-  // Customer Service
-  customer_service_create: "Create Customer Records",
-  customer_service_read: "View Customer Records",
-  customer_service_update: "Update Customer Records",
-  customer_service_delete: "Delete Customer Records",
-  // Work Orders
-  work_order_create: "Create Work Orders",
-  work_order_read: "View Work Orders",
-  work_order_update: "Update Work Orders",
-  work_order_delete: "Delete Work Orders",
-  // Reports
-  service_reports_read: "View Service Reports",
-  service_reports_export: "Export Service Reports",
-  // CRM Admin
-  crm_admin: "CRM Administration",
-  crm_settings: "CRM Settings",
-};
-// Module Display Names
+// Module Display Names (for UI)
 export const MODULE_DISPLAY_NAMES: Record<ServiceModule, string> = {
   [ServiceModule.SERVICE]: "Service Management",
   [ServiceModule.TECHNICIAN]: "Technician Management",

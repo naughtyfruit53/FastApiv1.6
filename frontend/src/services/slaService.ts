@@ -71,6 +71,7 @@ export interface SLAPolicyCreate {
   is_default?: boolean;
 }
 export type SLAPolicyUpdate = Partial<SLAPolicyCreate>;
+export type SLATrackingUpdate = Partial<SLATracking>; // Added this type to avoid 'any' on update arg
 export const slaService = {
   // SLA Policy Management
   getPolicies: async (
@@ -163,15 +164,12 @@ export const slaService = {
   assignSLAToTicket: async (
     organizationId: number,
     ticketId: number,
-    forceRecreate?: boolean,
-  ): Promise<any> => {
+    policyId: number,
+  ): Promise<SLATracking> => {
     try {
-      const params = new URLSearchParams();
-      if (forceRecreate) {
-        params.append("force_recreate", "true");
-      }
       const response = await api.post(
-        `/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/sla?${params.toString()}`,
+        `/api/v1/sla/organizations/${organizationId}/tickets/${ticketId}/assign-sla`,
+        { policy_id: policyId },
       );
       return response.data;
     } catch (error: any) {
@@ -200,7 +198,7 @@ export const slaService = {
   updateSLATracking: async (
     organizationId: number,
     trackingId: number,
-    update: any,
+    update: SLATrackingUpdate,
   ): Promise<SLATracking> => {
     try {
       const response = await api.put(

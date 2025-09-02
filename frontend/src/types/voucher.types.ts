@@ -108,8 +108,8 @@ export interface VoucherContextMenuProps {
   open: boolean;
   onClose: () => void;
   voucher: VoucherBase;
-  onEdit: (_id: number) => void;
-  onView: (_id: number) => void;
-  onDelete: (_voucher: VoucherBase) => void;
-  onGeneratePDF: (_voucher: VoucherBase) => void;
+  onEdit: (id: number) => void;
+  onView: (id: number) => void;
+  onDelete: (voucher: VoucherBase) => void;
+  onGeneratePDF: (voucher: VoucherBase) => void;
 }

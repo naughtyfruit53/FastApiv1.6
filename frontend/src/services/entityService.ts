@@ -17,7 +17,7 @@ interface QueryFunctionContext {
 export const getEntitiesByType = async (
   entityType: EntityType,
   { signal }: { signal?: AbortSignal } = {},
-) => {
+): Promise<Entity[]> => {
   const config = ENTITY_CONFIGS[entityType];
   const response = await api.get(config.endpoint, { signal });
   return response.data.map((entity: any) => ({
@@ -156,7 +156,7 @@ export const getEntityBalance = async (
   id: number,
   entityType: EntityType,
   { signal }: { signal?: AbortSignal } = {},
-): any => {
+): Promise<any> => {
   try {
     const params =
       entityType === "Customer" ? { customer_id: id } : { vendor_id: id };
@@ -178,7 +178,7 @@ export const getEntityBalance = async (
 // Legacy compatibility functions (to maintain existing code)
 export const getVendors = (
   { signal }: QueryFunctionContext = { queryKey: [] },
-) => getEntitiesByType("Vendor", { signal });
+): Promise<Entity[]> => getEntitiesByType("Vendor", { signal });
 export const getCustomers = (
   { signal }: QueryFunctionContext = { queryKey: [] },
-) => getEntitiesByType("Customer", { signal });
+): Promise<Entity[]> => getEntitiesByType("Customer", { signal });

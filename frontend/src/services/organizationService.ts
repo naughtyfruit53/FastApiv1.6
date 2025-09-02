@@ -1,7 +1,7 @@
 // frontend/src/services/organizationService.ts
 import api from "../lib/api";
 export const organizationService = {
-  createLicense: async (data: any) => {
+  createLicense: async (data: any): Promise<any> => {
     try {
       const response = await api.post("/organizations/license/create", data);
       // Organization context is managed by backend session only
@@ -12,7 +12,7 @@ export const organizationService = {
       );
     }
   },
-  getCurrentOrganization: async () => {
+  getCurrentOrganization: async (): Promise<any> => {
     try {
       const response = await api.get("/organizations/current");
       // Organization context is managed by backend session only
@@ -23,7 +23,7 @@ export const organizationService = {
       );
     }
   },
-  updateOrganization: async (data: any) => {
+  updateOrganization: async (data: any): Promise<any> => {
     try {
       const response = await api.put("/organizations/current", data);
       return response.data;
@@ -32,7 +32,7 @@ export const organizationService = {
     }
   },
   // Admin-only endpoints
-  getAllOrganizations: async () => {
+  getAllOrganizations: async (): Promise<any> => {
     try {
       const response = await api.get("/organizations/");
       return response.data;
@@ -40,7 +40,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to get organizations");
     }
   },
-  getOrganization: async (id: number) => {
+  getOrganization: async (id: number): Promise<any> => {
     try {
       const response = await api.get(`/organizations/${id}`);
       return response.data;
@@ -48,7 +48,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to get organization");
     }
   },
-  updateOrganizationById: async (id: number, data: any) => {
+  updateOrganizationById: async (id: number, data: any): Promise<any> => {
     try {
       const response = await api.put(`/organizations/${id}`, data);
       return response.data;
@@ -57,7 +57,7 @@ export const organizationService = {
     }
   },
   // New organization management endpoints
-  createOrganization: async (data: any) => {
+  createOrganization: async (data: any): Promise<any> => {
     try {
       const response = await api.post("/organizations/", data);
       return response.data;
@@ -65,7 +65,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to create organization");
     }
   },
-  joinOrganization: async (organizationId: number) => {
+  joinOrganization: async (organizationId: number): Promise<any> => {
     try {
       const response = await api.post(`/organizations/${organizationId}/join`);
       // Organization context is managed by backend session only
@@ -74,7 +74,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to join organization");
     }
   },
-  getOrganizationMembers: async (organizationId: number) => {
+  getOrganizationMembers: async (organizationId: number): Promise<any> => {
     try {
       const response = await api.get(
         `/organizations/${organizationId}/members`,
@@ -86,7 +86,7 @@ export const organizationService = {
       );
     }
   },
-  inviteUserToOrganization: async (organizationId: number, userData: any) => {
+  inviteUserToOrganization: async (organizationId: number, userData: any): Promise<any> => {
     try {
       const response = await api.post(
         `/organizations/${organizationId}/invite`,
@@ -100,7 +100,7 @@ export const organizationService = {
     }
   },
   // User organization management
-  getUserOrganizations: async () => {
+  getUserOrganizations: async (): Promise<any> => {
     try {
       const response = await api.get("/users/me/organizations");
       return response.data;
@@ -108,7 +108,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to get user organizations");
     }
   },
-  switchOrganization: async (organizationId: number) => {
+  switchOrganization: async (organizationId: number): Promise<any> => {
     try {
       const response = await api.put("/users/me/organization", {
         organization_id: organizationId,
@@ -119,7 +119,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to switch organization");
     }
   },
-  deleteOrganization: async (organizationId: number) => {
+  deleteOrganization: async (organizationId: number): Promise<any> => {
     try {
       const response = await api.delete(`/organizations/${organizationId}`);
       return response.data;
@@ -128,7 +128,7 @@ export const organizationService = {
     }
   },
   // Organization-scoped user management
-  getOrganizationUsers: async (organizationId: number, params?: any) => {
+  getOrganizationUsers: async (organizationId: number, params?: any): Promise<any> => {
     try {
       const response = await api.get(`/organizations/${organizationId}/users`, {
         params,
@@ -138,7 +138,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to get organization users");
     }
   },
-  createUserInOrganization: async (organizationId: number, userData: any) => {
+  createUserInOrganization: async (organizationId: number, userData: any): Promise<any> => {
     try {
       const response = await api.post(
         `/organizations/${organizationId}/users`,
@@ -155,7 +155,7 @@ export const organizationService = {
     organizationId: number,
     userId: number,
     userData: any,
-  ) => {
+  ): Promise<any> => {
     try {
       const response = await api.put(
         `/organizations/${organizationId}/users/${userId}`,
@@ -171,7 +171,7 @@ export const organizationService = {
   deleteUserFromOrganization: async (
     organizationId: number,
     userId: number,
-  ) => {
+  ): Promise<any> => {
     try {
       const response = await api.delete(
         `/organizations/${organizationId}/users/${userId}`,
@@ -184,7 +184,7 @@ export const organizationService = {
     }
   },
   // Invitation management
-  getOrganizationInvitations: async (organizationId: number, params?: any) => {
+  getOrganizationInvitations: async (organizationId: number, params?: any): Promise<any> => {
     try {
       const response = await api.get(
         `/organizations/${organizationId}/invitations`,
@@ -197,7 +197,7 @@ export const organizationService = {
       );
     }
   },
-  resendInvitation: async (organizationId: number, invitationId: number) => {
+  resendInvitation: async (organizationId: number, invitationId: number): Promise<any> => {
     try {
       const response = await api.post(
         `/organizations/${organizationId}/invitations/${invitationId}/resend`,
@@ -207,7 +207,7 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to resend invitation");
     }
   },
-  cancelInvitation: async (organizationId: number, invitationId: number) => {
+  cancelInvitation: async (organizationId: number, invitationId: number): Promise<any> => {
     try {
       const response = await api.delete(
         `/organizations/${organizationId}/invitations/${invitationId}`,

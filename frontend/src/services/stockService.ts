@@ -92,7 +92,7 @@ export const getLastVendorForProduct = async (
   try {
     const response = await api.get(`/stock/product/${productId}/last-vendor`);
     return response.data;
-  } catch (_error) {
+  } catch {
     return null;
   }
 };

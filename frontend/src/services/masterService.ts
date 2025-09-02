@@ -9,22 +9,22 @@ interface QueryFunctionContext {
   signal?: AbortSignal;
 }
 // Fetch all vendors
-export const getVendors = async ({ signal }: QueryFunctionContext) => {
+export const getVendors = async ({ signal }: QueryFunctionContext): Promise<any> => {
   const response = await api.get("/vendors", { signal });
   return response.data;
 };
 // Fetch all customers
-export const getCustomers = async ({ signal }: QueryFunctionContext) => {
+export const getCustomers = async ({ signal }: QueryFunctionContext): Promise<any> => {
   const response = await api.get("/customers", { signal });
   return response.data;
 };
 // Fetch all products
-export const getProducts = async ({ signal }: QueryFunctionContext) => {
+export const getProducts = async ({ signal }: QueryFunctionContext): Promise<any> => {
   const response = await api.get("/products", { signal });
   return response.data;
 };
 // Fetch all employees
-export const getEmployees = async ({ signal }: QueryFunctionContext) => {
+export const getEmployees = async ({ signal }: QueryFunctionContext): Promise<any> => {
   const response = await api.get("/employees", { signal });
   return response.data;
 };
@@ -32,7 +32,7 @@ export const getEmployees = async ({ signal }: QueryFunctionContext) => {
 export const searchCustomers = async ({
   queryKey,
   signal,
-}: QueryFunctionContext) => {
+}: QueryFunctionContext): Promise<any> => {
   const [, searchTerm, limit] = queryKey; // Expect queryKey = ['searchCustomers', searchTerm, limit]
   const response = await api.get("/customers", {
     params: {
@@ -48,7 +48,7 @@ export const searchCustomers = async ({
 export const searchProducts = async ({
   queryKey,
   signal,
-}: QueryFunctionContext) => {
+}: QueryFunctionContext): Promise<any> => {
   const [, searchTerm, limit] = queryKey; // Expect queryKey = ['searchProducts', searchTerm, limit]
   const response = await api.get("/products", {
     params: {
@@ -73,7 +73,7 @@ export const createCustomer = async (customerData: {
   state_code: string;
   gst_number?: string;
   pan_number?: string;
-}): any => {
+}): Promise<any> => {
   const response = await api.post("/customers", customerData);
   return response.data;
 };
@@ -90,7 +90,7 @@ export const createVendor = async (vendorData: {
   state_code: string;
   gst_number?: string;
   pan_number?: string;
-}): any => {
+}): Promise<any> => {
   const response = await api.post("/vendors", vendorData);
   return response.data;
 };
@@ -106,7 +106,7 @@ export const createProduct = async (productData: {
   reorder_level?: number;
   description?: string;
   is_manufactured?: boolean;
-}): any => {
+}): Promise<any> => {
   const response = await api.post("/products", productData);
   return response.data;
 };
@@ -123,28 +123,28 @@ export const createEmployee = async (employeeData: {
   department?: string;
   designation?: string;
   salary?: number;
-}): any => {
+}): Promise<any> => {
   const response = await api.post("/employees", employeeData);
   return response.data;
 };
-export const bulkImportVendors = async (data: any[]) => {
+export const bulkImportVendors = async (data: any[]): Promise<any> => {
   const response = await api.post("/vendors/bulk", data);
   return response.data;
 };
-export const bulkImportCustomers = async (data: any[]) => {
+export const bulkImportCustomers = async (data: any[]): Promise<any> => {
   const response = await api.post("/customers/bulk", data);
   return response.data;
 };
-export const bulkImportProducts = async (data: any[]) => {
+export const bulkImportProducts = async (data: any[]): Promise<any> => {
   const response = await api.post("/products/bulk", data);
   return response.data;
 };
-export const bulkImportStock = async (data: any[]) => {
+export const bulkImportStock = async (data: any[]): Promise<any> => {
   const response = await api.post("/stock/bulk", data);
   return response.data;
 };
 // Fetch stock with parameter cleaning to avoid 422 errors
-export const getStock = async ({ queryKey, signal }: QueryFunctionContext) => {
+export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
   const [, rawParams = {}] = queryKey; // Expect queryKey = ['stock', { skip: 0, limit: 100, product_id: ..., low_stock_only: ..., search: ..., show_zero: ... }]
   // Clean parameters to exclude invalid or empty values that cause validation errors
   const params: any = {
