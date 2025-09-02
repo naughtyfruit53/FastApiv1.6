@@ -1,6 +1,6 @@
-# TRITIQ ERP - FastAPI Migration
+# TritIQ Business Suite - FastAPI Migration
 
-A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the TRITIQ ERP system.
+A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the TritIQ Business Suite system.
 
 ## 🌟 Latest Enhancements
 
@@ -224,7 +224,7 @@ python scripts/audit_ui_features.py --verbose
 
 ### 🆕 Service CRM Integration with RBAC System
 
-The TRITIQ ERP platform includes a comprehensive Role-Based Access Control (RBAC) system specifically designed for Service CRM operations:
+The TritIQ Business Suite platform includes a comprehensive Role-Based Access Control (RBAC) system specifically designed for Service CRM operations:
 
 #### Key RBAC Features
 - **30+ Granular Permissions**: Fine-grained control over Service CRM modules
@@ -404,7 +404,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # Application
-PROJECT_NAME="TRITIQ ERP API"
+PROJECT_NAME="TritIQ Business Suite API"
 VERSION="1.0.0"
 DEBUG=true
 API_V1_STR="/api/v1"
@@ -418,7 +418,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 EMAILS_FROM_EMAIL=your-email@gmail.com
-EMAILS_FROM_NAME="TRITIQ ERP"
+EMAILS_FROM_NAME="TritIQ Business Suite"
 ```
 
 ## 🔧 Development
@@ -768,7 +768,7 @@ npm run dev
 
 ## 📄 License
 
-This project is proprietary software for TRITIQ ERP system.
+This project is proprietary software for TritIQ Business Suite system.
 
 ## 🙏 Acknowledgments
 

@@ -415,7 +415,7 @@ def get_routes():
 @app.on_event("startup")
 async def startup_event():
     """Initialize application: log CORS config, setup database, and seed super admin"""
-    logger.info("Starting up TRITIQ ERP API...")
+    logger.info("Starting up TritIQ Business Suite API...")
     try:
         create_tables()
         logger.info("Database tables created successfully")
@@ -443,12 +443,12 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    logger.info("Shutting down TRITIQ ERP API...")
+    logger.info("Shutting down TritIQ Business Suite API...")
 
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to TRITIQ ERP API",
+        "message": "Welcome to TritIQ Business Suite API",
         "version": config_settings.VERSION,
         "docs": "/docs"
     }

@@ -1,6 +1,6 @@
-# TRITIQ ERP Frontend
+# TritIQ Business Suite Frontend
 
-A modern React-based frontend for the TRITIQ ERP system built with Next.js and Material-UI.
+A modern React-based frontend for the TritIQ Business Suite system built with Next.js and Material-UI.
 
 ## 🚀 Turbopack Migration
 
