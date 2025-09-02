@@ -20,7 +20,6 @@ import {
 } from "@mui/material";
 import { PushPin, PushPinOutlined } from "@mui/icons-material";
 import StickyNote from "./StickyNote";
-import { useAuth } from "../../context/AuthContext";
 import { stickyNotesService } from "../../services/stickyNotesService";
 import { useStickyNotes } from "../../hooks/useStickyNotes";
 interface StickyNoteData {
@@ -42,7 +41,6 @@ const COLORS = [
   { name: "orange", label: "Orange" },
 ];
 const StickyNotesPanel: React.FC = () => {
-  const { user } = useAuth();
   const { userSettings } = useStickyNotes();
   const [notes, setNotes] = useState<StickyNoteData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +133,11 @@ const StickyNotesPanel: React.FC = () => {
       throw err;
     }
   };
-  // Always show icon, regardless of settings, but disable functionality if not enabled
+  // Only render if sticky notes are enabled
+  if (!userSettings.sticky_notes_enabled) {
+    return null;
+  }
+
   return (
     <>
       <Box
@@ -154,12 +156,6 @@ const StickyNotesPanel: React.FC = () => {
           cursor: "pointer",
         }}
         onClick={() => {
-          if (!userSettings.sticky_notes_enabled) {
-            setError(
-              "Sticky notes feature is disabled. Please enable in settings.",
-            );
-            return;
-          }
           setPopupOpen(true);
         }}
       >

@@ -20,7 +20,7 @@ logger.info(f"Loaded .env from: {env_path}")
 
 class Settings:
     # App Settings
-    PROJECT_NAME: str = "TRITIQ ERP API"
+    PROJECT_NAME: str = "TritIQ Business Suite API"
     VERSION: str = "1.0.0"
     DESCRIPTION: str = "FastAPI migration of PySide6 ERP application"
     API_V1_STR: str = "/api"
@@ -60,7 +60,7 @@ class Settings:
     SMTP_USERNAME: Optional[str] = None  # Gmail or SMTP user email
     SMTP_PASSWORD: Optional[str] = None  # Gmail app password or SMTP password  
     EMAILS_FROM_EMAIL: Optional[str] = None  # Sender email (same as SMTP_USERNAME)
-    EMAILS_FROM_NAME: str = "TRITIQ ERP"
+    EMAILS_FROM_NAME: str = "TritIQ Business Suite"
     
     # SendGrid (Alternative email service)
     SENDGRID_API_KEY: Optional[str] = None
@@ -68,7 +68,7 @@ class Settings:
     # Brevo (Sendinblue) Email Service - Primary
     BREVO_API_KEY: Optional[str] = None
     BREVO_FROM_EMAIL: Optional[str] = None
-    BREVO_FROM_NAME: str = "TRITIQ ERP"
+    BREVO_FROM_NAME: str = "TritIQ Business Suite"
     
     # Redis (for caching and task queue)
     REDIS_URL: str = "redis://localhost:6379"
