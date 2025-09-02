@@ -1,6 +1,5 @@
 import os
 from typing import Any, Dict, Optional, List
-from pydantic import BaseModel
 from dotenv import load_dotenv  # Explicitly load .env (optional, as BaseSettings handles it)
 import logging
 
@@ -17,6 +16,13 @@ print(f"DEBUG: .env exists: {os.path.exists(env_path)}")
 
 load_dotenv(env_path)
 logger.info(f"Loaded .env from: {env_path}")
+
+def assemble_cors_origins(v: str | List[str]) -> List[str] | str:
+    if isinstance(v, str) and not v.startswith("["):
+        return [i.strip() for i in v.split(",")]
+    elif isinstance(v, (list, str)):
+        return v
+    raise ValueError(v)
 
 class Settings:
     # App Settings
@@ -79,14 +85,6 @@ class Settings:
     
     # Cors
     BACKEND_CORS_ORIGINS: List[str] = assemble_cors_origins(os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8000,http://127.0.0.1:8080"))
-    
-    @classmethod
-    def assemble_cors_origins(cls, v: str | List[str]) -> List[str] | str:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
     
     # Environment
     ENVIRONMENT: str = "development"
