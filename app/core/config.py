@@ -61,34 +61,39 @@ class Settings:
     SUPABASE_JWT_SECRET: Optional[str] = os.getenv("SUPABASE_JWT_SECRET")
     
     # Email Settings (SMTP)
-    SMTP_HOST: str = "smtp.gmail.com"  # Changed back to SMTP_HOST to match .env
-    SMTP_PORT: int = 587
-    SMTP_USERNAME: Optional[str] = None  # Gmail or SMTP user email
-    SMTP_PASSWORD: Optional[str] = None  # Gmail app password or SMTP password  
-    EMAILS_FROM_EMAIL: Optional[str] = None  # Sender email (same as SMTP_USERNAME)
-    EMAILS_FROM_NAME: str = "TRITIQ ERP"
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USERNAME: Optional[str] = os.getenv("SMTP_USERNAME")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    EMAILS_FROM_EMAIL: Optional[str] = os.getenv("EMAILS_FROM_EMAIL")
+    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "TRITIQ ERP")
     
     # SendGrid (Alternative email service)
-    SENDGRID_API_KEY: Optional[str] = None
+    SENDGRID_API_KEY: Optional[str] = os.getenv("SENDGRID_API_KEY")
 
     # Brevo (Sendinblue) Email Service - Primary
-    BREVO_API_KEY: Optional[str] = None
-    BREVO_FROM_EMAIL: Optional[str] = None
-    BREVO_FROM_NAME: str = "TRITIQ ERP"
+    BREVO_API_KEY: Optional[str] = os.getenv("BREVO_API_KEY")
+    BREVO_FROM_EMAIL: Optional[str] = os.getenv("BREVO_FROM_EMAIL")
+    BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "TRITIQ ERP")
+    
+    # WhatsApp OTP Configuration
+    WHATSAPP_PROVIDER: Optional[str] = os.getenv("WHATSAPP_PROVIDER")
+    WHATSAPP_SENDER_NUMBER: Optional[str] = os.getenv("WHATSAPP_SENDER_NUMBER")
+    WHATSAPP_OTP_TEMPLATE_ID: Optional[str] = os.getenv("WHATSAPP_OTP_TEMPLATE_ID")
     
     # Redis (for caching and task queue)
-    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
     
     # File Storage
-    UPLOAD_FOLDER: str = "uploads"
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    UPLOAD_FOLDER: str = os.getenv("UPLOAD_FOLDER", "uploads")
+    MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
     
     # Cors
     BACKEND_CORS_ORIGINS: List[str] = assemble_cors_origins(os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8000,http://127.0.0.1:8080"))
     
     # Environment
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
     @property
     def jwt_secret(self) -> str:
