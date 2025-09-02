@@ -77,7 +77,7 @@ class Settings:
     BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "TRITIQ ERP")
     
     # WhatsApp OTP Configuration
-    WHATSAPP_PROVIDER: Optional[str] = os.getenv("WHATSAPP_PROVIDER")
+    WHATSAPP_PROVIDER: Optional[str] = os.getenv("WHATSAPP_PROVIDER", "brevo")
     WHATSAPP_SENDER_NUMBER: Optional[str] = os.getenv("WHATSAPP_SENDER_NUMBER")
     WHATSAPP_OTP_TEMPLATE_ID: Optional[str] = os.getenv("WHATSAPP_OTP_TEMPLATE_ID")
     
