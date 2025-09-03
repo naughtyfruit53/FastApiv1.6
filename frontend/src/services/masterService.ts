@@ -96,7 +96,7 @@ export const createVendor = async (vendorData: {
 };
 // Create new product
 export const createProduct = async (productData: {
-  name: string;
+  product_name: string;
   hsn_code?: string;
   part_number?: string;
   unit: string;

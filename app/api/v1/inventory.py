@@ -151,7 +151,7 @@ class InventoryService:
                 current_stock=current_stock,
                 reorder_level=product.reorder_level,
                 priority=AlertPriority.CRITICAL,
-                message=f"Product '{product.name}' is out of stock",
+                message=f"Product '{product.product_name}' is out of stock",
                 suggested_order_quantity=max(product.reorder_level * 2, 10)
             )
             db.add(alert)
@@ -164,7 +164,7 @@ class InventoryService:
                 current_stock=current_stock,
                 reorder_level=product.reorder_level,
                 priority=AlertPriority.HIGH,
-                message=f"Product '{product.name}' is below reorder level",
+                message=f"Product '{product.product_name}' is below reorder level",
                 suggested_order_quantity=max(product.reorder_level * 2 - current_stock, 10)
             )
             db.add(alert)
@@ -224,7 +224,7 @@ async def get_inventory_transactions(
     for transaction in transactions:
         transaction_data = InventoryTransactionResponse(
             **transaction.__dict__,
-            product_name=transaction.product.name if transaction.product else None,
+            product_name=transaction.product.product_name if transaction.product else None,
             created_by_name=transaction.created_by.full_name if transaction.created_by else None
         )
         response.append(transaction_data)
@@ -263,7 +263,7 @@ async def create_inventory_transaction(
         
         return InventoryTransactionResponse(
             **transaction_with_product.__dict__,
-            product_name=transaction_with_product.product.name,
+            product_name=transaction_with_product.product.product_name,
             created_by_name=transaction_with_product.created_by.full_name if transaction_with_product.created_by else None
         )
     
@@ -320,7 +320,7 @@ async def get_job_parts(
     for job_part in job_parts:
         job_part_data = JobPartsResponse(
             **job_part.__dict__,
-            product_name=job_part.product.name if job_part.product else None,
+            product_name=job_part.product.product_name if job_part.product else None,
             job_number=job_part.job.job_number if job_part.job else None,
             allocated_by_name=job_part.allocated_by.full_name if job_part.allocated_by else None,
             used_by_name=job_part.used_by.full_name if job_part.used_by else None
@@ -399,7 +399,7 @@ async def assign_parts_to_job(
     
     return JobPartsResponse(
         **job_part_with_relations.__dict__,
-        product_name=job_part_with_relations.product.name,
+        product_name=job_part_with_relations.product.product_name,
         job_number=job_part_with_relations.job.job_number,
         allocated_by_name=job_part_with_relations.allocated_by.full_name if job_part_with_relations.allocated_by else None
     )
@@ -478,7 +478,7 @@ async def update_job_parts(
     
     return JobPartsResponse(
         **job_part_with_relations.__dict__,
-        product_name=job_part_with_relations.product.name,
+        product_name=job_part_with_relations.product.product_name,
         job_number=job_part_with_relations.job.job_number,
         allocated_by_name=job_part_with_relations.allocated_by.full_name if job_part_with_relations.allocated_by else None,
         used_by_name=job_part_with_relations.used_by.full_name if job_part_with_relations.used_by else None
@@ -535,7 +535,7 @@ async def get_inventory_alerts(
     for alert in alerts:
         alert_data = InventoryAlertResponse(
             **alert.__dict__,
-            product_name=alert.product.name if alert.product else None,
+            product_name=alert.product.product_name if alert.product else None,
             acknowledged_by_name=alert.acknowledged_by.full_name if alert.acknowledged_by else None
         )
         response.append(alert_data)
@@ -676,7 +676,7 @@ async def get_inventory_usage_report(
         
         report_item = InventoryUsageReport(
             product_id=product.id,
-            product_name=product.name,
+            product_name=product.product_name,
             total_issued=transaction.total_issued if transaction else 0.0,
             total_received=transaction.total_received if transaction else 0.0,
             current_stock=stock.quantity if stock else 0.0,
@@ -734,7 +734,7 @@ async def get_low_stock_report(
         
         report_item = LowStockReport(
             product_id=product.id,
-            product_name=product.name,
+            product_name=product.product_name,
             current_stock=stock.quantity,
             reorder_level=product.reorder_level,
             stock_deficit=product.reorder_level - stock.quantity,

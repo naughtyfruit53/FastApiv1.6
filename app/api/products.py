@@ -41,7 +41,7 @@ async def get_products(
     
     if search:
         search_filter = (
-            Product.name.contains(search) |
+            Product.product_name.contains(search) |
             Product.hsn_code.contains(search) |
             Product.part_number.contains(search)
         )
@@ -86,7 +86,7 @@ async def create_product(
     
     # Check if product name already exists in organization
     existing_product = db.query(Product).filter(
-        Product.name == product.name,
+        Product.product_name == product.product_name,
         Product.organization_id == org_id
     ).first()
     if existing_product:
@@ -104,7 +104,7 @@ async def create_product(
     db.commit()
     db.refresh(db_product)
     
-    logger.info(f"Product {product.name} created in org {org_id} by {current_user.email}")
+    logger.info(f"Product {product.product_name} created in org {org_id} by {current_user.email}")
     return ProductResponse.from_product(db_product)
 
 @router.put("/{product_id}", response_model=ProductResponse)
@@ -128,9 +128,9 @@ async def update_product(
         TenantQueryMixin.ensure_tenant_access(product, getattr(product, "organization_id", None))
     
     # Check name uniqueness if being updated
-    if product_update.name and product_update.name != product.name:
+    if product_update.product_name and product_update.product_name != product.product_name:
         existing_product = db.query(Product).filter(
-            Product.name == product_update.name,
+            Product.product_name == product_update.product_name,
             Product.organization_id == product.organization_id
         ).first()
         if existing_product:
@@ -149,7 +149,7 @@ async def update_product(
     db.commit()
     db.refresh(product)
     
-    logger.info(f"Product {product.name} updated by {current_user.email}")
+    logger.info(f"Product {product.product_name} updated by {current_user.email}")
     return ProductResponse.from_product(product)
 
 @router.delete("/{product_id}")
@@ -177,7 +177,7 @@ async def delete_product(
     db.delete(product)
     db.commit()
     
-    logger.info(f"Product {product.name} deleted by {current_user.email}")
+    logger.info(f"Product {product.product_name} deleted by {current_user.email}")
     return {"message": "Product deleted successfully"}
 
 # Excel Import/Export/Template endpoints
@@ -214,7 +214,7 @@ async def export_products_excel(
     
     if search:
         search_filter = (
-            Product.name.contains(search) |
+            Product.product_name.contains(search) |
             Product.hsn_code.contains(search) |
             Product.part_number.contains(search)
         )
@@ -226,7 +226,7 @@ async def export_products_excel(
     products_data = []
     for product in products:
         products_data.append({
-            "product_name": product.name,  # Map name to product_name for consistency
+            "product_name": product.product_name,  # Map name to product_name for consistency
             "hsn_code": product.hsn_code or "",
             "part_number": product.part_number or "",
             "unit": product.unit,
@@ -281,7 +281,7 @@ async def import_products_excel(
             try:
                 # Map Excel columns to model fields
                 product_data = {
-                    "name": str(record.get("product_name", "")).strip(),  # Map product_name to name for DB
+                    "product_name": str(record.get("product_name", "")).strip(),  # Map product_name to name for DB
                     "hsn_code": str(record.get("hsn_code", "")).strip(),
                     "part_number": str(record.get("part_number", "")).strip(),
                     "unit": str(record.get("unit", "")).strip(),
@@ -294,7 +294,7 @@ async def import_products_excel(
                 }
                 
                 # Validate required fields
-                if not product_data["name"]:
+                if not product_data["product_name"]:
                     errors.append(f"Row {i}: Product Name is required")
                     continue
                     
@@ -304,7 +304,7 @@ async def import_products_excel(
                 
                 # Check if product already exists
                 existing_product = db.query(Product).filter(
-                    Product.name == product_data["name"],
+                    Product.product_name == product_data["product_name"],
                     Product.organization_id == org_id
                 ).first()
                 
@@ -315,7 +315,7 @@ async def import_products_excel(
                         setattr(existing_product, field, value)
                     updated_count += 1
                     product = existing_product
-                    logger.info(f"Updated product: {product_data['name']}")
+                    logger.info(f"Updated product: {product_data['product_name']}")
                 else:
                     # Create new product
                     new_product = Product(
@@ -326,7 +326,7 @@ async def import_products_excel(
                     db.flush()  # Get the new product ID
                     created_count += 1
                     product = new_product
-                    logger.info(f"Created product: {product_data['name']}")
+                    logger.info(f"Created product: {product_data['product_name']}")
                 
                 # Handle stock creation/update for the product
                 # Check for optional initial stock quantity in Excel
@@ -352,7 +352,7 @@ async def import_products_excel(
                             if initial_location:
                                 setattr(existing_stock, "location", initial_location)
                             updated_stocks += 1
-                            logger.info(f"Updated stock for product: {product_data['name']}")
+                            logger.info(f"Updated stock for product: {product_data['product_name']}")
                     else:
                         # Create new stock entry
                         new_stock = Stock(
@@ -364,7 +364,7 @@ async def import_products_excel(
                         )
                         db.add(new_stock)
                         created_stocks += 1
-                        logger.info(f"Created stock entry for product: {product_data['name']} with quantity: {quantity}")
+                        logger.info(f"Created stock entry for product: {product_data['product_name']} with quantity: {quantity}")
                     
             except (ValueError, TypeError) as e:
                 errors.append(f"Row {i}: Invalid data format - {str(e)}")
@@ -658,7 +658,7 @@ async def check_products_stock_consistency(
         result["consistency_issues"].append({
             "type": "products_without_stock",
             "count": len(products_without_stock),
-            "products": [{"id": p.id, "name": p.name} for p in products_without_stock]
+            "products": [{"id": p.id, "name": p.product_name} for p in products_without_stock]
         })
         
         if fix_issues:
@@ -710,7 +710,7 @@ async def check_products_stock_consistency(
         result["consistency_issues"].append({
             "type": "inactive_products_with_stock",
             "count": len(inactive_products_with_stock),
-            "products": [{"id": p.id, "name": p.name, "stock_qty": s.quantity} 
+            "products": [{"id": p.id, "name": p.product_name, "stock_qty": s.quantity} 
                         for p, s in inactive_products_with_stock]
         })
     

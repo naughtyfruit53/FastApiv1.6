@@ -45,7 +45,7 @@ class VoucherInDBBase(VoucherBase):
         from_attributes = True
 
 class ProductMinimal(BaseModel):
-    name: str
+    product_name: str
 
     class Config:
         from_attributes = True
