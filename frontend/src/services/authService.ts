@@ -1,6 +1,4 @@
 // frontend/src/services/authService.ts
-// Revised: frontend/src/services/authService.ts
-// frontend/src/services/authService.ts (Revised for detailed error handling in companyService)
 import api from "../lib/api"; // Use the api client
 export const authService = {
   login: async (username: string, password: string): Promise<any> => {
@@ -16,6 +14,7 @@ export const authService = {
       });
       console.log("[AuthService] Login API response received:", {
         hasToken: !!response.data.access_token,
+        hasRefresh: !!response.data.refresh_token,
         organizationId: response.data.organization_id,
         userRole: response.data.user_role,
         mustChangePassword: response.data.must_change_password,
@@ -63,6 +62,7 @@ export const authService = {
       });
       console.log("[AuthService] Email login API response received:", {
         hasToken: !!response.data.access_token,
+        hasRefresh: !!response.data.refresh_token,
         organizationId: response.data.organization_id,
         userRole: response.data.user_role,
         mustChangePassword: response.data.must_change_password,
@@ -71,6 +71,10 @@ export const authService = {
       localStorage.setItem("token", response.data.access_token);
       // Store ALL authentication context data immediately after token
       // Store authentication context data (NOT organization_id - that stays in memory)
+      if (response.data.refresh_token) {
+        localStorage.setItem("refresh_token", response.data.refresh_token);
+        console.log("[AuthService] Stored refresh token");
+      }
       if (response.data.user_role) {
         localStorage.setItem("user_role", response.data.user_role);
         console.log("[AuthService] Stored user_role:", response.data.user_role);
@@ -189,7 +193,9 @@ export const authService = {
       console.log("[AuthService] Attempting to refresh token");
       const refreshToken = localStorage.getItem("refresh_token");
       if (!refreshToken) {
-        throw new Error("No refresh token available");
+        console.error("[AuthService] No refresh token available");
+        // Instead of throw, return null and let caller handle
+        return null;
       }
       const response = await api.post("/auth/refresh-token", {
         refresh_token: refreshToken,
@@ -210,7 +216,7 @@ export const authService = {
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user_role");
       localStorage.removeItem("is_super_admin");
-      throw new Error(error.userMessage || "Token refresh failed");
+      return null;  // Return null instead of throw
     }
   },
   isTokenValid: () => {

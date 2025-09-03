@@ -22,12 +22,12 @@ from app.core.rbac_dependencies import (
     require_role_management_permission, require_same_organization,
     get_rbac_service
 )
+from app.api.v1.user import get_current_active_user
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
 
 # Permission Management Endpoints
 @router.get("/permissions", response_model=List[ServicePermissionInDB])
@@ -42,7 +42,6 @@ async def get_service_permissions(
     permissions = rbac_service.get_permissions(module=module, action=action)
     return permissions
 
-
 @router.post("/permissions/initialize")
 async def initialize_default_permissions(
     rbac_service: RBACService = Depends(get_rbac_service),
@@ -51,7 +50,6 @@ async def initialize_default_permissions(
     """Initialize default service permissions (admin only)"""
     logger.info(f"User {current_user.id} initializing default permissions")
     
-    # Only super admins can initialize permissions
     if not getattr(current_user, 'is_super_admin', False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -63,7 +61,6 @@ async def initialize_default_permissions(
         "message": f"Initialized {len(permissions)} default permissions",
         "permissions": permissions
     }
-
 
 # Role Management Endpoints
 @router.get("/organizations/{organization_id}/roles", response_model=List[ServiceRoleInDB])
@@ -79,7 +76,6 @@ async def get_organization_roles(
     roles = rbac_service.get_roles(organization_id, is_active=is_active)
     return roles
 
-
 @router.post("/organizations/{organization_id}/roles", response_model=ServiceRoleInDB)
 async def create_service_role(
     organization_id: int,
@@ -91,12 +87,10 @@ async def create_service_role(
     """Create a new service role"""
     logger.info(f"User {current_user.id} creating role '{role.name}' for organization {organization_id}")
     
-    # Ensure organization_id matches the path
     role.organization_id = organization_id
     
     db_role = rbac_service.create_role(role, created_by_user_id=current_user.id)
     return db_role
-
 
 @router.get("/roles/{role_id}", response_model=ServiceRoleWithPermissions)
 async def get_service_role(
@@ -107,26 +101,22 @@ async def get_service_role(
     """Get a specific service role with its permissions"""
     logger.info(f"User {current_user.id} requesting role {role_id}")
     
-    # Get role with organization check for non-super admins
     organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
     
     role = rbac_service.get_role_with_permissions(role_id)
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
     
-    # Check organization access
     if organization_id and role.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to role from different organization"
         )
     
-    # Convert to response format with permissions
     role_dict = role.__dict__.copy()
     role_dict['permissions'] = [rp.permission for rp in role.role_permissions]
     
     return role_dict
-
 
 @router.put("/roles/{role_id}", response_model=ServiceRoleInDB)
 async def update_service_role(
@@ -142,7 +132,6 @@ async def update_service_role(
     
     db_role = rbac_service.update_role(role_id, updates, organization_id=organization_id)
     return db_role
-
 
 @router.delete("/roles/{role_id}")
 async def delete_service_role(
@@ -161,7 +150,6 @@ async def delete_service_role(
     
     return {"message": "Role deleted successfully"}
 
-
 @router.post("/organizations/{organization_id}/roles/initialize")
 async def initialize_default_roles(
     organization_id: int,
@@ -178,7 +166,6 @@ async def initialize_default_roles(
         "roles": roles
     }
 
-
 # User Role Assignment Endpoints
 @router.post("/users/{user_id}/roles", response_model=RoleAssignmentResponse)
 async def assign_roles_to_user(
@@ -190,7 +177,6 @@ async def assign_roles_to_user(
     """Assign service roles to a user"""
     logger.info(f"User {current_user.id} assigning roles to user {user_id}")
     
-    # Ensure user_id matches the request
     assignment.user_id = user_id
     
     try:
@@ -210,7 +196,6 @@ async def assign_roles_to_user(
             assignments=[]
         )
 
-
 @router.delete("/users/{user_id}/roles/{role_id}")
 async def remove_role_from_user(
     user_id: int,
@@ -227,7 +212,6 @@ async def remove_role_from_user(
     
     return {"message": "Role removed successfully"}
 
-
 @router.delete("/users/{user_id}/roles")
 async def remove_all_roles_from_user(
     user_id: int,
@@ -240,19 +224,24 @@ async def remove_all_roles_from_user(
     count = rbac_service.remove_all_service_roles_from_user(user_id)
     return {"message": f"Removed {count} role assignments"}
 
-
 @router.get("/users/{user_id}/roles", response_model=List[ServiceRoleInDB])
 async def get_user_service_roles(
     user_id: int,
     rbac_service: RBACService = Depends(get_rbac_service),
-    current_user: User = Depends(require_role_management_permission)
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Get all service roles assigned to a user"""
+    """Get all service roles assigned to a user, including self"""
     logger.info(f"User {current_user.id} requesting roles for user {user_id}")
+    
+    # Allow users to view their own roles
+    if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to view other users' roles"
+        )
     
     roles = rbac_service.get_user_service_roles(user_id)
     return roles
-
 
 @router.get("/roles/{role_id}/users", response_model=List[UserWithServiceRoles])
 async def get_users_with_role(
@@ -265,7 +254,6 @@ async def get_users_with_role(
     
     users = rbac_service.get_users_with_role(role_id)
     
-    # Convert to response format
     result = []
     for user in users:
         user_roles = rbac_service.get_user_service_roles(user.id)
@@ -280,28 +268,29 @@ async def get_users_with_role(
     
     return result
 
-
 # Permission Checking Endpoints
 @router.post("/permissions/check", response_model=PermissionCheckResponse)
 async def check_user_permission(
     request: PermissionCheckRequest,
     rbac_service: RBACService = Depends(get_rbac_service),
-    current_user: User = Depends(require_role_management_permission)
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Check if a user has a specific permission"""
+    """Check if a user has a specific permission, including self"""
     logger.info(f"User {current_user.id} checking permission '{request.permission}' for user {request.user_id}")
+    
+    # Allow users to check their own permissions
+    if current_user.id != request.user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to check other users' permissions"
+        )
     
     has_permission = rbac_service.user_has_service_permission(request.user_id, request.permission)
     
-    # Determine source of permission
     source = "none"
     if has_permission:
         user_roles = rbac_service.get_user_service_roles(request.user_id)
-        for role in user_roles:
-            role_perms = rbac_service.db.query(rbac_service.db.query).join(
-                # This would need to be completed with proper joins
-            )
-        source = "service_role"  # Simplified for now
+        source = "service_role" if user_roles else "none"
     
     return PermissionCheckResponse(
         has_permission=has_permission,
@@ -310,15 +299,21 @@ async def check_user_permission(
         source=source
     )
 
-
 @router.get("/users/{user_id}/permissions")
 async def get_user_permissions(
     user_id: int,
     rbac_service: RBACService = Depends(get_rbac_service),
-    current_user: User = Depends(require_role_management_permission)
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Get all permissions for a user"""
+    """Get all permissions for a user, including self"""
     logger.info(f"User {current_user.id} requesting permissions for user {user_id}")
+    
+    # Allow users to view their own permissions
+    if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to view other users' permissions"
+        )
     
     permissions = rbac_service.get_user_service_permissions(user_id)
     roles = rbac_service.get_user_service_roles(user_id)
@@ -329,7 +324,6 @@ async def get_user_permissions(
         "service_roles": roles,
         "total_permissions": len(permissions)
     }
-
 
 # Bulk Operations
 @router.post("/roles/assign/bulk", response_model=BulkRoleAssignmentResponse)

@@ -14,6 +14,8 @@ import {
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { getFeatureFlag } from "../utils/config";
+import { passwordService } from "../services/authService"; // ADDED IMPORT FOR PASSWORD SERVICE
+
 interface PasswordChangeModalProps {
   open: boolean;
   onClose: () => void;
@@ -65,19 +67,12 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      // Call API for password change (mandatory or regular)
-      const endpoint = isRequired
-        ? "/api/v1/password/change-mandatory"
-        : "/api/v1/password/change";
-      const payload = isRequired ? { new_password: data.new_password } : data;
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to change password");
-      }
+      // Use passwordService instead of direct fetch - handles token update automatically
+      await passwordService.changePassword(
+        isRequired ? null : data.current_password!,
+        data.new_password,
+        data.confirm_password
+      );
       setSuccess(true);
       if (onSuccess) {
         onSuccess();
@@ -88,29 +83,11 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
         }, 2000);
       }
     } catch (err: any) {
-      // Try to extract from various error structures
-      const detail = err.response?.data?.detail;
-      const message = err.response?.data?.message;
       let errorMessage = "Failed to change password";
-      if (typeof detail === "string" && detail) {
-        errorMessage = detail;
-      } else if (typeof message === "string" && message) {
-        errorMessage = message;
-      } else if (Array.isArray(detail) && detail.length > 0) {
-        // Handle Pydantic validation errors
-        const messages = detail
-          .map((e) => e.msg || `${e.loc?.join(" -> ")}: ${e.type}`)
-          .filter(Boolean);
-        errorMessage =
-          messages.length > 0 ? messages.join(", ") : "Validation error";
-      } else if (detail && typeof detail === "object") {
-        // Handle object error details
-        errorMessage =
-          detail.error || detail.message || "Invalid request format";
-      } else if (typeof err.message === "string" && err.message) {
+      if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err.message) {
         errorMessage = err.message;
-      } else if (err.status === 422) {
-        errorMessage = "Invalid request. Please check your input fields.";
       }
       setError(errorMessage);
     } finally {

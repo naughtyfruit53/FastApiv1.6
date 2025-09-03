@@ -36,6 +36,7 @@ class Settings:
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     # JWT Token Expiry: minimum 120 minutes (2 hours), maximum 300 minutes (5 hours)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "180"))  # Default 3 hours, within required range
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", "1440"))  # Default 24 hours
     
     @classmethod
     def validate_token_expiry(cls, v: int) -> int:

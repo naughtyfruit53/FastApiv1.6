@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from datetime import datetime, timedelta, timezone
-from app.models import User, PlatformUser
+from app.models import User, PlatformUser, ServiceRole, UserServiceRole
 from app.models import Organization
 from app.schemas.user import (
     UserCreate, UserUpdate, UserInDB, 
@@ -15,6 +15,7 @@ from app.schemas.user import (
 from app.core.security import get_password_hash, verify_password, is_super_admin_email
 from app.core.audit import AuditLogger
 from app.services.email_service import email_service
+from app.services.rbac import RBACService  # ADDED FOR ROLE ASSIGNMENT
 import secrets
 import string
 import logging
@@ -37,7 +38,6 @@ class UserService:
         if organization_id is not None:
             query = query.filter(User.organization_id == organization_id)
         else:
-            # If no organization specified, prefer super admin users
             query = query.order_by(User.is_super_admin.desc())
         
         return query.first()
@@ -70,28 +70,23 @@ class UserService:
         allow_master_password: bool = True
     ) -> Optional[User]:
         """Authenticate user with email/password"""
-        # Try to find user
         user = UserService.get_user_by_email(db, email, organization_id)
         if not user:
             return None
         
-        # Check if user is active
         if not user.is_active:
             return None
         
-        # Check account lock
         if user.locked_until and user.locked_until > datetime.now(timezone.utc):
             return None
         
-        # Check master password for super admin (temporary)
         if (allow_master_password and 
             user.is_super_admin and 
             is_super_admin_email(user.email) and
-            password == "123456"):  # Temporary master password changed to match user's input
+            password == "123456"):
             user.force_password_reset = True
             return user
         
-        # Check temporary password
         if (user.temp_password_hash and 
             user.temp_password_expires and
             user.temp_password_expires > datetime.now(timezone.utc) and
@@ -99,7 +94,6 @@ class UserService:
             user.force_password_reset = True
             return user
         
-        # Check regular password
         if verify_password(password, user.hashed_password):
             return user
         
@@ -117,23 +111,19 @@ class UserService:
         if not user:
             return None
         
-        # Check if user is active
         if not user.is_active:
             return None
         
-        # Check account lock
         if user.locked_until and user.locked_until > datetime.now(timezone.utc):
             return None
         
-        # Check master password (temporary)
         if (allow_master_password and 
             user.role == "super_admin" and 
             is_super_admin_email(user.email) and
-            password == "123456"):  # Temporary master password changed to match user's input
+            password == "123456"):
             user.force_password_reset = True
             return user
         
-        # Check temporary password
         if (user.temp_password_hash and 
             user.temp_password_expires and
             user.temp_password_expires > datetime.now(timezone.utc) and
@@ -141,7 +131,6 @@ class UserService:
             user.force_password_reset = True
             return user
         
-        # Check regular password
         if verify_password(password, user.hashed_password):
             return user
         
@@ -149,18 +138,15 @@ class UserService:
     
     @staticmethod
     def create_user(db: Session, user_create: UserCreate) -> User:
-        """Create a new user"""
+        """Create a new user with default service role"""
         if user_create.organization_id is None:
             raise ValueError("Organization ID is required for creating a user")
         
-        # Verify organization exists
         org = db.query(Organization).filter(Organization.id == user_create.organization_id).first()
         if not org:
             raise ValueError(f"Organization with ID {user_create.organization_id} does not exist")
         
         hashed_password = get_password_hash(user_create.password)
-        
-        # Auto-generate username from email if not provided
         username = user_create.username or user_create.email.split("@")[0]
         
         db_user = User(
@@ -175,10 +161,29 @@ class UserService:
             employee_id=user_create.employee_id,
             phone=user_create.phone,
             is_active=user_create.is_active,
-            must_change_password=True  # Force password change on first login
+            must_change_password=True
         )
         
         db.add(db_user)
+        db.flush()  # Get user ID before committing
+        
+        # Assign default 'admin' service role for org super admin
+        if user_create.role == "org_admin":
+            rbac_service = RBACService(db)
+            role = db.query(ServiceRole).filter(
+                ServiceRole.organization_id == user_create.organization_id,
+                ServiceRole.name == "admin"
+            ).first()
+            if role:
+                assignment = UserServiceRole(
+                    organization_id=user_create.organization_id,
+                    user_id=db_user.id,
+                    role_id=role.id,
+                    assigned_by_id=None  # System-assigned
+                )
+                db.add(assignment)
+                logger.info(f"Assigned default 'admin' service role to user {db_user.email}")
+        
         db.commit()
         db.refresh(db_user)
         return db_user
@@ -213,7 +218,6 @@ class UserService:
         
         update_data = user_update.dict(exclude_unset=True)
         
-        # Auto-update username if email changes and username is not explicitly provided
         if 'email' in update_data and 'username' not in update_data:
             update_data['username'] = update_data['email'].split("@")[0]
         
@@ -230,7 +234,6 @@ class UserService:
         characters = string.ascii_letters + string.digits + "!@#$%^&*"
         password = ''.join(secrets.choice(characters) for _ in range(length))
         
-        # Ensure at least one character from each category
         if not any(c.islower() for c in password):
             password = password[:-1] + secrets.choice(string.ascii_lowercase)
         if not any(c.isupper() for c in password):
@@ -248,16 +251,13 @@ class UserService:
         request=None
     ) -> AdminPasswordResetResponse:
         """Reset password for a specific user (admin operation)"""
-        # Find target user
         target_user = UserService.get_user_by_email(db, target_email)
         if not target_user:
             raise ValueError(f"User with email {target_email} not found")
         
-        # Generate new password
         new_password = UserService.generate_secure_password()
         hashed_password = get_password_hash(new_password)
         
-        # Update user password
         target_user.hashed_password = hashed_password
         target_user.must_change_password = True
         target_user.force_password_reset = True
@@ -266,7 +266,6 @@ class UserService:
         
         db.commit()
         
-        # Try to send email notification
         email_sent = False
         email_error = None
         try:
@@ -275,7 +274,7 @@ class UserService:
                 target_user.full_name or target_user.username,
                 new_password, 
                 admin_user.full_name or admin_user.email,
-                organization_name=None  # Add if needed
+                organization_name=None
             )
             email_sent = success
             email_error = error
@@ -283,7 +282,6 @@ class UserService:
             email_error = str(e)
             logger.warning(f"Failed to send password reset email: {e}")
         
-        # Log the password reset
         AuditLogger.log_password_reset(
             db=db,
             admin_email=admin_user.email,
@@ -313,7 +311,6 @@ class UserService:
         request=None
     ) -> BulkPasswordResetResponse:
         """Reset passwords for all users in an organization"""
-        # Get all active users in the organization
         users = db.query(User).filter(
             and_(
                 User.organization_id == organization_id,
@@ -338,7 +335,6 @@ class UserService:
                 user.failed_login_attempts = 0
                 user.locked_until = None
                 
-                # Try to send email
                 email_sent = False
                 email_error = None
                 try:
@@ -347,7 +343,7 @@ class UserService:
                         user.full_name or user.username,
                         new_password, 
                         admin_user.full_name or admin_user.email,
-                        organization_name=None  # Add if needed
+                        organization_name=None
                     )
                     email_sent = success
                     email_error = error
@@ -370,7 +366,6 @@ class UserService:
         
         db.commit()
         
-        # Log the bulk password reset
         AuditLogger.log_password_reset(
             db=db,
             admin_email=admin_user.email,
@@ -397,7 +392,6 @@ class UserService:
         request=None
     ) -> BulkPasswordResetResponse:
         """Reset passwords for all users across all organizations (super admin only)"""
-        # Get all active users
         users = db.query(User).filter(User.is_active == True).all()
         
         if not users:
@@ -421,7 +415,6 @@ class UserService:
                 if user.organization_id:
                     affected_orgs.add(user.organization_id)
                 
-                # Try to send email
                 email_sent = False
                 email_error = None
                 try:
@@ -430,7 +423,7 @@ class UserService:
                         user.full_name or user.username,
                         new_password, 
                         admin_user.full_name or admin_user.email,
-                        organization_name=None  # Add if needed
+                        organization_name=None
                     )
                     email_sent = success
                     email_error = error
@@ -455,7 +448,6 @@ class UserService:
         
         db.commit()
         
-        # Log the global password reset
         AuditLogger.log_password_reset(
             db=db,
             admin_email=admin_user.email,
@@ -502,15 +494,11 @@ class UserService:
     ) -> None:
         """Update login attempt statistics"""
         if success:
-            # Reset failed attempts on successful login
             user.failed_login_attempts = 0
             user.locked_until = None
             user.last_login = datetime.now(timezone.utc)
         else:
-            # Increment failed attempts
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
-            
-            # Lock account if too many failed attempts
             if user.failed_login_attempts >= 5:
                 user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
         

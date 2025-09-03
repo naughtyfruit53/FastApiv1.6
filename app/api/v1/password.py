@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.core.security import verify_password, get_password_hash, create_access_token
+from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token  # ADDED create_refresh_token
 from app.core.config import settings
 from app.core.audit import AuditLogger, get_client_ip, get_user_agent
 from app.models import User
@@ -130,6 +130,15 @@ async def change_password(
             expires_delta=access_token_expires
         )
         
+        refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+        new_refresh_token = create_refresh_token(
+            subject=current_user.email,
+            organization_id=current_user.organization_id,
+            user_role=current_user.role,
+            user_type="platform" if getattr(current_user, 'is_platform_user', False) else "organization",
+            expires_delta=refresh_token_expires
+        )
+        
         # Log successful password change
         AuditLogger.log_password_reset(
             db=db,
@@ -152,6 +161,7 @@ async def change_password(
         return PasswordChangeResponse(
             message="Password changed successfully",
             access_token=new_access_token,
+            refresh_token=new_refresh_token,  # ADDED
             token_type="bearer"
         )
         
@@ -302,10 +312,20 @@ async def reset_password(
             expires_delta=access_token_expires
         )
         
+        refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+        new_refresh_token = create_refresh_token(
+            subject=user.email,
+            organization_id=user.organization_id,
+            user_role=user.role,
+            user_type="platform" if getattr(user, 'is_platform_user', False) else "organization",
+            expires_delta=refresh_token_expires
+        )
+        
         logger.info(f"Password reset successfully for {user.email}, new JWT token issued")
         return PasswordChangeResponse(
             message="Password reset successfully",
             access_token=new_access_token,
+            refresh_token=new_refresh_token,  # ADDED
             token_type="bearer"
         )
         

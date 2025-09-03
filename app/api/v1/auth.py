@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -8,6 +8,7 @@ from typing import Union
 from app.core.database import get_db
 from app.core.security import (
     create_access_token,
+    create_refresh_token,
     verify_password,
     get_password_hash,
     oauth2_scheme,
@@ -92,6 +93,15 @@ async def login(
         expires_delta=access_token_expires
     )
 
+    refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    refresh_token = create_refresh_token(
+        subject=user.email,
+        organization_id=organization_id,
+        user_role=user_role,
+        user_type=user_type,
+        expires_delta=refresh_token_expires
+    )
+
     create_audit_log(
         db=db,
         table_name="security_events",
@@ -118,6 +128,7 @@ async def login(
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "organization_id": organization_id,
         "organization_name": organization_name,
@@ -131,12 +142,12 @@ async def login(
 
 @router.post("/refresh-token", response_model=Token)
 async def refresh_token(
-    token: str = Depends(oauth2_scheme),
+    refresh_token: str = Body(...),
     db: Session = Depends(get_db)
 ):
-    email, organization_id, user_role, user_type = verify_token(token)
+    email, organization_id, user_role, user_type = verify_token(refresh_token, expected_type="refresh")
     if not email:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     if user_type == "platform":
         user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
@@ -155,7 +166,16 @@ async def refresh_token(
         expires_delta=access_token_expires
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    new_refresh_token = create_refresh_token(
+        subject=user.email,
+        organization_id=organization_id,
+        user_role=user_role,
+        user_type=user_type,
+        expires_delta=refresh_token_expires
+    )
+
+    return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
 
 @router.get("/logout")
 async def logout(

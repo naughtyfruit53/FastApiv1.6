@@ -1,6 +1,6 @@
 "use client";
 
-// fastapi_migration/frontend/src/pages/password-reset.tsx
+// frontend/src/pages/password-reset.tsx
 
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -53,21 +53,25 @@ const PasswordResetPage: React.FC = () => {
     setError(null);
 
     try {
-      await passwordService.changePassword(
+      const response = await passwordService.changePassword(
         isMandatory ? null : data.current_password || null,
         data.new_password,
         data.confirm_password,
       );
-      // Immediately update local state to prevent redirect loop
+      console.log("[PasswordResetPage] Password change response:", response); // ADDED FOR DEBUGGING
       updateUser({ must_change_password: false });
       setSuccess(true);
-      // Refresh from server to sync any other changes
       await refreshUser();
       setTimeout(() => {
         router.push("/dashboard");
       }, 2000);
     } catch (err: any) {
-      setError(err.message || "Failed to change password");
+      console.error("[PasswordResetPage] Password change error:", err); // ADDED FOR DEBUGGING
+      let errorMessage = err.message || "Failed to change password";
+      if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

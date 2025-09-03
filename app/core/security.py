@@ -40,13 +40,39 @@ def create_access_token(
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
+def create_refresh_token(
+    subject: Union[str, Any],
+    organization_id: Optional[int] = None,
+    user_role: Optional[str] = None,
+    user_type: str = "organization",
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
+        )
+
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "organization_id": organization_id,
+        "user_role": user_role,
+        "user_type": user_type,
+        "token_type": "refresh"  # Distinguish from access token
+    }
+
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
-def verify_token(token: str) -> tuple[Union[str, None], Union[int, None], Union[str, None], Union[str, None]]:
+def verify_token(token: str, expected_type: Optional[str] = None) -> tuple[Union[str, None], Union[int, None], Union[str, None], Union[str, None]]:
     """Verify token and return email, organization_id, user_role, and user_type"""
     try:
         print("DEBUG: Token to decode (security.py):", token)
@@ -54,10 +80,12 @@ def verify_token(token: str) -> tuple[Union[str, None], Union[int, None], Union[
             token, settings.jwt_secret, algorithms=[settings.ALGORITHM]
         )
         print("DEBUG: Decoded payload (security.py):", payload)
+        if expected_type and payload.get("token_type") != expected_type:
+            raise exceptions.JWTError("Invalid token type")
         email = payload.get("sub")
         organization_id = payload.get("organization_id")
         user_role = payload.get("user_role")
-        user_type = payload.get("user_type", "organization")  # Default to organization for backward compatibility
+        user_type = payload.get("user_type", "organization")
         return email, organization_id, user_role, user_type
     except exceptions.ExpiredSignatureError:
         raise HTTPException(
