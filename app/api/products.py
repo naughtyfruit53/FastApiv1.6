@@ -30,7 +30,7 @@ async def get_products(
 ):
     """Get products in current organization"""
     
-    # Restrict app super admins from accessing organization data
+    # Check if user is app super admin
     org_id = ensure_organization_context(current_user)
     
     query = db.query(Product)
@@ -140,7 +140,10 @@ async def update_product(
             )
     
     # Update product
-    for field, value in product_update.dict(exclude_unset=True).items():
+    update_data = product_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        if field in ['part_number', 'hsn_code'] and value == '':
+            value = None
         setattr(product, field, value)
     
     db.commit()

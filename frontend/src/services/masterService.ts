@@ -20,7 +20,7 @@ export const getCustomers = async ({ signal }: QueryFunctionContext): Promise<an
 };
 // Fetch all products
 export const getProducts = async ({ signal }: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/products", { signal });
+  const response = await api.get("/products", { params: { active_only: false }, signal });
   return response.data;
 };
 // Fetch all employees
@@ -38,7 +38,7 @@ export const searchCustomers = async ({
     params: {
       search: searchTerm,
       limit: limit || 10,
-      active_only: true,
+      active_only: false,
     },
     signal,
   });
@@ -54,7 +54,7 @@ export const searchProducts = async ({
     params: {
       search: searchTerm,
       limit: limit || 10,
-      active_only: true,
+      active_only: false,
     },
     signal,
   });
