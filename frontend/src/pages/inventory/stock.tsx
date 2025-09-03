@@ -65,6 +65,7 @@ const StockManagement: React.FC = () => {
   const router = useRouter();
   const { user, isOrgContextReady } = useAuth(); // Get organization context readiness
   const [searchText, setSearchText] = useState("");
+  const [filteredStockData, setFilteredStockData] = useState<any[]>([]);
   const [showZero, setShowZero] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
@@ -88,9 +89,9 @@ const StockManagement: React.FC = () => {
     // Add if you have low_stock_only or product_id states
   };
   // Only fetch stock data if organization context is ready
-  const { data: stockData, error: stockError } = useQuery({
+  const { data: stockData, error: stockError, isFetching } = useQuery({
     queryKey: ["stock", stockParams],
-    queryFn: () => masterDataService.getStock(), // Fix the function call
+    queryFn: () => masterDataService.getStock(stockParams), // Pass stockParams
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
   const { data: products } = useQuery({
@@ -126,6 +127,21 @@ const StockManagement: React.FC = () => {
       );
     },
   });
+  useEffect(() => {
+    if (stockData) {
+      let filtered = stockData;
+      if (searchText) {
+        const lowerSearch = searchText.toLowerCase();
+        filtered = stockData.filter((stock: any) =>
+          stock.product_name.toLowerCase().includes(lowerSearch)
+        );
+      }
+      if (!showZero) {
+        filtered = filtered.filter((stock: any) => stock.quantity > 0);
+      }
+      setFilteredStockData(filtered);
+    }
+  }, [stockData, searchText, showZero]);
   const handleEditStock = (stock: any) => {
     setSelectedStock(stock);
     setEditFormData({ quantity: stock.quantity });
@@ -420,7 +436,13 @@ const StockManagement: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {stockData?.map((stock: any) => (
+                    {isFetching ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center">
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredStockData?.map((stock: any) => (
                       <TableRow
                         key={stock.id}
                         sx={{

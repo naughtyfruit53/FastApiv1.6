@@ -25,7 +25,6 @@ interface User {
   full_name: string;
   role: string;
   is_active: boolean;
-  username: string;
 }
 interface OrganizationMembersDialogProps {
   open: boolean;
@@ -47,7 +46,6 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteData, setInviteData] = useState({
     email: "",
-    username: "",
     full_name: "",
     password: "",
     role: "standard_user",
@@ -85,7 +83,6 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
       // Reset form and refresh members
       setInviteData({
         email: "",
-        username: "",
         full_name: "",
         password: "",
         role: "standard_user",
@@ -127,7 +124,7 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
     }
   };
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">{organizationName} - Members</Typography>
@@ -181,20 +178,6 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
-                  label="Username"
-                  value={inviteData.username}
-                  onChange={(e) =>
-                    setInviteData((prev) => ({
-                      ...prev,
-                      username: e.target.value,
-                    }))
-                  }
-                  required
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
                   label="Full Name"
                   value={inviteData.full_name}
                   onChange={(e) =>
@@ -235,7 +218,6 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
                     disabled={
                       inviting ||
                       !inviteData.email ||
-                      !inviteData.username ||
                       !inviteData.password
                     }
                   >
@@ -286,15 +268,12 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
                     }
                     secondary={
                       <Box>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                           <Email
                             fontSize="small"
                             sx={{ mr: 0.5, verticalAlign: "text-bottom" }}
                           />
                           {member.email}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Username: {member.username}
                         </Typography>
                       </Box>
                     }

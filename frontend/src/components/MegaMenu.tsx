@@ -938,7 +938,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           sx: {
             width: selectedSection ? 'calc(100vw - 40px)' : 'auto',
             maxWidth: selectedSection ? 'calc(100vw - 40px)' : 'auto',
-            maxHeight: 'calc(100vh - 100px)',
+            maxHeight: 'calc(120vh - 120px)' ,
             overflowY: 'hidden',
             mt: 0,
             borderRadius: 2,
@@ -955,6 +955,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 backgroundColor: 'primary.50',
                 transform: 'translateX(4px)',
               }
+            },
+            '@media (max-width: 768px)': {
+              width: 'calc(100vw - 20px)',
+              left: '10px !important',
             }
           }
         }}
@@ -969,7 +973,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       >
         <Grid container>
           <Grid item xs={3}>
-            <List>
+            <List sx={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'visible', minHeight: filteredSections.length * 50 + 'px' }}>
               {filteredSections.map((section, index) => (
                 <ListItemButton
                   key={index}
@@ -981,7 +985,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                     '&:hover': {
                       backgroundColor: 'primary.main',
                       color: 'primary.contrastText',
-                    }
+                    },
+                    minHeight: '50px'
                   }}
                 >
                   <ListItemText primary={section.title} />
@@ -1125,8 +1130,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         position="static"
         className="modern-nav"
         sx={{
-          backgroundColor: 'var(--bg-surface)',
-          color: 'var(--text-primary)',
+          backgroundColor: '#001F3F',
+          color: 'white',
           boxShadow: 'var(--shadow-sm)',
           borderBottom: '1px solid var(--border-primary)'
         }}
@@ -1201,7 +1206,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 '& .MuiInputBase-input': {
                   padding: '8px 8px 8px 0',
                   transition: 'width 0.3s',
-                  width: searchQuery ? '200px' : '100px',
+                  width: searchQuery ? '300px' : '200px',
                 },
               }}
             />

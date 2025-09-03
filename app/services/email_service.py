@@ -417,6 +417,41 @@ TRITIQ ERP System
             logger.error(error_msg)
             return False, error_msg
 
+    def send_user_creation_email(self,
+                                 user_email: str,
+                                 user_name: str,
+                                 temp_password: str,
+                                 organization_name: str,
+                                 login_url: str = "https://fast-apiv1-6.vercel.app/") -> tuple[bool, Optional[str]]:
+        """Send user creation welcome email with login link"""
+        try:
+            logger.debug(f"Preparing user creation email for {user_email}")
+            template_vars = {
+                'user_name': user_name,
+                'user_email': user_email,
+                'temp_password': temp_password,
+                'organization_name': organization_name,
+                'creation_date': datetime.now().strftime('%Y-%m-%d'),
+                'creation_time': datetime.now().strftime('%H:%M:%S'),
+                'login_url': login_url
+            }
+            
+            plain_text, html_content = self.load_email_template('user_creation', **template_vars)
+            
+            subject = "Welcome to TRITIQ ERP - Your Account Has Been Created"
+            
+            success, error = self._send_email(user_email, subject, plain_text, html_content)
+            if success:
+                logger.info(f"User creation email sent successfully to {user_email}")
+            else:
+                logger.error(f"Failed to send user creation email to {user_email}: {error}")
+            return success, error
+            
+        except Exception as e:
+            error_msg = f"Error preparing user creation email for {user_email}: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+
     def generate_otp(self, length: int = 6) -> str:
         """Generate a secure random OTP"""
         return ''.join(secrets.choice(string.digits) for i in range(length))

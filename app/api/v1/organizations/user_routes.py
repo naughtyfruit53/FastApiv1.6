@@ -89,17 +89,6 @@ async def create_user_in_organization(
             detail="Email already registered in this organization"
         )
   
-    if user_data.username:
-        existing_username = db.query(User).filter(
-            User.username == user_data.username,
-            User.organization_id == organization_id
-        ).first()
-        if existing_username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken in this organization"
-            )
-  
     if not current_user.is_super_admin:
         user_count = db.query(User).filter(
             User.organization_id == organization_id,
@@ -141,7 +130,6 @@ async def create_user_in_organization(
         new_user = User(
             organization_id=organization_id,
             email=user_data.email,
-            username=user_data.username or user_data.email.split('@')[0],
             hashed_password=hashed_password,
             full_name=user_data.full_name,
             role=user_data.role or UserRole.STANDARD_USER.value,
@@ -158,6 +146,19 @@ async def create_user_in_organization(
         db.refresh(new_user)
       
         logger.info(f"User {new_user.email} created in organization {org.name} by {current_user.email}")
+
+        # Send welcome email with login link
+        success, error = email_service.send_user_creation_email(
+            user_email=new_user.email,
+            user_name=new_user.full_name,
+            temp_password=user_data.password,
+            organization_name=org.name,
+            login_url="https://fast-apiv1-6.vercel.app/"
+        )
+        
+        if not success:
+            logger.warning(f"User created but welcome email failed for {new_user.email}: {error}")
+
         return new_user
       
     except Exception as e:
@@ -206,7 +207,7 @@ async def update_user_in_organization(
         )
   
     if is_self_update and not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
-        allowed_fields = {"email", "username", "full_name", "phone", "department", "designation"}
+        allowed_fields = {"email", "full_name", "phone", "department", "designation"}
         if not all(field in allowed_fields for field in user_update.keys()):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

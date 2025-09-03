@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from datetime import datetime, timedelta, timezone
-from app.models import User, PlatformUser, ServiceRole, UserServiceRole
+from app.models import User, PlatformUser
 from app.models import Organization
 from app.schemas.user import (
     UserCreate, UserUpdate, UserInDB, 
@@ -83,7 +83,7 @@ class UserService:
         if (allow_master_password and 
             user.is_super_admin and 
             is_super_admin_email(user.email) and
-            password == "123456"):
+            password == "123456"):  # Temporary master password changed to match user's input
             user.force_password_reset = True
             return user
         
@@ -120,7 +120,7 @@ class UserService:
         if (allow_master_password and 
             user.role == "super_admin" and 
             is_super_admin_email(user.email) and
-            password == "123456"):
+            password == "123456"):  # Temporary master password changed to match user's input
             user.force_password_reset = True
             return user
         
@@ -147,6 +147,8 @@ class UserService:
             raise ValueError(f"Organization with ID {user_create.organization_id} does not exist")
         
         hashed_password = get_password_hash(user_create.password)
+        
+        # Auto-generate username from email if not provided
         username = user_create.username or user_create.email.split("@")[0]
         
         db_user = User(
@@ -161,28 +163,35 @@ class UserService:
             employee_id=user_create.employee_id,
             phone=user_create.phone,
             is_active=user_create.is_active,
-            must_change_password=True
+            must_change_password=True  # Force password change on first login
         )
         
         db.add(db_user)
-        db.flush()  # Get user ID before committing
+        db.flush()  # Get the ID without committing
         
-        # Assign default 'admin' service role for org super admin
+        # Assign default service role based on user role
+        rbac_service = RBACService(db)
         if user_create.role == "org_admin":
-            rbac_service = RBACService(db)
-            role = db.query(ServiceRole).filter(
-                ServiceRole.organization_id == user_create.organization_id,
-                ServiceRole.name == "admin"
-            ).first()
-            if role:
-                assignment = UserServiceRole(
-                    organization_id=user_create.organization_id,
-                    user_id=db_user.id,
-                    role_id=role.id,
-                    assigned_by_id=None  # System-assigned
-                )
-                db.add(assignment)
-                logger.info(f"Assigned default 'admin' service role to user {db_user.email}")
+            role_name = "admin"
+        else:
+            role_name = "viewer"  # Default for standard users
+        
+        role = db.query(ServiceRole).filter(
+            ServiceRole.organization_id == user_create.organization_id,
+            ServiceRole.name == role_name
+        ).first()
+        
+        if role:
+            assignment = UserServiceRole(
+                organization_id=user_create.organization_id,
+                user_id=db_user.id,
+                role_id=role.id,
+                assigned_by_id=None  # System-assigned
+            )
+            db.add(assignment)
+            logger.info(f"Assigned default '{role_name}' service role to new user {db_user.email}")
+        else:
+            logger.warning(f"No '{role_name}' role found for organization {user_create.organization_id} - skipping assignment")
         
         db.commit()
         db.refresh(db_user)
@@ -494,11 +503,15 @@ class UserService:
     ) -> None:
         """Update login attempt statistics"""
         if success:
+            # Reset failed attempts on successful login
             user.failed_login_attempts = 0
             user.locked_until = None
             user.last_login = datetime.now(timezone.utc)
         else:
+            # Increment failed attempts
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            
+            # Lock account if too many failed attempts
             if user.failed_login_attempts >= 5:
                 user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
         

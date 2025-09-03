@@ -328,7 +328,6 @@ class User(Base):
 
     # User credentials
     email: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    username: Mapped[str] = mapped_column(String, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
 
     # Supabase Auth integration
@@ -495,10 +494,7 @@ class User(Base):
     __table_args__ = (
         # Unique email per organization
         UniqueConstraint('organization_id', 'email', name='uq_user_org_email'),
-        # Unique username per organization
-        UniqueConstraint('organization_id', 'username', name='uq_user_org_username'),
         Index('idx_user_org_email', 'organization_id', 'email'),
-        Index('idx_user_org_username', 'organization_id', 'username'),
         Index('idx_user_org_active', 'organization_id', 'is_active'),
         {'extend_existing': True}
     )
