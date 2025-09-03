@@ -82,7 +82,9 @@ const ProductsPage: React.FC = () => {
       reorder_level: product.reorder_level,
       unit: product.unit,
       hsn_code: product.product_hsn_code,
-      part_number: product.product_part_number
+      part_number: product.product_part_number,
+      gst_rate: product.gst_rate,
+      is_active: product.is_active
     }));
   }, [products]);
   // Filter and sort products
@@ -294,7 +296,7 @@ const ProductsPage: React.FC = () => {
   }, []);
   const handleSubmit = () => {
     const cleanData = {
-      name: formData.product_name,
+      product_name: formData.product_name,
       hsn_code: formData.hsn_code,
       part_number: formData.part_number,
       unit: formData.unit,

@@ -16,7 +16,7 @@ class Product(Base):
     company_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("companies.id", name="fk_product_company_id"), nullable=True, index=True)  # Added for multi-company support
   
     # Product details
-    name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    product_name: Mapped[str] = mapped_column("name", String, nullable=False, index=True)
     hsn_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     part_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     unit: Mapped[str] = mapped_column(String, nullable=False)

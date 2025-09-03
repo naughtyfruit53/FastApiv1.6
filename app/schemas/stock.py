@@ -66,6 +66,8 @@ class StockWithProduct(StockInDB):
     product_part_number: Optional[str] = None
     unit_price: Optional[float] = 0.0  # Allow None values, default to 0.0
     reorder_level: Optional[int] = 0  # Allow None values, default to 0
+    gst_rate: Optional[float] = 0.0
+    is_active: bool = True
     total_value: Optional[float] = 0.0
     
     @validator('unit_price')

@@ -86,7 +86,7 @@ async def get_stock(
         
         if search:
             logger.info(f"Searching for products with term: {search}")
-            query = query.filter(Product.name.ilike(f"%{search}%"))
+            query = query.filter(Product.product_name.ilike(f"%{search}%"))
         
         if not show_zero:
             logger.info("Excluding zero quantity items")
@@ -110,11 +110,13 @@ async def get_stock(
                     unit=stock.unit,
                     location=stock.location,
                     last_updated=stock.last_updated,
-                    product_name=product.name,
+                    product_name=product.product_name,
                     product_hsn_code=product.hsn_code,
                     product_part_number=product.part_number,
                     unit_price=unit_price,  # Handle None values
                     reorder_level=product.reorder_level or 0,  # Handle None values
+                    gst_rate=product.gst_rate or 0.0,
+                    is_active=product.is_active,
                     total_value=total_value
                 )
                 result.append(stock_with_product)
@@ -202,11 +204,13 @@ async def get_low_stock(
                 unit=product.unit,
                 location=effective_location,
                 last_updated=effective_last_updated,
-                product_name=product.name,
+                product_name=product.product_name,
                 product_hsn_code=product.hsn_code,
                 product_part_number=product.part_number,
                 unit_price=unit_price,
                 reorder_level=product.reorder_level or 0,
+                gst_rate=product.gst_rate or 0.0,
+                is_active=product.is_active,
                 total_value=total_value
             )
             result.append(stock_with_product)
@@ -272,7 +276,7 @@ async def get_stock_movements(
         product = db.query(Product).filter(Product.id == movement.product_id).first()
         result.append(InventoryTransactionResponse(
             **movement.__dict__,
-            product_name=product.name if product else "Unknown Product"
+            product_name=product.product_name if product else "Unknown Product"
         ))
     
     return result
@@ -416,7 +420,7 @@ async def create_stock_entry(
     db.commit()
     db.refresh(db_stock)
     
-    logger.info(f"Stock entry created for product {product.name} by {current_user.email}")
+    logger.info(f"Stock entry created for product {product.product_name} by {current_user.email}")
     return db_stock
 
 @router.put("/product/{product_id}", response_model=StockInDB)
@@ -523,7 +527,7 @@ async def adjust_stock(
         logger.info(f"Stock adjusted for product ID {product_id}: {adjustment.quantity_change:+.2f} - {adjustment.reason} by {current_user.email}")
         
         return StockAdjustmentResponse(
-            message=f"Stock adjusted successfully. {adjustment.reason}",
+            message=f"Stock adjusted successfully.{adjustment.reason}",
             previous_quantity=previous_quantity,
             quantity_change=adjustment.quantity_change,
             new_quantity=new_quantity
@@ -676,7 +680,7 @@ async def bulk_import_stock(
                 
                 # Check if product exists by name
                 product = db.query(Product).filter(
-                    Product.name == product_name,
+                    Product.product_name == product_name,
                     Product.organization_id == org_id
                 ).first()
                 
@@ -724,7 +728,7 @@ async def bulk_import_stock(
                             warnings.append(f"Row {i}: Invalid reorder level for '{product_name}', setting to 10")
                         
                         product_data = {
-                            "name": product_name,
+                            "product_name": product_name,
                             "hsn_code": hsn_code,
                             "part_number": part_number,
                             "unit": unit.upper(),
@@ -906,7 +910,7 @@ async def export_stock_excel(
     stock_data = []
     for stock in stock_items:
         stock_data.append({
-            "product_name": stock.product.name,
+            "product_name": stock.product.product_name,
             "hsn_code": stock.product.hsn_code or "",
             "part_number": stock.product.part_number or "",
             "unit": stock.unit,
