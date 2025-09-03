@@ -100,6 +100,8 @@ async def get_stock(
         result = []
         for stock, product in stock_product_pairs:
             try:
+                unit_price = product.unit_price or 0.0
+                total_value = stock.quantity * unit_price
                 stock_with_product = StockWithProduct(
                     id=stock.id,
                     organization_id=stock.organization_id,
@@ -111,8 +113,9 @@ async def get_stock(
                     product_name=product.name,
                     product_hsn_code=product.hsn_code,
                     product_part_number=product.part_number,
-                    unit_price=product.unit_price or 0.0,  # Handle None values
-                    reorder_level=product.reorder_level or 0  # Handle None values
+                    unit_price=unit_price,  # Handle None values
+                    reorder_level=product.reorder_level or 0,  # Handle None values
+                    total_value=total_value
                 )
                 result.append(stock_with_product)
             except Exception as e:
@@ -188,6 +191,8 @@ async def get_low_stock(
             effective_quantity = stock.quantity if stock else 0.0
             effective_location = stock.location if stock else ""
             effective_last_updated = stock.last_updated if stock else product.created_at
+            unit_price = product.unit_price or 0.0
+            total_value = effective_quantity * unit_price
             
             stock_with_product = StockWithProduct(
                 id=stock.id if stock else 0,
@@ -200,8 +205,9 @@ async def get_low_stock(
                 product_name=product.name,
                 product_hsn_code=product.hsn_code,
                 product_part_number=product.part_number,
-                unit_price=product.unit_price or 0.0,
-                reorder_level=product.reorder_level or 0
+                unit_price=unit_price,
+                reorder_level=product.reorder_level or 0,
+                total_value=total_value
             )
             result.append(stock_with_product)
         except Exception as e:

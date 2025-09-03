@@ -64,8 +64,8 @@ const ProductsPage: React.FC = () => {
   });
   const queryClient = useQueryClient();
   const { data: products, isLoading: productsLoading } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => masterDataService.getProducts(),
+    queryKey: ["stock", {show_zero: true}],
+    queryFn: () => masterDataService.getStock({show_zero: true}),
     enabled: isOrgContextReady,
   });
   // Normalize products to ensure consistent product_name property
@@ -76,6 +76,13 @@ const ProductsPage: React.FC = () => {
     return products.map((product: any) => ({
       ...product,
       product_name: product.product_name || product.name || "",
+      id: product.product_id,
+      name: product.product_name,
+      unit_price: product.unit_price,
+      reorder_level: product.reorder_level,
+      unit: product.unit,
+      hsn_code: product.product_hsn_code,
+      part_number: product.product_part_number
     }));
   }, [products]);
   // Filter and sort products
@@ -110,7 +117,8 @@ const ProductsPage: React.FC = () => {
   const createItemMutation = useMutation({
     mutationFn: (data: any) => masterDataService.createProduct(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      queryClient.refetchQueries({ queryKey: ["stock"] });
       setItemDialog(false);
       setSelectedItem(null);
       setFormData({
@@ -128,7 +136,7 @@ const ProductsPage: React.FC = () => {
       });
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error(error);
       setErrorMessage(
         error.response?.data?.detail || "Failed to create product",
       );
@@ -137,7 +145,8 @@ const ProductsPage: React.FC = () => {
   const updateItemMutation = useMutation({
     mutationFn: (data: any) => masterDataService.updateProduct(data.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      queryClient.refetchQueries({ queryKey: ["stock"] });
       setItemDialog(false);
       setSelectedItem(null);
       setFormData({
@@ -155,7 +164,7 @@ const ProductsPage: React.FC = () => {
       });
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error(error);
       setErrorMessage(
         error.response?.data?.detail || "Failed to update product",
       );
@@ -167,7 +176,7 @@ const ProductsPage: React.FC = () => {
     normalizedProducts.forEach((product: any) => {
       if (product.hsn_code && product.hsn_code.trim()) {
         hsnSet.add(product.hsn_code.trim());
-      }
+     }
     });
     return Array.from(hsnSet).sort();
   }, [normalizedProducts]);
@@ -240,10 +249,10 @@ const ProductsPage: React.FC = () => {
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteProduct(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error(error);
       setErrorMessage(
         error.response?.data?.detail || "Failed to delete product",
       );
@@ -253,8 +262,17 @@ const ProductsPage: React.FC = () => {
     setSelectedItem(item);
     if (item) {
       setFormData({
-        ...item,
         product_name: item.product_name || item.name || "",
+        hsn_code: item.hsn_code || "",
+        part_number: item.part_number || "",
+        unit: item.unit || "",
+        unit_price: String(item.unit_price ?? ''),
+        gst_rate: String(item.gst_rate ?? ''),
+        is_gst_inclusive: item.is_gst_inclusive || false,
+        reorder_level: String(item.reorder_level ?? ''),
+        description: item.description || "",
+        is_manufactured: item.is_manufactured || false,
+        is_active: item.is_active ?? true, // Default to true if not present
       });
     } else {
       setFormData({
@@ -275,24 +293,23 @@ const ProductsPage: React.FC = () => {
     setItemDialog(true);
   }, []);
   const handleSubmit = () => {
-    const data = {
-      ...formData,
-      name: formData.product_name, // Map back to 'name' for backend compatibility
+    const cleanData = {
+      name: formData.product_name,
+      hsn_code: formData.hsn_code,
+      part_number: formData.part_number,
+      unit: formData.unit,
+      unit_price: parseFloat(formData.unit_price || '0'),
+      gst_rate: parseFloat(formData.gst_rate || '0'),
+      is_gst_inclusive: formData.is_gst_inclusive,
+      reorder_level: parseInt(formData.reorder_level || '0'),
+      description: formData.description,
+      is_manufactured: formData.is_manufactured,
+      is_active: formData.is_active,
     };
-    // Convert string numbers to actual numbers
-    if (data.unit_price) {
-      (data as any).unit_price = parseFloat(data.unit_price as string);
-    }
-    if (data.gst_rate) {
-      (data as any).gst_rate = parseFloat(data.gst_rate as string);
-    }
-    if (data.reorder_level) {
-      (data as any).reorder_level = parseInt(data.reorder_level as string);
-    }
     if (selectedItem) {
-      updateItemMutation.mutate({ ...selectedItem, ...data });
+      updateItemMutation.mutate({ id: selectedItem.product_id, ...cleanData });
     } else {
-      createItemMutation.mutate(data);
+      createItemMutation.mutate(cleanData);
     }
   };
   // Auto-open add dialog if action=add in URL
@@ -372,7 +389,7 @@ const ProductsPage: React.FC = () => {
                       direction={sortOrder}
                       onClick={handleSortToggle}
                     >
-                      Name
+                      Product Name
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>HSN Code</TableCell>
@@ -402,7 +419,7 @@ const ProductsPage: React.FC = () => {
                     <TableCell>{item.part_number || "N/A"}</TableCell>
                     <TableCell>{item.unit}</TableCell>
                     <TableCell>₹{item.unit_price}</TableCell>
-                    <TableCell>{item.gst_rate}%</TableCell>
+                   <TableCell>{item.gst_rate}%</TableCell>
                     <TableCell>
                       <Chip
                         label={
