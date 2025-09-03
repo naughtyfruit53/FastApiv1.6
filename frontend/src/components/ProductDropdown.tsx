@@ -66,7 +66,7 @@ const ProductDropdown: React.FC<ProductDropdownProps> = ({
         queryParams.append("search", search);
       }
       queryParams.append("active_only", "true");
-      queryParams.append("limit", "100");
+      queryParams.append("limit", "1000000000");  // Increased limit for better coverage
       const response = await fetch(`/api/v1/products?${queryParams}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,

@@ -47,6 +47,9 @@ async def get_products(
         )
         query = query.filter(search_filter)
     
+    # Add explicit ordering for stable results
+    query = query.order_by(Product.product_name.asc())
+    
     # Include files relationship
     from sqlalchemy.orm import selectinload
     query = query.options(selectinload(Product.files))
@@ -226,7 +229,7 @@ async def export_products_excel(
     products_data = []
     for product in products:
         products_data.append({
-            "product_name": product.product_name,  # Map name to product_name for consistency
+            "product_name": product.product_name,  # Map name to product_name for consistency for import
             "hsn_code": product.hsn_code or "",
             "part_number": product.part_number or "",
             "unit": product.unit,
@@ -376,7 +379,7 @@ async def import_products_excel(
         # Commit all changes
         db.commit()
         
-        logger.info(f"Products import completed by {current_user.email}: "
+        logger.info(f"Products import completed completed by {current_user.email}: "
                    f"{created_count} created, {updated_count} updated, "
                    f"{created_stocks} stock entries created, {updated_stocks} stock entries updated, "
                    f"{len(errors)} errors")
