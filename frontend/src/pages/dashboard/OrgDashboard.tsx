@@ -1,6 +1,6 @@
 // frontend/src/pages/dashboard/OrgDashboard.tsx
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Chip, Alert, Paper } from "@mui/material";
+import { Box, Typography, Chip, Alert, Paper, List, ListItem, ListItemText, ListItemAvatar, Avatar } from "@mui/material";
 import {
   Business,
   People,
@@ -9,9 +9,12 @@ import {
   TrendingUp,
 } from "@mui/icons-material";
 import adminService from "../../services/adminService";
+import activityService, { RecentActivity } from "../../services/activityService";
 import MetricCard from "../../components/MetricCard";
 import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
+import { useAuth } from "../../context/AuthContext";
+import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
 interface OrgStatistics {
   total_products: number;
   total_customers: number;
@@ -22,13 +25,24 @@ interface OrgStatistics {
   plan_type: string;
   storage_used_gb: number;
   generated_at: string;
+  plan_expiry?: string;
+  plan_status?: string;
+  subscription_start?: string;
+  subscription_validity_days?: number;
+  total_org_users?: number; // For super admin view
+  inactive_users?: number; // For super admin view
 }
 const OrgDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const isSuperAdmin = isAppSuperAdmin(user) || isOrgSuperAdmin(user);
   useEffect(() => {
     fetchOrgStatistics();
+    fetchRecentActivities();
   }, []);
   const fetchOrgStatistics = async () => {
     try {
@@ -38,6 +52,15 @@ const OrgDashboard: React.FC = () => {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+  const fetchRecentActivities = async () => {
+    try {
+      const response = await activityService.getRecentActivities(5);
+      setRecentActivities(response.activities);
+    } catch (err) {
+      console.error("Failed to fetch recent activities:", err);
+      // Keep empty array if fetch fails
     }
   };
   if (loading) {
@@ -93,6 +116,7 @@ const OrgDashboard: React.FC = () => {
       icon: <Inventory />,
       color: "primary" as const,
       description: "Products in inventory",
+      href: "/masters/products",
       trend: {
         value: 12,
         period: "vs last month",
@@ -105,6 +129,7 @@ const OrgDashboard: React.FC = () => {
       icon: <People />,
       color: "success" as const,
       description: "Active customers",
+      href: "/masters/customers",
       trend: {
         value: 8,
         period: "vs last month",
@@ -117,6 +142,7 @@ const OrgDashboard: React.FC = () => {
       icon: <Business />,
       color: "info" as const,
       description: "Registered vendors",
+      href: "/masters/vendors",
       trend: {
         value: 3,
         period: "vs last month",
@@ -129,6 +155,7 @@ const OrgDashboard: React.FC = () => {
       icon: <People />,
       color: "warning" as const,
       description: "Users in organization",
+      href: "/settings/user-management",
       trend: {
         value: 5,
         period: "vs last month",
@@ -137,10 +164,11 @@ const OrgDashboard: React.FC = () => {
     },
     {
       title: "Monthly Sales",
-      value: `$${(statistics.monthly_sales ?? 0).toLocaleString()}`,
+      value: `₹${(statistics.monthly_sales ?? 0).toLocaleString()}`,
       icon: <AttachMoney />,
       color: "success" as const,
       description: "Sales in last 30 days",
+      href: "/sales/dashboard",
       trend: {
         value: 15,
         period: "vs last month",
@@ -149,10 +177,11 @@ const OrgDashboard: React.FC = () => {
     },
     {
       title: "Inventory Value",
-      value: `$${(statistics.inventory_value ?? 0).toLocaleString()}`,
+      value: `₹${(statistics.inventory_value ?? 0).toLocaleString()}`,
       icon: <TrendingUp />,
       color: "primary" as const,
       description: "Current stock value",
+      href: "/inventory",
       trend: {
         value: 7,
         period: "vs last month",
@@ -172,6 +201,7 @@ const OrgDashboard: React.FC = () => {
             color={stat.color}
             description={stat.description}
             trend={stat.trend}
+            href={stat.href}
           />
         ))}
       </Box>
@@ -197,18 +227,70 @@ const OrgDashboard: React.FC = () => {
                 },
               }}
             />
+            {statistics.plan_status && (
+              <Chip
+                label={statistics.plan_status.toUpperCase()}
+                color={statistics.plan_status === "active" ? "success" : "default"}
+                variant="outlined"
+                size="small"
+              />
+            )}
           </Box>
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
             Storage Used: {statistics.storage_used_gb ?? 0} GB
           </Typography>
+          {statistics.plan_expiry && (
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+              Expires: {new Date(statistics.plan_expiry).toLocaleDateString()}
+            </Typography>
+          )}
+          {statistics.subscription_validity_days !== undefined && (
+            <Typography 
+              variant="body2" 
+              color={statistics.subscription_validity_days <= 30 ? "error" : "textSecondary"}
+              sx={{ fontWeight: statistics.subscription_validity_days <= 30 ? 600 : 400 }}
+            >
+              {statistics.subscription_validity_days > 0 
+                ? `${statistics.subscription_validity_days} days remaining`
+                : "Subscription expired"}
+            </Typography>
+          )}
         </Paper>
         <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
             Recent Activity
           </Typography>
-          <Typography variant="body2" color="textSecondary">
-            No recent activity available
-          </Typography>
+          {recentActivities.length > 0 ? (
+            <List sx={{ pt: 0 }}>
+              {recentActivities.map((activity) => (
+                <ListItem key={activity.id} sx={{ px: 0, py: 1 }}>
+                  <ListItemAvatar>
+                    <Avatar sx={{ width: 32, height: 32, fontSize: "1rem" }}>
+                      {activityService.getActivityIcon(activity.type)}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={activity.title}
+                    secondary={
+                      <Box>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                          {activity.description}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {activityService.formatActivityTime(activity.timestamp)}
+                          {activity.user_name && ` • by ${activity.user_name}`}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              No recent activity available
+            </Typography>
+          )}
         </Paper>
       </Box>
       <Paper className="modern-card" sx={{ p: 4 }}>
@@ -250,6 +332,11 @@ const OrgDashboard: React.FC = () => {
             <Typography variant="body2" color="textSecondary">
               Active Users
             </Typography>
+            {isSuperAdmin && statistics.total_org_users && (
+              <Typography variant="caption" color="textSecondary" sx={{ display: "block", mt: 0.5 }}>
+                of {statistics.total_org_users} total users
+              </Typography>
+            )}
           </Box>
           <Box sx={{ textAlign: "center" }}>
             <Typography
@@ -271,6 +358,45 @@ const OrgDashboard: React.FC = () => {
             </Typography>
           </Box>
         </Box>
+        {isSuperAdmin && (
+          <Box sx={{ mt: 3, pt: 3, borderTop: "1px solid", borderColor: "divider" }}>
+            <Typography variant="h6" gutterBottom sx={{ color: "primary.main" }}>
+              Super Admin View
+            </Typography>
+            <Box className="modern-grid cols-2">
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    color: "var(--warning-600)",
+                    fontWeight: 600,
+                    mb: 1,
+                  }}
+                >
+                  {statistics.inactive_users ?? 0}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Inactive Users
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    color: "var(--info-600)",
+                    fontWeight: 600,
+                    mb: 1,
+                  }}
+                >
+                  {((statistics.active_users / (statistics.total_org_users || 1)) * 100).toFixed(1)}%
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  User Activity Rate
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        )}
       </Paper>
     </DashboardLayout>
   );

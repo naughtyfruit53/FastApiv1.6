@@ -24,6 +24,12 @@ interface OrgStatistics {
   plan_type: string;
   storage_used_gb: number;
   generated_at: string;
+  plan_expiry?: string;
+  plan_status?: string;
+  subscription_start?: string;
+  subscription_validity_days?: number;
+  total_org_users?: number;
+  inactive_users?: number;
 }
 const adminService = {
   getAppStatistics: async (): Promise<AppStatistics> => {
