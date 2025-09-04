@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRoute
+from fastapi.staticfiles import StaticFiles
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, SessionLocal
 from app.core.tenant import TenantMiddleware
@@ -24,6 +25,8 @@ from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, ap
 # Added missing v1 imports (removed v1_login as merged into auth)
 from app.api.v1 import admin_setup as v1_admin_setup, master_auth as v1_master_auth, otp as v1_otp, password as v1_password, user as v1_user
 from app.api.v1 import pdf_extraction as v1_pdf_extraction
+# Add import for PDF generation
+from app.api.v1 import pdf_generation as v1_pdf_generation
 # Organizations router (modular version)
 from app.api.v1.organizations import router as organizations_router
 
@@ -252,6 +255,14 @@ app.include_router(
 )
 logger.info("PDF extraction router included successfully at prefix: /api/v1/pdf-extraction")
 
+# PDF Generation API
+app.include_router(
+    v1_pdf_generation.router,
+    prefix="/api/v1/pdf-generation",
+    tags=["pdf-generation"]
+)
+logger.info("PDF generation router included successfully at prefix: /api/v1/pdf-generation")
+
 # Service CRM RBAC API
 app.include_router(
     v1_rbac.router,
@@ -460,6 +471,10 @@ async def health_check():
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("app/static/favicon.ico")
+
+# Mount static files for PDF assets and uploads
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 if __name__ == "__main__":
     import uvicorn

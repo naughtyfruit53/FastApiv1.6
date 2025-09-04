@@ -1,0 +1,81 @@
+{% extends "base_voucher.html" %}
+
+{% set voucher_type_title = "Sales Invoice" %}
+{% set voucher_subtitle = "Tax Invoice" %}
+
+{% block voucher_specific_info %}
+<div class="voucher-info">
+    <div class="section-title">Invoice Details</div>
+    <div class="info-row">
+        <span class="info-label">Invoice No:</span>
+        <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Invoice Date:</span>
+        <span class="info-value">{{ voucher.date|format_date }}</span>
+    </div>
+    {% if voucher.due_date %}
+    <div class="info-row">
+        <span class="info-label">Due Date:</span>
+        <span class="info-value">{{ voucher.due_date|format_date }}</span>
+    </div>
+    {% endif %}
+    {% if voucher.sales_order %}
+    <div class="info-row">
+        <span class="info-label">Sales Order:</span>
+        <span class="info-value">{{ voucher.sales_order.voucher_number }}</span>
+    </div>
+    {% endif %}
+    {% if voucher.delivery_challan %}
+    <div class="info-row">
+        <span class="info-label">Delivery Challan:</span>
+        <span class="info-value">{{ voucher.delivery_challan.voucher_number }}</span>
+    </div>
+    {% endif %}
+    <div class="info-row">
+        <span class="info-label">Payment Terms:</span>
+        <span class="info-value">{{ voucher.payment_terms|default('Cash') }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Status:</span>
+        <span class="info-value">
+            <span class="status-badge">{{ voucher.status|default('Draft')|title }}</span>
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block voucher_specific_footer %}
+{% if voucher.shipping_address %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Shipping Address</div>
+    <div style="font-size: 10px; border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">
+        {{ voucher.shipping_address }}
+    </div>
+</div>
+{% endif %}
+
+{% if voucher.bank_details %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Bank Details for Payment</div>
+    <div style="font-size: 10px;">
+        {{ voucher.bank_details }}
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
+    <strong>Sales Declaration:</strong> We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+    All disputes are subject to [City] jurisdiction only.
+</div>
+
+{% if voucher.status == 'paid' %}
+<div style="margin-top: 10px; text-align: center; font-weight: bold; color: #27ae60; border: 2px solid #27ae60; padding: 5px; background-color: #d5f4e6;">
+    PAYMENT RECEIVED - THANK YOU FOR YOUR BUSINESS
+</div>
+{% elif voucher.status == 'overdue' %}
+<div style="margin-top: 10px; text-align: center; font-weight: bold; color: #e74c3c; border: 2px solid #e74c3c; padding: 5px; background-color: #fadbd8;">
+    PAYMENT OVERDUE - PLEASE REMIT IMMEDIATELY
+</div>
+{% endif %}
+{% endblock %}

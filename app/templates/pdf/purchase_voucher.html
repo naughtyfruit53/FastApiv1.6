@@ -1,0 +1,74 @@
+{% extends "base_voucher.html" %}
+
+{% set voucher_type_title = "Purchase Voucher" %}
+{% set voucher_subtitle = "Vendor Invoice" %}
+
+{% block voucher_specific_info %}
+<div class="voucher-info">
+    <div class="section-title">Purchase Details</div>
+    <div class="info-row">
+        <span class="info-label">Voucher No:</span>
+        <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date:</span>
+        <span class="info-value">{{ voucher.date|format_date }}</span>
+    </div>
+    {% if voucher.invoice_number %}
+    <div class="info-row">
+        <span class="info-label">Invoice No:</span>
+        <span class="info-value">{{ voucher.invoice_number }}</span>
+    </div>
+    {% endif %}
+    {% if voucher.invoice_date %}
+    <div class="info-row">
+        <span class="info-label">Invoice Date:</span>
+        <span class="info-value">{{ voucher.invoice_date|format_date }}</span>
+    </div>
+    {% endif %}
+    {% if voucher.purchase_order %}
+    <div class="info-row">
+        <span class="info-label">PO Number:</span>
+        <span class="info-value">{{ voucher.purchase_order.voucher_number }}</span>
+    </div>
+    {% endif %}
+    {% if voucher.grn %}
+    <div class="info-row">
+        <span class="info-label">GRN Number:</span>
+        <span class="info-value">{{ voucher.grn.voucher_number }}</span>
+    </div>
+    {% endif %}
+    <div class="info-row">
+        <span class="info-label">Payment Terms:</span>
+        <span class="info-value">{{ voucher.payment_terms|default('Immediate') }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Status:</span>
+        <span class="info-value">
+            <span class="status-badge">{{ voucher.status|default('Draft')|title }}</span>
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block voucher_specific_footer %}
+{% if voucher.payment_method %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Payment Information</div>
+    <div style="font-size: 10px;">
+        <strong>Payment Method:</strong> {{ voucher.payment_method }}<br>
+        {% if voucher.bank_details %}
+        <strong>Bank Details:</strong> {{ voucher.bank_details }}<br>
+        {% endif %}
+        {% if voucher.cheque_number %}
+        <strong>Cheque/Reference No:</strong> {{ voucher.cheque_number }}<br>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
+    <strong>Purchase Declaration:</strong> We hereby certify that the goods/services mentioned above have been received in good condition and as per specifications.
+    The prices are inclusive of all taxes as applicable.
+</div>
+{% endblock %}

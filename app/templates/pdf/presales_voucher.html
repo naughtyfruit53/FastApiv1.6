@@ -1,0 +1,87 @@
+{% extends "base_voucher.html" %}
+
+{% set voucher_type_title = "Quotation" %}
+{% set voucher_subtitle = "Price Estimate" %}
+
+{% block voucher_specific_info %}
+<div class="voucher-info">
+    <div class="section-title">Quotation Details</div>
+    <div class="info-row">
+        <span class="info-label">Quotation No:</span>
+        <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date:</span>
+        <span class="info-value">{{ voucher.date|format_date }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Valid Until:</span>
+        <span class="info-value">{{ voucher.valid_until|format_date|default('30 days from date') }}</span>
+    </div>
+    {% if voucher.enquiry_number %}
+    <div class="info-row">
+        <span class="info-label">Enquiry No:</span>
+        <span class="info-value">{{ voucher.enquiry_number }}</span>
+    </div>
+    {% endif %}
+    {% if voucher.reference_number %}
+    <div class="info-row">
+        <span class="info-label">Your Reference:</span>
+        <span class="info-value">{{ voucher.reference_number }}</span>
+    </div>
+    {% endif %}
+    <div class="info-row">
+        <span class="info-label">Delivery:</span>
+        <span class="info-value">{{ voucher.delivery_terms|default('Ex-Works') }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Status:</span>
+        <span class="info-value">
+            <span class="status-badge">{{ voucher.status|default('Draft')|title }}</span>
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block voucher_specific_footer %}
+{% if voucher.delivery_terms %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Delivery Terms</div>
+    <div style="font-size: 10px;">
+        {{ voucher.delivery_terms }}
+    </div>
+</div>
+{% endif %}
+
+{% if voucher.payment_terms %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Payment Terms</div>
+    <div style="font-size: 10px;">
+        {{ voucher.payment_terms }}
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
+    <strong>Important Notes:</strong><br>
+    • This quotation is valid for {{ voucher.validity_days|default(30) }} days from the date of issue.<br>
+    • Prices are subject to change without prior notice after the validity period.<br>
+    • All prices are exclusive of taxes unless mentioned otherwise.<br>
+    • Final confirmation required before processing the order.<br>
+    • Delivery timeline will be confirmed upon order confirmation.
+</div>
+
+<div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
+    Thank you for your enquiry. We look forward to your valuable order.
+</div>
+
+{% if voucher.status == 'converted' %}
+<div style="margin-top: 10px; text-align: center; font-weight: bold; color: #27ae60; border: 2px solid #27ae60; padding: 5px; background-color: #d5f4e6;">
+    QUOTATION CONVERTED TO ORDER
+</div>
+{% elif voucher.status == 'expired' %}
+<div style="margin-top: 10px; text-align: center; font-weight: bold; color: #e74c3c; border: 2px solid #e74c3c; padding: 5px; background-color: #fadbd8;">
+    QUOTATION EXPIRED
+</div>
+{% endif %}
+{% endblock %}
