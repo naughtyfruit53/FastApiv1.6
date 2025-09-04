@@ -108,6 +108,10 @@ const PurchaseOrderPage: React.FC = () => {
     totalAmount,
     totalSubtotal,
     totalGst,
+    totalCgst,
+    totalSgst,
+    totalIgst,
+    isIntrastate,
     // Mutations
     createMutation,
     updateMutation,
@@ -348,7 +352,8 @@ const PurchaseOrderPage: React.FC = () => {
     }
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
-      const fullVoucherData = response.data;
+      let fullVoucherData = response.data;
+      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
       setMode("edit");
       reset(fullVoucherData);
     } catch (err) {
@@ -363,7 +368,8 @@ const PurchaseOrderPage: React.FC = () => {
     }
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
-      const fullVoucherData = response.data;
+      let fullVoucherData = response.data;
+      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
       setMode("view");
       reset(fullVoucherData);
     } catch (err) {
@@ -374,12 +380,13 @@ const PurchaseOrderPage: React.FC = () => {
   // Handle data population for view and edit modes
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
+      const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
       const formattedData = {
         ...voucherData,
-        date: voucherData.date ? voucherData.date.split("T")[0] : "",
+        date: formattedDate,
       };
       reset(formattedData);
-      if (mode === "edit") {
+      if (voucherData.items && voucherData.items.length > 0) {
         remove();
         voucherData.items.forEach((item: any) => {
           append({
@@ -388,8 +395,7 @@ const PurchaseOrderPage: React.FC = () => {
             product_name: item.product?.product_name || item.product_name || "",
             quantity: item.quantity,
             unit_price: item.unit_price,
-            original_unit_price:
-              item.product?.unit_price || item.unit_price || 0, // Set original from master product
+            original_unit_price: item.product?.unit_price || item.unit_price || 0, // Set original from master product
             discount_percentage: item.discount_percentage || 0,
             gst_rate: item.gst_rate || 18,
             amount: item.total_amount,
@@ -781,11 +787,6 @@ const PurchaseOrderPage: React.FC = () => {
                           size="small"
                           sx={{ width: 120 }} // Increased width for qty field to fit unit
                           InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                {watch(`items.${index}.unit`)}
-                              </InputAdornment>
-                            ),
                             inputProps: { min: 0, step: 1 }, // Prevent negative qty, integer steps
                           }}
                         />
@@ -889,7 +890,7 @@ const PurchaseOrderPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
-                  {selectedVendor?.state_code === companyState ? (
+                  {isIntrastate ? (
                     <>
                       <Grid size={6}>
                         <Typography
@@ -908,7 +909,7 @@ const PurchaseOrderPage: React.FC = () => {
                             fontWeight: "bold",
                           }}
                         >
-                          ₹{(totalGst / 2).toLocaleString()}
+                          ₹{totalCgst.toLocaleString()}
                         </Typography>
                       </Grid>
                       <Grid size={6}>
@@ -928,7 +929,7 @@ const PurchaseOrderPage: React.FC = () => {
                             fontWeight: "bold",
                           }}
                         >
-                          ₹{(totalGst / 2).toLocaleString()}
+                          ₹{totalSgst.toLocaleString()}
                         </Typography>
                       </Grid>
                     </>
@@ -951,7 +952,7 @@ const PurchaseOrderPage: React.FC = () => {
                             fontWeight: "bold",
                           }}
                         >
-                          ₹{totalGst.toLocaleString()}
+                          ₹{totalIgst.toLocaleString()}
                         </Typography>
                       </Grid>
                     </>

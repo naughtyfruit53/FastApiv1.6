@@ -82,6 +82,7 @@ const SalesVoucherPage: React.FC = () => {
     totalCgst,
     totalSgst,
     totalIgst,
+    isIntrastate,
     // Mutations
     createMutation,
     updateMutation,
@@ -275,7 +276,7 @@ const SalesVoucherPage: React.FC = () => {
           currentId={selectedCustomerId}
         />
       </Box>
-      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
           <Grid size={6}>
@@ -530,18 +531,18 @@ const SalesVoucherPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
-                      {totalIgst > 0 ? 'IGST:' : 'CGST:'}
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-                      ₹{totalIgst > 0 ? totalIgst.toLocaleString() : totalCgst.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  {totalIgst === 0 && (
+                  {isIntrastate ? (
                     <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          CGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalCgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
                       <Grid size={6}>
                         <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
                           SGST:
@@ -550,6 +551,19 @@ const SalesVoucherPage: React.FC = () => {
                       <Grid size={6}>
                         <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
                           ₹{totalSgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </>
+                  ) : (
+                    <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          IGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalIgst.toLocaleString()}
                         </Typography>
                       </Grid>
                     </>
@@ -579,22 +593,6 @@ const SalesVoucherPage: React.FC = () => {
               inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
               size="small"
             />
-          </Grid>
-          {/* Action buttons - removed Generate PDF */}
-          <Grid size={12}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              {mode !== 'view' && (
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  color="success" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  sx={{ fontSize: 12 }}
-                >
-                  Save
-                </Button>
-              )}
-            </Box>
           </Grid>
         </Grid>
       </form>

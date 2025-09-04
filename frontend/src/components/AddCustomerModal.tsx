@@ -318,6 +318,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 {...register("gst_number")}
                 margin="normal"
                 InputProps={{
+                  style: { textTransform: 'uppercase' },
                   endAdornment: (
                     <InputAdornment position="end">
                       {gstSearchLoading ? (
@@ -337,6 +338,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 InputLabelProps={{
                   shrink:
                     !!watch("gst_number") || !!gstExtractedData?.gst_number,
+                }}
+                onChange={(e) => {
+                  const upperValue = e.target.value.toUpperCase();
+                  setValue("gst_number", upperValue);
                 }}
               />
             </Grid>

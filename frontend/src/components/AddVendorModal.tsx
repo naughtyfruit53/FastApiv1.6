@@ -319,6 +319,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 {...register("gst_number")}
                 margin="normal"
                 InputProps={{
+                  style: { textTransform: 'uppercase' },
                   endAdornment: (
                     <InputAdornment position="end">
                       {gstSearchLoading ? (
@@ -338,6 +339,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 InputLabelProps={{
                   shrink:
                     !!watch("gst_number") || !!gstExtractedData?.gst_number,
+                }}
+                onChange={(e) => {
+                  const upperValue = e.target.value.toUpperCase();
+                  setValue("gst_number", upperValue);
                 }}
               />
             </Grid>

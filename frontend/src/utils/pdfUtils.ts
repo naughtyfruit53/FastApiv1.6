@@ -88,21 +88,13 @@ export const generateVoucherPDF = async (
       payment_terms: voucherData.payment_terms,
       from_account: voucherData.from_account,
       to_account: voucherData.to_account,
-      ...Object.fromEntries(
-        Object.entries(voucherData).filter(
-          ([key]) =>
-            ![
-              "voucher_number",
-              "date",
-              "reference",
-              "notes",
-              "total_amount",
-              "items",
-              "vendor",
-              "customer",
-            ].includes(key),
-        ),
-      ),
+      // Manufacturing-specific fields
+      job_type: voucherData.job_type,
+      job_description: voucherData.job_description,
+      expected_completion_date: voucherData.expected_completion_date,
+      actual_completion_date: voucherData.actual_completion_date,
+      materials_supplied_by: voucherData.materials_supplied_by,
+      quality_specifications: voucherData.quality_specifications,
     };
     const pdfOptions = {
       voucherType: config.voucherType,
@@ -111,7 +103,19 @@ export const generateVoucherPDF = async (
       showItems: config.showItems || false,
       showTaxDetails: config.showTaxDetails || false,
     };
-    await pdfService.generateVoucherPDF(pdfVoucherData, pdfOptions);
+    const response = await pdfService.generateVoucherPDF(pdfVoucherData, pdfOptions);
+    
+    // Handle the response blob
+    if (response instanceof Blob) {
+      const url = window.URL.createObjectURL(response);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pdfOptions.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
   } catch (error) {
     console.error("Error generating PDF:", error);
     alert("Failed to generate PDF. Please try again.");
@@ -358,8 +362,19 @@ export const generateStandalonePDF = async (
       quality_specifications: voucherData.quality_specifications,
     };
     // Generate PDF
-    await generateVoucherPDF(pdfData, pdfConfig);
-    console.log("[PDF] PDF generated successfully for:", voucherType);
+    const response = await pdfService.generateVoucherPDF(pdfData, pdfConfig);
+    
+    // Handle the response blob
+    if (response instanceof Blob) {
+      const url = window.URL.createObjectURL(response);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pdfConfig.filename || `${pdfConfig.voucherTitle}_${pdfData.voucher_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
   } catch (error) {
     console.error("[PDF] Error generating standalone PDF:", error);
     alert("Failed to generate PDF. Please try again.");

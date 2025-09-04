@@ -13,6 +13,7 @@ import {
   getEmployees,
 } from "../services/masterService";
 import { useAuth } from "../context/AuthContext";
+import { useCompany } from "../context/CompanyContext";
 import {
   calculateVoucherTotals,
   getDefaultVoucherValues,
@@ -31,7 +32,8 @@ import api from "../lib/api"; // Direct import for list fetch
 export const useVoucherPage = (config: VoucherPageConfig) => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
-  const { isOrgContextReady, company } = useAuth(); // Get company from context
+  const { isOrgContextReady } = useAuth(); // Get isOrgContextReady from AuthContext
+  const { company } = useCompany(); // Get company from CompanyContext
   const queryClient = useQueryClient();
   console.log(
     "[useVoucherPage] Enhanced hook initialized for:",
@@ -177,18 +179,20 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       if (selectedEntity) {
         const companyStateCode = company?.state_code;
         if (!companyStateCode) {
-          throw new Error("Company state code is not available.");
+          console.error("Company state code is not available.");
+          return true; // Assume intrastate to prevent crash
         }
         const entityStateCode =
           selectedEntity.state_code || selectedEntity.gst_number?.slice(0, 2);
         if (!entityStateCode) {
-          throw new Error("Entity state code or GST number is not available.");
+          console.error("Entity state code or GST number is not available.");
+          return true; // Assume intrastate to prevent crash
         }
         isIntra = entityStateCode === companyStateCode;
       }
     } catch (error) {
       console.error("Error determining transaction state:", error);
-      throw error; // Re-throw to propagate the error
+      return true; // Assume intrastate to prevent crash
     }
     return isIntra;
   }, [
@@ -672,7 +676,12 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     } else if (voucherData) {
       console.log("[useVoucherPage] Loading voucher data:", voucherData);
       // Reset with voucher data
-      reset(voucherData);
+      const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
+      const formattedData = {
+        ...voucherData,
+        date: formattedDate,
+      };
+      reset(formattedData);
       // Ensure items array is properly loaded for vouchers with items
       if (
         config.hasItems !== false &&

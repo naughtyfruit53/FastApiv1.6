@@ -2,11 +2,19 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies for pdfkit (wkhtmltopdf) and general app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libpq-dev \
+    wkhtmltopdf \
+    xvfb \
+    fontconfig \
+    libjpeg62-turbo \
+    libpng16-16 \
+    libxrender1 \
+    libxext6 \
+    libfreetype6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

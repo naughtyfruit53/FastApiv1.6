@@ -84,10 +84,10 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
           >
             {/* Index Panel - approximately 40% */}
             <Grid
-              size={{ xs: 12, md: 5, lg: 4 }}
+              size={{ xs: 12, md: 5, lg: 5 }}
               sx={{
                 borderRight: "1px solid #e0e0e0",
-                maxWidth: { xs: "100%", md: "40%", lg: "33.333%" },
+                maxWidth: { xs: "100%", md: "40%", lg: "40%" },
               }}
             >
               <Paper
@@ -166,9 +166,9 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
             </Grid>
             {/* Form Panel - approximately 60% */}
             <Grid
-              size={{ xs: 12, md: 7, lg: 8 }}
+              size={{ xs: 12, md: 7, lg: 7 }}
               sx={{
-                maxWidth: { xs: "100%", md: "60%", lg: "66.667%" },
+                maxWidth: { xs: "100%", md: "60%", lg: "60%" },
               }}
             >
               <Paper

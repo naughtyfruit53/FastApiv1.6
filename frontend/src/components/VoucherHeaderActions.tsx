@@ -8,6 +8,8 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
+import VoucherPDFButton from "./VoucherPDFButton";
+
 interface VoucherHeaderActionsProps {
   mode: "create" | "edit" | "view";
   voucherType: string; // e.g., 'Purchase Order', 'Sales Voucher', etc.
@@ -22,7 +24,11 @@ interface VoucherHeaderActionsProps {
   voucherList?: any[];
   onView?: (_voucher: any) => void;
   isLoading?: boolean;
+  // PDF generation props
+  voucherNumber?: string;
+  showPDFButton?: boolean;
 }
+
 const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
   mode,
   voucherType,
@@ -37,16 +43,35 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
   voucherList: _voucherList,
   onView: _onView,
   isLoading,
+  // PDF generation props
+  voucherNumber,
+  showPDFButton = true,
 }) => {
   const router = useRouter();
+  
   const handleEditFallback = () => {
     if (currentId) {
       router.push(`${voucherRoute}?mode=edit&id=${currentId}`);
     }
   };
+  
   const handleCreateFallback = () => {
     router.push(`${voucherRoute}?mode=create`);
   };
+
+  // Map voucher type to PDF generation type
+  const getPDFVoucherType = (voucherType: string): string => {
+    const lowerType = voucherType.toLowerCase();
+    if (lowerType.includes('purchase')) return 'purchase';
+    if (lowerType.includes('sales') || lowerType.includes('invoice')) return 'sales';
+    if (lowerType.includes('quotation')) return 'quotation';
+    if (lowerType.includes('sales order')) return 'sales_order';
+    if (lowerType.includes('proforma')) return 'proforma';
+    return 'sales'; // Default fallback
+  };
+
+  const pdfVoucherType = getPDFVoucherType(voucherType);
+
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       {mode === "view" && (
@@ -69,6 +94,15 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
           >
             Edit {voucherType.toLowerCase()}
           </Button>
+          {showPDFButton && currentId && (
+            <VoucherPDFButton
+              voucherType={pdfVoucherType as any}
+              voucherId={currentId}
+              voucherNumber={voucherNumber}
+              variant="menu"
+              size="medium"
+            />
+          )}
         </>
       )}
       {mode === "edit" && (
@@ -99,6 +133,15 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
           >
             Cancel
           </Button>
+          {showPDFButton && currentId && (
+            <VoucherPDFButton
+              voucherType={pdfVoucherType as any}
+              voucherId={currentId}
+              voucherNumber={voucherNumber}
+              variant="button"
+              size="medium"
+            />
+          )}
         </>
       )}
       {mode === "create" && (
@@ -115,4 +158,5 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
     </Box>
   );
 };
+
 export default VoucherHeaderActions;
