@@ -18,6 +18,8 @@ export interface MetricCardProps {
   loading?: boolean;
   size?: "small" | "medium" | "large";
   className?: string;
+  onClick?: () => void;
+  href?: string;
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({
@@ -30,6 +32,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
   loading = false,
   size = "medium",
   className = "",
+  onClick,
+  href,
 }) => {
   const formatValue = (val: string | number): string => {
     if (typeof val === "number") {
@@ -59,6 +63,16 @@ const MetricCard: React.FC<MetricCardProps> = ({
         return <Remove sx={{ fontSize: 16 }} />;
     }
   };
+
+  const handleClick = () => {
+    if (href) {
+      window.location.href = href;
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
+  const isClickable = !!(onClick || href);
 
   const getTrendColor = () => {
     if (!trend) {
@@ -117,12 +131,19 @@ const MetricCard: React.FC<MetricCardProps> = ({
       className={`modern-metric-card ${color} ${className} animate-fade-in-up`}
       role="group"
       aria-label={`${title}: ${formatValue(value)}`}
-      tabIndex={0}
+      tabIndex={isClickable ? 0 : -1}
+      onClick={isClickable ? handleClick : undefined}
+      onKeyDown={isClickable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      } : undefined}
       sx={{
         minHeight: size === "large" ? 140 : size === "small" ? 100 : 120,
-        cursor: "pointer",
+        cursor: isClickable ? "pointer" : "default",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        "&:hover": {
+        "&:hover": isClickable ? {
           transform: "translateY(-4px) scale(1.02)",
           boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
           "& .metric-card-icon": {
@@ -131,15 +152,15 @@ const MetricCard: React.FC<MetricCardProps> = ({
           "& .metric-card-value": {
             color: "primary.main",
           },
-        },
-        "&:focus": {
+        } : {},
+        "&:focus": isClickable ? {
           outline: "2px solid",
           outlineColor: "primary.main",
           outlineOffset: "2px",
-        },
-        "&:active": {
+        } : {},
+        "&:active": isClickable ? {
           transform: "translateY(-2px) scale(1.01)",
-        },
+        } : {},
       }}
     >
       <Box className="metric-card-header">
