@@ -1,5 +1,4 @@
-import React from "react";
-// src/hooks/useVoucherPage.ts
+// frontend/src/hooks/useVoucherPage.ts
 // Enhanced comprehensive hook for voucher page logic with comprehensive overhaul features
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
@@ -159,6 +158,16 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       isOrgContextReady &&
       (config.entityType === "sales" || config.entityType === "financial"),
   });
+  const { data: voucherData, isLoading: isFetching } = useQuery({
+    queryKey: [config.voucherType, selectedId],
+    queryFn: () =>
+      voucherService.getVoucherById(
+        config.apiEndpoint || config.voucherType,
+        selectedId!,
+      ),
+    enabled:
+      !!selectedId && isOrgContextReady && (mode === "view" || mode === "edit"),
+  });
   // Extract isIntrastate as separate memo for UI usage
   const isIntrastate = useMemo(() => {
     let isIntra = true;
@@ -174,7 +183,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         vendorList &&
         selectedEntityId
       ) {
-        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
+        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId) || voucherData?.vendor;
       }
       if (selectedEntity) {
         const companyStateCode = company?.state_code;
@@ -202,6 +211,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     customerList,
     vendorList,
     company?.state_code,
+    voucherData
   ]);
   // Enhanced computed values using the extracted isIntrastate
   const {
@@ -275,16 +285,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     queryKey: ["products"],
     queryFn: getProducts,
     enabled: isOrgContextReady && config.hasItems !== false,
-  });
-  const { data: voucherData, isLoading: isFetching } = useQuery({
-    queryKey: [config.voucherType, selectedId],
-    queryFn: () =>
-      voucherService.getVoucherById(
-        config.apiEndpoint || config.voucherType,
-        selectedId!,
-      ),
-    enabled:
-      !!selectedId && isOrgContextReady && (mode === "view" || mode === "edit"),
   });
   const {
     data: nextVoucherNumber,
