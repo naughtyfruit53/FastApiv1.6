@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libxext6 \
     libfreetype6 \
+    wget \
     && rm -rf /var/lib/apt/lists/* \
     && wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_amd64.deb \
     && dpkg -i wkhtmltox_0.12.6.1-2.bullseye_amd64.deb \
