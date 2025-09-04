@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRoute
+from fastapi.staticfiles import StaticFiles
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, SessionLocal
 from app.core.tenant import TenantMiddleware
@@ -470,6 +471,10 @@ async def health_check():
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("app/static/favicon.ico")
+
+# Mount static files for PDF assets and uploads
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 if __name__ == "__main__":
     import uvicorn
