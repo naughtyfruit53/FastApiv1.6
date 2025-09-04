@@ -14,8 +14,8 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libxext6 \
     libfreetype6 \
-    wkhtmltox \
-    xfonts-75dpi \
+    wkhtmltopdf \
+    xfonts-75dpi-transcoded \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
