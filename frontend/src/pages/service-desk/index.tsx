@@ -1,4 +1,5 @@
 // frontend/src/pages/service-desk/index.tsx
+// Comprehensive Service Desk Dashboard with enhanced integration
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -20,6 +21,13 @@ import {
   Typography,
   Chip,
   Grid,
+  Tabs,
+  Tab,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -100,6 +108,7 @@ export default function ServiceDeskDashboard() {
   const [openTicketDialog, setOpenTicketDialog] = useState(false);
   const [selectedPriority, setSelectedPriority] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     loadServiceDeskData();
   }, []);
