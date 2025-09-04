@@ -352,7 +352,8 @@ const PurchaseOrderPage: React.FC = () => {
     }
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
-      const fullVoucherData = response.data;
+      let fullVoucherData = response.data;
+      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
       setMode("edit");
       reset(fullVoucherData);
     } catch (err) {
@@ -367,7 +368,8 @@ const PurchaseOrderPage: React.FC = () => {
     }
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
-      const fullVoucherData = response.data;
+      let fullVoucherData = response.data;
+      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
       setMode("view");
       reset(fullVoucherData);
     } catch (err) {
