@@ -82,6 +82,7 @@ const SalesVoucherPage: React.FC = () => {
     totalCgst,
     totalSgst,
     totalIgst,
+    isIntrastate,
     // Mutations
     createMutation,
     updateMutation,
@@ -530,18 +531,18 @@ const SalesVoucherPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
-                      {totalIgst > 0 ? 'IGST:' : 'CGST:'}
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-                      ₹{totalIgst > 0 ? totalIgst.toLocaleString() : totalCgst.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  {totalIgst === 0 && (
+                  {isIntrastate ? (
                     <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          CGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalCgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
                       <Grid size={6}>
                         <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
                           SGST:
@@ -550,6 +551,19 @@ const SalesVoucherPage: React.FC = () => {
                       <Grid size={6}>
                         <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
                           ₹{totalSgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </>
+                  ) : (
+                    <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          IGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalIgst.toLocaleString()}
                         </Typography>
                       </Grid>
                     </>
