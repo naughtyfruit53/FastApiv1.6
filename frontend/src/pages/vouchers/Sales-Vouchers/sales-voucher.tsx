@@ -275,7 +275,7 @@ const SalesVoucherPage: React.FC = () => {
           currentId={selectedCustomerId}
         />
       </Box>
-      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
           <Grid size={6}>
@@ -579,22 +579,6 @@ const SalesVoucherPage: React.FC = () => {
               inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
               size="small"
             />
-          </Grid>
-          {/* Action buttons - removed Generate PDF */}
-          <Grid size={12}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              {mode !== 'view' && (
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  color="success" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  sx={{ fontSize: 12 }}
-                >
-                  Save
-                </Button>
-              )}
-            </Box>
           </Grid>
         </Grid>
       </form>
