@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, Template
-from weasyprint import HTML, CSS
+import pdfkit
 from num2words import num2words
 from sqlalchemy.orm import Session
 from app.models import Company, User
@@ -334,16 +334,20 @@ class VoucherPDFGenerator:
             filename = f"{voucher_type}_{voucher_data.get('voucher_number', 'unknown')}_{uuid.uuid4().hex[:8]}.pdf"
             filepath = os.path.join(self.output_dir, filename)
             
-            # Convert to PDF using WeasyPrint
+            # Convert to PDF using pdfkit
             css_path = os.path.join(self.static_dir, 'css', 'voucher_print.css')
             
-            html_doc = HTML(string=html_content)
-            css_doc = CSS(filename=css_path) if os.path.exists(css_path) else None
+            options = {
+                'encoding': 'UTF-8',
+                'quiet': ''
+            }
             
-            if css_doc:
-                html_doc.write_pdf(filepath, stylesheets=[css_doc])
-            else:
-                html_doc.write_pdf(filepath)
+            pdfkit.from_string(
+                html_content,
+                filepath,
+                css=css_path if os.path.exists(css_path) else None,
+                options=options
+            )
             
             logger.info(f"PDF generated successfully: {filepath}")
             return filepath

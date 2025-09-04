@@ -340,6 +340,11 @@
                     <span class="info-value">{{ party.email }}</span>
                 </div>
                 {% endif %}
+                {% else %}
+                <div class="info-row">
+                    <span class="info-label">Note:</span>
+                    <span class="info-value">No party details available</span>
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -365,6 +370,7 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% if items|length > 0 %}
                     {% for item in items %}
                     <tr>
                         <td class="text-center">{{ loop.index }}</td>
@@ -391,6 +397,11 @@
                         <td class="text-right">{{ item.total_amount|format_currency }}</td>
                     </tr>
                     {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="11" class="text-center">No items available</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -475,6 +486,7 @@
                 </div>
                 <div class="signature-box">
                     <div class="signature-line"></div>
+                    <div class="signature-label">For {{ company.name }}</div>
                     <div class="signature-label">
                         {% if voucher.vendor %}Vendor Signature{% else %}Customer Signature{% endif %}
                     </div>

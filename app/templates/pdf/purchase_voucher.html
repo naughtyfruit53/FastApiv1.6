@@ -29,13 +29,13 @@
     {% if voucher.purchase_order %}
     <div class="info-row">
         <span class="info-label">PO Number:</span>
-        <span class="info-value">{{ voucher.purchase_order.voucher_number }}</span>
+        <span class="info-value">{{ voucher.purchase_order.voucher_number|default('N/A') }}</span>
     </div>
     {% endif %}
     {% if voucher.grn %}
     <div class="info-row">
         <span class="info-label">GRN Number:</span>
-        <span class="info-value">{{ voucher.grn.voucher_number }}</span>
+        <span class="info-value">{{ voucher.grn.voucher_number|default('N/A') }}</span>
     </div>
     {% endif %}
     <div class="info-row">
