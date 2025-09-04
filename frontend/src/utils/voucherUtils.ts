@@ -991,17 +991,3 @@ export const getVoucherStyles = (): any => ({
     },
   },
 });
-/**
- * Format voucher date to YYYY-MM-DD for date input fields
- * Centralizes the date formatting logic for all voucher types
- */
-export const formatVoucherDate = (dateStr: string | undefined): string => {
-  if (!dateStr) return '';
-  try {
-    const date = new Date(dateStr);
-    return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
-  } catch (e) {
-    console.error('Invalid date format:', dateStr, e);
-    return '';
-  }
-};
