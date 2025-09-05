@@ -1,6 +1,7 @@
 // Unified PDF generation utility for all voucher types
 // frontend/src/utils/pdfUtils.ts
-import pdfService from "../services/pdfService";
+import api from "../lib/api";
+
 export interface VoucherPdfConfig {
   voucherType: string;
   voucherTitle: string;
@@ -45,7 +46,7 @@ export interface VoucherPdfData {
  * Generate PDF for any voucher type using standardized configuration
  */
 export const generateVoucherPDF = async (
-  voucherData: VoucherPdfData,
+  voucherId: number,
   config: VoucherPdfConfig,
 ): Promise<void> => {
   try {
@@ -55,67 +56,22 @@ export const generateVoucherPDF = async (
       alert("You must be logged in to generate PDFs");
       return;
     }
-    // Prepare standardized voucher data for the PDF service
-    const pdfVoucherData = {
-      voucher_number: voucherData.voucher_number,
-      date: voucherData.date,
-      reference: voucherData.reference,
-      notes: voucherData.notes,
-      total_amount: voucherData.total_amount || 0,
-      items: voucherData.items || [],
-      // Map party information based on entity type
-      party:
-        config.entityType === "vendor" && voucherData.vendor
-          ? {
-              name: voucherData.vendor.name,
-              address: voucherData.vendor.address,
-              contact_number: voucherData.vendor.contact_number,
-              email: voucherData.vendor.email,
-              gstin: voucherData.vendor.gstin,
-            }
-          : config.entityType === "customer" && voucherData.customer
-            ? {
-                name: voucherData.customer.name,
-                address: voucherData.customer.address,
-                contact_number: voucherData.customer.contact_number,
-                email: voucherData.customer.email,
-                gstin: voucherData.customer.gstin,
-              }
-            : undefined,
-      // Include voucher-specific fields
-      payment_method: voucherData.payment_method,
-      receipt_method: voucherData.receipt_method,
-      payment_terms: voucherData.payment_terms,
-      from_account: voucherData.from_account,
-      to_account: voucherData.to_account,
-      // Manufacturing-specific fields
-      job_type: voucherData.job_type,
-      job_description: voucherData.job_description,
-      expected_completion_date: voucherData.expected_completion_date,
-      actual_completion_date: voucherData.actual_completion_date,
-      materials_supplied_by: voucherData.materials_supplied_by,
-      quality_specifications: voucherData.quality_specifications,
-    };
-    const pdfOptions = {
-      voucherType: config.voucherType,
-      voucherTitle: config.voucherTitle,
-      filename: `${config.voucherTitle.replace(/\s+/g, "")}${voucherData.voucher_number?.replace(/[^a-zA-Z0-9]/g, "_") || "Unknown"}.pdf`,
-      showItems: config.showItems || false,
-      showTaxDetails: config.showTaxDetails || false,
-    };
-    const response = await pdfService.generateVoucherPDF(pdfVoucherData, pdfOptions);
-    
+    // Call backend API for PDF generation
+    const response = await api.post(
+      `/pdf-generation/voucher/${config.voucherType}/${voucherId}`,
+      {},
+      { responseType: 'blob' }
+    );
     // Handle the response blob
-    if (response instanceof Blob) {
-      const url = window.URL.createObjectURL(response);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = pdfOptions.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }
+    const blob = response.data;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${config.voucherTitle.replace(/\s+/g, "")}_${voucherId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Error generating PDF:", error);
     alert("Failed to generate PDF. Please try again.");
@@ -317,15 +273,14 @@ export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
  * Can be used in any voucher component without requiring useVoucherPage hook
  */
 export const generateStandalonePDF = async (
-  voucherData: VoucherPdfData,
+  voucherId: number,
   voucherType: string,
-  entityData?: { vendor?: any; customer?: any; employee?: any },
 ): Promise<void> => {
   try {
     console.log(
       "[PDF] Generating standalone PDF for:",
       voucherType,
-      voucherData,
+      voucherId,
     );
     // Check authorization
     const token = localStorage.getItem("token");
@@ -335,46 +290,8 @@ export const generateStandalonePDF = async (
     }
     // Get PDF configuration
     const pdfConfig = getVoucherPdfConfig(voucherType);
-    // Prepare PDF data with entity information
-    const pdfData: VoucherPdfData = {
-      voucher_number:
-        voucherData.voucher_number || voucherData.job_number || "Unknown",
-      date: voucherData.date || new Date().toISOString().split("T")[0],
-      reference: voucherData.reference || voucherData.po_number,
-      notes: voucherData.notes || voucherData.description,
-      total_amount: voucherData.total_amount || voucherData.total_cost || 0,
-      items: voucherData.items || voucherData.materials || [],
-      // Map entity information
-      vendor: entityData?.vendor,
-      customer: entityData?.customer,
-      // Additional voucher-specific fields
-      payment_method: voucherData.payment_method,
-      receipt_method: voucherData.receipt_method,
-      payment_terms: voucherData.payment_terms,
-      from_account: voucherData.from_account,
-      to_account: voucherData.to_account,
-      // Manufacturing-specific fields
-      job_type: voucherData.job_type,
-      job_description: voucherData.job_description,
-      expected_completion_date: voucherData.expected_completion_date,
-      actual_completion_date: voucherData.actual_completion_date,
-      materials_supplied_by: voucherData.materials_supplied_by,
-      quality_specifications: voucherData.quality_specifications,
-    };
-    // Generate PDF
-    const response = await pdfService.generateVoucherPDF(pdfData, pdfConfig);
-    
-    // Handle the response blob
-    if (response instanceof Blob) {
-      const url = window.URL.createObjectURL(response);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = pdfConfig.filename || `${pdfConfig.voucherTitle}_${pdfData.voucher_number}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }
+    // Generate PDF via backend
+    await generateVoucherPDF(voucherId, pdfConfig);
   } catch (error) {
     console.error("[PDF] Error generating standalone PDF:", error);
     alert("Failed to generate PDF. Please try again.");

@@ -429,6 +429,16 @@
                             <th>Subtotal:</th>
                             <td>{{ subtotal|format_currency }}</td>
                         </tr>
+                        {% if total_discount > 0 %}
+                        <tr>
+                            <th>Discount:</th>
+                            <td>{{ total_discount|format_currency }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Taxable Amount:</th>
+                            <td>{{ total_taxable|format_currency }}</td>
+                        </tr>
                         {% if total_cgst > 0 %}
                         <tr>
                             <th>CGST:</th>
@@ -443,18 +453,6 @@
                         <tr>
                             <th>IGST:</th>
                             <td>{{ total_igst|format_currency }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if voucher.discount_amount %}
-                        <tr>
-                            <th>Discount:</th>
-                            <td>-{{ voucher.discount_amount|format_currency }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if voucher.round_off %}
-                        <tr>
-                            <th>Round Off:</th>
-                            <td>{{ voucher.round_off|format_currency }}</td>
                         </tr>
                         {% endif %}
                         <tr class="total-grand">

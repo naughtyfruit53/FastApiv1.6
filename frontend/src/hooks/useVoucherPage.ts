@@ -491,22 +491,14 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const handleGeneratePDF = useCallback(
     async (voucher?: any) => {
       const pdfConfig = getVoucherPdfConfig(config.voucherType);
-      const voucherToUse = voucher || voucherData || watch();
-      const pdfData: VoucherPdfData = {
-        voucher_number: voucherToUse.voucher_number,
-        date: voucherToUse.date,
-        reference: voucherToUse.reference,
-        notes: voucherToUse.notes,
-        total_amount: totalAmount,
-        items: computedItems,
-        payment_terms: voucherToUse.payment_terms,
-        from_account: voucherToUse.from_account,
-        to_account: voucherToUse.to_account,
-        ...voucherToUse,
-      };
-      await generateVoucherPDF(pdfData, pdfConfig);
+      const voucherToUse = voucher || voucherData;
+      if (!voucherToUse?.id) {
+        console.error("No voucher ID available for PDF generation");
+        return;
+      }
+      await generateVoucherPDF(voucherToUse.id, pdfConfig);
     },
-    [config.voucherType, watch, voucherData, totalAmount, computedItems],
+    [config.voucherType, voucherData],
   );
   // Delete functionality
   const handleDelete = useCallback(

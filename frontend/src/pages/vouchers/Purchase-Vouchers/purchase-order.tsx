@@ -217,7 +217,7 @@ const PurchaseOrderPage: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error(err);
       alert("Failed to save purchase order. Please try again.");
     }
   };
@@ -240,7 +240,7 @@ const PurchaseOrderPage: React.FC = () => {
       setMode("create");
       toast.success("Purchase order duplicated successfully");
     } catch (err) {
-      console.error(msg, err);
+      console.error(err);
       toast.error("Failed to duplicate purchase order");
     }
   };
@@ -339,7 +339,7 @@ const PurchaseOrderPage: React.FC = () => {
       setMode("view");
       reset(fullVoucherData);
     } catch (err) {
-      console.error(msg, err);
+      console.error(err);
       // Fallback to available data
       setMode("view");
       reset(voucher);
@@ -357,7 +357,7 @@ const PurchaseOrderPage: React.FC = () => {
       setMode("edit");
       reset(fullVoucherData);
     } catch (err) {
-      console.error(msg, err);
+      console.error(err);
       handleEdit(voucher);
     }
   };
@@ -373,7 +373,7 @@ const PurchaseOrderPage: React.FC = () => {
       setMode("view");
       reset(fullVoucherData);
     } catch (err) {
-      console.error(msg, err);
+      console.error(err);
       handleView(voucher);
     }
   };
@@ -488,7 +488,7 @@ const PurchaseOrderPage: React.FC = () => {
                       onView={() => handleViewWithData(voucher)}
                       onEdit={() => handleEditWithData(voucher)}
                       onDelete={() => handleDelete(voucher)}
-                      onPrint={() => handleGeneratePDF()}
+                      onPrint={() => handleGeneratePDF(voucher)}
                       onDuplicate={() => handleDuplicate(voucher.id)}
                       showKebab={true}
                       onClose={() => {}}
