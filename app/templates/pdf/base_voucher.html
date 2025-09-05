@@ -236,59 +236,56 @@
 </head>
 <body>
     <div class="voucher-container">
-        <!-- Header Section -->
-        <div class="voucher-header">
-            <div class="company-header">
-                {% if company.logo_url %}
-                <div class="company-logo">
-                    <img src="{{ company.logo_url }}" alt="{{ company.name }} Logo" />
-                </div>
-                {% endif %}
-                
-                <div class="company-info">
-                    <div class="company-name">{{ company.name }}</div>
-                    <div class="company-address">
-                        {{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}<br>
-                        {{ company.city }}, {{ company.state }} - {{ company.pin_code }}<br>
-                        {% if company.gst_number %}GST: {{ company.gst_number }} | {% endif %}
-                        {% if company.pan_number %}PAN: {{ company.pan_number }}<br>{% endif %}
-                        Phone: {{ company.contact_number }}
-                        {% if company.email %} | Email: {{ company.email }}{% endif %}
-                        {% if company.website %} | {{ company.website }}{% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <div class="voucher-title">
-                {{ voucher.voucher_type|default('Voucher')|title }}
-                {% if voucher.status %}
-                <span class="status-badge">{{ voucher.status }}</span>
-                {% endif %}
-            </div>
+        <!-- Voucher Title at Top -->
+        <div class="voucher-title">
+            {{ voucher.voucher_type|default('Voucher')|title }}
+            {% if voucher.status and voucher.status != 'draft' %}
+            <span class="status-badge">{{ voucher.status }}</span>
+            {% endif %}
         </div>
         
-        <!-- Voucher Details -->
+        <!-- Company and Vendor Details Side by Side -->
         <div class="voucher-details">
             <div class="voucher-info">
-                <div class="section-title">Voucher Details</div>
+                <div class="section-title">Company Details</div>
                 <div class="info-row">
-                    <span class="info-label">Voucher No:</span>
-                    <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+                    <span class="info-label">Name:</span>
+                    <span class="info-value">{{ company.name }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Date:</span>
-                    <span class="info-value">{{ voucher.date|format_date }}</span>
+                    <span class="info-label">Address:</span>
+                    <span class="info-value">{{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}</span>
                 </div>
-                {% if voucher.due_date %}
                 <div class="info-row">
-                    <span class="info-label">Due Date:</span>
-                    <span class="info-value">{{ voucher.due_date|format_date }}</span>
+                    <span class="info-label">City:</span>
+                    <span class="info-value">{{ company.city }}, {{ company.state }} - {{ company.pin_code }}</span>
+                </div>
+                {% if company.gst_number %}
+                <div class="info-row">
+                    <span class="info-label">GST No:</span>
+                    <span class="info-value">{{ company.gst_number }}</span>
                 </div>
                 {% endif %}
-                {% if voucher.reference_number %}
+                {% if company.pan_number %}
                 <div class="info-row">
-                    <span class="info-label">Reference:</span>
-                    <span class="info-value">{{ voucher.reference_number }}</span>
+                    <span class="info-label">PAN No:</span>
+                    <span class="info-value">{{ company.pan_number }}</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span class="info-value">{{ company.contact_number }}</span>
+                </div>
+                {% if company.email %}
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{ company.email }}</span>
+                </div>
+                {% endif %}
+                {% if company.website %}
+                <div class="info-row">
+                    <span class="info-label">Website:</span>
+                    <span class="info-value">{{ company.website }}</span>
                 </div>
                 {% endif %}
             </div>
@@ -358,15 +355,12 @@
                     <tr>
                         <th style="width: 5%">S.No</th>
                         <th style="width: 25%">Product/Service</th>
-                        <th style="width: 10%">HSN/SAC</th>
-                        <th style="width: 8%">Qty</th>
-                        <th style="width: 8%">Unit</th>
+                        <th style="width: 15%">HSN/SAC</th>
+                        <th style="width: 15%">Qty</th>
                         <th style="width: 10%">Rate</th>
                         <th style="width: 10%">Taxable Value</th>
                         <th style="width: 6%">GST%</th>
-                        <th style="width: 8%">CGST</th>
-                        <th style="width: 8%">SGST/IGST</th>
-                        <th style="width: 12%">Total</th>
+                        <th style="width: 14%">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -381,25 +375,16 @@
                             {% endif %}
                         </td>
                         <td class="text-center">{{ item.hsn_code|default('-') }}</td>
-                        <td class="text-center">{{ "%.2f"|format(item.quantity|float) }}</td>
-                        <td class="text-center">{{ item.unit|default('Nos') }}</td>
+                        <td class="text-center">{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}</td>
                         <td class="text-right">{{ item.unit_price|format_currency }}</td>
                         <td class="text-right">{{ item.taxable_amount|format_currency }}</td>
                         <td class="text-center">{{ item.gst_rate|default(0)|format_percentage }}</td>
-                        <td class="text-right">{{ item.cgst_amount|format_currency }}</td>
-                        <td class="text-right">
-                            {% if item.igst_amount > 0 %}
-                                {{ item.igst_amount|format_currency }}
-                            {% else %}
-                                {{ item.sgst_amount|format_currency }}
-                            {% endif %}
-                        </td>
                         <td class="text-right">{{ item.total_amount|format_currency }}</td>
                     </tr>
                     {% endfor %}
                     {% else %}
                     <tr>
-                        <td colspan="11" class="text-center">No items available</td>
+                        <td colspan="8" class="text-center">No items available</td>
                     </tr>
                     {% endif %}
                 </tbody>
@@ -439,7 +424,12 @@
                             <th>Taxable Amount:</th>
                             <td>{{ total_taxable|format_currency }}</td>
                         </tr>
-                        {% if total_cgst > 0 %}
+                        {% if is_interstate %}
+                        <tr>
+                            <th>IGST:</th>
+                            <td>{{ total_igst|format_currency }}</td>
+                        </tr>
+                        {% else %}
                         <tr>
                             <th>CGST:</th>
                             <td>{{ total_cgst|format_currency }}</td>
@@ -447,12 +437,6 @@
                         <tr>
                             <th>SGST:</th>
                             <td>{{ total_sgst|format_currency }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if total_igst > 0 %}
-                        <tr>
-                            <th>IGST:</th>
-                            <td>{{ total_igst|format_currency }}</td>
                         </tr>
                         {% endif %}
                         <tr class="total-grand">
@@ -474,20 +458,16 @@
             {% endif %}
             
             <div class="signatures">
-                <div class="signature-box">
+                <div class="signature-box" style="width: 50%; text-align: left;">
                     <div class="signature-line"></div>
                     <div class="signature-label">Prepared By</div>
-                </div>
-                <div class="signature-box">
-                    <div class="signature-line"></div>
+                    <br><br><br>
                     <div class="signature-label">Authorized Signatory</div>
-                </div>
-                <div class="signature-box">
-                    <div class="signature-line"></div>
                     <div class="signature-label">For {{ company.name }}</div>
-                    <div class="signature-label">
-                        {% if voucher.vendor %}Vendor Signature{% else %}Customer Signature{% endif %}
-                    </div>
+                </div>
+                <div class="signature-box" style="width: 50%; text-align: right;">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Vendor Signature</div>
                 </div>
             </div>
             

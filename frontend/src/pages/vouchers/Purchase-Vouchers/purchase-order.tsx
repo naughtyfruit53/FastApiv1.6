@@ -788,6 +788,7 @@ const PurchaseOrderPage: React.FC = () => {
                           sx={{ width: 120 }} // Increased width for qty field to fit unit
                           InputProps={{
                             inputProps: { min: 0, step: 1 }, // Prevent negative qty, integer steps
+                            endAdornment: <InputAdornment position="end">{watch(`items.${index}.unit`) || ''}</InputAdornment>,
                           }}
                         />
                       </TableCell>
