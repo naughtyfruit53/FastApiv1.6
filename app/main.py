@@ -155,6 +155,13 @@ except Exception as import_error:
 
 # Import Business Suite Core Module APIs
 try:
+    from app.api.v1 import master_data as v1_master_data
+    logger.info("Successfully imported master_data_router")
+except Exception as import_error:
+    logger.error(f"Failed to import master_data_router: {str(import_error)}")
+    raise
+
+try:
     from app.api.v1 import project_management as v1_project_management
     logger.info("Successfully imported project_management_router")
 except Exception as import_error:
@@ -448,6 +455,9 @@ app.include_router(
 logger.info("Sticky notes router included successfully at prefix: /api/v1/sticky_notes")
 
 # Include Business Suite Core Module routers
+app.include_router(v1_master_data.router, prefix="/api/v1/master-data", tags=["master-data"])
+logger.info("Master Data router included successfully at prefix: /api/v1/master-data")
+
 app.include_router(v1_project_management.router, prefix="/api/v1/projects", tags=["project-management"])
 logger.info("Project Management router included successfully at prefix: /api/v1/projects")
 

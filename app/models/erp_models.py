@@ -76,6 +76,24 @@ class ChartOfAccounts(Base):
     general_ledger_entries = relationship("GeneralLedger", back_populates="account")
     bank_account = relationship("BankAccount", back_populates="chart_account", uselist=False)
     
+    # Master Data relationships (back references)
+    categories_income = relationship("app.models.master_data_models.Category", 
+                                   foreign_keys="app.models.master_data_models.Category.default_income_account_id",
+                                   back_populates="default_income_account")
+    categories_expense = relationship("app.models.master_data_models.Category", 
+                                    foreign_keys="app.models.master_data_models.Category.default_expense_account_id",
+                                    back_populates="default_expense_account")
+    categories_asset = relationship("app.models.master_data_models.Category", 
+                                  foreign_keys="app.models.master_data_models.Category.default_asset_account_id",
+                                  back_populates="default_asset_account")
+    tax_codes = relationship("app.models.master_data_models.TaxCode", back_populates="tax_account")
+    payment_terms_discount = relationship("app.models.master_data_models.PaymentTermsExtended", 
+                                         foreign_keys="app.models.master_data_models.PaymentTermsExtended.discount_account_id",
+                                         back_populates="discount_account")
+    payment_terms_penalty = relationship("app.models.master_data_models.PaymentTermsExtended", 
+                                       foreign_keys="app.models.master_data_models.PaymentTermsExtended.penalty_account_id",
+                                       back_populates="penalty_account")
+    
     # Constraints
     __table_args__ = (
         UniqueConstraint('organization_id', 'account_code', name='uq_org_account_code'),
