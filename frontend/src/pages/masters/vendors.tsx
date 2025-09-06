@@ -1,5 +1,5 @@
 // frontend/src/pages/masters/vendors.tsx
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react"; // Added useEffect
 import { useRouter } from "next/router";
 import {
   Box,
@@ -30,13 +30,13 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as masterDataService from "../../services/masterService"; // Changed to namespace import to access all exports as an object
 import ExcelImportExport from "../../components/ExcelImportExport";
-import { useAuth } from "../../context/AuthContext";
+import { useCompany } from "../../context/CompanyContext"; // Changed to useCompany instead of useAuth
 import AddVendorModal from "../../components/AddVendorModal";
 
 const VendorsPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
-  const { isOrgContextReady } = useAuth();
+  const { isCompanySetupNeeded, isLoading: companyLoading, company, error: companyError } = useCompany(); // Added company and companyError for debugging
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [editVendor, setEditVendor] = useState<any | null>(null);
   const [addVendorLoading, setAddVendorLoading] = useState(false);
@@ -46,10 +46,12 @@ const VendorsPage: React.FC = () => {
   const sortBy = "name";
   const queryClient = useQueryClient();
 
-  const { data: vendors, isLoading } = useQuery({
+  const vendorsEnabled = !isCompanySetupNeeded && !companyLoading; // Extracted for logging
+
+  const { data: vendors, isLoading: vendorsLoading, error: vendorsError } = useQuery({ // Added vendorsLoading and vendorsError for better handling
     queryKey: ["vendors"],
     queryFn: () => masterDataService.getVendors(),
-    enabled: isOrgContextReady,
+    enabled: vendorsEnabled, // Changed enabled condition to fetch only when company setup is not needed and not loading
   });
 
   const filteredAndSortedVendors = useMemo(() => {
@@ -168,8 +170,34 @@ const VendorsPage: React.FC = () => {
     }
   }, [action, openAddVendorModal]);
 
-  if (!isOrgContextReady) {
+  useEffect(() => { // Added useEffect for debugging logs
+    console.log("[VendorsPage] Company setup needed:", isCompanySetupNeeded);
+    console.log("[VendorsPage] Company loading:", companyLoading);
+    console.log("[VendorsPage] Vendors query enabled:", vendorsEnabled);
+    console.log("[VendorsPage] Company data:", company);
+    console.log("[VendorsPage] Company error:", companyError);
+    console.log("[VendorsPage] Vendors data:", vendors);
+    console.log("[VendorsPage] Vendors loading:", vendorsLoading);
+    console.log("[VendorsPage] Vendors error:", vendorsError);
+  }, [isCompanySetupNeeded, companyLoading, vendorsEnabled, company, companyError, vendors, vendorsLoading, vendorsError]);
+
+  useEffect(() => { // Added useEffect to handle redirect if company setup needed
+    if (isCompanySetupNeeded && !companyLoading) {
+      console.log("[VendorsPage] Redirecting to company setup as setup is needed");
+      router.push("/masters/company-details"); // Assuming this is the company setup page based on app structure
+    }
+  }, [isCompanySetupNeeded, companyLoading, router]);
+
+  if (companyLoading || vendorsLoading) { // Updated loading check to include vendorsLoading
     return <div>Loading...</div>;
+  }
+
+  if (isCompanySetupNeeded) {
+    return <div>Please complete company setup first to view vendors.</div>; // Added fallback message, though redirect should handle it
+  }
+
+  if (vendorsError) {
+    return <div>Error loading vendors: {vendorsError.message}</div>; // Added error display
   }
 
   return (
@@ -305,6 +333,13 @@ const VendorsPage: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredAndSortedVendors.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      No vendors found
+                    </TableCell>
+                  </TableRow>
+                )} {/* Added fallback row if no vendors */}
               </TableBody>
             </Table>
           </TableContainer>
