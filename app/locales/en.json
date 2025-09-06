@@ -1,0 +1,136 @@
+{
+  "ai": {
+    "insight_type": {
+      "opportunity": "Opportunity",
+      "risk": "Risk",
+      "optimization": "Optimization",
+      "trend": "Trend",
+      "recommendation": "Recommendation"
+    },
+    "category": {
+      "sales": "Sales",
+      "finance": "Finance",
+      "operations": "Operations",
+      "customer": "Customer",
+      "hr": "Human Resources",
+      "marketing": "Marketing",
+      "inventory": "Inventory"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "model_status": {
+      "draft": "Draft",
+      "training": "Training",
+      "trained": "Trained",
+      "deployed": "Deployed",
+      "deprecated": "Deprecated",
+      "failed": "Failed"
+    },
+    "prediction_type": {
+      "classification": "Classification",
+      "regression": "Regression",
+      "forecasting": "Forecasting",
+      "anomaly_detection": "Anomaly Detection",
+      "clustering": "Clustering",
+      "recommendation": "Recommendation"
+    },
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    }
+  },
+  "dashboard": {
+    "title": "AI Analytics Dashboard",
+    "total_models": "Total Models",
+    "active_models": "Active Models",
+    "models_in_training": "Models in Training",
+    "predictions_today": "Predictions Today",
+    "predictions_week": "Predictions This Week",
+    "predictions_month": "Predictions This Month",
+    "average_accuracy": "Average Model Accuracy",
+    "active_anomalies": "Active Anomalies",
+    "critical_anomalies": "Critical Anomalies",
+    "active_insights": "Active Insights",
+    "high_priority_insights": "High Priority Insights",
+    "automation_workflows": "Automation Workflows",
+    "active_automations": "Active Automations"
+  },
+  "models": {
+    "create_model": "Create AI Model",
+    "train_model": "Train Model",
+    "deploy_model": "Deploy Model",
+    "model_performance": "Model Performance",
+    "prediction_accuracy": "Prediction Accuracy",
+    "training_duration": "Training Duration",
+    "last_prediction": "Last Prediction"
+  },
+  "predictions": {
+    "make_prediction": "Make Prediction",
+    "prediction_result": "Prediction Result",
+    "confidence_score": "Confidence Score",
+    "processing_time": "Processing Time",
+    "submit_feedback": "Submit Feedback"
+  },
+  "anomalies": {
+    "detect_anomalies": "Detect Anomalies",
+    "anomaly_detected": "Anomaly Detected",
+    "anomaly_score": "Anomaly Score",
+    "business_impact": "Business Impact",
+    "assign_alert": "Assign Alert",
+    "resolve_alert": "Resolve Alert"
+  },
+  "insights": {
+    "generate_insights": "Generate Insights",
+    "ai_recommendation": "AI Recommendation",
+    "implementation_effort": "Implementation Effort",
+    "potential_impact": "Potential Impact",
+    "action_items": "Action Items"
+  },
+  "automation": {
+    "create_workflow": "Create Workflow",
+    "automation_workflow": "Automation Workflow",
+    "trigger_conditions": "Trigger Conditions",
+    "workflow_steps": "Workflow Steps",
+    "execution_status": "Execution Status",
+    "success_rate": "Success Rate"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "created": "Created",
+    "updated": "Updated",
+    "deleted": "Deleted",
+    "active": "Active",
+    "inactive": "Inactive",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "download": "Download",
+    "upload": "Upload",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "help": "Help",
+    "documentation": "Documentation"
+  }
+}

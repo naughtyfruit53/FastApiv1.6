@@ -1,0 +1,136 @@
+{
+  "ai": {
+    "insight_type": {
+      "opportunity": "Oportunidad",
+      "risk": "Riesgo",
+      "optimization": "Optimización",
+      "trend": "Tendencia",
+      "recommendation": "Recomendación"
+    },
+    "category": {
+      "sales": "Ventas",
+      "finance": "Finanzas",
+      "operations": "Operaciones",
+      "customer": "Cliente",
+      "hr": "Recursos Humanos",
+      "marketing": "Marketing",
+      "inventory": "Inventario"
+    },
+    "priority": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta",
+      "urgent": "Urgente"
+    },
+    "model_status": {
+      "draft": "Borrador",
+      "training": "Entrenando",
+      "trained": "Entrenado",
+      "deployed": "Implementado",
+      "deprecated": "Obsoleto",
+      "failed": "Fallido"
+    },
+    "prediction_type": {
+      "classification": "Clasificación",
+      "regression": "Regresión",
+      "forecasting": "Predicción",
+      "anomaly_detection": "Detección de Anomalías",
+      "clustering": "Agrupación",
+      "recommendation": "Recomendación"
+    },
+    "severity": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta",
+      "critical": "Crítica"
+    }
+  },
+  "dashboard": {
+    "title": "Panel de Análisis IA",
+    "total_models": "Modelos Totales",
+    "active_models": "Modelos Activos",
+    "models_in_training": "Modelos en Entrenamiento",
+    "predictions_today": "Predicciones Hoy",
+    "predictions_week": "Predicciones Esta Semana",
+    "predictions_month": "Predicciones Este Mes",
+    "average_accuracy": "Precisión Promedio del Modelo",
+    "active_anomalies": "Anomalías Activas",
+    "critical_anomalies": "Anomalías Críticas",
+    "active_insights": "Perspectivas Activas",
+    "high_priority_insights": "Perspectivas de Alta Prioridad",
+    "automation_workflows": "Flujos de Automatización",
+    "active_automations": "Automatizaciones Activas"
+  },
+  "models": {
+    "create_model": "Crear Modelo IA",
+    "train_model": "Entrenar Modelo",
+    "deploy_model": "Implementar Modelo",
+    "model_performance": "Rendimiento del Modelo",
+    "prediction_accuracy": "Precisión de Predicción",
+    "training_duration": "Duración del Entrenamiento",
+    "last_prediction": "Última Predicción"
+  },
+  "predictions": {
+    "make_prediction": "Hacer Predicción",
+    "prediction_result": "Resultado de Predicción",
+    "confidence_score": "Puntuación de Confianza",
+    "processing_time": "Tiempo de Procesamiento",
+    "submit_feedback": "Enviar Comentarios"
+  },
+  "anomalies": {
+    "detect_anomalies": "Detectar Anomalías",
+    "anomaly_detected": "Anomalía Detectada",
+    "anomaly_score": "Puntuación de Anomalía",
+    "business_impact": "Impacto Empresarial",
+    "assign_alert": "Asignar Alerta",
+    "resolve_alert": "Resolver Alerta"
+  },
+  "insights": {
+    "generate_insights": "Generar Perspectivas",
+    "ai_recommendation": "Recomendación IA",
+    "implementation_effort": "Esfuerzo de Implementación",
+    "potential_impact": "Impacto Potencial",
+    "action_items": "Elementos de Acción"
+  },
+  "automation": {
+    "create_workflow": "Crear Flujo de Trabajo",
+    "automation_workflow": "Flujo de Automatización",
+    "trigger_conditions": "Condiciones de Activación",
+    "workflow_steps": "Pasos del Flujo de Trabajo",
+    "execution_status": "Estado de Ejecución",
+    "success_rate": "Tasa de Éxito"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "info": "Información",
+    "created": "Creado",
+    "updated": "Actualizado",
+    "deleted": "Eliminado",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "enabled": "Habilitado",
+    "disabled": "Deshabilitado",
+    "yes": "Sí",
+    "no": "No",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "view": "Ver",
+    "download": "Descargar",
+    "upload": "Subir",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "sort": "Ordenar",
+    "export": "Exportar",
+    "import": "Importar",
+    "refresh": "Actualizar",
+    "settings": "Configuración",
+    "help": "Ayuda",
+    "documentation": "Documentación"
+  }
+}
