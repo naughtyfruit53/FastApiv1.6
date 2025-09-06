@@ -379,6 +379,12 @@ class Organization(Base):
         "app.models.mail_management.EmailRule",
         back_populates="organization"
     )
+    
+    # OAuth2 Email Token relationships
+    email_tokens: Mapped[List["app.models.oauth_models.UserEmailToken"]] = relationship(
+        "app.models.oauth_models.UserEmailToken",
+        back_populates="organization"
+    )
 
     __table_args__ = (
         Index('idx_org_status_subdomain', 'status', 'subdomain'),
@@ -543,6 +549,12 @@ class User(Base):
     )
     email_rules: Mapped[List["app.models.mail_management.EmailRule"]] = relationship(
         "app.models.mail_management.EmailRule",
+        back_populates="user"
+    )
+    
+    # OAuth2 Email Token relationship
+    email_tokens: Mapped[List["app.models.oauth_models.UserEmailToken"]] = relationship(
+        "app.models.oauth_models.UserEmailToken",
         back_populates="user"
     )
     
