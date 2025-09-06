@@ -500,12 +500,12 @@ class BulkIntegrationUpdate(BaseModel):
 
 class BulkSyncJobAction(BaseModel):
     job_ids: List[int] = Field(..., min_items=1)
-    action: str = Field(..., regex="^(cancel|retry)$")
+    action: str = Field(..., pattern="^(cancel|retry)$")
 
 
 # Test and Validation Schemas
 class IntegrationTestRequest(BaseModel):
-    test_type: str = Field(..., regex="^(connection|authentication|sync)$")
+    test_type: str = Field(..., pattern="^(connection|authentication|sync)$")
     entity_type: Optional[str] = None
     sample_data: Optional[Dict[str, Any]] = None
 
@@ -541,7 +541,7 @@ class IntegrationExportRequest(BaseModel):
     include_transformation_rules: bool = True
     include_logs: bool = False
     log_days: int = Field(default=7, ge=1, le=90)
-    format: str = Field(default="json", regex="^(json|excel|csv)$")
+    format: str = Field(default="json", pattern="^(json|excel|csv)$")
 
 
 class IntegrationImportRequest(BaseModel):

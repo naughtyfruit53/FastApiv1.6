@@ -167,6 +167,27 @@ try:
 except Exception as import_error:
     logger.error(f"Failed to import workflow_approval_router: {str(import_error)}")
     raise
+
+try:
+    from app.api.v1 import api_gateway as v1_api_gateway
+    logger.info("Successfully imported api_gateway_router")
+except Exception as import_error:
+    logger.error(f"Failed to import api_gateway_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import external_integrations as v1_external_integrations
+    logger.info("Successfully imported external_integrations_router")
+except Exception as import_error:
+    logger.error(f"Failed to import external_integrations_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import reporting_hub as v1_reporting_hub
+    logger.info("Successfully imported reporting_hub_router")
+except Exception as import_error:
+    logger.error(f"Failed to import reporting_hub_router: {str(import_error)}")
+    raise
     logger.info("Successfully imported mail_router")
 except Exception as import_error:
     logger.error(f"Failed to import mail_router: {str(import_error)}")
@@ -432,6 +453,15 @@ logger.info("Project Management router included successfully at prefix: /api/v1/
 
 app.include_router(v1_workflow_approval.router, prefix="/api/v1/workflow", tags=["workflow-approval"])
 logger.info("Workflow Approval router included successfully at prefix: /api/v1/workflow")
+
+app.include_router(v1_api_gateway.router, prefix="/api/v1/gateway", tags=["api-gateway"])
+logger.info("API Gateway router included successfully at prefix: /api/v1/gateway")
+
+app.include_router(v1_external_integrations.router, prefix="/api/v1/external-integrations", tags=["external-integrations"])
+logger.info("External Integrations router included successfully at prefix: /api/v1/external-integrations")
+
+app.include_router(v1_reporting_hub.router, prefix="/api/v1/reports", tags=["reporting-hub"])
+logger.info("Reporting Hub router included successfully at prefix: /api/v1/reports")
 
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}

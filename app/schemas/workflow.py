@@ -229,7 +229,7 @@ class ApprovalRequestBase(BaseModel):
     entity_type: str = Field(..., max_length=100)
     entity_id: int
     entity_data: Optional[Dict[str, Any]] = None
-    priority: str = Field(default="medium", regex="^(low|medium|high|urgent)$")
+    priority: str = Field(default="medium", pattern="^(low|medium|high|urgent)$")
     assigned_to: int
     deadline: Optional[datetime] = None
 
@@ -243,13 +243,13 @@ class ApprovalRequestCreate(ApprovalRequestBase):
 class ApprovalRequestUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    priority: Optional[str] = Field(None, regex="^(low|medium|high|urgent)$")
+    priority: Optional[str] = Field(None, pattern="^(low|medium|high|urgent)$")
     assigned_to: Optional[int] = None
     deadline: Optional[datetime] = None
 
 
 class ApprovalDecision(BaseModel):
-    decision: ApprovalStatus = Field(..., regex="^(approved|rejected|delegated)$")
+    decision: ApprovalStatus = Field(..., pattern="^(approved|rejected|delegated)$")
     decision_comments: Optional[str] = None
     decision_data: Optional[Dict[str, Any]] = None
     delegated_to: Optional[int] = None
@@ -395,13 +395,13 @@ class ApprovalRequestList(BaseModel):
 # Bulk Operations
 class BulkApprovalDecision(BaseModel):
     approval_ids: List[int] = Field(..., min_items=1)
-    decision: ApprovalStatus = Field(..., regex="^(approved|rejected)$")
+    decision: ApprovalStatus = Field(..., pattern="^(approved|rejected)$")
     decision_comments: Optional[str] = None
 
 
 class BulkWorkflowAction(BaseModel):
     instance_ids: List[int] = Field(..., min_items=1)
-    action: str = Field(..., regex="^(cancel|pause|resume)$")
+    action: str = Field(..., pattern="^(cancel|pause|resume)$")
     reason: Optional[str] = None
 
 
@@ -413,7 +413,7 @@ class WorkflowExportRequest(BaseModel):
     filters: Optional[Dict[str, Any]] = None
     include_history: bool = True
     include_attachments: bool = False
-    format: str = Field(default="excel", regex="^(excel|csv|pdf)$")
+    format: str = Field(default="excel", pattern="^(excel|csv|pdf)$")
 
 
 # Update forward references

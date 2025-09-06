@@ -154,7 +154,7 @@ class APIUsageLogWithDetails(APIUsageLogResponse):
 # API Endpoint Schemas
 class APIEndpointBase(BaseModel):
     path: str = Field(..., min_length=1, max_length=500)
-    method: str = Field(..., regex="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
+    method: str = Field(..., pattern="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     is_public: bool = False
@@ -311,7 +311,7 @@ class RateLimitRuleBase(BaseModel):
     description: Optional[str] = None
     api_key_id: Optional[int] = None
     endpoint_pattern: Optional[str] = Field(None, max_length=500)
-    method: Optional[str] = Field(None, regex="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
+    method: Optional[str] = Field(None, pattern="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
     requests_limit: int = Field(..., gt=0)
     time_window_type: RateLimitType
     time_window_value: int = Field(default=1, gt=0)
@@ -331,7 +331,7 @@ class RateLimitRuleUpdate(BaseModel):
     description: Optional[str] = None
     api_key_id: Optional[int] = None
     endpoint_pattern: Optional[str] = Field(None, max_length=500)
-    method: Optional[str] = Field(None, regex="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
+    method: Optional[str] = Field(None, pattern="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
     requests_limit: Optional[int] = Field(None, gt=0)
     time_window_type: Optional[RateLimitType] = None
     time_window_value: Optional[int] = Field(None, gt=0)

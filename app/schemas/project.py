@@ -388,7 +388,7 @@ class ProjectExportRequest(BaseModel):
     include_time_logs: bool = True
     include_resources: bool = True
     include_documents: bool = False
-    format: str = Field(default="excel", regex="^(excel|csv|pdf)$")
+    format: str = Field(default="excel", pattern="^(excel|csv|pdf)$")
 
 
 # Update forward references
