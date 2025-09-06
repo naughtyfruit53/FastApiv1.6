@@ -12,26 +12,37 @@ class VoucherItemBase(BaseModel):
     unit_price: float
 
 class VoucherItemWithTax(VoucherItemBase):
-    discount_percentage: float = 0.0
-    discount_amount: float = 0.0
-    taxable_amount: float
-    gst_rate: float = 0.0
-    cgst_amount: float = 0.0
-    sgst_amount: float = 0.0
-    igst_amount: float = 0.0
-    total_amount: float
+    discount_percentage: Optional[float] = None
+    discount_amount: Optional[float] = None
+    taxable_amount: Optional[float] = None
+    gst_rate: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_amount: Optional[float] = None
+    total_amount: Optional[float] = None
 
-class SimpleVoucherItem(VoucherItemBase):
-    total_amount: float
+class SimpleVoucherItem(BaseModel):
+    product_id: int
+    quantity: float
+    unit: str
+    unit_price: float
+    discount_percentage: Optional[float] = None
+    discount_amount: Optional[float] = None
+    taxable_amount: Optional[float] = None
+    gst_rate: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_amount: Optional[float] = None
+    total_amount: Optional[float] = None
 
 class VoucherBase(BaseModel):
     voucher_number: str
     date: datetime
-    total_amount: float = 0.0
-    cgst_amount: float = 0.0
-    sgst_amount: float = 0.0
-    igst_amount: float = 0.0
-    discount_amount: float = 0.0
+    total_amount: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_amount: Optional[float] = None
+    discount_amount: Optional[float] = None
     status: str = "draft"
     notes: Optional[str] = None
 
@@ -53,6 +64,8 @@ class ProductMinimal(BaseModel):
 class VendorMinimal(BaseModel):
     id: int
     name: str
+    state_code: Optional[str] = None
+    gst_number: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -175,14 +188,14 @@ class SalesVoucherInDB(VoucherInDBBase):
     items: List[SalesVoucherItemInDB]
 
 # Purchase Order
-class PurchaseOrderItemCreate(SimpleVoucherItem):
+class PurchaseOrderItemCreate(VoucherItemWithTax):
     pass
 
-class PurchaseOrderItemInDB(PurchaseOrderItemCreate):
+class PurchaseOrderItemInDB(VoucherItemWithTax):
     id: int
     purchase_order_id: int
-    delivered_quantity: float = 0.0
-    pending_quantity: float
+    delivered_quantity: Optional[float] = 0.0
+    pending_quantity: Optional[float] = None
     product: Optional[ProductMinimal] = None
 
 class PurchaseOrderCreate(VoucherBase):

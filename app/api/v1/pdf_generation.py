@@ -14,7 +14,7 @@ from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.services.pdf_generation_service import pdf_generator
 from app.services.rbac import RBACService
-from app.models.vouchers.purchase import PurchaseVoucher
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder
 from app.models.vouchers.sales import SalesVoucher
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice
 import logging
@@ -26,6 +26,7 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
     """Check if user has permission for voucher type"""
     permission_map = {
         'purchase': 'voucher_read',
+        'purchase-orders': 'voucher_read',
         'sales': 'voucher_read',
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
@@ -55,6 +56,7 @@ async def generate_voucher_pdf(
     
     Supported voucher types:
     - purchase: Purchase Voucher
+    - purchase-orders: Purchase Order
     - sales: Sales Voucher  
     - quotation: Quotation
     - sales_order: Sales Order
@@ -173,6 +175,11 @@ async def get_available_templates(
             "description": "Purchase voucher with vendor details and tax calculations"
         },
         {
+            "type": "purchase-orders",
+            "name": "Purchase Order",
+            "description": "Purchase order with vendor details and tax calculations"
+        },
+        {
             "type": "sales",
             "name": "Sales Invoice",
             "description": "Sales invoice with customer details and tax calculations"
@@ -207,6 +214,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
     
     model_map = {
         'purchase': PurchaseVoucher,
+        'purchase-orders': PurchaseOrder,
         'sales': SalesVoucher,
         'quotation': Quotation,
         'sales_order': SalesOrder,
@@ -318,12 +326,12 @@ def _item_to_dict(item) -> Dict[str, Any]:
     item_data = {
         'id': item.id,
         'product_id': getattr(item, 'product_id', None),
-        'quantity': float(item.quantity),
+        'quantity': float(item.quantity or 0),
         'unit': getattr(item, 'unit', 'Nos'),
-        'unit_price': float(item.unit_price),
+        'unit_price': float(item.unit_price or 0),
         'description': getattr(item, 'description', ''),
         'hsn_code': getattr(item, 'hsn_code', ''),
-        'gst_rate': float(getattr(item, 'gst_rate', 0)),
+        'gst_rate': float(getattr(item, 'gst_rate', 0) or 0),
     }
     
     # Add product name if available
@@ -339,6 +347,6 @@ def _item_to_dict(item) -> Dict[str, Any]:
     if hasattr(item, 'igst_amount'):
         item_data['igst_amount'] = float(item.igst_amount or 0)
     if hasattr(item, 'total_amount'):
-        item_data['total_amount'] = float(item.total_amount)
+        item_data['total_amount'] = float(item.total_amount or 0)
     
     return item_data

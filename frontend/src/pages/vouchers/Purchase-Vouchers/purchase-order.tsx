@@ -1,5 +1,4 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
-// Purchase Order Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from "react";
 import {
   Box,
@@ -19,6 +18,8 @@ import {
   Autocomplete,
   InputAdornment,
   Fab,
+  Alert,
+  Button,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import AddVendorModal from "../../../components/AddVendorModal";
@@ -37,17 +38,45 @@ import {
 } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
-import api from "../../../lib/api"; // Import api for direct call
-import { useAuth } from "../../../context/AuthContext"; // Assume companyState is available here
+import api from "../../../lib/api";
+import { useCompany } from "../../../context/CompanyContext";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
+
 const PurchaseOrderPage: React.FC = () => {
-  const { company } = useAuth(); // Fetch company from context (includes state)
-  const companyState = company?.state_code; // Use company.state_code for comparison
+  const { company, isLoading: companyLoading, error: companyError } = useCompany();
   const router = useRouter();
   const { productId, vendorId } = router.query;
   const config = getVoucherConfig("purchase-order");
   const voucherStyles = getVoucherStyles();
+  const [gstError, setGstError] = useState<string | null>(null);
+
+  // Derive company state code with fallback to gst_number prefix
+  const companyState = useMemo(() => {
+    if (company?.state_code) {
+      console.log("[PurchaseOrderPage] Company state_code:", company.state_code);
+      return company.state_code;
+    }
+    if (company?.gst_number) {
+      const gstPrefix = company.gst_number.slice(0, 2);
+      console.log("[PurchaseOrderPage] Using GST prefix as state_code:", gstPrefix);
+      return gstPrefix;
+    }
+    console.warn("[PurchaseOrderPage] No state_code or gst_number found in company:", company);
+    return null;
+  }, [company]);
+
+  // Log company object and query state for debugging
+  useEffect(() => {
+    console.log("[PurchaseOrderPage] Company context:", {
+      company,
+      companyLoading,
+      companyError,
+      companyState,
+      timestamp: new Date().toISOString(),
+    });
+  }, [company, companyLoading, companyError, companyState]);
+
   const {
     mode,
     setMode,
@@ -77,15 +106,12 @@ const PurchaseOrderPage: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-    // Enhanced pagination
     currentPage,
     pageSize,
     paginationData,
     handlePageChange,
-    // Reference document handling
     referenceDocument,
     handleReferenceSelected,
-    // Form
     control,
     handleSubmit,
     watch,
@@ -95,7 +121,6 @@ const PurchaseOrderPage: React.FC = () => {
     append,
     remove,
     reset,
-    // Data
     voucherList,
     vendorList,
     productList,
@@ -103,23 +128,19 @@ const PurchaseOrderPage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-    // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
-    totalGst,
     totalCgst,
     totalSgst,
     totalIgst,
     isIntrastate,
-    // Mutations
     createMutation,
     updateMutation,
-    // Event handlers
     handleCreate,
     handleEdit,
     handleView,
-    handleSubmitForm: _handleSubmitForm, // Rename to avoid conflict
+    handleSubmitForm,
     handleContextMenu,
     handleCloseContextMenu,
     handleSearch,
@@ -129,56 +150,80 @@ const PurchaseOrderPage: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-    // Utilities
     isViewMode,
   } = useVoucherPage(config);
-  // Additional state for voucher list modal
+
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
-  // Purchase Order specific state
   const selectedVendorId = watch("vendor_id");
-  const selectedVendor = vendorList?.find(
-    (v: any) => v.id === selectedVendorId,
-  );
-  // Enhanced vendor options with "Add New"
+  const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
+
+  // Validate state codes for GST calculation after company data is loaded
+  useEffect(() => {
+    if (companyLoading) {
+      console.log("[PurchaseOrderPage] Company data still loading, skipping GST validation");
+      return;
+    }
+    if (selectedVendorId && !selectedVendor?.state_code && !selectedVendor?.gst_number) {
+      setGstError("Vendor state code or GST number is missing. Please update vendor details.");
+    } else if (!companyState) {
+      setGstError("Company state code or GST number is missing. Please update company details in settings.");
+    } else {
+      setGstError(null);
+    }
+    console.log("[PurchaseOrderPage] GST Validation:", {
+      selectedVendor,
+      companyState,
+      selectedVendorId,
+      vendorStateCode: selectedVendor?.state_code || selectedVendor?.gst_number?.slice(0, 2),
+      timestamp: new Date().toISOString(),
+    });
+  }, [selectedVendorId, selectedVendor, companyState, companyLoading]);
+
   const enhancedVendorOptions = [
     ...(vendorList || []),
     { id: null, name: "Add New Vendor..." },
   ];
-  // Stock data state for items
-  const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>(
-    {},
-  );
-  // Purchase Order specific handlers
+
+  const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
+
   const handleAddItem = () => {
     append({
       product_id: null,
       product_name: "",
       quantity: 1,
       unit_price: 0,
-      original_unit_price: 0, // Added for master price comparison
+      original_unit_price: 0,
       discount_percentage: 0,
       gst_rate: 18,
+      cgst_rate: isIntrastate ? 9 : 0,
+      sgst_rate: isIntrastate ? 9 : 0,
+      igst_rate: isIntrastate ? 0 : 18,
       amount: 0,
       unit: "",
       current_stock: 0,
       reorder_level: 0,
     });
   };
+
   const handleCancel = () => {
     setMode("view");
-    // Reset form to original voucherData
     if (voucherData) {
       reset(voucherData);
     }
   };
-  // Custom submit handler to prompt for PDF after save
+
   const onSubmit = async (data: any) => {
     try {
       if (config.hasItems !== false) {
-        data.items = computedItems;
+        data.items = computedItems.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        }));
         data.total_amount = totalAmount;
+        data.is_intrastate = isIntrastate;
       }
-      // Check for price updates and prompt
       const itemsToUpdate = data.items.filter(
         (item: any) =>
           item.unit_price !== item.original_unit_price && item.product_id,
@@ -196,11 +241,9 @@ const PurchaseOrderPage: React.FC = () => {
               }),
             ),
           );
-          // Optional: refresh product list if needed
           refreshMasterData();
         }
       }
-      // Remove original_unit_price from items before saving
       data.items = data.items.map(
         ({ original_unit_price, ...item }: any) => item,
       );
@@ -217,21 +260,20 @@ const PurchaseOrderPage: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error(msg, err);
-      alert("Failed to save purchase order. Please try again.");
+      console.error("Error saving purchase order:", err);
+      toast.error("Failed to save purchase order. Please try again.");
     }
   };
-  // Handle duplicate purchase order
+
   const handleDuplicate = async (id: number) => {
     try {
       const voucher = voucherList?.find((v) => v.id === id);
       if (!voucher) {
         return;
       }
-      // Reset form with duplicated data
       reset({
         ...voucher,
-        voucher_number: "", // Clear voucher number to generate new one
+        voucher_number: "",
         date: new Date().toISOString().split("T")[0],
         created_at: undefined,
         updated_at: undefined,
@@ -240,11 +282,11 @@ const PurchaseOrderPage: React.FC = () => {
       setMode("create");
       toast.success("Purchase order duplicated successfully");
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error duplicating purchase order:", err);
       toast.error("Failed to duplicate purchase order");
     }
   };
-  // Function to get stock color
+
   const getStockColor = (stock: number, reorder: number) => {
     if (stock === 0) {
       return "error.main";
@@ -254,7 +296,7 @@ const PurchaseOrderPage: React.FC = () => {
     }
     return "success.main";
   };
-  // Memoize all selected products
+
   const selectedProducts = useMemo(() => {
     return fields.map((_, index) => {
       const productId = watch(`items.${index}.product_id`);
@@ -265,7 +307,7 @@ const PurchaseOrderPage: React.FC = () => {
     productList,
     ...fields.map((_, index) => watch(`items.${index}.product_id`)),
   ]);
-  // Effect to fetch stock when product changes
+
   useEffect(() => {
     fields.forEach((_, index) => {
       const productId = watch(`items.${index}.product_id`);
@@ -273,7 +315,6 @@ const PurchaseOrderPage: React.FC = () => {
         setStockLoading((prev) => ({ ...prev, [index]: true }));
         getStock({ queryKey: ["", { product_id: productId }] })
           .then((res) => {
-            console.log("Stock Response for product " + productId + ":", res);
             const stockData = res[0] || { quantity: 0 };
             setValue(`items.${index}.current_stock`, stockData.quantity);
             setStockLoading((prev) => ({ ...prev, [index]: false }));
@@ -292,7 +333,7 @@ const PurchaseOrderPage: React.FC = () => {
     setValue,
     fields.length,
   ]);
-  // Manual fetch for voucher number if not loaded
+
   useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {
       voucherService
@@ -301,7 +342,7 @@ const PurchaseOrderPage: React.FC = () => {
         .catch((err) => console.error("Failed to fetch voucher number:", err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
-  // Prefill vendor and product from query params
+
   useEffect(() => {
     if (mode === "create" && productId && productList) {
       const product = productList.find((p) => p.id === Number(productId));
@@ -311,9 +352,12 @@ const PurchaseOrderPage: React.FC = () => {
           product_name: product.product_name || product.name,
           quantity: 1,
           unit_price: product.unit_price || 0,
-          original_unit_price: product.unit_price || 0, // Set original from master
+          original_unit_price: product.unit_price || 0,
           discount_percentage: 0,
           gst_rate: product.gst_rate || 18,
+          cgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
+          sgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : product.gst_rate || 18,
           amount: 0,
           unit: product.unit,
           current_stock: 0,
@@ -321,7 +365,8 @@ const PurchaseOrderPage: React.FC = () => {
         });
       }
     }
-  }, [mode, productId, productList, append]);
+  }, [mode, productId, productList, append, isIntrastate]);
+
   useEffect(() => {
     if (mode === "create" && vendorId && vendorList) {
       const vendor = vendorList.find((v) => v.id === Number(vendorId));
@@ -330,22 +375,20 @@ const PurchaseOrderPage: React.FC = () => {
       }
     }
   }, [mode, vendorId, vendorList, setValue]);
+
   const handleVoucherClick = async (voucher: any) => {
     try {
-      // Fetch complete voucher data including items
       const response = await api.get(`/purchase-orders/${voucher.id}`);
       const fullVoucherData = response.data;
-      // Load the complete voucher data into the form
       setMode("view");
       reset(fullVoucherData);
     } catch (err) {
-      console.error(msg, err);
-      // Fallback to available data
+      console.error("Error fetching voucher:", err);
       setMode("view");
       reset(voucher);
     }
   };
-  // Enhanced handleEdit to fetch complete data
+
   const handleEditWithData = async (voucher: any) => {
     if (!voucher || !voucher.id) {
       return;
@@ -355,13 +398,21 @@ const PurchaseOrderPage: React.FC = () => {
       let fullVoucherData = response.data;
       fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
       setMode("edit");
-      reset(fullVoucherData);
+      reset({
+        ...fullVoucherData,
+        items: fullVoucherData.items.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        })),
+      });
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error fetching voucher for edit:", err);
       handleEdit(voucher);
     }
   };
-  // Enhanced handleView to fetch complete data
+
   const handleViewWithData = async (voucher: any) => {
     if (!voucher || !voucher.id) {
       return;
@@ -371,19 +422,33 @@ const PurchaseOrderPage: React.FC = () => {
       let fullVoucherData = response.data;
       fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
       setMode("view");
-      reset(fullVoucherData);
+      reset({
+        ...fullVoucherData,
+        items: fullVoucherData.items.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        })),
+      });
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error fetching voucher for view:", err);
       handleView(voucher);
     }
   };
-  // Handle data population for view and edit modes
+
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
       const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
       const formattedData = {
         ...voucherData,
         date: formattedDate,
+        items: voucherData.items?.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        })) || [],
       };
       reset(formattedData);
       if (voucherData.items && voucherData.items.length > 0) {
@@ -395,9 +460,12 @@ const PurchaseOrderPage: React.FC = () => {
             product_name: item.product?.product_name || item.product_name || "",
             quantity: item.quantity,
             unit_price: item.unit_price,
-            original_unit_price: item.product?.unit_price || item.unit_price || 0, // Set original from master product
+            original_unit_price: item.product?.unit_price || item.unit_price || 0,
             discount_percentage: item.discount_percentage || 0,
             gst_rate: item.gst_rate || 18,
+            cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+            sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+            igst_rate: isIntrastate ? 0 : item.gst_rate || 18,
             amount: item.total_amount,
             unit: item.unit,
             current_stock: item.current_stock || 0,
@@ -406,105 +474,108 @@ const PurchaseOrderPage: React.FC = () => {
         });
       }
     }
-  }, [voucherData, mode, reset, append, remove]);
+  }, [voucherData, mode, reset, append, remove, isIntrastate]);
+
   const indexContent = (
-    <>
-      {/* Voucher list table */}
-      <TableContainer sx={{ maxHeight: 400 }}>
-        <Table stickyHeader size="small">
-          <TableHead>
+    <TableContainer sx={{ maxHeight: 400 }}>
+      <Table stickyHeader size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+            >
+              Voucher No.
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+            >
+              Date
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+            >
+              Vendor
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
+            >
+              Amount
+            </TableCell>
+            <TableCell
+              align="right"
+              sx={{ fontSize: 15, fontWeight: "bold", p: 0, width: 40 }}
+            ></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {latestVouchers.length === 0 ? (
             <TableRow>
-              <TableCell
-                align="center"
-                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-              >
-                Voucher No.
+              <TableCell colSpan={5} align="center">
+                No purchase orders available
               </TableCell>
-              <TableCell
-                align="center"
-                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-              >
-                Date
-              </TableCell>
-              <TableCell
-                align="center"
-                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-              >
-                Vendor
-              </TableCell>
-              <TableCell
-                align="center"
-                sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-              >
-                Amount
-              </TableCell>
-              <TableCell
-                align="right"
-                sx={{ fontSize: 15, fontWeight: "bold", p: 0, width: 40 }}
-              ></TableCell>
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {latestVouchers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center">
-                  No purchase orders available
+          ) : (
+            latestVouchers.slice(0, 7).map((voucher: any) => (
+              <TableRow
+                key={voucher.id}
+                hover
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  handleContextMenu(e, voucher);
+                }}
+                sx={{ cursor: "pointer" }}
+              >
+                <TableCell
+                  align="center"
+                  sx={{ fontSize: 12, p: 1 }}
+                  onClick={() => handleViewWithData(voucher)}
+                >
+                  {voucher.voucher_number}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                  {voucher.date
+                    ? new Date(voucher.date).toLocaleDateString()
+                    : "N/A"}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                  {vendorList?.find((v: any) => v.id === voucher.vendor_id)
+                    ?.name || "N/A"}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                  ₹{voucher.total_amount?.toLocaleString() || "0"}
+                </TableCell>
+                <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
+                  <VoucherContextMenu
+                    voucher={voucher}
+                    voucherType="Purchase Order"
+                    onView={() => handleViewWithData(voucher)}
+                    onEdit={() => handleEditWithData(voucher)}
+                    onDelete={() => handleDelete(voucher)}
+                    onPrint={() => handleGeneratePDF(voucher)}
+                    onDuplicate={() => handleDuplicate(voucher.id)}
+                    showKebab={true}
+                    onClose={() => {}}
+                  />
                 </TableCell>
               </TableRow>
-            ) : (
-              latestVouchers.slice(0, 7).map((voucher: any) => (
-                <TableRow
-                  key={voucher.id}
-                  hover
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    handleContextMenu(e, voucher);
-                  }}
-                  sx={{ cursor: "pointer" }}
-                >
-                  <TableCell
-                    align="center"
-                    sx={{ fontSize: 12, p: 1 }}
-                    onClick={() => handleViewWithData(voucher)}
-                  >
-                    {voucher.voucher_number}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                    {voucher.date
-                      ? new Date(voucher.date).toLocaleDateString()
-                      : "N/A"}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                    {vendorList?.find((v: any) => v.id === voucher.vendor_id)
-                      ?.name || "N/A"}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                    ₹{voucher.total_amount?.toLocaleString() || "0"}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
-                    <VoucherContextMenu
-                      voucher={voucher}
-                      voucherType="Purchase Order"
-                      onView={() => handleViewWithData(voucher)}
-                      onEdit={() => handleEditWithData(voucher)}
-                      onDelete={() => handleDelete(voucher)}
-                      onPrint={() => handleGeneratePDF()}
-                      onDuplicate={() => handleDuplicate(voucher.id)}
-                      showKebab={true}
-                      onClose={() => {}}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
+
   const formContent = (
     <Box>
-      {/* Header Actions */}
+      {gstError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {gstError}
+        </Alert>
+      )}
       <Box
         sx={{
           display: "flex",
@@ -535,7 +606,6 @@ const PurchaseOrderPage: React.FC = () => {
         style={voucherStyles.formContainer}
       >
         <Grid container spacing={1}>
-          {/* Voucher Number */}
           <Grid size={6}>
             <TextField
               fullWidth
@@ -554,7 +624,6 @@ const PurchaseOrderPage: React.FC = () => {
               sx={{ "& .MuiInputBase-root": { height: 27 } }}
             />
           </Grid>
-          {/* Date */}
           <Grid size={6}>
             <TextField
               fullWidth
@@ -575,7 +644,6 @@ const PurchaseOrderPage: React.FC = () => {
               sx={{ "& .MuiInputBase-root": { height: 27 } }}
             />
           </Grid>
-          {/* Vendor, Reference, Payment Terms in one row */}
           <Grid size={4}>
             <Autocomplete
               size="small"
@@ -641,7 +709,6 @@ const PurchaseOrderPage: React.FC = () => {
               size="small"
             />
           </Grid>
-          {/* Items section */}
           <Grid
             size={12}
             sx={{
@@ -655,7 +722,6 @@ const PurchaseOrderPage: React.FC = () => {
               Items
             </Typography>
           </Grid>
-          {/* Items Table */}
           <Grid size={12}>
             <TableContainer
               component={Paper}
@@ -742,10 +808,22 @@ const PurchaseOrderPage: React.FC = () => {
                             setValue(
                               `items.${index}.original_unit_price`,
                               product?.unit_price || 0,
-                            ); // Set original from master
+                            );
                             setValue(
                               `items.${index}.gst_rate`,
                               product?.gst_rate || 18,
+                            );
+                            setValue(
+                              `items.${index}.cgst_rate`,
+                              isIntrastate ? (product?.gst_rate || 18) / 2 : 0,
+                            );
+                            setValue(
+                              `items.${index}.sgst_rate`,
+                              isIntrastate ? (product?.gst_rate || 18) / 2 : 0,
+                            );
+                            setValue(
+                              `items.${index}.igst_rate`,
+                              isIntrastate ? 0 : product?.gst_rate || 18,
                             );
                             setValue(
                               `items.${index}.unit`,
@@ -755,7 +833,6 @@ const PurchaseOrderPage: React.FC = () => {
                               `items.${index}.reorder_level`,
                               product?.reorder_level || 0,
                             );
-                            // Stock fetch handled in useEffect
                           }}
                           disabled={mode === "view"}
                           size="small"
@@ -785,9 +862,10 @@ const PurchaseOrderPage: React.FC = () => {
                           })}
                           disabled={mode === "view"}
                           size="small"
-                          sx={{ width: 120 }} // Increased width for qty field to fit unit
+                          sx={{ width: 120 }}
                           InputProps={{
-                            inputProps: { min: 0, step: 1 }, // Prevent negative qty, integer steps
+                            inputProps: { min: 0, step: 1 },
+                            endAdornment: <InputAdornment position="end">{watch(`items.${index}.unit`) || ''}</InputAdornment>,
                           }}
                         />
                       </TableCell>
@@ -801,7 +879,7 @@ const PurchaseOrderPage: React.FC = () => {
                           size="small"
                           sx={{ width: 80 }}
                           InputProps={{
-                            inputProps: { min: 0, step: 0.01 }, // Allow decimals up to 2 digits
+                            inputProps: { min: 0, step: 0.01 },
                           }}
                         />
                       </TableCell>
@@ -816,7 +894,7 @@ const PurchaseOrderPage: React.FC = () => {
                           size="small"
                           sx={{ width: 60 }}
                           InputProps={{
-                            inputProps: { min: 0, step: 0.01 }, // Allow decimals for discount
+                            inputProps: { min: 0, step: 0.01 },
                           }}
                         />
                       </TableCell>
@@ -825,9 +903,21 @@ const PurchaseOrderPage: React.FC = () => {
                           size="small"
                           options={GST_SLABS}
                           value={watch(`items.${index}.gst_rate`) || 18}
-                          onChange={(_, value) =>
-                            setValue(`items.${index}.gst_rate`, value || 18)
-                          }
+                          onChange={(_, value) => {
+                            setValue(`items.${index}.gst_rate`, value || 18);
+                            setValue(
+                              `items.${index}.cgst_rate`,
+                              isIntrastate ? (value || 18) / 2 : 0,
+                            );
+                            setValue(
+                              `items.${index}.sgst_rate`,
+                              isIntrastate ? (value || 18) / 2 : 0,
+                            );
+                            setValue(
+                              `items.${index}.igst_rate`,
+                              isIntrastate ? 0 : value || 18,
+                            );
+                          }}
                           renderInput={(params) => (
                             <TextField
                               {...params}
@@ -865,7 +955,6 @@ const PurchaseOrderPage: React.FC = () => {
               </Box>
             )}
           </Grid>
-          {/* Totals */}
           <Grid size={12}>
             <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
               <Box sx={{ minWidth: 300 }}>
@@ -897,7 +986,7 @@ const PurchaseOrderPage: React.FC = () => {
                           variant="body2"
                           sx={{ textAlign: "right", fontSize: 14 }}
                         >
-                          CGST:
+                          CGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
                         </Typography>
                       </Grid>
                       <Grid size={6}>
@@ -917,7 +1006,7 @@ const PurchaseOrderPage: React.FC = () => {
                           variant="body2"
                           sx={{ textAlign: "right", fontSize: 14 }}
                         >
-                          SGST:
+                          SGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
                         </Typography>
                       </Grid>
                       <Grid size={6}>
@@ -940,7 +1029,7 @@ const PurchaseOrderPage: React.FC = () => {
                           variant="body2"
                           sx={{ textAlign: "right", fontSize: 14 }}
                         >
-                          IGST:
+                          IGST ({watch(`items.0.gst_rate`) || 18}%):
                         </Typography>
                       </Grid>
                       <Grid size={6}>
@@ -985,7 +1074,6 @@ const PurchaseOrderPage: React.FC = () => {
               </Box>
             </Box>
           </Grid>
-          {/* Amount in Words */}
           <Grid size={12}>
             <TextField
               fullWidth
@@ -997,11 +1085,23 @@ const PurchaseOrderPage: React.FC = () => {
               size="small"
             />
           </Grid>
+          {mode !== "view" && (
+            <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={isLoading || companyLoading || !!gstError}
+              >
+                {mode === "create" ? "Create Purchase Order" : "Update Purchase Order"}
+              </Button>
+            </Grid>
+          )}
         </Grid>
       </form>
     </Box>
   );
-  if (isLoading) {
+
+  if (isLoading || companyLoading) {
     return (
       <Container>
         <Box
@@ -1015,6 +1115,7 @@ const PurchaseOrderPage: React.FC = () => {
       </Container>
     );
   }
+
   return (
     <>
       <VoucherLayout
@@ -1023,12 +1124,6 @@ const PurchaseOrderPage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
-        // pagination={paginationData ? {
-        //   currentPage: currentPage,
-        //   totalPages: paginationData.totalPages,
-        //   onPageChange: handlePageChange,
-        //   totalItems: paginationData.totalItems
-        // } : undefined)
         centerAligned={true}
         modalContent={
           <VoucherListModal
@@ -1045,7 +1140,6 @@ const PurchaseOrderPage: React.FC = () => {
           />
         }
       />
-      {/* Modals */}
       <AddVendorModal
         open={showAddVendorModal}
         onClose={() => setShowAddVendorModal(false)}
@@ -1077,6 +1171,18 @@ const PurchaseOrderPage: React.FC = () => {
             `items.${addingItemIndex}.gst_rate`,
             newProduct.gst_rate || 18,
           );
+          setValue(
+            `items.${addingItemIndex}.cgst_rate`,
+            isIntrastate ? (newProduct.gst_rate || 18) / 2 : 0,
+          );
+          setValue(
+            `items.${addingItemIndex}.sgst_rate`,
+            isIntrastate ? (newProduct.gst_rate || 18) / 2 : 0,
+          );
+          setValue(
+            `items.${addingItemIndex}.igst_rate`,
+            isIntrastate ? 0 : newProduct.gst_rate || 18,
+          );
           setValue(`items.${addingItemIndex}.unit`, newProduct.unit || "");
           setValue(
             `items.${addingItemIndex}.reorder_level`,
@@ -1106,4 +1212,5 @@ const PurchaseOrderPage: React.FC = () => {
     </>
   );
 };
+
 export default PurchaseOrderPage;

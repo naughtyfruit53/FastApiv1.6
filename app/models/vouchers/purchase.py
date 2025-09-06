@@ -33,6 +33,13 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False)
     delivered_quantity = Column(Float, default=0.0)
     pending_quantity = Column(Float, nullable=False)
+    discount_percentage = Column(Float, default=0.0)
+    gst_rate = Column(Float, default=18.0)
+    discount_amount = Column(Float, default=0.0)
+    taxable_amount = Column(Float, default=0.0)
+    cgst_amount = Column(Float, default=0.0)
+    sgst_amount = Column(Float, default=0.0)
+    igst_amount = Column(Float, default=0.0)
     
     purchase_order = relationship("PurchaseOrder", back_populates="items")
 

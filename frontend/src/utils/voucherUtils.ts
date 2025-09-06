@@ -90,7 +90,7 @@ export const numberToWordsInteger = (num: number): string => {
     return "";
   }
   const belowTwenty = [
-    " ",
+    "",
     "One",
     "Two",
     "Three",
@@ -112,8 +112,8 @@ export const numberToWordsInteger = (num: number): string => {
     "Nineteen",
   ];
   const tens = [
-    " ",
-    " ",
+    "",
+    "",
     "Twenty",
     "Thirty",
     "Forty",
@@ -123,11 +123,18 @@ export const numberToWordsInteger = (num: number): string => {
     "Eighty",
     "Ninety",
   ];
-  const thousands = ["", "Thousand", "Million", "Billion"];
+  const thousands = ["", "Thousand", "Lakh", "Crore"];
   let word = "";
   let i = 0;
   while (num > 0) {
-    const chunk = num % 1000;
+    let chunk: number;
+    if (i === 0) {
+      chunk = num % 1000; // Thousands
+    } else if (i === 1) {
+      chunk = num % 100; // Lakhs (2 digits)
+    } else {
+      chunk = num % 100; // Crores and above (2 digits each)
+    }
     if (chunk) {
       let chunkWord = "";
       if (chunk >= 100) {
@@ -143,7 +150,11 @@ export const numberToWordsInteger = (num: number): string => {
       }
       word = chunkWord + thousands[i] + " " + word;
     }
-    num = Math.floor(num / 1000);
+    if (i === 0) {
+      num = Math.floor(num / 1000);
+    } else {
+      num = Math.floor(num / 100);
+    }
     i++;
   }
   return word.trim();
@@ -160,7 +171,7 @@ export const numberToWords = (num: number): string => {
   const decimal = Math.round((num - integer) * 100);
   let word = numberToWordsInteger(integer);
   if (decimal > 0) {
-    word += " point " + numberToWordsInteger(decimal);
+    word += " and " + numberToWordsInteger(decimal) + " Paise";
   }
   return word ? word + " only" : "";
 };

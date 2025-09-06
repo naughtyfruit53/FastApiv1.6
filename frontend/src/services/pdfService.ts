@@ -1,3 +1,5 @@
+// frontend/src/services/pdfService.ts
+
 // Professional PDF Service for Vouchers
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -108,6 +110,33 @@ class ProfessionalPdfService {
     return null;
   }
 
+  private drawLogoPlaceholder(
+    company: CompanyBranding,
+    yPosition: number,
+  ): void {
+    // Create a more realistic logo placeholder with company initial
+    const companyInitial = company.name.charAt(0).toUpperCase();
+    this.doc.setDrawColor(100);
+    this.doc.setFillColor(245, 245, 245);
+    this.doc.roundedRect(this.margins.left, yPosition, 40, 25, 3, 3, "FD");
+
+    // Company initial in the logo area
+    this.doc.setFontSize(16);
+    this.doc.setFont("helvetica", "bold");
+    this.doc.setTextColor(80);
+    this.doc.text(companyInitial, this.margins.left + 20, yPosition + 16, {
+      align: "center",
+    });
+
+    // Logo text
+    this.doc.setFontSize(6);
+    this.doc.setTextColor(120);
+    this.doc.text("LOGO", this.margins.left + 20, yPosition + 21, {
+      align: "center",
+    });
+    this.doc.setTextColor(0);
+  }
+
   private async drawHeader(
     company: CompanyBranding,
     voucherTitle: string,
@@ -205,33 +234,6 @@ class ProfessionalPdfService {
     );
 
     return yPosition + 10;
-  }
-
-  private drawLogoPlaceholder(
-    company: CompanyBranding,
-    yPosition: number,
-  ): void {
-    // Create a more realistic logo placeholder with company initial
-    const companyInitial = company.name.charAt(0).toUpperCase();
-    this.doc.setDrawColor(100);
-    this.doc.setFillColor(245, 245, 245);
-    this.doc.roundedRect(this.margins.left, yPosition, 40, 25, 3, 3, "FD");
-
-    // Company initial in the logo area
-    this.doc.setFontSize(16);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.setTextColor(80);
-    this.doc.text(companyInitial, this.margins.left + 20, yPosition + 16, {
-      align: "center",
-    });
-
-    // Logo text
-    this.doc.setFontSize(6);
-    this.doc.setTextColor(120);
-    this.doc.text("LOGO", this.margins.left + 20, yPosition + 21, {
-      align: "center",
-    });
-    this.doc.setTextColor(0);
   }
 
   private drawVoucherDetails(voucher: VoucherData, yPosition: number): number {
@@ -335,7 +337,9 @@ class ProfessionalPdfService {
 
   private drawItemsTable(items: any[], yPosition: number): number {
     if (!items || items.length === 0) {
-      return yPosition;
+      this.doc.setFontSize(10);
+      this.doc.text("No items available", this.margins.left, yPosition + 10);
+      return yPosition + 20;
     }
 
     const columns = [

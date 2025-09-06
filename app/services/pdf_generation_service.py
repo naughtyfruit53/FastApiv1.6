@@ -9,11 +9,14 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, Template
-import pdfkit
+from xhtml2pdf import pisa
+from io import BytesIO
 from num2words import num2words
 from sqlalchemy.orm import Session
 from app.models import Company, User
 import logging
+import base64
+import re  # Added for sanitizing filenames
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +172,11 @@ class VoucherPDFGenerator:
             return ""
         if isinstance(date_obj, str):
             return date_obj
-        return date_obj.strftime(format_str)
+        if isinstance(date_obj, datetime):
+            return date_obj.strftime(format_str)
+        if isinstance(date_obj, date):
+            return date_obj.strftime(format_str)
+        return str(date_obj)
     
     def _format_percentage(self, value: float) -> str:
         """Format percentage value"""
@@ -184,8 +191,11 @@ class VoucherPDFGenerator:
             
             if company:
                 logo_url = None
-                if company.logo_path and os.path.exists(f".{company.logo_path}"):
-                    logo_url = company.logo_path
+                logo_path = os.path.join('uploads/company_logos', f"{organization_id}.png")
+                if os.path.exists(logo_path):
+                    with open(logo_path, 'rb') as f:
+                        logo_data = base64.b64encode(f.read()).decode('utf-8')
+                    logo_url = f"data:image/png;base64,{logo_data}"
                 
                 return {
                     'name': company.name,
@@ -242,6 +252,8 @@ class VoucherPDFGenerator:
         processed_items = []
         
         subtotal = 0.0
+        total_discount = 0.0
+        total_taxable = 0.0
         total_cgst = 0.0
         total_sgst = 0.0
         total_igst = 0.0
@@ -250,18 +262,25 @@ class VoucherPDFGenerator:
             # Calculate item totals
             quantity = float(item.get('quantity', 0))
             unit_price = float(item.get('unit_price', 0))
+            discount_percentage = float(item.get('discount_percentage', 0))
             gst_rate = float(item.get('gst_rate', 0))
             
-            taxable_amount = quantity * unit_price
+            item_subtotal = quantity * unit_price
+            discount_amount = item_subtotal * (discount_percentage / 100)
+            taxable_amount = item_subtotal - discount_amount
             
-            # Calculate GST (assuming intrastate for now)
+            # Calculate GST (assuming intrastate for now - enhance with actual check)
             gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, False)
             
             item_total = taxable_amount + gst_calc['total_gst']
             
             processed_item = {
                 **item,
+                'subtotal': item_subtotal,
+                'discount_percentage': discount_percentage,
+                'discount_amount': discount_amount,
                 'taxable_amount': taxable_amount,
+                'gst_rate': gst_rate,
                 'cgst_rate': gst_calc['cgst_rate'],
                 'sgst_rate': gst_calc['sgst_rate'],
                 'igst_rate': gst_calc['igst_rate'],
@@ -273,12 +292,14 @@ class VoucherPDFGenerator:
             
             processed_items.append(processed_item)
             
-            subtotal += taxable_amount
+            subtotal += item_subtotal
+            total_discount += discount_amount
+            total_taxable += taxable_amount
             total_cgst += gst_calc['cgst_amount']
             total_sgst += gst_calc['sgst_amount']
             total_igst += gst_calc['igst_amount']
         
-        grand_total = subtotal + total_cgst + total_sgst + total_igst
+        grand_total = total_taxable + total_cgst + total_sgst + total_igst
         
         # Prepare template data
         template_data = {
@@ -286,6 +307,8 @@ class VoucherPDFGenerator:
             'voucher': voucher_data,
             'items': processed_items,
             'subtotal': subtotal,
+            'total_discount': total_discount,
+            'total_taxable': total_taxable,
             'total_cgst': total_cgst,
             'total_sgst': total_sgst,
             'total_igst': total_igst,
@@ -320,6 +343,9 @@ class VoucherPDFGenerator:
             # Get template for voucher type
             template_name = f"{voucher_type}_voucher.html"
             
+            if voucher_type == 'purchase-orders':
+                template_name = 'purchase_voucher.html'
+            
             try:
                 template = self.jinja_env.get_template(template_name)
             except Exception:
@@ -331,23 +357,18 @@ class VoucherPDFGenerator:
             html_content = template.render(**template_data)
             
             # Generate unique filename
-            filename = f"{voucher_type}_{voucher_data.get('voucher_number', 'unknown')}_{uuid.uuid4().hex[:8]}.pdf"
+            voucher_number = voucher_data.get('voucher_number', 'unknown')
+            voucher_number = re.sub(r'[^\w\-]', '_', voucher_number)  # Sanitize voucher_number
+            filename = f"{voucher_type}_{voucher_number}_{uuid.uuid4().hex[:8]}.pdf"
             filepath = os.path.join(self.output_dir, filename)
             
-            # Convert to PDF using pdfkit
-            css_path = os.path.join(self.static_dir, 'css', 'voucher_print.css')
+            # Convert to PDF using xhtml2pdf
+            pdf_buffer = BytesIO()
+            pisa.CreatePDF(html_content, dest=pdf_buffer)
+            pdf_buffer.seek(0)
             
-            options = {
-                'encoding': 'UTF-8',
-                'quiet': ''
-            }
-            
-            pdfkit.from_string(
-                html_content,
-                filepath,
-                css=css_path if os.path.exists(css_path) else None,
-                options=options
-            )
+            with open(filepath, 'wb') as f:
+                f.write(pdf_buffer.getvalue())
             
             logger.info(f"PDF generated successfully: {filepath}")
             return filepath
