@@ -120,6 +120,11 @@ from .mail_management import (
 from .sticky_notes import (
     StickyNote
 )
+# Import AI analytics models
+from .ai_analytics_models import (
+    AIModel, PredictionResult, AnomalyDetection, AIInsight, 
+    ModelPerformanceMetric, AutomationWorkflow, ModelStatus, PredictionType
+)
 
 # No imports from .base as all models have been moved
 
@@ -210,6 +215,10 @@ __all__ = [
     
     # Sticky notes models
     "StickyNote",
+    
+    # AI analytics models
+    "AIModel", "PredictionResult", "AnomalyDetection", "AIInsight", 
+    "ModelPerformanceMetric", "AutomationWorkflow", "ModelStatus", "PredictionType",
     
     # Migration models
     "MigrationJob", "MigrationDataMapping", "MigrationLog", "MigrationTemplate",
