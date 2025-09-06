@@ -118,6 +118,12 @@ export const updateVendor = async (id: number, vendorData: {
   return response.data;
 };
 
+// Delete vendor (added to support deletion in vendors.tsx)
+export const deleteVendor = async (id: number): Promise<any> => {
+  const response = await api.delete(`/vendors/${id}`);
+  return response.data;
+};
+
 // Create new product
 export const createProduct = async (productData: {
   product_name: string;

@@ -28,9 +28,8 @@ import {
   Search as SearchIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { masterDataService } from "../../services/masterService";
+import * as masterDataService from "../../services/masterService"; // Changed to namespace import to access all exports as an object
 import ExcelImportExport from "../../components/ExcelImportExport";
-import { bulkImportVendors } from "../../services/masterService";
 import { useAuth } from "../../context/AuthContext";
 import AddVendorModal from "../../components/AddVendorModal";
 
@@ -209,7 +208,7 @@ const VendorsPage: React.FC = () => {
             <ExcelImportExport
               data={vendors || []}
               entity="Vendors"
-              onImport={bulkImportVendors}
+              onImport={masterDataService.bulkImportVendors} // Updated to use the namespace
             />
           </Box>
           <Box sx={{ mb: 3 }}>

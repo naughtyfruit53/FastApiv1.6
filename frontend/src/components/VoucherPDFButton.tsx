@@ -18,7 +18,7 @@ import {
   Preview as PreviewIcon,
   MoreVert as MoreIcon
 } from '@mui/icons-material';
-import { api } from '../lib/api';
+import api from '../lib/api'; // Changed to default import since it's exported as default in api.ts
 
 interface VoucherPDFButtonProps {
   voucherType: 'purchase' | 'sales' | 'quotation' | 'sales_order' | 'proforma';
