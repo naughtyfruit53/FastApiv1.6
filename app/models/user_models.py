@@ -155,6 +155,38 @@ class Organization(Base):
         "app.models.erp_models.TaxCode",
         back_populates="organization"
     )
+    
+    # Project Management relationships
+    projects: Mapped[List["app.models.project_models.Project"]] = relationship(
+        "app.models.project_models.Project",
+        back_populates="organization"
+    )
+    
+    # Workflow relationships
+    workflow_templates: Mapped[List["app.models.workflow_models.WorkflowTemplate"]] = relationship(
+        "app.models.workflow_models.WorkflowTemplate",
+        back_populates="organization"
+    )
+    approval_requests: Mapped[List["app.models.workflow_models.ApprovalRequest"]] = relationship(
+        "app.models.workflow_models.ApprovalRequest",
+        back_populates="organization"
+    )
+    
+    # API Gateway relationships
+    api_keys: Mapped[List["app.models.api_gateway_models.APIKey"]] = relationship(
+        "app.models.api_gateway_models.APIKey",
+        back_populates="organization"
+    )
+    webhooks: Mapped[List["app.models.api_gateway_models.Webhook"]] = relationship(
+        "app.models.api_gateway_models.Webhook",
+        back_populates="organization"
+    )
+    
+    # Integration relationships
+    external_integrations: Mapped[List["app.models.integration_models.ExternalIntegration"]] = relationship(
+        "app.models.integration_models.ExternalIntegration",
+        back_populates="organization"
+    )
     journal_entries: Mapped[List["app.models.erp_models.JournalEntry"]] = relationship(
         "app.models.erp_models.JournalEntry",
         back_populates="organization"

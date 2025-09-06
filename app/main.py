@@ -153,6 +153,25 @@ except Exception as import_error:
     logger.error(f"Failed to import mail_router: {str(import_error)}")
     raise
 
+# Import Business Suite Core Module APIs
+try:
+    from app.api.v1 import project_management as v1_project_management
+    logger.info("Successfully imported project_management_router")
+except Exception as import_error:
+    logger.error(f"Failed to import project_management_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import workflow_approval as v1_workflow_approval
+    logger.info("Successfully imported workflow_approval_router")
+except Exception as import_error:
+    logger.error(f"Failed to import workflow_approval_router: {str(import_error)}")
+    raise
+    logger.info("Successfully imported mail_router")
+except Exception as import_error:
+    logger.error(f"Failed to import mail_router: {str(import_error)}")
+    raise
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
@@ -406,6 +425,13 @@ app.include_router(
     tags=["sticky-notes"]
 )
 logger.info("Sticky notes router included successfully at prefix: /api/v1/sticky_notes")
+
+# Include Business Suite Core Module routers
+app.include_router(v1_project_management.router, prefix="/api/v1/projects", tags=["project-management"])
+logger.info("Project Management router included successfully at prefix: /api/v1/projects")
+
+app.include_router(v1_workflow_approval.router, prefix="/api/v1/workflow", tags=["workflow-approval"])
+logger.info("Workflow Approval router included successfully at prefix: /api/v1/workflow")
 
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}
