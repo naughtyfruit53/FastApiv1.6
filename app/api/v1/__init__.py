@@ -8,6 +8,7 @@ from .hr import router as hr_router
 from .payroll import router as payroll_router
 from .ai_analytics import router as ai_analytics_router
 from .oauth import router as oauth_router
+from .email import router as email_router
 
 api_v1_router = APIRouter(prefix="/v1")
 
@@ -17,3 +18,4 @@ api_v1_router.include_router(hr_router)
 api_v1_router.include_router(payroll_router)
 api_v1_router.include_router(ai_analytics_router, prefix="/ai-analytics", tags=["AI Analytics"])
 api_v1_router.include_router(oauth_router, prefix="/oauth", tags=["OAuth2"])
+api_v1_router.include_router(email_router, prefix="/email", tags=["Email"])
