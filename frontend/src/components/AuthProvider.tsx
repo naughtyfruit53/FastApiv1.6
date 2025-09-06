@@ -59,28 +59,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error),
-  );
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      if (error.response.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true;
-        await refreshToken();
-        return api(originalRequest);
-      }
-      return Promise.reject(error);
-    },
-  );
+  useEffect(() => {
+    // Moved interceptors here to ensure they only run on client-side
+    const requestInterceptor = api.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error),
+    );
+
+    const responseInterceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+        if (error.response.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+          await refreshToken();
+          return api(originalRequest);
+        }
+        return Promise.reject(error);
+      },
+    );
+
+    // Cleanup interceptors on unmount
+    return () => {
+      api.interceptors.request.eject(requestInterceptor);
+      api.interceptors.response.eject(responseInterceptor);
+    };
+  }, []); // Empty dependency array to run once on mount
+
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token");

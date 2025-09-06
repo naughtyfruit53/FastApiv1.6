@@ -1,5 +1,4 @@
-"use client";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router"; // Changed to correct import for Pages Router
 import { useEffect } from "react";
 export default function Home(): null {
   const router = useRouter();

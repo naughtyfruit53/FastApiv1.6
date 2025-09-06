@@ -10,6 +10,7 @@ import Layout from "../components/layout";
 import { useRouter } from "next/router";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CompanyProvider } from "../context/CompanyContext"; // Add CompanyProvider import
+import { useState, useEffect } from "react"; // Added import for useState and useEffect
 
 // Create modern theme using our design system
 const theme = createTheme({
@@ -17,7 +18,7 @@ const theme = createTheme({
     primary: {
       main: "#2563eb", // var(--primary-600)
       light: "#3b82f6", // var(--primary-500)
-      dark: "#1dasc", // var(--primary-700)
+      dark: "#1d4ed8", // var(--primary-700) - fixed typo from "#1dasc"
     },
     secondary: {
       main: "#7c3aed", // var(--secondary-600)
@@ -156,7 +157,17 @@ const queryClient = new QueryClient({
 });
 
 function MyApp({ Component, pageProps }: AppProps): any {
-  const router = useRouter();
+  const [mounted, setMounted] = useState(false); // Added mounted state to ensure client-only rendering
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null; // Render nothing on server-side to avoid hook issues
+  }
+
+  const router = useRouter(); // Now safe, as this only runs on client
   const LayoutWrapper = () => {
     const { user, logout } = useAuth();
     const showMegaMenu =
