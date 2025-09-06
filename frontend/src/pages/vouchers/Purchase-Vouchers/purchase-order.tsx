@@ -503,7 +503,7 @@ const PurchaseOrderPage: React.FC = () => {
               align="center"
               sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
             >
-              Amount
+              Total Amount
             </TableCell>
             <TableCell
               align="right"
@@ -775,7 +775,7 @@ const PurchaseOrderPage: React.FC = () => {
                       GST%
                     </TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
-                      Amount
+                      Line Total
                     </TableCell>
                     {mode !== "view" && (
                       <TableCell

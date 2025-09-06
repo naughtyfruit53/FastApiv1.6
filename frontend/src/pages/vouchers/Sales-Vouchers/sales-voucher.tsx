@@ -217,7 +217,7 @@ const SalesVoucherPage: React.FC = () => {
               <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
               <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Date</TableCell>
               <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Customer</TableCell>
-              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Total Amount</TableCell>
               <TableCell align="right" sx={{ fontSize: 15, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
             </TableRow>
           </TableHead>
@@ -390,7 +390,7 @@ const SalesVoucherPage: React.FC = () => {
                     <TableCell sx={voucherStyles.productTableColumns.rate}>Rate</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.discount}>Disc%</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.gst}>GST%</TableCell>
-                    <TableCell sx={voucherStyles.productTableColumns.amount}>Amount</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.amount}>Line Total</TableCell>
                     {mode !== 'view' && (
                       <TableCell sx={voucherStyles.productTableColumns.action}>Action</TableCell>
                     )}

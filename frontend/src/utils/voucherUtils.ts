@@ -1001,4 +1001,120 @@ export const getVoucherStyles = (): any => ({
       },
     },
   },
+  
+  // Enhanced button styling for voucher forms
+  voucherActionButtons: {
+    display: "flex",
+    gap: "8px",
+    justifyContent: "center",
+    alignItems: "center",
+    "& .MuiButton-root": {
+      textTransform: "none",
+      borderRadius: "6px",
+      fontWeight: "500",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+      "&:hover": {
+        boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+        transform: "translateY(-1px)",
+      },
+      transition: "all 0.2s ease-in-out",
+    },
+    "& .MuiButton-contained": {
+      background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
+      color: "white",
+    },
+    "& .MuiButton-outlined": {
+      borderColor: "#2196F3",
+      color: "#2196F3",
+      "&:hover": {
+        backgroundColor: "rgba(33, 150, 243, 0.04)",
+      },
+    },
+  },
+
+  // Enhanced form field styling
+  enhancedFormField: {
+    "& .MuiTextField-root": {
+      "& .MuiOutlinedInput-root": {
+        borderRadius: "6px",
+        "&:hover": {
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#2196F3",
+          },
+        },
+        "&.Mui-focused": {
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#2196F3",
+            borderWidth: "2px",
+          },
+        },
+      },
+      "& .MuiInputLabel-root": {
+        color: "#666",
+        "&.Mui-focused": {
+          color: "#2196F3",
+        },
+      },
+    },
+  },
+
+  // Enhanced table styling with better visual hierarchy
+  enhancedTable: {
+    "& .MuiTableContainer-root": {
+      borderRadius: "8px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+      border: "1px solid #e0e0e0",
+    },
+    "& .MuiTableHead-root": {
+      background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+      "& .MuiTableCell-root": {
+        fontWeight: "600",
+        color: "#2c3e50",
+        borderBottom: "2px solid #e0e0e0",
+      },
+    },
+    "& .MuiTableBody-root .MuiTableRow-root": {
+      "&:hover": {
+        backgroundColor: "#f8f9fa",
+        transform: "scale(1.01)",
+        transition: "all 0.2s ease-in-out",
+      },
+    },
+  },
+
+  // Loading and error states styling
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "200px",
+    gap: "16px",
+    "& .MuiCircularProgress-root": {
+      color: "#2196F3",
+    },
+    "& .MuiTypography-root": {
+      color: "#666",
+      textAlign: "center",
+    },
+  },
+
+  // Success and error feedback styling
+  feedbackContainer: {
+    "& .MuiAlert-root": {
+      borderRadius: "8px",
+      fontWeight: "500",
+      "& .MuiAlert-icon": {
+        alignItems: "center",
+      },
+    },
+    "& .MuiAlert-standardSuccess": {
+      backgroundColor: "#e8f5e8",
+      color: "#2e7d32",
+    },
+    "& .MuiAlert-standardError": {
+      backgroundColor: "#ffeaea",
+      color: "#d32f2f",
+    },
+  },
 });

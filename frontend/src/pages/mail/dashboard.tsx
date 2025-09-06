@@ -1,5 +1,4 @@
 // frontend/src/pages/mail/dashboard.tsx
-"use client";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -19,6 +18,10 @@ import {
   Divider,
   Avatar,
   Badge,
+  Modal,
+  TextField,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import {
   Email,
@@ -35,8 +38,11 @@ import {
   MarkEmailRead,
   MarkEmailUnread,
   Archive,
+  Settings,
+  Close,
 } from "@mui/icons-material";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
+import api from "../../lib/api";
 interface MailStats {
   total_emails: number;
   unread_emails: number;
@@ -73,31 +79,26 @@ const MailDashboard: React.FC = () => {
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEmailConfigModal, setShowEmailConfigModal] = useState(false);
   useEffect(() => {
-    // Simulate API call - replace with actual API integration
     const fetchData = async () => {
       try {
         setLoading(true);
-        // TODO: Replace with actual API calls
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
-        // Mock data for demonstration
-        const mockStats: MailStats = {
-          total_emails: 1247,
-          unread_emails: 23,
-          flagged_emails: 8,
-          today_emails: 15,
-          this_week_emails: 67,
-          sent_emails: 145,
-          draft_emails: 3,
-          spam_emails: 12,
-        };
+        setError(null);
+        
+        // Fetch mail dashboard stats
+        const statsResponse = await api.get('/api/v1/mail/dashboard');
+        setStats(statsResponse.data);
+        
+        // For now, use mock data for recent emails and accounts
+        // TODO: Implement actual endpoints for these
         const mockEmails: RecentEmail[] = [
           {
             id: 1,
             subject: "Q4 Budget Review Meeting",
             from_address: "john.doe@company.com",
             from_name: "John Doe",
-            received_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
+            received_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
             is_unread: true,
             is_flagged: false,
             has_attachments: true,
@@ -108,55 +109,50 @@ const MailDashboard: React.FC = () => {
             subject: "Project Status Update",
             from_address: "sarah.smith@company.com",
             from_name: "Sarah Smith",
-            received_at: new Date(
-              Date.now() - 2 * 60 * 60 * 1000,
-            ).toISOString(), // 2 hours ago
+            received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
             is_unread: true,
             is_flagged: true,
             has_attachments: false,
             priority: "normal",
           },
-          {
-            id: 3,
-            subject: "Welcome to TritiQ ERP",
-            from_address: "support@tritiq.com",
-            from_name: "TritiQ Support",
-            received_at: new Date(
-              Date.now() - 4 * 60 * 60 * 1000,
-            ).toISOString(), // 4 hours ago
-            is_unread: false,
-            is_flagged: false,
-            has_attachments: false,
-            priority: "normal",
-          },
         ];
+        
         const mockAccounts: EmailAccount[] = [
           {
             id: 1,
-            name: "Work Email",
-            email_address: "user@company.com",
-            unread_count: 18,
+            name: "Primary Email",
+            email_address: "admin@company.com",
+            unread_count: 15,
             sync_status: "success",
             last_sync: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
           },
-          {
-            id: 2,
-            name: "Personal Gmail",
-            email_address: "user@gmail.com",
-            unread_count: 5,
-            sync_status: "success",
-            last_sync: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-          },
         ];
-        setStats(mockStats);
+        
         setRecentEmails(mockEmails);
         setEmailAccounts(mockAccounts);
-      } catch (err) {
-        setError("Failed to load mail dashboard data");
+      } catch (error: any) {
+        console.error('Error fetching mail dashboard data:', error);
+        setError('Failed to load mail dashboard data. Please try again.');
+        
+        // Fallback to mock data if API fails
+        const mockStats: MailStats = {
+          total_emails: 0,
+          unread_emails: 0,
+          flagged_emails: 0,
+          today_emails: 0,
+          this_week_emails: 0,
+          sent_emails: 0,
+          draft_emails: 0,
+          spam_emails: 0,
+        };
+        setStats(mockStats);
+        setRecentEmails([]);
+        setEmailAccounts([]);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
   const handleNavigate = (path: string) => {
@@ -575,9 +571,19 @@ const MailDashboard: React.FC = () => {
             <Grid item xs={12}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Email Accounts
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                      Email Accounts
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Add />}
+                      onClick={() => setShowEmailConfigModal(true)}
+                    >
+                      Add Account
+                    </Button>
+                  </Box>
                   <List dense>
                     {emailAccounts.map((account) => (
                       <ListItem
@@ -707,6 +713,166 @@ const MailDashboard: React.FC = () => {
           </Grid>
         </Grid>
       </Grid>
+
+      {/* Email Configuration Modal */}
+      <Modal
+        open={showEmailConfigModal}
+        onClose={() => setShowEmailConfigModal(false)}
+        aria-labelledby="email-config-modal"
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 600,
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+            maxHeight: '90vh',
+            overflow: 'auto',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6">
+              Add Email Account
+            </Typography>
+            <Button
+              onClick={() => setShowEmailConfigModal(false)}
+              sx={{ minWidth: 'auto', p: 1 }}
+            >
+              <Close />
+            </Button>
+          </Box>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Account Name"
+                placeholder="e.g., Work Email"
+                helperText="A display name for this email account"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email Address"
+                type="email"
+                placeholder="user@example.com"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
+                Incoming Mail (IMAP) Settings
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={8}>
+              <TextField
+                fullWidth
+                label="IMAP Server"
+                placeholder="imap.gmail.com"
+              />
+            </Grid>
+            <Grid item xs={4}>
+              <TextField
+                fullWidth
+                label="Port"
+                type="number"
+                defaultValue="993"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={<Switch defaultChecked />}
+                label="Use SSL/TLS"
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
+                Outgoing Mail (SMTP) Settings
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={8}>
+              <TextField
+                fullWidth
+                label="SMTP Server"
+                placeholder="smtp.gmail.com"
+              />
+            </Grid>
+            <Grid item xs={4}>
+              <TextField
+                fullWidth
+                label="Port"
+                type="number"
+                defaultValue="587"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={<Switch defaultChecked />}
+                label="Use SSL/TLS"
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
+                Authentication
+              </Typography>
+            </Grid>
+
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Username"
+                placeholder="Usually your email address"
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Password"
+                type="password"
+                placeholder="Your email password or app password"
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                For Gmail and other modern email providers, you may need to use an "App Password" instead of your regular password. 
+                Check your email provider's documentation for details.
+              </Alert>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => setShowEmailConfigModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    // TODO: Implement save functionality
+                    alert('Email account configuration will be implemented in the backend');
+                    setShowEmailConfigModal(false);
+                  }}
+                >
+                  Save Account
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Modal>
     </Box>
   );
 };
