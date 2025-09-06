@@ -14,8 +14,8 @@ from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.services.pdf_generation_service import pdf_generator
 from app.services.rbac import RBACService
-from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder
-from app.models.vouchers.sales import SalesVoucher
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn
+from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice
 import logging
 
@@ -27,7 +27,10 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
     permission_map = {
         'purchase': 'voucher_read',
         'purchase-orders': 'voucher_read',
+        'purchase-return': 'voucher_read',
         'sales': 'voucher_read',
+        'delivery-challan': 'voucher_read',
+        'sales-return': 'voucher_read',
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
         'proforma': 'presales_read'
@@ -57,7 +60,10 @@ async def generate_voucher_pdf(
     Supported voucher types:
     - purchase: Purchase Voucher
     - purchase-orders: Purchase Order
-    - sales: Sales Voucher  
+    - purchase-return: Purchase Return
+    - sales: Sales Voucher
+    - delivery-challan: Delivery Challan
+    - sales-return: Sales Return
     - quotation: Quotation
     - sales_order: Sales Order
     - proforma: Proforma Invoice
@@ -215,7 +221,10 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
     model_map = {
         'purchase': PurchaseVoucher,
         'purchase-orders': PurchaseOrder,
+        'purchase-return': PurchaseReturn,
         'sales': SalesVoucher,
+        'delivery-challan': DeliveryChallan,
+        'sales-return': SalesReturn,
         'quotation': Quotation,
         'sales_order': SalesOrder,
         'proforma': ProformaInvoice
