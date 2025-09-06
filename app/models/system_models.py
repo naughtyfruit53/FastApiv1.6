@@ -67,6 +67,38 @@ class Company(Base):
         "app.models.product_models.Product",
         back_populates="company"
     )
+    
+    # Project Management relationships
+    projects: Mapped[List["app.models.project_models.Project"]] = relationship(
+        "app.models.project_models.Project",
+        back_populates="company"
+    )
+    
+    # Workflow relationships
+    workflow_templates: Mapped[List["app.models.workflow_models.WorkflowTemplate"]] = relationship(
+        "app.models.workflow_models.WorkflowTemplate",
+        back_populates="company"
+    )
+    approval_requests: Mapped[List["app.models.workflow_models.ApprovalRequest"]] = relationship(
+        "app.models.workflow_models.ApprovalRequest",
+        back_populates="company"
+    )
+    
+    # API Gateway relationships
+    api_keys: Mapped[List["app.models.api_gateway_models.APIKey"]] = relationship(
+        "app.models.api_gateway_models.APIKey",
+        back_populates="company"
+    )
+    webhooks: Mapped[List["app.models.api_gateway_models.Webhook"]] = relationship(
+        "app.models.api_gateway_models.Webhook",
+        back_populates="company"
+    )
+    
+    # Integration relationships
+    external_integrations: Mapped[List["app.models.integration_models.ExternalIntegration"]] = relationship(
+        "app.models.integration_models.ExternalIntegration",
+        back_populates="company"
+    )
 
     __table_args__ = (
         Index('idx_company_org_name', 'organization_id', 'name'),
