@@ -99,6 +99,34 @@ class Company(Base):
         "app.models.integration_models.ExternalIntegration",
         back_populates="company"
     )
+    
+    # Master Data relationships
+    categories: Mapped[List["app.models.master_data_models.Category"]] = relationship(
+        "app.models.master_data_models.Category",
+        back_populates="company"
+    )
+    units: Mapped[List["app.models.master_data_models.Unit"]] = relationship(
+        "app.models.master_data_models.Unit",
+        back_populates="company"
+    )
+    tax_codes_extended: Mapped[List["app.models.master_data_models.TaxCode"]] = relationship(
+        "app.models.master_data_models.TaxCode",
+        back_populates="company"
+    )
+    payment_terms_extended: Mapped[List["app.models.master_data_models.PaymentTermsExtended"]] = relationship(
+        "app.models.master_data_models.PaymentTermsExtended",
+        back_populates="company"
+    )
+    
+    # Advanced Workflow Automation relationships
+    business_rules: Mapped[List["app.models.workflow_automation_models.BusinessRule"]] = relationship(
+        "app.models.workflow_automation_models.BusinessRule",
+        back_populates="company"
+    )
+    workflow_templates_advanced: Mapped[List["app.models.workflow_automation_models.WorkflowTemplateAdvanced"]] = relationship(
+        "app.models.workflow_automation_models.WorkflowTemplateAdvanced",
+        back_populates="company"
+    )
 
     __table_args__ = (
         Index('idx_company_org_name', 'organization_id', 'name'),
