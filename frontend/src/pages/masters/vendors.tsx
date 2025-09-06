@@ -1,4 +1,4 @@
-// Standalone Vendors Page - Extract from masters/index.tsx
+// frontend/src/pages/masters/vendors.tsx
 import React, { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
@@ -28,28 +28,31 @@ import {
   Search as SearchIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { masterDataService } from "../../services/authService";
+import { masterDataService } from "../../services/masterService";
 import ExcelImportExport from "../../components/ExcelImportExport";
 import { bulkImportVendors } from "../../services/masterService";
 import { useAuth } from "../../context/AuthContext";
 import AddVendorModal from "../../components/AddVendorModal";
+
 const VendorsPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
   const { isOrgContextReady } = useAuth();
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
+  const [editVendor, setEditVendor] = useState<any | null>(null);
   const [addVendorLoading, setAddVendorLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const sortBy = "name"; // Fixed sort column since only one sortable field
+  const sortBy = "name";
   const queryClient = useQueryClient();
+
   const { data: vendors, isLoading } = useQuery({
     queryKey: ["vendors"],
     queryFn: () => masterDataService.getVendors(),
     enabled: isOrgContextReady,
   });
-  // Debounced search and sorting
+
   const filteredAndSortedVendors = useMemo(() => {
     if (!vendors) {
       return [];
@@ -60,7 +63,6 @@ const VendorsPage: React.FC = () => {
         vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-    // Sort by name
     if (sortBy === "name") {
       filtered.sort((a: any, b: any) => {
         const nameA = a.name?.toLowerCase() || "";
@@ -74,15 +76,16 @@ const VendorsPage: React.FC = () => {
     }
     return filtered;
   }, [vendors, searchTerm, sortBy, sortOrder]);
+
   const handleSort = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
+
   const handleVendorAdd = async (vendorData: any) => {
     setAddVendorLoading(true);
     try {
       const response = await masterDataService.createVendor(vendorData);
       const newVendor = response;
-      // Update query data immediately
       queryClient.setQueryData(["vendors"], (old: any) =>
         old ? [...old, newVendor] : [newVendor],
       );
@@ -105,6 +108,36 @@ const VendorsPage: React.FC = () => {
       setAddVendorLoading(false);
     }
   };
+
+  const handleVendorUpdate = async (vendorData: any) => {
+    if (!editVendor?.id) return;
+    setAddVendorLoading(true);
+    try {
+      const response = await masterDataService.updateVendor(editVendor.id, vendorData);
+      queryClient.setQueryData(["vendors"], (old: any) =>
+        old ? old.map((v: any) => (v.id === editVendor.id ? response : v)) : [response],
+      );
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      setShowAddVendorModal(false);
+      setEditVendor(null);
+      alert("Vendor updated successfully!");
+    } catch (error: any) {
+      console.error("Error updating vendor", error);
+      let errorMsg = "Error updating vendor";
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMsg = detail.map((err: any) => err.msg || err).join(", ");
+        } else if (typeof detail === "string") {
+          errorMsg = detail;
+        }
+      }
+      setErrorMessage(errorMsg);
+    } finally {
+      setAddVendorLoading(false);
+    }
+  };
+
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteVendor(id),
     onSuccess: () => {
@@ -117,23 +150,32 @@ const VendorsPage: React.FC = () => {
       );
     },
   });
+
   const openAddVendorModal = useCallback(() => {
     setErrorMessage("");
+    setEditVendor(null);
     setShowAddVendorModal(true);
   }, []);
-  // Auto-open add modal if action=add in URL
+
+  const openEditVendorModal = useCallback((vendor: any) => {
+    setErrorMessage("");
+    setEditVendor(vendor);
+    setShowAddVendorModal(true);
+  }, []);
+
   React.useEffect(() => {
     if (action === "add") {
       openAddVendorModal();
     }
   }, [action, openAddVendorModal]);
+
   if (!isOrgContextReady) {
     return <div>Loading...</div>;
   }
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
-        {/* Header */}
         <Box
           sx={{
             display: "flex",
@@ -154,7 +196,6 @@ const VendorsPage: React.FC = () => {
             Add Vendor
           </Button>
         </Box>
-        {/* Vendors Table */}
         <Paper sx={{ p: 3 }}>
           <Box
             sx={{
@@ -171,7 +212,6 @@ const VendorsPage: React.FC = () => {
               onImport={bulkImportVendors}
             />
           </Box>
-          {/* Search Field */}
           <Box sx={{ mb: 3 }}>
             <TextField
               placeholder="Search vendors by name, email, or contact person..."
@@ -250,9 +290,9 @@ const VendorsPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <IconButton
-                        disabled
+                        onClick={() => openEditVendorModal(item)}
                         size="small"
-                        title="Edit functionality temporarily disabled"
+                        title="Edit Vendor"
                       >
                         <Edit />
                       </IconButton>
@@ -270,15 +310,19 @@ const VendorsPage: React.FC = () => {
             </Table>
           </TableContainer>
         </Paper>
-        {/* Add Vendor Modal */}
         <AddVendorModal
           open={showAddVendorModal}
-          onClose={() => setShowAddVendorModal(false)}
-          onAdd={handleVendorAdd}
+          onClose={() => {
+            setShowAddVendorModal(false);
+            setEditVendor(null);
+          }}
+          onAdd={editVendor ? handleVendorUpdate : handleVendorAdd}
           loading={addVendorLoading}
+          initialData={editVendor} // Pass full vendor data for editing
         />
       </Box>
     </Container>
   );
 };
+
 export default VendorsPage;
