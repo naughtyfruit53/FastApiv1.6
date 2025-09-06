@@ -1,5 +1,5 @@
 // frontend/src/context/CompanyContext.tsx
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect } from "react"; // Added useEffect to the import
 import { useQuery } from "@tanstack/react-query";
 import { companyService } from "../services/authService";
 import { useAuth } from "./AuthContext";
