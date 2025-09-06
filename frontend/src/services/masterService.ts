@@ -7,26 +7,26 @@ interface QueryFunctionContext {
 }
 
 // Fetch all vendors
-export const getVendors = async ({ signal }: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/vendors", { signal });
+export const getVendors = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional to prevent destructuring undefined
+  const response = await api.get("/vendors", { signal: context?.signal });
   return response.data;
 };
 
 // Fetch all customers
-export const getCustomers = async ({ signal }: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/customers", { signal });
+export const getCustomers = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
+  const response = await api.get("/customers", { signal: context?.signal });
   return response.data;
 };
 
 // Fetch all products
-export const getProducts = async ({ signal }: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/products", { params: { active_only: false }, signal });
+export const getProducts = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
+  const response = await api.get("/products", { params: { active_only: false }, signal: context?.signal });
   return response.data;
 };
 
 // Fetch all employees
-export const getEmployees = async ({ signal }: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/employees", { signal });
+export const getEmployees = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
+  const response = await api.get("/employees", { signal: context?.signal });
   return response.data;
 };
 
