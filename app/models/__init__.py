@@ -116,6 +116,10 @@ from .mail_management import (
     EmailAccount, Email, EmailAttachment, SentEmail, EmailAction,
     EmailTemplate, EmailRule, EmailAccountType, EmailStatus, EmailPriority
 )
+# Import OAuth2 models
+from .oauth_models import (
+    UserEmailToken, OAuthState, OAuthProvider, TokenStatus
+)
 # Import sticky notes models
 from .sticky_notes import (
     StickyNote
@@ -212,6 +216,9 @@ __all__ = [
     # Mail management models
     "EmailAccount", "Email", "EmailAttachment", "SentEmail", "EmailAction",
     "EmailTemplate", "EmailRule", "EmailAccountType", "EmailStatus", "EmailPriority",
+    
+    # OAuth2 models
+    "UserEmailToken", "OAuthState", "OAuthProvider", "TokenStatus",
     
     # Sticky notes models
     "StickyNote",

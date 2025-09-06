@@ -43,6 +43,7 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import api from "../../lib/api";
+import OAuthLoginButton from "../../components/OAuthLoginButton";
 interface MailStats {
   total_emails: number;
   unread_emails: number;
@@ -575,14 +576,27 @@ const MailDashboard: React.FC = () => {
                     <Typography variant="h6">
                       Email Accounts
                     </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Add />}
-                      onClick={() => setShowEmailConfigModal(true)}
-                    >
-                      Add Account
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <OAuthLoginButton 
+                        variant="button"
+                        onSuccess={(result) => {
+                          console.log('OAuth success:', result);
+                          // Refresh email accounts list
+                          fetchMailData();
+                        }}
+                        onError={(error) => {
+                          console.error('OAuth error:', error);
+                        }}
+                      />
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Settings />}
+                        onClick={() => setShowEmailConfigModal(true)}
+                      >
+                        Manual Setup
+                      </Button>
+                    </Box>
                   </Box>
                   <List dense>
                     {emailAccounts.map((account) => (
@@ -746,6 +760,40 @@ const MailDashboard: React.FC = () => {
               <Close />
             </Button>
           </Box>
+
+          {/* OAuth Options */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Quick Setup (Recommended)
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Connect your email account securely with one click:
+            </Typography>
+            <OAuthLoginButton 
+              variant="list"
+              onSuccess={(result) => {
+                console.log('OAuth success:', result);
+                setShowEmailConfigModal(false);
+                fetchMailData();
+              }}
+              onError={(error) => {
+                console.error('OAuth error:', error);
+              }}
+            />
+          </Box>
+
+          <Divider sx={{ my: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              OR
+            </Typography>
+          </Divider>
+
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Manual Configuration
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Configure your email account manually using IMAP/SMTP settings:
+          </Typography>
 
           <Grid container spacing={2}>
             <Grid item xs={12}>
