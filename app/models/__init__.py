@@ -38,7 +38,7 @@ from .marketing_models import (
 )
 # Import ERP core models
 from .erp_models import (
-    ChartOfAccounts, GSTConfiguration, TaxCode, JournalEntry,
+    ChartOfAccounts, GSTConfiguration, ERPTaxCode, JournalEntry,
     AccountsPayable, AccountsReceivable, PaymentRecord,
     GeneralLedger, CostCenter, BankAccount, BankReconciliation,
     FinancialStatement, FinancialKPI
@@ -129,6 +129,11 @@ from .ai_analytics_models import (
     AIModel, PredictionResult, AnomalyDetection, AIInsight, 
     ModelPerformanceMetric, AutomationWorkflow, ModelStatus, PredictionType
 )
+# Import Workflow Automation models
+from .workflow_automation_models import (
+    BusinessRule, WorkflowTemplateAdvanced, AutomationWorkflowStep, AutomationWorkflowInstance,
+    AutomationWorkflowStepExecution, BusinessRuleExecution, WorkflowSchedule
+)
 
 # No imports from .base as all models have been moved
 
@@ -166,7 +171,7 @@ __all__ = [
     "MarketingList", "MarketingListContact",
     
     # ERP and financial models
-    "ChartOfAccounts", "GSTConfiguration", "TaxCode", "JournalEntry",
+    "ChartOfAccounts", "GSTConfiguration", "ERPTaxCode", "JournalEntry",
     "AccountsPayable", "AccountsReceivable", "PaymentRecord",
     "GeneralLedger", "CostCenter", "BankAccount", "BankReconciliation",
     "FinancialStatement", "FinancialKPI",
@@ -229,5 +234,9 @@ __all__ = [
     
     # Migration models
     "MigrationJob", "MigrationDataMapping", "MigrationLog", "MigrationTemplate",
-    "MigrationConflict", "MigrationSourceType", "MigrationDataType", "MigrationJobStatus"
+    "MigrationConflict", "MigrationSourceType", "MigrationDataType", "MigrationJobStatus",
+    
+    # Workflow automation models
+    "BusinessRule", "WorkflowTemplateAdvanced", "AutomationWorkflowStep", "AutomationWorkflowInstance",
+    "AutomationWorkflowStepExecution", "BusinessRuleExecution", "WorkflowSchedule"
 ]

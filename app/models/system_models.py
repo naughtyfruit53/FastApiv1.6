@@ -1,7 +1,5 @@
 # app/models/system_models.py
 
-# app/models/system_models.py
-
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -109,7 +107,7 @@ class Company(Base):
         "app.models.master_data_models.Unit",
         back_populates="company"
     )
-    tax_codes_extended: Mapped[List["app.models.master_data_models.TaxCode"]] = relationship(
+    tax_codes: Mapped[List["app.models.master_data_models.TaxCode"]] = relationship(
         "app.models.master_data_models.TaxCode",
         back_populates="company"
     )

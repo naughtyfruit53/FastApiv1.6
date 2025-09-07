@@ -30,7 +30,8 @@ from app.schemas.api_gateway import (
     APIErrorResponse, APIErrorWithDetails, APIErrorResolve,
     APIGatewayDashboardStats, APIUsageStats, BulkAPIKeyUpdate, BulkWebhookUpdate
 )
-from app.services.rbac import require_permission, RBACService
+from app.services.rbac import RBACService
+from app.core.rbac_dependencies import check_service_permission
 
 router = APIRouter()
 
@@ -157,13 +158,13 @@ async def get_api_gateway_dashboard(
 
 # API Key Management
 @router.post("/api-keys", response_model=APIKeyGenerated)
-@require_permission("api_gateway", "create")
 async def create_api_key(
     api_key_data: APIKeyCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new API key"""
+    check_service_permission(current_user, "api_gateway", "create", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -323,7 +324,6 @@ async def list_api_keys(
     )
 
 @router.put("/api-keys/{api_key_id}", response_model=APIKeyResponse)
-@require_permission("api_gateway", "update")
 async def update_api_key(
     api_key_id: int,
     api_key_update: APIKeyUpdate,
@@ -331,6 +331,7 @@ async def update_api_key(
     db: Session = Depends(get_db)
 ):
     """Update an API key"""
+    check_service_permission(current_user, "api_gateway", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -366,13 +367,13 @@ async def update_api_key(
     return APIKeyResponse.from_orm(api_key)
 
 @router.delete("/api-keys/{api_key_id}")
-@require_permission("api_gateway", "delete")
 async def delete_api_key(
     api_key_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Delete an API key"""
+    check_service_permission(current_user, "api_gateway", "delete", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -468,13 +469,13 @@ async def list_usage_logs(
 
 # Webhook Management
 @router.post("/webhooks", response_model=WebhookResponse)
-@require_permission("api_gateway", "create")
 async def create_webhook(
     webhook_data: WebhookCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new webhook"""
+    check_service_permission(current_user, "api_gateway", "create", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     

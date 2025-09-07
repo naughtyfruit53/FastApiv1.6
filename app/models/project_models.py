@@ -191,8 +191,8 @@ class ProjectResource(Base):
     total_cost = Column(Float, nullable=True, default=0.0)
     
     # Timeline
-    allocation_start_date = Column(Date, nullable=True)
-    allocation_end_date = Column(Date, nullable=True)
+    allocation_start = Column(Date, nullable=True)
+    allocation_end = Column(Date, nullable=True)
     
     # Resource reference (for human resources)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)

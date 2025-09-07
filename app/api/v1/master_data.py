@@ -1,4 +1,3 @@
-# app/api/v1/master_data.py
 """
 Master Data API endpoints for Categories, Units, Payment Terms, and Tax Codes
 These endpoints provide complete CRUD operations for master data management
@@ -26,7 +25,7 @@ from app.schemas.master_data import (
     UnitCreate, UnitUpdate, UnitResponse, UnitList, UnitFilter, UnitConversion,
     TaxCodeCreate, TaxCodeUpdate, TaxCodeResponse, TaxCodeList, TaxCodeFilter, TaxCalculation,
     PaymentTermsExtendedCreate, PaymentTermsExtendedUpdate, PaymentTermsExtendedResponse,
-    PaymentTermsExtendedList, PaymentTermsExtendedFilter,
+    PaymentTermsExtendedList, PaymentTermsExtendedList, PaymentTermsExtendedFilter,
     BulkCategoryUpdate, BulkUnitUpdate, BulkTaxCodeUpdate, BulkPaymentTermsUpdate,
     MasterDataStats
 )
@@ -691,7 +690,7 @@ async def calculate_tax(
             tax_calculation.amount, tax_code
         )
         
-        tax_calculation.calculated_tax = calculation_result["tax_amount"]
+        tax_calculation.converted_value = calculation_result["tax_amount"]
         tax_calculation.tax_breakdown = calculation_result["breakdown"]
         
         return tax_calculation

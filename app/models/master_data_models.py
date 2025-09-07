@@ -1,4 +1,5 @@
 # app/models/master_data_models.py
+
 """
 Master Data Models - Categories, Units, Payment Terms, and Tax Codes
 These models provide foundational data structures for business operations
@@ -73,9 +74,7 @@ class Category(Base):
     default_income_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True)
     default_expense_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True)
     default_asset_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True)
-    
-    # Tax configuration
-    default_tax_code_id = Column(Integer, ForeignKey("tax_codes.id"), nullable=True)
+    default_tax_code_id = Column(Integer, ForeignKey("master_tax_codes.id"), nullable=True)
     
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -91,11 +90,11 @@ class Category(Base):
     default_income_account = relationship("ChartOfAccounts", foreign_keys=[default_income_account_id])
     default_expense_account = relationship("ChartOfAccounts", foreign_keys=[default_expense_account_id])
     default_asset_account = relationship("ChartOfAccounts", foreign_keys=[default_asset_account_id])
-    default_tax_code = relationship("TaxCode", back_populates="categories")
+    default_tax_code = relationship("TaxCode", primaryjoin="Category.default_tax_code_id == TaxCode.id", back_populates="categories")
     
     # Constraints
     __table_args__ = (
-        UniqueConstraint('organization_id', 'name', 'category_type', name='uq_category_org_name_type'),
+        UniqueConstraint('organization_id', 'name', 'category_type', name='uq_category_org_name_name_type'),
         UniqueConstraint('organization_id', 'code', name='uq_category_org_code'),
         Index('idx_category_org_type_active', 'organization_id', 'category_type', 'is_active'),
         Index('idx_category_parent', 'parent_category_id'),
@@ -151,7 +150,7 @@ class Unit(Base):
 
 class TaxCode(Base):
     """Tax codes for various tax types and rates"""
-    __tablename__ = "tax_codes"
+    __tablename__ = "master_tax_codes"
 
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)

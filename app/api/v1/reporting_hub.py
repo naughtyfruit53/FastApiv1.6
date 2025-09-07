@@ -18,7 +18,8 @@ from app.schemas.project import ProjectResponse
 from app.schemas.workflow import ApprovalRequestResponse
 from app.schemas.api_gateway import APIUsageStats
 from app.schemas.integration import ExternalIntegrationResponse
-from app.services.rbac import require_permission, RBACService
+from app.services.rbac import RBACService
+from app.core.rbac_dependencies import check_service_permission
 
 router = APIRouter()
 
@@ -688,13 +689,13 @@ async def get_workflow_report(
 
 # Generic report generator
 @router.post("/reports/custom", response_model=ReportResponse)
-@require_permission("reporting", "create")
 async def generate_custom_report(
     report_config: Dict[str, Any],
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Generate a custom report based on configuration"""
+    check_service_permission(current_user, "reporting", "create", db)
     org_id = current_user.organization_id
     
     # This is a simplified custom report generator

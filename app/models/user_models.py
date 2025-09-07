@@ -56,7 +56,6 @@ class Organization(Base):
     industry: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     website: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Contact information
     primary_email: Mapped[str] = mapped_column(String, nullable=False)
@@ -151,8 +150,8 @@ class Organization(Base):
         "app.models.erp_models.GSTConfiguration",
         back_populates="organization"
     )
-    tax_codes: Mapped[List["app.models.erp_models.TaxCode"]] = relationship(
-        "app.models.erp_models.TaxCode",
+    erp_tax_codes: Mapped[List["app.models.erp_models.ERPTaxCode"]] = relationship(
+        "app.models.erp_models.ERPTaxCode",
         back_populates="organization"
     )
     
@@ -255,7 +254,7 @@ class Organization(Base):
         "app.models.master_data_models.Unit",
         back_populates="organization"
     )
-    tax_codes_extended: Mapped[List["app.models.master_data_models.TaxCode"]] = relationship(
+    tax_codes: Mapped[List["app.models.master_data_models.TaxCode"]] = relationship(
         "app.models.master_data_models.TaxCode",
         back_populates="organization"
     )
@@ -273,8 +272,8 @@ class Organization(Base):
         "app.models.workflow_automation_models.WorkflowTemplateAdvanced",
         back_populates="organization"
     )
-    workflow_instances: Mapped[List["app.models.workflow_automation_models.WorkflowInstance"]] = relationship(
-        "app.models.workflow_automation_models.WorkflowInstance",
+    workflow_instances: Mapped[List["app.models.workflow_automation_models.AutomationWorkflowInstance"]] = relationship(
+        "app.models.workflow_automation_models.AutomationWorkflowInstance",
         back_populates="organization"
     )
     workflow_schedules: Mapped[List["app.models.workflow_automation_models.WorkflowSchedule"]] = relationship(
@@ -460,114 +459,114 @@ class User(Base):
         "sticky_notes_enabled": True
     }) # User-specific settings including sticky notes preference
 
-    # Relationships with fully qualified paths
-    organization: Mapped[Optional["app.models.user_models.Organization"]] = relationship(
-        "app.models.user_models.Organization", 
+    # Relationships with class names only (forward refs)
+    organization: Mapped[Optional["Organization"]] = relationship(
+        "Organization", 
         back_populates="users"
     )
     
     # Task Management Relationships
-    created_tasks: Mapped[List["app.models.task_management.Task"]] = relationship(
-        "app.models.task_management.Task",
-        foreign_keys="app.models.task_management.Task.created_by",
+    created_tasks: Mapped[List["Task"]] = relationship(
+        "Task",
+        foreign_keys="Task.created_by",
         back_populates="creator"
     )
-    assigned_tasks: Mapped[List["app.models.task_management.Task"]] = relationship(
-        "app.models.task_management.Task",
-        foreign_keys="app.models.task_management.Task.assigned_to",
+    assigned_tasks: Mapped[List["Task"]] = relationship(
+        "Task",
+        foreign_keys="Task.assigned_to",
         back_populates="assignee"
     )
-    created_projects: Mapped[List["app.models.task_management.TaskProject"]] = relationship(
-        "app.models.task_management.TaskProject",
+    created_projects: Mapped[List["TaskProject"]] = relationship(
+        "TaskProject",
         back_populates="creator"
     )
-    project_memberships: Mapped[List["app.models.task_management.TaskProjectMember"]] = relationship(
-        "app.models.task_management.TaskProjectMember",
+    project_memberships: Mapped[List["TaskProjectMember"]] = relationship(
+        "TaskProjectMember",
         back_populates="user"
     )
-    task_comments: Mapped[List["app.models.task_management.TaskComment"]] = relationship(
-        "app.models.task_management.TaskComment",
+    task_comments: Mapped[List["TaskComment"]] = relationship(
+        "TaskComment",
         back_populates="user"
     )
-    task_attachments: Mapped[List["app.models.task_management.TaskAttachment"]] = relationship(
-        "app.models.task_management.TaskAttachment",
+    task_attachments: Mapped[List["TaskAttachment"]] = relationship(
+        "TaskAttachment",
         back_populates="user"
     )
-    time_logs: Mapped[List["app.models.task_management.TaskTimeLog"]] = relationship(
-        "app.models.task_management.TaskTimeLog",
+    time_logs: Mapped[List["TaskTimeLog"]] = relationship(
+        "TaskTimeLog",
         back_populates="user"
     )
-    task_reminders: Mapped[List["app.models.task_management.TaskReminder"]] = relationship(
-        "app.models.task_management.TaskReminder",
+    task_reminders: Mapped[List["TaskReminder"]] = relationship(
+        "TaskReminder",
         back_populates="user"
     )
     
     # Calendar Management Relationships
-    created_events: Mapped[List["app.models.calendar_management.CalendarEvent"]] = relationship(
-        "app.models.calendar_management.CalendarEvent",
-        foreign_keys="app.models.calendar_management.CalendarEvent.created_by",
+    created_events: Mapped[List["CalendarEvent"]] = relationship(
+        "CalendarEvent",
+        foreign_keys="CalendarEvent.created_by",
         back_populates="creator"
     )
-    event_attendances: Mapped[List["app.models.calendar_management.EventAttendee"]] = relationship(
-        "app.models.calendar_management.EventAttendee",
+    event_attendances: Mapped[List["EventAttendee"]] = relationship(
+        "EventAttendee",
         back_populates="user"
     )
-    event_reminders: Mapped[List["app.models.calendar_management.EventReminder"]] = relationship(
-        "app.models.calendar_management.EventReminder",
+    event_reminders: Mapped[List["EventReminder"]] = relationship(
+        "EventReminder",
         back_populates="user"
     )
-    owned_calendars: Mapped[List["app.models.calendar_management.Calendar"]] = relationship(
-        "app.models.calendar_management.Calendar",
+    owned_calendars: Mapped[List["Calendar"]] = relationship(
+        "Calendar",
         back_populates="owner"
     )
-    calendar_shares: Mapped[List["app.models.calendar_management.CalendarShare"]] = relationship(
-        "app.models.calendar_management.CalendarShare",
-        foreign_keys="app.models.calendar_management.CalendarShare.user_id",
+    calendar_shares: Mapped[List["CalendarShare"]] = relationship(
+        "CalendarShare",
+        foreign_keys="CalendarShare.user_id",
         back_populates="user"
     )
-    google_calendar_integration: Mapped[List["app.models.calendar_management.GoogleCalendarIntegration"]] = relationship(
-        "app.models.calendar_management.GoogleCalendarIntegration",
+    google_calendar_integration: Mapped[List["GoogleCalendarIntegration"]] = relationship(
+        "GoogleCalendarIntegration",
         back_populates="user"
     )
     
     # Email Management Relationships
-    email_accounts: Mapped[List["app.models.mail_management.EmailAccount"]] = relationship(
-        "app.models.mail_management.EmailAccount",
+    email_accounts: Mapped[List["EmailAccount"]] = relationship(
+        "EmailAccount",
         back_populates="user"
     )
-    sent_emails: Mapped[List["app.models.mail_management.SentEmail"]] = relationship(
-        "app.models.mail_management.SentEmail",
+    sent_emails: Mapped[List["SentEmail"]] = relationship(
+        "SentEmail",
         back_populates="sender"
     )
-    email_actions: Mapped[List["app.models.mail_management.EmailAction"]] = relationship(
-        "app.models.mail_management.EmailAction",
+    email_actions: Mapped[List["EmailAction"]] = relationship(
+        "EmailAction",
         back_populates="user"
     )
-    created_email_templates: Mapped[List["app.models.mail_management.EmailTemplate"]] = relationship(
-        "app.models.mail_management.EmailTemplate",
+    created_email_templates: Mapped[List["EmailTemplate"]] = relationship(
+        "EmailTemplate",
         back_populates="creator"
     )
-    email_rules: Mapped[List["app.models.mail_management.EmailRule"]] = relationship(
-        "app.models.mail_management.EmailRule",
+    email_rules: Mapped[List["EmailRule"]] = relationship(
+        "EmailRule",
         back_populates="user"
     )
     
     # OAuth2 Email Token relationship
-    email_tokens: Mapped[List["app.models.oauth_models.UserEmailToken"]] = relationship(
-        "app.models.oauth_models.UserEmailToken",
+    email_tokens: Mapped[List["UserEmailToken"]] = relationship(
+        "UserEmailToken",
         back_populates="user"
     )
     
     # Sticky Notes relationship
-    sticky_notes: Mapped[List["app.models.sticky_notes.StickyNote"]] = relationship(
-        "app.models.sticky_notes.StickyNote",
+    sticky_notes: Mapped[List["StickyNote"]] = relationship(
+        "StickyNote",
         back_populates="user"
     )
     
     # Company assignments for multi-company support
-    company_assignments: Mapped[List["app.models.user_models.UserCompany"]] = relationship(
-        "app.models.user_models.UserCompany",
-        foreign_keys="app.models.user_models.UserCompany.user_id",
+    company_assignments: Mapped[List["UserCompany"]] = relationship(
+        "UserCompany",
+        foreign_keys="UserCompany.user_id",
         back_populates="user"
     )
 
@@ -599,16 +598,16 @@ class ServiceRole(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
-    # Relationships with fully qualified paths
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization"
+    # Relationships with class names only
+    organization: Mapped["Organization"] = relationship(
+        "Organization"
     )
-    user_assignments: Mapped[List["app.models.user_models.UserServiceRole"]] = relationship(
-        "app.models.user_models.UserServiceRole", 
+    user_assignments: Mapped[List["UserServiceRole"]] = relationship(
+        "UserServiceRole", 
         back_populates="role"
     )
-    role_permissions: Mapped[List["app.models.user_models.ServiceRolePermission"]] = relationship(
-        "app.models.user_models.ServiceRolePermission", 
+    role_permissions: Mapped[List["ServiceRolePermission"]] = relationship(
+        "ServiceRolePermission", 
         back_populates="role"
     )
 
@@ -637,9 +636,9 @@ class ServicePermission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
-    # Relationships with fully qualified paths
-    role_permissions: Mapped[List["app.models.user_models.ServiceRolePermission"]] = relationship(
-        "app.models.user_models.ServiceRolePermission", 
+    # Relationships with class names only
+    role_permissions: Mapped[List["ServiceRolePermission"]] = relationship(
+        "ServiceRolePermission", 
         back_populates="permission"
     )
 
@@ -665,16 +664,16 @@ class ServiceRolePermission(Base):
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships with fully qualified paths
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization"
+    # Relationships with class names only
+    organization: Mapped["Organization"] = relationship(
+        "Organization"
     )
-    role: Mapped["app.models.user_models.ServiceRole"] = relationship(
-        "app.models.user_models.ServiceRole", 
+    role: Mapped["ServiceRole"] = relationship(
+        "ServiceRole", 
         back_populates="role_permissions"
     )
-    permission: Mapped["app.models.user_models.ServicePermission"] = relationship(
-        "app.models.user_models.ServicePermission", 
+    permission: Mapped["ServicePermission"] = relationship(
+        "ServicePermission", 
         back_populates="role_permissions"
     )
 
@@ -708,20 +707,20 @@ class UserServiceRole(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
-    # Relationships with fully qualified paths
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization"
+    # Relationships with class names only
+    organization: Mapped["Organization"] = relationship(
+        "Organization"
     )
-    user: Mapped["app.models.user_models.User"] = relationship(
-        "app.models.user_models.User", 
+    user: Mapped["User"] = relationship(
+        "User", 
         foreign_keys=[user_id]
     )
-    role: Mapped["app.models.user_models.ServiceRole"] = relationship(
-        "app.models.user_models.ServiceRole", 
+    role: Mapped["ServiceRole"] = relationship(
+        "ServiceRole", 
         back_populates="user_assignments"
     )
-    assigned_by: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", 
+    assigned_by: Mapped[Optional["User"]] = relationship(
+        "User", 
         foreign_keys=[assigned_by_id]
     )
 
@@ -756,20 +755,20 @@ class UserCompany(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    user: Mapped["app.models.user_models.User"] = relationship(
-        "app.models.user_models.User", 
+    user: Mapped["User"] = relationship(
+        "User", 
         foreign_keys=[user_id],
         back_populates="company_assignments"
     )
-    company: Mapped["app.models.system_models.Company"] = relationship(
-        "app.models.system_models.Company",
+    company: Mapped["Company"] = relationship(
+        "Company",
         back_populates="user_assignments"
     )
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization"
+    organization: Mapped["Organization"] = relationship(
+        "Organization"
     )
-    assigned_by: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", 
+    assigned_by: Mapped[Optional["User"]] = relationship(
+        "User", 
         foreign_keys=[assigned_by_id]
     )
 

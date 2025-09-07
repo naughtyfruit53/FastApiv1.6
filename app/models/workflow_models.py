@@ -97,12 +97,12 @@ class WorkflowTemplate(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # Relationships
-    organization = relationship("Organization", back_populates="workflow_templates")
-    company = relationship("Company", back_populates="workflow_templates")
-    creator = relationship("User")
+    organization = relationship("app.models.user_models.Organization", back_populates="workflow_templates")
+    company = relationship("app.models.system_models.Company", back_populates="workflow_templates")
+    creator = relationship("app.models.user_models.User")
     
-    steps = relationship("WorkflowStep", back_populates="template", cascade="all, delete-orphan", order_by="WorkflowStep.step_order")
-    instances = relationship("WorkflowInstance", back_populates="template", cascade="all, delete-orphan")
+    steps = relationship("app.models.workflow_models.WorkflowStep", back_populates="template", cascade="all, delete-orphan", order_by="app.models.workflow_models.WorkflowStep.step_order")
+    instances = relationship("app.models.workflow_models.WorkflowInstance", back_populates="template", cascade="all, delete-orphan")
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'name', 'version', name='uq_workflow_template_org_name_version'),
@@ -157,16 +157,17 @@ class WorkflowStep(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
-    template = relationship("WorkflowTemplate", back_populates="steps")
-    assigned_user = relationship("User", foreign_keys=[assigned_user_id])
-    escalation_user = relationship("User", foreign_keys=[escalation_to_user_id])
+    template = relationship("app.models.workflow_models.WorkflowTemplate", back_populates="steps")
+    assigned_user = relationship("app.models.user_models.User", foreign_keys=[assigned_user_id])
+    escalation_user = relationship("app.models.user_models.User", foreign_keys=[escalation_to_user_id])
     
-    step_instances = relationship("WorkflowStepInstance", back_populates="step", cascade="all, delete-orphan")
+    step_instances = relationship("app.models.workflow_models.WorkflowStepInstance", back_populates="step", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index('idx_workflow_step_org_template', 'organization_id', 'template_id'),
         Index('idx_workflow_step_org_order', 'organization_id', 'template_id', 'step_order'),
         Index('idx_workflow_step_org_type', 'organization_id', 'step_type'),
+        {'extend_existing': True}
     )
 
 
@@ -211,12 +212,12 @@ class WorkflowInstance(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
-    template = relationship("WorkflowTemplate", back_populates="instances")
-    triggered_by_user = relationship("User")
-    current_step = relationship("WorkflowStep")
+    template = relationship("app.models.workflow_models.WorkflowTemplate", back_populates="instances")
+    triggered_by_user = relationship("app.models.user_models.User")
+    current_step = relationship("app.models.workflow_models.WorkflowStep")
     
-    step_instances = relationship("WorkflowStepInstance", back_populates="instance", cascade="all, delete-orphan")
-    approvals = relationship("ApprovalRequest", back_populates="workflow_instance", cascade="all, delete-orphan")
+    step_instances = relationship("app.models.workflow_models.WorkflowStepInstance", back_populates="instance", cascade="all, delete-orphan")
+    approvals = relationship("app.models.workflow_models.ApprovalRequest", back_populates="workflow_instance", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index('idx_workflow_instance_org_template', 'organization_id', 'template_id'),
@@ -255,9 +256,9 @@ class WorkflowStepInstance(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
-    instance = relationship("WorkflowInstance", back_populates="step_instances")
-    step = relationship("WorkflowStep", back_populates="step_instances")
-    assignee = relationship("User")
+    instance = relationship("app.models.workflow_models.WorkflowInstance", back_populates="step_instances")
+    step = relationship("app.models.workflow_models.WorkflowStep", back_populates="step_instances")
+    assignee = relationship("app.models.user_models.User")
     
     __table_args__ = (
         Index('idx_workflow_step_instance_org_instance', 'organization_id', 'instance_id'),
@@ -323,18 +324,18 @@ class ApprovalRequest(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
-    organization = relationship("Organization", back_populates="approval_requests")
-    company = relationship("Company", back_populates="approval_requests")
-    requester = relationship("User", foreign_keys=[requested_by])
-    approver = relationship("User", foreign_keys=[assigned_to])
-    delegate = relationship("User", foreign_keys=[delegated_to])
-    escalated_user = relationship("User", foreign_keys=[escalated_to])
+    organization = relationship("app.models.user_models.Organization", back_populates="approval_requests")
+    company = relationship("app.models.system_models.Company", back_populates="approval_requests")
+    requester = relationship("app.models.user_models.User", foreign_keys=[requested_by])
+    approver = relationship("app.models.user_models.User", foreign_keys=[assigned_to])
+    delegate = relationship("app.models.user_models.User", foreign_keys=[delegated_to])
+    escalated_user = relationship("app.models.user_models.User", foreign_keys=[escalated_to])
     
-    workflow_instance = relationship("WorkflowInstance", back_populates="approvals")
-    step_instance = relationship("WorkflowStepInstance")
+    workflow_instance = relationship("app.models.workflow_models.WorkflowInstance", back_populates="approvals")
+    step_instance = relationship("app.models.workflow_models.WorkflowStepInstance")
     
-    attachments = relationship("ApprovalAttachment", back_populates="approval", cascade="all, delete-orphan")
-    history = relationship("ApprovalHistory", back_populates="approval", cascade="all, delete-orphan")
+    attachments = relationship("app.models.workflow_models.ApprovalAttachment", back_populates="approval", cascade="all, delete-orphan")
+    history = relationship("app.models.workflow_models.ApprovalHistory", back_populates="approval", cascade="all, delete-orphan")
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'approval_code', name='uq_approval_org_code'),
@@ -371,8 +372,8 @@ class ApprovalHistory(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
-    approval = relationship("ApprovalRequest", back_populates="history")
-    performer = relationship("User")
+    approval = relationship("app.models.workflow_models.ApprovalRequest", back_populates="history")
+    performer = relationship("app.models.user_models.User")
     
     __table_args__ = (
         Index('idx_approval_history_org_approval', 'organization_id', 'approval_id'),
@@ -402,8 +403,8 @@ class ApprovalAttachment(Base):
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # Relationships
-    approval = relationship("ApprovalRequest", back_populates="attachments")
-    uploader = relationship("User")
+    approval = relationship("app.models.workflow_models.ApprovalRequest", back_populates="attachments")
+    uploader = relationship("app.models.user_models.User")
     
     __table_args__ = (
         Index('idx_approval_attachment_org_approval', 'organization_id', 'approval_id'),

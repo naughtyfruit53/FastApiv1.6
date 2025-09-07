@@ -30,7 +30,8 @@ from app.schemas.integration import (
     MappingValidationRequest, MappingValidationResponse, BulkIntegrationUpdate, BulkSyncJobAction,
     IntegrationExportRequest, IntegrationImportRequest, IntegrationImportResponse
 )
-from app.services.rbac import require_permission, RBACService
+from app.services.rbac import RBACService
+from app.core.rbac_dependencies import check_service_permission
 
 router = APIRouter()
 
@@ -158,13 +159,13 @@ async def get_integration_dashboard(
 
 # External Integration Management
 @router.post("/integrations", response_model=ExternalIntegrationResponse)
-@require_permission("integration", "create")
 async def create_integration(
     integration_data: ExternalIntegrationCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new external integration"""
+    check_service_permission(current_user, "integration", "create", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -424,7 +425,6 @@ async def get_integration(
     )
 
 @router.put("/integrations/{integration_id}", response_model=ExternalIntegrationResponse)
-@require_permission("integration", "update")
 async def update_integration(
     integration_id: int,
     integration_update: ExternalIntegrationUpdate,
@@ -432,6 +432,7 @@ async def update_integration(
     db: Session = Depends(get_db)
 ):
     """Update an integration"""
+    check_service_permission(current_user, "integration", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -467,13 +468,13 @@ async def update_integration(
     return ExternalIntegrationResponse.from_orm(integration)
 
 @router.delete("/integrations/{integration_id}")
-@require_permission("integration", "delete")
 async def delete_integration(
     integration_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Delete an integration"""
+    check_service_permission(current_user, "integration", "delete", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -503,7 +504,6 @@ async def delete_integration(
 
 # Integration Mapping Management
 @router.post("/integrations/{integration_id}/mappings", response_model=IntegrationMappingResponse)
-@require_permission("integration", "update")
 async def create_integration_mapping(
     integration_id: int,
     mapping_data: IntegrationMappingCreate,
@@ -511,6 +511,7 @@ async def create_integration_mapping(
     db: Session = Depends(get_db)
 ):
     """Create a new integration mapping"""
+    check_service_permission(current_user, "integration", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -617,7 +618,6 @@ async def list_integration_mappings(
 
 # Test endpoints
 @router.post("/integrations/{integration_id}/test", response_model=IntegrationTestResponse)
-@require_permission("integration", "test")
 async def test_integration(
     integration_id: int,
     test_request: IntegrationTestRequest,
@@ -625,6 +625,7 @@ async def test_integration(
     db: Session = Depends(get_db)
 ):
     """Test an integration connection"""
+    check_service_permission(current_user, "integration", "test", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -792,7 +793,7 @@ async def check_integration_health(
     
     # Check mapping configuration
     mapping_count = db.query(IntegrationMapping).filter(
-        IntegrationMapping.integration_id == integration_id
+        IntegrationMapping.integration_id == integration.id
     ).count()
     
     if mapping_count == 0:

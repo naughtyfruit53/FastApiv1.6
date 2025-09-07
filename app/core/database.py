@@ -3,6 +3,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from app.core.config import settings
 import logging
 from fastapi import HTTPException
+from sqlalchemy.exc import ProgrammingError
+import psycopg2.errors as pg_errors
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +135,17 @@ def execute_with_retry(operation_func, max_retries: int = 3, *args, **kwargs):
     
     raise last_exception
 
-# Create all tables
+# Create all tables with error handling for duplicates
 def create_tables():
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except ProgrammingError as e:
+        if isinstance(e.orig, (pg_errors.DuplicateTable, pg_errors.DuplicateObject)):
+            logger.warning(f"Some tables or indexes already exist, skipping creation: {str(e)}")
+        else:
+            logger.error(f"Unexpected database error during table creation: {str(e)}")
+            raise
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {str(e)}")
+        raise

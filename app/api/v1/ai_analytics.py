@@ -8,7 +8,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_permissions
+from app.core.security import get_current_user
+from app.core.permissions import PermissionChecker
 from app.models.user_models import User
 from app.services.ai_analytics_service import AIAnalyticsService
 from app.schemas.ai_analytics import (
@@ -25,20 +26,18 @@ from app.schemas.ai_analytics import (
 
 router = APIRouter()
 
-
 @router.get("/dashboard", response_model=AIAnalyticsDashboard)
 async def get_ai_analytics_dashboard(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get AI analytics dashboard data"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
     dashboard_data = service.get_ai_analytics_dashboard(current_user.organization_id)
     
     return AIAnalyticsDashboard(**dashboard_data)
-
 
 # ============================================================================
 # AI MODEL MANAGEMENT ENDPOINTS
@@ -51,7 +50,7 @@ async def create_ai_model(
     db: Session = Depends(get_db)
 ):
     """Create a new AI model"""
-    await require_permissions(current_user, ["ai_analytics:create"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:create", db)
     
     service = AIAnalyticsService(db)
     model = service.create_ai_model(
@@ -62,7 +61,6 @@ async def create_ai_model(
     
     return AIModelResponse.from_orm(model)
 
-
 @router.get("/models", response_model=List[AIModelResponse])
 async def get_ai_models(
     status: Optional[ModelStatusEnum] = Query(None, description="Filter by model status"),
@@ -71,7 +69,7 @@ async def get_ai_models(
     db: Session = Depends(get_db)
 ):
     """Get AI models for the organization"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
     models = service.get_ai_models(
@@ -82,7 +80,6 @@ async def get_ai_models(
     
     return [AIModelResponse.from_orm(model) for model in models]
 
-
 @router.get("/models/{model_id}", response_model=AIModelResponse)
 async def get_ai_model(
     model_id: int = Path(..., description="AI model ID"),
@@ -90,7 +87,7 @@ async def get_ai_model(
     db: Session = Depends(get_db)
 ):
     """Get a specific AI model"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
     model = service.get_ai_model(current_user.organization_id, model_id)
@@ -100,7 +97,6 @@ async def get_ai_model(
     
     return AIModelResponse.from_orm(model)
 
-
 @router.put("/models/{model_id}", response_model=AIModelResponse)
 async def update_ai_model(
     model_id: int,
@@ -109,7 +105,7 @@ async def update_ai_model(
     db: Session = Depends(get_db)
 ):
     """Update an AI model"""
-    await require_permissions(current_user, ["ai_analytics:update"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:update", db)
     
     service = AIAnalyticsService(db)
     model = service.get_ai_model(current_user.organization_id, model_id)
@@ -127,7 +123,6 @@ async def update_ai_model(
     
     return AIModelResponse.from_orm(model)
 
-
 @router.post("/models/{model_id}/train")
 async def train_ai_model(
     model_id: int,
@@ -136,7 +131,7 @@ async def train_ai_model(
     db: Session = Depends(get_db)
 ):
     """Train an AI model"""
-    await require_permissions(current_user, ["ai_analytics:manage"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
     
     service = AIAnalyticsService(db)
     
@@ -150,7 +145,6 @@ async def train_ai_model(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.post("/models/{model_id}/deploy")
 async def deploy_ai_model(
     model_id: int,
@@ -159,7 +153,7 @@ async def deploy_ai_model(
     db: Session = Depends(get_db)
 ):
     """Deploy an AI model to production"""
-    await require_permissions(current_user, ["ai_analytics:manage"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
     
     service = AIAnalyticsService(db)
     
@@ -172,7 +166,6 @@ async def deploy_ai_model(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.get("/models/{model_id}/performance", response_model=ModelPerformanceSummary)
 async def get_model_performance(
     model_id: int,
@@ -180,7 +173,7 @@ async def get_model_performance(
     db: Session = Depends(get_db)
 ):
     """Get model performance metrics"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
     model = service.get_ai_model(current_user.organization_id, model_id)
@@ -215,7 +208,6 @@ async def get_model_performance(
         performance_metrics=[ModelPerformanceMetricResponse.from_orm(metric) for metric in metrics]
     )
 
-
 # ============================================================================
 # PREDICTION ENDPOINTS
 # ============================================================================
@@ -227,7 +219,7 @@ async def make_prediction(
     db: Session = Depends(get_db)
 ):
     """Make a prediction using a deployed AI model"""
-    await require_permissions(current_user, ["ai_analytics:predict"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:predict", db)
     
     service = AIAnalyticsService(db)
     
@@ -241,7 +233,6 @@ async def make_prediction(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.get("/predictions", response_model=List[PredictionResponse])
 async def get_predictions(
     model_id: Optional[int] = Query(None, description="Filter by model ID"),
@@ -250,7 +241,7 @@ async def get_predictions(
     db: Session = Depends(get_db)
 ):
     """Get prediction results"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
     predictions = service.get_prediction_results(
@@ -261,7 +252,6 @@ async def get_predictions(
     
     return [PredictionResponse.from_orm(prediction) for prediction in predictions]
 
-
 @router.post("/predictions/{prediction_id}/feedback")
 async def submit_prediction_feedback(
     prediction_id: str,
@@ -270,7 +260,7 @@ async def submit_prediction_feedback(
     db: Session = Depends(get_db)
 ):
     """Submit feedback for a prediction"""
-    await require_permissions(current_user, ["ai_analytics:feedback"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:feedback", db)
     
     from app.models.ai_analytics_models import PredictionResult
     
@@ -291,7 +281,6 @@ async def submit_prediction_feedback(
     
     return {"message": "Feedback submitted successfully"}
 
-
 # ============================================================================
 # ANOMALY DETECTION ENDPOINTS
 # ============================================================================
@@ -304,7 +293,7 @@ async def detect_anomalies(
     db: Session = Depends(get_db)
 ):
     """Detect anomalies in business data"""
-    await require_permissions(current_user, ["ai_analytics:detect"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:detect", db)
     
     service = AIAnalyticsService(db)
     anomalies = service.detect_anomalies(
@@ -315,7 +304,6 @@ async def detect_anomalies(
     
     return [AnomalyDetectionResponse.from_orm(anomaly) for anomaly in anomalies]
 
-
 @router.get("/anomalies", response_model=List[AnomalyDetectionResponse])
 async def get_anomalies(
     severity: Optional[SeverityLevel] = Query(None, description="Filter by severity"),
@@ -323,7 +311,7 @@ async def get_anomalies(
     db: Session = Depends(get_db)
 ):
     """Get active anomalies"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
     anomalies = service.get_active_anomalies(
@@ -333,7 +321,6 @@ async def get_anomalies(
     
     return [AnomalyDetectionResponse.from_orm(anomaly) for anomaly in anomalies]
 
-
 @router.put("/anomalies/{anomaly_id}")
 async def update_anomaly(
     anomaly_id: int,
@@ -342,7 +329,7 @@ async def update_anomaly(
     db: Session = Depends(get_db)
 ):
     """Update an anomaly alert"""
-    await require_permissions(current_user, ["ai_analytics:manage"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
     
     from app.models.ai_analytics_models import AnomalyDetection
     
@@ -368,7 +355,6 @@ async def update_anomaly(
     
     return {"message": "Anomaly updated successfully"}
 
-
 # ============================================================================
 # AI INSIGHTS ENDPOINTS
 # ============================================================================
@@ -380,7 +366,7 @@ async def generate_insights(
     db: Session = Depends(get_db)
 ):
     """Generate AI-powered business insights"""
-    await require_permissions(current_user, ["ai_analytics:generate"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:generate", db)
     
     service = AIAnalyticsService(db)
     insights = service.generate_insights(
@@ -390,7 +376,6 @@ async def generate_insights(
     
     return [AIInsightResponse.from_orm(insight) for insight in insights]
 
-
 @router.get("/insights", response_model=List[AIInsightResponse])
 async def get_insights(
     priority: Optional[str] = Query(None, description="Filter by priority"),
@@ -399,7 +384,7 @@ async def get_insights(
     db: Session = Depends(get_db)
 ):
     """Get active AI insights"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
     insights = service.get_active_insights(
@@ -410,7 +395,6 @@ async def get_insights(
     
     return [AIInsightResponse.from_orm(insight) for insight in insights]
 
-
 @router.put("/insights/{insight_id}")
 async def update_insight(
     insight_id: int,
@@ -419,7 +403,7 @@ async def update_insight(
     db: Session = Depends(get_db)
 ):
     """Update an AI insight"""
-    await require_permissions(current_user, ["ai_analytics:manage"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
     
     from app.models.ai_analytics_models import AIInsight
     
@@ -443,7 +427,6 @@ async def update_insight(
     
     return {"message": "Insight updated successfully"}
 
-
 # ============================================================================
 # PREDICTIVE ANALYTICS ENDPOINTS
 # ============================================================================
@@ -455,7 +438,7 @@ async def generate_predictive_analytics(
     db: Session = Depends(get_db)
 ):
     """Generate predictive analytics"""
-    await require_permissions(current_user, ["ai_analytics:predict"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:predict", db)
     
     service = AIAnalyticsService(db)
     
@@ -468,7 +451,6 @@ async def generate_predictive_analytics(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 # ============================================================================
 # AUTOMATION WORKFLOW ENDPOINTS
 # ============================================================================
@@ -480,7 +462,7 @@ async def create_automation_workflow(
     db: Session = Depends(get_db)
 ):
     """Create an automation workflow"""
-    await require_permissions(current_user, ["ai_analytics:automation"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:automation", db)
     
     from app.models.ai_analytics_models import AutomationWorkflow
     
@@ -505,7 +487,6 @@ async def create_automation_workflow(
     
     return AutomationWorkflowResponse.from_orm(workflow)
 
-
 @router.get("/workflows", response_model=List[AutomationWorkflowResponse])
 async def get_automation_workflows(
     workflow_type: Optional[str] = Query(None, description="Filter by workflow type"),
@@ -514,7 +495,7 @@ async def get_automation_workflows(
     db: Session = Depends(get_db)
 ):
     """Get automation workflows"""
-    await require_permissions(current_user, ["ai_analytics:read"], db)
+    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     from app.models.ai_analytics_models import AutomationWorkflow
     

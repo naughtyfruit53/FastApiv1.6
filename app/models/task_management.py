@@ -44,7 +44,8 @@ class Task(Base):
     # Relations
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  # Added for multi-company support
-    project_id = Column(Integer, ForeignKey("task_projects.id"), nullable=True)
+    task_project_id = Column(Integer, ForeignKey("task_projects.id"), nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     
@@ -57,7 +58,8 @@ class Task(Base):
     # Relationships
     organization = relationship("Organization", back_populates="tasks")
     company = relationship("Company", back_populates="tasks")  # Added for multi-company support
-    project = relationship("TaskProject", back_populates="tasks")
+    task_project = relationship("TaskProject", back_populates="tasks")
+    project = relationship("Project", back_populates="tasks")
     creator = relationship("User", foreign_keys=[created_by], back_populates="created_tasks")
     assignee = relationship("User", foreign_keys=[assigned_to], back_populates="assigned_tasks")
     comments = relationship("TaskComment", back_populates="task", cascade="all, delete-orphan")
@@ -89,7 +91,7 @@ class TaskProject(Base):
     organization = relationship("Organization", back_populates="task_projects")
     company = relationship("Company", back_populates="task_projects")  # Added for multi-company support
     creator = relationship("User", back_populates="created_projects")
-    tasks = relationship("Task", back_populates="project")
+    tasks = relationship("Task", back_populates="task_project")
     members = relationship("TaskProjectMember", back_populates="project", cascade="all, delete-orphan")
 
 class TaskProjectMember(Base):

@@ -28,7 +28,8 @@ from app.schemas.workflow import (
     ApprovalHistoryResponse, WorkflowDashboardStats, ApprovalDashboardStats,
     BulkApprovalDecision, BulkWorkflowAction
 )
-from app.services.rbac import require_permission, RBACService
+from app.services.rbac import RBACService
+from app.core.rbac_dependencies import check_service_permission
 
 router = APIRouter()
 
@@ -257,13 +258,13 @@ async def get_approval_dashboard(
 
 # Workflow Template Management
 @router.post("/templates", response_model=WorkflowTemplateResponse)
-@require_permission("workflow", "create")
 async def create_workflow_template(
     template: WorkflowTemplateCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new workflow template"""
+    check_service_permission(current_user, "workflow", "create", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -416,13 +417,13 @@ async def list_workflow_templates(
 
 # Approval Request Management
 @router.post("/approvals", response_model=ApprovalRequestResponse)
-@require_permission("approval", "create")
 async def create_approval_request(
     approval: ApprovalRequestCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new approval request"""
+    check_service_permission(current_user, "approval", "create", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -588,7 +589,6 @@ async def list_approval_requests(
     )
 
 @router.put("/approvals/{approval_id}/decision", response_model=ApprovalRequestResponse)
-@require_permission("approval", "respond")
 async def make_approval_decision(
     approval_id: int,
     decision: ApprovalDecision,
@@ -596,6 +596,7 @@ async def make_approval_decision(
     db: Session = Depends(get_db)
 ):
     """Make a decision on an approval request"""
+    check_service_permission(current_user, "approval", "respond", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -679,13 +680,13 @@ async def make_approval_decision(
 
 # Bulk Operations
 @router.put("/approvals/bulk-decision")
-@require_permission("approval", "respond")
 async def bulk_approval_decision(
     bulk_decision: BulkApprovalDecision,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Make bulk approval decisions"""
+    check_service_permission(current_user, "approval", "respond", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     user_companies = rbac.get_user_companies(current_user.id)

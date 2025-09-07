@@ -24,7 +24,8 @@ from app.schemas.project import (
     DocumentCreate, DocumentUpdate, DocumentResponse, DocumentWithDetails,
     TimeLogCreate, TimeLogUpdate, TimeLogResponse, TimeLogWithDetails, TimeLogApproval
 )
-from app.services.rbac import require_permission, RBACService
+from app.services.rbac import RBACService
+from app.core.rbac_dependencies import check_service_permission
 
 router = APIRouter()
 
@@ -134,13 +135,13 @@ async def get_project_dashboard(
 
 # Project CRUD Operations
 @router.post("/projects", response_model=ProjectResponse)
-@require_permission("project", "create")
 async def create_project(
     project: ProjectCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new project"""
+    check_service_permission(current_user, "project", "create", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -382,7 +383,6 @@ async def get_project(
     )
 
 @router.put("/projects/{project_id}", response_model=ProjectResponse)
-@require_permission("project", "update")
 async def update_project(
     project_id: int,
     project_update: ProjectUpdate,
@@ -390,6 +390,7 @@ async def update_project(
     db: Session = Depends(get_db)
 ):
     """Update a project"""
+    check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -425,13 +426,13 @@ async def update_project(
     return ProjectResponse.from_orm(project)
 
 @router.delete("/projects/{project_id}")
-@require_permission("project", "delete")
 async def delete_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Delete a project"""
+    check_service_permission(current_user, "project", "delete", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
@@ -461,13 +462,13 @@ async def delete_project(
 
 # Bulk Operations
 @router.put("/projects/bulk-update")
-@require_permission("project", "update")
 async def bulk_update_projects(
     bulk_update: BulkProjectUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Bulk update multiple projects"""
+    check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     user_companies = rbac.get_user_companies(current_user.id)
@@ -497,13 +498,13 @@ async def bulk_update_projects(
     return {"message": f"Updated {len(projects)} projects successfully"}
 
 @router.put("/projects/bulk-status")
-@require_permission("project", "update")
 async def bulk_update_project_status(
     status_update: ProjectStatusBulkUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Bulk update project status"""
+    check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     user_companies = rbac.get_user_companies(current_user.id)
@@ -533,7 +534,6 @@ async def bulk_update_project_status(
 
 # Milestone Management
 @router.post("/projects/{project_id}/milestones", response_model=MilestoneResponse)
-@require_permission("project", "update")
 async def create_milestone(
     project_id: int,
     milestone: MilestoneCreate,
@@ -541,6 +541,7 @@ async def create_milestone(
     db: Session = Depends(get_db)
 ):
     """Create a new project milestone"""
+    check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
     
