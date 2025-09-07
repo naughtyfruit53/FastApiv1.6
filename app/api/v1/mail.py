@@ -32,65 +32,89 @@ async def get_mail_dashboard(
 ):
     """Get mail dashboard statistics for current user's organization"""
     org_id = current_user.organization_id
+    if not org_id:
+        return MailDashboardStats(
+            total_emails=0,
+            unread_emails=0,
+            flagged_emails=0,
+            today_emails=0,
+            this_week_emails=0,
+            sent_emails=0,
+            draft_emails=0,
+            spam_emails=0
+        )
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
     week_end = today_start + timedelta(days=7)
     
-    # Base query for user's organization emails
-    base_query = db.query(Email).filter(Email.organization_id == org_id)
-    
-    # Total emails
-    total_emails = base_query.count()
-    
-    # Unread emails
-    unread_emails = base_query.filter(Email.status == "unread").count()
-    
-    # Flagged emails
-    flagged_emails = base_query.filter(Email.is_flagged == True).count()
-    
-    # Today's emails
-    today_emails = base_query.filter(
-        and_(
-            Email.received_at >= today_start,
-            Email.received_at < today_end
+    try:
+        # Base query for user's organization emails
+        base_query = db.query(Email).filter(Email.organization_id == org_id)
+        
+        # Total emails
+        total_emails = base_query.count()
+        
+        # Unread emails
+        unread_emails = base_query.filter(Email.status == "unread").count()
+        
+        # Flagged emails
+        flagged_emails = base_query.filter(Email.is_flagged == True).count()
+        
+        # Today's emails
+        today_emails = base_query.filter(
+            and_(
+                Email.received_at >= today_start,
+                Email.received_at < today_end
+            )
+        ).count()
+        
+        # This week's emails
+        this_week_emails = base_query.filter(
+            and_(
+                Email.received_at >= today_start,
+                Email.received_at < week_end
+            )
+        ).count()
+        
+        # Sent emails
+        sent_emails = db.query(SentEmail).filter(
+            SentEmail.organization_id == org_id
+        ).count()
+        
+        # Draft emails (assuming status = "pending")
+        draft_emails = db.query(SentEmail).filter(
+            and_(
+                SentEmail.organization_id == org_id,
+                SentEmail.status == "pending"
+            )
+        ).count()
+        
+        # Spam emails
+        spam_emails = base_query.filter(Email.status == "spam").count()
+        
+        return MailDashboardStats(
+            total_emails=total_emails,
+            unread_emails=unread_emails,
+            flagged_emails=flagged_emails,
+            today_emails=today_emails,
+            this_week_emails=this_week_emails,
+            sent_emails=sent_emails,
+            draft_emails=draft_emails,
+            spam_emails=spam_emails
         )
-    ).count()
-    
-    # This week's emails
-    this_week_emails = base_query.filter(
-        and_(
-            Email.received_at >= today_start,
-            Email.received_at < week_end
+    except Exception as e:
+        print(f"Error fetching mail dashboard stats: {str(e)}")
+        return MailDashboardStats(
+            total_emails=0,
+            unread_emails=0,
+            flagged_emails=0,
+            today_emails=0,
+            this_week_emails=0,
+            sent_emails=0,
+            draft_emails=0,
+            spam_emails=0
         )
-    ).count()
-    
-    # Sent emails
-    sent_emails = db.query(SentEmail).filter(
-        SentEmail.organization_id == org_id
-    ).count()
-    
-    # Draft emails (assuming status = "pending")
-    draft_emails = db.query(SentEmail).filter(
-        and_(
-            SentEmail.organization_id == org_id,
-            SentEmail.status == "pending"
-        )
-    ).count()
-    
-    # Spam emails
-    spam_emails = base_query.filter(Email.status == "spam").count()
-    
-    return MailDashboardStats(
-        total_emails=total_emails,
-        unread_emails=unread_emails,
-        flagged_emails=flagged_emails,
-        today_emails=today_emails,
-        this_week_emails=this_week_emails,
-        sent_emails=sent_emails,
-        draft_emails=draft_emails,
-        spam_emails=spam_emails
-    )
 
 # Email Accounts
 @router.get("/accounts", response_model=List[EmailAccountWithDetails])
