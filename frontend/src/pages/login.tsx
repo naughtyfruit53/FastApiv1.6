@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import UnifiedLoginForm from "../components/UnifiedLoginForm";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import DemoModeDialog from "../components/DemoModeDialog";
+import OAuthLoginButton from "../components/OAuthLoginButton";
 import { useAuth } from "../context/AuthContext";
 const LoginPage: React.FC = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
@@ -70,7 +71,7 @@ const LoginPage: React.FC = () => {
         window.location.href = "/dashboard";
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error("Failed to establish secure session:", err);
       toast.error("Failed to establish secure session. Please try again.", {
         position: "top-right",
         autoClose: 5000,
@@ -98,6 +99,30 @@ const LoginPage: React.FC = () => {
         </Typography>
         <Box sx={{ p: 3 }}>
           <UnifiedLoginForm onLogin={handleLogin} />
+          
+          {/* OAuth Login Section */}
+          <Box sx={{ mt: 3, mb: 2 }}>
+            <Divider sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                OR SIGN IN WITH
+              </Typography>
+            </Divider>
+            <OAuthLoginButton 
+              variant="button"
+              onSuccess={(result) => {
+                console.log('OAuth login successful:', result);
+                // The OAuth flow should redirect back with auth tokens
+                // This will be handled by the OAuth callback endpoint
+              }}
+              onError={(error) => {
+                console.error('OAuth login error:', error);
+                toast.error(`OAuth Login Failed: ${error}`, {
+                  position: "top-right",
+                  autoClose: 5000,
+                });
+              }}
+            />
+          </Box>
         </Box>
         <Box sx={{ mt: 2 }}>
           <Button
@@ -109,7 +134,7 @@ const LoginPage: React.FC = () => {
           </Button>
         </Box>
         {/* Demo Mode Section */}
-        <Box sx={{ mt: 3, mb: 2 }}>
+        <Box sx={{ mt: 2, mb: 2 }}>
           <Divider sx={{ mb: 2 }}>
             <Typography variant="body2" color="text.secondary">
               OR
