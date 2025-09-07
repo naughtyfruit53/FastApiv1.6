@@ -44,7 +44,7 @@ interface OAuthLoginButtonProps {
 
 const OAuthLoginButton: React.FC<OAuthLoginButtonProps> = ({
   variant = 'button',
-  onSuccess,
+  onSuccess, // Used for OAuth callback handling, not direct success
   onError
 }) => {
   const [open, setOpen] = useState(false);
@@ -75,7 +75,9 @@ const OAuthLoginButton: React.FC<OAuthLoginButtonProps> = ({
     setError(null);
     try {
       const result = await initiateOAuthFlow(provider);
-      // Redirect to OAuth provider
+      // OAuth flow redirects to provider, then back to callback URL
+      // onSuccess will be called by the OAuth callback handler
+      console.log('Initiating OAuth flow for:', provider);
       window.location.href = result.authorization_url;
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || `Failed to initiate ${provider} OAuth flow`;

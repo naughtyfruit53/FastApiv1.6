@@ -582,7 +582,7 @@ const MailDashboard: React.FC = () => {
                         onSuccess={(result) => {
                           console.log('OAuth success:', result);
                           // Refresh email accounts list
-                          fetchMailData();
+                          fetchData();
                         }}
                         onError={(error) => {
                           console.error('OAuth error:', error);
@@ -774,7 +774,7 @@ const MailDashboard: React.FC = () => {
               onSuccess={(result) => {
                 console.log('OAuth success:', result);
                 setShowEmailConfigModal(false);
-                fetchMailData();
+                fetchData();
               }}
               onError={(error) => {
                 console.error('OAuth error:', error);
