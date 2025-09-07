@@ -185,11 +185,14 @@ async def factory_default_system(
 async def create_organization(
     org_data: OrganizationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    request: Request = None
+    current_user: User = Depends(get_current_active_user)
 ):
     """Create new organization (Super admin only)"""
-    PermissionChecker.require_permission(Permission.CREATE_ORGANIZATIONS, current_user, db, request)
+    if not current_user.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super administrators can create organizations"
+        )
   
     try:
         existing_org = db.query(Organization).filter(

@@ -53,7 +53,15 @@ async def get_current_company(
     logger.info(f"[/companies/current] User context: role={current_user.role}, is_super_admin={current_user.is_super_admin}, org_id={current_user.organization_id}")
     
     try:
-        # Restrict app super admins from accessing organization data
+        # For super admins, return a default or null response since they don't have an organization
+        if current_user.is_super_admin and current_user.organization_id is None:
+            logger.info(f"[/companies/current] Super admin access without organization context - returning no company setup")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No company associated with super admin account"
+            )
+        
+        # For organization users, ensure organization context
         org_id = ensure_organization_context(current_user)
         logger.info(f"[/companies/current] Organization context established: org_id={org_id}")
         

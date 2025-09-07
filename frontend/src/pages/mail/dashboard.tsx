@@ -43,7 +43,6 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import api from "../../lib/api";
-import OAuthLoginButton from "../../components/OAuthLoginButton";
 interface MailStats {
   total_emails: number;
   unread_emails: number;
@@ -81,84 +80,77 @@ const MailDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEmailConfigModal, setShowEmailConfigModal] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Fetch mail dashboard stats
-        const statsResponse = await api.get('/api/v1/mail/dashboard');
+        const statsResponse = await api.get('/mail/dashboard');
         setStats(statsResponse.data);
-        
-        // For now, use mock data for recent emails and accounts
-        // TODO: Implement actual endpoints for these
-        const mockEmails: RecentEmail[] = [
-          {
-            id: 1,
-            subject: "Q4 Budget Review Meeting",
-            from_address: "john.doe@company.com",
-            from_name: "John Doe",
-            received_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            is_unread: true,
-            is_flagged: false,
-            has_attachments: true,
-            priority: "high",
-          },
-          {
-            id: 2,
-            subject: "Project Status Update",
-            from_address: "sarah.smith@company.com",
-            from_name: "Sarah Smith",
-            received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            is_unread: true,
-            is_flagged: true,
-            has_attachments: false,
-            priority: "normal",
-          },
-        ];
-        
-        const mockAccounts: EmailAccount[] = [
-          {
-            id: 1,
-            name: "Primary Email",
-            email_address: "admin@company.com",
-            unread_count: 15,
-            sync_status: "success",
-            last_sync: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-          },
-        ];
-        
-        setRecentEmails(mockEmails);
-        setEmailAccounts(mockAccounts);
+
+        // Fetch recent emails
+        const emailsResponse = await api.get('/emails', {
+          params: { page: 1, per_page: 5, sort_by: 'received_at', sort_order: 'desc' },
+        });
+        setRecentEmails(emailsResponse.data.emails);
+
+        // Fetch email accounts
+        const accountsResponse = await api.get('/accounts');
+        setEmailAccounts(accountsResponse.data.map((account: any) => ({
+          id: account.id,
+          name: account.name,
+          email_address: account.email_address,
+          unread_count: account.unread_count,
+          sync_status: account.last_sync_status || 'success',
+          last_sync: account.last_sync_at || new Date().toISOString(),
+        })));
       } catch (error: any) {
         console.error('Error fetching mail dashboard data:', error);
-        setError('Failed to load mail dashboard data. Please try again.');
-        
-        // Fallback to mock data if API fails
-        const mockStats: MailStats = {
-          total_emails: 0,
-          unread_emails: 0,
-          flagged_emails: 0,
-          today_emails: 0,
-          this_week_emails: 0,
-          sent_emails: 0,
-          draft_emails: 0,
-          spam_emails: 0,
-        };
-        setStats(mockStats);
-        setRecentEmails([]);
-        setEmailAccounts([]);
+        const errorMessage = error.response?.status === 401
+          ? 'Authentication failed. Please log in again.'
+          : error.response?.status === 500
+          ? 'Server error. Please try again later.'
+          : error.response?.status === 404
+          ? 'Endpoint not found. Check API URL configuration.'
+          : `Failed to load mail dashboard data: ${error.message || 'Unknown error'}`;
+        setError(errorMessage);
+
+        if (retryCount < maxRetries) {
+          setTimeout(() => {
+            setRetryCount(retryCount + 1);
+          }, 2000);
+        } else {
+          // Fallback to empty data
+          setStats({
+            total_emails: 0,
+            unread_emails: 0,
+            flagged_emails: 0,
+            today_emails: 0,
+            this_week_emails: 0,
+            sent_emails: 0,
+            draft_emails: 0,
+            spam_emails: 0,
+          });
+          setRecentEmails([]);
+          setEmailAccounts([]);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [retryCount]);
+
   const handleNavigate = (path: string) => {
     router.push(path);
   };
+
   const formatTimeAgo = (dateTime: string) => {
     const date = new Date(dateTime);
     const now = new Date();
@@ -166,65 +158,55 @@ const MailDashboard: React.FC = () => {
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    if (diffMins < 1) {
-      return "Just now";
-    }
-    if (diffMins < 60) {
-      return `${diffMins}m ago`;
-    }
-    if (diffHours < 24) {
-      return `${diffHours}h ago`;
-    }
-    if (diffDays < 7) {
-      return `${diffDays}d ago`;
-    }
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "urgent":
-        return "error";
-      case "high":
-        return "warning";
-      case "normal":
-        return "default";
-      case "low":
-        return "info";
-      default:
-        return "default";
+      case "urgent": return "error";
+      case "high": return "warning";
+      case "normal": return "default";
+      case "low": return "info";
+      default: return "default";
     }
   };
+
   const getSyncStatusColor = (status: string) => {
     switch (status) {
-      case "success":
-        return "success";
-      case "error":
-        return "error";
-      case "syncing":
-        return "warning";
-      default:
-        return "default";
+      case "success": return "success";
+      case "error": return "error";
+      case "syncing": return "warning";
+      default: return "default";
     }
   };
+
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
     );
   }
+
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">{error}</Alert>
+        <Button
+          variant="outlined"
+          onClick={() => setRetryCount(retryCount + 1)}
+          sx={{ mt: 2 }}
+        >
+          Retry
+        </Button>
       </Box>
     );
   }
+
   if (!stats) {
     return (
       <Box sx={{ p: 3 }}>
@@ -232,6 +214,7 @@ const MailDashboard: React.FC = () => {
       </Box>
     );
   }
+
   return (
     <Box
       sx={{
@@ -311,20 +294,12 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Total Emails
                   </Typography>
-                  <Typography variant="h5">
-                    {stats.total_emails.toLocaleString()}
-                  </Typography>
+                  <Typography variant="h5">{stats.total_emails.toLocaleString()}</Typography>
                 </Box>
                 <Email color="primary" sx={{ fontSize: 40 }} />
               </Box>
@@ -334,20 +309,12 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Unread
                   </Typography>
-                  <Typography variant="h5" color="warning.main">
-                    {stats.unread_emails}
-                  </Typography>
+                  <Typography variant="h5" color="warning.main">{stats.unread_emails}</Typography>
                 </Box>
                 <Badge badgeContent={stats.unread_emails} color="warning">
                   <MarkEmailUnread color="warning" sx={{ fontSize: 40 }} />
@@ -359,13 +326,7 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Flagged
@@ -380,13 +341,7 @@ const MailDashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
                     Today's Emails
@@ -419,45 +374,22 @@ const MailDashboard: React.FC = () => {
                       sx={{
                         cursor: "pointer",
                         borderRadius: 1,
-                        backgroundColor: email.is_unread
-                          ? "action.hover"
-                          : "transparent",
-                        "&:hover": {
-                          backgroundColor: "action.selected",
-                        },
+                        backgroundColor: email.is_unread ? "action.hover" : "transparent",
+                        "&:hover": { backgroundColor: "action.selected" },
                       }}
                       onClick={() => handleNavigate(`/mail/emails/${email.id}`)}
                     >
                       <ListItemIcon>
-                        <Avatar
-                          sx={{
-                            bgcolor: "primary.main",
-                            width: 32,
-                            height: 32,
-                          }}
-                        >
-                          {email.from_name ? (
-                            email.from_name.charAt(0).toUpperCase()
-                          ) : (
-                            <Person />
-                          )}
+                        <Avatar sx={{ bgcolor: "primary.main", width: 32, height: 32 }}>
+                          {email.from_name ? email.from_name.charAt(0).toUpperCase() : <Person />}
                         </Avatar>
                       </ListItemIcon>
                       <ListItemText
                         primary={
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              flexWrap: "wrap",
-                            }}
-                          >
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                             <Typography
                               variant="subtitle2"
-                              sx={{
-                                fontWeight: email.is_unread ? "bold" : "normal",
-                              }}
+                              sx={{ fontWeight: email.is_unread ? "bold" : "normal" }}
                             >
                               {email.subject}
                             </Typography>
@@ -468,12 +400,8 @@ const MailDashboard: React.FC = () => {
                                 color={getPriorityColor(email.priority) as any}
                               />
                             )}
-                            {email.is_flagged && (
-                              <Flag color="error" sx={{ fontSize: 16 }} />
-                            )}
-                            {email.has_attachments && (
-                              <AttachFile sx={{ fontSize: 16 }} />
-                            )}
+                            {email.is_flagged && <Flag color="error" sx={{ fontSize: 16 }} />}
+                            {email.has_attachments && <AttachFile sx={{ fontSize: 16 }} />}
                           </Box>
                         }
                         secondary={
@@ -501,9 +429,7 @@ const MailDashboard: React.FC = () => {
               </List>
               {recentEmails.length === 0 && (
                 <Box sx={{ textAlign: "center", py: 4 }}>
-                  <Typography color="textSecondary">
-                    No recent emails
-                  </Typography>
+                  <Typography color="textSecondary">No recent emails</Typography>
                   <Button
                     variant="outlined"
                     startIcon={<Add />}
@@ -525,14 +451,7 @@ const MailDashboard: React.FC = () => {
                   <Typography variant="h6" gutterBottom>
                     Quick Actions
                   </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 2,
-                      mt: 2,
-                    }}
-                  >
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
                     <Button
                       variant="outlined"
                       startIcon={<Inbox />}
@@ -573,21 +492,8 @@ const MailDashboard: React.FC = () => {
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">
-                      Email Accounts
-                    </Typography>
+                    <Typography variant="h6">Email Accounts</Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
-                      <OAuthLoginButton 
-                        variant="button"
-                        onSuccess={(result) => {
-                          console.log('OAuth success:', result);
-                          // Refresh email accounts list
-                          fetchData();
-                        }}
-                        onError={(error) => {
-                          console.error('OAuth error:', error);
-                        }}
-                      />
                       <Button
                         variant="outlined"
                         size="small"
@@ -602,23 +508,10 @@ const MailDashboard: React.FC = () => {
                     {emailAccounts.map((account) => (
                       <ListItem
                         key={account.id}
-                        sx={{
-                          borderRadius: 1,
-                          mb: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                        }}
+                        sx={{ borderRadius: 1, mb: 1, border: "1px solid", borderColor: "divider" }}
                       >
                         <ListItemIcon>
-                          <Avatar
-                            sx={{
-                              bgcolor:
-                                getSyncStatusColor(account.sync_status) +
-                                ".main",
-                              width: 32,
-                              height: 32,
-                            }}
-                          >
+                          <Avatar sx={{ bgcolor: getSyncStatusColor(account.sync_status) + ".main", width: 32, height: 32 }}>
                             <Email />
                           </Avatar>
                         </ListItemIcon>
@@ -626,23 +519,15 @@ const MailDashboard: React.FC = () => {
                           primary={account.name}
                           secondary={
                             <Box>
-                              <Typography variant="caption" display="block">
-                                {account.email_address}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="textSecondary"
-                              >
+                              <Typography variant="caption" display="block">{account.email_address}</Typography>
+                              <Typography variant="caption" color="textSecondary">
                                 Last sync: {formatTimeAgo(account.last_sync)}
                               </Typography>
                             </Box>
                           }
                         />
                         <ListItemSecondaryAction>
-                          <Badge
-                            badgeContent={account.unread_count}
-                            color="warning"
-                          >
+                          <Badge badgeContent={account.unread_count} color="warning">
                             <Inbox />
                           </Badge>
                         </ListItemSecondaryAction>
@@ -664,60 +549,24 @@ const MailDashboard: React.FC = () => {
             <Grid item xs={12}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Mail Stats
-                  </Typography>
+                  <Typography variant="h6" gutterBottom>Mail Stats</Typography>
                   <Box sx={{ mt: 2 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
                       <Typography variant="body2">Sent Emails</Typography>
-                      <Typography variant="body2">
-                        {stats.sent_emails}
-                      </Typography>
+                      <Typography variant="body2">{stats.sent_emails}</Typography>
                     </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
                       <Typography variant="body2">This Week</Typography>
-                      <Typography variant="body2">
-                        {stats.this_week_emails}
-                      </Typography>
+                      <Typography variant="body2">{stats.this_week_emails}</Typography>
                     </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
                       <Typography variant="body2">Drafts</Typography>
-                      <Typography variant="body2">
-                        {stats.draft_emails}
-                      </Typography>
+                      <Typography variant="body2">{stats.draft_emails}</Typography>
                     </Box>
                     {stats.spam_emails > 0 && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          mb: 1,
-                        }}
-                      >
-                        <Typography variant="body2" color="error">
-                          Spam
-                        </Typography>
-                        <Typography variant="body2" color="error">
-                          {stats.spam_emails}
-                        </Typography>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                        <Typography variant="body2" color="error">Spam</Typography>
+                        <Typography variant="body2" color="error">{stats.spam_emails}</Typography>
                       </Box>
                     )}
                   </Box>
@@ -727,7 +576,6 @@ const MailDashboard: React.FC = () => {
           </Grid>
         </Grid>
       </Grid>
-
       {/* Email Configuration Modal */}
       <Modal
         open={showEmailConfigModal}
@@ -750,168 +598,87 @@ const MailDashboard: React.FC = () => {
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6">
-              Add Email Account
-            </Typography>
-            <Button
-              onClick={() => setShowEmailConfigModal(false)}
-              sx={{ minWidth: 'auto', p: 1 }}
-            >
+            <Typography variant="h6">Add Email Account</Typography>
+            <Button onClick={() => setShowEmailConfigModal(false)} sx={{ minWidth: 'auto', p: 1 }}>
               <Close />
             </Button>
           </Box>
-
-          {/* OAuth Options */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Quick Setup (Recommended)
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Connect your email account securely with one click:
-            </Typography>
-            <OAuthLoginButton 
-              variant="list"
-              onSuccess={(result) => {
-                console.log('OAuth success:', result);
-                setShowEmailConfigModal(false);
-                fetchData();
-              }}
-              onError={(error) => {
-                console.error('OAuth error:', error);
-              }}
-            />
-          </Box>
-
-          <Divider sx={{ my: 3 }}>
-            <Typography variant="body2" color="text.secondary">
-              OR
-            </Typography>
-          </Divider>
-
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Manual Configuration
-          </Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>Manual Configuration</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Configure your email account manually using IMAP/SMTP settings:
           </Typography>
-
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Account Name"
-                placeholder="e.g., Work Email"
-                helperText="A display name for this email account"
-              />
+              <TextField fullWidth label="Account Name" placeholder="e.g., Work Email" helperText="A display name for this email account" />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email Address"
-                type="email"
-                placeholder="user@example.com"
-              />
+              <TextField fullWidth label="Email Address" type="email" placeholder="user@example.com" />
             </Grid>
-            
             <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-                Incoming Mail (IMAP) Settings
-              </Typography>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Incoming Mail (IMAP) Settings</Typography>
             </Grid>
-            
             <Grid item xs={8}>
-              <TextField
-                fullWidth
-                label="IMAP Server"
-                placeholder="imap.gmail.com"
-              />
+              <TextField fullWidth label="IMAP Server" placeholder="imap.gmail.com" />
             </Grid>
             <Grid item xs={4}>
-              <TextField
-                fullWidth
-                label="Port"
-                type="number"
-                defaultValue="993"
-              />
+              <TextField fullWidth label="Port" type="number" defaultValue="993" />
             </Grid>
             <Grid item xs={12}>
-              <FormControlLabel
-                control={<Switch defaultChecked />}
-                label="Use SSL/TLS"
-              />
+              <FormControlLabel control={<Switch defaultChecked />} label="Use SSL/TLS" />
             </Grid>
-
             <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-                Outgoing Mail (SMTP) Settings
-              </Typography>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Outgoing Mail (SMTP) Settings</Typography>
             </Grid>
-            
             <Grid item xs={8}>
-              <TextField
-                fullWidth
-                label="SMTP Server"
-                placeholder="smtp.gmail.com"
-              />
+              <TextField fullWidth label="SMTP Server" placeholder="smtp.gmail.com" />
             </Grid>
             <Grid item xs={4}>
-              <TextField
-                fullWidth
-                label="Port"
-                type="number"
-                defaultValue="587"
-              />
+              <TextField fullWidth label="Port" type="number" defaultValue="587" />
             </Grid>
             <Grid item xs={12}>
-              <FormControlLabel
-                control={<Switch defaultChecked />}
-                label="Use SSL/TLS"
-              />
+              <FormControlLabel control={<Switch defaultChecked />} label="Use SSL/TLS" />
             </Grid>
-
             <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-                Authentication
-              </Typography>
-            </Grid>
-
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Username"
-                placeholder="Usually your email address"
-              />
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Authentication</Typography>
             </Grid>
             <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Password"
-                type="password"
-                placeholder="Your email password or app password"
-              />
+              <TextField fullWidth label="Username" placeholder="Usually your email address" />
             </Grid>
-
+            <Grid item xs={6}>
+              <TextField fullWidth label="Password" type="password" placeholder="Your email password or app password" />
+            </Grid>
             <Grid item xs={12}>
               <Alert severity="info" sx={{ mt: 2 }}>
-                For Gmail and other modern email providers, you may need to use an "App Password" instead of your regular password. 
+                For Gmail and other modern email providers, you may need to use an "App Password" instead of your regular password.
                 Check your email provider's documentation for details.
               </Alert>
             </Grid>
-
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => setShowEmailConfigModal(false)}
-                >
+                <Button variant="outlined" onClick={() => setShowEmailConfigModal(false)}>
                   Cancel
                 </Button>
                 <Button
                   variant="contained"
-                  onClick={() => {
-                    // TODO: Implement save functionality
-                    alert('Email account configuration will be implemented in the backend');
-                    setShowEmailConfigModal(false);
+                  onClick={async () => {
+                    try {
+                      // TODO: Implement actual save logic by calling /api/v1/accounts endpoint
+                      await api.post('/accounts', {
+                        name: 'Work Email', // Replace with actual form data
+                        email_address: 'user@example.com', // Replace with actual form data
+                        imap_server: 'imap.gmail.com', // Replace with actual form data
+                        imap_port: 993, // Replace with actual form data
+                        smtp_server: 'smtp.gmail.com', // Replace with actual form data
+                        smtp_port: 587, // Replace with actual form data
+                        username: 'user@example.com', // Replace with actual form data
+                        password: 'password', // Replace with actual form data
+                      });
+                      setShowEmailConfigModal(false);
+                      fetchData();
+                    } catch (error) {
+                      console.error('Error saving email account:', error);
+                      setError('Failed to save email account. Please try again.');
+                    }
                   }}
                 >
                   Save Account

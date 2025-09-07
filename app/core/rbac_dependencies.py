@@ -1,5 +1,3 @@
-# app/core/rbac_dependencies.py
-
 """
 FastAPI dependencies for Service CRM RBAC (Role-Based Access Control)
 """
