@@ -1,9 +1,9 @@
 # app/main.py
 
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings as config_settings
@@ -17,6 +17,12 @@ from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
 from app.api.routes import admin
 import logging
 import app.models  # Import all models to register them with Base.metadata
+from app.api.v1.auth import get_current_active_user as get_current_user
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.models.oauth_models import OAuthProvider
+from app.services.oauth_service import OAuth2Service
+from app.models.user_models import User
 
 # Configure logging at the top
 logging.basicConfig(level=logging.INFO)
@@ -198,6 +204,9 @@ except Exception as import_error:
     logger.error(f"Failed to import reporting_hub_router: {str(import_error)}")
     raise
 
+# Import OAuth router
+from app.api.v1 import oauth as v1_oauth
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
@@ -323,6 +332,14 @@ app.include_router(
     tags=["gst"]
 )
 logger.info("GST router included successfully at prefix: /api/v1/gst")
+
+# OAuth API
+app.include_router(
+    v1_oauth.router,
+    prefix="/api/v1/oauth",
+    tags=["oauth"]
+)
+logger.info("OAuth router included successfully at prefix: /api/v1/oauth")
 
 # ------------------------------------------------------------------------------
 # LEGACY API ROUTERS (business modules)
@@ -476,6 +493,49 @@ app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{b
 logger.info("BOM router included successfully at prefix: /api/v1")
 app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])  # Potential dynamic paths
 logger.info("Manufacturing router included successfully at prefix: /api/v1")
+
+@app.get("/mail/oauth/{provider}")
+async def mail_oauth_redirect(
+    provider: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Redirect to OAuth provider authorization URL for demo purposes
+    """
+    try:
+        oauth_provider = OAuthProvider(provider.lower())
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported OAuth provider: {provider}"
+        )
+    
+    redirect_uri = config_settings.OAUTH_REDIRECT_URI
+    
+    oauth_service = OAuth2Service(db)
+    try:
+        auth_url, state = oauth_service.create_authorization_url(
+            provider=oauth_provider,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
+            redirect_uri=redirect_uri
+        )
+        
+        return RedirectResponse(url=auth_url)
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"OAuth redirect error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to redirect to authorization URL"
+        )
 
 @app.get("/routes")
 def get_routes():

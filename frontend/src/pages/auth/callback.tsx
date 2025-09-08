@@ -26,20 +26,27 @@ const OAuthCallback: React.FC = () => {
 
   useEffect(() => {
     const processCallback = async () => {
-      const { provider, code, state, error, error_description } = router.query;
+      const { code, state, error, error_description } = router.query;
 
-      if (!provider || (!code && !error)) {
+      if (!code && !error) {
         // Still loading or missing parameters
+        return;
+      }
+
+      const provider = localStorage.getItem(`oauth_provider_${state as string}`);
+      if (!provider) {
+        setStatus('error');
+        setMessage('Invalid authentication state. Please try again.');
         return;
       }
 
       try {
         if (error) {
-          throw new Error(error_description as string || error as string);
+          throw new Error((error_description as string) || (error as string));
         }
 
         const result = await handleOAuthCallback(
-          provider as string,
+          provider,
           code as string,
           state as string,
           error as string,
@@ -50,6 +57,9 @@ const OAuthCallback: React.FC = () => {
         setStatus('success');
         setMessage(`Successfully connected ${provider} email account`);
 
+        // Clean up storage
+        localStorage.removeItem(`oauth_provider_${state as string}`);
+
         // Redirect to mail dashboard after a short delay
         setTimeout(() => {
           router.push('/mail/dashboard');
@@ -59,6 +69,8 @@ const OAuthCallback: React.FC = () => {
         console.error('OAuth callback error:', err);
         setStatus('error');
         setMessage(err.message || 'Failed to complete OAuth authentication');
+        // Clean up on error as well
+        localStorage.removeItem(`oauth_provider_${state as string}`);
       }
     };
 

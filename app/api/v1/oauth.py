@@ -99,7 +99,7 @@ async def oauth_login(
         )
 
 
-@router.post("/callback/{provider}")
+@router.get("/callback/{provider}")
 async def oauth_callback(
     provider: str,
     code: str = Query(..., description="Authorization code from OAuth provider"),

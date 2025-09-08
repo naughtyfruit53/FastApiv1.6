@@ -95,6 +95,8 @@ export const useOAuth = () => {
       const response = await apiClient.post(`/api/v1/oauth/login/${provider}`, {
         redirect_uri: redirectUri
       });
+      // Store provider with state for callback
+      localStorage.setItem(`oauth_provider_${response.data.state}`, provider);
       return response.data;
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || `Failed to initiate ${provider} OAuth flow`;
@@ -120,7 +122,7 @@ export const useOAuth = () => {
         throw new Error(errorDescription || error);
       }
 
-      const response = await apiClient.post(`/api/v1/oauth/callback/${provider}`, null, {
+      const response = await apiClient.get(`/api/v1/oauth/callback/${provider}`, {
         params: { code, state, error, error_description: errorDescription }
       });
       return response.data;

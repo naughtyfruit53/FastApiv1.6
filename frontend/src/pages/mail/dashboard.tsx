@@ -40,9 +40,11 @@ import {
   Archive,
   Settings,
   Close,
+  Google,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import api from "../../lib/api";
+
 interface MailStats {
   total_emails: number;
   unread_emails: number;
@@ -53,6 +55,7 @@ interface MailStats {
   draft_emails: number;
   spam_emails: number;
 }
+
 interface RecentEmail {
   id: number;
   subject: string;
@@ -64,6 +67,7 @@ interface RecentEmail {
   has_attachments: boolean;
   priority: "low" | "normal" | "high" | "urgent";
 }
+
 interface EmailAccount {
   id: number;
   name: string;
@@ -72,6 +76,7 @@ interface EmailAccount {
   sync_status: "success" | "error" | "syncing";
   last_sync: string;
 }
+
 const MailDashboard: React.FC = () => {
   const router = useRouter();
   const [stats, setStats] = useState<MailStats | null>(null);
@@ -82,6 +87,17 @@ const MailDashboard: React.FC = () => {
   const [showEmailConfigModal, setShowEmailConfigModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
+  const [noAccounts, setNoAccounts] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    name: '',
+    email_address: '',
+    imap_server: '',
+    imap_port: 993,
+    smtp_server: '',
+    smtp_port: 587,
+    username: '',
+    password: '',
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,14 +110,15 @@ const MailDashboard: React.FC = () => {
         setStats(statsResponse.data);
 
         // Fetch recent emails
-        const emailsResponse = await api.get('/emails', {
+        const emailsResponse = await api.get('/mail/emails', {
           params: { page: 1, per_page: 5, sort_by: 'received_at', sort_order: 'desc' },
         });
         setRecentEmails(emailsResponse.data.emails);
 
         // Fetch email accounts
-        const accountsResponse = await api.get('/accounts');
-        setEmailAccounts(accountsResponse.data.map((account: any) => ({
+        const accountsResponse = await api.get('/mail/accounts');
+        const accountsData = accountsResponse.data;
+        setEmailAccounts(accountsData.map((account: any) => ({
           id: account.id,
           name: account.name,
           email_address: account.email_address,
@@ -109,6 +126,10 @@ const MailDashboard: React.FC = () => {
           sync_status: account.last_sync_status || 'success',
           last_sync: account.last_sync_at || new Date().toISOString(),
         })));
+        setNoAccounts(accountsData.length === 0);
+        if (accountsData.length === 0) {
+          setShowEmailConfigModal(true); // Auto-open modal if no accounts
+        }
       } catch (error: any) {
         console.error('Error fetching mail dashboard data:', error);
         let errorMessage = 'Failed to load mail dashboard data';
@@ -129,6 +150,8 @@ const MailDashboard: React.FC = () => {
           errorMessage = 'Server error. Please try again later.';
         } else if (status === 404) {
           errorMessage = 'No email accounts configured. Please set up an email account.';
+          setNoAccounts(true);
+          setShowEmailConfigModal(true); // Auto-open modal on 404
         }
 
         setError(errorMessage);
@@ -138,7 +161,6 @@ const MailDashboard: React.FC = () => {
             setRetryCount(retryCount + 1);
           }, 2000);
         } else {
-          // Fallback to empty data
           setStats({
             total_emails: 0,
             unread_emails: 0,
@@ -159,6 +181,32 @@ const MailDashboard: React.FC = () => {
 
     fetchData();
   }, [retryCount]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setAccountForm(prev => ({
+      ...prev,
+      [name]: name.includes('port') ? parseInt(value) || '' : value,
+    }));
+  };
+
+  const handleSaveAccount = async () => {
+    try {
+      await api.post('/mail/accounts', {
+        ...accountForm,
+      });
+      setShowEmailConfigModal(false);
+      setRetryCount(prev => prev + 1); // Refresh data
+    } catch (error) {
+      console.error('Error saving email account:', error);
+      setError('Failed to save email account. Please try again.');
+    }
+  };
+
+  const handleGoogleOAuth = () => {
+    // Trigger backend OAuth for Google
+    window.location.href = '/mail/oauth/google'; // Assuming backend handles redirect
+  };
 
   const handleNavigate = (path: string) => {
     router.push(path);
@@ -278,6 +326,23 @@ const MailDashboard: React.FC = () => {
           Mail Dashboard
         </Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
+          {noAccounts && (
+            <Button
+              variant="contained"
+              startIcon={<Google />}
+              onClick={handleGoogleOAuth}
+              sx={{
+                borderRadius: 2,
+                transition: "all 0.2s ease-in-out",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                },
+              }}
+            >
+              Setup with Google
+            </Button>
+          )}
           <Button
             variant="outlined"
             startIcon={<Sync />}
@@ -622,19 +687,49 @@ const MailDashboard: React.FC = () => {
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <TextField fullWidth label="Account Name" placeholder="e.g., Work Email" helperText="A display name for this email account" />
+              <TextField 
+                fullWidth 
+                label="Account Name" 
+                placeholder="e.g., Work Email" 
+                helperText="A display name for this email account" 
+                name="name"
+                value={accountForm.name}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={12}>
-              <TextField fullWidth label="Email Address" type="email" placeholder="user@example.com" />
+              <TextField 
+                fullWidth 
+                label="Email Address" 
+                type="email" 
+                placeholder="user@example.com" 
+                name="email_address"
+                value={accountForm.email_address}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Incoming Mail (IMAP) Settings</Typography>
             </Grid>
             <Grid item xs={8}>
-              <TextField fullWidth label="IMAP Server" placeholder="imap.gmail.com" />
+              <TextField 
+                fullWidth 
+                label="IMAP Server" 
+                placeholder="imap.gmail.com" 
+                name="imap_server"
+                value={accountForm.imap_server}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={4}>
-              <TextField fullWidth label="Port" type="number" defaultValue="993" />
+              <TextField 
+                fullWidth 
+                label="Port" 
+                type="number" 
+                name="imap_port"
+                value={accountForm.imap_port}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={12}>
               <FormControlLabel control={<Switch defaultChecked />} label="Use SSL/TLS" />
@@ -643,10 +738,24 @@ const MailDashboard: React.FC = () => {
               <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Outgoing Mail (SMTP) Settings</Typography>
             </Grid>
             <Grid item xs={8}>
-              <TextField fullWidth label="SMTP Server" placeholder="smtp.gmail.com" />
+              <TextField 
+                fullWidth 
+                label="SMTP Server" 
+                placeholder="smtp.gmail.com" 
+                name="smtp_server"
+                value={accountForm.smtp_server}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={4}>
-              <TextField fullWidth label="Port" type="number" defaultValue="587" />
+              <TextField 
+                fullWidth 
+                label="Port" 
+                type="number" 
+                name="smtp_port"
+                value={accountForm.smtp_port}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={12}>
               <FormControlLabel control={<Switch defaultChecked />} label="Use SSL/TLS" />
@@ -655,10 +764,25 @@ const MailDashboard: React.FC = () => {
               <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Authentication</Typography>
             </Grid>
             <Grid item xs={6}>
-              <TextField fullWidth label="Username" placeholder="Usually your email address" />
+              <TextField 
+                fullWidth 
+                label="Username" 
+                placeholder="Usually your email address" 
+                name="username"
+                value={accountForm.username}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={6}>
-              <TextField fullWidth label="Password" type="password" placeholder="Your email password or app password" />
+              <TextField 
+                fullWidth 
+                label="Password" 
+                type="password" 
+                placeholder="Your email password or app password" 
+                name="password"
+                value={accountForm.password}
+                onChange={handleInputChange}
+              />
             </Grid>
             <Grid item xs={12}>
               <Alert severity="info" sx={{ mt: 2 }}>
@@ -673,26 +797,7 @@ const MailDashboard: React.FC = () => {
                 </Button>
                 <Button
                   variant="contained"
-                  onClick={async () => {
-                    try {
-                      // TODO: Implement actual save logic by calling /api/v1/accounts endpoint
-                      await api.post('/accounts', {
-                        name: 'Work Email', // Replace with actual form data
-                        email_address: 'user@example.com', // Replace with actual form data
-                        imap_server: 'imap.gmail.com', // Replace with actual form data
-                        imap_port: 993, // Replace with actual form data
-                        smtp_server: 'smtp.gmail.com', // Replace with actual form data
-                        smtp_port: 587, // Replace with actual form data
-                        username: 'user@example.com', // Replace with actual form data
-                        password: 'password', // Replace with actual form data
-                      });
-                      setShowEmailConfigModal(false);
-                      fetchData();
-                    } catch (error) {
-                      console.error('Error saving email account:', error);
-                      setError('Failed to save email account. Please try again.');
-                    }
-                  }}
+                  onClick={handleSaveAccount}
                 >
                   Save Account
                 </Button>
@@ -704,4 +809,5 @@ const MailDashboard: React.FC = () => {
     </Box>
   );
 };
+
 export default MailDashboard;
