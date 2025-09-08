@@ -111,13 +111,26 @@ const MailDashboard: React.FC = () => {
         })));
       } catch (error: any) {
         console.error('Error fetching mail dashboard data:', error);
-        const errorMessage = error.response?.status === 401
-          ? 'Authentication failed. Please log in again.'
-          : error.response?.status === 500
-          ? 'Server error. Please try again later.'
-          : error.response?.status === 404
-          ? 'Endpoint not found. Check API URL configuration.'
-          : `Failed to load mail dashboard data: ${error.message || 'Unknown error'}`;
+        let errorMessage = 'Failed to load mail dashboard data';
+        if (error.response?.data?.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.userMessage) {
+          errorMessage = error.userMessage;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        const status = error.status || error.response?.status;
+        if (status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to access the mail dashboard. Contact your administrator.';
+        } else if (status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (status === 404) {
+          errorMessage = 'No email accounts configured. Please set up an email account.';
+        }
+
         setError(errorMessage);
 
         if (retryCount < maxRetries) {

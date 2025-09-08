@@ -1,5 +1,6 @@
 # app/main.py
 
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -15,6 +16,7 @@ from app.api.v1 import stock as v1_stock
 from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
 from app.api.routes import admin
 import logging
+import app.models  # Import all models to register them with Base.metadata
 
 # Configure logging at the top
 logging.basicConfig(level=logging.INFO)
@@ -153,7 +155,7 @@ except Exception as import_error:
     logger.error(f"Failed to import mail_router: {str(import_error)}")
     raise
 
-# Import Business Suite Core Module APIs
+# Import Business Suite Core Module routers
 try:
     from app.api.v1 import master_data as v1_master_data
     logger.info("Successfully imported master_data_router")
@@ -194,10 +196,6 @@ try:
     logger.info("Successfully imported reporting_hub_router")
 except Exception as import_error:
     logger.error(f"Failed to import reporting_hub_router: {str(import_error)}")
-    raise
-    logger.info("Successfully imported mail_router")
-except Exception as import_error:
-    logger.error(f"Failed to import mail_router: {str(import_error)}")
     raise
 
 # Create FastAPI app
@@ -338,7 +336,7 @@ logger.info("Users router included successfully at prefix: /api/v1/users")
 app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
 logger.info("Admin legacy router included successfully at prefix: /api/admin")
 app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
-logger.info("Companies router included successfully at prefix: /api/v1/companies")
+logger.info("Companies router included in at prefix: /api/v1/companies")
 app.include_router(vendors.router, prefix="/api/v1/vendors", tags=["vendors"])
 logger.info("Vendors router included successfully at prefix: /api/v1/vendors")
 app.include_router(customers.router, prefix="/api/v1/customers", tags=["customers"])

@@ -12,7 +12,7 @@ from datetime import datetime
 from decimal import Decimal
 import enum
 
-from .base import Base
+from app.core.database import Base
 
 
 class CategoryType(enum.Enum):
@@ -163,7 +163,7 @@ class TaxCode(Base):
     
     # Tax configuration
     tax_rate = Column(Numeric(5, 2), nullable=False)  # Percentage rate
-    is_compound = Column(Boolean, default=False, nullable=False)  # Compound tax calculation
+    is_compound = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     
     # Tax components (for GST: CGST, SGST, IGST)

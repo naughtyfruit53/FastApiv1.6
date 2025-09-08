@@ -1,3 +1,5 @@
+# app/core/rbac_dependencies.py
+
 """
 FastAPI dependencies for Service CRM RBAC (Role-Based Access Control)
 """
@@ -97,14 +99,6 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         "work_order_update": [Permission.MANAGE_USERS],
         "work_order_delete": [Permission.DELETE_USERS],
         
-        # Reports permissions
-        "service_reports_read": [Permission.VIEW_AUDIT_LOGS],
-        "service_reports_export": [Permission.VIEW_AUDIT_LOGS],
-        
-        # Admin permissions
-        "crm_admin": [Permission.MANAGE_ORGANIZATIONS, Permission.SUPER_ADMIN],
-        "crm_settings": [Permission.MANAGE_ORGANIZATIONS, Permission.ACCESS_ORG_SETTINGS],
-        
         # SLA management permissions
         "sla_create": [Permission.CREATE_USERS],
         "sla_read": [Permission.VIEW_USERS],
@@ -150,7 +144,34 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         # Analytics permissions
         "analytics_read": [Permission.VIEW_USERS, Permission.VIEW_AUDIT_LOGS],
         "analytics_manage": [Permission.MANAGE_USERS, Permission.MANAGE_ORGANIZATIONS],  # Manager only
-        "analytics_export": [Permission.VIEW_AUDIT_LOGS, Permission.MANAGE_USERS]
+        "analytics_export": [Permission.VIEW_AUDIT_LOGS, Permission.MANAGE_USERS],
+        
+        # Mail module permissions
+        "mail:dashboard:read": [Permission.ACCESS_ORG_SETTINGS],
+        "mail:accounts:read": [Permission.ACCESS_ORG_SETTINGS],
+        "mail:accounts:create": [Permission.CREATE_USERS],
+        "mail:accounts:update": [Permission.MANAGE_USERS],
+        "mail:accounts:delete": [Permission.DELETE_USERS],
+        "mail:emails:read": [Permission.ACCESS_ORG_SETTINGS],
+        "mail:emails:compose": [Permission.MANAGE_USERS],
+        "mail:emails:update": [Permission.MANAGE_USERS],
+        "mail:emails:sync": [Permission.MANAGE_USERS],
+        "mail:templates:read": [Permission.ACCESS_ORG_SETTINGS],
+        "mail:templates:create": [Permission.MANAGE_USERS],
+        
+        # Sticky notes permissions
+        "sticky_notes:read": [Permission.ACCESS_ORG_SETTINGS],
+        "sticky_notes:create": [Permission.ACCESS_ORG_SETTINGS],
+        "sticky_notes:update": [Permission.ACCESS_ORG_SETTINGS],
+        "sticky_notes:delete": [Permission.ACCESS_ORG_SETTINGS],
+        
+        # Reports permissions
+        "service_reports_read": [Permission.VIEW_AUDIT_LOGS],
+        "service_reports_export": [Permission.VIEW_AUDIT_LOGS],
+        
+        # Admin permissions
+        "crm_admin": [Permission.MANAGE_ORGANIZATIONS, Permission.SUPER_ADMIN],
+        "crm_settings": [Permission.MANAGE_ORGANIZATIONS, Permission.ACCESS_ORG_SETTINGS],
     }
     
     return fallback_map.get(service_permission, [])

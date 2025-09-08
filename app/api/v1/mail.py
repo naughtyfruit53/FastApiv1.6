@@ -14,7 +14,8 @@ import logging
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user as get_current_user
 from app.core.rbac_dependencies import check_service_permission, RBACDependency
-from app.models import User, Organization, EmailAccount, Email, EmailAttachment, SentEmail, EmailAction, EmailTemplate, EmailRule
+from app.models.user_models import User, Organization
+from app.models.mail_management import EmailAccount, Email, EmailAttachment, SentEmail, EmailAction, EmailTemplate, EmailRule
 from app.schemas.mail_schemas import (
     EmailAccountCreate, EmailAccountUpdate, EmailAccountResponse, EmailAccountWithDetails,
     EmailCreate, EmailUpdate, EmailResponse, EmailWithDetails, EmailList, EmailFilter,
@@ -61,12 +62,6 @@ async def get_mail_dashboard(
             EmailAccount.user_id == current_user.id
         )
     ).count()
-    if email_accounts == 0:
-        logger.warning(f"No email accounts configured for user {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No email accounts configured. Please set up an email account."
-        )
 
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)

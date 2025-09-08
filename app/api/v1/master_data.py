@@ -1,3 +1,5 @@
+# app/api/v1/master_data.py
+
 """
 Master Data API endpoints for Categories, Units, Payment Terms, and Tax Codes
 These endpoints provide complete CRUD operations for master data management
@@ -25,7 +27,7 @@ from app.schemas.master_data import (
     UnitCreate, UnitUpdate, UnitResponse, UnitList, UnitFilter, UnitConversion,
     TaxCodeCreate, TaxCodeUpdate, TaxCodeResponse, TaxCodeList, TaxCodeFilter, TaxCalculation,
     PaymentTermsExtendedCreate, PaymentTermsExtendedUpdate, PaymentTermsExtendedResponse,
-    PaymentTermsExtendedList, PaymentTermsExtendedList, PaymentTermsExtendedFilter,
+    PaymentTermsExtendedList, PaymentTermsExtendedFilter,
     BulkCategoryUpdate, BulkUnitUpdate, BulkTaxCodeUpdate, BulkPaymentTermsUpdate,
     MasterDataStats
 )
@@ -161,8 +163,8 @@ async def get_master_data_dashboard(
 
 @router.get("/categories", response_model=CategoryList)
 async def get_categories(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=1000),
     category_filter: CategoryFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -196,14 +198,14 @@ async def get_categories(
         total = query.count()
         
         # Apply pagination and ordering
-        categories = query.order_by(Category.sort_order, Category.name).offset(skip).limit(limit).all()
+        categories = query.order_by(Category.sort_order, Category.name).offset((page-1)*per_page).limit(per_page).all()
         
         return CategoryList(
             items=categories,
             total=total,
-            page=skip // limit + 1,
-            size=limit,
-            pages=(total + limit - 1) // limit
+            page=page,
+            per_page=per_page,
+            total_pages=(total + per_page - 1) // per_page
         )
         
     except Exception as e:
@@ -402,8 +404,8 @@ async def delete_category(
 
 @router.get("/units", response_model=UnitList)
 async def get_units(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=1000),
     unit_filter: UnitFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -437,14 +439,14 @@ async def get_units(
         total = query.count()
         
         # Apply pagination and ordering
-        units = query.order_by(Unit.unit_type, Unit.name).offset(skip).limit(limit).all()
+        units = query.order_by(Unit.unit_type, Unit.name).offset((page-1)*per_page).limit(per_page).all()
         
         return UnitList(
             items=units,
             total=total,
-            page=skip // limit + 1,
-            size=limit,
-            pages=(total + limit - 1) // limit
+            page=page,
+            per_page=per_page,
+            total_pages=(total + per_page - 1) // per_page
         )
         
     except Exception as e:
@@ -565,8 +567,8 @@ async def convert_units(
 
 @router.get("/tax-codes", response_model=TaxCodeList)
 async def get_tax_codes(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=1000),
     tax_filter: TaxCodeFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -600,14 +602,14 @@ async def get_tax_codes(
         total = query.count()
         
         # Apply pagination and ordering
-        tax_codes = query.order_by(TaxCode.tax_type, TaxCode.tax_rate).offset(skip).limit(limit).all()
+        tax_codes = query.order_by(TaxCode.tax_type, TaxCode.tax_rate).offset((page-1)*per_page).limit(per_page).all()
         
         return TaxCodeList(
             items=tax_codes,
             total=total,
-            page=skip // limit + 1,
-            size=limit,
-            pages=(total + limit - 1) // limit
+            page=page,
+            per_page=per_page,
+            total_pages=(total + per_page - 1) // per_page
         )
         
     except Exception as e:
@@ -690,7 +692,7 @@ async def calculate_tax(
             tax_calculation.amount, tax_code
         )
         
-        tax_calculation.converted_value = calculation_result["tax_amount"]
+        tax_calculation.calculated_tax = calculation_result["tax_amount"]
         tax_calculation.tax_breakdown = calculation_result["breakdown"]
         
         return tax_calculation
@@ -708,8 +710,8 @@ async def calculate_tax(
 
 @router.get("/payment-terms", response_model=PaymentTermsExtendedList)
 async def get_payment_terms(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=1000),
     payment_terms_filter: PaymentTermsExtendedFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -740,14 +742,14 @@ async def get_payment_terms(
         total = query.count()
         
         # Apply pagination and ordering
-        payment_terms = query.order_by(PaymentTermsExtended.payment_days, PaymentTermsExtended.name).offset(skip).limit(limit).all()
+        payment_terms = query.order_by(PaymentTermsExtended.payment_days, PaymentTermsExtended.name).offset((page-1)*per_page).limit(per_page).all()
         
         return PaymentTermsExtendedList(
             items=payment_terms,
             total=total,
-            page=skip // limit + 1,
-            size=limit,
-            pages=(total + limit - 1) // limit
+            page=page,
+            per_page=per_page,
+            total_pages=(total + per_page - 1) // per_page
         )
         
     except Exception as e:
