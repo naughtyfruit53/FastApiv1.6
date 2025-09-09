@@ -44,6 +44,7 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import api from "../../lib/api";
+import { useAuth } from "../../context/AuthContext"; // Corrected path
 
 interface MailStats {
   total_emails: number;
@@ -79,6 +80,7 @@ interface EmailAccount {
 
 const MailDashboard: React.FC = () => {
   const router = useRouter();
+  const { logout } = useAuth(); // Add this
   const [stats, setStats] = useState<MailStats | null>(null);
   const [recentEmails, setRecentEmails] = useState<RecentEmail[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
@@ -144,6 +146,8 @@ const MailDashboard: React.FC = () => {
         const status = error.status || error.response?.status;
         if (status === 401) {
           errorMessage = 'Authentication failed. Please log in again.';
+          logout(); // Add this to logout on 401
+          router.push('/login'); // Redirect to login
         } else if (status === 403) {
           errorMessage = 'You do not have permission to access the mail dashboard. Contact your administrator.';
         } else if (status === 500) {
@@ -180,7 +184,7 @@ const MailDashboard: React.FC = () => {
     };
 
     fetchData();
-  }, [retryCount]);
+  }, [retryCount, logout, router]); // Add logout and router to dependencies
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

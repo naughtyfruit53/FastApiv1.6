@@ -81,7 +81,7 @@ class UserEmailTokenUpdate(BaseModel):
 class UserEmailTokenResponse(UserEmailTokenBase):
     id: int
     user_id: int
-    organization_id: int
+    organization_id: Optional[int] = None
     token_type: str
     expires_at: Optional[datetime]
     status: TokenStatusEnum

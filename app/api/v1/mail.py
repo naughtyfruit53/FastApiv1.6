@@ -42,7 +42,7 @@ require_mail_templates_read = RBACDependency("mail:templates:read")
 require_mail_templates_create = RBACDependency("mail:templates:create")
 
 # Mail Dashboard
-@router.get("/dashboard", response_model=MailDashboardStats, dependencies=[Depends(require_mail_read)])
+@router.get("/dashboard", response_model=MailDashboardStats)
 async def get_mail_dashboard(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -132,7 +132,7 @@ async def get_mail_dashboard(
         )
 
 # Email Accounts
-@router.get("/accounts", response_model=List[EmailAccountWithDetails], dependencies=[Depends(require_mail_accounts_read)])
+@router.get("/accounts", response_model=List[EmailAccountWithDetails])
 async def get_email_accounts(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -165,7 +165,7 @@ async def get_email_accounts(
     logger.info(f"Fetched {len(account_details)} email accounts for user {current_user.id}")
     return account_details
 
-@router.post("/accounts", response_model=EmailAccountResponse, dependencies=[Depends(require_mail_accounts_create)])
+@router.post("/accounts", response_model=EmailAccountResponse)
 async def create_email_account(
     account_data: EmailAccountCreate,
     current_user: User = Depends(get_current_user),
@@ -202,7 +202,7 @@ async def create_email_account(
     logger.info(f"Created email account {account.email_address} for user {current_user.id}")
     return EmailAccountResponse.model_validate(account)
 
-@router.get("/accounts/{account_id}", response_model=EmailAccountWithDetails, dependencies=[Depends(require_mail_accounts_read)])
+@router.get("/accounts/{account_id}", response_model=EmailAccountWithDetails)
 async def get_email_account(
     account_id: int,
     current_user: User = Depends(get_current_user),
@@ -241,7 +241,7 @@ async def get_email_account(
     logger.info(f"Fetched email account {account_id} for user {current_user.id}")
     return EmailAccountWithDetails(**account_dict)
 
-@router.put("/accounts/{account_id}", response_model=EmailAccountResponse, dependencies=[Depends(require_mail_accounts_update)])
+@router.put("/accounts/{account_id}", response_model=EmailAccountResponse)
 async def update_email_account(
     account_id: int,
     account_data: EmailAccountUpdate,
@@ -276,7 +276,7 @@ async def update_email_account(
     logger.info(f"Updated email account {account_id} for user {current_user.id}")
     return EmailAccountResponse.model_validate(account)
 
-@router.delete("/accounts/{account_id}", dependencies=[Depends(require_mail_accounts_delete)])
+@router.delete("/accounts/{account_id}")
 async def delete_email_account(
     account_id: int,
     current_user: User = Depends(get_current_user),
@@ -304,7 +304,7 @@ async def delete_email_account(
     return {"message": "Email account deleted successfully"}
 
 # Emails
-@router.get("/emails", response_model=EmailList, dependencies=[Depends(require_mail_emails_read)])
+@router.get("/emails", response_model=EmailList)
 async def get_emails(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -415,7 +415,7 @@ async def get_emails(
         total_pages=total_pages
     )
 
-@router.get("/emails/{email_id}", response_model=EmailWithDetails, dependencies=[Depends(require_mail_emails_read)])
+@router.get("/emails/{email_id}", response_model=EmailWithDetails)
 async def get_email(
     email_id: int,
     current_user: User = Depends(get_current_user),
@@ -489,7 +489,7 @@ async def get_email(
     logger.info(f"Fetched email {email_id} for user {current_user.id}")
     return EmailWithDetails(**email_dict)
 
-@router.put("/emails/{email_id}", response_model=EmailResponse, dependencies=[Depends(require_mail_emails_update)])
+@router.put("/emails/{email_id}", response_model=EmailResponse)
 async def update_email(
     email_id: int,
     email_data: EmailUpdate,
@@ -542,7 +542,7 @@ async def update_email(
     logger.info(f"Updated email {email_id} for user {current_user.id}")
     return EmailResponse.model_validate(email)
 
-@router.post("/compose", response_model=SentEmailResponse, dependencies=[Depends(require_mail_emails_compose)])
+@router.post("/compose", response_model=SentEmailResponse)
 async def compose_and_send_email(
     compose_request: MailComposeRequest,
     current_user: User = Depends(get_current_user),
@@ -614,7 +614,7 @@ async def compose_and_send_email(
     logger.info(f"Composed and sent email from account {compose_request.account_id} by user {current_user.id}")
     return SentEmailResponse.model_validate(sent_email)
 
-@router.post("/sync", response_model=MailSyncResponse, dependencies=[Depends(require_mail_emails_sync)])
+@router.post("/sync", response_model=MailSyncResponse)
 async def sync_emails(
     sync_request: MailSyncRequest,
     current_user: User = Depends(get_current_user),
@@ -675,7 +675,7 @@ async def sync_emails(
         errors=errors if errors else None
     )
 
-@router.get("/templates", response_model=List[EmailTemplateWithDetails], dependencies=[Depends(require_mail_templates_read)])
+@router.get("/templates", response_model=List[EmailTemplateWithDetails])
 async def get_email_templates(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -698,7 +698,7 @@ async def get_email_templates(
     logger.info(f"Fetched {len(template_details)} email templates for user {current_user.id}")
     return template_details
 
-@router.post("/templates", response_model=EmailTemplateResponse, dependencies=[Depends(require_mail_templates_create)])
+@router.post("/templates", response_model=EmailTemplateResponse)
 async def create_email_template(
     template_data: EmailTemplateCreate,
     current_user: User = Depends(get_current_user),

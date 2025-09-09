@@ -534,7 +534,7 @@ const AccountsPage: React.FC = () => {
         <DialogContent>
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Quick Setup (Recommended)
+              Setup Email Account
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Connect your email account securely with OAuth:
@@ -552,24 +552,6 @@ const AccountsPage: React.FC = () => {
               }}
             />
           </Box>
-
-          <Divider sx={{ my: 3 }}>
-            <Typography variant="body2" color="text.secondary">
-              OR
-            </Typography>
-          </Divider>
-
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Manual Configuration
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Configure IMAP/SMTP settings manually:
-          </Typography>
-
-          <Alert severity="info">
-            Manual configuration will be implemented in a future update. 
-            Please use OAuth setup for now.
-          </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowAddModal(false)}>

@@ -27,7 +27,7 @@ from .license_routes import license_router
 from app.services.otp_service import OTPService
 from app.schemas.reset import OTPRequest, OTPVerify
 
-router = APIRouter(prefix="/organizations", tags=["organizations"])
+router = APIRouter(tags=["organizations"])
 
 router.include_router(user_router)
 router.include_router(invitation_router)
@@ -88,7 +88,7 @@ async def update_current_organization(
     if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can update organization details"
+            detail="Only super administrators or organization administrators can update organization details"
         )
   
     organization = db.query(Organization).filter(
@@ -163,7 +163,7 @@ async def factory_default_system(
     if not current_user.is_super_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only app super administrators can perform factory default reset"
+            detail="Only super administrators can perform factory default reset"
         )
     try:
         from app.services.reset_service import ResetService
@@ -323,7 +323,7 @@ async def request_reset_otp(
   
     try:
         otp_service = OTPService(db)
-        otp_service.generate_and_send_otp(current_user.email, "reset_data", organization_id=current_user.organization_id)
+        otp = otp_service.generate_and_send_otp(current_user.email, "reset_data", organization_id=current_user.organization_id)
         return {"message": "OTP sent to your email. Please verify to proceed with data reset."}
     except Exception as e:
         raise HTTPException(

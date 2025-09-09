@@ -35,7 +35,7 @@ class UserEmailToken(Base):
     
     # User and organization associations
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
     
     # OAuth provider and account info
     provider = Column(Enum(OAuthProvider), nullable=False)

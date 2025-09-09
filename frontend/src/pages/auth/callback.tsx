@@ -26,15 +26,16 @@ const OAuthCallback: React.FC = () => {
 
   useEffect(() => {
     const processCallback = async () => {
-      const { code, state, error, error_description } = router.query;
+      const { code, state, error, error_description, provider } = router.query;
 
       if (!code && !error) {
         // Still loading or missing parameters
         return;
       }
 
-      const provider = localStorage.getItem(`oauth_provider_${state as string}`);
-      if (!provider) {
+      const storedProvider = localStorage.getItem(`oauth_provider_${state as string}`);
+      console.log(`Stored provider for state ${state}: ${storedProvider}`);
+      if (!storedProvider) {
         setStatus('error');
         setMessage('Invalid authentication state. Please try again.');
         return;
@@ -46,7 +47,7 @@ const OAuthCallback: React.FC = () => {
         }
 
         const result = await handleOAuthCallback(
-          provider,
+          storedProvider,
           code as string,
           state as string,
           error as string,
@@ -55,7 +56,7 @@ const OAuthCallback: React.FC = () => {
 
         setResult(result);
         setStatus('success');
-        setMessage(`Successfully connected ${provider} email account`);
+        setMessage(`Successfully connected ${storedProvider} email account`);
 
         // Clean up storage
         localStorage.removeItem(`oauth_provider_${state as string}`);
@@ -77,7 +78,7 @@ const OAuthCallback: React.FC = () => {
     if (router.isReady) {
       processCallback();
     }
-  }, [router.isReady, router.query, handleOAuthCallback]);
+  }, [router.isReady, router.query, handleOAuthCallback, router]);
 
   const handleRetry = () => {
     router.push('/mail/dashboard');

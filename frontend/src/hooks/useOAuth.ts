@@ -77,7 +77,10 @@ export const useOAuth = () => {
       const response = await apiClient.get('/api/v1/oauth/providers');
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to fetch OAuth providers';
+      let errorMsg = err.response?.data?.detail || 'Failed to fetch OAuth providers. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth providers endpoint not found. Ensure the backend server is running on port 8000 and that the route is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -92,14 +95,22 @@ export const useOAuth = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.post(`/api/v1/oauth/login/${provider}`, {
-        redirect_uri: redirectUri
-      });
-      // Store provider with state for callback
-      localStorage.setItem(`oauth_provider_${response.data.state}`, provider);
+      // Fetch the authorization URL from the backend with auth headers
+      const response = await apiClient.post(`/api/v1/oauth/login/${provider}`);
+      const { authorization_url, state } = response.data;
+      console.log(`Storing provider for state: ${state} - ${provider}`);
+      localStorage.setItem(`oauth_provider_${state}`, provider);
+      console.log(`Redirecting to OAuth provider: ${authorization_url}`);
+      window.location.href = authorization_url;
+      // Return the response for completeness, though redirect happens immediately
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || `Failed to initiate ${provider} OAuth flow`;
+      let errorMsg = err.response?.data?.detail || `Failed to initiate ${provider} OAuth flow. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).`;
+      if (err.response?.status === 401) {
+        errorMsg = 'Unauthorized: Please ensure you are logged in and your session is active. If the issue persists, re-login and try again.';
+      } else if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth initiation endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/login/{provider} is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -127,7 +138,10 @@ export const useOAuth = () => {
       });
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || `OAuth callback failed for ${provider}`;
+      let errorMsg = err.response?.data?.detail || `OAuth callback failed for ${provider}. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).`;
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth callback endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/callback/{provider} is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -142,7 +156,10 @@ export const useOAuth = () => {
       const response = await apiClient.get('/api/v1/oauth/tokens');
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to fetch user tokens';
+      let errorMsg = err.response?.data?.detail || 'Failed to fetch user tokens. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth tokens endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/tokens is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -157,7 +174,10 @@ export const useOAuth = () => {
       const response = await apiClient.get(`/api/v1/oauth/tokens/${tokenId}`);
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to fetch token details';
+      let errorMsg = err.response?.data?.detail || 'Failed to fetch token details. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth token details endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/tokens/{tokenId} is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -180,7 +200,10 @@ export const useOAuth = () => {
       const response = await apiClient.put(`/api/v1/oauth/tokens/${tokenId}`, updates);
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to update token';
+      let errorMsg = err.response?.data?.detail || 'Failed to update token. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth update token endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/tokens/{tokenId} is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -195,7 +218,10 @@ export const useOAuth = () => {
       const response = await apiClient.post(`/api/v1/oauth/tokens/${tokenId}/refresh`);
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to refresh token';
+      let errorMsg = err.response?.data?.detail || 'Failed to refresh token. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth refresh token endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/tokens/{tokenId}/refresh is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -210,7 +236,10 @@ export const useOAuth = () => {
       const response = await apiClient.delete(`/api/v1/oauth/tokens/${tokenId}`);
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to revoke token';
+      let errorMsg = err.response?.data?.detail || 'Failed to revoke token. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth revoke token endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/tokens/{tokenId} is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {
@@ -233,7 +262,10 @@ export const useOAuth = () => {
       });
       return response.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to sync emails';
+      let errorMsg = err.response?.data?.detail || 'Failed to sync emails. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
+      if (err.response?.status === 404) {
+        errorMsg = 'Backend OAuth sync emails endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/tokens/{tokenId}/sync is defined.';
+      }
       setError(errorMsg);
       throw err;
     } finally {

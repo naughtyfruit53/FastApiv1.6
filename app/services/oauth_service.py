@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any, Tuple
 from urllib.parse import urlencode, parse_qs, urlparse
 
 import requests
+import json
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
@@ -84,7 +85,7 @@ class OAuth2Service:
         self, 
         provider: OAuthProvider, 
         user_id: int, 
-        organization_id: int,
+        organization_id: Optional[int],
         redirect_uri: str,
         scope: Optional[str] = None
     ) -> Tuple[str, str]:
@@ -170,17 +171,25 @@ class OAuth2Service:
             token_data["code_verifier"] = oauth_state.code_verifier
         
         # Exchange code for tokens
-        response = requests.post(
-            config["token_endpoint"],
-            data=token_data,
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
-        )
+        try:
+            response = requests.post(
+                config["token_endpoint"],
+                data=token_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error in token exchange: {str(e)}")
+            raise ValueError("Network error during token exchange")
         
         if not response.ok:
-            logger.error(f"Token exchange failed: {response.text}")
+            logger.error(f"Token exchange failed: {response.status_code} - {response.text}")
             raise ValueError(f"Token exchange failed: {response.status_code}")
-        
-        token_response = response.json()
+
+        try:
+            token_response = response.json()
+        except json.JSONDecodeError:
+            logger.error(f"Invalid JSON in token response: {response.text}")
+            raise ValueError("Invalid response format from token endpoint")
         
         # Get user info
         user_info = self._get_user_info(provider, token_response["access_token"])
@@ -196,18 +205,26 @@ class OAuth2Service:
         config = getattr(OAuthConfig, provider.value.upper())
         
         headers = {"Authorization": f"Bearer {access_token}"}
-        response = requests.get(config["userinfo_endpoint"], headers=headers)
+        try:
+            response = requests.get(config["userinfo_endpoint"], headers=headers)
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error in user info request: {str(e)}")
+            raise ValueError("Network error during user info request")
         
         if not response.ok:
-            logger.error(f"User info request failed: {response.text}")
+            logger.error(f"User info request failed: {response.status_code} - {response.text}")
             raise ValueError("Failed to get user information")
         
-        return response.json()
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            logger.error(f"Invalid JSON in user info response: {response.text}")
+            raise ValueError("Invalid response format from user info endpoint")
     
     def store_user_tokens(
         self,
         user_id: int,
-        organization_id: int,
+        organization_id: Optional[int],
         provider: OAuthProvider,
         token_response: Dict[str, Any],
         user_info: Dict[str, Any]
@@ -307,7 +324,13 @@ class OAuth2Service:
                 self.db.commit()
                 return False
             
-            token_response = response.json()
+            try:
+                token_response = response.json()
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON in refresh token response: {response.text}")
+                user_token.status = TokenStatus.REFRESH_FAILED
+                self.db.commit()
+                return False
             
             # Update token
             user_token.access_token = token_response["access_token"]
@@ -326,8 +349,13 @@ class OAuth2Service:
             self.db.commit()
             return True
             
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error in token refresh: {str(e)}")
+            user_token.status = TokenStatus.REFRESH_FAILED
+            self.db.commit()
+            return False
         except Exception as e:
-            logger.error(f"Token refresh error: {e}")
+            logger.error(f"Token refresh error: {str(e)}")
             user_token.status = TokenStatus.REFRESH_FAILED
             self.db.commit()
             return False

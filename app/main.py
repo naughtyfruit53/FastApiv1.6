@@ -346,8 +346,8 @@ logger.info("OAuth router included successfully at prefix: /api/v1/oauth")
 # ------------------------------------------------------------------------------
 app.include_router(platform.router, prefix="/api/v1/platform", tags=["platform"])
 logger.info("Platform router included successfully at prefix: /api/v1/platform")
-app.include_router(organizations_router, prefix="/api/v1", tags=["organizations"])
-logger.info("Organizations router included successfully at prefix: /api/v1")
+app.include_router(organizations_router, prefix="/api/v1/organizations", tags=["organizations"])
+logger.info("Organizations router included successfully at prefix: /api/v1/organizations")
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 logger.info("Users router included successfully at prefix: /api/v1/users")
 app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
@@ -493,49 +493,6 @@ app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{b
 logger.info("BOM router included successfully at prefix: /api/v1")
 app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])  # Potential dynamic paths
 logger.info("Manufacturing router included successfully at prefix: /api/v1")
-
-@app.get("/mail/oauth/{provider}")
-async def mail_oauth_redirect(
-    provider: str,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Redirect to OAuth provider authorization URL for demo purposes
-    """
-    try:
-        oauth_provider = OAuthProvider(provider.lower())
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider: {provider}"
-        )
-    
-    redirect_uri = config_settings.OAUTH_REDIRECT_URI
-    
-    oauth_service = OAuth2Service(db)
-    try:
-        auth_url, state = oauth_service.create_authorization_url(
-            provider=oauth_provider,
-            user_id=current_user.id,
-            organization_id=current_user.organization_id,
-            redirect_uri=redirect_uri
-        )
-        
-        return RedirectResponse(url=auth_url)
-        
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.error(f"OAuth redirect error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to redirect to authorization URL"
-        )
 
 @app.get("/routes")
 def get_routes():

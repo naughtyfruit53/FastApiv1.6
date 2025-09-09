@@ -151,13 +151,20 @@ async def oauth_callback(
             )
         
         # Store tokens
-        user_token = oauth_service.store_user_tokens(
-            user_id=oauth_state.user_id,
-            organization_id=oauth_state.organization_id,
-            provider=oauth_provider,
-            token_response=token_response,
-            user_info=user_info
-        )
+        try:
+            user_token = oauth_service.store_user_tokens(
+                user_id=oauth_state.user_id,
+                organization_id=oauth_state.organization_id,
+                provider=oauth_provider,
+                token_response=token_response,
+                user_info=user_info
+            )
+        except Exception as e:
+            logger.error(f"Error storing tokens: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to store OAuth tokens"
+            )
         
         return {
             "success": True,
@@ -173,7 +180,7 @@ async def oauth_callback(
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"OAuth callback error: {e}")
+        logger.error(f"OAuth callback error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process OAuth callback"
@@ -330,7 +337,7 @@ async def revoke_token(
         )
     
     oauth_service = OAuth2Service(db)
-    oauth_service.revoke_token(token_id)
+    success = oauth_service.revoke_token(token_id)
     
     return {"success": True, "message": "Token revoked successfully"}
 
