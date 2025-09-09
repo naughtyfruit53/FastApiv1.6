@@ -14,6 +14,9 @@ class PurchaseOrder(BaseVoucher):
     delivery_date = Column(DateTime(timezone=True))
     payment_terms = Column(String)
     terms_conditions = Column(Text)
+    line_discount_type = Column(String)  # 'percentage' or 'amount'
+    total_discount_type = Column(String)  # 'percentage' or 'amount'
+    total_discount = Column(Float, default=0.0)
     
     vendor = relationship("Vendor")
     items = relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan")
@@ -35,7 +38,7 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     pending_quantity = Column(Float, nullable=False)
     discount_percentage = Column(Float, default=0.0)
     gst_rate = Column(Float, default=18.0)
-    discount_amount = Column(Float, default=0.0)
+    discount_amount = Column(Float, default=0.0, nullable=False)
     taxable_amount = Column(Float, default=0.0)
     cgst_amount = Column(Float, default=0.0)
     sgst_amount = Column(Float, default=0.0)

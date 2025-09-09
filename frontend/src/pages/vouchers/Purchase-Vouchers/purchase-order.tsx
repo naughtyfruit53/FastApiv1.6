@@ -20,6 +20,13 @@ import {
   Fab,
   Alert,
   Button,
+  Checkbox,
+  FormControlLabel,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TableFooter,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import AddVendorModal from "../../../components/AddVendorModal";
@@ -134,6 +141,9 @@ const PurchaseOrderPage: React.FC = () => {
     totalCgst,
     totalSgst,
     totalIgst,
+    totalDiscount,
+    totalTaxable,
+    gstBreakdown,
     isIntrastate,
     createMutation,
     updateMutation,
@@ -151,6 +161,16 @@ const PurchaseOrderPage: React.FC = () => {
     refreshMasterData,
     getAmountInWords,
     isViewMode,
+    lineDiscountEnabled,
+    lineDiscountType,
+    totalDiscountEnabled,
+    totalDiscountType,
+    handleToggleLineDiscount,
+    handleToggleTotalDiscount,
+    discountDialogOpen,
+    handleDiscountDialogClose,
+    handleDiscountTypeSelect,
+    discountDialogFor,
   } = useVoucherPage(config);
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
@@ -194,6 +214,7 @@ const PurchaseOrderPage: React.FC = () => {
       unit_price: 0,
       original_unit_price: 0,
       discount_percentage: 0,
+      discount_amount: 0,
       gst_rate: 18,
       cgst_rate: isIntrastate ? 9 : 0,
       sgst_rate: isIntrastate ? 9 : 0,
@@ -215,6 +236,9 @@ const PurchaseOrderPage: React.FC = () => {
   const onSubmit = async (data: any) => {
     try {
       if (config.hasItems !== false) {
+        data.line_discount_type = lineDiscountEnabled ? lineDiscountType : null;
+        data.total_discount_type = totalDiscountEnabled ? totalDiscountType : null;
+        data.total_discount = watch('total_discount') || 0;
         data.items = computedItems.map((item: any) => ({
           ...item,
           cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
@@ -354,6 +378,7 @@ const PurchaseOrderPage: React.FC = () => {
           unit_price: product.unit_price || 0,
           original_unit_price: product.unit_price || 0,
           discount_percentage: 0,
+          discount_amount: 0,
           gst_rate: product.gst_rate || 18,
           cgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
           sgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
@@ -443,12 +468,6 @@ const PurchaseOrderPage: React.FC = () => {
       const formattedData = {
         ...voucherData,
         date: formattedDate,
-        items: voucherData.items?.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })) || [],
       };
       reset(formattedData);
       if (voucherData.items && voucherData.items.length > 0) {
@@ -462,6 +481,7 @@ const PurchaseOrderPage: React.FC = () => {
             unit_price: item.unit_price,
             original_unit_price: item.product?.unit_price || item.unit_price || 0,
             discount_percentage: item.discount_percentage || 0,
+            discount_amount: item.discount_amount || 0,
             gst_rate: item.gst_rate || 18,
             cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
             sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
@@ -568,6 +588,8 @@ const PurchaseOrderPage: React.FC = () => {
       </Table>
     </TableContainer>
   );
+
+  const gstRatesVary = Object.keys(gstBreakdown).length > 1;
 
   const formContent = (
     <Box>
@@ -723,6 +745,28 @@ const PurchaseOrderPage: React.FC = () => {
             </Typography>
           </Grid>
           <Grid size={12}>
+            <Box sx={{display: 'flex', gap: 2, mb: 1}}>
+              <FormControlLabel
+                control={
+                  <Checkbox 
+                    checked={lineDiscountEnabled} 
+                    onChange={(e) => handleToggleLineDiscount(e.target.checked)}
+                    disabled={mode === "view"}
+                  />
+                }
+                label="Add Line Discount"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox 
+                    checked={totalDiscountEnabled} 
+                    onChange={(e) => handleToggleTotalDiscount(e.target.checked)}
+                    disabled={mode === "view"}
+                  />
+                }
+                label="Add Total Discount"
+              />
+            </Box>
             <TableContainer
               component={Paper}
               sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}
@@ -768,9 +812,11 @@ const PurchaseOrderPage: React.FC = () => {
                     >
                       Rate
                     </TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
-                      Disc%
-                    </TableCell>
+                    {lineDiscountEnabled && (
+                      <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
+                        {lineDiscountType === 'percentage' ? 'Disc%' : 'Disc ₹'}
+                      </TableCell>
+                    )}
                     <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
                       GST%
                     </TableCell>
@@ -883,21 +929,23 @@ const PurchaseOrderPage: React.FC = () => {
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ p: 1 }}>
-                        <TextField
-                          type="number"
-                          {...control.register(
-                            `items.${index}.discount_percentage`,
-                            { valueAsNumber: true },
-                          )}
-                          disabled={mode === "view"}
-                          size="small"
-                          sx={{ width: 60 }}
-                          InputProps={{
-                            inputProps: { min: 0, step: 0.01 },
-                          }}
-                        />
-                      </TableCell>
+                      {lineDiscountEnabled && (
+                        <TableCell sx={{ p: 1 }}>
+                          <TextField
+                            type="number"
+                            {...control.register(
+                              `items.${index}.${lineDiscountType === 'percentage' ? 'discount_percentage' : 'discount_amount'}`,
+                              { valueAsNumber: true },
+                            )}
+                            disabled={mode === "view"}
+                            size="small"
+                            sx={{ width: 60 }}
+                            InputProps={{
+                              inputProps: { min: 0, step: lineDiscountType === 'percentage' ? 0.01 : 1 },
+                            }}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell sx={{ p: 1 }}>
                         <Autocomplete
                           size="small"
@@ -979,72 +1027,167 @@ const PurchaseOrderPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
-                  {isIntrastate ? (
+                  {totalDiscountEnabled && (
                     <>
                       <Grid size={6}>
                         <Typography
                           variant="body2"
                           sx={{ textAlign: "right", fontSize: 14 }}
                         >
-                          CGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
+                          Disc {totalDiscountType === 'percentage' ? '%' : '₹'}:
                         </Typography>
                       </Grid>
                       <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            textAlign: "right",
-                            fontSize: 14,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₹{totalCgst.toLocaleString()}
-                        </Typography>
+                        {mode === "view" ? (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              textAlign: "right",
+                              fontSize: 14,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            ₹{totalDiscount.toLocaleString()}
+                          </Typography>
+                        ) : (
+                          <TextField
+                            type="number"
+                            {...control.register("total_discount", { valueAsNumber: true })}
+                            size="small"
+                            sx={{ width: 100 }}
+                            InputProps={{
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  {totalDiscountType === 'percentage' ? '%' : '₹'}
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        )}
                       </Grid>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{ textAlign: "right", fontSize: 14 }}
-                        >
-                          SGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
-                        </Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            textAlign: "right",
-                            fontSize: 14,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₹{totalSgst.toLocaleString()}
-                        </Typography>
-                      </Grid>
+                    </>
+                  )}
+                  {gstRatesVary ? (
+                    <>
+                      {Object.entries(gstBreakdown).map(([rate, { cgst, sgst, igst }]) => (
+                        <React.Fragment key={rate}>
+                          {isIntrastate ? (
+                            <>
+                              <Grid size={6}>
+                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14 }}>
+                                  CGST ({parseFloat(rate) / 2}%):
+                                </Typography>
+                              </Grid>
+                              <Grid size={6}>
+                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14, fontWeight: "bold" }}>
+                                  ₹{cgst.toLocaleString()}
+                                </Typography>
+                              </Grid>
+                              <Grid size={6}>
+                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14 }}>
+                                  SGST ({parseFloat(rate) / 2}%):
+                                </Typography>
+                              </Grid>
+                              <Grid size={6}>
+                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14, fontWeight: "bold" }}>
+                                  ₹{sgst.toLocaleString()}
+                                </Typography>
+                              </Grid>
+                            </>
+                          ) : (
+                            <>
+                              <Grid size={6}>
+                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14 }}>
+                                  IGST ({rate}%):
+                                </Typography>
+                              </Grid>
+                              <Grid size={6}>
+                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14, fontWeight: "bold" }}>
+                                  ₹{igst.toLocaleString()}
+                                </Typography>
+                              </Grid>
+                            </>
+                          )}
+                        </React.Fragment>
+                      ))}
                     </>
                   ) : (
                     <>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{ textAlign: "right", fontSize: 14 }}
-                        >
-                          IGST ({watch(`items.0.gst_rate`) || 18}%):
-                        </Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            textAlign: "right",
-                            fontSize: 14,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₹{totalIgst.toLocaleString()}
-                        </Typography>
-                      </Grid>
+                      {isIntrastate ? (
+                        <>
+                          <Grid size={6}>
+                            <Typography
+                              variant="body2"
+                              sx={{ textAlign: "right", fontSize: 14 }}
+                            >
+                              CGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
+                            </Typography>
+                          </Grid>
+                          <Grid size={6}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                textAlign: "right",
+                                fontSize: 14,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              ₹{totalCgst.toLocaleString()}
+                            </Typography>
+                          </Grid>
+                          <Grid size={6}>
+                            <Typography
+                              variant="body2"
+                              sx={{ textAlign: "right", fontSize: 14 }}
+                            >
+                              SGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
+                            </Typography>
+                          </Grid>
+                          <Grid size={6}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                textAlign: "right",
+                                fontSize: 14,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              ₹{totalSgst.toLocaleString()}
+                            </Typography>
+                          </Grid>
+                        </>
+                      ) : (
+                        <>
+                          <Grid size={6}>
+                            <Typography
+                              variant="body2"
+                              sx={{ textAlign: "right", fontSize: 14 }}
+                            >
+                              IGST ({watch(`items.0.gst_rate`) || 18}%):
+                            </Typography>
+                          </Grid>
+                          <Grid size={6}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                textAlign: "right",
+                                fontSize: 14,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              ₹{totalIgst.toLocaleString()}
+                            </Typography>
+                          </Grid>
+                        </>
+                      )}
                     </>
+                  )}
+                  {gstRatesVary && (
+                    <Grid size={12}>
+                      <Alert severity="info" sx={{ mt: 1 }}>
+                        Multiple GST rates applied. Showing breakdown per rate.
+                      </Alert>
+                    </Grid>
                   )}
                   <Grid size={6}>
                     <Typography
@@ -1098,6 +1241,17 @@ const PurchaseOrderPage: React.FC = () => {
           )}
         </Grid>
       </form>
+      <Dialog open={discountDialogOpen} onClose={handleDiscountDialogClose}>
+        <DialogTitle>Select Discount Type</DialogTitle>
+        <DialogContent>
+          <Typography>Please select the discount type for {discountDialogFor} discount.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleDiscountTypeSelect('percentage')}>Discount %</Button>
+          <Button onClick={() => handleDiscountTypeSelect('amount')}>Discount ₹</Button>
+          <Button onClick={handleDiscountDialogClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 

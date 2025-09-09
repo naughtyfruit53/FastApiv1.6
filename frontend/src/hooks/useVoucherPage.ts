@@ -80,6 +80,78 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     null,
   );
   const [referenceDocument, setReferenceDocument] = useState<any>(null);
+  // Discount states (common across vouchers)
+  const [lineDiscountEnabled, setLineDiscountEnabled] = useState(false);
+  const [lineDiscountType, setLineDiscountType] = useState<'percentage' | 'amount' | null>(null);
+  const [totalDiscountEnabled, setTotalDiscountEnabled] = useState(false);
+  const [totalDiscountType, setTotalDiscountType] = useState<'percentage' | 'amount' | null>(null);
+  // Discount dialog states
+  const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
+  const [discountDialogFor, setDiscountDialogFor] = useState<'line' | 'total' | null>(null);
+  // Load saved discount types from localStorage
+  useEffect(() => {
+    const savedLineType = localStorage.getItem('voucherLineDiscountType');
+    if (savedLineType) setLineDiscountType(savedLineType as 'percentage' | 'amount');
+    const savedTotalType = localStorage.getItem('voucherTotalDiscountType');
+    if (savedTotalType) setTotalDiscountType(savedTotalType as 'percentage' | 'amount');
+  }, []);
+  // Save discount types to localStorage
+  useEffect(() => {
+    if (lineDiscountType) localStorage.setItem('voucherLineDiscountType', lineDiscountType);
+  }, [lineDiscountType]);
+  useEffect(() => {
+    if (totalDiscountType) localStorage.setItem('voucherTotalDiscountType', totalDiscountType);
+  }, [totalDiscountType]);
+  // Handlers for toggling discounts
+  const handleToggleLineDiscount = (enabled: boolean) => {
+    if (enabled) {
+      if (!lineDiscountType) {
+        setDiscountDialogFor('line');
+        setDiscountDialogOpen(true);
+        return;
+      }
+    } else {
+      // Reset when unchecked
+      setLineDiscountType(null);
+      localStorage.removeItem('voucherLineDiscountType');
+    }
+    setLineDiscountEnabled(enabled);
+  };
+  const handleToggleTotalDiscount = (enabled: boolean) => {
+    if (enabled) {
+      if (!totalDiscountType) {
+        setDiscountDialogFor('total');
+        setDiscountDialogOpen(true);
+        return;
+      }
+    } else {
+      // Reset when unchecked
+      setTotalDiscountType(null);
+      localStorage.removeItem('voucherTotalDiscountType');
+    }
+    setTotalDiscountEnabled(enabled);
+  };
+  const handleDiscountTypeSelect = (type: 'percentage' | 'amount') => {
+    if (discountDialogFor === 'line') {
+      setLineDiscountType(type);
+      setLineDiscountEnabled(true);
+    } else if (discountDialogFor === 'total') {
+      setTotalDiscountType(type);
+      setTotalDiscountEnabled(true);
+    }
+    setDiscountDialogOpen(false);
+    setDiscountDialogFor(null);
+  };
+  const handleDiscountDialogClose = () => {
+    setDiscountDialogOpen(false);
+    setDiscountDialogFor(null);
+    // If canceled, uncheck the checkbox if needed
+    if (discountDialogFor === 'line') {
+      setLineDiscountEnabled(false);
+    } else if (discountDialogFor === 'total') {
+      setTotalDiscountEnabled(false);
+    }
+  };
   // Enhanced form management with reference support
   const defaultValues = useMemo(() => {
     const baseValues = {
@@ -112,11 +184,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       return {
         ...baseValues,
         ...itemDefaults,
+        total_discount: 0,
         items: [
           {
             ...itemDefaults.items[0],
             unit_price: 0.0, // Ensure 2 decimal places
             original_unit_price: 0.0,
+            discount_percentage: 0,
             discount_amount: 0.0,
             taxable_amount: 0.0,
             cgst_amount: 0.0,
@@ -222,6 +296,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalCgst,
     totalSgst,
     totalIgst,
+    totalDiscount,
+    totalTaxable,
+    gstBreakdown,
   } = useMemo(() => {
     if (config.hasItems === false || !itemsWatch) {
       return {
@@ -232,6 +309,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         totalCgst: 0,
         totalSgst: 0,
         totalIgst: 0,
+        totalDiscount: 0,
+        totalTaxable: 0,
+        gstBreakdown: {},
       };
     }
     // Ensure all rates are properly formatted
@@ -239,8 +319,14 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       ...item,
       unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0)),
     }));
-    return calculateVoucherTotals(formattedItems, isIntrastate);
-  }, [itemsWatch, config.hasItems, watch, isIntrastate]);
+    return calculateVoucherTotals(
+      formattedItems, 
+      isIntrastate,
+      lineDiscountEnabled ? lineDiscountType : null,
+      totalDiscountEnabled ? totalDiscountType : null,
+      watch("total_discount") || 0
+    );
+  }, [itemsWatch, config.hasItems, watch, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType]);
   // Enhanced queries with pagination and sorting
   const {
     data: voucherList,
@@ -674,6 +760,14 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         date: formattedDate,
       };
       reset(formattedData);
+      // Set discount states from loaded data
+      if (config.hasItems !== false) {
+        setLineDiscountEnabled(!!voucherData.line_discount_type);
+        setLineDiscountType(voucherData.line_discount_type || null);
+        setTotalDiscountEnabled(!!voucherData.total_discount_type);
+        setTotalDiscountType(voucherData.total_discount_type || null);
+        setValue('total_discount', voucherData.total_discount || 0);
+      }
       // Ensure items array is properly loaded for vouchers with items
       if (
         config.hasItems !== false &&
@@ -695,6 +789,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
             unit: item.unit || item.product?.unit || "",
             current_stock: item.current_stock || 0,
             reorder_level: item.reorder_level || 0,
+            discount_percentage: item.discount_percentage || 0,
+            discount_amount: item.discount_amount || 0,
           });
         });
         console.log("[useVoucherPage] Loaded items:", voucherData.items.length);
@@ -840,6 +936,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalCgst,
     totalSgst,
     totalIgst,
+    totalDiscount,
+    totalTaxable,
+    gstBreakdown,
     isIntrastate,
     // Mutations
     createMutation,
@@ -865,5 +964,16 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     // Enhanced utilities
     isViewMode: mode === "view",
     enhancedRateUtils,
+    // Discount handlers and states
+    lineDiscountEnabled,
+    lineDiscountType,
+    totalDiscountEnabled,
+    totalDiscountType,
+    handleToggleLineDiscount,
+    handleToggleTotalDiscount,
+    discountDialogOpen,
+    handleDiscountDialogClose,
+    handleDiscountTypeSelect,
+    discountDialogFor,
   };
 };

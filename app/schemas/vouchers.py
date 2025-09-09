@@ -4,6 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 from datetime import date, datetime
 from typing import Dict, Any
+from pydantic import field_validator
 
 class VoucherItemBase(BaseModel):
     product_id: int
@@ -189,7 +190,7 @@ class SalesVoucherInDB(VoucherInDBBase):
 
 # Purchase Order
 class PurchaseOrderItemCreate(VoucherItemWithTax):
-    pass
+    discount_amount: Optional[float] = 0.0
 
 class PurchaseOrderItemInDB(VoucherItemWithTax):
     id: int
@@ -197,12 +198,21 @@ class PurchaseOrderItemInDB(VoucherItemWithTax):
     delivered_quantity: Optional[float] = 0.0
     pending_quantity: Optional[float] = None
     product: Optional[ProductMinimal] = None
+    discount_amount: float = 0.0
+
+    @field_validator('discount_amount', mode='before')
+    @classmethod
+    def default_discount(cls, v):
+        return v if v is not None else 0.0
 
 class PurchaseOrderCreate(VoucherBase):
     vendor_id: int
     delivery_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    line_discount_type: Optional[str] = None
+    total_discount_type: Optional[str] = None
+    total_discount: Optional[float] = 0.0
     items: List[PurchaseOrderItemCreate] = []
 
 class PurchaseOrderUpdate(BaseModel):
@@ -210,6 +220,9 @@ class PurchaseOrderUpdate(BaseModel):
     delivery_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    line_discount_type: Optional[str] = None
+    total_discount_type: Optional[str] = None
+    total_discount: Optional[float] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -220,6 +233,9 @@ class PurchaseOrderInDB(VoucherInDBBase):
     delivery_date: Optional[datetime]
     payment_terms: Optional[str]
     terms_conditions: Optional[str]
+    line_discount_type: Optional[str]
+    total_discount_type: Optional[str]
+    total_discount: float
     items: List[PurchaseOrderItemInDB]
     vendor: Optional[VendorMinimal] = None
 
