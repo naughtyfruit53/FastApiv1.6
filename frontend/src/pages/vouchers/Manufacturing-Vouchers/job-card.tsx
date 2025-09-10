@@ -130,7 +130,7 @@ export default function JobCardVoucher() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const queryClient = useQueryClient();
-  const { control, handleSubmit, watch, setValue, reset, formState } =
+  const { control, handleSubmit, watch, setValue, reset } =
     useForm<JobCardVoucher>({
       defaultValues,
     });
@@ -230,8 +230,8 @@ export default function JobCardVoucher() {
       const { data: newNextNumber } = await refetchNextNumber();
       setValue("voucher_number", newNextNumber);
     },
-    onError: (error: any) => {
-      console.error(msg, err);
+    onError: (_error: any) => {
+      console.error("Create job card failed:", _error);
     },
   });
   const updateMutation = useMutation({
@@ -243,8 +243,8 @@ export default function JobCardVoucher() {
       setSelectedId(null);
       reset(defaultValues);
     },
-    onError: (error: any) => {
-      console.error(msg, err);
+    onError: (_error: any) => {
+      console.error("Update job card failed:", _error);
     },
   });
   const deleteMutation = useMutation({
