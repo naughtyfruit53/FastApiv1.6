@@ -35,6 +35,7 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     __tablename__ = "purchase_order_items"
     
     purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)  # Added foreign key for product
     delivered_quantity = Column(Float, default=0.0)
     pending_quantity = Column(Float, nullable=False)
     discount_percentage = Column(Float, default=0.0)
@@ -46,6 +47,7 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     igst_amount = Column(Float, default=0.0)
     
     purchase_order = relationship("PurchaseOrder", back_populates="items")
+    product = relationship("Product")  # Added relationship to Product
 
 # Goods Receipt Note (GRN) - Enhanced for auto-population from PO
 class GoodsReceiptNote(BaseVoucher):

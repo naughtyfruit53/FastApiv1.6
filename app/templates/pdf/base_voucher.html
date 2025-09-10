@@ -146,13 +146,14 @@
         .items-table thead th { padding: 8px 5px; border: 1px solid #2c3e50; background-color:#34495e; color:#fff; text-align:center; font-weight:bold; }
 
         .items-table th:nth-child(1) { width: 3%; }   /* S.No */
-        .items-table th:nth-child(2) { width: 44%; }  /* Product/Service */
+        .items-table th:nth-child(2) { width: 35%; }  /* Product/Service */
         .items-table th:nth-child(3) { width: 8%; }   /* HSN/SAC */
         .items-table th:nth-child(4) { width: 10%; }  /* Qty */
         .items-table th:nth-child(5) { width: 10%; }  /* Rate */
-        .items-table th:nth-child(6) { width: 10%; }  /* Taxable Value */
-        .items-table th:nth-child(7) { width: 5%; }   /* GST% */
-        .items-table th:nth-child(8) { width: 10%; }  /* Total */
+        .items-table th:nth-child(6) { width: 10%; }  /* Disc % or ₹ */
+        .items-table th:nth-child(7) { width: 10%; }  /* Taxable Value */
+        .items-table th:nth-child(8) { width: 5%; }   /* GST% */
+        .items-table th:nth-child(9) { width: 10%; }  /* Total */
 
         .items-table td {
             padding: 6px 5px;
@@ -374,6 +375,9 @@
                         <th>HSN/SAC</th>
                         <th>Qty</th>
                         <th>Rate</th>
+                        {% if line_discount_enabled %}  <!-- Conditional discount column -->
+                        <th>Disc % or ₹</th>
+                        {% endif %}
                         <th>Taxable Value</th>
                         <th>GST%</th>
                         <th>Total</th>
@@ -393,6 +397,17 @@
                         <td class="text-center">{{ item.hsn_code|default('-') }}</td>
                         <td class="text-center">{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}</td>
                         <td class="text-right">{{ item.unit_price|format_currency }}</td>
+                        {% if line_discount_enabled %}  <!-- Conditional discount display -->
+                        <td class="text-right">
+                            {% if item.discount_percentage > 0 %}
+                                {{ item.discount_percentage }}%
+                            {% elif item.discount_amount > 0 %}
+                                {{ item.discount_amount|format_currency }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        {% endif %}
                         <td class="text-right">{{ item.taxable_amount|format_currency }}</td>
                         <td class="text-center">{{ item.gst_rate|default(0)|format_percentage }}</td>
                         <td class="text-right">{{ item.total_amount|format_currency }}</td>
@@ -400,7 +415,7 @@
                     {% endfor %}
                     {% else %}
                     <tr>
-                        <td colspan="8" class="text-center">No items available</td>
+                        <td colspan="{% if line_discount_enabled %}9{% else %}8{% endif %}" class="text-center">No items available</td>  <!-- Dynamic colspan -->
                     </tr>
                     {% endif %}
                 </tbody>
@@ -416,9 +431,9 @@
                             <th>Subtotal:</th>
                             <td>{{ subtotal|format_currency }}</td>
                         </tr>
-                        {% if total_discount > 0 %}
+                        {% if total_discount_enabled and total_discount > 0 %}  <!-- Conditional total discount row -->
                         <tr>
-                            <th>Discount:</th>
+                            <th>Total Discount:</th>
                             <td>{{ total_discount|format_currency }}</td>
                         </tr>
                         {% endif %}

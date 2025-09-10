@@ -13,7 +13,7 @@ from xhtml2pdf import pisa
 from io import BytesIO
 from num2words import num2words
 from sqlalchemy.orm import Session
-from app.models import Company, User
+from app.models import Company, User, Vendor  # Added Vendor import
 import logging
 import base64
 import re  # Added for sanitizing filenames
@@ -247,6 +247,17 @@ class VoucherPDFGenerator:
         # Get company branding
         company = self._get_company_branding(db, organization_id)
         
+        # Get vendor/party details and determine interstate
+        is_interstate = False
+        vendor = None
+        if voucher_data.get('vendor_id'):
+            vendor = db.query(Vendor).filter(Vendor.id == voucher_data['vendor_id']).first()
+            if vendor and company['state_code'] and vendor.state_code:
+                is_interstate = company['state_code'] != vendor.state_code
+            elif vendor and company['state_code'] and vendor.gst_number:
+                vendor_state_code = vendor.gst_number[:2]  # First 2 digits of GSTIN
+                is_interstate = company['state_code'] != vendor_state_code
+        
         # Calculate totals and taxes for items
         items = voucher_data.get('items', [])
         processed_items = []
@@ -257,7 +268,6 @@ class VoucherPDFGenerator:
         total_cgst = 0.0
         total_sgst = 0.0
         total_igst = 0.0
-        is_interstate = voucher_data.get('is_interstate', False)
         
         for item in items:
             # Calculate item totals
@@ -272,7 +282,7 @@ class VoucherPDFGenerator:
               discount_amount = item_subtotal * (discount_percentage / 100)
             taxable_amount = item_subtotal - discount_amount
             
-            # Calculate GST (assuming intrastate for now - enhance with actual check)
+            # Calculate GST with updated interstate check
             gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
             
             item_total = taxable_amount + gst_calc['total_gst']
@@ -326,6 +336,8 @@ class VoucherPDFGenerator:
             'round_off': round_off,
             'grand_total': grand_total,
             'is_interstate': is_interstate,
+            'line_discount_enabled': voucher_data.get('line_discount_type') is not None,  # Flag for line discount
+            'total_discount_enabled': voucher_data.get('total_discount_type') is not None,  # Flag for total discount
             'amount_in_words': IndianNumberFormatter.amount_to_words(grand_total),
             'generated_at': datetime.now(),
             'page_count': 1  # Will be updated for multi-page
