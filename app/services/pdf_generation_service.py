@@ -224,6 +224,12 @@ class VoucherPDFGenerator:
                         logo_data = base64.b64encode(f.read()).decode('utf-8')
                     logo_url = f"data:image/png;base64,{logo_data}"
                 
+                state_code = company.state_code
+                if not state_code and company.gst_number:
+                    state_code = company.gst_number[:2]  # Fallback to GST prefix
+                
+                logger.info(f"Company GST: {company.gst_number}, state_code (final): {state_code}")
+                
                 return {
                     'name': company.name,
                     'address1': company.address1,
@@ -231,7 +237,7 @@ class VoucherPDFGenerator:
                     'city': company.city,
                     'state': company.state,
                     'pin_code': company.pin_code,
-                    'state_code': company.state_code,
+                    'state_code': state_code,
                     'gst_number': company.gst_number or '',
                     'pan_number': company.pan_number or '',
                     'contact_number': company.contact_number,
@@ -276,13 +282,17 @@ class VoucherPDFGenerator:
         
         # Get vendor/party details and determine interstate
         is_interstate = False
-        vendor = None
-        if voucher_data.get('vendor_id'):
-            vendor = db.query(Vendor).filter(Vendor.id == voucher_data['vendor_id']).first()
-            if vendor and company['state_code']:
-                vendor_state_code = vendor.state_code or (vendor.gst_number[:2] if vendor.gst_number else None)
-                if vendor_state_code:
-                    is_interstate = company['state_code'] != vendor_state_code
+        vendor = voucher_data.get('vendor')
+        vendor_state_code = None
+        if vendor and company['state_code']:
+            vendor_state_code = vendor.get('state_code')
+            logger.info(f"Vendor initial state_code: {vendor_state_code}, gst_number: {vendor.get('gst_number')}")
+            if not vendor_state_code and vendor.get('gst_number'):
+                vendor_state_code = vendor['gst_number'][:2]
+            if vendor_state_code:
+                is_interstate = company['state_code'] != vendor_state_code
+        
+        logger.info(f"Company state_code: {company['state_code']}, Vendor state_code: {vendor_state_code if vendor_state_code else 'None'}, is_interstate: {is_interstate}")
         
         # Calculate totals and taxes for items
         items = voucher_data.get('items', [])

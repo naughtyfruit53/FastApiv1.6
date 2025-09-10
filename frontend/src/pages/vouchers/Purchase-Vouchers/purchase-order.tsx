@@ -650,6 +650,11 @@ const PurchaseOrderPage: React.FC = () => {
           justifyContent: "space-between",
           alignItems: "center",
           mb: 2,
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          backgroundColor: "background.paper",
+          py: 1,
         }}
       >
         <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
@@ -1254,17 +1259,7 @@ const PurchaseOrderPage: React.FC = () => {
               size="small"
             />
           </Grid>
-          {mode !== "view" && (
-            <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={isLoading || companyLoading || !!gstError}
-              >
-                {mode === "create" ? "Create Purchase Order" : "Update Purchase Order"}
-              </Button>
-            </Grid>
-          )}
+          {/* Removed the bottom submit button */}
         </Grid>
       </form>
       <Dialog open={discountDialogOpen} onClose={handleDiscountDialogClose}>

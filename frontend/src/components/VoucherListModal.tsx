@@ -54,6 +54,20 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
     mouseY: number;
     voucher: any;
   } | null>(null);
+  const getEntityName = (voucher: any) => {
+    if (voucher.customer_id && customerList.length > 0) {
+      return (
+        customerList.find((c: any) => c.id === voucher.customer_id)?.name ||
+        "N/A"
+      );
+    }
+    if (voucher.vendor_id && vendorList.length > 0) {
+      return (
+        vendorList.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"
+      );
+    }
+    return "N/A";
+  };
   // Filter vouchers based on search criteria
   const filteredVouchers = vouchers.filter((voucher) => {
     const matchesSearch =
@@ -62,7 +76,8 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       voucher.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      voucher.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+      voucher.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getEntityName(voucher).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFromDate =
       fromDate === "" || new Date(voucher.date) >= new Date(fromDate);
     const matchesToDate =
@@ -87,20 +102,6 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
     }
     onVoucherClick(voucher);
     onClose(); // Close modal after selection
-  };
-  const getEntityName = (voucher: any) => {
-    if (voucher.customer_id && customerList.length > 0) {
-      return (
-        customerList.find((c: any) => c.id === voucher.customer_id)?.name ||
-        "N/A"
-      );
-    }
-    if (voucher.vendor_id && vendorList.length > 0) {
-      return (
-        vendorList.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"
-      );
-    }
-    return "N/A";
   };
   const formatDate = (dateString: string) => {
     if (!dateString) {
