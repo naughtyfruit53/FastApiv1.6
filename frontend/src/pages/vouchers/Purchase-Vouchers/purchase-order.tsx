@@ -53,7 +53,7 @@ import { toast } from "react-toastify";
 const PurchaseOrderPage: React.FC = () => {
   const { company, isLoading: companyLoading, error: companyError } = useCompany();
   const router = useRouter();
-  const { productId, vendorId } = router.query;
+  const { productId, vendorId, id: queryId } = router.query;  // Renamed id to queryId to avoid conflict
   const config = getVoucherConfig("purchase-order");
   const voucherStyles = getVoucherStyles();
   const [gstError, setGstError] = useState<string | null>(null);
@@ -180,6 +180,157 @@ const PurchaseOrderPage: React.FC = () => {
   const selectedVendorId = watch("vendor_id");
   const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
 
+  // Move function definitions here to ensure they are initialized before use in useEffect hooks
+  const handleEditWithData = async (voucher: any) => {
+    if (!voucher || !voucher.id) {
+      return;
+    }
+    try {
+      const response = await api.get(`/purchase-orders/${voucher.id}`);
+      let fullVoucherData = response.data;
+      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
+      setMode("edit");
+      reset({
+        ...fullVoucherData,
+        items: fullVoucherData.items.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        })),
+      });
+    } catch (err) {
+      console.error("Error fetching voucher for edit:", err);
+      handleEdit(voucher);
+    }
+  };
+
+  const handleViewWithData = async (voucher: any) => {
+    if (!voucher || !voucher.id) {
+      return;
+    }
+    try {
+      const response = await api.get(`/purchase-orders/${voucher.id}`);
+      let fullVoucherData = response.data;
+      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
+      setMode("view");
+      reset({
+        ...fullVoucherData,
+        items: fullVoucherData.items.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        })),
+      });
+    } catch (err) {
+      console.error("Error fetching voucher for view:", err);
+      handleView(voucher);
+    }
+  };
+
+  const handleVoucherClick = async (voucher: any) => {
+    try {
+      const response = await api.get(`/purchase-orders/${voucher.id}`);
+      const fullVoucherData = response.data;
+      setMode("view");
+      reset(fullVoucherData);
+    } catch (err) {
+      console.error("Error fetching voucher:", err);
+      setMode("view");
+      reset(voucher);
+    }
+  };
+
+  const handleDuplicate = async (id: number) => {
+    try {
+      const voucher = voucherList?.find((v) => v.id === id);
+      if (!voucher) {
+        return;
+      }
+      reset({
+        ...voucher,
+        voucher_number: "",
+        date: new Date().toISOString().split("T")[0],
+        created_at: undefined,
+        updated_at: undefined,
+        id: undefined,
+      });
+      setMode("create");
+      toast.success("Purchase order duplicated successfully");
+    } catch (err) {
+      console.error("Error duplicating purchase order:", err);
+      toast.error("Failed to duplicate purchase order");
+    }
+  };
+
+  const handleFinalSubmit = async (data: any) => {
+    try {
+      if (config.hasItems !== false) {
+        data.line_discount_type = lineDiscountEnabled ? lineDiscountType : null;
+        data.total_discount_type = totalDiscountEnabled ? totalDiscountType : null;
+        data.total_discount = watch('total_discount') || 0;
+        data.items = computedItems.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        }));
+        data.total_amount = totalAmount;
+        data.is_intrastate = isIntrastate;
+        data.round_off = totalRoundOff;
+      }
+      const itemsToUpdate = data.items.filter(
+        (item: any) =>
+          item.unit_price !== item.original_unit_price && item.product_id,
+      );
+      if (itemsToUpdate.length > 0) {
+        if (
+          confirm(
+            `Some items have updated prices. Update master product prices for ${itemsToUpdate.length} items?`,
+          )
+        ) {
+          await Promise.all(
+            itemsToUpdate.map((item: any) =>
+              api.put(`/products/${item.product_id}`, {
+                unit_price: item.unit_price,
+              }),
+            ),
+          );
+          refreshMasterData();
+        }
+      }
+      data.items = data.items.map(
+        ({ original_unit_price, ...item }: any) => item,
+      );
+      let response;
+      if (mode === "create") {
+        response = await createMutation.mutateAsync(data);
+        if (confirm("Voucher created successfully. Generate PDF?")) {
+          handleGeneratePDF(response);
+        }
+      } else if (mode === "edit") {
+        response = await updateMutation.mutateAsync(data);
+        if (confirm("Voucher updated successfully. Generate PDF?")) {
+          handleGeneratePDF(response);
+        }
+      }
+    } catch (err) {
+      console.error("Error saving purchase order:", err);
+      toast.error("Failed to save purchase order. Please try again.");
+    }
+  };
+
+  // Set mode and fetch data based on query params
+  useEffect(() => {
+    if (queryId) {
+      setMode('edit');
+      handleEditWithData({ id: Number(queryId) });
+    } else {
+      setMode('create');
+    }
+  }, [queryId, handleEditWithData, setMode]);
+
   // Validate state codes for GST calculation after company data is loaded
   useEffect(() => {
     if (companyLoading) {
@@ -243,85 +394,6 @@ const PurchaseOrderPage: React.FC = () => {
       return;
     }
     handleFinalSubmit(data);
-  };
-
-  const handleFinalSubmit = async (data: any) => {
-    try {
-      if (config.hasItems !== false) {
-        data.line_discount_type = lineDiscountEnabled ? lineDiscountType : null;
-        data.total_discount_type = totalDiscountEnabled ? totalDiscountType : null;
-        data.total_discount = watch('total_discount') || 0;
-        data.items = computedItems.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        }));
-        data.total_amount = totalAmount;
-        data.is_intrastate = isIntrastate;
-        data.round_off = totalRoundOff;
-      }
-      const itemsToUpdate = data.items.filter(
-        (item: any) =>
-          item.unit_price !== item.original_unit_price && item.product_id,
-      );
-      if (itemsToUpdate.length > 0) {
-        if (
-          confirm(
-            `Some items have updated prices. Update master product prices for ${itemsToUpdate.length} items?`,
-          )
-        ) {
-          await Promise.all(
-            itemsToUpdate.map((item: any) =>
-              api.put(`/products/${item.product_id}`, {
-                unit_price: item.unit_price,
-              }),
-            ),
-          );
-          refreshMasterData();
-        }
-      }
-      data.items = data.items.map(
-        ({ original_unit_price, ...item }: any) => item,
-      );
-      let response;
-      if (mode === "create") {
-        response = await createMutation.mutateAsync(data);
-        if (confirm("Voucher created successfully. Generate PDF?")) {
-          handleGeneratePDF(response);
-        }
-      } else if (mode === "edit") {
-        response = await updateMutation.mutateAsync(data);
-        if (confirm("Voucher updated successfully. Generate PDF?")) {
-          handleGeneratePDF(response);
-        }
-      }
-    } catch (err) {
-      console.error("Error saving purchase order:", err);
-      toast.error("Failed to save purchase order. Please try again.");
-    }
-  };
-
-  const handleDuplicate = async (id: number) => {
-    try {
-      const voucher = voucherList?.find((v) => v.id === id);
-      if (!voucher) {
-        return;
-      }
-      reset({
-        ...voucher,
-        voucher_number: "",
-        date: new Date().toISOString().split("T")[0],
-        created_at: undefined,
-        updated_at: undefined,
-        id: undefined,
-      });
-      setMode("create");
-      toast.success("Purchase order duplicated successfully");
-    } catch (err) {
-      console.error("Error duplicating purchase order:", err);
-      toast.error("Failed to duplicate purchase order");
-    }
   };
 
   const getStockColor = (stock: number, reorder: number) => {
@@ -414,67 +486,6 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [mode, vendorId, vendorList, setValue]);
 
-  const handleVoucherClick = async (voucher: any) => {
-    try {
-      const response = await api.get(`/purchase-orders/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode("view");
-      reset(fullVoucherData);
-    } catch (err) {
-      console.error("Error fetching voucher:", err);
-      setMode("view");
-      reset(voucher);
-    }
-  };
-
-  const handleEditWithData = async (voucher: any) => {
-    if (!voucher || !voucher.id) {
-      return;
-    }
-    try {
-      const response = await api.get(`/purchase-orders/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      setMode("edit");
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for edit:", err);
-      handleEdit(voucher);
-    }
-  };
-
-  const handleViewWithData = async (voucher: any) => {
-    if (!voucher || !voucher.id) {
-      return;
-    }
-    try {
-      const response = await api.get(`/purchase-orders/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      setMode("view");
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for view:", err);
-      handleView(voucher);
-    }
-  };
-
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
       const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
@@ -547,7 +558,7 @@ const PurchaseOrderPage: React.FC = () => {
         <TableBody>
           {latestVouchers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">
+              <TableCell colSpan={5} align="center">  {/* Fixed colSpan with quotes */}
                 No purchase orders available
               </TableCell>
             </TableRow>

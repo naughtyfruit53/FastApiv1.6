@@ -39,6 +39,7 @@ interface ProductFormData {
 interface Product {
   product_name: string;
   hsn_code: string;
+  part_number: string;
   unit: string;
   gst_rate: number;
 }
@@ -203,7 +204,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       reset();
       onClose(); // Close modal on success
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error adding product:", err);
     }
   };
   const handleClose = () => {

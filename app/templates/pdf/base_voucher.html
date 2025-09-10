@@ -431,7 +431,7 @@
                             <th>Subtotal:</th>
                             <td>{{ subtotal|format_currency }}</td>
                         </tr>
-                        {% if total_discount_enabled and total_discount > 0 %}  <!-- Conditional total discount row -->
+                        {% if total_discount_enabled %}  <!-- Show if enabled, even if 0 -->
                         <tr>
                             <th>Total Discount:</th>
                             <td>{{ total_discount|format_currency }}</td>
