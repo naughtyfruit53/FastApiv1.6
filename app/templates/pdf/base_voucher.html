@@ -18,7 +18,7 @@
         }
         
         body {
-            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-family: 'NotoSans', 'DejaVuSans', sans-serif;
             font-size: 11px;
             line-height: 1.4;
             color: #333;
@@ -312,7 +312,7 @@
                                 <div class="company-name">{{ company.name }}</div>
                                 <div class="company-address">
                                     {{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}<br>
-                                    {{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %} - {{ company.pin_code }}{% endif %}
+                                    {{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %}, {{ company.pin_code }}{% endif %}
                                 </div>
                                 <div style="margin-top:6px; font-size:11px; color:#555;">
                                     {% if company.gst_number %}<div class="info-row"><span class="info-label">GST No:</span><span class="info-value">{{ company.gst_number }}</span></div>{% endif %}
@@ -400,9 +400,9 @@
                         {% if line_discount_enabled %}  <!-- Conditional discount display -->
                         <td class="text-right">
                             {% if item.discount_percentage > 0 %}
-                                {{ item.discount_percentage }}%
+                                {{ item.discount_percentage }}
                             {% elif item.discount_amount > 0 %}
-                                {{ item.discount_amount|format_currency }}
+                                {{ item.discount_amount|format_currency(show_symbol=False) }}
                             {% else %}
                                 -
                             {% endif %}
@@ -433,8 +433,8 @@
                         </tr>
                         {% if total_discount_enabled %}  <!-- Show if enabled, even if 0 -->
                         <tr>
-                            <th>Total Discount:</th>
-                            <td>{{ total_discount|format_currency }}</td>
+                            <th>Total Discount{% if voucher.total_discount_type == 'percentage' %}%{% else %}₹{% endif %}:</th>
+                            <td>{% if voucher.total_discount_type == 'percentage' %}{{ total_discount }}{% else %}{{ total_discount|format_currency(show_symbol=False) }}{% endif %}</td>
                         </tr>
                         {% endif %}
                         <tr>

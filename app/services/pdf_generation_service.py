@@ -18,6 +18,9 @@ import logging
 import base64
 import re  # Added for sanitizing filenames
 
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 logger = logging.getLogger(__name__)
 
 class IndianNumberFormatter:
@@ -56,8 +59,8 @@ class IndianNumberFormatter:
             return f"Amount: {amount:.2f}"
     
     @staticmethod
-    def format_indian_currency(amount: float) -> str:
-        """Format amount in Indian currency format (₹1,23,456.78)"""
+    def format_indian_currency(amount: float, show_symbol: bool = True) -> str:
+        """Format amount in Indian currency format format (₹1,23,456.78)"""
         try:
             # Handle negative amounts
             is_negative = amount < 0
@@ -91,7 +94,9 @@ class IndianNumberFormatter:
                 formatted_amount += f".{paise:02d}"
             
             # Add currency symbol and negative sign if needed
-            result = f"₹{formatted_amount}"
+            result = f"{formatted_amount}"
+            if show_symbol:
+                result = f"Rs. {result}"
             if is_negative:
                 result = f"-{result}"
                 
@@ -99,7 +104,7 @@ class IndianNumberFormatter:
             
         except Exception as e:
             logger.error(f"Error formatting Indian currency: {e}")
-            return f"₹{amount:.2f}"
+            return f"Rs. {amount:.2f}"
 
 class TaxCalculator:
     """GST and tax calculation utilities"""
@@ -158,6 +163,28 @@ class VoucherPDFGenerator:
         
         # Add custom filters
         self._add_custom_filters()
+
+        # Register fonts
+        self._register_fonts()
+    
+    def _register_fonts(self):
+        """Register custom fonts for PDF generation"""
+        try:
+            font_path = os.path.join(os.path.dirname(__file__), '../static/fonts/NotoSans-Regular.ttf')
+            if os.path.exists(font_path):
+                pdfmetrics.registerFont(TTFont('NotoSans', font_path))
+                logger.info("NotoSans font registered successfully")
+            else:
+                logger.warning("NotoSans-Regular.ttf not found at %s. Download from https://fonts.google.com/noto/specimen/Noto+Sans and place it there for proper ₹ symbol display.", font_path)
+
+            # Optionally register bold variant
+            bold_font_path = os.path.join(os.path.dirname(__file__), '../static/fonts/NotoSans-Bold.ttf')
+            if os.path.exists(bold_font_path):
+                pdfmetrics.registerFont(TTFont('NotoSans-Bold', bold_font_path))
+                logger.info("NotoSans-Bold font registered successfully")
+
+        except Exception as e:
+            logger.error(f"Error registering fonts: {e}")
     
     def _add_custom_filters(self):
         """Add custom Jinja2 filters"""
@@ -180,7 +207,7 @@ class VoucherPDFGenerator:
     
     def _format_percentage(self, value: float) -> str:
         """Format percentage value"""
-        return f"{value:.2f}%"
+        return f"{value:.2f}"
     
     def _get_company_branding(self, db: Session, organization_id: int) -> Dict[str, Any]:
         """Get company branding information"""
@@ -252,11 +279,10 @@ class VoucherPDFGenerator:
         vendor = None
         if voucher_data.get('vendor_id'):
             vendor = db.query(Vendor).filter(Vendor.id == voucher_data['vendor_id']).first()
-            if vendor and company['state_code'] and vendor.state_code:
-                is_interstate = company['state_code'] != vendor.state_code
-            elif vendor and company['state_code'] and vendor.gst_number:
-                vendor_state_code = vendor.gst_number[:2]  # First 2 digits of GSTIN
-                is_interstate = company['state_code'] != vendor_state_code
+            if vendor and company['state_code']:
+                vendor_state_code = vendor.state_code or (vendor.gst_number[:2] if vendor.gst_number else None)
+                if vendor_state_code:
+                    is_interstate = company['state_code'] != vendor_state_code
         
         # Calculate totals and taxes for items
         items = voucher_data.get('items', [])
