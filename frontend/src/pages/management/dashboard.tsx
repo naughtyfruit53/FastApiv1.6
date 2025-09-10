@@ -30,9 +30,38 @@ import {
   Assessment,
   Download,
   Refresh,
+  BarChart,
+  PieChart,
+  ShowChart,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
+import { Bar, Line, Doughnut } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import axios from "axios";
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 interface DashboardData {
   period: string;
   date_range: {
@@ -121,7 +150,7 @@ const ManagementDashboard: React.FC = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error(msg, err);
+      console.error("Export failed:", err);
     }
   };
   const formatCurrency = (value: number): string => {
@@ -134,6 +163,81 @@ const ManagementDashboard: React.FC = () => {
   };
   const formatPercentage = (value: number): string => {
     return `${value.toFixed(1)}%`;
+  };
+
+  // Chart configuration
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top" as const,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+      },
+    },
+  };
+
+  // Revenue vs Cost Chart Data
+  const revenueVsCostData = {
+    labels: ["Revenue", "Costs", "Profit"],
+    datasets: [
+      {
+        label: "Financial Performance",
+        data: [
+          dashboardData?.revenue_metrics.total_revenue || 0,
+          dashboardData?.cost_metrics.total_costs || 0,
+          dashboardData?.profitability.gross_profit || 0,
+        ],
+        backgroundColor: [
+          "rgba(54, 162, 235, 0.6)",
+          "rgba(255, 99, 132, 0.6)",
+          "rgba(75, 192, 192, 0.6)",
+        ],
+        borderColor: [
+          "rgba(54, 162, 235, 1)",
+          "rgba(255, 99, 132, 1)",
+          "rgba(75, 192, 192, 1)",
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  // Customer Distribution Chart Data
+  const customerDistributionData = {
+    labels: ["Existing Customers", "New Customers"],
+    datasets: [
+      {
+        data: [
+          (dashboardData?.customer_metrics.total_active_customers || 0) -
+            (dashboardData?.customer_metrics.new_customers || 0),
+          dashboardData?.customer_metrics.new_customers || 0,
+        ],
+        backgroundColor: ["rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)"],
+        borderColor: ["rgba(255, 206, 86, 1)", "rgba(75, 192, 192, 1)"],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  // Stock Health Chart Data
+  const stockHealthData = {
+    labels: ["Healthy Stock", "Low Stock"],
+    datasets: [
+      {
+        data: [
+          (dashboardData?.inventory_metrics.total_products || 0) -
+            (dashboardData?.inventory_metrics.low_stock_items || 0),
+          dashboardData?.inventory_metrics.low_stock_items || 0,
+        ],
+        backgroundColor: ["rgba(75, 192, 192, 0.6)", "rgba(255, 99, 132, 0.6)"],
+        borderColor: ["rgba(75, 192, 192, 1)", "rgba(255, 99, 132, 1)"],
+        borderWidth: 1,
+      },
+    ],
   };
   const MetricCard: React.FC<{
     title: string;
@@ -312,6 +416,193 @@ const ManagementDashboard: React.FC = () => {
           />
         </Grid>
       </Grid>
+
+      {/* Data Visualization Charts */}
+      <Typography variant="h6" gutterBottom>
+        Business Analytics Visualization
+      </Typography>
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" mb={2}>
+                <BarChart sx={{ mr: 1 }} />
+                <Typography variant="h6">Financial Performance</Typography>
+              </Box>
+              <Box height="300px">
+                <Bar data={revenueVsCostData} options={chartOptions} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" mb={2}>
+                <PieChart sx={{ mr: 1 }} />
+                <Typography variant="h6">Customer Distribution</Typography>
+              </Box>
+              <Box height="300px">
+                <Doughnut
+                  data={customerDistributionData}
+                  options={{
+                    responsive: true,
+                    plugins: {
+                      legend: {
+                        position: "bottom" as const,
+                      },
+                    },
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" mb={2}>
+                <ShowChart sx={{ mr: 1 }} />
+                <Typography variant="h6">Stock Health Status</Typography>
+              </Box>
+              <Box height="300px">
+                <Doughnut
+                  data={stockHealthData}
+                  options={{
+                    responsive: true,
+                    plugins: {
+                      legend: {
+                        position: "bottom" as const,
+                      },
+                    },
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" mb={2}>
+                <Analytics sx={{ mr: 1 }} />
+                <Typography variant="h6">Key Performance Indicators</Typography>
+              </Box>
+              <Box p={2}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2">Profit Margin</Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {formatPercentage(
+                          dashboardData?.profitability.profit_margin || 0
+                        )}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        width: "100%",
+                        bgcolor: "grey.300",
+                        borderRadius: 1,
+                        height: 8,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: `${Math.min(
+                            Math.max(
+                              dashboardData?.profitability.profit_margin || 0,
+                              0
+                            ),
+                            100
+                          )}%`,
+                          bgcolor: "success.main",
+                          height: "100%",
+                          borderRadius: 1,
+                        }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2">Stock Health</Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {formatPercentage(
+                          dashboardData?.inventory_metrics
+                            .stock_health_percentage || 0
+                        )}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        width: "100%",
+                        bgcolor: "grey.300",
+                        borderRadius: 1,
+                        height: 8,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: `${
+                            dashboardData?.inventory_metrics
+                              .stock_health_percentage || 0
+                          }%`,
+                          bgcolor:
+                            (dashboardData?.inventory_metrics
+                              .stock_health_percentage || 0) >= 80
+                              ? "success.main"
+                              : "warning.main",
+                          height: "100%",
+                          borderRadius: 1,
+                        }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2">Customer Growth</Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {formatPercentage(
+                          dashboardData?.customer_metrics.customer_growth_rate ||
+                            0
+                        )}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        width: "100%",
+                        bgcolor: "grey.300",
+                        borderRadius: 1,
+                        height: 8,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: `${Math.min(
+                            Math.max(
+                              dashboardData?.customer_metrics
+                                .customer_growth_rate || 0,
+                              0
+                            ),
+                            100
+                          )}%`,
+                          bgcolor: "primary.main",
+                          height: "100%",
+                          borderRadius: 1,
+                        }}
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       {/* Cash Flow Analysis */}
       <Typography variant="h6" gutterBottom>
         Cash Flow Analysis
