@@ -385,6 +385,21 @@ class Organization(Base):
         "UserEmailToken",
         back_populates="organization"
     )
+    
+    # New role hierarchy relationships
+    organization_roles: Mapped[List["OrganizationRole"]] = relationship(
+        "OrganizationRole",
+        back_populates="organization"
+    )
+    approval_settings: Mapped[Optional["OrganizationApprovalSettings"]] = relationship(
+        "OrganizationApprovalSettings",
+        back_populates="organization",
+        uselist=False
+    )
+    voucher_approvals: Mapped[List["VoucherApproval"]] = relationship(
+        "VoucherApproval",
+        back_populates="organization"
+    )
 
     __table_args__ = (
         Index('idx_org_status_subdomain', 'status', 'subdomain'),
@@ -569,6 +584,13 @@ class User(Base):
     company_assignments: Mapped[List["UserCompany"]] = relationship(
         "UserCompany",
         foreign_keys="UserCompany.user_id",
+        back_populates="user"
+    )
+    
+    # New organization role assignments
+    organization_role_assignments: Mapped[List["UserOrganizationRole"]] = relationship(
+        "UserOrganizationRole",
+        foreign_keys="UserOrganizationRole.user_id",
         back_populates="user"
     )
 
@@ -781,5 +803,213 @@ class UserCompany(Base):
         Index('idx_user_company_org', 'organization_id'),
         Index('idx_user_company_active', 'is_active'),
         Index('idx_user_company_admin', 'is_company_admin'),
+        {'extend_existing': True}
+    )
+
+
+# New Organization Role Hierarchy Models
+
+class OrganizationRole(Base):
+    """Organization-wide roles (Management, Manager, Executive) with module-based permissions"""
+    __tablename__ = "organization_roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_org_role_organization_id"), nullable=False, index=True)
+    
+    # Role details
+    name: Mapped[str] = mapped_column(String, nullable=False) # management, manager, executive
+    display_name: Mapped[str] = mapped_column(String, nullable=False) # Human-readable name
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    hierarchy_level: Mapped[int] = mapped_column(Integer, nullable=False) # 1=Management, 2=Manager, 3=Executive
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_org_role_created_by_id"), nullable=True)
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
+    user_assignments: Mapped[List["UserOrganizationRole"]] = relationship("UserOrganizationRole", back_populates="role")
+    module_assignments: Mapped[List["RoleModuleAssignment"]] = relationship("RoleModuleAssignment", back_populates="role")
+    
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'name', name='uq_org_role_org_name'),
+        Index('idx_org_role_org_active', 'organization_id', 'is_active'),
+        Index('idx_org_role_hierarchy', 'hierarchy_level'),
+        {'extend_existing': True}
+    )
+
+
+class RoleModuleAssignment(Base):
+    """Module assignments for organization roles - which modules each role can access"""
+    __tablename__ = "role_module_assignments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Foreign keys
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_role_module_organization_id"), nullable=False, index=True)
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("organization_roles.id", name="fk_role_module_role_id"), nullable=False)
+    
+    # Module assignment details
+    module_name: Mapped[str] = mapped_column(String, nullable=False) # CRM, ERP, HR, etc.
+    access_level: Mapped[str] = mapped_column(String, nullable=False, default="full") # full, limited, view_only
+    permissions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # Specific permissions for the module
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    assigned_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_role_module_assigned_by_id"), nullable=True)
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    role: Mapped["OrganizationRole"] = relationship("OrganizationRole", back_populates="module_assignments")
+    assigned_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_by_id])
+    
+    __table_args__ = (
+        UniqueConstraint('role_id', 'module_name', name='uq_role_module'),
+        Index('idx_role_module_org', 'organization_id'),
+        Index('idx_role_module_active', 'is_active'),
+        {'extend_existing': True}
+    )
+
+
+class UserOrganizationRole(Base):
+    """User assignments to organization roles"""
+    __tablename__ = "user_organization_roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Foreign keys
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_user_org_role_organization_id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_org_role_user_id"), nullable=False)
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("organization_roles.id", name="fk_user_org_role_role_id"), nullable=False)
+    
+    # Assignment details
+    assigned_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_org_role_assigned_by_id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Manager assignment for executives - executives report to managers per module
+    manager_assignments: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # {"CRM": manager_user_id, "ERP": manager_user_id}
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    role: Mapped["OrganizationRole"] = relationship("OrganizationRole", back_populates="user_assignments")
+    assigned_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_by_id])
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'role_id', name='uq_user_org_role'),
+        Index('idx_user_org_role_user', 'user_id'),
+        Index('idx_user_org_role_role', 'role_id'),
+        Index('idx_user_org_role_active', 'is_active'),
+        {'extend_existing': True}
+    )
+
+
+# Voucher Approval Workflow Models
+
+class OrganizationApprovalSettings(Base):
+    """Organization-wide approval workflow settings"""
+    __tablename__ = "organization_approval_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Foreign key
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_approval_settings_organization_id"), nullable=False, unique=True, index=True)
+    
+    # Approval model settings
+    approval_model: Mapped[str] = mapped_column(String, nullable=False, default="no_approval") # no_approval, level_1, level_2
+    
+    # Level 2 approval settings - which Management users can provide final approval
+    level_2_approvers: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # {"user_ids": [1, 2, 3]} - Management users who can approve
+    
+    # Additional workflow settings
+    auto_approve_threshold: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # Auto-approve vouchers below this amount
+    escalation_timeout_hours: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=72) # Auto-escalate after X hours
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updated_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_approval_settings_updated_by_id"), nullable=True)
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    updated_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[updated_by_id])
+    voucher_approvals: Mapped[List["VoucherApproval"]] = relationship("VoucherApproval", back_populates="approval_settings")
+    
+    __table_args__ = (
+        Index('idx_approval_settings_model', 'approval_model'),
+        {'extend_existing': True}
+    )
+
+
+class VoucherApproval(Base):
+    """Individual voucher approval records"""
+    __tablename__ = "voucher_approvals"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Foreign keys
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_voucher_approval_organization_id"), nullable=False, index=True)
+    approval_settings_id: Mapped[int] = mapped_column(Integer, ForeignKey("organization_approval_settings.id", name="fk_voucher_approval_settings_id"), nullable=False)
+    
+    # Voucher identification - generic to support all voucher types
+    voucher_type: Mapped[str] = mapped_column(String, nullable=False) # sales_voucher, purchase_voucher, etc.
+    voucher_id: Mapped[int] = mapped_column(Integer, nullable=False) # ID of the specific voucher
+    voucher_number: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Human-readable voucher number
+    voucher_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # Amount for threshold checking
+    
+    # Submitter information
+    submitted_by_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_voucher_approval_submitted_by_id"), nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Current approval status
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending") # pending, level_1_approved, approved, rejected
+    current_approver_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_voucher_approval_current_approver_id"), nullable=True)
+    
+    # Level 1 approval (Manager)
+    level_1_approver_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_voucher_approval_level_1_approver_id"), nullable=True)
+    level_1_approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    level_1_comments: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Level 2 approval (Management)
+    level_2_approver_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_voucher_approval_level_2_approver_id"), nullable=True)
+    level_2_approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    level_2_comments: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Final decision
+    final_decision: Mapped[Optional[str]] = mapped_column(String, nullable=True) # approved, rejected
+    final_decision_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    final_decision_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_voucher_approval_final_decision_by_id"), nullable=True)
+    rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    approval_settings: Mapped["OrganizationApprovalSettings"] = relationship("OrganizationApprovalSettings", back_populates="voucher_approvals")
+    submitted_by: Mapped["User"] = relationship("User", foreign_keys=[submitted_by_id])
+    current_approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[current_approver_id])
+    level_1_approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[level_1_approver_id])
+    level_2_approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[level_2_approver_id])
+    final_decision_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[final_decision_by_id])
+    
+    __table_args__ = (
+        UniqueConstraint('voucher_type', 'voucher_id', name='uq_voucher_approval'),
+        Index('idx_voucher_approval_org', 'organization_id'),
+        Index('idx_voucher_approval_status', 'status'),
+        Index('idx_voucher_approval_submitted', 'submitted_by_id'),
+        Index('idx_voucher_approval_current', 'current_approver_id'),
         {'extend_existing': True}
     )
