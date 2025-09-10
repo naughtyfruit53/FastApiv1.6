@@ -315,9 +315,20 @@ const PurchaseOrderPage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      let errorMsg = "Error saving purchase order";
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMsg = detail.map((e: any) => `${e.loc.join('.')} - ${e.msg}`).join('\n');
+        } else if (typeof detail === "string") {
+          errorMsg = detail;
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      toast.error(errorMsg);
       console.error("Error saving purchase order:", err);
-      toast.error("Failed to save purchase order. Please try again.");
     }
   };
 
@@ -388,6 +399,17 @@ const PurchaseOrderPage: React.FC = () => {
   };
 
   const onSubmit = (data: any) => {
+    // Added validation to prevent submit with null vendor or products
+    if (!watch("vendor_id")) {
+      toast.error("vendor is not present");
+      return;
+    }
+    for (let i = 0; i < fields.length; i++) {
+      if (!watch(`items.${i}.product_id`)) {
+        toast.error(`Please select product for item ${i + 1}`);
+        return;
+      }
+    }
     if (totalRoundOff !== 0) {
       setSubmitData(data);
       setRoundOffConfirmOpen(true);
@@ -1326,42 +1348,63 @@ const PurchaseOrderPage: React.FC = () => {
       <AddProductModal
         open={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
-        onAdd={(newProduct) => {
-          setValue(`items.${addingItemIndex}.product_id`, newProduct.id);
-          setValue(
-            `items.${addingItemIndex}.product_name`,
-            newProduct.product_name,
-          );
-          setValue(
-            `items.${addingItemIndex}.unit_price`,
-            newProduct.unit_price || 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.original_unit_price`,
-            newProduct.unit_price || 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.gst_rate`,
-            newProduct.gst_rate ?? 18,
-          );
-          setValue(
-            `items.${addingItemIndex}.cgst_rate`,
-            isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.sgst_rate`,
-            isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.igst_rate`,
-            isIntrastate ? 0 : newProduct.gst_rate ?? 18,
-          );
-          setValue(`items.${addingItemIndex}.unit`, newProduct.unit || "");
-          setValue(
-            `items.${addingItemIndex}.reorder_level`,
-            newProduct.reorder_level || 0,
-          );
-          refreshMasterData();
+        onAdd={async (productData) => {
+          setAddProductLoading(true);
+          try {
+            const response = await api.post('/products', productData);
+            const newProduct = response.data;
+            setValue(`items.${addingItemIndex}.product_id`, newProduct.id);
+            setValue(
+              `items.${addingItemIndex}.product_name`,
+              newProduct.product_name,
+            );
+            setValue(
+              `items.${addingItemIndex}.unit_price`,
+              newProduct.unit_price || 0,
+            );
+            setValue(
+              `items.${addingItemIndex}.original_unit_price`,
+              newProduct.unit_price || 0,
+            );
+            setValue(
+              `items.${addingItemIndex}.gst_rate`,
+              newProduct.gst_rate ?? 18,
+            );
+            setValue(
+              `items.${addingItemIndex}.cgst_rate`,
+              isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0,
+            );
+            setValue(
+              `items.${addingItemIndex}.sgst_rate`,
+              isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0,
+            );
+            setValue(
+              `items.${addingItemIndex}.igst_rate`,
+              isIntrastate ? 0 : newProduct.gst_rate ?? 18,
+            );
+            setValue(`items.${addingItemIndex}.unit`, newProduct.unit || "");
+            setValue(
+              `items.${addingItemIndex}.reorder_level`,
+              newProduct.reorder_level || 0,
+            );
+            refreshMasterData();
+          } catch (err: any) {
+            let errorMsg = "Failed to add product. Please check the form and try again.";
+            if (err.response?.data?.detail) {
+              const detail = err.response.data.detail;
+              if (Array.isArray(detail)) {
+                errorMsg = detail.map((e: any) => `${e.loc.join('.')} - ${e.msg}`).join('\n');
+              } else if (typeof detail === "string") {
+                errorMsg = detail;
+              }
+            } else if (err.message) {
+              errorMsg = err.message;
+            }
+            toast.error(errorMsg);
+            console.error("Failed to create new product:", err);
+          } finally {
+            setAddProductLoading(false);
+          }
         }}
         loading={addProductLoading}
         setLoading={setAddProductLoading}

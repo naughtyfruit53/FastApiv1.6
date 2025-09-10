@@ -17,6 +17,7 @@ import {
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts } from "../services/masterService";
+import { toast } from "react-toastify";
 interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
@@ -203,7 +204,19 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       await onAdd(cleanData);
       reset();
       onClose(); // Close modal on success
-    } catch (err) {
+    } catch (err: any) {
+      let errorMsg = "Error adding product";
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMsg = detail.map((e: any) => `${e.loc.join('.')} - ${e.msg}`).join('\n');
+        } else if (typeof detail === "string") {
+          errorMsg = detail;
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      toast.error(errorMsg);
       console.error("Error adding product:", err);
     }
   };
