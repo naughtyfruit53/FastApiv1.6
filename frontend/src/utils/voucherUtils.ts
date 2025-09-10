@@ -177,6 +177,13 @@ export const numberToWords = (num: number): string => {
   return word ? word + " only" : "";
 };
 /**
+ * Wrapper for numberToWords to match getAmountInWords naming
+ * Used in voucher forms for amount in words display
+ */
+export const getAmountInWords = (amount: number): string => {
+  return numberToWords(Math.round(amount));
+};
+/**
  * Enhanced GST calculation utilities with state-based split logic
  * Supports both intrastate (CGST+SGST) and interstate (IGST) transactions
  */
@@ -278,7 +285,7 @@ export const calculateVoucherTotals = (
   });
 
   const totalSubtotal = itemsWithLineDisc.reduce((sum, item) => sum + item.subtotal, 0);
-  const totalAmount = computedItems.reduce((sum, item) => sum + item.amount, 0);
+  let totalAmount = computedItems.reduce((sum, item) => sum + item.amount, 0);
   const totalCgst = computedItems.reduce((sum, item) => sum + item.cgst_amount, 0);
   const totalSgst = computedItems.reduce((sum, item) => sum + item.sgst_amount, 0);
   const totalIgst = computedItems.reduce((sum, item) => sum + item.igst_amount, 0);
@@ -297,6 +304,16 @@ export const calculateVoucherTotals = (
     gstBreakdown[rate].taxable += item.taxable_amount;
   });
 
+  // Calculate round off
+  const decimalPart = totalAmount - Math.floor(totalAmount);
+  let totalRoundOff = 0;
+  if (decimalPart < 0.5) {
+    totalRoundOff = -decimalPart;
+  } else {
+    totalRoundOff = 1 - decimalPart;
+  }
+  totalAmount += totalRoundOff;
+
   return {
     computedItems,
     totalAmount: parseFloat(totalAmount.toFixed(2)),
@@ -308,6 +325,7 @@ export const calculateVoucherTotals = (
     totalSgst: parseFloat(totalSgst.toFixed(2)),
     totalIgst: parseFloat(totalIgst.toFixed(2)),
     gstBreakdown,
+    totalRoundOff: parseFloat(totalRoundOff.toFixed(2)),
   };
 };
 /**
@@ -377,7 +395,7 @@ export const formatRateField = (value: number | string): string => {
   return isNaN(numValue) ? "0.00" : numValue.toFixed(2);
 };
 /**
- * Parse rate field input to ensure 2 decimal places
+ * Parse rate field input to ensure 2 decimal places max
  */
 export const parseRateField = (value: string): number => {
   const parsed = parseFloat(value);

@@ -213,6 +213,7 @@ class PurchaseOrderCreate(VoucherBase):
     line_discount_type: Optional[str] = None
     total_discount_type: Optional[str] = None
     total_discount: Optional[float] = 0.0
+    round_off: Optional[float] = 0.0
     items: List[PurchaseOrderItemCreate] = []
 
 class PurchaseOrderUpdate(BaseModel):
@@ -223,6 +224,7 @@ class PurchaseOrderUpdate(BaseModel):
     line_discount_type: Optional[str] = None
     total_discount_type: Optional[str] = None
     total_discount: Optional[float] = None
+    round_off: Optional[float] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -236,8 +238,14 @@ class PurchaseOrderInDB(VoucherInDBBase):
     line_discount_type: Optional[str]
     total_discount_type: Optional[str]
     total_discount: float
+    round_off: float = 0.0  # Added default to prevent validation errors on existing data
     items: List[PurchaseOrderItemInDB]
     vendor: Optional[VendorMinimal] = None
+
+    @field_validator('round_off', mode='before')
+    @classmethod
+    def handle_none_round_off(cls, v):
+        return 0.0 if v is None else v
 
 class PurchaseOrderAutoPopulateResponse(BaseModel):
     vendor_id: int

@@ -17,6 +17,7 @@ class PurchaseOrder(BaseVoucher):
     line_discount_type = Column(String)  # 'percentage' or 'amount'
     total_discount_type = Column(String)  # 'percentage' or 'amount'
     total_discount = Column(Float, default=0.0)
+    round_off = Column(Float, default=0.0)  # Added to match schema and PDF calculations
     
     vendor = relationship("Vendor")
     items = relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan")

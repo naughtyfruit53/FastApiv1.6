@@ -6,7 +6,7 @@ Comprehensive PDF generation service for vouchers with Indian formatting
 
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, date  # Added date import for type checking
 from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, Template
 from xhtml2pdf import pisa
@@ -252,30 +252,33 @@ class VoucherPDFGenerator:
         processed_items = []
         
         subtotal = 0.0
-        total_discount = 0.0
+        total_discount = voucher_data.get('total_discount', 0.0)
         total_taxable = 0.0
         total_cgst = 0.0
         total_sgst = 0.0
         total_igst = 0.0
+        is_interstate = voucher_data.get('is_interstate', False)
         
         for item in items:
             # Calculate item totals
             quantity = float(item.get('quantity', 0))
             unit_price = float(item.get('unit_price', 0))
             discount_percentage = float(item.get('discount_percentage', 0))
+            discount_amount = float(item.get('discount_amount', 0))
             gst_rate = float(item.get('gst_rate', 0))
             
             item_subtotal = quantity * unit_price
-            discount_amount = item_subtotal * (discount_percentage / 100)
+            if discount_percentage > 0:
+              discount_amount = item_subtotal * (discount_percentage / 100)
             taxable_amount = item_subtotal - discount_amount
             
             # Calculate GST (assuming intrastate for now - enhance with actual check)
-            gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, False)
+            gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
             
             item_total = taxable_amount + gst_calc['total_gst']
             
             processed_item = {
-                **item,
+                **item,  # Unpack original item dict to include all its fields
                 'subtotal': item_subtotal,
                 'discount_percentage': discount_percentage,
                 'discount_amount': discount_amount,
@@ -293,13 +296,21 @@ class VoucherPDFGenerator:
             processed_items.append(processed_item)
             
             subtotal += item_subtotal
-            total_discount += discount_amount
             total_taxable += taxable_amount
             total_cgst += gst_calc['cgst_amount']
             total_sgst += gst_calc['sgst_amount']
             total_igst += gst_calc['igst_amount']
         
-        grand_total = total_taxable + total_cgst + total_sgst + total_igst
+        grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
+        
+        # Calculate round off
+        decimal_part = grand_total - int(grand_total)
+        round_off = 0.0
+        if decimal_part < 0.5:
+            round_off = -decimal_part
+        else:
+            round_off = 1 - decimal_part
+        grand_total += round_off
         
         # Prepare template data
         template_data = {
@@ -312,7 +323,9 @@ class VoucherPDFGenerator:
             'total_cgst': total_cgst,
             'total_sgst': total_sgst,
             'total_igst': total_igst,
+            'round_off': round_off,
             'grand_total': grand_total,
+            'is_interstate': is_interstate,
             'amount_in_words': IndianNumberFormatter.amount_to_words(grand_total),
             'generated_at': datetime.now(),
             'page_count': 1  # Will be updated for multi-page

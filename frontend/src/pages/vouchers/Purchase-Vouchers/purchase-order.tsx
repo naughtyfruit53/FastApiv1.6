@@ -28,7 +28,7 @@ import {
   DialogTitle,
   TableFooter,
 } from "@mui/material";
-import { Add, Remove } from "@mui/icons-material";
+import { Add, Remove, Clear } from "@mui/icons-material";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
@@ -57,6 +57,8 @@ const PurchaseOrderPage: React.FC = () => {
   const config = getVoucherConfig("purchase-order");
   const voucherStyles = getVoucherStyles();
   const [gstError, setGstError] = useState<string | null>(null);
+  const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
+  const [submitData, setSubmitData] = useState<any>(null);
 
   // Derive company state code with fallback to gst_number prefix
   const companyState = useMemo(() => {
@@ -171,6 +173,7 @@ const PurchaseOrderPage: React.FC = () => {
     handleDiscountDialogClose,
     handleDiscountTypeSelect,
     discountDialogFor,
+    totalRoundOff,
   } = useVoucherPage(config);
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
@@ -233,7 +236,16 @@ const PurchaseOrderPage: React.FC = () => {
     }
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = (data: any) => {
+    if (totalRoundOff !== 0) {
+      setSubmitData(data);
+      setRoundOffConfirmOpen(true);
+      return;
+    }
+    handleFinalSubmit(data);
+  };
+
+  const handleFinalSubmit = async (data: any) => {
     try {
       if (config.hasItems !== false) {
         data.line_discount_type = lineDiscountEnabled ? lineDiscountType : null;
@@ -247,6 +259,7 @@ const PurchaseOrderPage: React.FC = () => {
         }));
         data.total_amount = totalAmount;
         data.is_intrastate = isIntrastate;
+        data.round_off = totalRoundOff;
       }
       const itemsToUpdate = data.items.filter(
         (item: any) =>
@@ -379,10 +392,10 @@ const PurchaseOrderPage: React.FC = () => {
           original_unit_price: product.unit_price || 0,
           discount_percentage: 0,
           discount_amount: 0,
-          gst_rate: product.gst_rate || 18,
-          cgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
-          sgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
-          igst_rate: isIntrastate ? 0 : product.gst_rate || 18,
+          gst_rate: product.gst_rate ?? 18,
+          cgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : product.gst_rate ?? 18,
           amount: 0,
           unit: product.unit,
           current_stock: 0,
@@ -482,10 +495,10 @@ const PurchaseOrderPage: React.FC = () => {
             original_unit_price: item.product?.unit_price || item.unit_price || 0,
             discount_percentage: item.discount_percentage || 0,
             discount_amount: item.discount_amount || 0,
-            gst_rate: item.gst_rate || 18,
-            cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : item.gst_rate || 18,
+            gst_rate: item.gst_rate ?? 18,
+            cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
+            sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
+            igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
             amount: item.total_amount,
             unit: item.unit,
             current_stock: item.current_stock || 0,
@@ -857,19 +870,19 @@ const PurchaseOrderPage: React.FC = () => {
                             );
                             setValue(
                               `items.${index}.gst_rate`,
-                              product?.gst_rate || 18,
+                              product?.gst_rate ?? 18,
                             );
                             setValue(
                               `items.${index}.cgst_rate`,
-                              isIntrastate ? (product?.gst_rate || 18) / 2 : 0,
+                              isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0,
                             );
                             setValue(
                               `items.${index}.sgst_rate`,
-                              isIntrastate ? (product?.gst_rate || 18) / 2 : 0,
+                              isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0,
                             );
                             setValue(
                               `items.${index}.igst_rate`,
-                              isIntrastate ? 0 : product?.gst_rate || 18,
+                              isIntrastate ? 0 : product?.gst_rate ?? 18,
                             );
                             setValue(
                               `items.${index}.unit`,
@@ -950,20 +963,20 @@ const PurchaseOrderPage: React.FC = () => {
                         <Autocomplete
                           size="small"
                           options={GST_SLABS}
-                          value={watch(`items.${index}.gst_rate`) || 18}
+                          value={watch(`items.${index}.gst_rate`) ?? 18}
                           onChange={(_, value) => {
-                            setValue(`items.${index}.gst_rate`, value || 18);
+                            setValue(`items.${index}.gst_rate`, value ?? 18);
                             setValue(
                               `items.${index}.cgst_rate`,
-                              isIntrastate ? (value || 18) / 2 : 0,
+                              isIntrastate ? (value ?? 18) / 2 : 0,
                             );
                             setValue(
                               `items.${index}.sgst_rate`,
-                              isIntrastate ? (value || 18) / 2 : 0,
+                              isIntrastate ? (value ?? 18) / 2 : 0,
                             );
                             setValue(
                               `items.${index}.igst_rate`,
-                              isIntrastate ? 0 : value || 18,
+                              isIntrastate ? 0 : value ?? 18,
                             );
                           }}
                           renderInput={(params) => (
@@ -1027,6 +1040,7 @@ const PurchaseOrderPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
+
                   {totalDiscountEnabled && (
                     <>
                       <Grid size={6}>
@@ -1037,28 +1051,41 @@ const PurchaseOrderPage: React.FC = () => {
                           Disc {totalDiscountType === 'percentage' ? '%' : '₹'}:
                         </Typography>
                       </Grid>
-                      <Grid size={6}>
+                      <Grid size={6} sx={{ textAlign: "right" }}>
                         {mode === "view" ? (
                           <Typography
                             variant="body2"
                             sx={{
-                              textAlign: "right",
                               fontSize: 14,
                               fontWeight: "bold",
                             }}
                           >
-                            ₹{totalDiscount.toLocaleString()}
+                            {totalDiscountType === 'percentage'
+                              ? `${watch("total_discount") || 0}%`
+                              : `₹${(watch("total_discount") || 0).toLocaleString()}`}
                           </Typography>
                         ) : (
                           <TextField
                             type="number"
                             {...control.register("total_discount", { valueAsNumber: true })}
                             size="small"
-                            sx={{ width: 100 }}
+                            sx={{ width: 120 }}
                             InputProps={{
+                              inputProps: { min: 0, step: totalDiscountType === 'percentage' ? 0.01 : 0.01 },
                               endAdornment: (
-                                <InputAdornment position="end">
-                                  {totalDiscountType === 'percentage' ? '%' : '₹'}
+                                <InputAdornment position="end" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Typography sx={{ mr: 0.5 }}>{totalDiscountType === 'percentage' ? '%' : '₹'}</Typography>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                      // clear the discount value and disable total discount
+                                      setValue("total_discount", 0);
+                                      handleToggleTotalDiscount(false);
+                                    }}
+                                    aria-label="clear discount"
+                                  >
+                                    <Clear fontSize="small" />
+                                  </IconButton>
                                 </InputAdornment>
                               ),
                             }}
@@ -1067,128 +1094,94 @@ const PurchaseOrderPage: React.FC = () => {
                       </Grid>
                     </>
                   )}
-                  {gstRatesVary ? (
+
+                  {isIntrastate ? (
                     <>
-                      {Object.entries(gstBreakdown).map(([rate, { cgst, sgst, igst }]) => (
-                        <React.Fragment key={rate}>
-                          {isIntrastate ? (
-                            <>
-                              <Grid size={6}>
-                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14 }}>
-                                  CGST ({parseFloat(rate) / 2}%):
-                                </Typography>
-                              </Grid>
-                              <Grid size={6}>
-                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14, fontWeight: "bold" }}>
-                                  ₹{cgst.toLocaleString()}
-                                </Typography>
-                              </Grid>
-                              <Grid size={6}>
-                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14 }}>
-                                  SGST ({parseFloat(rate) / 2}%):
-                                </Typography>
-                              </Grid>
-                              <Grid size={6}>
-                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14, fontWeight: "bold" }}>
-                                  ₹{sgst.toLocaleString()}
-                                </Typography>
-                              </Grid>
-                            </>
-                          ) : (
-                            <>
-                              <Grid size={6}>
-                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14 }}>
-                                  IGST ({rate}%):
-                                </Typography>
-                              </Grid>
-                              <Grid size={6}>
-                                <Typography variant="body2" sx={{ textAlign: "right", fontSize: 14, fontWeight: "bold" }}>
-                                  ₹{igst.toLocaleString()}
-                                </Typography>
-                              </Grid>
-                            </>
-                          )}
-                        </React.Fragment>
-                      ))}
+                      <Grid size={6}>
+                        <Typography
+                          variant="body2"
+                          sx={{ textAlign: "right", fontSize: 14 }}
+                        >
+                          CGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            textAlign: "right",
+                            fontSize: 14,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          ₹{totalCgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography
+                          variant="body2"
+                          sx={{ textAlign: "right", fontSize: 14 }}
+                        >
+                          SGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            textAlign: "right",
+                            fontSize: 14,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          ₹{totalSgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
                     </>
                   ) : (
                     <>
-                      {isIntrastate ? (
-                        <>
-                          <Grid size={6}>
-                            <Typography
-                              variant="body2"
-                              sx={{ textAlign: "right", fontSize: 14 }}
-                            >
-                              CGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
-                            </Typography>
-                          </Grid>
-                          <Grid size={6}>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                textAlign: "right",
-                                fontSize: 14,
-                                fontWeight: "bold",
-                              }}
-                            >
-                              ₹{totalCgst.toLocaleString()}
-                            </Typography>
-                          </Grid>
-                          <Grid size={6}>
-                            <Typography
-                              variant="body2"
-                              sx={{ textAlign: "right", fontSize: 14 }}
-                            >
-                              SGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
-                            </Typography>
-                          </Grid>
-                          <Grid size={6}>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                textAlign: "right",
-                                fontSize: 14,
-                                fontWeight: "bold",
-                              }}
-                            >
-                              ₹{totalSgst.toLocaleString()}
-                            </Typography>
-                          </Grid>
-                        </>
-                      ) : (
-                        <>
-                          <Grid size={6}>
-                            <Typography
-                              variant="body2"
-                              sx={{ textAlign: "right", fontSize: 14 }}
-                            >
-                              IGST ({watch(`items.0.gst_rate`) || 18}%):
-                            </Typography>
-                          </Grid>
-                          <Grid size={6}>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                textAlign: "right",
-                                fontSize: 14,
-                                fontWeight: "bold",
-                              }}
-                            >
-                              ₹{totalIgst.toLocaleString()}
-                            </Typography>
-                          </Grid>
-                        </>
-                      )}
+                      <Grid size={6}>
+                        <Typography
+                          variant="body2"
+                          sx={{ textAlign: "right", fontSize: 14 }}
+                        >
+                          IGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            textAlign: "right",
+                            fontSize: 14,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          ₹{totalIgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
                     </>
                   )}
-                  {gstRatesVary && (
-                    <Grid size={12}>
-                      <Alert severity="info" sx={{ mt: 1 }}>
-                        Multiple GST rates applied. Showing breakdown per rate.
-                      </Alert>
-                    </Grid>
-                  )}
+                  <Grid size={6}>
+                    <Typography
+                      variant="body2"
+                      sx={{ textAlign: "right", fontSize: 14 }}
+                    >
+                      Round Off:
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        textAlign: "right",
+                        fontSize: 14,
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ₹{totalRoundOff > 0 ? '+' : ''}{totalRoundOff.toLocaleString()}
+                    </Typography>
+                  </Grid>
                   <Grid size={6}>
                     <Typography
                       variant="h6"
@@ -1210,7 +1203,7 @@ const PurchaseOrderPage: React.FC = () => {
                         fontWeight: "bold",
                       }}
                     >
-                      ₹{totalAmount.toLocaleString()}
+                      ₹{Math.round(totalAmount).toLocaleString()}
                     </Typography>
                   </Grid>
                 </Grid>
@@ -1250,6 +1243,21 @@ const PurchaseOrderPage: React.FC = () => {
           <Button onClick={() => handleDiscountTypeSelect('percentage')}>Discount %</Button>
           <Button onClick={() => handleDiscountTypeSelect('amount')}>Discount ₹</Button>
           <Button onClick={handleDiscountDialogClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={roundOffConfirmOpen} onClose={() => setRoundOffConfirmOpen(false)}>
+        <DialogTitle>Confirm Round Off</DialogTitle>
+        <DialogContent>
+          <Typography>Round off amount is {totalRoundOff.toFixed(2)}. Proceed with save?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRoundOffConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={() => {
+            setRoundOffConfirmOpen(false);
+            if (submitData) {
+              handleFinalSubmit(submitData);
+            }
+          }} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
     </Box>
@@ -1323,19 +1331,19 @@ const PurchaseOrderPage: React.FC = () => {
           );
           setValue(
             `items.${addingItemIndex}.gst_rate`,
-            newProduct.gst_rate || 18,
+            newProduct.gst_rate ?? 18,
           );
           setValue(
             `items.${addingItemIndex}.cgst_rate`,
-            isIntrastate ? (newProduct.gst_rate || 18) / 2 : 0,
+            isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0,
           );
           setValue(
             `items.${addingItemIndex}.sgst_rate`,
-            isIntrastate ? (newProduct.gst_rate || 18) / 2 : 0,
+            isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0,
           );
           setValue(
             `items.${addingItemIndex}.igst_rate`,
-            isIntrastate ? 0 : newProduct.gst_rate || 18,
+            isIntrastate ? 0 : newProduct.gst_rate ?? 18,
           );
           setValue(`items.${addingItemIndex}.unit`, newProduct.unit || "");
           setValue(

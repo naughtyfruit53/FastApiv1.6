@@ -20,6 +20,7 @@ import {
   voucherListUtils,
   enhancedRateUtils,
   VOUCHER_PAGINATION_DEFAULTS,
+  getAmountInWords,  // Added import for getAmountInWords
 } from "../utils/voucherUtils";
 import {
   generateVoucherPDF,
@@ -163,6 +164,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       reference_type: "",
       reference_id: null as number | null,
       reference_number: "",
+      round_off: 0,
     };
     if (config.hasItems === false) {
       // Financial vouchers - use financial defaults
@@ -217,7 +219,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     control,
     name: "items",
   });
-  const itemsWatch = useWatch({ control, name: "items" });
+  // Combined useWatch for items and total_discount to avoid multiple calls
+  const watchedFields = useWatch({ control, name: ["items", "total_discount"] });
+  const itemsWatch = watchedFields[0] || [];  // Default to empty array
+  const totalDiscountWatch = watchedFields[1] || 0;  // Default to 0
   const { data: vendorList } = useQuery({
     queryKey: ["vendors"],
     queryFn: getVendors,
@@ -299,6 +304,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalDiscount,
     totalTaxable,
     gstBreakdown,
+    totalRoundOff,
   } = useMemo(() => {
     if (config.hasItems === false || !itemsWatch) {
       return {
@@ -312,6 +318,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         totalDiscount: 0,
         totalTaxable: 0,
         gstBreakdown: {},
+        totalRoundOff: 0,
       };
     }
     // Ensure all rates are properly formatted
@@ -324,9 +331,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       isIntrastate,
       lineDiscountEnabled ? lineDiscountType : null,
       totalDiscountEnabled ? totalDiscountType : null,
-      watch("total_discount") || 0
+      totalDiscountWatch
     );
-  }, [itemsWatch, config.hasItems, watch, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType]);
+  }, [itemsWatch, config.hasItems, watch, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, totalDiscountWatch]);  // Keep totalDiscountWatch in deps
   // Enhanced queries with pagination and sorting
   const {
     data: voucherList,
@@ -610,10 +617,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     },
     [config.voucherType, config.apiEndpoint, queryClient, refetchVoucherList],
   );
-  // Number to words utility
-  const getAmountInWords = useCallback((amount: number) => {
-    return numberToWords(amount);
-  }, []);
   // Master data refresh functionality
   const refreshMasterData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["vendors"] });
@@ -791,6 +794,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
             reorder_level: item.reorder_level || 0,
             discount_percentage: item.discount_percentage || 0,
             discount_amount: item.discount_amount || 0,
+            gst_rate: item.gst_rate ?? 18,
           });
         });
         console.log("[useVoucherPage] Loaded items:", voucherData.items.length);
@@ -940,6 +944,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalTaxable,
     gstBreakdown,
     isIntrastate,
+    totalRoundOff,
     // Mutations
     createMutation,
     updateMutation,
@@ -960,7 +965,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     handleAddProduct,
     handleAddShipping,
     refreshMasterData,
-    getAmountInWords,
+    getAmountInWords,  // Now imported from utils
     // Enhanced utilities
     isViewMode: mode === "view",
     enhancedRateUtils,
