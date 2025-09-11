@@ -312,6 +312,7 @@ class VoucherPDFGenerator:
             discount_percentage = float(item.get('discount_percentage', 0))
             discount_amount = float(item.get('discount_amount', 0))
             gst_rate = float(item.get('gst_rate', 0))
+            description = item.get('description', '')
             
             item_subtotal = quantity * unit_price
             if discount_percentage > 0:
@@ -336,7 +337,8 @@ class VoucherPDFGenerator:
                 'cgst_amount': gst_calc['cgst_amount'],
                 'sgst_amount': gst_calc['sgst_amount'],
                 'igst_amount': gst_calc['igst_amount'],
-                'total_amount': item_total
+                'total_amount': item_total,
+                'description': description
             }
             
             processed_items.append(processed_item)

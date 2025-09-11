@@ -191,6 +191,7 @@ class SalesVoucherInDB(VoucherInDBBase):
 # Purchase Order
 class PurchaseOrderItemCreate(VoucherItemWithTax):
     discount_amount: Optional[float] = 0.0
+    description: Optional[str] = None
 
 class PurchaseOrderItemInDB(VoucherItemWithTax):
     id: int
@@ -199,6 +200,7 @@ class PurchaseOrderItemInDB(VoucherItemWithTax):
     pending_quantity: Optional[float] = None
     product: Optional[ProductMinimal] = None
     discount_amount: float = 0.0
+    description: Optional[str] = None
 
     @field_validator('discount_amount', mode='before')
     @classmethod

@@ -43,6 +43,43 @@
 </div>
 {% endblock %}
 
+{% block item_table_headers %}
+<tr>
+    <th class="item-cell" style="width: 5%;">Sl. No.</th>
+    <th class="item-cell" style="width: 40%;">Product</th>
+    <th class="item-cell" style="width: 10%;">HSN/SAC</th>
+    <th class="item-cell" style="width: 10%;">Qty</th>
+    <th class="item-cell" style="width: 10%;">Rate</th>
+    {% if line_discount_enabled %}
+    <th class="item-cell" style="width: 10%;">Disc. %</th>
+    {% endif %}
+    <th class="item-cell" style="width: 10%;">GST %</th>
+    <th class="item-cell" style="width: 15%;">Amount</th>
+</tr>
+{% endblock %}
+
+{% block item_table_rows %}
+{% for item in items %}
+<tr>
+    <td class="item-cell">{{ loop.index }}</td>
+    <td class="item-cell">
+        <div>{{ item.product_name|default(item.product.product_name) }}</div>
+        {% if item.description %}
+        <div style="font-size: 8px; color: #666; margin-top: 2px;">{{ item.description }}</div>
+        {% endif %}
+    </td>
+    <td class="item-cell">{{ item.hsn_code|default('N/A') }}</td>
+    <td class="item-cell">{{ item.quantity }} {{ item.unit|default('') }}</td>
+    <td class="item-cell">{{ item.unit_price|format_currency(show_symbol=False) }}</td>
+    {% if line_discount_enabled %}
+    <td class="item-cell">{{ item.discount_percentage|format_percentage }}%</td>
+    {% endif %}
+    <td class="item-cell">{{ item.gst_rate|format_percentage }}%</td>
+    <td class="item-cell">{{ item.total_amount|format_currency(show_symbol=False) }}</td>
+</tr>
+{% endfor %}
+{% endblock %}
+
 {% block voucher_specific_footer %}
 {% if voucher.delivery_terms %}
 <div style="margin-top: 15px;">

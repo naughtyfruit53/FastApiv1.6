@@ -1,7 +1,7 @@
 """Add organization role hierarchy and voucher approval workflow
 
-Revision ID: role_approval_workflow_2025_01_01
-Revises: head
+Revision ID: add_role_approval_workflow
+Revises: 649c2623e6c7
 Create Date: 2025-01-01 12:00:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'role_approval_workflow_2025_01_01'
-down_revision = None  # This will be set manually if needed
+revision = 'add_role_approval_workflow'
+down_revision = '649c2623e6c7'
 branch_labels = None
 depends_on = None
 

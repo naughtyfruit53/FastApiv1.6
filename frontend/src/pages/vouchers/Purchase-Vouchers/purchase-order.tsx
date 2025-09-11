@@ -59,6 +59,7 @@ const PurchaseOrderPage: React.FC = () => {
   const [gstError, setGstError] = useState<string | null>(null);
   const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
   const [submitData, setSubmitData] = useState<any>(null);
+  const [descriptionEnabled, setDescriptionEnabled] = useState(false);
 
   // Derive company state code with fallback to gst_number prefix
   const companyState = useMemo(() => {
@@ -209,6 +210,15 @@ const PurchaseOrderPage: React.FC = () => {
 
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
 
+  const handleToggleDescription = (checked: boolean) => {
+    setDescriptionEnabled(checked);
+    if (!checked) {
+      fields.forEach((_, index) => {
+        setValue(`items.${index}.description`, '');
+      });
+    }
+  };
+
   const handleAddItem = () => {
     append({
       product_id: null,
@@ -226,6 +236,7 @@ const PurchaseOrderPage: React.FC = () => {
       unit: "",
       current_stock: 0,
       reorder_level: 0,
+      description: '',
     });
   };
 
@@ -416,6 +427,7 @@ const PurchaseOrderPage: React.FC = () => {
           unit: product.unit,
           current_stock: 0,
           reorder_level: product.reorder_level || 0,
+          description: '',
         });
       }
     }
@@ -519,6 +531,7 @@ const PurchaseOrderPage: React.FC = () => {
             unit: item.unit,
             current_stock: item.current_stock || 0,
             reorder_level: item.reorder_level || 0,
+            description: item.description || '',
           });
         });
       }
@@ -797,6 +810,16 @@ const PurchaseOrderPage: React.FC = () => {
                 }
                 label="Add Total Discount"
               />
+              <FormControlLabel
+                control={
+                  <Checkbox 
+                    checked={descriptionEnabled} 
+                    onChange={(e) => handleToggleDescription(e.target.checked)}
+                    disabled={mode === "view"}
+                  />
+                }
+                label="Add Description"
+              />
             </Box>
             <TableContainer
               component={Paper}
@@ -865,163 +888,180 @@ const PurchaseOrderPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {fields.map((field: any, index: number) => (
-                    <TableRow key={field.id}>
-                      <TableCell sx={{ p: 1 }}>
-                        <ProductAutocomplete
-                          value={selectedProducts[index]}
-                          onChange={(product) => {
-                            setValue(
-                              `items.${index}.product_id`,
-                              product?.id || null,
-                            );
-                            setValue(
-                              `items.${index}.product_name`,
-                              product?.product_name || "",
-                            );
-                            setValue(
-                              `items.${index}.unit_price`,
-                              product?.unit_price || 0,
-                            );
-                            setValue(
-                              `items.${index}.original_unit_price`,
-                              product?.unit_price || 0,
-                            );
-                            setValue(
-                              `items.${index}.gst_rate`,
-                              product?.gst_rate ?? 18,
-                            );
-                            setValue(
-                              `items.${index}.cgst_rate`,
-                              isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.sgst_rate`,
-                              isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.igst_rate`,
-                              isIntrastate ? 0 : product?.gst_rate ?? 18,
-                            );
-                            setValue(
-                              `items.${index}.unit`,
-                              product?.unit || "",
-                            );
-                            setValue(
-                              `items.${index}.reorder_level`,
-                              product?.reorder_level || 0,
-                            );
-                          }}
-                          disabled={mode === "view"}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1, textAlign: "center" }}>
-                        {stockLoading[index] ? (
-                          <CircularProgress size={12} />
-                        ) : watch(`items.${index}.product_id`) ? (
-                          <Typography
-                            variant="caption"
-                            color={getStockColor(
-                              watch(`items.${index}.current_stock`),
-                              watch(`items.${index}.reorder_level`),
-                            )}
-                          >
-                            {watch(`items.${index}.current_stock`)}{" "}
-                            {watch(`items.${index}.unit`)}
-                          </Typography>
-                        ) : null}
-                      </TableCell>
-                      <TableCell sx={{ p: 1, textAlign: "right" }}>
-                        <TextField
-                          type="number"
-                          {...control.register(`items.${index}.quantity`, {
-                            valueAsNumber: true,
-                          })}
-                          disabled={mode === "view"}
-                          size="small"
-                          sx={{ width: 120 }}
-                          InputProps={{
-                            inputProps: { min: 0, step: 1 },
-                            endAdornment: <InputAdornment position="end">{watch(`items.${index}.unit`) || ''}</InputAdornment>,
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1, textAlign: "right" }}>
-                        <TextField
-                          type="number"
-                          {...control.register(`items.${index}.unit_price`, {
-                            valueAsNumber: true,
-                          })}
-                          disabled={mode === "view"}
-                          size="small"
-                          sx={{ width: 80 }}
-                          InputProps={{
-                            inputProps: { min: 0, step: 0.01 },
-                          }}
-                        />
-                      </TableCell>
-                      {lineDiscountEnabled && (
+                    <React.Fragment key={field.id}>
+                      <TableRow>
                         <TableCell sx={{ p: 1 }}>
-                          <TextField
-                            type="number"
-                            {...control.register(
-                              `items.${index}.${lineDiscountType === 'percentage' ? 'discount_percentage' : 'discount_amount'}`,
-                              { valueAsNumber: true },
-                            )}
+                          <ProductAutocomplete
+                            value={selectedProducts[index]}
+                            onChange={(product) => {
+                              setValue(
+                                `items.${index}.product_id`,
+                                product?.id || null,
+                              );
+                              setValue(
+                                `items.${index}.product_name`,
+                                product?.product_name || "",
+                              );
+                              setValue(
+                                `items.${index}.unit_price`,
+                                product?.unit_price || 0,
+                              );
+                              setValue(
+                                `items.${index}.original_unit_price`,
+                                product?.unit_price || 0,
+                              );
+                              setValue(
+                                `items.${index}.gst_rate`,
+                                product?.gst_rate ?? 18,
+                              );
+                              setValue(
+                                `items.${index}.cgst_rate`,
+                                isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0,
+                              );
+                              setValue(
+                                `items.${index}.sgst_rate`,
+                                isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0,
+                              );
+                              setValue(
+                                `items.${index}.igst_rate`,
+                                isIntrastate ? 0 : product?.gst_rate ?? 18,
+                              );
+                              setValue(
+                                `items.${index}.unit`,
+                                product?.unit || "",
+                              );
+                              setValue(
+                                `items.${index}.reorder_level`,
+                                product?.reorder_level || 0,
+                              );
+                            }}
                             disabled={mode === "view"}
                             size="small"
-                            sx={{ width: 60 }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: "center" }}>
+                          {stockLoading[index] ? (
+                            <CircularProgress size={12} />
+                          ) : watch(`items.${index}.product_id`) ? (
+                            <Typography
+                              variant="caption"
+                              color={getStockColor(
+                                watch(`items.${index}.current_stock`),
+                                watch(`items.${index}.reorder_level`),
+                              )}
+                            >
+                              {watch(`items.${index}.current_stock`)}{" "}
+                              {watch(`items.${index}.unit`)}
+                            </Typography>
+                          ) : null}
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: "right" }}>
+                          <TextField
+                            type="number"
+                            {...control.register(`items.${index}.quantity`, {
+                              valueAsNumber: true,
+                            })}
+                            disabled={mode === "view"}
+                            size="small"
+                            sx={{ width: 120 }}
                             InputProps={{
-                              inputProps: { min: 0, step: lineDiscountType === 'percentage' ? 0.01 : 1 },
+                              inputProps: { min: 0, step: 1 },
+                              endAdornment: <InputAdornment position="end">{watch(`items.${index}.unit`) || ''}</InputAdornment>,
                             }}
                           />
                         </TableCell>
-                      )}
-                      <TableCell sx={{ p: 1 }}>
-                        <Autocomplete
-                          size="small"
-                          options={GST_SLABS}
-                          value={watch(`items.${index}.gst_rate`) ?? 18}
-                          onChange={(_, value) => {
-                            setValue(`items.${index}.gst_rate`, value ?? 18);
-                            setValue(
-                              `items.${index}.cgst_rate`,
-                              isIntrastate ? (value ?? 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.sgst_rate`,
-                              isIntrastate ? (value ?? 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.igst_rate`,
-                              isIntrastate ? 0 : value ?? 18,
-                            );
-                          }}
-                          renderInput={(params) => (
+                        <TableCell sx={{ p: 1, textAlign: "right" }}>
+                          <TextField
+                            type="number"
+                            {...control.register(`items.${index}.unit_price`, {
+                              valueAsNumber: true,
+                            })}
+                            disabled={mode === "view"}
+                            size="small"
+                            sx={{ width: 80 }}
+                            InputProps={{
+                              inputProps: { min: 0, step: 0.01 },
+                            }}
+                          />
+                        </TableCell>
+                        {lineDiscountEnabled && (
+                          <TableCell sx={{ p: 1 }}>
                             <TextField
-                              {...params}
+                              type="number"
+                              {...control.register(
+                                `items.${index}.${lineDiscountType === 'percentage' ? 'discount_percentage' : 'discount_amount'}`,
+                                { valueAsNumber: true },
+                              )}
+                              disabled={mode === "view"}
                               size="small"
                               sx={{ width: 60 }}
+                              InputProps={{
+                                inputProps: { min: 0, step: lineDiscountType === 'percentage' ? 0.01 : 1 },
+                              }}
                             />
-                          )}
-                          disabled={mode === "view"}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1, fontSize: 14 }}>
-                        ₹{computedItems[index]?.amount?.toLocaleString() || "0"}
-                      </TableCell>
-                      {mode !== "view" && (
+                          </TableCell>
+                        )}
                         <TableCell sx={{ p: 1 }}>
-                          <IconButton
+                          <Autocomplete
                             size="small"
-                            onClick={() => remove(index)}
-                            color="error"
-                          >
-                            <Remove />
-                          </IconButton>
+                            options={GST_SLABS}
+                            value={watch(`items.${index}.gst_rate`) ?? 18}
+                            onChange={(_, value) => {
+                              setValue(`items.${index}.gst_rate`, value ?? 18);
+                              setValue(
+                                `items.${index}.cgst_rate`,
+                                isIntrastate ? (value ?? 18) / 2 : 0,
+                              );
+                              setValue(
+                                `items.${index}.sgst_rate`,
+                                isIntrastate ? (value ?? 18) / 2 : 0,
+                              );
+                              setValue(
+                                `items.${index}.igst_rate`,
+                                isIntrastate ? 0 : value ?? 18,
+                              );
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                size="small"
+                                sx={{ width: 60 }}
+                              />
+                            )}
+                            disabled={mode === "view"}
+                          />
                         </TableCell>
+                        <TableCell sx={{ p: 1, fontSize: 14 }}>
+                          ₹{computedItems[index]?.amount?.toLocaleString() || "0"}
+                        </TableCell>
+                        {mode !== "view" && (
+                          <TableCell sx={{ p: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => remove(index)}
+                              color="error"
+                            >
+                              <Remove />
+                            </IconButton>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                      {descriptionEnabled && (
+                        <TableRow>
+                          <TableCell colSpan={mode !== "view" ? 8 : 7} sx={{ p: 1 }}>
+                            <TextField
+                              multiline
+                              rows={1}
+                              placeholder="Description"
+                              {...control.register(`items.${index}.description`)}
+                              disabled={mode === "view"}
+                              size="small"
+                              fullWidth
+                            />
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </TableRow>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
