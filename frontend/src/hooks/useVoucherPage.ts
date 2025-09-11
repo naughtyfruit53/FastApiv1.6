@@ -67,6 +67,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   } | null>(null);
   const [useDifferentShipping, setUseDifferentShipping] = useState(false);
   // Enhanced pagination and filtering states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(VOUCHER_PAGINATION_DEFAULTS.pageSize);
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -89,23 +91,17 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const [discountDialogFor, setDiscountDialogFor] = useState<'line' | 'total' | null>(null);
   // Load saved discount types from localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedLineType = localStorage.getItem('voucherLineDiscountType');
-      if (savedLineType) setLineDiscountType(savedLineType as 'percentage' | 'amount');
-      const savedTotalType = localStorage.getItem('voucherTotalDiscountType');
-      if (savedTotalType) setTotalDiscountType(savedTotalType as 'percentage' | 'amount');
-    }
+    const savedLineType = localStorage.getItem('voucherLineDiscountType');
+    if (savedLineType) setLineDiscountType(savedLineType as 'percentage' | 'amount');
+    const savedTotalType = localStorage.getItem('voucherTotalDiscountType');
+    if (savedTotalType) setTotalDiscountType(savedTotalType as 'percentage' | 'amount');
   }, []);
   // Save discount types to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined' && lineDiscountType) {
-      localStorage.setItem('voucherLineDiscountType', lineDiscountType);
-    }
+    if (lineDiscountType) localStorage.setItem('voucherLineDiscountType', lineDiscountType);
   }, [lineDiscountType]);
   useEffect(() => {
-    if (typeof window !== 'undefined' && totalDiscountType) {
-      localStorage.setItem('voucherTotalDiscountType', totalDiscountType);
-    }
+    if (totalDiscountType) localStorage.setItem('voucherTotalDiscountType', totalDiscountType);
   }, [totalDiscountType]);
   // Handlers for toggling discounts
   const handleToggleLineDiscount = (enabled: boolean) => {
@@ -118,9 +114,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     } else {
       // Reset when unchecked
       setLineDiscountType(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('voucherLineDiscountType');
-      }
+      localStorage.removeItem('voucherLineDiscountType');
     }
     setLineDiscountEnabled(enabled);
   };
@@ -134,9 +128,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     } else {
       // Reset when unchecked
       setTotalDiscountType(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('voucherTotalDiscountType');
-      }
+      localStorage.removeItem('voucherTotalDiscountType');
     }
     setTotalDiscountEnabled(enabled);
   };
@@ -348,12 +340,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     isLoading: isLoadingList,
     refetch: refetchVoucherList,
   } = useQuery({
-    queryKey: [config.voucherType],
+    queryKey: [config.voucherType, currentPage, pageSize],
     queryFn: () =>
       voucherService.getVouchers(config.voucherType, {
+        skip: (currentPage - 1) * pageSize,
+        limit: 99999,
         sort: "desc",
         sortBy: "created_at",
-        limit: 99999
       }),
     enabled: isOrgContextReady,
   });
@@ -407,7 +400,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       console.log("[useVoucherPage] Voucher created successfully:", newVoucher);
       // Optimistically update the voucher list by prepending the new voucher
       queryClient.setQueryData(
-        [config.voucherType],
+        [config.voucherType, currentPage, pageSize],
         (oldData: any) => {
           if (!oldData) {
             return [newVoucher];
@@ -419,6 +412,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       await refetchVoucherList(); // Explicit refetch after invalidation
       setMode("create");
       setSelectedId(null);
+      setCurrentPage(1); // Reset to first page to see new voucher
       reset(defaultValues);
       const { data: newNextNumber } = await refetchNextNumber();
       setValue("voucher_number", newNextNumber);
@@ -500,6 +494,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const handleCloseContextMenu = () => {
     setContextMenu(null);
   };
+  // Enhanced pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
   // Enhanced reference document handling
   const handleReferenceSelected = (referenceData: any) => {
     setReferenceDocument(referenceData);
@@ -541,6 +539,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     [sortedVouchers],
   );
   // Enhanced pagination data
+  const paginationData = useMemo(() => {
+    const totalVouchers = sortedVouchers.length;
+    return voucherListUtils.paginate(sortedVouchers, currentPage, pageSize);
+  }, [sortedVouchers, currentPage, pageSize]);
   const handleSearch = () => {
     if (fromDate && toDate && new Date(toDate) < new Date(fromDate)) {
       alert("To date cannot be earlier than from date");
@@ -569,6 +571,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       return (!searchTerm || matchesSearch) && matchesDate;
     });
     setFilteredVouchers(filtered);
+    setCurrentPage(1); // Reset to first page when filtering
   };
   // Modal handlers (missing from original)
   const handleModalOpen = useCallback(() => {
@@ -815,19 +818,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "refreshMasterData") {
         refreshMasterData();
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem("refreshMasterData");
-        }
+        localStorage.removeItem("refreshMasterData");
       }
     };
-    if (typeof window !== 'undefined') {
-      window.addEventListener("storage", handleStorageChange);
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener("storage", handleStorageChange);
-      }
-    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, [refreshMasterData]);
   useEffect(() => {
     if (mode === "create" && isOrgContextReady) {
@@ -909,6 +904,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     toDate,
     setToDate,
     filteredVouchers,
+    // Enhanced pagination
+    currentPage,
+    pageSize,
+    paginationData,
+    handlePageChange,
     // Reference document handling
     referenceDocument,
     handleReferenceSelected,
