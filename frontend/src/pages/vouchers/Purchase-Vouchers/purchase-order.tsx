@@ -362,7 +362,7 @@ const PurchaseOrderPage: React.FC = () => {
           });
       } else {
         setValue(`items.${index}.current_stock`, 0);
-        setStockLoading((prev) => ({ ...prev, [index]: false });
+        setStockLoading((prev) => ({ ...prev, [index]: false }));
       }
     });
   }, [
