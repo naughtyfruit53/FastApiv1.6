@@ -246,6 +246,22 @@ const PurchaseOrderPage: React.FC = () => {
   };
 
   const handleFinalSubmit = async (data: any) => {
+    if (!data.vendor_id) {
+      toast.error("Please select a vendor");
+      return;
+    }
+
+    const validItems = data.items.filter(
+      (item: any) => item.product_id && item.quantity > 0
+    );
+
+    if (validItems.length === 0) {
+      toast.error("Please add at least one valid product with quantity");
+      return;
+    }
+
+    data.items = validItems;
+
     try {
       if (config.hasItems !== false) {
         data.line_discount_type = lineDiscountEnabled ? lineDiscountType : null;
