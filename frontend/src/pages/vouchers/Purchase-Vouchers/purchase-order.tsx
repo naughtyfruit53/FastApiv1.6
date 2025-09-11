@@ -620,37 +620,39 @@ const PurchaseOrderPage: React.FC = () => {
 
   const gstRatesVary = Object.keys(gstBreakdown).length > 1;
 
-  const formContent = (
+  const formHeader = (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
+        {config.voucherTitle} -{" "}
+        {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
+      </Typography>
+      <VoucherHeaderActions
+        mode={mode}
+        voucherType={config.voucherTitle}
+        voucherRoute="/vouchers/Purchase-Vouchers/purchase-order"
+        currentId={mode !== "create" ? voucherData?.id : null}
+        onEdit={() =>
+          voucherData && voucherData.id && handleEditWithData(voucherData)
+        }
+        onCreate={handleCreate}
+        onCancel={handleCancel}
+      />
+    </Box>
+  );
+
+  const formBody = (
     <Box>
       {gstError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {gstError}
         </Alert>
       )}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
-          {config.voucherTitle} -{" "}
-          {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
-        </Typography>
-        <VoucherHeaderActions
-          mode={mode}
-          voucherType={config.voucherTitle}
-          voucherRoute="/vouchers/Purchase-Vouchers/purchase-order"
-          currentId={mode !== "create" ? voucherData?.id : null}
-          onEdit={() =>
-            voucherData && voucherData.id && handleEditWithData(voucherData)
-          }
-          onCreate={handleCreate}
-          onCancel={handleCancel}
-        />
-      </Box>
       <form
         id="voucherForm"
         onSubmit={handleSubmit(onSubmit)}
@@ -1289,7 +1291,8 @@ const PurchaseOrderPage: React.FC = () => {
         voucherType={config.voucherTitle}
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
-        formContent={formContent}
+        formHeader={formHeader}
+        formBody={formBody}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={
