@@ -67,6 +67,10 @@ from app.api.v1 import procurement as v1_procurement
 from app.api.v1 import tally as v1_tally
 from app.api.v1 import warehouse as v1_warehouse
 
+# Add imports for Financial Modeling and Forecasting
+from app.api.v1 import financial_modeling as v1_financial_modeling
+from app.api.v1 import forecasting as v1_forecasting
+
 # Add import for RBAC
 from app.api.v1 import rbac as v1_rbac
 
@@ -416,6 +420,13 @@ logger.info("ERP Core router included successfully at prefix: /api/v1/erp")
 
 app.include_router(v1_finance_analytics.router, prefix="/api/v1/finance", tags=["finance-analytics"])
 logger.info("Finance Analytics router included successfully at prefix: /api/v1/finance")
+
+# Include Financial Modeling and Forecasting routers
+app.include_router(v1_financial_modeling.router, prefix="/api/v1/financial-modeling", tags=["financial-modeling"])
+logger.info("Financial Modeling router included successfully at prefix: /api/v1/financial-modeling")
+
+app.include_router(v1_forecasting.router, prefix="/api/v1/forecasting", tags=["forecasting"])
+logger.info("Forecasting router included successfully at prefix: /api/v1/forecasting")
 
 app.include_router(v1_procurement.router, prefix="/api/v1/procurement", tags=["procurement"])
 logger.info("Procurement router included successfully at prefix: /api/v1/procurement")
