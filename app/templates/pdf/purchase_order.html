@@ -8,17 +8,25 @@
 {% block voucher_specific_info %}
 <div class="voucher-info">
     <div class="section-title">Purchase Order Details</div>
-    <div class="info-row">
-        <span class="info-label">PO No:</span>
-        <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <div class="info-row" style="flex: 1;">
+            <span class="info-label">Date:</span>
+            <span class="info-value">{{ voucher.date|format_date }}</span>
+        </div>
+        <div class="info-row" style="flex: 1; text-align: right;">
+            <span class="info-label">PO No:</span>
+            <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+        </div>
     </div>
-    <div class="info-row">
-        <span class="info-label">Date:</span>
-        <span class="info-value">{{ voucher.date|format_date }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Required By:</span>
-        <span class="info-value">{{ voucher.required_by_date|format_date|default('Immediate') }}</span>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <div class="info-row" style="flex: 1;">
+            <span class="info-label">Required By:</span>
+            <span class="info-value">{{ voucher.required_by_date|format_date|default('Immediate') }}</span>
+        </div>
+        <div class="info-row" style="flex: 1; text-align: right;">
+            <span class="info-label">Payment Terms:</span>
+            <span class="info-value">{{ voucher.payment_terms|default('As per agreement') }}</span>
+        </div>
     </div>
     {% if voucher.reference_number %}
     <div class="info-row">
@@ -26,16 +34,6 @@
         <span class="info-value">{{ voucher.reference_number }}</span>
     </div>
     {% endif %}
-    <div class="info-row">
-        <span class="info-label">Payment Terms:</span>
-        <span class="info-value">{{ voucher.payment_terms|default('As per agreement') }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Status:</span>
-        <span class="info-value">
-            <span class="status-badge">{{ voucher.status|default('Draft')|title }}</span>
-        </span>
-    </div>
 </div>
 {% endblock %}
 

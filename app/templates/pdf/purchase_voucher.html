@@ -8,14 +8,30 @@
 {% block voucher_specific_info %}
 <div class="voucher-info">
     <div class="section-title">Purchase Voucher Details</div>
-    <div class="info-row">
-        <span class="info-label">Voucher No:</span>
-        <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <div class="info-row" style="flex: 1;">
+            <span class="info-label">Date:</span>
+            <span class="info-value">{{ voucher.date|format_date }}</span>
+        </div>
+        <div class="info-row" style="flex: 1; text-align: right;">
+            <span class="info-label">Voucher No:</span>
+            <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+        </div>
     </div>
-    <div class="info-row">
-        <span class="info-label">Date:</span>
-        <span class="info-value">{{ voucher.date|format_date }}</span>
+    {% if voucher.due_date %}
+    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <div class="info-row" style="flex: 1;">
+            <span class="info-label">Due Date:</span>
+            <span class="info-value">{{ voucher.due_date|format_date|default('Immediate') }}</span>
+        </div>
+        {% if voucher.status != 'draft' %}
+        <div class="info-row" style="flex: 1; text-align: right;">
+            <span class="info-label">Payment Status:</span>
+            <span class="info-value">{{ voucher.status|title }}</span>
+        </div>
+        {% endif %}
     </div>
+    {% endif %}
     {% if voucher.reference_number %}
     <div class="info-row">
         <span class="info-label">Reference:</span>
@@ -25,12 +41,6 @@
     <div class="info-row">
         <span class="info-label">Payment Terms:</span>
         <span class="info-value">{{ voucher.payment_terms|default('As per agreement') }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Status:</span>
-        <span class="info-value">
-            <span class="status-badge">{{ voucher.status|default('Draft')|title }}</span>
-        </span>
     </div>
 </div>
 {% endblock %}

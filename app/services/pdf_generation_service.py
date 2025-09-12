@@ -404,10 +404,16 @@ class VoucherPDFGenerator:
             template_data = self._prepare_voucher_data(voucher_data, db, organization_id)
             
             # Get template for voucher type
-            template_name = f"{voucher_type}_voucher.html"
-            
-            if voucher_type == 'purchase-orders':
+            if voucher_type in ['purchase', 'purchase-vouchers']:
+                template_name = 'purchase_voucher.html'
+            elif voucher_type == 'purchase-orders':
                 template_name = 'purchase_order.html'
+            elif voucher_type == 'sales':
+                template_name = 'sales_voucher.html'
+            elif voucher_type in ['quotation', 'sales_order', 'proforma']:
+                template_name = 'presales_voucher.html'
+            else:
+                template_name = f"{voucher_type}_voucher.html"
             
             try:
                 template = self.jinja_env.get_template(template_name)

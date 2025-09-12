@@ -293,6 +293,8 @@
             <span class="status-badge">{{ voucher.status }}</span>
             {% endif %}
         </div>
+
+        {% block voucher_specific_info %}{% endblock %}
         
         <!-- Company and Vendor/Customer Details in a 1-row 2-column table -->
         <table class="voucher-details-table" role="presentation" aria-hidden="true">
