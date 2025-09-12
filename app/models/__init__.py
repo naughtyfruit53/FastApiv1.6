@@ -43,6 +43,18 @@ from .erp_models import (
     GeneralLedger, CostCenter, BankAccount, BankReconciliation,
     FinancialStatement, FinancialKPI
 )
+# Import financial modeling models
+from .financial_modeling_models import (
+    FinancialModel, DCFModel, ScenarioAnalysis, TradingComparables,
+    TransactionComparables, FinancialModelTemplate, ModelAuditTrail,
+    ValuationMethodType, ScenarioType
+)
+# Import forecasting models
+from .forecasting_models import (
+    FinancialForecast, ForecastVersion, BusinessDriverModel, MLForecastModel,
+    MLPrediction, RiskAnalysis, RiskEvent, AutomatedInsight,
+    ForecastMethodType, ForecastFrequency, ForecastStatus
+)
 # Import procurement models
 from .procurement_models import (
     RequestForQuotation, RFQItem, VendorRFQ, VendorQuotation, QuotationItem,

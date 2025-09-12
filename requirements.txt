@@ -37,3 +37,9 @@ google-api-python-client==2.151.0
 msal==1.31.0
 imaplib2==3.6
 cryptography==45.0.7  # Already specified above but ensuring version
+
+# ML and Financial Modeling Dependencies
+scikit-learn==1.5.2
+numpy==1.26.4
+scipy==1.14.1
+joblib==1.4.2
