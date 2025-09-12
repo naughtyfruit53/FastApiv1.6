@@ -109,6 +109,9 @@ class Settings:
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
+    # wkhtmltopdf path (dynamic for local Windows vs. deployment Linux)
+    WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf")
+    
     @property
     def jwt_secret(self) -> str:
         """
