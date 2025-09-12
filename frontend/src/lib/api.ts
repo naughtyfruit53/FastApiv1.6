@@ -10,34 +10,28 @@ const handleTokenExpiry = () => {
   const currentSearch = window.location.search;
   const currentHash = window.location.hash;
   const returnUrl = `${currentPath}${currentSearch}${currentHash}`;
-  // Store form data if available
-  try {
-    const forms = document.querySelectorAll("form");
-    const formData: { [key: string]: any } = {};
-    forms.forEach((form, index) => {
-      const formDataObj = new FormData(form);
-      const formEntries: { [key: string]: any } = {};
-      for (const [key, value] of formDataObj.entries()) {
-        if (typeof value === "string" && value.trim()) {
-          formEntries[key] = value;
-        }
+  const forms = document.querySelectorAll("form");
+  const formData: { [key: string]: any } = {};
+  forms.forEach((form, index) => {
+    const formDataObj = new FormData(form);
+    const formEntries: { [key: string]: any } = {};
+    for (const [key, value] of formDataObj.entries()) {
+      if (typeof value === "string" && value.trim()) {
+        formEntries[key] = value;
       }
-      if (Object.keys(formEntries).length > 0) {
-        formData[`form_${index}`] = formEntries;
-      }
-    });
-    if (Object.keys(formData).length > 0) {
-      sessionStorage.setItem("formDataBeforeExpiry", JSON.stringify(formData));
-      console.log("[API] Preserved form data before logout");
     }
-  } catch (error) {
-    console.warn("[API] Could not preserve form data:", error);
+    if (Object.keys(formEntries).length > 0) {
+      formData[`form_${index}`] = formEntries;
+    }
+  });
+  if (Object.keys(formData).length > 0) {
+    sessionStorage.setItem("formDataBeforeExpiry", JSON.stringify(formData));
+    console.log("[API] Preserved form data before logout");
   }
   if (returnUrl !== "/" && !returnUrl.includes("/login")) {
     sessionStorage.setItem("returnUrlAfterLogin", returnUrl);
     console.log("[API] Stored return URL:", returnUrl);
   }
-  // Clear auth data except refresh_token
   localStorage.removeItem("token");
   localStorage.removeItem("user_role");
   localStorage.removeItem("is_super_admin");
@@ -166,7 +160,7 @@ api.interceptors.response.use(
       error: error.response?.data,
       timestamp: new Date().toISOString(),
     });
-    if ((status === 401 || status === 403) && !originalRequest._retry) {
+    if (status === 401 && !originalRequest._retry) {
       if (originalRequest.headers?.Authorization) {
         console.log(`[API] ${status} Auth error - attempting token refresh`);
         originalRequest._retry = true;

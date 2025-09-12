@@ -23,6 +23,7 @@ import { useForm, Controller } from "react-hook-form";
 import { authService } from "../services/authService";
 interface UnifiedLoginFormProps {
   onLogin: (_token: string, _loginResponse?: any) => void;
+  onForgotPassword: () => void;
 }
 interface LoginFormData {
   email: string;
@@ -30,7 +31,7 @@ interface LoginFormData {
   phoneNumber: string;
   otp: string;
 }
-const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
+const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin, onForgotPassword }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -378,16 +379,21 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin }) => {
             </Button>
           )}
         </Box>
-        <Typography
-          variant="body2"
-          color="textSecondary"
-          align="center"
-          sx={{ mt: 2 }}
-        >
-          {useOTP
-            ? "Enter your email and optional phone number to receive an OTP for secure login."
-            : "Use your email and password to login, or try OTP authentication for enhanced security."}
-        </Typography>
+        <Box sx={{ textAlign: "center", mt: 2 }}>
+          {useOTP ? (
+            <Typography variant="body2" color="textSecondary">
+              Enter your email and optional phone number to receive an OTP for secure login.
+            </Typography>
+          ) : (
+            <Button
+              variant="text"
+              color="primary"
+              onClick={onForgotPassword}
+            >
+              Forgot Password?
+            </Button>
+          )}
+        </Box>
       </CardContent>
     </Card>
   );

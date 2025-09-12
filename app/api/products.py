@@ -85,7 +85,12 @@ async def create_product(
 ):
     """Create new product"""
     
-    org_id = require_current_organization_id()
+    org_id = current_user.organization_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No current Organization specified"
+        )
     
     # Check if product name already exists in organization
     existing_product = db.query(Product).filter(
@@ -209,7 +214,12 @@ async def export_products_excel(
     
     # Apply tenant filtering for non-super-admin users
     if not bool(current_user.is_super_admin):
-        org_id = require_current_organization_id()
+        org_id = current_user.organization_id
+        if not org_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No current Organization specified"
+            )
         query = TenantQueryMixin.filter_by_tenant(query, Product, org_id)
     
     if active_only:
@@ -252,7 +262,12 @@ async def import_products_excel(
 ):
     """Import products from Excel file"""
     
-    org_id = require_current_organization_id()
+    org_id = current_user.organization_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No current Organization specified"
+        )
     
     # Validate company setup is completed before allowing product imports
     validate_company_setup_for_operations(db, org_id)
@@ -426,7 +441,12 @@ async def upload_product_file(
 ):
     """Upload a file for a product (max 5 files per product)"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = current_user.organization_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No current Organization specified"
+        )
     
     # Verify product exists and belongs to current organization
     product = db.query(Product).filter(
@@ -512,7 +532,12 @@ async def get_product_files(
 ):
     """Get all files for a product"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = current_user.organization_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No current Organization specified"
+        )
     
     # Verify product exists and belongs to current organization
     product = db.query(Product).filter(
@@ -552,7 +577,12 @@ async def download_product_file(
 ):
     """Download a product file"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = current_user.organization_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No current Organization specified"
+        )
     
     # Get file record
     file_record = db.query(ProductFile).filter(
@@ -589,7 +619,12 @@ async def delete_product_file(
 ):
     """Delete a product file"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = current_user.organization_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No current Organization specified"
+        )
     
     # Get file record
     file_record = db.query(ProductFile).filter(
@@ -635,7 +670,12 @@ async def check_products_stock_consistency(
     """
     
     # Get organization context
-    org_id = ensure_organization_context(current_user)
+    org_id = current_user.organization_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No current Organization specified"
+        )
     
     # Count products and stock entries
     products_count = db.query(Product).filter(Product.organization_id == org_id).count()

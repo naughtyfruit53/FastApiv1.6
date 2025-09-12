@@ -347,7 +347,7 @@ const DeliveryChallanPage: React.FC = () => {
                 align="center"
                 sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
               >
-                Amount
+                Total Amount
               </TableCell>
               <TableCell
                 align="right"
@@ -642,7 +642,7 @@ const DeliveryChallanPage: React.FC = () => {
                         textAlign: "center",
                       }}
                     >
-                      Amount
+                      Line Total
                     </TableCell>
                     {mode !== "view" && (
                       <TableCell

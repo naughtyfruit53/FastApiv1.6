@@ -1,5 +1,5 @@
 // frontend/src/context/CompanyContext.tsx
-import React, { createContext, useContext, useEffect } from "react"; // Added useEffect to the import
+import React, { createContext, useContext, useEffect, useState } from "react"; // Added useState
 import { useQuery } from "@tanstack/react-query";
 import { companyService } from "../services/authService";
 import { useAuth } from "./AuthContext";
@@ -27,6 +27,8 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
     !!localStorage.getItem("token") &&
     router.pathname !== "/login";
 
+  const [isCompanySetupNeeded, setIsCompanySetupNeeded] = useState(false);
+
   const {
     data: company,
     isLoading,
@@ -50,32 +52,40 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     enabled,
     retry: false,
+    onSuccess: (data) => {
+      if (!data) {
+        setIsCompanySetupNeeded(true);
+      }
+    },
     onError: (err: any) => {
       console.error("[CompanyContext] Error fetching company:", {
         error: err.message,
         status: err.status,
         timestamp: new Date().toISOString(),
       });
-      if (
-        err.message === "No authentication token available" ||
-        err.status === 401
-      ) {
-        console.log(
-          "[CompanyContext] No auth token - skipping setup check silently",
-        );
-      } else if (err.status === 404 || err.isCompanySetupRequired) {
+      const status = err.response?.status;
+      if (status === 401) {
+        console.log("[CompanyContext] 401 Unauthorized - redirecting to login");
+        router.push("/login");
+      } else if (status === 404 || err.isCompanySetupRequired) {
         console.log(
           "[CompanyContext] Company setup needed due to 404/missing company",
         );
+        setIsCompanySetupNeeded(true);
         toast.error("Company details not found. Please complete company setup.");
+      } else if (status === 403) {
+        toast.error("Access denied. Insufficient permissions for company details.");
       } else {
         toast.error(`Error fetching company details: ${err.message}`);
       }
     },
   });
 
-  const isCompanySetupNeeded =
-    enabled && !isLoading && company === null && !error;
+  useEffect(() => {
+    if (enabled && !isLoading && !error && company === null) {
+      setIsCompanySetupNeeded(true);
+    }
+  }, [enabled, isLoading, error, company]);
 
   useEffect(() => {
     if (company) {

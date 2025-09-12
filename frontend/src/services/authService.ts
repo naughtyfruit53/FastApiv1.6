@@ -70,7 +70,7 @@ export const authService = {
       // Store token FIRST
       localStorage.setItem("token", response.data.access_token);
       // Store ALL authentication context data immediately after token
-      // Store authentication context data (NOT organization_id - that stays in memory)
+      // Store refresh token if provided
       if (response.data.refresh_token) {
         localStorage.setItem("refresh_token", response.data.refresh_token);
         console.log("[AuthService] Stored refresh token");
@@ -657,7 +657,9 @@ export const companyService = {
       const response = await api.get("/organizations/current");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to fetch organization info");
+      throw new Error(
+        error.userMessage || "Failed to fetch organization info",
+      );
     }
   },
   getCompanyUsers: async (companyId: number) => {

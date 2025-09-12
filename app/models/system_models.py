@@ -1,7 +1,5 @@
 # app/models/system_models.py
 
-# app/models/system_models.py
-
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -65,6 +63,66 @@ class Company(Base):
     )
     products: Mapped[List["app.models.product_models.Product"]] = relationship(
         "app.models.product_models.Product",
+        back_populates="company"
+    )
+    
+    # Project Management relationships
+    projects: Mapped[List["app.models.project_models.Project"]] = relationship(
+        "app.models.project_models.Project",
+        back_populates="company"
+    )
+    
+    # Workflow relationships
+    workflow_templates: Mapped[List["app.models.workflow_models.WorkflowTemplate"]] = relationship(
+        "app.models.workflow_models.WorkflowTemplate",
+        back_populates="company"
+    )
+    approval_requests: Mapped[List["app.models.workflow_models.ApprovalRequest"]] = relationship(
+        "app.models.workflow_models.ApprovalRequest",
+        back_populates="company"
+    )
+    
+    # API Gateway relationships
+    api_keys: Mapped[List["app.models.api_gateway_models.APIKey"]] = relationship(
+        "app.models.api_gateway_models.APIKey",
+        back_populates="company"
+    )
+    webhooks: Mapped[List["app.models.api_gateway_models.Webhook"]] = relationship(
+        "app.models.api_gateway_models.Webhook",
+        back_populates="company"
+    )
+    
+    # Integration relationships
+    external_integrations: Mapped[List["app.models.integration_models.ExternalIntegration"]] = relationship(
+        "app.models.integration_models.ExternalIntegration",
+        back_populates="company"
+    )
+    
+    # Master Data relationships
+    categories: Mapped[List["app.models.master_data_models.Category"]] = relationship(
+        "app.models.master_data_models.Category",
+        back_populates="company"
+    )
+    units: Mapped[List["app.models.master_data_models.Unit"]] = relationship(
+        "app.models.master_data_models.Unit",
+        back_populates="company"
+    )
+    tax_codes: Mapped[List["app.models.master_data_models.TaxCode"]] = relationship(
+        "app.models.master_data_models.TaxCode",
+        back_populates="company"
+    )
+    payment_terms_extended: Mapped[List["app.models.master_data_models.PaymentTermsExtended"]] = relationship(
+        "app.models.master_data_models.PaymentTermsExtended",
+        back_populates="company"
+    )
+    
+    # Advanced Workflow Automation relationships
+    business_rules: Mapped[List["app.models.workflow_automation_models.BusinessRule"]] = relationship(
+        "app.models.workflow_automation_models.BusinessRule",
+        back_populates="company"
+    )
+    workflow_templates_advanced: Mapped[List["app.models.workflow_automation_models.WorkflowTemplateAdvanced"]] = relationship(
+        "app.models.workflow_automation_models.WorkflowTemplateAdvanced",
         back_populates="company"
     )
 

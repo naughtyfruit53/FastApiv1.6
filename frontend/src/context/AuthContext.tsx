@@ -21,6 +21,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   updateUser: (updatedData: Partial<User>) => void;
   isOrgContextReady: boolean;
+  getAuthHeaders: () => { Authorization?: string };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       // On error, clear sensitive data and force re-auth
       console.log("[AuthProvider] Auth error - clearing data");
       localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
       localStorage.removeItem("user_role");
       localStorage.removeItem("is_super_admin");
       // Preserve refresh_token for potential recovery
@@ -335,6 +337,12 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
   };
 
+  // Get auth headers for API requests
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   // Only ready if user is super admin or has org context
   const isOrgContextReady =
     !user || user.is_super_admin || !!user.organization_id;
@@ -450,6 +458,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         refreshUser,
         updateUser,
         isOrgContextReady,
+        getAuthHeaders,
       }}
     >
       {children}
@@ -457,7 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   );
 }
 
-export const useAuth = (): any => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within AuthProvider");

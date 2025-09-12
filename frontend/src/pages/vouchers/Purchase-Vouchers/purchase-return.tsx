@@ -37,10 +37,32 @@ import {
 } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
-import api from "../../../lib/api"; // Import api for direct call
+import api from "../../../lib/api";
+import { useCompany } from "../../../context/CompanyContext";
+import { useRouter } from "next/router";
+import { toast } from "react-toastify";
 const PurchaseReturnPage: React.FC = () => {
+  const { company, isLoading: companyLoading, error: companyError } = useCompany();
+  const router = useRouter();
+  const { productId, vendorId } = router.query;
   const config = getVoucherConfig("purchase-return");
   const voucherStyles = getVoucherStyles();
+  const [gstError, setGstError] = useState<string | null>(null);
+
+  // Derive company state code with fallback to gst_number prefix
+  const companyState = useMemo(() => {
+    if (company?.state_code) {
+      console.log("[PurchaseReturnPage] Company state_code:", company.state_code);
+      return company.state_code;
+    }
+    if (company?.gst_number && company.gst_number.length >= 2) {
+      const stateCodeFromGst = company.gst_number.slice(0, 2);
+      console.log("[PurchaseReturnPage] Derived state from GST:", stateCodeFromGst);
+      return stateCodeFromGst;
+    }
+    console.log("[PurchaseReturnPage] No state code available");
+    return null;
+  }, [company]);
   const {
     // State
     mode,
@@ -128,6 +150,46 @@ const PurchaseReturnPage: React.FC = () => {
   const selectedVendor = vendorList?.find(
     (v: any) => v.id === selectedVendorId,
   );
+
+  // Validate state codes for GST calculation after company data is loaded
+  useEffect(() => {
+    if (companyLoading) {
+      console.log("[PurchaseReturnPage] Company data still loading, skipping GST validation");
+      return;
+    }
+    if (selectedVendorId && !selectedVendor?.state_code && !selectedVendor?.gst_number) {
+      setGstError("Vendor state code or GST number is missing. Please update vendor details.");
+    } else if (!companyState) {
+      setGstError("Company state code or GST number is missing. Please update company details in settings.");
+    } else {
+      setGstError(null);
+    }
+    console.log("[PurchaseReturnPage] GST Validation:", {
+      selectedVendor,
+      companyState,
+      selectedVendorId,
+      vendorStateCode: selectedVendor?.state_code || selectedVendor?.gst_number?.slice(0, 2),
+      timestamp: new Date().toISOString(),
+    });
+  }, [selectedVendorId, selectedVendor, companyState, companyLoading]);
+
+  // Determine if transaction is intrastate
+  const vendorState = useMemo(() => {
+    if (selectedVendor?.state_code) {
+      return selectedVendor.state_code;
+    }
+    if (selectedVendor?.gst_number && selectedVendor.gst_number.length >= 2) {
+      return selectedVendor.gst_number.slice(0, 2);
+    }
+    return null;
+  }, [selectedVendor]);
+
+  const isIntrastate = useMemo(() => {
+    if (!companyState || !vendorState) {
+      return true; // Default to intrastate if state codes are not available
+    }
+    return companyState === vendorState;
+  }, [companyState, vendorState]);
   // Enhanced vendor options with "Add New"
   const enhancedVendorOptions = [
     ...(vendorList || []),
@@ -144,8 +206,12 @@ const PurchaseReturnPage: React.FC = () => {
       product_name: "",
       quantity: 1,
       unit_price: 0,
+      original_unit_price: 0,
       discount_percentage: 0,
       gst_rate: 18,
+      cgst_rate: isIntrastate ? 9 : 0,
+      sgst_rate: isIntrastate ? 9 : 0,
+      igst_rate: isIntrastate ? 0 : 18,
       amount: 0,
       unit: "",
       current_stock: 0,
@@ -156,23 +222,49 @@ const PurchaseReturnPage: React.FC = () => {
   const onSubmit = async (data: any) => {
     try {
       if (config.hasItems !== false) {
-        data.items = computedItems;
+        data.items = computedItems.map((item: any) => ({
+          ...item,
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        }));
         data.total_amount = totalAmount;
+        data.is_intrastate = isIntrastate;
       }
+      const itemsToUpdate = data.items.filter(
+        (item: any) =>
+          item.unit_price !== item.original_unit_price && item.product_id,
+      );
+      if (itemsToUpdate.length > 0) {
+        if (
+          confirm(
+            `Some items have updated prices. Update master product prices for ${itemsToUpdate.length} items?`,
+          )
+        ) {
+          await Promise.all(
+            itemsToUpdate.map((item: any) =>
+              api.put(`/products/${item.product_id}`, {
+                unit_price: item.unit_price,
+              }),
+            ),
+          );
+        }
+      }
+
       let response;
       if (mode === "create") {
         response = await createMutation.mutateAsync(data);
-        if (confirm("Voucher created successfully. Generate PDF?")) {
+        if (confirm("Purchase return created successfully. Generate PDF?")) {
           handleGeneratePDF(response);
         }
       } else if (mode === "edit") {
         response = await updateMutation.mutateAsync(data);
-        if (confirm("Voucher updated successfully. Generate PDF?")) {
+        if (confirm("Purchase return updated successfully. Generate PDF?")) {
           handleGeneratePDF(response);
         }
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error("Failed to save purchase return:", err);
       alert("Failed to save purchase return. Please try again.");
     }
   };
@@ -242,7 +334,7 @@ const PurchaseReturnPage: React.FC = () => {
       setMode("view");
       reset(fullVoucherData);
     } catch (err) {
-      console.error(msg, err);
+      console.error("Failed to load voucher data for view:", err);
       // Fallback to available data
       setMode("view");
       reset(voucher);
@@ -256,7 +348,7 @@ const PurchaseReturnPage: React.FC = () => {
       setMode("edit");
       reset(fullVoucherData);
     } catch (err) {
-      console.error(msg, err);
+      console.error("Failed to load voucher data for edit:", err);
       handleEdit(voucher);
     }
   };
@@ -268,7 +360,7 @@ const PurchaseReturnPage: React.FC = () => {
       setMode("view");
       reset(fullVoucherData);
     } catch (err) {
-      console.error(msg, err);
+      console.error("Failed to load voucher data for view:", err);
       handleView(voucher);
     }
   };
@@ -301,7 +393,7 @@ const PurchaseReturnPage: React.FC = () => {
                 align="center"
                 sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
               >
-                Amount
+                Total Amount
               </TableCell>
               <TableCell
                 align="right"
@@ -560,7 +652,7 @@ const PurchaseReturnPage: React.FC = () => {
                       GST%
                     </TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
-                      Amount
+                      Line Total
                     </TableCell>
                     {mode !== "view" && (
                       <TableCell

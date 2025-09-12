@@ -5,6 +5,7 @@ RBAC service layer for Service CRM role-based access control
 """
 
 from typing import List, Optional, Dict, Set
+from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
 from fastapi import HTTPException, status, Depends
@@ -18,8 +19,10 @@ from app.schemas.rbac import (
     UserServiceRoleCreate, ServiceRoleType, ServiceModule, ServiceAction
 )
 from app.core.permissions import Permission
-from app.api.v1.auth import get_current_active_user  # Import for dependency
 import logging
+
+if TYPE_CHECKING:
+    from app.api.v1.auth import get_current_active_user  # Type-only import to break circular import
 
 logger = logging.getLogger(__name__)
 
@@ -391,6 +394,25 @@ class RBACService:
             # CRM Admin
             ("crm_admin", "CRM Administration", "Full CRM administration access", "crm_admin", "admin"),
             ("crm_settings", "CRM Settings", "Manage CRM settings", "crm_admin", "update"),
+            
+            # Mail Module Permissions
+            ("mail:dashboard:read", "Read Mail Dashboard", "View mail dashboard statistics", "mail", "read"),
+            ("mail:accounts:read", "Read Mail Accounts", "View email accounts", "mail", "read"),
+            ("mail:accounts:create", "Create Mail Accounts", "Add new email accounts", "mail", "create"),
+            ("mail:accounts:update", "Update Mail Accounts", "Modify email accounts", "mail", "update"),
+            ("mail:accounts:delete", "Delete Mail Accounts", "Remove email accounts", "mail", "delete"),
+            ("mail:emails:read", "Read Emails", "View emails", "mail", "read"),
+            ("mail:emails:compose", "Compose Emails", "Send new emails", "mail", "create"),
+            ("mail:emails:update", "Update Emails", "Modify emails", "mail", "update"),
+            ("mail:emails:sync", "Sync Emails", "Synchronize email accounts", "mail", "update"),
+            ("mail:templates:read", "Read Templates", "View email templates", "mail", "read"),
+            ("mail:templates:create", "Create Templates", "Add new email templates", "mail", "create"),
+            
+            # Sticky Notes Permissions (to fix the 401 in logs)
+            ("sticky_notes:read", "Read Sticky Notes", "View sticky notes", "sticky_notes", "read"),
+            ("sticky_notes:create", "Create Sticky Notes", "Add new sticky notes", "sticky_notes", "create"),
+            ("sticky_notes:update", "Update Sticky Notes", "Modify sticky notes", "sticky_notes", "update"),
+            ("sticky_notes:delete", "Delete Sticky Notes", "Remove sticky notes", "sticky_notes", "delete"),
         ]
         
         created_permissions = []
@@ -435,7 +457,9 @@ class RBACService:
                     "appointment_read", "appointment_update", "appointment_create",
                     "customer_service_read", "customer_service_update",
                     "work_order_read", "work_order_update", "work_order_create",
-                    "service_reports_read", "service_reports_export"
+                    "service_reports_read", "service_reports_export",
+                    "mail:dashboard:read", "mail:accounts:read", "mail:accounts:update", "mail:emails:read", "mail:emails:compose", "mail:emails:update", "mail:emails:sync",
+                    "sticky_notes:read", "sticky_notes:update"
                 ]
             },
             {
@@ -448,7 +472,9 @@ class RBACService:
                     "appointment_read", "appointment_update", "appointment_create",
                     "customer_service_read", "customer_service_update", "customer_service_create",
                     "work_order_read", "work_order_update",
-                    "service_reports_read"
+                    "service_reports_read",
+                    "mail:dashboard:read", "mail:emails:read", "mail:emails:compose",
+                    "sticky_notes:read"
                 ]
             },
             {
@@ -461,7 +487,9 @@ class RBACService:
                     "appointment_read",
                     "customer_service_read",
                     "work_order_read",
-                    "service_reports_read"
+                    "service_reports_read",
+                    "mail:dashboard:read", "mail:emails:read",
+                    "sticky_notes:read"
                 ]
             }
         ]

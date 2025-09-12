@@ -8,40 +8,47 @@ import {
   IconButton,
   CircularProgress,
   Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   Autocomplete,
   InputAdornment,
   Fab,
   Alert,
   Button,
+  Checkbox,
+  FormControlLabel,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
-import { Add, Remove } from "@mui/icons-material";
+import { Add, Remove, Clear } from "@mui/icons-material";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
-import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherContextMenu from "../../../components/VoucherContextMenu"; // Updated to merged component
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
-import ProductAutocomplete from "../../../components/ProductAutocomplete";
+import VoucherItemTable from "../../../components/VoucherItemTable"; // New common table
+import VoucherFormTotals from "../../../components/VoucherFormTotals"; // New common totals
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
-import {
-  getVoucherConfig,
-  GST_SLABS,
-  getVoucherStyles,
-} from "../../../utils/voucherUtils";
+import { getVoucherConfig, GST_SLABS, getVoucherStyles } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
 import { useCompany } from "../../../context/CompanyContext";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
+import { useGstValidation } from "../../../hooks/useGstValidation"; // New GST hook
+import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New discounts hook
+import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers"; // New utils
+import voucherFormStyles from "../../../styles/voucherFormStyles"; // New common styles import
 
 const PurchaseOrderPage: React.FC = () => {
   const { company, isLoading: companyLoading, error: companyError } = useCompany();
@@ -49,33 +56,6 @@ const PurchaseOrderPage: React.FC = () => {
   const { productId, vendorId } = router.query;
   const config = getVoucherConfig("purchase-order");
   const voucherStyles = getVoucherStyles();
-  const [gstError, setGstError] = useState<string | null>(null);
-
-  // Derive company state code with fallback to gst_number prefix
-  const companyState = useMemo(() => {
-    if (company?.state_code) {
-      console.log("[PurchaseOrderPage] Company state_code:", company.state_code);
-      return company.state_code;
-    }
-    if (company?.gst_number) {
-      const gstPrefix = company.gst_number.slice(0, 2);
-      console.log("[PurchaseOrderPage] Using GST prefix as state_code:", gstPrefix);
-      return gstPrefix;
-    }
-    console.warn("[PurchaseOrderPage] No state_code or gst_number found in company:", company);
-    return null;
-  }, [company]);
-
-  // Log company object and query state for debugging
-  useEffect(() => {
-    console.log("[PurchaseOrderPage] Company context:", {
-      company,
-      companyLoading,
-      companyError,
-      companyState,
-      timestamp: new Date().toISOString(),
-    });
-  }, [company, companyLoading, companyError, companyState]);
 
   const {
     mode,
@@ -95,10 +75,7 @@ const PurchaseOrderPage: React.FC = () => {
     setAddShippingLoading,
     addingItemIndex,
     setAddingItemIndex,
-    showFullModal,
     contextMenu,
-    useDifferentShipping,
-    setUseDifferentShipping,
     searchTerm,
     setSearchTerm,
     fromDate,
@@ -134,13 +111,15 @@ const PurchaseOrderPage: React.FC = () => {
     totalCgst,
     totalSgst,
     totalIgst,
+    totalDiscount,
+    totalTaxable,
+    gstBreakdown,
     isIntrastate,
     createMutation,
     updateMutation,
     handleCreate,
     handleEdit,
     handleView,
-    handleSubmitForm,
     handleContextMenu,
     handleCloseContextMenu,
     handleSearch,
@@ -151,150 +130,36 @@ const PurchaseOrderPage: React.FC = () => {
     refreshMasterData,
     getAmountInWords,
     isViewMode,
+    totalRoundOff,
   } = useVoucherPage(config);
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
-  const selectedVendorId = watch("vendor_id");
-  const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
-
-  // Validate state codes for GST calculation after company data is loaded
-  useEffect(() => {
-    if (companyLoading) {
-      console.log("[PurchaseOrderPage] Company data still loading, skipping GST validation");
-      return;
-    }
-    if (selectedVendorId && !selectedVendor?.state_code && !selectedVendor?.gst_number) {
-      setGstError("Vendor state code or GST number is missing. Please update vendor details.");
-    } else if (!companyState) {
-      setGstError("Company state code or GST number is missing. Please update company details in settings.");
-    } else {
-      setGstError(null);
-    }
-    console.log("[PurchaseOrderPage] GST Validation:", {
-      selectedVendor,
-      companyState,
-      selectedVendorId,
-      vendorStateCode: selectedVendor?.state_code || selectedVendor?.gst_number?.slice(0, 2),
-      timestamp: new Date().toISOString(),
-    });
-  }, [selectedVendorId, selectedVendor, companyState, companyLoading]);
-
-  const enhancedVendorOptions = [
-    ...(vendorList || []),
-    { id: null, name: "Add New Vendor..." },
-  ];
-
+  const [submitData, setSubmitData] = useState<any>(null);
+  const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
+  const selectedVendorId = watch("vendor_id");
 
-  const handleAddItem = () => {
-    append({
-      product_id: null,
-      product_name: "",
-      quantity: 1,
-      unit_price: 0,
-      original_unit_price: 0,
-      discount_percentage: 0,
-      gst_rate: 18,
-      cgst_rate: isIntrastate ? 9 : 0,
-      sgst_rate: isIntrastate ? 9 : 0,
-      igst_rate: isIntrastate ? 0 : 18,
-      amount: 0,
-      unit: "",
-      current_stock: 0,
-      reorder_level: 0,
-    });
-  };
+  // Use new hooks
+  const { gstError } = useGstValidation(selectedVendorId, vendorList);
+  const {
+    lineDiscountEnabled,
+    lineDiscountType,
+    totalDiscountEnabled,
+    totalDiscountType,
+    discountDialogOpen,
+    discountDialogFor,
+    handleToggleLineDiscount,
+    handleToggleTotalDiscount,
+    handleDiscountTypeSelect,
+    handleDiscountDialogClose,
+  } = useVoucherDiscounts();
+  const [descriptionEnabled, setDescriptionEnabled] = useState(false);
 
-  const handleCancel = () => {
-    setMode("view");
-    if (voucherData) {
-      reset(voucherData);
+  const handleToggleDescription = (checked: boolean) => {
+    setDescriptionEnabled(checked);
+    if (!checked) {
+      fields.forEach((_, index) => setValue(`items.${index}.description`, ''));
     }
-  };
-
-  const onSubmit = async (data: any) => {
-    try {
-      if (config.hasItems !== false) {
-        data.items = computedItems.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        }));
-        data.total_amount = totalAmount;
-        data.is_intrastate = isIntrastate;
-      }
-      const itemsToUpdate = data.items.filter(
-        (item: any) =>
-          item.unit_price !== item.original_unit_price && item.product_id,
-      );
-      if (itemsToUpdate.length > 0) {
-        if (
-          confirm(
-            `Some items have updated prices. Update master product prices for ${itemsToUpdate.length} items?`,
-          )
-        ) {
-          await Promise.all(
-            itemsToUpdate.map((item: any) =>
-              api.put(`/products/${item.product_id}`, {
-                unit_price: item.unit_price,
-              }),
-            ),
-          );
-          refreshMasterData();
-        }
-      }
-      data.items = data.items.map(
-        ({ original_unit_price, ...item }: any) => item,
-      );
-      let response;
-      if (mode === "create") {
-        response = await createMutation.mutateAsync(data);
-        if (confirm("Voucher created successfully. Generate PDF?")) {
-          handleGeneratePDF(response);
-        }
-      } else if (mode === "edit") {
-        response = await updateMutation.mutateAsync(data);
-        if (confirm("Voucher updated successfully. Generate PDF?")) {
-          handleGeneratePDF(response);
-        }
-      }
-    } catch (err) {
-      console.error("Error saving purchase order:", err);
-      toast.error("Failed to save purchase order. Please try again.");
-    }
-  };
-
-  const handleDuplicate = async (id: number) => {
-    try {
-      const voucher = voucherList?.find((v) => v.id === id);
-      if (!voucher) {
-        return;
-      }
-      reset({
-        ...voucher,
-        voucher_number: "",
-        date: new Date().toISOString().split("T")[0],
-        created_at: undefined,
-        updated_at: undefined,
-        id: undefined,
-      });
-      setMode("create");
-      toast.success("Purchase order duplicated successfully");
-    } catch (err) {
-      console.error("Error duplicating purchase order:", err);
-      toast.error("Failed to duplicate purchase order");
-    }
-  };
-
-  const getStockColor = (stock: number, reorder: number) => {
-    if (stock === 0) {
-      return "error.main";
-    }
-    if (stock <= reorder) {
-      return "warning.main";
-    }
-    return "success.main";
   };
 
   const selectedProducts = useMemo(() => {
@@ -302,11 +167,7 @@ const PurchaseOrderPage: React.FC = () => {
       const productId = watch(`items.${index}.product_id`);
       return productList?.find((p: any) => p.id === productId) || null;
     });
-  }, [
-    fields.length,
-    productList,
-    ...fields.map((_, index) => watch(`items.${index}.product_id`)),
-  ]);
+  }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
 
   useEffect(() => {
     fields.forEach((_, index) => {
@@ -328,16 +189,11 @@ const PurchaseOrderPage: React.FC = () => {
         setStockLoading((prev) => ({ ...prev, [index]: false }));
       }
     });
-  }, [
-    fields.map((f) => watch(`items.${fields.indexOf(f)}.product_id`)).join(","),
-    setValue,
-    fields.length,
-  ]);
+  }, [fields.map((f) => watch(`items.${fields.indexOf(f)}.product_id`)).join(","), setValue, fields.length]);
 
   useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {
-      voucherService
-        .getNextVoucherNumber(config.nextNumberEndpoint)
+      voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
         .then((number) => setValue("voucher_number", number))
         .catch((err) => console.error("Failed to fetch voucher number:", err));
     }
@@ -354,14 +210,16 @@ const PurchaseOrderPage: React.FC = () => {
           unit_price: product.unit_price || 0,
           original_unit_price: product.unit_price || 0,
           discount_percentage: 0,
-          gst_rate: product.gst_rate || 18,
-          cgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
-          sgst_rate: isIntrastate ? (product.gst_rate || 18) / 2 : 0,
-          igst_rate: isIntrastate ? 0 : product.gst_rate || 18,
+          discount_amount: 0,
+          gst_rate: product.gst_rate ?? 18,
+          cgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : product.gst_rate ?? 18,
           amount: 0,
           unit: product.unit,
           current_stock: 0,
           reorder_level: product.reorder_level || 0,
+          description: '',
         });
       }
     }
@@ -390,9 +248,7 @@ const PurchaseOrderPage: React.FC = () => {
   };
 
   const handleEditWithData = async (voucher: any) => {
-    if (!voucher || !voucher.id) {
-      return;
-    }
+    if (!voucher || !voucher.id) return;
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
       let fullVoucherData = response.data;
@@ -414,9 +270,7 @@ const PurchaseOrderPage: React.FC = () => {
   };
 
   const handleViewWithData = async (voucher: any) => {
-    if (!voucher || !voucher.id) {
-      return;
-    }
+    if (!voucher || !voucher.id) return;
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
       let fullVoucherData = response.data;
@@ -443,12 +297,6 @@ const PurchaseOrderPage: React.FC = () => {
       const formattedData = {
         ...voucherData,
         date: formattedDate,
-        items: voucherData.items?.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })) || [],
       };
       reset(formattedData);
       if (voucherData.items && voucherData.items.length > 0) {
@@ -462,101 +310,86 @@ const PurchaseOrderPage: React.FC = () => {
             unit_price: item.unit_price,
             original_unit_price: item.product?.unit_price || item.unit_price || 0,
             discount_percentage: item.discount_percentage || 0,
-            gst_rate: item.gst_rate || 18,
-            cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : item.gst_rate || 18,
+            discount_amount: item.discount_amount || 0,
+            gst_rate: item.gst_rate ?? 18,
+            cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
+            sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
+            igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
             amount: item.total_amount,
             unit: item.unit,
             current_stock: item.current_stock || 0,
             reorder_level: item.reorder_level || 0,
+            description: item.description || '',
           });
         });
       }
     }
   }, [voucherData, mode, reset, append, remove, isIntrastate]);
 
+  const onSubmit = (data: any) => {
+    if (totalRoundOff !== 0) {
+      setSubmitData(data);
+      setRoundOffConfirmOpen(true);
+      return;
+    }
+    handleFinalSubmit(
+      data,
+      watch,
+      computedItems,
+      isIntrastate,
+      totalAmount,
+      totalRoundOff,
+      lineDiscountEnabled,
+      lineDiscountType,
+      totalDiscountEnabled,
+      totalDiscountType,
+      createMutation,
+      updateMutation,
+      mode,
+      handleGeneratePDF,
+      refreshMasterData,
+      config
+    );
+  };
+
+  const handleCancel = () => {
+    setMode("view");
+    if (voucherData) reset(voucherData);
+  };
+
+  const enhancedVendorOptions = [...(vendorList || []), { id: null, name: "Add New Vendor..." }];
+
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            <TableCell
-              align="center"
-              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-            >
-              Voucher No.
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-            >
-              Date
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-            >
-              Vendor
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}
-            >
-              Amount
-            </TableCell>
-            <TableCell
-              align="right"
-              sx={{ fontSize: 15, fontWeight: "bold", p: 0, width: 40 }}
-            ></TableCell>
+            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Voucher No.</TableCell>
+            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Date</TableCell>
+            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Vendor</TableCell>
+            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Total Amount</TableCell>
+            <TableCell align="right" sx={{ fontSize: 15, fontWeight: "bold", p: 0, width: 40 }}></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {latestVouchers.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} align="center">
-                No purchase orders available
-              </TableCell>
-            </TableRow>
+            <TableRow><TableCell colSpan={5} align="center">No purchase orders available</TableCell></TableRow>
           ) : (
             latestVouchers.slice(0, 7).map((voucher: any) => (
-              <TableRow
-                key={voucher.id}
-                hover
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  handleContextMenu(e, voucher);
-                }}
-                sx={{ cursor: "pointer" }}
-              >
-                <TableCell
-                  align="center"
-                  sx={{ fontSize: 12, p: 1 }}
-                  onClick={() => handleViewWithData(voucher)}
-                >
-                  {voucher.voucher_number}
-                </TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                  {voucher.date
-                    ? new Date(voucher.date).toLocaleDateString()
-                    : "N/A"}
-                </TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                  {vendorList?.find((v: any) => v.id === voucher.vendor_id)
-                    ?.name || "N/A"}
-                </TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                  ₹{voucher.total_amount?.toLocaleString() || "0"}
-                </TableCell>
+              <TableRow key={voucher.id} hover onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} sx={{ cursor: "pointer" }}>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{voucher.date ? new Date(voucher.date).toLocaleDateString() : "N/A"}</TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || "0"}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                   <VoucherContextMenu
                     voucher={voucher}
                     voucherType="Purchase Order"
-                    onView={() => handleViewWithData(voucher)}
-                    onEdit={() => handleEditWithData(voucher)}
-                    onDelete={() => handleDelete(voucher)}
-                    onPrint={() => handleGeneratePDF(voucher)}
-                    onDuplicate={() => handleDuplicate(voucher.id)}
+                    onView={handleViewWithData}
+                    onEdit={handleEditWithData}
+                    onDelete={handleDelete}
+                    onPrint={handleGeneratePDF}
+                    onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -569,510 +402,168 @@ const PurchaseOrderPage: React.FC = () => {
     </TableContainer>
   );
 
-  const formContent = (
+  const formHeader = (
+    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
+        {config.voucherTitle} - {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
+      </Typography>
+      <VoucherHeaderActions
+        mode={mode}
+        voucherType={config.voucherTitle}
+        voucherRoute="/vouchers/Purchase-Vouchers/purchase-order"
+        currentId={mode !== "create" ? voucherData?.id : null}
+        onEdit={() => voucherData && voucherData.id && handleEditWithData(voucherData)}
+        onCreate={handleCreate}
+        onCancel={handleCancel}
+      />
+    </Box>
+  );
+
+  const formBody = (
     <Box>
-      {gstError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {gstError}
-        </Alert>
-      )}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
-          {config.voucherTitle} -{" "}
-          {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
-        </Typography>
-        <VoucherHeaderActions
-          mode={mode}
-          voucherType={config.voucherTitle}
-          voucherRoute="/vouchers/Purchase-Vouchers/purchase-order"
-          currentId={mode !== "create" ? voucherData?.id : null}
-          onEdit={() =>
-            voucherData && voucherData.id && handleEditWithData(voucherData)
-          }
-          onCreate={handleCreate}
-          onCancel={handleCancel}
-        />
-      </Box>
-      <form
-        id="voucherForm"
-        onSubmit={handleSubmit(onSubmit)}
-        style={voucherStyles.formContainer}
-      >
+      {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
-          <Grid size={6}>
-            <TextField
-              fullWidth
-              label="Voucher Number"
-              {...control.register("voucher_number")}
-              disabled
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{
-                style: {
-                  fontSize: 14,
-                  textAlign: "center",
-                  fontWeight: "bold",
-                },
-              }}
-              size="small"
-              sx={{ "& .MuiInputBase-root": { height: 27 } }}
-            />
-          </Grid>
-          <Grid size={6}>
-            <TextField
-              fullWidth
-              label="Date"
-              type="date"
-              {...control.register("date")}
-              disabled={mode === "view"}
-              InputLabelProps={{
-                shrink: true,
-                style: {
-                  fontSize: 12,
-                  display: "block",
-                  visibility: "visible",
-                },
-              }}
-              inputProps={{ style: { fontSize: 14, textAlign: "center" } }}
-              size="small"
-              sx={{ "& .MuiInputBase-root": { height: 27 } }}
+          <Grid size={4}>
+            <TextField 
+              fullWidth 
+              label="Voucher Number" 
+              {...control.register("voucher_number")} 
+              disabled 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center', fontWeight: 'bold' } 
+              }} 
+              InputLabelProps={{ shrink: true }} 
             />
           </Grid>
           <Grid size={4}>
-            <Autocomplete
-              size="small"
-              options={enhancedVendorOptions}
-              getOptionLabel={(option: any) => option?.name || ""}
-              value={selectedVendor || null}
-              onChange={(_, newValue) => {
-                if (newValue?.id === null) {
-                  setShowAddVendorModal(true);
-                } else {
-                  setValue("vendor_id", newValue?.id || null);
-                }
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Vendor"
-                  error={!!errors.vendor_id}
-                  helperText={errors.vendor_id ? "Required" : ""}
-                  InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                  inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
+            <TextField 
+              fullWidth 
+              label="Date" 
+              type="date" 
+              {...control.register("date")} 
+              disabled={mode === "view"} 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center' } 
+              }} 
+              InputLabelProps={{ shrink: true }} 
+            />
+          </Grid>
+          <Grid size={4}>
+            <TextField 
+              fullWidth 
+              label="Required by Date" 
+              type="date" 
+              {...control.register("required_by_date")} 
+              disabled={mode === "view"} 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center' } 
+              }} 
+              InputLabelProps={{ shrink: true }} 
+            />
+          </Grid>
+          <Grid size={4}>
+            <Autocomplete 
+              size="small" 
+              options={enhancedVendorOptions} 
+              getOptionLabel={(option: any) => option?.name || ""} 
+              value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null} 
+              onChange={(_, newValue) => { 
+                if (newValue?.id === null) setShowAddVendorModal(true); 
+                else setValue("vendor_id", newValue?.id || null); 
+              }} 
+              renderInput={(params) => 
+                <TextField 
+                  {...params} 
+                  label="Vendor" 
+                  error={!!errors.vendor_id} 
+                  helperText={errors.vendor_id ? "Required" : ""} 
+                  sx={voucherFormStyles.field} 
+                  InputLabelProps={{ shrink: true }} 
                 />
-              )}
-              disabled={mode === "view"}
+              } 
+              disabled={mode === "view"} 
             />
           </Grid>
           <Grid size={4}>
-            <TextField
-              fullWidth
-              label="Reference"
-              {...control.register("reference")}
-              disabled={mode === "view"}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14 } }}
-              size="small"
-              sx={{ "& .MuiInputBase-root": { height: 27 } }}
+            <TextField 
+              fullWidth 
+              label="Reference" 
+              {...control.register("reference")} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.field} 
+              InputLabelProps={{ shrink: true }} 
             />
           </Grid>
           <Grid size={4}>
-            <TextField
-              fullWidth
-              label="Payment Terms"
-              {...control.register("payment_terms")}
-              disabled={mode === "view"}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14 } }}
-              size="small"
-              sx={{ "& .MuiInputBase-root": { height: 27 } }}
+            <TextField 
+              fullWidth 
+              label="Payment Terms" 
+              {...control.register("payment_terms")} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.field} 
+              InputLabelProps={{ shrink: true }} 
             />
           </Grid>
           <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Notes"
-              {...control.register("notes")}
-              multiline
-              rows={2}
-              disabled={mode === "view"}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14 } }}
-              size="small"
+            <TextField 
+              fullWidth 
+              label="Notes" 
+              {...control.register("notes")} 
+              multiline 
+              rows={2} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.notesField} 
+              InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid
-            size={12}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              height: 27,
-            }}
-          >
-            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>
-              Items
-            </Typography>
+          <Grid size={12} sx={voucherFormStyles.itemsHeader}>
+            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
           </Grid>
           <Grid size={12}>
-            <TableContainer
-              component={Paper}
-              sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}
-            >
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        p: 1,
-                        width: "30%",
-                      }}
-                    >
-                      Product
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        p: 1,
-                        width: "100px",
-                      }}
-                    ></TableCell>
-                    <TableCell
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        p: 1,
-                        textAlign: "right",
-                      }}
-                    >
-                      Qty
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        p: 1,
-                        textAlign: "right",
-                      }}
-                    >
-                      Rate
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
-                      Disc%
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
-                      GST%
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
-                      Amount
-                    </TableCell>
-                    {mode !== "view" && (
-                      <TableCell
-                        sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
-                      >
-                        Action
-                      </TableCell>
-                    )}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {fields.map((field: any, index: number) => (
-                    <TableRow key={field.id}>
-                      <TableCell sx={{ p: 1 }}>
-                        <ProductAutocomplete
-                          value={selectedProducts[index]}
-                          onChange={(product) => {
-                            setValue(
-                              `items.${index}.product_id`,
-                              product?.id || null,
-                            );
-                            setValue(
-                              `items.${index}.product_name`,
-                              product?.product_name || "",
-                            );
-                            setValue(
-                              `items.${index}.unit_price`,
-                              product?.unit_price || 0,
-                            );
-                            setValue(
-                              `items.${index}.original_unit_price`,
-                              product?.unit_price || 0,
-                            );
-                            setValue(
-                              `items.${index}.gst_rate`,
-                              product?.gst_rate || 18,
-                            );
-                            setValue(
-                              `items.${index}.cgst_rate`,
-                              isIntrastate ? (product?.gst_rate || 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.sgst_rate`,
-                              isIntrastate ? (product?.gst_rate || 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.igst_rate`,
-                              isIntrastate ? 0 : product?.gst_rate || 18,
-                            );
-                            setValue(
-                              `items.${index}.unit`,
-                              product?.unit || "",
-                            );
-                            setValue(
-                              `items.${index}.reorder_level`,
-                              product?.reorder_level || 0,
-                            );
-                          }}
-                          disabled={mode === "view"}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1, textAlign: "center" }}>
-                        {stockLoading[index] ? (
-                          <CircularProgress size={12} />
-                        ) : watch(`items.${index}.product_id`) ? (
-                          <Typography
-                            variant="caption"
-                            color={getStockColor(
-                              watch(`items.${index}.current_stock`),
-                              watch(`items.${index}.reorder_level`),
-                            )}
-                          >
-                            {watch(`items.${index}.current_stock`)}{" "}
-                            {watch(`items.${index}.unit`)}
-                          </Typography>
-                        ) : null}
-                      </TableCell>
-                      <TableCell sx={{ p: 1, textAlign: "right" }}>
-                        <TextField
-                          type="number"
-                          {...control.register(`items.${index}.quantity`, {
-                            valueAsNumber: true,
-                          })}
-                          disabled={mode === "view"}
-                          size="small"
-                          sx={{ width: 120 }}
-                          InputProps={{
-                            inputProps: { min: 0, step: 1 },
-                            endAdornment: <InputAdornment position="end">{watch(`items.${index}.unit`) || ''}</InputAdornment>,
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1, textAlign: "right" }}>
-                        <TextField
-                          type="number"
-                          {...control.register(`items.${index}.unit_price`, {
-                            valueAsNumber: true,
-                          })}
-                          disabled={mode === "view"}
-                          size="small"
-                          sx={{ width: 80 }}
-                          InputProps={{
-                            inputProps: { min: 0, step: 0.01 },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1 }}>
-                        <TextField
-                          type="number"
-                          {...control.register(
-                            `items.${index}.discount_percentage`,
-                            { valueAsNumber: true },
-                          )}
-                          disabled={mode === "view"}
-                          size="small"
-                          sx={{ width: 60 }}
-                          InputProps={{
-                            inputProps: { min: 0, step: 0.01 },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1 }}>
-                        <Autocomplete
-                          size="small"
-                          options={GST_SLABS}
-                          value={watch(`items.${index}.gst_rate`) || 18}
-                          onChange={(_, value) => {
-                            setValue(`items.${index}.gst_rate`, value || 18);
-                            setValue(
-                              `items.${index}.cgst_rate`,
-                              isIntrastate ? (value || 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.sgst_rate`,
-                              isIntrastate ? (value || 18) / 2 : 0,
-                            );
-                            setValue(
-                              `items.${index}.igst_rate`,
-                              isIntrastate ? 0 : value || 18,
-                            );
-                          }}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              size="small"
-                              sx={{ width: 60 }}
-                            />
-                          )}
-                          disabled={mode === "view"}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ p: 1, fontSize: 14 }}>
-                        ₹{computedItems[index]?.amount?.toLocaleString() || "0"}
-                      </TableCell>
-                      {mode !== "view" && (
-                        <TableCell sx={{ p: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => remove(index)}
-                            color="error"
-                          >
-                            <Remove />
-                          </IconButton>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            {mode !== "view" && (
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
-                <Fab color="primary" size="small" onClick={handleAddItem}>
-                  <Add />
-                </Fab>
-              </Box>
-            )}
+            <VoucherItemTable
+              fields={fields}
+              control={control}
+              watch={watch}
+              setValue={setValue}
+              remove={remove}
+              append={append}
+              mode={mode}
+              isIntrastate={isIntrastate}
+              computedItems={computedItems}
+              lineDiscountEnabled={lineDiscountEnabled}
+              lineDiscountType={lineDiscountType}
+              totalDiscountEnabled={totalDiscountEnabled}
+              descriptionEnabled={descriptionEnabled}
+              handleToggleLineDiscount={handleToggleLineDiscount}
+              handleToggleTotalDiscount={handleToggleTotalDiscount}
+              handleToggleDescription={handleToggleDescription}
+              stockLoading={stockLoading}
+              getStockColor={getStockColor}
+              selectedProducts={selectedProducts}
+            />
           </Grid>
           <Grid size={12}>
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-              <Box sx={{ minWidth: 300 }}>
-                <Grid container spacing={1}>
-                  <Grid size={6}>
-                    <Typography
-                      variant="body2"
-                      sx={{ textAlign: "right", fontSize: 14 }}
-                    >
-                      Subtotal:
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        textAlign: "right",
-                        fontSize: 14,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      ₹{totalSubtotal.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  {isIntrastate ? (
-                    <>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{ textAlign: "right", fontSize: 14 }}
-                        >
-                          CGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
-                        </Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            textAlign: "right",
-                            fontSize: 14,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₹{totalCgst.toLocaleString()}
-                        </Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{ textAlign: "right", fontSize: 14 }}
-                        >
-                          SGST ({(watch(`items.0.gst_rate`) || 18) / 2}%):
-                        </Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            textAlign: "right",
-                            fontSize: 14,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₹{totalSgst.toLocaleString()}
-                        </Typography>
-                      </Grid>
-                    </>
-                  ) : (
-                    <>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{ textAlign: "right", fontSize: 14 }}
-                        >
-                          IGST ({watch(`items.0.gst_rate`) || 18}%):
-                        </Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            textAlign: "right",
-                            fontSize: 14,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₹{totalIgst.toLocaleString()}
-                        </Typography>
-                      </Grid>
-                    </>
-                  )}
-                  <Grid size={6}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        textAlign: "right",
-                        fontSize: 16,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Total:
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        textAlign: "right",
-                        fontSize: 16,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      ₹{totalAmount.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Box>
-            </Box>
+            <VoucherFormTotals
+              totalSubtotal={totalSubtotal}
+              totalCgst={totalCgst}
+              totalSgst={totalSgst}
+              totalIgst={totalIgst}
+              totalAmount={totalAmount}
+              totalRoundOff={totalRoundOff}
+              isIntrastate={isIntrastate}
+              totalDiscountEnabled={totalDiscountEnabled}
+              totalDiscountType={totalDiscountType}
+              mode={mode}
+              watch={watch}
+              control={control}
+              setValue={setValue}
+              handleToggleTotalDiscount={handleToggleTotalDiscount}
+              getAmountInWords={getAmountInWords}
+            />
           </Grid>
           <Grid size={12}>
             <TextField
@@ -1083,33 +574,35 @@ const PurchaseOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
               inputProps={{ style: { fontSize: 14 } }}
               size="small"
+              sx={{ mt: 2 }}
             />
           </Grid>
-          {mode !== "view" && (
-            <Grid size={12} sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={isLoading || companyLoading || !!gstError}
-              >
-                {mode === "create" ? "Create Purchase Order" : "Update Purchase Order"}
-              </Button>
-            </Grid>
-          )}
         </Grid>
       </form>
+      <Dialog open={discountDialogOpen} onClose={handleDiscountDialogClose}>
+        <DialogTitle>Select Discount Type</DialogTitle>
+        <DialogContent><Typography>Please select the discount type for {discountDialogFor} discount.</Typography></DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleDiscountTypeSelect('percentage')}>Discount %</Button>
+          <Button onClick={() => handleDiscountTypeSelect('amount')}>Discount ₹</Button>
+          <Button onClick={handleDiscountDialogClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={roundOffConfirmOpen} onClose={() => setRoundOffConfirmOpen(false)}>
+        <DialogTitle>Confirm Round Off</DialogTitle>
+        <DialogContent><Typography>Round off amount is {totalRoundOff.toFixed(2)}. Proceed with save?</Typography></DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRoundOffConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, computedItems, isIntrastate, totalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config); }} variant="contained">Confirm</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 
   if (isLoading || companyLoading) {
     return (
       <Container>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="400px"
-        >
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
       </Container>
@@ -1122,7 +615,8 @@ const PurchaseOrderPage: React.FC = () => {
         voucherType={config.voucherTitle}
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
-        formContent={formContent}
+        formHeader={formHeader}
+        formBody={formBody}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={
@@ -1140,75 +634,10 @@ const PurchaseOrderPage: React.FC = () => {
           />
         }
       />
-      <AddVendorModal
-        open={showAddVendorModal}
-        onClose={() => setShowAddVendorModal(false)}
-        onAdd={(newVendor) => {
-          setValue("vendor_id", newVendor.id);
-          refreshMasterData();
-        }}
-        loading={addVendorLoading}
-        setLoading={setAddVendorLoading}
-      />
-      <AddProductModal
-        open={showAddProductModal}
-        onClose={() => setShowAddProductModal(false)}
-        onAdd={(newProduct) => {
-          setValue(`items.${addingItemIndex}.product_id`, newProduct.id);
-          setValue(
-            `items.${addingItemIndex}.product_name`,
-            newProduct.product_name,
-          );
-          setValue(
-            `items.${addingItemIndex}.unit_price`,
-            newProduct.unit_price || 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.original_unit_price`,
-            newProduct.unit_price || 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.gst_rate`,
-            newProduct.gst_rate || 18,
-          );
-          setValue(
-            `items.${addingItemIndex}.cgst_rate`,
-            isIntrastate ? (newProduct.gst_rate || 18) / 2 : 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.sgst_rate`,
-            isIntrastate ? (newProduct.gst_rate || 18) / 2 : 0,
-          );
-          setValue(
-            `items.${addingItemIndex}.igst_rate`,
-            isIntrastate ? 0 : newProduct.gst_rate || 18,
-          );
-          setValue(`items.${addingItemIndex}.unit`, newProduct.unit || "");
-          setValue(
-            `items.${addingItemIndex}.reorder_level`,
-            newProduct.reorder_level || 0,
-          );
-          refreshMasterData();
-        }}
-        loading={addProductLoading}
-        setLoading={setAddProductLoading}
-      />
-      <AddShippingAddressModal
-        open={showShippingModal}
-        onClose={() => setShowShippingModal(false)}
-        loading={addShippingLoading}
-        setLoading={setAddShippingLoading}
-      />
-      <VoucherContextMenu
-        contextMenu={contextMenu}
-        voucherType="Purchase Order"
-        onClose={handleCloseContextMenu}
-        onEdit={handleEditWithData}
-        onView={handleViewWithData}
-        onDelete={handleDelete}
-        onPrint={handleGeneratePDF}
-        onDuplicate={(id: number) => handleDuplicate(id)}
-      />
+      <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onAdd={(newVendor) => { setValue("vendor_id", newVendor.id); refreshMasterData(); }} loading={addVendorLoading} setLoading={setAddVendorLoading} />
+      <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
+      <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
+      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Purchase Order" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")} />
     </>
   );
 };

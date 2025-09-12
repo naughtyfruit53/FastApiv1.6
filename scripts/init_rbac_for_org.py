@@ -1,4 +1,4 @@
-# scripts/initialize_rbac_for_org.py
+# scripts/init_rbac_for_org.py
 
 import sys
 import os
@@ -18,10 +18,11 @@ def initialize_rbac_for_org(org_id: int = 1):
     db = SessionLocal()
     try:
         rbac_service = RBACService(db)
-        rbac_service.initialize_default_permissions()
-        roles = rbac_service.initialize_default_roles(org_id)
+        permissions = rbac_service.initialize_default_permissions()
+        print(f"\n✅ Initialized {len(permissions)} default permissions, including mail permissions.")
         
-        print("\n✅ Default roles created:")
+        roles = rbac_service.initialize_default_roles(org_id)
+        print("\n✅ Default roles created with mail permissions assigned:")
         for role in roles:
             print(f"- {role.name} ({role.display_name})")
         
@@ -39,17 +40,17 @@ def initialize_rbac_for_org(org_id: int = 1):
             
             if admin_role:
                 assignment = rbac_service.assign_role_to_user(org_admin.id, admin_role.id)
-                print(f"\n✅ Assigned admin role to user {org_admin.email}")
+                print(f"\n✅ Assigned admin role (with mail:dashboard:read) to user {org_admin.email} (ID: {org_admin.id})")
             else:
-                print("\n⚠️ Admin role not found")
+                print("\n⚠️ Admin role not found - check if roles were created correctly")
         else:
-            print("\n⚠️ Org admin user not found")
+            print("\n⚠️ Org admin user not found - verify user with role 'org_admin' exists in organization {org_id}")
         
-        print("\nPlease restart the application and refresh the frontend.")
+        print("\nScript completed. Restart the application, log out and log in again to refresh permissions.")
         
     except Exception as e:
         db.rollback()
-        print(f"Error: {e}")
+        print(f"Error during initialization: {e}")
     finally:
         db.close()
 
@@ -57,5 +58,5 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         org_id = int(sys.argv[1])
     else:
-        org_id = 1
+        org_id = 1  # Default to organization ID 1 as per your logs
     initialize_rbac_for_org(org_id)

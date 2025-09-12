@@ -70,7 +70,7 @@ const LoginPage: React.FC = () => {
         window.location.href = "/dashboard";
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error("Failed to establish secure session:", err);
       toast.error("Failed to establish secure session. Please try again.", {
         position: "top-right",
         autoClose: 5000,
@@ -78,7 +78,7 @@ const LoginPage: React.FC = () => {
     }
   };
   return (
-    <Container maxWidth="xs">
+    <Container maxWidth="lg">
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Image
           src="/Tritiq.png"
@@ -94,52 +94,39 @@ const LoginPage: React.FC = () => {
           gutterBottom
           color="textSecondary"
         >
-          Enterprise Resource Planning System
+          One-Stop Solution for All Your Entrepreneurial Needs
         </Typography>
-        <Box sx={{ p: 3 }}>
-          <UnifiedLoginForm onLogin={handleLogin} />
-        </Box>
-        <Box sx={{ mt: 2 }}>
-          <Button
-            variant="text"
-            color="primary"
-            onClick={() => setForgotPasswordOpen(true)}
-          >
-            Forgot Password?
-          </Button>
-        </Box>
-        {/* Demo Mode Section */}
-        <Box sx={{ mt: 3, mb: 2 }}>
-          <Divider sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              OR
-            </Typography>
-          </Divider>
-          <Button
-            variant="outlined"
-            fullWidth
-            startIcon={<PlayArrow />}
-            onClick={() => setDemoModeOpen(true)}
-            sx={{
-              borderRadius: 2,
-              py: 1.5,
-              borderColor: "primary.light",
-              "&:hover": {
-                borderColor: "primary.main",
-                backgroundColor: "primary.light",
-                color: "primary.contrastText",
-              },
-            }}
-          >
-            Try Demo Mode
-          </Button>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 1, textAlign: "center" }}
-          >
-            Experience all features with sample data
-          </Typography>
+        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "stretch", mt: 2, gap: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ p: 3 }}>
+              <UnifiedLoginForm 
+                onLogin={handleLogin} 
+                onForgotPassword={() => setForgotPasswordOpen(true)}
+              />
+            </Box>
+          </Box>
+          <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+          <Divider orientation="horizontal" flexItem sx={{ display: { xs: "block", sm: "none" } }} />
+          <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<PlayArrow />}
+              onClick={() => setDemoModeOpen(true)}
+              sx={{
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: "primary.light",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  backgroundColor: "primary.light",
+                  color: "primary.contrastText",
+                },
+              }}
+            >
+              Try Demo Mode
+            </Button>
+          </Box>
         </Box>
       </Box>
       {/* Forgot Password Modal */}

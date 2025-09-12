@@ -6,17 +6,20 @@ Comprehensive PDF generation service for vouchers with Indian formatting
 
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, date  # Added date import for type checking
 from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, Template
-from xhtml2pdf import pisa
+import pdfkit  # Replaced xhtml2pdf with pdfkit
 from io import BytesIO
 from num2words import num2words
 from sqlalchemy.orm import Session
-from app.models import Company, User
+from app.models import Company, User, Vendor  # Added Vendor import
 import logging
 import base64
 import re  # Added for sanitizing filenames
+
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +59,8 @@ class IndianNumberFormatter:
             return f"Amount: {amount:.2f}"
     
     @staticmethod
-    def format_indian_currency(amount: float) -> str:
-        """Format amount in Indian currency format (₹1,23,456.78)"""
+    def format_indian_currency(amount: float, show_symbol: bool = True) -> str:
+        """Format amount in Indian currency format format (₹1,23,456.78)"""
         try:
             # Handle negative amounts
             is_negative = amount < 0
@@ -91,7 +94,9 @@ class IndianNumberFormatter:
                 formatted_amount += f".{paise:02d}"
             
             # Add currency symbol and negative sign if needed
-            result = f"₹{formatted_amount}"
+            result = f"{formatted_amount}"
+            if show_symbol:
+                result = f"Rs. {result}"
             if is_negative:
                 result = f"-{result}"
                 
@@ -99,7 +104,7 @@ class IndianNumberFormatter:
             
         except Exception as e:
             logger.error(f"Error formatting Indian currency: {e}")
-            return f"₹{amount:.2f}"
+            return f"Rs. {amount:.2f}"
 
 class TaxCalculator:
     """GST and tax calculation utilities"""
@@ -158,6 +163,31 @@ class VoucherPDFGenerator:
         
         # Add custom filters
         self._add_custom_filters()
+
+        # Register fonts (still using ReportLab for fonts, but pdfkit handles most)
+        self._register_fonts()
+        
+        # pdfkit config (adjust path if needed)
+        self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
+    
+    def _register_fonts(self):
+        """Register custom fonts for PDF generation (optional for pdfkit)"""
+        try:
+            font_path = os.path.join(os.path.dirname(__file__), '../static/fonts/NotoSans-Regular.ttf')
+            if os.path.exists(font_path):
+                pdfmetrics.registerFont(TTFont('NotoSans', font_path))
+                logger.info("NotoSans font registered successfully")
+            else:
+                logger.warning("NotoSans-Regular.ttf not found at %s. Download from https://fonts.google.com/noto/specimen/Noto+Sans and place it there for proper ₹ symbol display.", font_path)
+
+            # Optionally register bold variant
+            bold_font_path = os.path.join(os.path.dirname(__file__), '../static/fonts/NotoSans-Bold.ttf')
+            if os.path.exists(bold_font_path):
+                pdfmetrics.registerFont(TTFont('NotoSans-Bold', bold_font_path))
+                logger.info("NotoSans-Bold font registered successfully")
+
+        except Exception as e:
+            logger.error(f"Error registering fonts: {e}")
     
     def _add_custom_filters(self):
         """Add custom Jinja2 filters"""
@@ -180,7 +210,7 @@ class VoucherPDFGenerator:
     
     def _format_percentage(self, value: float) -> str:
         """Format percentage value"""
-        return f"{value:.2f}%"
+        return f"{value:.2f}"
     
     def _get_company_branding(self, db: Session, organization_id: int) -> Dict[str, Any]:
         """Get company branding information"""
@@ -197,6 +227,12 @@ class VoucherPDFGenerator:
                         logo_data = base64.b64encode(f.read()).decode('utf-8')
                     logo_url = f"data:image/png;base64,{logo_data}"
                 
+                state_code = company.state_code
+                if not state_code and company.gst_number:
+                    state_code = company.gst_number[:2]  # Fallback to GST prefix
+                
+                logger.info(f"Company GST: {company.gst_number}, state_code (final): {state_code}")
+                
                 return {
                     'name': company.name,
                     'address1': company.address1,
@@ -204,7 +240,7 @@ class VoucherPDFGenerator:
                     'city': company.city,
                     'state': company.state,
                     'pin_code': company.pin_code,
-                    'state_code': company.state_code,
+                    'state_code': state_code,
                     'gst_number': company.gst_number or '',
                     'pan_number': company.pan_number or '',
                     'contact_number': company.contact_number,
@@ -247,35 +283,53 @@ class VoucherPDFGenerator:
         # Get company branding
         company = self._get_company_branding(db, organization_id)
         
+        # Get vendor/party details and determine interstate
+        is_interstate = False
+        vendor = voucher_data.get('vendor')
+        vendor_state_code = None
+        if vendor and company['state_code']:
+            vendor_state_code = vendor.get('state_code')
+            logger.info(f"Vendor initial state_code: {vendor_state_code}, gst_number: {vendor.get('gst_number')}")
+            if not vendor_state_code and vendor.get('gst_number'):
+                vendor_state_code = vendor['gst_number'][:2]
+            if vendor_state_code:
+                is_interstate = company['state_code'] != vendor_state_code
+        
+        logger.info(f"Company state_code: {company['state_code']}, Vendor state_code: {vendor_state_code if vendor_state_code else 'None'}, is_interstate: {is_interstate}")
+        
         # Calculate totals and taxes for items
         items = voucher_data.get('items', [])
         processed_items = []
         
         subtotal = 0.0
-        total_discount = 0.0
+        total_discount = voucher_data.get('total_discount', 0.0)
         total_taxable = 0.0
         total_cgst = 0.0
         total_sgst = 0.0
         total_igst = 0.0
+        total_quantity = 0.0  # Added for totals row
         
         for item in items:
             # Calculate item totals
             quantity = float(item.get('quantity', 0))
             unit_price = float(item.get('unit_price', 0))
             discount_percentage = float(item.get('discount_percentage', 0))
+            discount_amount = float(item.get('discount_amount', 0))
             gst_rate = float(item.get('gst_rate', 0))
+            description = item.get('description', '')
             
             item_subtotal = quantity * unit_price
-            discount_amount = item_subtotal * (discount_percentage / 100)
+            if discount_percentage > 0:
+              discount_amount = item_subtotal * (discount_percentage / 100)
             taxable_amount = item_subtotal - discount_amount
             
-            # Calculate GST (assuming intrastate for now - enhance with actual check)
-            gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, False)
+            # Calculate GST with updated interstate check
+            gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
             
             item_total = taxable_amount + gst_calc['total_gst']
             
             processed_item = {
-                **item,
+                **item,  # Unpack original item dict to include all its fields
                 'subtotal': item_subtotal,
                 'discount_percentage': discount_percentage,
                 'discount_amount': discount_amount,
@@ -287,19 +341,29 @@ class VoucherPDFGenerator:
                 'cgst_amount': gst_calc['cgst_amount'],
                 'sgst_amount': gst_calc['sgst_amount'],
                 'igst_amount': gst_calc['igst_amount'],
-                'total_amount': item_total
+                'total_amount': item_total,
+                'description': description
             }
             
             processed_items.append(processed_item)
             
             subtotal += item_subtotal
-            total_discount += discount_amount
             total_taxable += taxable_amount
             total_cgst += gst_calc['cgst_amount']
             total_sgst += gst_calc['sgst_amount']
             total_igst += gst_calc['igst_amount']
+            total_quantity += quantity  # Accumulate quantity
         
-        grand_total = total_taxable + total_cgst + total_sgst + total_igst
+        grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
+        
+        # Calculate round off
+        decimal_part = grand_total - int(grand_total)
+        round_off = 0.0
+        if decimal_part < 0.5:
+            round_off = -decimal_part
+        else:
+            round_off = 1 - decimal_part
+        grand_total += round_off
         
         # Prepare template data
         template_data = {
@@ -312,7 +376,12 @@ class VoucherPDFGenerator:
             'total_cgst': total_cgst,
             'total_sgst': total_sgst,
             'total_igst': total_igst,
+            'round_off': round_off,
             'grand_total': grand_total,
+            'total_quantity': total_quantity,  # Added for items table totals
+            'is_interstate': is_interstate,
+            'line_discount_enabled': voucher_data.get('line_discount_type') is not None,  # Flag for line discount
+            'total_discount_enabled': voucher_data.get('total_discount_type') is not None,  # Flag for total discount
             'amount_in_words': IndianNumberFormatter.amount_to_words(grand_total),
             'generated_at': datetime.now(),
             'page_count': 1  # Will be updated for multi-page
@@ -341,10 +410,16 @@ class VoucherPDFGenerator:
             template_data = self._prepare_voucher_data(voucher_data, db, organization_id)
             
             # Get template for voucher type
-            template_name = f"{voucher_type}_voucher.html"
-            
-            if voucher_type == 'purchase-orders':
+            if voucher_type in ['purchase', 'purchase-vouchers']:
                 template_name = 'purchase_voucher.html'
+            elif voucher_type == 'purchase-orders':
+                template_name = 'purchase_order.html'
+            elif voucher_type == 'sales':
+                template_name = 'sales_voucher.html'
+            elif voucher_type in ['quotation', 'sales_order', 'proforma']:
+                template_name = 'presales_voucher.html'
+            else:
+                template_name = f"{voucher_type}_voucher.html"
             
             try:
                 template = self.jinja_env.get_template(template_name)
@@ -362,13 +437,19 @@ class VoucherPDFGenerator:
             filename = f"{voucher_type}_{voucher_number}_{uuid.uuid4().hex[:8]}.pdf"
             filepath = os.path.join(self.output_dir, filename)
             
-            # Convert to PDF using xhtml2pdf
-            pdf_buffer = BytesIO()
-            pisa.CreatePDF(html_content, dest=pdf_buffer)
-            pdf_buffer.seek(0)
-            
-            with open(filepath, 'wb') as f:
-                f.write(pdf_buffer.getvalue())
+            # Convert to PDF using pdfkit (replaced pisa)
+            pdf_options = {
+                'page-size': 'A4',
+                'margin-top': '0mm',
+                'margin-right': '0mm',
+                'margin-bottom': '0mm',
+                'margin-left': '0mm',
+                'encoding': 'UTF-8',
+                'disable-smart-shrinking': '',
+                'zoom': '1.0',
+                'dpi': '96'
+            }
+            pdfkit.from_string(html_content, filepath, configuration=self.pdfkit_config, options=pdf_options)
             
             logger.info(f"PDF generated successfully: {filepath}")
             return filepath

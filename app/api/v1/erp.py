@@ -14,7 +14,7 @@ from app.core.org_restrictions import require_current_organization_id
 from app.core.rbac_dependencies import check_service_permission
 from app.schemas.user import UserInDB
 from app.models.erp_models import (
-    ChartOfAccounts, GSTConfiguration, TaxCode, JournalEntry,
+    ChartOfAccounts, GSTConfiguration, ERPTaxCode, JournalEntry,
     AccountsPayable, AccountsReceivable, PaymentRecord,
     GeneralLedger, CostCenter, BankAccount, BankReconciliation,
     FinancialStatement, FinancialKPI
@@ -355,15 +355,15 @@ async def get_tax_codes(
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get tax codes with filtering options"""
-    query = db.query(TaxCode).filter(
-        TaxCode.organization_id == organization_id
+    query = db.query(ERPTaxCode).filter(
+        ERPTaxCode.organization_id == organization_id
     )
     
     if tax_type:
-        query = query.filter(TaxCode.tax_type == tax_type)
+        query = query.filter(ERPTaxCode.tax_type == tax_type)
     
     if is_active is not None:
-        query = query.filter(TaxCode.is_active == is_active)
+        query = query.filter(ERPTaxCode.is_active == is_active)
     
     tax_codes = query.offset(skip).limit(limit).all()
     return tax_codes
@@ -378,9 +378,9 @@ async def create_tax_code(
 ):
     """Create a new tax code"""
     # Check if tax code already exists
-    existing = db.query(TaxCode).filter(
-        TaxCode.organization_id == organization_id,
-        TaxCode.tax_code == tax_data.tax_code
+    existing = db.query(ERPTaxCode).filter(
+        ERPTaxCode.organization_id == organization_id,
+        ERPTaxCode.tax_code == tax_data.tax_code
     ).first()
     
     if existing:
@@ -389,7 +389,7 @@ async def create_tax_code(
             detail="Tax code already exists"
         )
     
-    tax_code = TaxCode(
+    tax_code = ERPTaxCode(
         organization_id=organization_id,
         **tax_data.dict()
     )

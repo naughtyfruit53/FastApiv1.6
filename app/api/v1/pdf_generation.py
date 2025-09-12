@@ -7,15 +7,15 @@ FastAPI endpoints for voucher PDF generation
 import os
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Dict, Any
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.services.pdf_generation_service import pdf_generator
 from app.services.rbac import RBACService
-from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder
-from app.models.vouchers.sales import SalesVoucher
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem
+from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice
 import logging
 
@@ -26,8 +26,12 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
     """Check if user has permission for voucher type"""
     permission_map = {
         'purchase': 'voucher_read',
+        'purchase-vouchers': 'voucher_read',
         'purchase-orders': 'voucher_read',
+        'purchase-return': 'voucher_read',
         'sales': 'voucher_read',
+        'delivery-challan': 'voucher_read',
+        'sales-return': 'voucher_read',
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
         'proforma': 'presales_read'
@@ -57,7 +61,10 @@ async def generate_voucher_pdf(
     Supported voucher types:
     - purchase: Purchase Voucher
     - purchase-orders: Purchase Order
-    - sales: Sales Voucher  
+    - purchase-return: Purchase Return
+    - sales: Sales Voucher
+    - delivery-challan: Delivery Challan
+    - sales-return: Sales Return
     - quotation: Quotation
     - sales_order: Sales Order
     - proforma: Proforma Invoice
@@ -214,8 +221,12 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
     
     model_map = {
         'purchase': PurchaseVoucher,
+        'purchase-vouchers': PurchaseVoucher,
         'purchase-orders': PurchaseOrder,
+        'purchase-return': PurchaseReturn,
         'sales': SalesVoucher,
+        'delivery-challan': DeliveryChallan,
+        'sales-return': SalesReturn,
         'quotation': Quotation,
         'sales_order': SalesOrder,
         'proforma': ProformaInvoice
@@ -229,11 +240,25 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         )
     
     try:
-        # Query voucher with organization filtering
-        voucher = db.query(model_class).filter(
+        # Query voucher with organization filtering and eager loading
+        query = db.query(model_class).filter(
             model_class.id == voucher_id,
             model_class.organization_id == current_user.organization_id
-        ).first()
+        )
+        
+        # Add eager loading for common relations
+        if hasattr(model_class, 'vendor'):
+            query = query.options(joinedload(model_class.vendor))
+        if hasattr(model_class, 'customer'):
+            query = query.options(joinedload(model_class.customer))
+        if hasattr(model_class, 'items'):
+            if voucher_type == 'purchase-orders':
+                query = query.options(joinedload(model_class.items).joinedload(PurchaseOrderItem.product))
+            else:
+                # For other types, add if they have product relation
+                query = query.options(joinedload(model_class.items))
+        
+        voucher = query.first()
         
         if not voucher:
             return None
@@ -286,6 +311,16 @@ def _voucher_to_dict(voucher) -> Dict[str, Any]:
         voucher_data['valid_until'] = voucher.valid_until
     if hasattr(voucher, 'delivery_terms'):
         voucher_data['delivery_terms'] = voucher.delivery_terms
+    if hasattr(voucher, 'delivery_date'):
+        voucher_data['required_by_date'] = voucher.delivery_date  # Alias for template
+    
+    # Add discount types for conditional rendering
+    if hasattr(voucher, 'line_discount_type'):
+        voucher_data['line_discount_type'] = voucher.line_discount_type
+    if hasattr(voucher, 'total_discount_type'):
+        voucher_data['total_discount_type'] = voucher.total_discount_type
+    if hasattr(voucher, 'total_discount'):
+        voucher_data['total_discount'] = voucher.total_discount
     
     # Add related entities
     if hasattr(voucher, 'vendor') and voucher.vendor:
@@ -332,6 +367,8 @@ def _item_to_dict(item) -> Dict[str, Any]:
         'description': getattr(item, 'description', ''),
         'hsn_code': getattr(item, 'hsn_code', ''),
         'gst_rate': float(getattr(item, 'gst_rate', 0) or 0),
+        'discount_percentage': float(getattr(item, 'discount_percentage', 0)),
+        'discount_amount': float(getattr(item, 'discount_amount', 0)),
     }
     
     # Add product name if available

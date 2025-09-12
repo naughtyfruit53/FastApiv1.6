@@ -19,7 +19,7 @@ router = APIRouter(tags=["purchase-orders"])
 @router.get("/", response_model=List[PurchaseOrderInDB])
 async def get_purchase_orders(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
-    limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
+    limit: int = Query(5, ge=1, le=99999, description="Maximum number of records to return (default 5 for UI standard)"),
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),

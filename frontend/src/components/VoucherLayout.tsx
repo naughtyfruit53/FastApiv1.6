@@ -15,7 +15,8 @@ interface VoucherLayoutProps {
   voucherType: string;
   voucherTitle?: string;
   indexContent: React.ReactNode;
-  formContent: React.ReactNode;
+  formHeader?: React.ReactNode;
+  formBody: React.ReactNode;
   onShowAll?: () => void;
   showAllButton?: boolean;
   // Enhanced pagination props
@@ -36,7 +37,8 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   voucherType,
   voucherTitle: _voucherTitle,
   indexContent,
-  formContent,
+  formHeader,
+  formBody,
   onShowAll,
   showAllButton = true,
   pagination,
@@ -93,7 +95,7 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
               <Paper
                 sx={{
                   p: 1,
-                  height: "100vh",
+                  height: "100%",
                   borderRadius: 0,
                   boxShadow: "none",
                   overflow: "auto",
@@ -173,16 +175,31 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
             >
               <Paper
                 sx={{
-                  p: 1,
                   height: "100vh",
                   borderRadius: 0,
                   boxShadow: "none",
-                  overflow: "auto",
                   width: "100%",
                   ...voucherStyles.formContainer,
+                  p: 0,
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
-                {formContent}
+                {formHeader && (
+                  <Box
+                    sx={{
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 10,
+                      backgroundColor: "background.paper",
+                      borderBottom: "1px solid #e0e0e0",
+                      p: 1,
+                    }}
+                  >
+                    {formHeader}
+                  </Box>
+                )}
+                <Box sx={{ flex: 1, overflow: "auto", p: 1 }}>{formBody}</Box>
               </Paper>
             </Grid>
           </Grid>

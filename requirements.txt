@@ -25,4 +25,20 @@ pdfkit==1.0.0
 jinja2==3.1.4
 reportlab==4.2.5
 num2words==0.5.13
-xhtml2pdf==0.2.16  # Added to resolve ModuleNotFoundError
+
+# OAuth2 and Email API Dependencies
+authlib==1.3.2
+requests==2.31.0
+google-auth==2.34.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+google-api-python-client==2.151.0
+msal==1.31.0
+imaplib2==3.6
+cryptography==45.0.7  # Already specified above but ensuring version
+
+# ML and Financial Modeling Dependencies
+scikit-learn==1.5.2
+numpy==1.26.4
+scipy==1.14.1
+joblib==1.4.2

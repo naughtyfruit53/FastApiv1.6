@@ -1,9 +1,11 @@
+# app/api/v1/auth.py
+
 import logging
+from typing import Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from typing import Union
 
 from app.core.database import get_db
 from app.core.security import (
@@ -231,3 +233,22 @@ def get_current_super_admin(current_user: UserInDB = Depends(get_current_active_
     if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Not super admin")
     return current_user
+
+def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
+    if not token:
+        return None
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    payload = verify_token(token)
+    if not payload:
+        raise credentials_exception
+    email: str = payload.get("sub")
+    if email is None:
+        raise credentials_exception
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user

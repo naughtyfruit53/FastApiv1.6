@@ -6,6 +6,7 @@ interface VoucherItem {
   quantity?: number;
   unit_price?: number;
   discount_percentage?: number;
+  discount_amount?: number;
   gst_rate?: number;
   [key: string]: any;
 }
@@ -176,6 +177,13 @@ export const numberToWords = (num: number): string => {
   return word ? word + " only" : "";
 };
 /**
+ * Wrapper for numberToWords to match getAmountInWords naming
+ * Used in voucher forms for amount in words display
+ */
+export const getAmountInWords = (amount: number): string => {
+  return numberToWords(Math.round(amount));
+};
+/**
  * Enhanced GST calculation utilities with state-based split logic
  * Supports both intrastate (CGST+SGST) and interstate (IGST) transactions
  */
@@ -224,42 +232,100 @@ export const calculateItemTotals = (
 export const calculateVoucherTotals = (
   items: any[],
   isIntrastate: boolean = true,
+  lineDiscountType?: 'percentage' | 'amount' | null,
+  totalDiscountType?: 'percentage' | 'amount' | null,
+  totalDiscountValue: number = 0,
 ): any => {
-  const computedItems = items.map((item) =>
-    calculateItemTotals(item, isIntrastate),
-  );
-  const totalAmount = computedItems.reduce(
-    (sum, item) => sum + item.total_amount,
-    0,
-  );
-  const totalSubtotal = computedItems.reduce(
-    (sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0),
-    0,
-  );
-  const totalGst = computedItems.reduce(
-    (sum, item) => sum + item.taxable_amount * ((item.gst_rate || 0) / 100),
-    0,
-  );
-  const totalCgst = computedItems.reduce(
-    (sum, item) => sum + item.cgst_amount,
-    0,
-  );
-  const totalSgst = computedItems.reduce(
-    (sum, item) => sum + item.sgst_amount,
-    0,
-  );
-  const totalIgst = computedItems.reduce(
-    (sum, item) => sum + item.igst_amount,
-    0,
-  );
+  // First, calculate per item after line discount
+  const itemsWithLineDisc = items.map(item => {
+    const subtotal = (item.quantity || 0) * (item.unit_price || 0);
+    let lineDiscAmount = 0;
+    if (lineDiscountType === 'percentage') {
+      lineDiscAmount = subtotal * ((item.discount_percentage || 0) / 100);
+    } else if (lineDiscountType === 'amount') {
+      lineDiscAmount = item.discount_amount || 0;
+    }
+    const afterLineDisc = subtotal - lineDiscAmount;
+    return { ...item, subtotal, lineDiscAmount, afterLineDisc };
+  });
+
+  const sumAfterLine = itemsWithLineDisc.reduce((sum, item) => sum + item.afterLineDisc, 0);
+
+  let totalDiscAmount = 0;
+  if (totalDiscountType === 'percentage') {
+    totalDiscAmount = sumAfterLine * (totalDiscountValue / 100);
+  } else if (totalDiscountType === 'amount') {
+    totalDiscAmount = totalDiscountValue;
+  }
+
+  const afterTotalDisc = sumAfterLine - totalDiscAmount;
+  const apportionFactor = sumAfterLine > 0 ? afterTotalDisc / sumAfterLine : 0;
+
+  const computedItems = itemsWithLineDisc.map(item => {
+    const taxableAmount = item.afterLineDisc * apportionFactor;
+    const gstRate = item.gst_rate || 0;
+    const gstAmount = taxableAmount * (gstRate / 100);
+    let cgst = 0, sgst = 0, igst = 0;
+    if (isIntrastate) {
+      cgst = gstAmount / 2;
+      sgst = gstAmount / 2;
+    } else {
+      igst = gstAmount;
+    }
+    const total = taxableAmount + gstAmount;
+    return {
+      ...item,
+      discount_amount: item.lineDiscAmount, // for line
+      taxable_amount: taxableAmount,
+      cgst_amount: cgst,
+      sgst_amount: sgst,
+      igst_amount: igst,
+      amount: total, // line total
+    };
+  });
+
+  const totalSubtotal = itemsWithLineDisc.reduce((sum, item) => sum + item.subtotal, 0);
+  let totalAmount = computedItems.reduce((sum, item) => sum + item.amount, 0);
+  const totalCgst = computedItems.reduce((sum, item) => sum + item.cgst_amount, 0);
+  const totalSgst = computedItems.reduce((sum, item) => sum + item.sgst_amount, 0);
+  const totalIgst = computedItems.reduce((sum, item) => sum + item.igst_amount, 0);
+  const totalGst = totalCgst + totalSgst + totalIgst;
+
+  // Aggregated GST breakdown
+  const gstBreakdown: { [rate: number]: { cgst: number, sgst: number, igst: number, taxable: number } } = {};
+  computedItems.forEach(item => {
+    const rate = item.gst_rate || 0;
+    if (!gstBreakdown[rate]) {
+      gstBreakdown[rate] = { cgst: 0, sgst: 0, igst: 0, taxable: 0 };
+    }
+    gstBreakdown[rate].cgst += item.cgst_amount;
+    gstBreakdown[rate].sgst += item.sgst_amount;
+    gstBreakdown[rate].igst += item.igst_amount;
+    gstBreakdown[rate].taxable += item.taxable_amount;
+  });
+
+  // Calculate round off
+  const decimalPart = totalAmount - Math.floor(totalAmount);
+  let totalRoundOff = 0;
+  if (decimalPart < 0.5) {
+    totalRoundOff = -decimalPart;
+  } else {
+    totalRoundOff = 1 - decimalPart;
+  }
+  totalAmount += totalRoundOff;
+
   return {
     computedItems,
     totalAmount: parseFloat(totalAmount.toFixed(2)),
     totalSubtotal: parseFloat(totalSubtotal.toFixed(2)),
+    totalDiscount: parseFloat(totalDiscAmount.toFixed(2)),
+    totalTaxable: parseFloat(afterTotalDisc.toFixed(2)),
     totalGst: parseFloat(totalGst.toFixed(2)),
     totalCgst: parseFloat(totalCgst.toFixed(2)),
     totalSgst: parseFloat(totalSgst.toFixed(2)),
     totalIgst: parseFloat(totalIgst.toFixed(2)),
+    gstBreakdown,
+    totalRoundOff: parseFloat(totalRoundOff.toFixed(2)),
   };
 };
 /**
@@ -307,6 +373,7 @@ export const getDefaultVoucherValues = (type: "purchase" | "sales"): any => {
       },
     ],
     total_amount: 0.0,
+    total_discount: 0.0,
   };
   if (type === "purchase") {
     return {
@@ -328,7 +395,7 @@ export const formatRateField = (value: number | string): string => {
   return isNaN(numValue) ? "0.00" : numValue.toFixed(2);
 };
 /**
- * Parse rate field input to ensure 2 decimal places
+ * Parse rate field input to ensure 2 decimal places max
  */
 export const parseRateField = (value: string): number => {
   const parsed = parseFloat(value);
@@ -999,6 +1066,122 @@ export const getVoucherStyles = (): any => ({
       "&:nth-of-type(even)": {
         backgroundColor: "#fafbfc",
       },
+    },
+  },
+  
+  // Enhanced button styling for voucher forms
+  voucherActionButtons: {
+    display: "flex",
+    gap: "8px",
+    justifyContent: "center",
+    alignItems: "center",
+    "& .MuiButton-root": {
+      textTransform: "none",
+      borderRadius: "6px",
+      fontWeight: "500",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+      "&:hover": {
+        boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+        transform: "translateY(-1px)",
+      },
+      transition: "all 0.2s ease-in-out",
+    },
+    "& .MuiButton-contained": {
+      background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
+      color: "white",
+    },
+    "& .MuiButton-outlined": {
+      borderColor: "#2196F3",
+      color: "#2196F3",
+      "&:hover": {
+        backgroundColor: "rgba(33, 150, 243, 0.04)",
+      },
+    },
+  },
+
+  // Enhanced form field styling
+  enhancedFormField: {
+    "& .MuiTextField-root": {
+      "& .MuiOutlinedInput-root": {
+        borderRadius: "6px",
+        "&:hover": {
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#2196F3",
+          },
+        },
+        "&.Mui-focused": {
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#2196F3",
+            borderWidth: "2px",
+          },
+        },
+      },
+      "& .MuiInputLabel-root": {
+        color: "#666",
+        "&.Mui-focused": {
+          color: "#2196F3",
+        },
+      },
+    },
+  },
+
+  // Enhanced table styling with better visual hierarchy
+  enhancedTable: {
+    "& .MuiTableContainer-root": {
+      borderRadius: "8px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+      border: "1px solid #e0e0e0",
+    },
+    "& .MuiTableHead-root": {
+      background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+      "& .MuiTableCell-root": {
+        fontWeight: "600",
+        color: "#2c3e50",
+        borderBottom: "2px solid #e0e0e0",
+      },
+    },
+    "& .MuiTableBody-root .MuiTableRow-root": {
+      "&:hover": {
+        backgroundColor: "#f8f9fa",
+        transform: "scale(1.01)",
+        transition: "all 0.2s ease-in-out",
+      },
+    },
+  },
+
+  // Loading and error states styling
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "200px",
+    gap: "16px",
+    "& .MuiCircularProgress-root": {
+      color: "#2196F3",
+    },
+    "& .MuiTypography-root": {
+      color: "#666",
+      textAlign: "center",
+    },
+  },
+
+  // Success and error feedback styling
+  feedbackContainer: {
+    "& .MuiAlert-root": {
+      borderRadius: "8px",
+      fontWeight: "500",
+      "& .MuiAlert-icon": {
+        alignItems: "center",
+      },
+    },
+    "& .MuiAlert-standardSuccess": {
+      backgroundColor: "#e8f5e8",
+      color: "#2e7d32",
+    },
+    "& .MuiAlert-standardError": {
+      backgroundColor: "#ffeaea",
+      color: "#d32f2f",
     },
   },
 });

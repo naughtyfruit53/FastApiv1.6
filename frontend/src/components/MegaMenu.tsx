@@ -707,6 +707,39 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       ]
     },
     // Tasks & Calendar menu (split from Workspace)
+    projects: {
+      title: 'Projects',
+      icon: <Assignment />,
+      sections: [
+        {
+          title: 'Project Management',
+          items: [
+            { name: 'All Projects', path: '/projects', icon: <Assignment /> },
+            { name: 'Project Planning', path: '/projects/planning', icon: <Timeline /> },
+            { name: 'Resource Management', path: '/projects/resources', icon: <People /> },
+            { name: 'Create Project', path: '/projects/create', icon: <NoteAdd /> }
+          ]
+        },
+        {
+          title: 'Analytics & Reporting',
+          items: [
+            { name: 'Project Analytics', path: '/projects/analytics', icon: <Analytics /> },
+            { name: 'Performance Reports', path: '/projects/reports', icon: <Assessment /> },
+            { name: 'Resource Utilization', path: '/projects/utilization', icon: <TrendingUp /> },
+            { name: 'Budget Analysis', path: '/projects/budget', icon: <MonetizationOn /> }
+          ]
+        },
+        {
+          title: 'Collaboration',
+          items: [
+            { name: 'Team Dashboard', path: '/projects/team', icon: <Groups /> },
+            { name: 'Time Tracking', path: '/projects/time', icon: <AccessTime /> },
+            { name: 'Project Documents', path: '/projects/documents', icon: <Storage /> },
+            { name: 'Project Chat', path: '/projects/chat', icon: <Chat /> }
+          ]
+        }
+      ]
+    },
     tasksCalendar: {
       title: 'Tasks & Calendar',
       icon: <Task />,
@@ -716,17 +749,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           items: [
             { name: 'Task Dashboard', path: '/tasks/dashboard', icon: <Dashboard /> },
             { name: 'My Tasks', path: '/tasks', icon: <Task /> },
-            { name: 'Task Projects', path: '/tasks/projects', icon: <Assignment /> },
             { name: 'Create Task', path: '/tasks/create', icon: <NoteAdd /> }
-          ]
-        },
-        {
-          title: 'Time Management',
-          items: [
-            { name: 'Time Tracking', path: '/tasks/time-logs', icon: <AccessTime /> },
-            { name: 'Task Reports', path: '/tasks/reports', icon: <Assessment /> },
-            { name: 'Team Performance', path: '/tasks/team-performance', icon: <Groups /> },
-            { name: 'Project Analytics', path: '/tasks/project-analytics', icon: <Analytics /> }
           ]
         },
         {
@@ -845,6 +868,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         { title: 'Sales', subSections: menuItems.sales.sections },
         { title: 'Marketing', subSections: menuItems.marketing.sections },
         { title: 'Service', subSections: menuItems.service.sections },
+        { title: 'Projects', subSections: menuItems.projects.sections },
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
         { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
         { title: 'Email', subSections: menuItems.email.sections }

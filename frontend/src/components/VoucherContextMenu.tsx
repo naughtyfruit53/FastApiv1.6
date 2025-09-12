@@ -1,4 +1,5 @@
-// frontend/src/components/VoucherContextMenu.tsx
+// src/components/VoucherContextMenu.tsx
+// Merged version: Comprehensive context menu with duplicate and all existing features.
 import React, { useState } from 'react';
 import { Menu, MenuItem, IconButton } from '@mui/material';
 import { 
@@ -16,19 +17,16 @@ import {
 interface VoucherContextMenuProps {
   voucher?: any;
   voucherType: string;
-  onView: (id: number) => void;
-  onEdit: (id: number) => void;
-  onDelete: (id: number) => void;
-  onPrint?: (id: number, mode: 'print' | 'download') => void;
+  onView: (voucher: any) => void;
+  onEdit: (voucher: any) => void;
+  onDelete: (voucher: any) => void;
+  onPrint?: (voucher: any) => void;
   onEmail?: (id: number) => void;
   onDuplicate?: (id: number) => void;
   onCreateDispatch?: (id: number) => void;
   showKebab?: boolean;
-  contextMenu?: { mouseX: number; mouseY: number; voucher: any } | null;
+  contextMenu?: { mouseX: number; mouseY: number } | null;
   onClose: () => void;
-  open?: boolean;
-  anchorPosition?: { left: number; top: number };
-  anchorReference?: 'anchorPosition' | 'anchorEl' | 'none';
 }
 
 const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
@@ -44,12 +42,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   showKebab = false,
   contextMenu = null,
   onClose,
-  open = false,
-  anchorPosition = null,
-  anchorReference,
 }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const effectiveVoucher = voucher || (contextMenu ? contextMenu.voucher : null);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -60,44 +54,39 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     onClose();
   };
 
-  const handleAction = (action: (id: number) => void) => () => {
-    if (effectiveVoucher) {
-      action(effectiveVoucher.id);
+  const handleAction = (action: (voucher: any) => void) => () => {
+    if (voucher) {
+      action(voucher);
     }
     handleMenuClose();
   };
 
-  const handlePrintAction = (mode: 'print' | 'download') => () => {
-    if (onPrint && effectiveVoucher) {
-      onPrint(effectiveVoucher.id, mode);
+  const handlePrintAction = () => () => {
+    if (onPrint && voucher) {
+      onPrint(voucher);
     }
     handleMenuClose();
   };
 
-  // Determine email recipient based on voucher type
+  // Determine email recipient based on voucher type (kept from original)
   const getEmailRecipient = () => {
-    if (!effectiveVoucher) {
-      return '';
-    }
-    if (!voucherType) {
-      return '';
-    }
+    if (!voucher) return '';
     const lowerType = voucherType?.toLowerCase() || '';
     if (lowerType.includes('sales')) {
-      return effectiveVoucher.customer?.email || '';
+      return voucher.customer?.email || '';
     } else if (lowerType.includes('purchase') || lowerType.includes('financial') || lowerType.includes('payment')) {
-      return effectiveVoucher.vendor?.email || '';
+      return voucher.vendor?.email || '';
     } else if (lowerType.includes('receipt')) {
-      return effectiveVoucher.customer?.email || '';
+      return voucher.customer?.email || '';
     }
     return '';
   };
 
   const handleEmailClick = () => {
-    if (onEmail && effectiveVoucher) {
+    if (onEmail && voucher) {
       const recipient = getEmailRecipient();
       if (recipient) {
-        onEmail(effectiveVoucher.id);
+        onEmail(voucher.id);
       } else {
         alert('No email recipient found for this voucher type.');
       }
@@ -105,11 +94,11 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     handleMenuClose();
   };
 
-  const menuProps = anchorPosition && anchorReference ? {
-    open: open || Boolean(anchorEl),
+  const menuProps = contextMenu ? {
+    open: contextMenu !== null,
     onClose: handleMenuClose,
-    anchorReference: anchorReference,
-    anchorPosition,
+    anchorReference: "anchorPosition" as const,
+    anchorPosition: contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined,
   } : {
     open: Boolean(anchorEl),
     anchorEl,
@@ -117,8 +106,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   };
 
   const hasEmail = !!onEmail && !!getEmailRecipient();
-  const isDeliveryChallan = (voucherType?.toLowerCase() || '').includes('delivery challan');
-  const isPurchaseOrder = (voucherType?.toLowerCase() || '').includes('purchase order');
+  const isDeliveryChallan = voucherType?.toLowerCase().includes('delivery challan');
 
   return (
     <>
@@ -143,13 +131,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
           <Delete sx={{ mr: 1 }} /> Delete {voucherType}
         </MenuItem>
         {onPrint && (
-          <MenuItem onClick={handlePrintAction('print')}>
+          <MenuItem onClick={handlePrintAction()}>
             <Print sx={{ mr: 1 }} /> Print {voucherType}
-          </MenuItem>
-        )}
-        {onPrint && (
-          <MenuItem onClick={handlePrintAction('download')}>
-            <SaveAlt sx={{ mr: 1 }} /> Save {voucherType} as PDF
           </MenuItem>
         )}
         {hasEmail && (

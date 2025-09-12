@@ -82,6 +82,19 @@ class Settings:
     WHATSAPP_SENDER_NUMBER: Optional[str] = os.getenv("WHATSAPP_SENDER_NUMBER")
     WHATSAPP_OTP_TEMPLATE_ID: Optional[str] = os.getenv("WHATSAPP_OTP_TEMPLATE_ID")
     
+    # OAuth2 Configuration
+    # Google OAuth2
+    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET")
+    
+    # Microsoft OAuth2
+    MICROSOFT_CLIENT_ID: Optional[str] = os.getenv("MICROSOFT_CLIENT_ID")
+    MICROSOFT_CLIENT_SECRET: Optional[str] = os.getenv("MICROSOFT_CLIENT_SECRET")
+    MICROSOFT_TENANT_ID: Optional[str] = os.getenv("MICROSOFT_TENANT_ID", "common")
+    
+    # OAuth2 Redirect URIs
+    OAUTH_REDIRECT_URI: str = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:3000/auth/callback")
+    
     # Redis (for caching and task queue)
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
     

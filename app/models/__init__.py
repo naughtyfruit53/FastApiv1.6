@@ -38,10 +38,22 @@ from .marketing_models import (
 )
 # Import ERP core models
 from .erp_models import (
-    ChartOfAccounts, GSTConfiguration, TaxCode, JournalEntry,
+    ChartOfAccounts, GSTConfiguration, ERPTaxCode, JournalEntry,
     AccountsPayable, AccountsReceivable, PaymentRecord,
     GeneralLedger, CostCenter, BankAccount, BankReconciliation,
     FinancialStatement, FinancialKPI
+)
+# Import financial modeling models
+from .financial_modeling_models import (
+    FinancialModel, DCFModel, ScenarioAnalysis, TradingComparables,
+    TransactionComparables, FinancialModelTemplate, ModelAuditTrail,
+    ValuationMethodType, ScenarioType
+)
+# Import forecasting models
+from .forecasting_models import (
+    FinancialForecast, ForecastVersion, BusinessDriverModel, MLForecastModel,
+    MLPrediction, RiskAnalysis, RiskEvent, AutomatedInsight,
+    ForecastMethodType, ForecastFrequency, ForecastStatus
 )
 # Import procurement models
 from .procurement_models import (
@@ -116,9 +128,23 @@ from .mail_management import (
     EmailAccount, Email, EmailAttachment, SentEmail, EmailAction,
     EmailTemplate, EmailRule, EmailAccountType, EmailStatus, EmailPriority
 )
+# Import OAuth2 models
+from .oauth_models import (
+    UserEmailToken, OAuthState, OAuthProvider, TokenStatus
+)
 # Import sticky notes models
 from .sticky_notes import (
     StickyNote
+)
+# Import AI analytics models
+from .ai_analytics_models import (
+    AIModel, PredictionResult, AnomalyDetection, AIInsight, 
+    ModelPerformanceMetric, AutomationWorkflow, ModelStatus, PredictionType
+)
+# Import Workflow Automation models
+from .workflow_automation_models import (
+    BusinessRule, WorkflowTemplateAdvanced, AutomationWorkflowStep, AutomationWorkflowInstance,
+    AutomationWorkflowStepExecution, BusinessRuleExecution, WorkflowSchedule
 )
 
 # No imports from .base as all models have been moved
@@ -157,7 +183,7 @@ __all__ = [
     "MarketingList", "MarketingListContact",
     
     # ERP and financial models
-    "ChartOfAccounts", "GSTConfiguration", "TaxCode", "JournalEntry",
+    "ChartOfAccounts", "GSTConfiguration", "ERPTaxCode", "JournalEntry",
     "AccountsPayable", "AccountsReceivable", "PaymentRecord",
     "GeneralLedger", "CostCenter", "BankAccount", "BankReconciliation",
     "FinancialStatement", "FinancialKPI",
@@ -208,10 +234,21 @@ __all__ = [
     "EmailAccount", "Email", "EmailAttachment", "SentEmail", "EmailAction",
     "EmailTemplate", "EmailRule", "EmailAccountType", "EmailStatus", "EmailPriority",
     
+    # OAuth2 models
+    "UserEmailToken", "OAuthState", "OAuthProvider", "TokenStatus",
+    
     # Sticky notes models
     "StickyNote",
     
+    # AI analytics models
+    "AIModel", "PredictionResult", "AnomalyDetection", "AIInsight", 
+    "ModelPerformanceMetric", "AutomationWorkflow", "ModelStatus", "PredictionType",
+    
     # Migration models
     "MigrationJob", "MigrationDataMapping", "MigrationLog", "MigrationTemplate",
-    "MigrationConflict", "MigrationSourceType", "MigrationDataType", "MigrationJobStatus"
+    "MigrationConflict", "MigrationSourceType", "MigrationDataType", "MigrationJobStatus",
+    
+    # Workflow automation models
+    "BusinessRule", "WorkflowTemplateAdvanced", "AutomationWorkflowStep", "AutomationWorkflowInstance",
+    "AutomationWorkflowStepExecution", "BusinessRuleExecution", "WorkflowSchedule"
 ]

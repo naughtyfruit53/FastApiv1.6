@@ -1,8 +1,9 @@
 # app/main.py
 
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings as config_settings
@@ -15,6 +16,13 @@ from app.api.v1 import stock as v1_stock
 from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
 from app.api.routes import admin
 import logging
+import app.models  # Import all models to register them with Base.metadata
+from app.api.v1.auth import get_current_active_user as get_current_user
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.models.oauth_models import OAuthProvider
+from app.services.oauth_service import OAuth2Service
+from app.models.user_models import User
 
 # Configure logging at the top
 logging.basicConfig(level=logging.INFO)
@@ -58,6 +66,10 @@ from app.api.v1 import finance_analytics as v1_finance_analytics
 from app.api.v1 import procurement as v1_procurement
 from app.api.v1 import tally as v1_tally
 from app.api.v1 import warehouse as v1_warehouse
+
+# Add imports for Financial Modeling and Forecasting
+from app.api.v1 import financial_modeling as v1_financial_modeling
+from app.api.v1 import forecasting as v1_forecasting
 
 # Add import for RBAC
 from app.api.v1 import rbac as v1_rbac
@@ -152,6 +164,52 @@ try:
 except Exception as import_error:
     logger.error(f"Failed to import mail_router: {str(import_error)}")
     raise
+
+# Import Business Suite Core Module routers
+try:
+    from app.api.v1 import master_data as v1_master_data
+    logger.info("Successfully imported master_data_router")
+except Exception as import_error:
+    logger.error(f"Failed to import master_data_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import project_management as v1_project_management
+    logger.info("Successfully imported project_management_router")
+except Exception as import_error:
+    logger.error(f"Failed to import project_management_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import workflow_approval as v1_workflow_approval
+    logger.info("Successfully imported workflow_approval_router")
+except Exception as import_error:
+    logger.error(f"Failed to import workflow_approval_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import api_gateway as v1_api_gateway
+    logger.info("Successfully imported api_gateway_router")
+except Exception as import_error:
+    logger.error(f"Failed to import api_gateway_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import external_integrations as v1_external_integrations
+    logger.info("Successfully imported external_integrations_router")
+except Exception as import_error:
+    logger.error(f"Failed to import external_integrations_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import reporting_hub as v1_reporting_hub
+    logger.info("Successfully imported reporting_hub_router")
+except Exception as import_error:
+    logger.error(f"Failed to import reporting_hub_router: {str(import_error)}")
+    raise
+
+# Import OAuth router
+from app.api.v1 import oauth as v1_oauth
 
 # Create FastAPI app
 app = FastAPI(
@@ -279,19 +337,27 @@ app.include_router(
 )
 logger.info("GST router included successfully at prefix: /api/v1/gst")
 
+# OAuth API
+app.include_router(
+    v1_oauth.router,
+    prefix="/api/v1/oauth",
+    tags=["oauth"]
+)
+logger.info("OAuth router included successfully at prefix: /api/v1/oauth")
+
 # ------------------------------------------------------------------------------
 # LEGACY API ROUTERS (business modules)
 # ------------------------------------------------------------------------------
 app.include_router(platform.router, prefix="/api/v1/platform", tags=["platform"])
 logger.info("Platform router included successfully at prefix: /api/v1/platform")
-app.include_router(organizations_router, prefix="/api/v1", tags=["organizations"])
-logger.info("Organizations router included successfully at prefix: /api/v1")
+app.include_router(organizations_router, prefix="/api/v1/organizations", tags=["organizations"])
+logger.info("Organizations router included successfully at prefix: /api/v1/organizations")
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 logger.info("Users router included successfully at prefix: /api/v1/users")
 app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
 logger.info("Admin legacy router included successfully at prefix: /api/admin")
 app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
-logger.info("Companies router included successfully at prefix: /api/v1/companies")
+logger.info("Companies router included in at prefix: /api/v1/companies")
 app.include_router(vendors.router, prefix="/api/v1/vendors", tags=["vendors"])
 logger.info("Vendors router included successfully at prefix: /api/v1/vendors")
 app.include_router(customers.router, prefix="/api/v1/customers", tags=["customers"])
@@ -355,6 +421,13 @@ logger.info("ERP Core router included successfully at prefix: /api/v1/erp")
 app.include_router(v1_finance_analytics.router, prefix="/api/v1/finance", tags=["finance-analytics"])
 logger.info("Finance Analytics router included successfully at prefix: /api/v1/finance")
 
+# Include Financial Modeling and Forecasting routers
+app.include_router(v1_financial_modeling.router, prefix="/api/v1/financial-modeling", tags=["financial-modeling"])
+logger.info("Financial Modeling router included successfully at prefix: /api/v1/financial-modeling")
+
+app.include_router(v1_forecasting.router, prefix="/api/v1/forecasting", tags=["forecasting"])
+logger.info("Forecasting router included successfully at prefix: /api/v1/forecasting")
+
 app.include_router(v1_procurement.router, prefix="/api/v1/procurement", tags=["procurement"])
 logger.info("Procurement router included successfully at prefix: /api/v1/procurement")
 
@@ -406,6 +479,25 @@ app.include_router(
     tags=["sticky-notes"]
 )
 logger.info("Sticky notes router included successfully at prefix: /api/v1/sticky_notes")
+
+# Include Business Suite Core Module routers
+app.include_router(v1_master_data.router, prefix="/api/v1/master-data", tags=["master-data"])
+logger.info("Master Data router included successfully at prefix: /api/v1/master-data")
+
+app.include_router(v1_project_management.router, prefix="/api/v1/projects", tags=["project-management"])
+logger.info("Project Management router included successfully at prefix: /api/v1/projects")
+
+app.include_router(v1_workflow_approval.router, prefix="/api/v1/workflow", tags=["workflow-approval"])
+logger.info("Workflow Approval router included successfully at prefix: /api/v1/workflow")
+
+app.include_router(v1_api_gateway.router, prefix="/api/v1/gateway", tags=["api-gateway"])
+logger.info("API Gateway router included successfully at prefix: /api/v1/gateway")
+
+app.include_router(v1_external_integrations.router, prefix="/api/v1/external-integrations", tags=["external-integrations"])
+logger.info("External Integrations router included successfully at prefix: /api/v1/external-integrations")
+
+app.include_router(v1_reporting_hub.router, prefix="/api/v1/reports", tags=["reporting-hub"])
+logger.info("Reporting Hub router included successfully at prefix: /api/v1/reports")
 
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}

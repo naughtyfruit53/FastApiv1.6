@@ -14,6 +14,10 @@ class PurchaseOrder(BaseVoucher):
     delivery_date = Column(DateTime(timezone=True))
     payment_terms = Column(String)
     terms_conditions = Column(Text)
+    line_discount_type = Column(String)  # 'percentage' or 'amount'
+    total_discount_type = Column(String)  # 'percentage' or 'amount'
+    total_discount = Column(Float, default=0.0)
+    round_off = Column(Float, default=0.0)  # Added to match schema and PDF calculations
     
     vendor = relationship("Vendor")
     items = relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan")
@@ -31,17 +35,20 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     __tablename__ = "purchase_order_items"
     
     purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)  # Added foreign key for product
     delivered_quantity = Column(Float, default=0.0)
     pending_quantity = Column(Float, nullable=False)
     discount_percentage = Column(Float, default=0.0)
     gst_rate = Column(Float, default=18.0)
-    discount_amount = Column(Float, default=0.0)
+    discount_amount = Column(Float, default=0.0, nullable=False)
     taxable_amount = Column(Float, default=0.0)
     cgst_amount = Column(Float, default=0.0)
     sgst_amount = Column(Float, default=0.0)
     igst_amount = Column(Float, default=0.0)
+    description = Column(Text)
     
     purchase_order = relationship("PurchaseOrder", back_populates="items")
+    product = relationship("Product")  # Added relationship to Product
 
 # Goods Receipt Note (GRN) - Enhanced for auto-population from PO
 class GoodsReceiptNote(BaseVoucher):
