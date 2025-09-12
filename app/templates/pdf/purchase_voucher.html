@@ -1,82 +1,24 @@
-<!-- app/templates/pdf/purchase_voucher.html -->
-
 {% extends "base_voucher.html" %}
 
-{% set voucher_type_title = "Purchase Voucher" %}
-{% set voucher_subtitle = "Purchase Voucher" %}
-
-{% block voucher_specific_info %}
-<div class="voucher-info">
-    <div class="section-title">Purchase Voucher Details</div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-        <div class="info-row" style="flex: 1;">
-            <span class="info-label">Date:</span>
-            <span class="info-value">{{ voucher.date|format_date }}</span>
-        </div>
-        <div class="info-row" style="flex: 1; text-align: right;">
-            <span class="info-label">Voucher No:</span>
-            <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
-        </div>
-    </div>
-    {% if voucher.due_date %}
-    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-        <div class="info-row" style="flex: 1;">
-            <span class="info-label">Due Date:</span>
-            <span class="info-value">{{ voucher.due_date|format_date|default('Immediate') }}</span>
-        </div>
-        {% if voucher.status != 'draft' %}
-        <div class="info-row" style="flex: 1; text-align: right;">
-            <span class="info-label">Payment Status:</span>
-            <span class="info-value">{{ voucher.status|title }}</span>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-    {% if voucher.reference_number %}
-    <div class="info-row">
-        <span class="info-label">Reference:</span>
-        <span class="info-value">{{ voucher.reference_number }}</span>
-    </div>
-    {% endif %}
-    <div class="info-row">
-        <span class="info-label">Payment Terms:</span>
-        <span class="info-value">{{ voucher.payment_terms|default('As per agreement') }}</span>
-    </div>
-</div>
-{% endblock %}
-
-{% block item_table_headers %}
-<tr>
-    <th class="item-cell" style="width: 5%;">Sl. No.</th>
-    <th class="item-cell" style="width: 40%;">Product</th>
-    <th class="item-cell" style="width: 10%;">HSN/SAC</th>
-    <th class="item-cell" style="width: 10%;">Qty</th>
-    <th class="item-cell" style="width: 10%;">Rate</th>
-    {% if line_discount_enabled %}
-    <th class="item-cell" style="width: 10%;">Disc. %</th>
-    {% endif %}
-    <th class="item-cell" style="width: 10%;">GST %</th>
-    <th class="item-cell" style="width: 15%;">Amount</th>
-</tr>
+{% block voucher_meta %}
+<tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date }}</td></tr>
+<tr><td class="label">Voucher Number</td><td class="value">{{ voucher.voucher_number|default('N/A') }}</td></tr>
+{% if voucher.reference_number %}<tr><td class="label">Ref Number</td><td class="value">{{ voucher.reference_number }}</td></tr>{% endif %}
+{% if voucher.due_date %}<tr><td class="label">Due Date</td><td class="value">{{ voucher.due_date|format_date|default('Immediate') }}</td></tr>{% endif %}
+<tr><td class="label">Payment Terms</td><td class="value">{{ voucher.payment_terms|default('As per agreement') }}</td></tr>
 {% endblock %}
 
 {% block voucher_specific_footer %}
 {% if voucher.notes %}
-<div style="margin-top: 15px;">
-    <div class="section-title">Additional Notes</div>
-    <div style="font-size: 10px;">
-        {{ voucher.notes }}
-    </div>
+<div class="terms" style="border-top: var(--cell-border);">
+    <table>
+        <tbody>
+            <tr><td style="font-weight:700;">Additional Notes</td></tr>
+            {% for note in voucher.notes.split('\n') %}
+            <tr><td>{{ note|trim }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endif %}
-
-<div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
-    <strong>Important:</strong><br>
-    • Prices are subject to change without notice.<br>
-    • GST extra as applicable.
-</div>
-
-<div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
-    Thank you for your business.
-</div>
 {% endblock %}

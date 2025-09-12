@@ -5,513 +5,374 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ voucher.voucher_type|title }} Voucher - {{ voucher.voucher_number }}</title>
     <style>
-        /* Inline critical CSS for PDF generation */
-        @page {
-            size: A4;
-            margin: 20mm 15mm 20mm 15mm;
-        }
+        /* Page / print */
+        @page { size: A4; margin: 0 }
+        html, body { height: 100%; margin: 0; padding: 0; background: #fff; font-family: "Segoe UI", Roboto, Arial, sans-serif; font-size: 11px; color: #111 }
+        .preview-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 0; background: #fff; }
+        .a4 { width: 210mm; height: 297mm; background: #fff; position: relative; box-sizing: border-box; overflow: hidden; box-shadow: none; }
         
-        * {
-            margin: 0;
+        /* Voucher title */
+        .voucher-title {
+            position: absolute;
+            top: 0.5cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-weight: 700;
+            font-size: 18pt;
+            line-height: 1;
+            z-index: 20;
+        }
+        /* framed voucher box inside margins */
+        .voucher-box {
+            position: absolute;
+            left: 1.25cm;
+            top: 1.5cm;
+            right: 0.75cm;
+            bottom: 0.5cm;
+            border: 3px solid #222;
+            box-sizing: border-box;
+            padding: 0;
+            background: #fff;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 2x2 grid (shared borders, no gaps) */
+        .blocks-grid { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 }
+        .blocks-grid td {
+            border: 1px solid #222;
             padding: 0;
             box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'NotoSans', 'DejaVuSans', sans-serif;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #333;
-            background: white;
-        }
-        
-        .voucher-container {
-            width: 100%;
-            padding: 10px;
-        }
-        
-        .voucher-header {
-            border-bottom: 2px solid #000;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-        }
-        
-        .company-header {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-        
-        .company-logo {
-            width: 80px;
-            height: 80px;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-        
-        .company-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border: 1px solid #ddd;
-        }
-        
-        .company-info {
-            flex: 1;
-        }
-        
-        /* Company name standard size/weight (matches address) */
-        .company-name {
-            font-size: 11px;
-            font-weight: normal;
-            color: #2c3e50;
-            margin-bottom: 3px;
-            text-transform: none;
-        }
-        
-        .company-address {
-            font-size: 11px;
-            line-height: 1.3;
-            color: #555;
-            margin-bottom: 5px;
-        }
-        
-        .voucher-title {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin: 10px 0;
-            text-transform: uppercase;
-        }
-
-        /* New: table-based 1-row 2-column layout for company + party/vendor */
-        .voucher-details-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-            table-layout: fixed; /* keeps columns consistent for PDF */
-        }
-
-        .voucher-details-table td {
             vertical-align: top;
-            padding: 6px 8px;
-            width: 50%;
-        }
-
-        .section-title {
-            font-size: 12px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 8px;
-            padding: 5px 0;
-            border-bottom: 1px solid #bdc3c7;
-        }
-        
-        .info-row {
-            display: flex;
-            margin-bottom: 3px;
-            align-items: flex-start;
-        }
-        
-        .info-label {
-            font-weight: bold;
-            width: 120px;
+            height: 6.9em;
+            line-height: 1.15em;
             font-size: 11px;
-            color: #2c3e50;
         }
-        
-        .info-value {
-            flex: 1;
-            font-size: 11px;
-            color: #333;
-        }
-
-        /* Items table styling */
-        .items-section {
-            margin-top: 6px;
-        }
-
-        /* Make the table use more horizontal space and stabilize column widths.
-           Product column is larger so HSN doesn't force shrinking. */
-        .items-table {
+        .block-inner { padding: 2px; box-sizing: border-box; } /* small inner padding */
+        /* --- TOP-RIGHT meta: remove outside table border; only row separators and the parent block border remain --- */
+        .meta-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10px;
-            margin: 10px 0;
             table-layout: fixed;
+            margin: 0;
+            border: none; /* ensure no outside border */
         }
-
-        /* Column widths set by percentages to keep consistent layout */
-        .items-table thead th { padding: 8px 5px; border: 1px solid #2c3e50; background-color:#34495e; color:#fff; text-align:center; font-weight:bold; }
-
-        .items-table th:nth-child(1) { width: 3%; }   /* S.No */
-        .items-table th:nth-child(2) { width: 35%; }  /* Product/Service */
-        .items-table th:nth-child(3) { width: 8%; }   /* HSN/SAC */
-        .items-table th:nth-child(4) { width: 10%; }  /* Qty */
-        .items-table th:nth-child(5) { width: 10%; }  /* Rate */
-        .items-table th:nth-child(6) { width: 10%; }  /* Disc % or ₹ */
-        .items-table th:nth-child(7) { width: 10%; }  /* Taxable Value */
-        .items-table th:nth-child(8) { width: 5%; }   /* GST% */
-        .items-table th:nth-child(9) { width: 10%; }  /* Total */
-
-        .items-table td {
-            padding: 6px 5px;
-            text-align: center;
-            border: 1px solid #bdc3c7;
+        .meta-table tr { border-bottom: 1px solid #222; }
+        .meta-table tr:last-child { border-bottom: none; }
+        .meta-table td {
+            padding: 2px; /* 2px padding as requested */
+            font-size: 11px; /* matches overall font */
+            line-height: 1;
             vertical-align: middle;
+            box-sizing: border-box;
+            height: 18px; /* compact row height similar to product rows */
+            overflow: hidden;
+            border: none; /* Explicitly remove any td borders */
+        }
+        .meta-table .label { width: 64%; text-align: left; font-weight: 600; padding-left: 6px; white-space: nowrap; }
+        .meta-table .value { width: 36%; text-align: right; padding-right: 6px; box-sizing: border-box; border-left: 1px solid #222; }
+        /* ITEMS TABLE */
+        .items-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; margin: 0 }
+        .items-table thead th {
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+            border-bottom: 1px solid #222;
+            border-top: none; /* grid bottom border acts as separator */
+            padding: 2px 6px;
+            background: #f6f6f6;
+            font-weight: 700;
+            text-align: left;
+            font-size: 13px; /* table titles font size requested */
+            height: 22px;
+        }
+        .items-table tbody td {
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+            border-bottom: 1px solid #222;
+            padding: 2px 6px;
+            vertical-align: middle;
+            height: 18px;
             overflow: hidden;
         }
-
-        .items-table .text-left { text-align: left; }
-        .items-table .text-right { text-align: right; }
-
-                .totals-section {
-            margin-top: 20px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 20px;
-        }
-        
-        .amount-words {
-            width: 100%;
-            padding-top: 10px;
-        }
-
-        .totals-table {
-            width: 35%;
-        }
-        
-        .totals-table table {
-            width: 100%;
-            border-collapse: collapse;
+        .items-table thead th:first-child, .items-table tbody td:first-child { border-left: 1px solid #222; }
+        .items-table thead th:last-child, .items-table tbody td:last-child { border-right: 1px solid #222; }
+        .blank-row td { height: 18px; }
+        /* totals row inside same table */
+        .items-table tfoot td {
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+            border-bottom: 1px solid #222;
+            padding: 2px 6px;
+            background: #fafafa;
+            vertical-align: middle;
+            height: 20px;
             font-size: 11px;
         }
-        
-        .totals-table th {
-            background-color: #ecf0f1;
-            padding: 6px 8px;
-            text-align: left;
-            border: 1px solid #bdc3c7;
-            font-weight: bold;
+        .items-table tfoot .label-cell { font-weight: 700; padding-left: 6px; }
+        .items-table tfoot .num-cell { text-align: right; font-weight: 700; padding-right: 6px; }
+        /* Totals & Bank area directly below items table (single-border look) */
+        .totals-bank {
+            width: 100%;
+            border-collapse: collapse;
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+            border-bottom: 1px solid #222;
+            box-sizing: border-box;
         }
-        
-        .totals-table td {
-            padding: 6px 8px;
-            text-align: right;
-            border: 1px solid #bdc3c7;
+        .totals-bank td {
+            border-top: 1px solid #222;
+            vertical-align: top;
+            padding: 6px;
         }
-        
-        .total-grand {
-            font-weight: bold;
-            background-color: #f39c12;
-            color: white;
-        }
-        
-        .amount-in-words {
-            font-weight: bold;
-            font-size: 12px;
-            color: #2c3e50;
-            border: 1px solid #bdc3c7;
-            padding: 10px;
-            background-color: #f8f9fa;
-            text-transform: capitalize;
-        }
-        
-        .voucher-footer {
-            margin-top: 30px;
-            border-top: 1px solid #bdc3c7;
-            padding-top: 15px;
-        }
-        
-        .signatures {
+        .totals-bank .bank { border-right: 1px solid #222; font-size: 11px; min-height: 120px; }
+        .totals { font-size: 11px; }
+        .totals table { width: 100%; border-collapse: collapse; }
+        .totals td { padding: 4px 6px; border-bottom: 1px solid #e6e6e6; vertical-align: middle; height: 18px; font-size: 11px; }
+        .totals tr:last-child td { border-bottom: none; font-weight: 700; font-size: 13px; }
+        /* Full-width amount-in-words block (no gap) */
+        .amount-words {
+            box-sizing: border-box;
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+            border-bottom: 1px solid #222;
+            padding: 6px;
+            min-height: 28px;
             display: flex;
-            justify-content: space-between;
-            margin-top: 40px;
+            align-items: center;
+            font-weight: 600;
+            font-size: 11px;
         }
-        
-        .signature-box {
-            width: 30%;
-            text-align: center;
+        .amount-words .label { font-weight: 700; margin-right: 8px; font-size: 11px; }
+        /* TERMS block: 4 stacked rows, no gaps */
+        .terms { box-sizing: border-box; border-left: 1px solid #222; border-right: 1px solid #222; border-bottom: 1px solid #222; font-size: 11px; }
+        .terms table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .terms td { padding: 6px; border-bottom: 1px solid #222; height: 18px; font-size: 11px; }
+        .terms tr:last-child td { border-bottom: none; }
+        /* Column width helpers */
+        .col-sr { width: 6%; text-align: center }
+        .col-product { width: 34%; padding-left: 6px }
+        .col-hsn { width: 12%; text-align: center }
+        .col-qty { width: 8%; text-align: right; padding-right: 6px }
+        .col-rate { width: 10%; text-align: right; padding-right: 6px }
+        .col-gst { width: 8%; text-align: right; padding-right: 6px }
+        .col-disc { width: 8%; text-align: right; padding-right: 6px }
+        .col-line { width: 12%; text-align: right; padding-right: 6px }
+        .num { font-variant-numeric: tabular-nums; }
+        .muted { color: #555; }
+        .right { text-align: right; }
+        @media print {
+            body { background: #fff }
+            .preview-wrap { padding: 0 }
+            .a4 { box-shadow: none; margin: 0 }
         }
-        
-        .signature-line {
-            border-bottom: 1px solid #333;
-            margin-bottom: 5px;
-            height: 40px;
-        }
-        
-        .signature-label {
-            font-size: 10px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        /* Move "Prepared By" down by about two lines using a small margin.
-           More reliable for PDF than adding raw <br> tags. */
-        .prepared-shift {
-            margin-top: 1.2rem;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: bold;
-            text-transform: uppercase;
-            background-color: #f39c12;
-            color: white;
-        }
-
-        /* Responsive: stack the two columns on narrow widths */
-        @media (max-width: 600px) {
-            .voucher-details-table,
-            .voucher-details-table tbody,
-            .voucher-details-table tr {
-                display: block;
-                width: 100%;
-            }
-            .voucher-details-table td {
-                display: block;
-                width: 100%;
-                padding: 6px 0;
-            }
-            .info-label { width: 110px; }
-            .company-logo { margin-bottom: 6px; }
-            .items-table { table-layout: auto; }
-        }
-
     </style>
 </head>
 <body>
-    <div class="voucher-container">
-        <!-- Voucher Title at Top -->
-        <div class="voucher-title">
-            {{ voucher.voucher_type|default('Voucher')|title }}
-            {% if voucher.status and voucher.status != 'draft' %}
-            <span class="status-badge">{{ voucher.status }}</span>
-            {% endif %}
-        </div>
-
-        {% block voucher_specific_info %}{% endblock %}
-        
-        <!-- Company and Vendor/Customer Details in a 1-row 2-column table -->
-        <table class="voucher-details-table" role="presentation" aria-hidden="true">
-            <tbody>
-                <tr>
-                    <!-- Left column: Company Details -->
-                    <td class="company-cell">
-                        <div class="section-title">Company Details</div>
-
-                        <div style="display:flex; align-items:flex-start; margin-top:6px;">
-                            <div class="company-logo" style="margin-right:10px;">
-                                {% if company.logo_url %}
-                                <img src="{{ company.logo_url }}" alt="{{ company.name }} Logo">
-                                {% endif %}
-                            </div>
-                            <div style="flex:1;">
-                                <div class="company-name">{{ company.name }}</div>
-                                <div class="company-address">
-                                    {{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}<br>
-                                    {{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %}, {{ company.pin_code }}{% endif %}
-                                </div>
-                                <div style="margin-top:6px; font-size:11px; color:#555;">
-                                    {% if company.gst_number %}<div class="info-row"><span class="info-label">GST No:</span><span class="info-value">{{ company.gst_number }}</span></div>{% endif %}
-                                    {% if company.pan_number %}<div class="info-row"><span class="info-label">PAN No:</span><span class="info-value">{{ company.pan_number }}</span></div>{% endif %}<br>
-                                    {% if company.contact_number %}<div class="info-row"><span class="info-label">Phone:</span><span class="info-value">{{ company.contact_number }}</span></div>{% endif %}
-                                    {% if company.email %}<div class="info-row"><span class="info-label">Email:</span><span class="info-value">{{ company.email }}</span></div>{% endif %}<br>
-                                    {% if company.website %}<div class="info-row"><span class="info-label">Website:</span><span class="info-value">{{ company.website }}</span></div>{% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-
-                    <!-- Right column: Party (Vendor/Customer) Details - matched formatting to company side -->
-                    <td class="party-cell">
-                        <div class="section-title">
-                            {% if voucher.vendor %}Vendor Details{% elif voucher.customer %}Customer Details{% else %}Party Details{% endif %}
-                        </div>
-
-                        <div style="display:flex; align-items:flex-start; margin-top:6px;">
-                            <div class="company-logo" style="margin-right:10px;">
-                                {% if (voucher.vendor and voucher.vendor.logo_url) or (voucher.customer and voucher.customer.logo_url) %}
-                                <img src="{{ (voucher.vendor and voucher.vendor.logo_url) or (voucher.customer and voucher.customer.logo_url) }}" alt="Party Logo">
-                                {% endif %}
-                            </div>
-                            <div style="flex:1;">
-                                {% set party = voucher.vendor or voucher.customer %}
-                                {% if party %}
-                                    <div class="company-name">{{ party.name }}</div>
-                                    <div class="company-address">
-                                        {% if party.address %}{{ party.address }}{% endif %}<br>
-                                        {% if party.city %}{{ party.city }}{% if party.state %}, {{ party.state }}{% endif %}{% if party.pin_code %} - {{ party.pin_code }}{% endif %}{% endif %}
-                                    </div>
-                                    <div style="margin-top:6px; font-size:11px; color:#555;">
-                                        {% if party.gst_number %}<div class="info-row"><span class="info-label">GST No:</span><span class="info-value">{{ party.gst_number }}</span></div>{% endif %}<br>
-                                        {% if party.contact_number %}<div class="info-row"><span class="info-label">Phone:</span><span class="info-value">{{ party.contact_number }}</span></div>{% endif %}
-                                        {% if party.email %}<div class="info-row"><span class="info-label">Email:</span><span class="info-value">{{ party.email }}</span></div>{% endif %}
-                                    </div>
-                                {% else %}
-                                    <div class="info-row">
-                                        <span class="info-label">Note:</span>
-                                        <span class="info-value">No party details available</span>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        
-        <!-- Items Section -->
-        <div class="items-section">
-            <div class="section-title">Items</div>
-            
-            <table class="items-table" role="table" aria-label="Items">
-                <thead>
-                    <tr>
-                        <th>S.No</th>
-                        <th>Product/Service</th>
-                        <th>HSN/SAC</th>
-                        <th>Qty</th>
-                        <th>Rate</th>
-                        {% if line_discount_enabled %}  <!-- Conditional discount column -->
-                        <th>Disc % or ₹</th>
-                        {% endif %}
-                        <th>Taxable Value</th>
-                        <th>GST%</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if items|length > 0 %}
-                    {% for item in items %}
-                    <tr>
-                        <td class="text-center">{{ loop.index }}</td>
-                        <td class="text-left" style="padding-left:8px;">
-                            {{ item.product_name|default(item.description, 'Product') }}
-                            {% if item.description and item.product_name != item.description %}
-                            <br><small>{{ item.description }}</small>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">{{ item.hsn_code|default('-') }}</td>
-                        <td class="text-center">{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}</td>
-                        <td class="text-right">{{ item.unit_price|format_currency }}</td>
-                        {% if line_discount_enabled %}  <!-- Conditional discount display -->
-                        <td class="text-right">
-                            {% if item.discount_percentage > 0 %}
-                                {{ item.discount_percentage }}%
-                            {% elif item.discount_amount > 0 %}
-                                {{ item.discount_amount|format_currency(show_symbol=False) }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        {% endif %}
-                        <td class="text-right">{{ item.taxable_amount|format_currency }}</td>
-                        <td class="text-center">{{ item.gst_rate|default(0)|format_percentage }}%</td>
-                        <td class="text-right">{{ item.total_amount|format_currency }}</td>
-                    </tr>
-                    {% endfor %}
-                    {% else %}
-                    <tr>
-                        <td colspan="{% if line_discount_enabled %}9{% else %}8{% endif %}" class="text-center">No items available</td>  <!-- Dynamic colspan -->
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Totals Section (totals table first) -->
-        <div class="totals-section">
-            <div class="totals-table" aria-hidden="false">
-                <table>
+    <div class="preview-wrap">
+        <div class="a4" id="page-a4">
+            <div class="voucher-title">
+                {{ voucher.voucher_type|upper }}
+                {% if voucher.status and voucher.status != 'draft' %}
+                <span style="font-size: 9px; background-color: #f39c12; color: white; padding: 3px 8px; border-radius: 3px; text-transform: uppercase;">{{ voucher.status }}</span>
+                {% endif %}
+            </div>
+            <div class="voucher-box">
+                <!-- 2x2 grid -->
+                <table class="blocks-grid" role="grid" aria-label="Top 4 blocks grid">
                     <tbody>
                         <tr>
-                            <th>Subtotal:</th>
-                            <td>{{ subtotal|format_currency }}</td>
+                            <!-- TOP LEFT: Company details -->
+                            <td id="block-1">
+                                <div class="block-inner" style="display: flex; align-items: flex-start;">
+                                    {% if company.logo_url %}
+                                    <img src="{{ company.logo_url }}" style="width: 50px; height: 50px; margin-right: 10px; object-fit: contain;">
+                                    {% endif %}
+                                    <div>
+                                        <div style="font-weight:700; font-size:12px;">{{ company.name|upper }}</div>
+                                        <div>{{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}</div>
+                                        <div>{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %}, {{ company.pin_code }}{% endif %}</div>
+                                        {% if company.gst_number %}<div>GSTIN: {{ company.gst_number }}</div>{% endif %}
+                                        {% if company.contact_number %}<div>Contact: {{ company.contact_number }}</div>{% endif %}
+                                        {% if company.pan_number %}<div>Company’s PAN: {{ company.pan_number }}</div>{% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <!-- TOP RIGHT: meta table (no outer border, row separators only) -->
+                            <td id="block-2">
+                                <div class="block-inner">
+                                    <table class="meta-table" role="table" aria-label="Top-right meta (label/value rows)">
+                                        <tbody>
+                                            {% block voucher_meta %}
+                                            <tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date }}</td></tr>
+                                            <tr><td class="label">Voucher Number</td><td class="value">{{ voucher.voucher_number|default('N/A') }}</td></tr>
+                                            {% if voucher.reference_number %}<tr><td class="label">Ref Number</td><td class="value">{{ voucher.reference_number }}</td></tr>{% endif %}
+                                            {% endblock %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
                         </tr>
-                        {% if total_discount_enabled %}  <!-- Show if enabled, even if 0 -->
                         <tr>
-                            <th>Total Discount{% if voucher.total_discount_type == 'percentage' %}%{% else %}₹{% endif %}:</th>
-                            <td>{% if voucher.total_discount_type == 'percentage' %}{{ total_discount }}%{% else %}{{ total_discount|format_currency(show_symbol=False) }}{% endif %}</td>
-                        </tr>
-                        {% endif %}
-                        <tr>
-                            <th>Taxable Amount:</th>
-                            <td>{{ total_taxable|format_currency }}</td>
-                        </tr>
-                        {% if is_interstate %}
-                        <tr>
-                            <th>IGST:</th>
-                            <td>{{ total_igst|format_currency }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <th>CGST:</th>
-                            <td>{{ total_cgst|format_currency }}</td>
-                        </tr>
-                        <tr>
-                            <th>SGST:</th>
-                            <td>{{ total_sgst|format_currency }}</td>
-                        </tr>
-                        {% endif %}
-                        <tr>
-                            <th>Round Off:</th>
-                            <td>{{ round_off|format_currency }}</td>
-                        </tr>
-                        <tr class="total-grand">
-                            <th>Grand Total:</th>
-                            <td>{{ grand_total|format_currency }}</td>
+                            <!-- BOTTOM LEFT: Bill To (Party: Vendor/Customer) -->
+                            <td id="block-3">
+                                <div class="block-inner">
+                                    {% set party = voucher.vendor or voucher.customer %}
+                                    {% if party %}
+                                    <div style="font-weight:700;">{{ 'Vendor' if voucher.vendor else 'Customer' }} Details</div>
+                                    <div style="font-weight:600;">{{ party.name|upper }}</div>
+                                    <div>{{ party.address }}{% if party.city %}, {{ party.city }}{% endif %}{% if party.state %}, {{ party.state }}{% endif %}{% if party.pin_code %} - {{ party.pin_code }}{% endif %}</div>
+                                    {% if party.contact_number %}<div>Contact: {{ party.contact_number }}</div>{% endif %}
+                                    {% if party.gst_number %}<div>GSTIN/UIN: {{ party.gst_number }}</div>{% endif %}
+                                    {% if party.pan_number %}<div>PAN/IT No: {{ party.pan_number }}</div>{% endif %}
+                                    {% else %}
+                                    <div style="font-weight:700;">No Party Details</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <!-- BOTTOM RIGHT: Ship To (placeholder if different) -->
+                            <td id="block-4">
+                                <div class="block-inner">
+                                    <div style="font-weight:700;">Ship To</div>
+                                    {% if voucher.shipping_address %}
+                                    <div style="font-weight:600;">{{ voucher.shipping_address.name|default('') }}</div>
+                                    <div>{{ voucher.shipping_address.address }}</div>
+                                    <div>{{ voucher.shipping_address.city }}{% if voucher.shipping_address.state %}, {{ voucher.shipping_address.state }}{% endif %}</div>
+                                    {% if voucher.shipping_address.contact %}<div>Contact / GSTIN: {{ voucher.shipping_address.contact }}</div>{% endif %}
+                                    {% else %}
+                                    <div style="font-weight:600;">(Same as Bill To)</div>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-
-        <!-- Amount in Words moved BELOW totals table -->
-        <div class="amount-words" role="note" aria-label="Amount in words">
-            <div class="section-title">Amount in Words</div>
-            <div class="amount-in-words">
-                {{ amount_in_words }}
-            </div>
-
-            {% if voucher.notes %}
-            <div class="section-title" style="margin-top: 12px;">Notes</div>
-            <div style="border: 1px solid #bdc3c7; padding: 10px; background-color: #f8f9fa; font-size: 10px;">
-                {{ voucher.notes }}
-            </div>
-            {% endif %}
-        </div>
-        
-        <!-- Footer -->
-        <div class="voucher-footer">
-            {% if voucher.terms_conditions %}
-            <div class="section-title">Terms & Conditions</div>
-            <div style="font-size: 9px; margin-bottom: 15px;">
-                {{ voucher.terms_conditions }}
-            </div>
-            {% endif %}
-            
-            <div class="signatures">
-                <div class="signature-box" style="width: 50%; text-align: left;">
-                    <div class="signature-line"></div>
-                    <div class="signature-label prepared-shift">Prepared By</div>
-                    <br><br>
-                    <div class="signature-label">Authorized Signatory</div>
-                    <div class="signature-label">For {{ company.name }}</div>
+                <!-- Items table with blank row & totals -->
+                <table class="items-table" role="table" aria-label="Items">
+                    <thead>
+                        <tr>
+                            <th class="col-sr">Sr No.</th>
+                            <th class="col-product">Product Name</th>
+                            <th class="col-hsn">HSN Code</th>
+                            <th class="col-qty">Quantity</th>
+                            <th class="col-rate">Rate</th>
+                            {% if line_discount_enabled %}<th class="col-disc">Disc</th>{% endif %}
+                            <th class="col-gst">GST%</th>
+                            <th class="col-line">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if items|length > 0 %}
+                        {% for item in items %}
+                        <tr>
+                            <td class="col-sr">{{ loop.index }}</td>
+                            <td class="col-product">{{ item.product_name|default(item.description, 'Product') }}{% if item.description and item.product_name != item.description %}<br><small>{{ item.description }}</small>{% endif %}</td>
+                            <td class="col-hsn">{{ item.hsn_code|default('-') }}</td>
+                            <td class="col-qty num">{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}</td>
+                            <td class="col-rate num">{{ item.unit_price|format_currency(show_symbol=False) }}</td>
+                            {% if line_discount_enabled %}
+                            <td class="col-disc num">
+                                {% if item.discount_percentage > 0 %}
+                                    {{ item.discount_percentage }}%
+                                {% elif item.discount_amount > 0 %}
+                                    {{ item.discount_amount|format_currency(show_symbol=False) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            <td class="col-gst num">{{ item.gst_rate|format_percentage }}%</td>
+                            <td class="col-line num">{{ item.total_amount|format_currency(show_symbol=False) }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="{% if line_discount_enabled %}8{% else %}7{% endif %}" class="text-center">No items available</td>
+                        </tr>
+                        {% endif %}
+                        <!-- blank bordered row before totals -->
+                        <tr class="blank-row"><td></td><td></td><td></td><td></td><td></td>{% if line_discount_enabled %}<td></td>{% endif %}<td></td><td></td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td></td>
+                            <td class="label-cell">Totals</td>
+                            <td></td>
+                            <td class="num num-cell" style="text-align:right;">{{ total_quantity|default(0) }}</td>
+                            <td></td>
+                            {% if line_discount_enabled %}<td></td>{% endif %}
+                            <td></td>
+                            <td class="num num-cell" style="text-align:right;">{{ subtotal|format_currency(show_symbol=False) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <!-- Totals & Bank area -->
+                <table class="totals-bank" role="region" aria-label="Bank and Totals">
+                    <tr>
+                        <td class="bank">
+                            <div style="font-weight:700;">Company’s Bank Details</div>
+                            {% if company.bank_details %}
+                            <div>A/c Holder’s Name : {{ company.bank_details.holder_name|default(company.name) }}</div>
+                            <div>Bank Name : {{ company.bank_details.bank_name }}</div>
+                            <div>A/c No. : {{ company.bank_details.account_number }}</div>
+                            <div>Branch & IFS Code : {{ company.bank_details.branch }} & {{ company.bank_details.ifsc }}</div>
+                            {% endif %}
+                            {% if company.pan_number %}<div style="font-size:11px; color:#555; margin-top:4px;">Company’s PAN : {{ company.pan_number }}</div>{% endif %}
+                        </td>
+                        <td class="totals">
+                            <table>
+                                <tbody>
+                                    <tr><td class="muted">Taxable Value</td><td class="right num">{{ total_taxable|format_currency(show_symbol=False) }}</td></tr>
+                                    {% if is_interstate %}
+                                    <tr><td class="muted">OUTPUT IGST @ {{ voucher.gst_rate|default(18) }}%</td><td class="right num">{{ total_igst|format_currency(show_symbol=False) }}</td></tr>
+                                    {% else %}
+                                    <tr><td class="muted">OUTPUT CGST @ {{ voucher.gst_rate|default(9) }}%</td><td class="right num">{{ total_cgst|format_currency(show_symbol=False) }}</td></tr>
+                                    <tr><td class="muted">OUTPUT SGST @ {{ voucher.gst_rate|default(9) }}%</td><td class="right num">{{ total_sgst|format_currency(show_symbol=False) }}</td></tr>
+                                    {% endif %}
+                                    <tr><td class="muted">Round Off</td><td class="right num">{{ round_off|format_currency(show_symbol=False) }}</td></tr>
+                                    <tr><td style="font-weight:700">Total</td><td class="right num">{{ grand_total|format_currency(show_symbol=False) }}</td></tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <!-- Amount in words -->
+                <div class="amount-words">
+                    <div class="label">Amount Chargeable (in words) :</div>
+                    <div style="margin-left:8px;">{{ amount_in_words }}</div>
                 </div>
-                <div class="signature-box" style="width: 50%; text-align: right;">
-                    <div class="signature-line"></div>
-                    <div class="signature-label">Vendor Signature</div>
+                <!-- Terms -->
+                <div class="terms">
+                    <table>
+                        <tbody>
+                            {% if voucher.terms_conditions %}
+                            {% for term in voucher.terms_conditions.split('\n')|slice(4) %}
+                            <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr><td>1. TERMS AND CONDITIONS - NO RETURN NO EXCHANGE.</td></tr>
+                            <tr><td>2. Late payments will be subject to an interest charge of 18%.</td></tr>
+                            <tr><td>3. Goods once sold will not be taken back without prior written consent.</td></tr>
+                            <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px; font-size: 9px; color: #666;">
-                Generated on {{ generated_at|format_date('%d/%m/%Y %H:%M') }} | 
-                This is a computer generated document.
+                <!-- Signatures -->
+                <div class="signatures" style="margin-top: auto; box-sizing: border-box; border-left: 1px solid #222; border-right: 1px solid #222; border-bottom: 1px solid #222; display: flex; justify-content: space-between; padding: 10px; font-size: 11px;">
+                    <div style="width: 45%; text-align: left;">
+                        <div style="height: 40px;"></div>
+                        <div>_______________________</div>
+                        <div>Authorized Signature (Entity)</div>
+                    </div>
+                    <div style="width: 45%; text-align: right;">
+                        <div>For {{ company.name|upper }}</div>
+                        <div style="height: 40px;"></div>
+                        <div>_______________________</div>
+                        <div>Authorized Signature</div>
+                    </div>
+                </div>
+                {% block voucher_specific_footer %}{% endblock %}
             </div>
         </div>
     </div>

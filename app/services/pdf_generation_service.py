@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, date  # Added date import for type checking
 from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, Template
-from xhtml2pdf import pisa
+import pdfkit  # Replaced xhtml2pdf with pdfkit
 from io import BytesIO
 from num2words import num2words
 from sqlalchemy.orm import Session
@@ -164,11 +164,14 @@ class VoucherPDFGenerator:
         # Add custom filters
         self._add_custom_filters()
 
-        # Register fonts
+        # Register fonts (still using ReportLab for fonts, but pdfkit handles most)
         self._register_fonts()
+        
+        # pdfkit config (adjust path if needed)
+        self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
     
     def _register_fonts(self):
-        """Register custom fonts for PDF generation"""
+        """Register custom fonts for PDF generation (optional for pdfkit)"""
         try:
             font_path = os.path.join(os.path.dirname(__file__), '../static/fonts/NotoSans-Regular.ttf')
             if os.path.exists(font_path):
@@ -304,6 +307,7 @@ class VoucherPDFGenerator:
         total_cgst = 0.0
         total_sgst = 0.0
         total_igst = 0.0
+        total_quantity = 0.0  # Added for totals row
         
         for item in items:
             # Calculate item totals
@@ -348,6 +352,7 @@ class VoucherPDFGenerator:
             total_cgst += gst_calc['cgst_amount']
             total_sgst += gst_calc['sgst_amount']
             total_igst += gst_calc['igst_amount']
+            total_quantity += quantity  # Accumulate quantity
         
         grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
         
@@ -373,6 +378,7 @@ class VoucherPDFGenerator:
             'total_igst': total_igst,
             'round_off': round_off,
             'grand_total': grand_total,
+            'total_quantity': total_quantity,  # Added for items table totals
             'is_interstate': is_interstate,
             'line_discount_enabled': voucher_data.get('line_discount_type') is not None,  # Flag for line discount
             'total_discount_enabled': voucher_data.get('total_discount_type') is not None,  # Flag for total discount
@@ -431,13 +437,19 @@ class VoucherPDFGenerator:
             filename = f"{voucher_type}_{voucher_number}_{uuid.uuid4().hex[:8]}.pdf"
             filepath = os.path.join(self.output_dir, filename)
             
-            # Convert to PDF using xhtml2pdf
-            pdf_buffer = BytesIO()
-            pisa.CreatePDF(html_content, dest=pdf_buffer)
-            pdf_buffer.seek(0)
-            
-            with open(filepath, 'wb') as f:
-                f.write(pdf_buffer.getvalue())
+            # Convert to PDF using pdfkit (replaced pisa)
+            pdf_options = {
+                'page-size': 'A4',
+                'margin-top': '0mm',
+                'margin-right': '0mm',
+                'margin-bottom': '0mm',
+                'margin-left': '0mm',
+                'encoding': 'UTF-8',
+                'disable-smart-shrinking': '',
+                'zoom': '1.0',
+                'dpi': '96'
+            }
+            pdfkit.from_string(html_content, filepath, configuration=self.pdfkit_config, options=pdf_options)
             
             logger.info(f"PDF generated successfully: {filepath}")
             return filepath
