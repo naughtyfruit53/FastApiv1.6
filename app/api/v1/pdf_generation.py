@@ -26,6 +26,7 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
     """Check if user has permission for voucher type"""
     permission_map = {
         'purchase': 'voucher_read',
+        'purchase-vouchers': 'voucher_read',
         'purchase-orders': 'voucher_read',
         'purchase-return': 'voucher_read',
         'sales': 'voucher_read',
@@ -220,6 +221,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
     
     model_map = {
         'purchase': PurchaseVoucher,
+        'purchase-vouchers': PurchaseVoucher,
         'purchase-orders': PurchaseOrder,
         'purchase-return': PurchaseReturn,
         'sales': SalesVoucher,
@@ -309,6 +311,8 @@ def _voucher_to_dict(voucher) -> Dict[str, Any]:
         voucher_data['valid_until'] = voucher.valid_until
     if hasattr(voucher, 'delivery_terms'):
         voucher_data['delivery_terms'] = voucher.delivery_terms
+    if hasattr(voucher, 'delivery_date'):
+        voucher_data['required_by_date'] = voucher.delivery_date  # Alias for template
     
     # Add discount types for conditional rendering
     if hasattr(voucher, 'line_discount_type'):

@@ -8,6 +8,7 @@ from sqlalchemy import desc, and_
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 from decimal import Decimal
+import logging
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user

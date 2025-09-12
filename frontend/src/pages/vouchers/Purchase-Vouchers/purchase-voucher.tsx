@@ -48,6 +48,7 @@ import { toast } from "react-toastify";
 import { useGstValidation } from "../../../hooks/useGstValidation"; // New GST hook
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New discounts hook
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers"; // New utils
+import voucherFormStyles from "../../../styles/voucherFormStyles"; // New common styles import
 
 const PurchaseVoucherPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
@@ -372,16 +373,57 @@ const PurchaseVoucherPage: React.FC = () => {
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
-          <Grid item xs={6}>
-            <TextField fullWidth label="Voucher Number" {...control.register("voucher_number")} disabled InputLabelProps={{ shrink: true, style: { fontSize: 12 } }} inputProps={{ style: { fontSize: 14, textAlign: "center", fontWeight: "bold" } }} size="small" sx={{ "& .MuiInputBase-root": { height: 27 } }} />
+          <Grid size={6}>
+            <TextField 
+              fullWidth 
+              label="Voucher Number" 
+              {...control.register("voucher_number")} 
+              disabled 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center', fontWeight: 'bold' } 
+              }} 
+              InputLabelProps={{ shrink: true }} 
+            />
           </Grid>
-          <Grid item xs={6}>
-            <TextField fullWidth label="Date" type="date" {...control.register("date")} disabled={mode === "view"} InputLabelProps={{ shrink: true, style: { fontSize: 12, display: "block", visibility: "visible" } }} inputProps={{ style: { fontSize: 14, textAlign: "center" } }} size="small" sx={{ "& .MuiInputBase-root": { height: 27 } }} />
+          <Grid size={6}>
+            <TextField 
+              fullWidth 
+              label="Date" 
+              type="date" 
+              {...control.register("date")} 
+              disabled={mode === "view"} 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center' } 
+              }} 
+              InputLabelProps={{ shrink: true }} 
+            />
           </Grid>
-          <Grid item xs={4}>
-            <Autocomplete size="small" options={enhancedVendorOptions} getOptionLabel={(option: any) => option?.name || ""} value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null} onChange={(_, newValue) => { if (newValue?.id === null) setShowAddVendorModal(true); else setValue("vendor_id", newValue?.id || null); }} renderInput={(params) => <TextField {...params} label="Vendor" error={!!errors.vendor_id} helperText={errors.vendor_id ? "Required" : ""} InputLabelProps={{ shrink: true, style: { fontSize: 12 } }} inputProps={{ ...params.inputProps, style: { fontSize: 14 } }} size="small" sx={{ "& .MuiInputBase-root": { height: 27 } }} />} disabled={mode === "view"} />
+          <Grid size={4}>
+            <Autocomplete 
+              size="small" 
+              options={enhancedVendorOptions} 
+              getOptionLabel={(option: any) => option?.name || ""} 
+              value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null} 
+              onChange={(_, newValue) => { 
+                if (newValue?.id === null) setShowAddVendorModal(true); 
+                else setValue("vendor_id", newValue?.id || null); 
+              }} 
+              renderInput={(params) => 
+                <TextField 
+                  {...params} 
+                  label="Vendor" 
+                  error={!!errors.vendor_id} 
+                  helperText={errors.vendor_id ? "Required" : ""} 
+                  sx={voucherFormStyles.field} 
+                  InputLabelProps={{ shrink: true }} 
+                />
+              } 
+              disabled={mode === "view"} 
+            />
           </Grid>
-          <Grid item xs={4}>
+          <Grid size={4}>
             <VoucherReferenceDropdown
               voucherType="purchase-voucher"
               value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
@@ -390,16 +432,32 @@ const PurchaseVoucherPage: React.FC = () => {
               onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
-          <Grid item xs={4}>
-            <TextField fullWidth label="Payment Terms" {...control.register("payment_terms")} disabled={mode === "view"} InputLabelProps={{ shrink: true, style: { fontSize: 12 } }} inputProps={{ style: { fontSize: 14 } }} size="small" sx={{ "& .MuiInputBase-root": { height: 27 } }} />
+          <Grid size={4}>
+            <TextField 
+              fullWidth 
+              label="Payment Terms" 
+              {...control.register("payment_terms")} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.field} 
+              InputLabelProps={{ shrink: true }} 
+            />
           </Grid>
-          <Grid item xs={12}>
-            <TextField fullWidth label="Notes" {...control.register("notes")} multiline rows={2} disabled={mode === "view"} InputLabelProps={{ shrink: true, style: { fontSize: 12 } }} inputProps={{ style: { fontSize: 14 } }} size="small" />
+          <Grid size={12}>
+            <TextField 
+              fullWidth 
+              label="Notes" 
+              {...control.register("notes")} 
+              multiline 
+              rows={1} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.notesField} 
+              InputLabelProps={{ shrink: true }} 
+            />
           </Grid>
-          <Grid item xs={12} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 27 }}>
+          <Grid size={12} sx={voucherFormStyles.itemsHeader}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <VoucherItemTable
               fields={fields}
               control={control}
@@ -422,7 +480,7 @@ const PurchaseVoucherPage: React.FC = () => {
               selectedProducts={selectedProducts}
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <VoucherFormTotals
               totalSubtotal={totalSubtotal}
               totalCgst={totalCgst}
@@ -439,6 +497,18 @@ const PurchaseVoucherPage: React.FC = () => {
               setValue={setValue}
               handleToggleTotalDiscount={handleToggleTotalDiscount}
               getAmountInWords={getAmountInWords}
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              label="Amount in Words"
+              value={getAmountInWords(totalAmount)}
+              disabled
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
+              size="small"
+              sx={{ mt: 2 }}
             />
           </Grid>
         </Grid>

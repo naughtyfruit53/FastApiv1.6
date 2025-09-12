@@ -424,40 +424,48 @@ const PurchaseOrderPage: React.FC = () => {
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
-          <Grid item xs={4}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Voucher Number" 
               {...control.register("voucher_number")} 
               disabled 
-              sx={voucherFormStyles.field} 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center', fontWeight: 'bold' } 
+              }} 
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid item xs={4}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Date" 
               type="date" 
               {...control.register("date")} 
               disabled={mode === "view"} 
-              sx={voucherFormStyles.field} 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center' } 
+              }} 
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid item xs={4}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Required by Date" 
               type="date" 
               {...control.register("required_by_date")} 
               disabled={mode === "view"} 
-              sx={voucherFormStyles.field} 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center' } 
+              }} 
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid item xs={12} /> {/* Empty item for line break */}
-          <Grid item xs={4}>
+          <Grid size={4}>
             <Autocomplete 
               size="small" 
               options={enhancedVendorOptions} 
@@ -480,7 +488,7 @@ const PurchaseOrderPage: React.FC = () => {
               disabled={mode === "view"} 
             />
           </Grid>
-          <Grid item xs={4}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Reference" 
@@ -490,7 +498,7 @@ const PurchaseOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid item xs={4}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Payment Terms" 
@@ -500,7 +508,7 @@ const PurchaseOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField 
               fullWidth 
               label="Notes" 
@@ -512,10 +520,10 @@ const PurchaseOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid item xs={12} sx={voucherFormStyles.itemsHeader}>
+          <Grid size={12} sx={voucherFormStyles.itemsHeader}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <VoucherItemTable
               fields={fields}
               control={control}
@@ -538,7 +546,7 @@ const PurchaseOrderPage: React.FC = () => {
               selectedProducts={selectedProducts}
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <VoucherFormTotals
               totalSubtotal={totalSubtotal}
               totalCgst={totalCgst}
@@ -555,6 +563,18 @@ const PurchaseOrderPage: React.FC = () => {
               setValue={setValue}
               handleToggleTotalDiscount={handleToggleTotalDiscount}
               getAmountInWords={getAmountInWords}
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              label="Amount in Words"
+              value={getAmountInWords(totalAmount)}
+              disabled
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
+              size="small"
+              sx={{ mt: 2 }}
             />
           </Grid>
         </Grid>

@@ -29,6 +29,7 @@ import {
 } from "../utils/pdfUtils";
 import { VoucherPageConfig } from "../types/voucher.types";
 import api from "../lib/api"; // Direct import for list fetch
+
 export const useVoucherPage = (config: VoucherPageConfig) => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
@@ -344,7 +345,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     queryFn: () =>
       voucherService.getVouchers(config.voucherType, {
         skip: (currentPage - 1) * pageSize,
-        limit: 99999,
+        limit: 500,
         sort: "desc",
         sortBy: "created_at",
       }),

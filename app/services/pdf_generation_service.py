@@ -407,7 +407,7 @@ class VoucherPDFGenerator:
             template_name = f"{voucher_type}_voucher.html"
             
             if voucher_type == 'purchase-orders':
-                template_name = 'purchase_voucher.html'
+                template_name = 'purchase_order.html'
             
             try:
                 template = self.jinja_env.get_template(template_name)

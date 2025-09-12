@@ -108,18 +108,18 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "30%" }}>Product</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "100px" }}></TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "right" }}>Qty</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "right" }}>Rate</TableCell>
+              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "30%" }}>Product</TableCell>
+              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "100px" }}></TableCell>
+              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}>Qty</TableCell>
+              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}>Rate</TableCell>
               {lineDiscountEnabled && (
-                <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
+                <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
                   {lineDiscountType === 'percentage' ? 'Disc%' : 'Disc ₹'}
                 </TableCell>
               )}
-              <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>GST%</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Line Total</TableCell>
-              {mode !== "view" && <TableCell sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Action</TableCell>}
+              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>GST%</TableCell>
+              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Line Total</TableCell>
+              {mode !== "view" && <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Action</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -145,7 +145,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       size="small"
                     />
                   </TableCell>
-                  <TableCell sx={{ p: 1, textAlign: "center" }}>
+                  <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
                     {stockLoading[index] ? (
                       <CircularProgress size={12} />
                     ) : watch(`items.${index}.product_id`) ? (
@@ -154,7 +154,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       </Typography>
                     ) : null}
                   </TableCell>
-                  <TableCell sx={{ p: 1, textAlign: "right" }}>
+                  <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
                     <TextField
                       type="number"
                       {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
@@ -167,7 +167,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       }}
                     />
                   </TableCell>
-                  <TableCell sx={{ p: 1, textAlign: "right" }}>
+                  <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
                     <TextField
                       type="number"
                       {...control.register(`items.${index}.unit_price`, { valueAsNumber: true })}
@@ -178,7 +178,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                     />
                   </TableCell>
                   {lineDiscountEnabled && (
-                    <TableCell sx={{ p: 1 }}>
+                    <TableCell align="center" sx={{ p: 1 }}>
                       <TextField
                         type="number"
                         {...control.register(`items.${index}.${lineDiscountType === 'percentage' ? 'discount_percentage' : 'discount_amount'}`, { valueAsNumber: true })}
@@ -189,7 +189,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       />
                     </TableCell>
                   )}
-                  <TableCell sx={{ p: 1 }}>
+                  <TableCell align="center" sx={{ p: 1 }}>
                     <Autocomplete
                       size="small"
                       options={GST_SLABS}
@@ -204,11 +204,11 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       disabled={mode === "view"}
                     />
                   </TableCell>
-                  <TableCell sx={{ p: 1, fontSize: 14 }}>
+                  <TableCell align="center" sx={{ p: 1, fontSize: 14 }}>
                     ₹{computedItems[index]?.amount?.toLocaleString() || "0"}
                   </TableCell>
                   {mode !== "view" && (
-                    <TableCell sx={{ p: 1 }}>
+                    <TableCell align="center" sx={{ p: 1 }}>
                       <IconButton size="small" onClick={() => remove(index)} color="error">
                         <Remove />
                       </IconButton>
