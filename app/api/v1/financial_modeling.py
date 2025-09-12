@@ -29,7 +29,8 @@ from app.schemas.financial_modeling import (
 )
 from app.services.financial_modeling_service import FinancialModelingService
 from app.models.erp_models import GeneralLedger, ChartOfAccounts
-import logging
+from app.utils.financial_export import FinancialExportService
+from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -798,4 +799,167 @@ async def get_model_audit_trail(
         raise
     except Exception as e:
         logger.error(f"Error fetching audit trail: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Export Endpoints
+@router.get("/models/{model_id}/export/excel")
+async def export_financial_model_excel(
+    model_id: int,
+    include_scenarios: bool = Query(True, description="Include scenario analysis"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Export financial model to Excel format"""
+    try:
+        # Get financial model
+        model = db.query(FinancialModel).filter(
+            FinancialModel.id == model_id,
+            FinancialModel.organization_id == organization_id
+        ).first()
+        
+        if not model:
+            raise HTTPException(status_code=404, detail="Financial model not found")
+        
+        # Get DCF model if exists
+        dcf_model = db.query(DCFModel).filter(
+            DCFModel.financial_model_id == model_id,
+            DCFModel.organization_id == organization_id
+        ).first()
+        
+        if not dcf_model:
+            raise HTTPException(status_code=404, detail="DCF model not found for this financial model")
+        
+        # Get scenarios if requested
+        scenarios = []
+        if include_scenarios:
+            scenarios = db.query(ScenarioAnalysis).filter(
+                ScenarioAnalysis.financial_model_id == model_id,
+                ScenarioAnalysis.organization_id == organization_id
+            ).all()
+        
+        # Convert to dictionaries
+        model_dict = {
+            'id': model.id,
+            'model_name': model.model_name,
+            'model_type': model.model_type.value,
+            'model_version': model.model_version,
+            'analysis_start_date': model.analysis_start_date.isoformat(),
+            'analysis_end_date': model.analysis_end_date.isoformat(),
+            'forecast_years': model.forecast_years,
+            'assumptions': model.assumptions,
+            'projections': model.projections,
+            'valuation_results': model.valuation_results,
+            'created_at': model.created_at.isoformat(),
+            'is_approved': model.is_approved
+        }
+        
+        dcf_dict = {
+            'cost_of_equity': float(dcf_model.cost_of_equity),
+            'cost_of_debt': float(dcf_model.cost_of_debt),
+            'tax_rate': float(dcf_model.tax_rate),
+            'debt_to_equity_ratio': float(dcf_model.debt_to_equity_ratio),
+            'wacc': float(dcf_model.wacc),
+            'terminal_growth_rate': float(dcf_model.terminal_growth_rate),
+            'terminal_value': float(dcf_model.terminal_value),
+            'pv_of_fcf': float(dcf_model.pv_of_fcf),
+            'pv_of_terminal_value': float(dcf_model.pv_of_terminal_value),
+            'enterprise_value': float(dcf_model.enterprise_value),
+            'equity_value': float(dcf_model.equity_value),
+            'shares_outstanding': float(dcf_model.shares_outstanding) if dcf_model.shares_outstanding else None,
+            'value_per_share': float(dcf_model.value_per_share) if dcf_model.value_per_share else None,
+            'cash_flow_projections': dcf_model.cash_flow_projections
+        }
+        
+        scenarios_dict = []
+        for scenario in scenarios:
+            scenarios_dict.append({
+                'scenario_name': scenario.scenario_name,
+                'scenario_type': scenario.scenario_type.value,
+                'scenario_description': scenario.scenario_description,
+                'assumption_changes': scenario.assumption_changes,
+                'scenario_results': scenario.scenario_results,
+                'variance_from_base': scenario.variance_from_base,
+                'probability': float(scenario.probability) if scenario.probability else None,
+                'risk_adjusted_value': float(scenario.risk_adjusted_value) if scenario.risk_adjusted_value else None
+            })
+        
+        # Generate Excel file
+        export_service = FinancialExportService()
+        excel_file = export_service.export_dcf_model_to_excel(
+            model_dict, 
+            dcf_dict, 
+            scenarios_dict if scenarios_dict else None
+        )
+        
+        # Return as streaming response
+        filename = f"{model.model_name.replace(' ', '_')}_DCF_Model.xlsx"
+        
+        return StreamingResponse(
+            excel_file,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting financial model to Excel: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/trading-comparables/export/csv")
+async def export_trading_comparables_csv(
+    industry: Optional[str] = Query(None),
+    is_active: bool = Query(True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Export trading comparables to CSV format"""
+    try:
+        query = db.query(TradingComparables).filter(
+            TradingComparables.organization_id == organization_id,
+            TradingComparables.is_active == is_active
+        )
+        
+        if industry:
+            query = query.filter(TradingComparables.industry == industry)
+        
+        comparables = query.all()
+        
+        # Convert to list of dictionaries
+        data = []
+        for comp in comparables:
+            data.append({
+                'company_name': comp.company_name,
+                'ticker_symbol': comp.ticker_symbol,
+                'industry': comp.industry,
+                'market_cap': float(comp.market_cap) if comp.market_cap else None,
+                'revenue_ttm': float(comp.revenue_ttm) if comp.revenue_ttm else None,
+                'ebitda_ttm': float(comp.ebitda_ttm) if comp.ebitda_ttm else None,
+                'net_income_ttm': float(comp.net_income_ttm) if comp.net_income_ttm else None,
+                'ev_revenue_multiple': float(comp.ev_revenue_multiple) if comp.ev_revenue_multiple else None,
+                'ev_ebitda_multiple': float(comp.ev_ebitda_multiple) if comp.ev_ebitda_multiple else None,
+                'pe_ratio': float(comp.pe_ratio) if comp.pe_ratio else None,
+                'data_source': comp.data_source,
+                'as_of_date': comp.as_of_date.isoformat(),
+                'created_at': comp.created_at.isoformat()
+            })
+        
+        # Generate CSV file
+        export_service = FinancialExportService()
+        csv_file = export_service.export_to_csv(data, "trading_comparables")
+        
+        filename = f"trading_comparables_{industry or 'all'}_{datetime.now().strftime('%Y%m%d')}.csv"
+        
+        return StreamingResponse(
+            csv_file,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error exporting trading comparables to CSV: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
