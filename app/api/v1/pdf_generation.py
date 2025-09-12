@@ -14,7 +14,7 @@ from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.services.pdf_generation_service import pdf_generator
 from app.services.rbac import RBACService
-from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem
 from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice
 import logging
@@ -29,6 +29,7 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
         'purchase-vouchers': 'voucher_read',
         'purchase-orders': 'voucher_read',
         'purchase-return': 'voucher_read',
+        'purchase-returns': 'voucher_read',
         'sales': 'voucher_read',
         'delivery-challan': 'voucher_read',
         'sales-return': 'voucher_read',
@@ -62,6 +63,7 @@ async def generate_voucher_pdf(
     - purchase: Purchase Voucher
     - purchase-orders: Purchase Order
     - purchase-return: Purchase Return
+    - purchase-returns: Purchase Return
     - sales: Sales Voucher
     - delivery-challan: Delivery Challan
     - sales-return: Sales Return
@@ -224,6 +226,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'purchase-vouchers': PurchaseVoucher,
         'purchase-orders': PurchaseOrder,
         'purchase-return': PurchaseReturn,
+        'purchase-returns': PurchaseReturn,
         'sales': SalesVoucher,
         'delivery-challan': DeliveryChallan,
         'sales-return': SalesReturn,
@@ -252,10 +255,17 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         if hasattr(model_class, 'customer'):
             query = query.options(joinedload(model_class.customer))
         if hasattr(model_class, 'items'):
-            if voucher_type == 'purchase-orders':
-                query = query.options(joinedload(model_class.items).joinedload(PurchaseOrderItem.product))
+            item_class_map = {
+                'purchase': PurchaseVoucherItem,
+                'purchase-vouchers': PurchaseVoucherItem,
+                'purchase-orders': PurchaseOrderItem,
+                'purchase-return': PurchaseReturnItem,
+                'purchase-returns': PurchaseReturnItem,
+            }
+            item_class = item_class_map.get(voucher_type)
+            if item_class:
+                query = query.options(joinedload(model_class.items).joinedload(item_class.product))
             else:
-                # For other types, add if they have product relation
                 query = query.options(joinedload(model_class.items))
         
         voucher = query.first()

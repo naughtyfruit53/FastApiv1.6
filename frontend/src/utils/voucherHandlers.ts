@@ -21,8 +21,11 @@ export const handleFinalSubmit = async (
   refreshMasterData: () => void,
   config: any
 ) => {
-  if (!data.vendor_id) {
-    toast.error("Please select a vendor");
+  const entityIdField = config.entityType === 'purchase' ? 'vendor_id' : 'customer_id';
+  const entityName = config.entityType === 'purchase' ? 'vendor' : 'customer';
+
+  if (!data[entityIdField]) {
+    toast.error(`Please select a ${entityName}`);
     return;
   }
 

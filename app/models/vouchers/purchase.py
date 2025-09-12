@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func  # Added import for func
 from app.core.database import Base
 from .base import BaseVoucher, VoucherItemBase, SimpleVoucherItemBase
+from app.models.product_models import Product  # Added import for Product
 
 # Purchase Order
 class PurchaseOrder(BaseVoucher):
@@ -138,6 +139,7 @@ class PurchaseVoucherItem(VoucherItemBase):
     
     purchase_voucher = relationship("PurchaseVoucher", back_populates="items")
     grn_item = relationship("GoodsReceiptNoteItem")
+    product = relationship("Product")  # Added relationship to Product
 
 # Purchase Return (Rejection In)
 class PurchaseReturn(BaseVoucher):
@@ -163,3 +165,4 @@ class PurchaseReturnItem(VoucherItemBase):
     
     purchase_return_id = Column(Integer, ForeignKey("purchase_returns.id"), nullable=False)
     purchase_return = relationship("PurchaseReturn", back_populates="items")
+    product = relationship("Product")  # Added relationship to Product
