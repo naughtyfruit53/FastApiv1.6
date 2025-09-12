@@ -21,6 +21,9 @@ import re  # Added for sanitizing filenames
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
+# Import settings for dynamic wkhtmltopdf path
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 class IndianNumberFormatter:
@@ -167,8 +170,11 @@ class VoucherPDFGenerator:
         # Register fonts (still using ReportLab for fonts, but pdfkit handles most)
         self._register_fonts()
         
-        # pdfkit config (adjust path if needed)
-        self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
+        # pdfkit config using dynamic path from settings (works for Windows local and Linux deploy)
+        wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
+        if not os.path.exists(wkhtmltopdf_path):
+            raise FileNotFoundError(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Please install it and set WKHTMLTOPDF_PATH in .env.")
+        self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
     
     def _register_fonts(self):
         """Register custom fonts for PDF generation (optional for pdfkit)"""
