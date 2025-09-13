@@ -31,9 +31,10 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
         'purchase-return': 'voucher_read',
         'purchase-returns': 'voucher_read',
         'sales': 'voucher_read',
+        'sales-vouchers': 'voucher_read',
         'delivery-challan': 'voucher_read',
-        'delivery-challans': 'voucher_read',
         'sales-return': 'voucher_read',
+        'sales-returns': 'voucher_read',
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
         'sales-orders': 'presales_read',
@@ -87,6 +88,10 @@ async def generate_voucher_pdf(
         voucher_type = 'sales_order'
     elif voucher_type == 'delivery-challans':
         voucher_type = 'delivery-challan'
+    elif voucher_type == 'sales-vouchers':
+        voucher_type = 'sales'
+    elif voucher_type == 'sales-returns':
+        voucher_type = 'sales-return'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -152,6 +157,10 @@ async def download_voucher_pdf(
         voucher_type = 'sales_order'
     elif voucher_type == 'delivery-challans':
         voucher_type = 'delivery-challan'
+    elif voucher_type == 'sales-vouchers':
+        voucher_type = 'sales'
+    elif voucher_type == 'sales-returns':
+        voucher_type = 'sales-return'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -262,6 +271,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'delivery-challan': DeliveryChallan,
         'delivery-challans': DeliveryChallan,
         'sales-return': SalesReturn,
+        'sales-returns': SalesReturn,
         'quotation': Quotation,
         'sales_order': SalesOrder,
         'sales-orders': SalesOrder,

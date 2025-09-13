@@ -19,6 +19,12 @@ import {
   DialogContent,
   DialogTitle,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import { Add, Remove, Clear } from "@mui/icons-material";
 import AddCustomerModal from "../../../components/AddCustomerModal";
