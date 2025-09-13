@@ -1,3 +1,4 @@
+// frontend/src/components/MobileNav.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -33,9 +34,12 @@ import {
   AccountBalance,
   Campaign,
   SupportAgent,
+  ChevronRight,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { isAppSuperAdmin } from '../types/user.types';
+import { menuItems, mainMenuSections } from './menuConfig';
 
 interface MobileNavProps {
   user?: any;
@@ -52,9 +56,11 @@ const MobileNav: React.FC<MobileNavProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [expandedSubSections, setExpandedSubSections] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   const { isMobile } = useMobileDetection();
+  const isSuperAdmin = isAppSuperAdmin(user);
 
   // Don't render on desktop
   if (!isMobile || !isVisible) {
@@ -73,6 +79,14 @@ const MobileNav: React.FC<MobileNavProps> = ({
     );
   };
 
+  const handleSubSectionToggle = (subSectionName: string) => {
+    setExpandedSubSections(prev => 
+      prev.includes(subSectionName) 
+        ? prev.filter(s => s !== subSectionName)
+        : [...prev, subSectionName]
+    );
+  };
+
   const navigateTo = (path: string) => {
     router.push(path);
     setIsOpen(false); // Close drawer after navigation
@@ -87,16 +101,21 @@ const MobileNav: React.FC<MobileNavProps> = ({
     if (!query) return items;
     return items.filter(item => 
       item.name.toLowerCase().includes(query.toLowerCase()) ||
-      (item.items && item.items.some((subItem: any) => 
+      (item.subItems && item.subItems.some((subItem: any) => 
         subItem.name.toLowerCase().includes(query.toLowerCase())
+      )) ||
+      (item.items && item.items.some((subItem: any) => 
+        subItem.name.toLowerCase().includes(query.toLowerCase()) ||
+        (subItem.subItems && subItem.subItems.some((nestedItem: any) => 
+          nestedItem.name.toLowerCase().includes(query.toLowerCase())
+        ))
       ))
     );
   };
 
   const renderMenuItems = () => {
-    if (!menuItems?.menu?.sections) return null;
-
-    const filteredSections = filterMenuItems(menuItems.menu.sections, searchQuery);
+    const sections = mainMenuSections(isSuperAdmin);
+    const filteredSections = filterMenuItems(sections, searchQuery);
 
     return filteredSections.map((section: any, index: number) => (
       <Box key={index}>
@@ -136,27 +155,80 @@ const MobileNav: React.FC<MobileNavProps> = ({
                   </ListItem>
                 )}
                 {subSection.items?.map((item: any, itemIndex: number) => (
-                  <ListItemButton
-                    key={itemIndex}
-                    onClick={() => navigateTo(item.path)}
-                    sx={{
-                      pl: 6,
-                      minHeight: 44,
-                      '&:hover': {
-                        backgroundColor: 'secondary.light',
-                      }
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={item.name}
-                      primaryTypographyProps={{
-                        fontSize: '0.9rem',
+                  item.subItems ? (
+                    <Box key={itemIndex}>
+                      <ListItemButton
+                        onClick={() => handleSubSectionToggle(item.name)}
+                        sx={{
+                          pl: 6,
+                          minHeight: 44,
+                          '&:hover': {
+                            backgroundColor: 'secondary.light',
+                          }
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          {item.icon || <ChevronRight />}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={item.name}
+                          primaryTypographyProps={{
+                            fontSize: '0.9rem',
+                          }}
+                        />
+                        {expandedSubSections.includes(item.name) ? <ExpandLess /> : <ExpandMore />}
+                      </ListItemButton>
+                      <Collapse in={expandedSubSections.includes(item.name)} timeout="auto" unmountOnExit>
+                        <List component="div" disablePadding>
+                          {item.subItems.map((subItem: any, subItemIndex: number) => (
+                            <ListItemButton
+                              key={subItemIndex}
+                              onClick={() => navigateTo(subItem.path)}
+                              sx={{
+                                pl: 8,
+                                minHeight: 40,
+                                '&:hover': {
+                                  backgroundColor: 'action.hover',
+                                }
+                              }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 32 }}>
+                                {subItem.icon}
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary={subItem.name}
+                                primaryTypographyProps={{
+                                  fontSize: '0.85rem',
+                                }}
+                              />
+                            </ListItemButton>
+                          ))}
+                        </List>
+                      </Collapse>
+                    </Box>
+                  ) : (
+                    <ListItemButton
+                      key={itemIndex}
+                      onClick={() => navigateTo(item.path)}
+                      sx={{
+                        pl: 6,
+                        minHeight: 44,
+                        '&:hover': {
+                          backgroundColor: 'secondary.light',
+                        }
                       }}
-                    />
-                  </ListItemButton>
+                    >
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={item.name}
+                        primaryTypographyProps={{
+                          fontSize: '0.9rem',
+                        }}
+                      />
+                    </ListItemButton>
+                  )
                 ))}
               </Box>
             ))}
