@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Box, Paper } from '@mui/material';
+import { Box, Paper, Typography } from '@mui/material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 interface MobileActionSheetAction {

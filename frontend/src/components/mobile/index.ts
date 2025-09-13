@@ -12,3 +12,9 @@ export { default as MobileDrawer } from './MobileDrawer';
 export { default as MobileHeader } from './MobileHeader';
 export { default as MobileSearchBar } from './MobileSearchBar';
 export { default as MobileActionSheet } from './MobileActionSheet';
+
+// Advanced mobile components
+export { default as SwipeableCard } from './SwipeableCard';
+export { default as MobileBottomSheet } from './MobileBottomSheet';
+export { default as MobileContextualMenu } from './MobileContextualMenu';
+export { default as KeyboardNavigation, SkipLink, useFocusManager } from './KeyboardNavigation';
