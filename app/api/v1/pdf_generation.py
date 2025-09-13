@@ -35,7 +35,9 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
         'sales-return': 'voucher_read',
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
-        'proforma': 'presales_read'
+        'sales-orders': 'presales_read',
+        'proforma': 'presales_read',
+        'proforma-invoices': 'presales_read'
     }
     
     required_permission = permission_map.get(voucher_type)
@@ -61,6 +63,7 @@ async def generate_voucher_pdf(
     
     Supported voucher types:
     - purchase: Purchase Voucher
+    - purchase-vouchers: Purchase Voucher
     - purchase-orders: Purchase Order
     - purchase-return: Purchase Return
     - purchase-returns: Purchase Return
@@ -69,12 +72,18 @@ async def generate_voucher_pdf(
     - sales-return: Sales Return
     - quotation: Quotation
     - sales_order: Sales Order
+    - sales-orders: Sales Order
     - proforma: Proforma Invoice
+    - proforma-invoices: Proforma Invoice
     """
     
     # Normalize voucher_type for consistency
     if voucher_type == 'quotations':
         voucher_type = 'quotation'
+    elif voucher_type == 'proforma-invoices':
+        voucher_type = 'proforma'
+    elif voucher_type == 'sales-orders':
+        voucher_type = 'sales_order'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -134,6 +143,10 @@ async def download_voucher_pdf(
     # Normalize voucher_type for consistency
     if voucher_type == 'quotations':
         voucher_type = 'quotation'
+    elif voucher_type == 'proforma-invoices':
+        voucher_type = 'proforma'
+    elif voucher_type == 'sales-orders':
+        voucher_type = 'sales_order'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -240,7 +253,9 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'sales-return': SalesReturn,
         'quotation': Quotation,
         'sales_order': SalesOrder,
-        'proforma': ProformaInvoice
+        'sales-orders': SalesOrder,
+        'proforma': ProformaInvoice,
+        'proforma-invoices': ProformaInvoice
     }
     
     model_class = model_map.get(voucher_type)
@@ -271,7 +286,9 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
                 'purchase-returns': PurchaseReturnItem,
                 'quotation': QuotationItem,
                 'sales_order': SalesOrderItem,
-                'proforma': ProformaInvoiceItem
+                'sales-orders': SalesOrderItem,
+                'proforma': ProformaInvoiceItem,
+                'proforma-invoices': ProformaInvoiceItem
             }
             item_class = item_class_map.get(voucher_type)
             if item_class:

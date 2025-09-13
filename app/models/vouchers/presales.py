@@ -97,5 +97,14 @@ class SalesOrderItem(SimpleVoucherItemBase):
     sales_order_id = Column(Integer, ForeignKey("sales_orders.id"), nullable=False)
     delivered_quantity = Column(Float, default=0.0)
     pending_quantity = Column(Float, nullable=False)
+    discount_percentage = Column(Float, default=0.0)
+    gst_rate = Column(Float, default=18.0)
+    discount_amount = Column(Float, default=0.0, nullable=False)
+    taxable_amount = Column(Float, default=0.0)
+    cgst_amount = Column(Float, default=0.0)
+    sgst_amount = Column(Float, default=0.0)
+    igst_amount = Column(Float, default=0.0)
+    description = Column(Text)
     
     sales_order = relationship("app.models.vouchers.presales.SalesOrder", back_populates="items")
+    product = relationship("app.models.product_models.Product")  # Assuming Product model exists
