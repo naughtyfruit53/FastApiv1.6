@@ -1,10 +1,9 @@
 import React from 'react';
-import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, Collapse, TextField, InputAdornment } from '@mui/material';
-import { ExpandLess, ExpandMore, Search, Dashboard, Receipt, Inventory, People, Business, Assessment, Settings, ShoppingCart, AccountBalance, Campaign, SupportAgent, ChevronRight } from '@mui/icons-material';
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, TextField, InputAdornment } from '@mui/material';
+import { Search, Dashboard, Receipt, Inventory, People, Business, Assessment, Settings, ShoppingCart, AccountBalance, Campaign, SupportAgent } from '@mui/icons-material';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
-import { isAppSuperAdmin } from '../../types/user.types';
 
 interface MobileNavigationProps {
   open: boolean;

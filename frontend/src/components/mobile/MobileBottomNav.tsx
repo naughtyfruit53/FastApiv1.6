@@ -4,7 +4,6 @@ import {
   Dashboard,
   Receipt,
   People,
-  Assessment,
   Settings,
   AccountBalance,
 } from '@mui/icons-material';

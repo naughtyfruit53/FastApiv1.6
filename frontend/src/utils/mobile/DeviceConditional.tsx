@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 interface DeviceConditionalProps {
@@ -42,7 +42,7 @@ export const withMobileDetection = <P extends object>(
 /**
  * Utility function to get responsive values
  */
-export const getResponsiveValue = <T>(
+export const getResponsiveValue = <T,>(
   mobileValue: T,
   tabletValue: T,
   desktopValue: T,
