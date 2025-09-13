@@ -144,7 +144,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         throw new globalThis.Error(errorMessage);
       }
     } catch (error: any) {
-      console.error(msg, err);
+      console.error("Error processing GST certificate:", error);
       setGstUploadError(
         error.response?.data?.detail ||
           "Failed to process GST certificate. Please try again.",
@@ -245,11 +245,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       reset();
       onClose(); // Close modal on success
     } catch (error: any) {
-      console.error(msg, err);
+      console.error("Error adding customer:", error);
       // Set more specific error message
-      const errorMessage =
-        error.response?.data?.detail ||
-        "Failed to add customer. Please try again.";
+      let errorMessage = "Failed to add customer. Please try again.";
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((err: any) => `${err.loc ? err.loc.join(' -> ') + ': ' : ''}${err.msg || err.type}`).join(', ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else {
+          errorMessage = JSON.stringify(detail);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       setGstUploadError(errorMessage);
     }
   };

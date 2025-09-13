@@ -94,10 +94,13 @@ async def create_sales_order(
         db.flush()
         
         for item_data in invoice.items:
-            from app.models.vouchers import SalesOrderItem
+            from app.models.vouchers.presales import SalesOrderItem
+            item_dict = item_data.dict()
+            item_dict['pending_quantity'] = item_dict.get('quantity', 0)
+            item_dict['delivered_quantity'] = 0.0
             item = SalesOrderItem(
                 sales_order_id=db_invoice.id,
-                **item_data.dict()
+                **item_dict
             )
             db.add(item)
         
@@ -164,12 +167,15 @@ async def update_sales_order(
             setattr(invoice, field, value)
         
         if invoice_update.items is not None:
-            from app.models.vouchers import SalesOrderItem
+            from app.models.vouchers.presales import SalesOrderItem
             db.query(SalesOrderItem).filter(SalesOrderItem.sales_order_id == invoice_id).delete()
             for item_data in invoice_update.items:
+                item_dict = item_data.dict()
+                item_dict['pending_quantity'] = item_dict.get('quantity', 0)
+                item_dict['delivered_quantity'] = 0.0
                 item = SalesOrderItem(
                     sales_order_id=invoice_id,
-                    **item_data.dict()
+                    **item_dict
                 )
                 db.add(item)
         
@@ -204,7 +210,7 @@ async def delete_sales_order(
                 detail="Sales order not found"
             )
         
-        from app.models.vouchers import SalesOrderItem
+        from app.models.vouchers.presales import SalesOrderItem
         db.query(SalesOrderItem).filter(SalesOrderItem.sales_order_id == invoice_id).delete()
         
         db.delete(invoice)

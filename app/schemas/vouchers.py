@@ -466,6 +466,10 @@ class QuotationCreate(VoucherBase):
     valid_until: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    line_discount_type: Optional[str] = None
+    total_discount_type: Optional[str] = None
+    total_discount: Optional[float] = 0.0
+    round_off: Optional[float] = 0.0
     items: List[QuotationItemCreate] = []
 
 class QuotationUpdate(BaseModel):
@@ -473,6 +477,10 @@ class QuotationUpdate(BaseModel):
     valid_until: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    line_discount_type: Optional[str] = None
+    total_discount_type: Optional[str] = None
+    total_discount: Optional[float] = None
+    round_off: Optional[float] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -483,6 +491,10 @@ class QuotationInDB(VoucherInDBBase):
     valid_until: Optional[datetime]
     payment_terms: Optional[str]
     terms_conditions: Optional[str]
+    line_discount_type: Optional[str] = None
+    total_discount_type: Optional[str] = None
+    total_discount: Optional[float] = 0.0
+    round_off: Optional[float] = 0.0
     items: List[QuotationItemInDB]
 
 # Credit Note
@@ -774,7 +786,7 @@ class BulkImportError(BaseModel):
     field: Optional[str] = None
     value: Optional[str] = None
     error: str
-    error_type: str = "validation_error"  # validation_error, business_rule, data_type, etc.
+    error_type: str = "validation_error"  # validation_error, business_rule, data_type, data_type, etc.
     suggestion: Optional[str] = None  # Helpful suggestion to fix the error
     
 class BulkImportWarning(BaseModel):

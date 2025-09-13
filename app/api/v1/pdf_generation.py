@@ -14,9 +14,9 @@ from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.services.pdf_generation_service import pdf_generator
 from app.services.rbac import RBACService
-from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem
 from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn
-from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice
+from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice, QuotationItem, SalesOrderItem, ProformaInvoiceItem  # Added ProformaInvoiceItem import
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,12 +29,15 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
         'purchase-vouchers': 'voucher_read',
         'purchase-orders': 'voucher_read',
         'purchase-return': 'voucher_read',
+        'purchase-returns': 'voucher_read',
         'sales': 'voucher_read',
         'delivery-challan': 'voucher_read',
         'sales-return': 'voucher_read',
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
-        'proforma': 'presales_read'
+        'sales-orders': 'presales_read',
+        'proforma': 'presales_read',
+        'proforma-invoices': 'presales_read'
     }
     
     required_permission = permission_map.get(voucher_type)
@@ -60,15 +63,27 @@ async def generate_voucher_pdf(
     
     Supported voucher types:
     - purchase: Purchase Voucher
+    - purchase-vouchers: Purchase Voucher
     - purchase-orders: Purchase Order
     - purchase-return: Purchase Return
+    - purchase-returns: Purchase Return
     - sales: Sales Voucher
     - delivery-challan: Delivery Challan
     - sales-return: Sales Return
     - quotation: Quotation
     - sales_order: Sales Order
+    - sales-orders: Sales Order
     - proforma: Proforma Invoice
+    - proforma-invoices: Proforma Invoice
     """
+    
+    # Normalize voucher_type for consistency
+    if voucher_type == 'quotations':
+        voucher_type = 'quotation'
+    elif voucher_type == 'proforma-invoices':
+        voucher_type = 'proforma'
+    elif voucher_type == 'sales-orders':
+        voucher_type = 'sales_order'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -124,6 +139,14 @@ async def download_voucher_pdf(
     """
     Download PDF for a specific voucher (forces download instead of preview)
     """
+    
+    # Normalize voucher_type for consistency
+    if voucher_type == 'quotations':
+        voucher_type = 'quotation'
+    elif voucher_type == 'proforma-invoices':
+        voucher_type = 'proforma'
+    elif voucher_type == 'sales-orders':
+        voucher_type = 'sales_order'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -224,12 +247,15 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'purchase-vouchers': PurchaseVoucher,
         'purchase-orders': PurchaseOrder,
         'purchase-return': PurchaseReturn,
+        'purchase-returns': PurchaseReturn,
         'sales': SalesVoucher,
         'delivery-challan': DeliveryChallan,
         'sales-return': SalesReturn,
         'quotation': Quotation,
         'sales_order': SalesOrder,
-        'proforma': ProformaInvoice
+        'sales-orders': SalesOrder,
+        'proforma': ProformaInvoice,
+        'proforma-invoices': ProformaInvoice
     }
     
     model_class = model_map.get(voucher_type)
@@ -252,10 +278,22 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         if hasattr(model_class, 'customer'):
             query = query.options(joinedload(model_class.customer))
         if hasattr(model_class, 'items'):
-            if voucher_type == 'purchase-orders':
-                query = query.options(joinedload(model_class.items).joinedload(PurchaseOrderItem.product))
+            item_class_map = {
+                'purchase': PurchaseVoucherItem,
+                'purchase-vouchers': PurchaseVoucherItem,
+                'purchase-orders': PurchaseOrderItem,
+                'purchase-return': PurchaseReturnItem,
+                'purchase-returns': PurchaseReturnItem,
+                'quotation': QuotationItem,
+                'sales_order': SalesOrderItem,
+                'sales-orders': SalesOrderItem,
+                'proforma': ProformaInvoiceItem,
+                'proforma-invoices': ProformaInvoiceItem
+            }
+            item_class = item_class_map.get(voucher_type)
+            if item_class:
+                query = query.options(joinedload(model_class.items).joinedload(item_class.product))
             else:
-                # For other types, add if they have product relation
                 query = query.options(joinedload(model_class.items))
         
         voucher = query.first()
@@ -290,6 +328,11 @@ def _voucher_to_dict(voucher) -> Dict[str, Any]:
         'notes': getattr(voucher, 'notes', ''),
         'terms_conditions': getattr(voucher, 'terms_conditions', ''),
         'created_at': voucher.created_at,
+        # Initialize discount fields with defaults
+        'line_discount_type': getattr(voucher, 'line_discount_type', None),
+        'total_discount_type': getattr(voucher, 'total_discount_type', None),
+        'total_discount': float(getattr(voucher, 'total_discount', 0.0) or 0.0),
+        'round_off': float(getattr(voucher, 'round_off', 0.0) or 0.0),
     }
     
     # Add type-specific fields
@@ -313,14 +356,6 @@ def _voucher_to_dict(voucher) -> Dict[str, Any]:
         voucher_data['delivery_terms'] = voucher.delivery_terms
     if hasattr(voucher, 'delivery_date'):
         voucher_data['required_by_date'] = voucher.delivery_date  # Alias for template
-    
-    # Add discount types for conditional rendering
-    if hasattr(voucher, 'line_discount_type'):
-        voucher_data['line_discount_type'] = voucher.line_discount_type
-    if hasattr(voucher, 'total_discount_type'):
-        voucher_data['total_discount_type'] = voucher.total_discount_type
-    if hasattr(voucher, 'total_discount'):
-        voucher_data['total_discount'] = voucher.total_discount
     
     # Add related entities
     if hasattr(voucher, 'vendor') and voucher.vendor:
@@ -354,6 +389,7 @@ def _entity_to_dict(entity) -> Dict[str, Any]:
         'gst_number': getattr(entity, 'gst_number', ''),
         'contact_number': getattr(entity, 'contact_number', ''),
         'email': getattr(entity, 'email', ''),
+        'state_code': getattr(entity, 'state_code', '') or (entity.gst_number[:2] if getattr(entity, 'gst_number', None) else ''),
     }
 
 def _item_to_dict(item) -> Dict[str, Any]:
@@ -367,23 +403,17 @@ def _item_to_dict(item) -> Dict[str, Any]:
         'description': getattr(item, 'description', ''),
         'hsn_code': getattr(item, 'hsn_code', ''),
         'gst_rate': float(getattr(item, 'gst_rate', 0) or 0),
-        'discount_percentage': float(getattr(item, 'discount_percentage', 0)),
-        'discount_amount': float(getattr(item, 'discount_amount', 0)),
+        'discount_percentage': float(getattr(item, 'discount_percentage', 0) or 0),
+        'discount_amount': float(getattr(item, 'discount_amount', 0) or 0),
+        'cgst_amount': float(getattr(item, 'cgst_amount', 0) or 0),
+        'sgst_amount': float(getattr(item, 'sgst_amount', 0) or 0),
+        'igst_amount': float(getattr(item, 'igst_amount', 0) or 0),
+        'total_amount': float(getattr(item, 'total_amount', 0) or 0),
     }
     
     # Add product name if available
     if hasattr(item, 'product') and item.product:
         item_data['product_name'] = item.product.product_name
         item_data['hsn_code'] = item.product.hsn_code or item_data['hsn_code']
-    
-    # Add tax amounts if available
-    if hasattr(item, 'cgst_amount'):
-        item_data['cgst_amount'] = float(item.cgst_amount or 0)
-    if hasattr(item, 'sgst_amount'):
-        item_data['sgst_amount'] = float(item.sgst_amount or 0)
-    if hasattr(item, 'igst_amount'):
-        item_data['igst_amount'] = float(item.igst_amount or 0)
-    if hasattr(item, 'total_amount'):
-        item_data['total_amount'] = float(item.total_amount or 0)
     
     return item_data

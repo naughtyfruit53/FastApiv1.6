@@ -24,6 +24,9 @@ from reportlab.pdfbase.ttfonts import TTFont
 # Import settings for dynamic wkhtmltopdf path
 from app.core.config import settings
 
+# Import voucher PDF configs for titles
+from app.utils.pdf_utils import VOUCHER_PDF_CONFIGS, get_voucher_pdf_config  # Corrected import to pdf_utils
+
 logger = logging.getLogger(__name__)
 
 class IndianNumberFormatter:
@@ -422,7 +425,7 @@ class VoucherPDFGenerator:
                 template_name = 'purchase_order.html'
             elif voucher_type == 'sales':
                 template_name = 'sales_voucher.html'
-            elif voucher_type in ['quotation', 'sales_order', 'proforma']:
+            elif voucher_type in ['quotation', 'sales_order', 'sales-orders', 'proforma']:
                 template_name = 'presales_voucher.html'
             else:
                 template_name = f"{voucher_type}_voucher.html"

@@ -1,4 +1,4 @@
-// src/components/VoucherItemTable.tsx
+// frontend/src/components/VoucherItemTable.tsx
 // Reusable component for voucher items table, handling append/remove, toggles, stock, and rows.
 import React from 'react';
 import {
@@ -14,8 +14,6 @@ import {
   IconButton,
   Typography,
   CircularProgress,
-  FormControlLabel,
-  Checkbox,
   Fab,
   InputAdornment,
   Box, // Added missing import for Box
@@ -90,20 +88,6 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
 
   return (
     <>
-      <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-        <FormControlLabel
-          control={<Checkbox checked={lineDiscountEnabled} onChange={(e) => handleToggleLineDiscount(e.target.checked)} disabled={mode === "view"} />}
-          label="Add Line Discount"
-        />
-        <FormControlLabel
-          control={<Checkbox checked={totalDiscountEnabled} onChange={(e) => handleToggleTotalDiscount(e.target.checked)} disabled={mode === "view"} />}
-          label="Add Total Discount"
-        />
-        <FormControlLabel
-          control={<Checkbox checked={descriptionEnabled} onChange={(e) => handleToggleDescription(e.target.checked)} disabled={mode === "view"} />}
-          label="Add Description"
-        />
-      </Box>
       <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
         <Table stickyHeader size="small">
           <TableHead>

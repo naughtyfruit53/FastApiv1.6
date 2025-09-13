@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers.presales import Quotation
+from app.models.vouchers.presales import Quotation, QuotationItem
 from app.schemas.vouchers import QuotationCreate, QuotationInDB, QuotationUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -62,7 +62,7 @@ async def get_next_quotation_number(
 @router.post("", response_model=QuotationInDB, include_in_schema=False)
 @router.post("/", response_model=QuotationInDB)
 async def create_quotation(
-    invoice: QuotationCreate,
+    quotation: QuotationCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: Session = Depends(get_db),
@@ -70,51 +70,50 @@ async def create_quotation(
 ):
     """Create new quotation"""
     try:
-        invoice_data = invoice.dict(exclude={'items'})
-        invoice_data['created_by'] = current_user.id
-        invoice_data['organization_id'] = current_user.organization_id
+        quotation_data = quotation.dict(exclude={'items'})
+        quotation_data['created_by'] = current_user.id
+        quotation_data['organization_id'] = current_user.organization_id
         
         # Generate unique voucher number if not provided or blank
-        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+        if not quotation_data.get('voucher_number') or quotation_data['voucher_number'] == '':
+            quotation_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                 db, "QT", current_user.organization_id, Quotation
             )
         else:
             existing = db.query(Quotation).filter(
                 Quotation.organization_id == current_user.organization_id,
-                Quotation.voucher_number == invoice_data['voucher_number']
+                Quotation.voucher_number == quotation_data['voucher_number']
             ).first()
             if existing:
-                invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                quotation_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "QT", current_user.organization_id, Quotation
                 )
         
-        db_invoice = Quotation(**invoice_data)
-        db.add(db_invoice)
+        db_quotation = Quotation(**quotation_data)
+        db.add(db_quotation)
         db.flush()
         
-        for item_data in invoice.items:
-            from app.models.vouchers import QuotationItem
+        for item_data in quotation.items:
             item = QuotationItem(
-                quotation_id=db_invoice.id,
+                quotation_id=db_quotation.id,
                 **item_data.dict()
             )
             db.add(item)
         
         db.commit()
-        db.refresh(db_invoice)
+        db.refresh(db_quotation)
         
-        if send_email and db_invoice.customer and db_invoice.customer.email:
+        if send_email and db_quotation.customer and db_quotation.customer.email:
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="quotation",
-                voucher_id=db_invoice.id,
-                recipient_email=db_invoice.customer.email,
-                recipient_name=db_invoice.customer.name
+                voucher_id=db_quotation.id,
+                recipient_email=db_quotation.customer.email,
+                recipient_name=db_quotation.customer.name
             )
         
-        logger.info(f"Quotation {db_invoice.voucher_number} created by {current_user.email}")
-        return db_invoice
+        logger.info(f"Quotation {db_quotation.voucher_number} created by {current_user.email}")
+        return db_quotation
         
     except Exception as e:
         db.rollback()
@@ -124,60 +123,59 @@ async def create_quotation(
             detail="Failed to create quotation"
         )
 
-@router.get("/{invoice_id}", response_model=QuotationInDB)
+@router.get("/{quotation_id}", response_model=QuotationInDB)
 async def get_quotation(
-    invoice_id: int,
+    quotation_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    invoice = db.query(Quotation).options(joinedload(Quotation.customer)).filter(
-        Quotation.id == invoice_id,
+    quotation = db.query(Quotation).options(joinedload(Quotation.customer)).filter(
+        Quotation.id == quotation_id,
         Quotation.organization_id == current_user.organization_id
     ).first()
-    if not invoice:
+    if not quotation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Quotation not found"
         )
-    return invoice
+    return quotation
 
-@router.put("/{invoice_id}", response_model=QuotationInDB)
+@router.put("/{quotation_id}", response_model=QuotationInDB)
 async def update_quotation(
-    invoice_id: int,
-    invoice_update: QuotationUpdate,
+    quotation_id: int,
+    quotation_update: QuotationUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        invoice = db.query(Quotation).filter(
-            Quotation.id == invoice_id,
+        quotation = db.query(Quotation).filter(
+            Quotation.id == quotation_id,
             Quotation.organization_id == current_user.organization_id
         ).first()
-        if not invoice:
+        if not quotation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Quotation not found"
             )
         
-        update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
+        update_data = quotation_update.dict(exclude_unset=True, exclude={'items'})
         for field, value in update_data.items():
-            setattr(invoice, field, value)
+            setattr(quotation, field, value)
         
-        if invoice_update.items is not None:
-            from app.models.vouchers import QuotationItem
-            db.query(QuotationItem).filter(QuotationItem.quotation_id == invoice_id).delete()
-            for item_data in invoice_update.items:
+        if quotation_update.items is not None:
+            db.query(QuotationItem).filter(QuotationItem.quotation_id == quotation_id).delete()
+            for item_data in quotation_update.items:
                 item = QuotationItem(
-                    quotation_id=invoice_id,
+                    quotation_id=quotation_id,
                     **item_data.dict()
                 )
                 db.add(item)
         
         db.commit()
-        db.refresh(invoice)
+        db.refresh(quotation)
         
-        logger.info(f"Quotation {invoice.voucher_number} updated by {current_user.email}")
-        return invoice
+        logger.info(f"Quotation {quotation.voucher_number} updated by {current_user.email}")
+        return quotation
         
     except Exception as e:
         db.rollback()
@@ -187,30 +185,29 @@ async def update_quotation(
             detail="Failed to update quotation"
         )
 
-@router.delete("/{invoice_id}")
+@router.delete("/{quotation_id}")
 async def delete_quotation(
-    invoice_id: int,
+    quotation_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        invoice = db.query(Quotation).filter(
-            Quotation.id == invoice_id,
+        quotation = db.query(Quotation).filter(
+            Quotation.id == quotation_id,
             Quotation.organization_id == current_user.organization_id
         ).first()
-        if not invoice:
+        if not quotation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Quotation not found"
             )
         
-        from app.models.vouchers import QuotationItem
-        db.query(QuotationItem).filter(QuotationItem.quotation_id == invoice_id).delete()
+        db.query(QuotationItem).filter(QuotationItem.quotation_id == quotation_id).delete()
         
-        db.delete(invoice)
+        db.delete(quotation)
         db.commit()
         
-        logger.info(f"Quotation {invoice.voucher_number} deleted by {current_user.email}")
+        logger.info(f"Quotation {quotation.voucher_number} deleted by {current_user.email}")
         return {"message": "Quotation deleted successfully"}
         
     except Exception as e:
