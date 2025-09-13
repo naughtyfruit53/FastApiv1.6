@@ -16,7 +16,9 @@ import {
   CircularProgress,
   Fab,
   InputAdornment,
-  Box, // Added missing import for Box
+  Box,
+  Checkbox, // Added import for Checkbox
+  FormControlLabel, // Added import for FormControlLabel
 } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
 import ProductAutocomplete from './ProductAutocomplete'; // Assuming this exists; adjust if needed
@@ -42,6 +44,9 @@ interface VoucherItemTableProps {
   stockLoading: { [key: number]: boolean };
   getStockColor: (stock: number, reorder: number) => string;
   selectedProducts: any[];
+  showLineDiscountCheckbox?: boolean; // New prop
+  showTotalDiscountCheckbox?: boolean; // New prop
+  showDescriptionCheckbox?: boolean; // New prop
 }
 
 const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
@@ -64,6 +69,9 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
   stockLoading,
   getStockColor,
   selectedProducts,
+  showLineDiscountCheckbox = false,
+  showTotalDiscountCheckbox = false,
+  showDescriptionCheckbox = false,
 }) => {
   const handleAddItem = () => {
     append({
@@ -88,6 +96,43 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
 
   return (
     <>
+      {mode !== "view" && (showLineDiscountCheckbox || showTotalDiscountCheckbox || showDescriptionCheckbox) && (
+        <Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'flex-start' }}>
+          {showLineDiscountCheckbox && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={lineDiscountEnabled}
+                  onChange={(e) => handleToggleLineDiscount(e.target.checked)}
+                />
+              }
+              label="Enable Line Discount"
+            />
+          )}
+          {showTotalDiscountCheckbox && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={totalDiscountEnabled}
+                  onChange={(e) => handleToggleTotalDiscount(e.target.checked)}
+                />
+              }
+              label="Enable Total Discount"
+            />
+          )}
+          {showDescriptionCheckbox && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={descriptionEnabled}
+                  onChange={(e) => handleToggleDescription(e.target.checked)}
+                />
+              }
+              label="Enable Description"
+            />
+          )}
+        </Box>
+      )}
       <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
         <Table stickyHeader size="small">
           <TableHead>

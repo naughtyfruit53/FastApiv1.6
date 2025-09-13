@@ -285,7 +285,7 @@ class VoucherPDFGenerator:
                 'logo_url': None
             }
     
-    def _prepare_voucher_data(self, voucher_data: Dict[str, Any], 
+    def _prepare_voucher_data(self, voucher_type: str, voucher_data: Dict[str, Any], 
                             db: Session, organization_id: int) -> Dict[str, Any]:
         """Prepare voucher data for template rendering"""
         
@@ -295,16 +295,18 @@ class VoucherPDFGenerator:
         # Get vendor/party details and determine interstate
         is_interstate = False
         vendor = voucher_data.get('vendor')
-        vendor_state_code = None
-        if vendor and company['state_code']:
-            vendor_state_code = vendor.get('state_code')
-            logger.info(f"Vendor initial state_code: {vendor_state_code}, gst_number: {vendor.get('gst_number')}")
-            if not vendor_state_code and vendor.get('gst_number'):
-                vendor_state_code = vendor['gst_number'][:2]
-            if vendor_state_code:
-                is_interstate = company['state_code'] != vendor_state_code
+        customer = voucher_data.get('customer')
+        party = vendor or customer
+        party_state_code = None
+        if party and company['state_code']:
+            party_state_code = party.get('state_code')
+            logger.info(f"Party initial state_code: {party_state_code}, gst_number: {party.get('gst_number')}")
+            if not party_state_code and party.get('gst_number'):
+                party_state_code = party['gst_number'][:2]
+            if party_state_code:
+                is_interstate = company['state_code'] != party_state_code
         
-        logger.info(f"Company state_code: {company['state_code']}, Vendor state_code: {vendor_state_code if vendor_state_code else 'None'}, is_interstate: {is_interstate}")
+        logger.info(f"Company state_code: {company['state_code']}, Party state_code: {party_state_code if party_state_code else 'None'}, is_interstate: {is_interstate}")
         
         # Calculate totals and taxes for items
         items = voucher_data.get('items', [])
@@ -321,10 +323,10 @@ class VoucherPDFGenerator:
         for item in items:
             # Calculate item totals
             quantity = float(item.get('quantity', 0))
-            unit_price = float(item.get('unit_price', 0))
-            discount_percentage = float(item.get('discount_percentage', 0))
-            discount_amount = float(item.get('discount_amount', 0))
-            gst_rate = float(item.get('gst_rate', 0))
+            unit_price = float(item.get('unit_price', 0) or 0)  # Handle None
+            discount_percentage = float(item.get('discount_percentage', 0) or 0)
+            discount_amount = float(item.get('discount_amount', 0) or 0)
+            gst_rate = float(item.get('gst_rate', 0) or 0)
             description = item.get('description', '')
             
             item_subtotal = quantity * unit_price
@@ -416,7 +418,7 @@ class VoucherPDFGenerator:
         """
         try:
             # Prepare data for template
-            template_data = self._prepare_voucher_data(voucher_data, db, organization_id)
+            template_data = self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)
             
             # Get template for voucher type
             if voucher_type in ['purchase', 'purchase-vouchers']:
@@ -425,6 +427,8 @@ class VoucherPDFGenerator:
                 template_name = 'purchase_order.html'
             elif voucher_type == 'sales':
                 template_name = 'sales_voucher.html'
+            elif voucher_type == 'delivery-challan':
+                template_name = 'delivery_challan.html'
             elif voucher_type in ['quotation', 'sales_order', 'sales-orders', 'proforma']:
                 template_name = 'presales_voucher.html'
             else:

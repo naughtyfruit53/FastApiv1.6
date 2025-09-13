@@ -38,6 +38,11 @@ import {
   Stack,
   ListItemIcon,
   ListItemText,
+  useMediaQuery,
+  useTheme,
+  Card,
+  CardContent,
+  CardActions,
 } from "@mui/material";
 import {
   Add,
@@ -61,6 +66,8 @@ declare module "jspdf" {
   }
 }
 const StockManagement: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const router = useRouter();
   const { user, isOrgContextReady } = useAuth(); // Get organization context readiness
@@ -285,6 +292,131 @@ const StockManagement: React.FC = () => {
     }
     handleMenuClose();
   };
+
+  const renderDesktopTable = () => (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Product Name</TableCell>
+            <TableCell>Quantity</TableCell>
+            <TableCell>Unit Price</TableCell>
+            <TableCell>Total Value</TableCell>
+            <TableCell>Reorder Level</TableCell>
+            <TableCell>Last Updated</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {isFetching ? (
+            <TableRow>
+              <TableCell colSpan={7} align="center">
+                Loading...
+              </TableCell>
+            </TableRow>
+          ) : filteredStockData?.map((stock: any) => (
+            <TableRow
+              key={stock.id}
+              sx={{
+                backgroundColor:
+                  stock.quantity <= stock.reorder_level
+                    ? "yellow.main"
+                    : "inherit",
+              }}
+            >
+              <TableCell>{stock.product_name}</TableCell>
+              <TableCell>
+                {stock.quantity} {stock.unit}
+              </TableCell>
+              <TableCell>{stock.unit_price}</TableCell>
+              <TableCell>{stock.total_value}</TableCell>
+              <TableCell>{stock.reorder_level}</TableCell>
+              <TableCell>{stock.last_updated}</TableCell>
+              <TableCell>
+                <IconButton
+                  onClick={() =>
+                    alert(`Details: {stock.description}`)
+                  }
+                >
+                  <Visibility />
+                </IconButton>
+                <IconButton onClick={() => handleEditStock(stock)}>
+                  <Edit />
+                </IconButton>
+                <IconButton
+                  onClick={(e) =>
+                    handleMenuClick(e, stock.product_id)
+                  }
+                >
+                  <MoreVert />
+                </IconButton>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  const renderMobileCards = () => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {isFetching ? (
+        <Typography align="center">Loading...</Typography>
+      ) : filteredStockData?.map((stock: any) => (
+        <Card 
+          key={stock.id} 
+          sx={{ 
+            backgroundColor: stock.quantity <= stock.reorder_level ? 'warning.light' : 'inherit',
+            boxShadow: 1,
+            borderRadius: 2
+          }}
+        >
+          <CardContent sx={{ p: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              {stock.product_name}
+            </Typography>
+            <Typography variant="body2">
+              Quantity: {stock.quantity} {stock.unit}
+            </Typography>
+            <Typography variant="body2">
+              Unit Price: {stock.unit_price}
+            </Typography>
+            <Typography variant="body2">
+              Total Value: {stock.total_value}
+            </Typography>
+            <Typography variant="body2">
+              Reorder Level: {stock.reorder_level}
+            </Typography>
+            <Typography variant="body2">
+              Last Updated: {stock.last_updated}
+            </Typography>
+          </CardContent>
+          <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+            <IconButton
+              onClick={() =>
+                alert(`Details: {stock.description}`)
+              }
+              size="small"
+            >
+              <Visibility />
+            </IconButton>
+            <IconButton onClick={() => handleEditStock(stock)} size="small">
+              <Edit />
+            </IconButton>
+            <IconButton
+              onClick={(e) =>
+                handleMenuClick(e, stock.product_id)
+              }
+              size="small"
+            >
+              <MoreVert />
+            </IconButton>
+          </CardActions>
+        </Card>
+      ))}
+    </Box>
+  );
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -360,10 +492,10 @@ const StockManagement: React.FC = () => {
                 </Grid>
                 <Grid size={{ xs: 12, md: 8 }}>
                   <Stack
-                    direction="row"
+                    direction={{ xs: 'column', sm: 'row' }}
                     spacing={1}
                     justifyContent="flex-end"
-                    sx={{ flexWrap: "nowrap" }}
+                    sx={{ flexWrap: 'wrap' }}
                   >
                     <Button
                       variant="contained"
@@ -422,68 +554,7 @@ const StockManagement: React.FC = () => {
                 zIndex: 1,
               }}
             >
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Product Name</TableCell>
-                      <TableCell>Quantity</TableCell>
-                      <TableCell>Unit Price</TableCell>
-                      <TableCell>Total Value</TableCell>
-                      <TableCell>Reorder Level</TableCell>
-                      <TableCell>Last Updated</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {isFetching ? (
-                      <TableRow>
-                        <TableCell colSpan={7} align="center">
-                          Loading...
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredStockData?.map((stock: any) => (
-                      <TableRow
-                        key={stock.id}
-                        sx={{
-                          backgroundColor:
-                            stock.quantity <= stock.reorder_level
-                              ? "yellow.main"
-                              : "inherit",
-                        }}
-                      >
-                        <TableCell>{stock.product_name}</TableCell>
-                        <TableCell>
-                          {stock.quantity} {stock.unit}
-                        </TableCell>
-                        <TableCell>{stock.unit_price}</TableCell>
-                        <TableCell>{stock.total_value}</TableCell>
-                        <TableCell>{stock.reorder_level}</TableCell>
-                        <TableCell>{stock.last_updated}</TableCell>
-                        <TableCell>
-                          <IconButton
-                            onClick={() =>
-                              alert(`Details: {stock.description}`)
-                            }
-                          >
-                            <Visibility />
-                          </IconButton>
-                          <IconButton onClick={() => handleEditStock(stock)}>
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            onClick={(e) =>
-                              handleMenuClick(e, stock.product_id)
-                            }
-                          >
-                            <MoreVert />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              {isMobile ? renderMobileCards() : renderDesktopTable()}
             </Box>
           </>
         )}
@@ -513,6 +584,7 @@ const StockManagement: React.FC = () => {
         onClose={() => setMovementsDialogOpen(false)}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>Stock Movements</DialogTitle>
         <DialogContent>
@@ -555,7 +627,7 @@ const StockManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
       {/* Edit Stock Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} fullWidth maxWidth="xs" fullScreen={isMobile}>
         <DialogTitle>Edit Stock</DialogTitle>
         <DialogContent>
           <TextField
@@ -577,6 +649,9 @@ const StockManagement: React.FC = () => {
       <Dialog
         open={manualDialogOpen}
         onClose={() => setManualDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+        fullScreen={isMobile}
       >
         <DialogTitle>Manual Stock Entry</DialogTitle>
         <DialogContent>
@@ -633,6 +708,7 @@ const StockManagement: React.FC = () => {
         onClose={() => setImportDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>Import Stock</DialogTitle>
         <DialogContent>

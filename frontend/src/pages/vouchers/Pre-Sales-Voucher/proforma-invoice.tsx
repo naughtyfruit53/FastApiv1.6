@@ -9,12 +9,6 @@ import {
   IconButton,
   CircularProgress,
   Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   Autocomplete,
   Fab,
@@ -26,6 +20,12 @@ import {
   DialogContent,
   DialogTitle,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import { Add, Remove, Clear } from "@mui/icons-material";
 import AddCustomerModal from "../../../components/AddCustomerModal";
@@ -78,8 +78,6 @@ const ProformaInvoicePage: React.FC = () => {
     addingItemIndex,
     setAddingItemIndex,
     contextMenu,
-    useDifferentShipping,
-    setUseDifferentShipping,
     currentPage,
     pageSize,
     paginationData,
@@ -373,7 +371,7 @@ const ProformaInvoicePage: React.FC = () => {
     </Box>
   );
 
-  const formBody = (
+  const formContent = (
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
@@ -406,6 +404,15 @@ const ProformaInvoicePage: React.FC = () => {
             />
           </Grid>
           <Grid size={4}>
+            <VoucherReferenceDropdown
+              voucherType="proforma-invoice"
+              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
+              onChange={(reference) => { setValue('reference_type', reference.referenceType || ''); setValue('reference_id', reference.referenceId || null); setValue('reference_number', reference.referenceNumber || ''); }}
+              disabled={mode === 'view'}
+              onReferenceSelected={handleReferenceSelected}
+            />
+          </Grid>
+          <Grid size={4}>
             <Autocomplete 
               size="small" 
               options={enhancedCustomerOptions} 
@@ -426,15 +433,6 @@ const ProformaInvoicePage: React.FC = () => {
                 />
               } 
               disabled={mode === "view"} 
-            />
-          </Grid>
-          <Grid size={4}>
-            <VoucherReferenceDropdown
-              voucherType="proforma-invoice"
-              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
-              onChange={(reference) => { setValue('reference_type', reference.referenceType || ''); setValue('reference_id', reference.referenceId || null); setValue('reference_number', reference.referenceNumber || ''); }}
-              disabled={mode === 'view'}
-              onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
           <Grid size={4}>
@@ -461,12 +459,6 @@ const ProformaInvoicePage: React.FC = () => {
           </Grid>
           <Grid size={12} sx={voucherFormStyles.itemsHeader}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <FormControlLabel
-                control={<Checkbox checked={useDifferentShipping} onChange={(e) => setUseDifferentShipping(e.target.checked)} disabled={mode === "view"} />}
-                label="Use Different Shipping Address"
-              />
-            </Box>
           </Grid>
           <Grid size={12}>
             <VoucherItemTable
@@ -489,6 +481,9 @@ const ProformaInvoicePage: React.FC = () => {
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
+              showLineDiscountCheckbox={true}
+              showTotalDiscountCheckbox={true}
+              showDescriptionCheckbox={true}
             />
           </Grid>
           <Grid size={12}>
@@ -561,7 +556,7 @@ const ProformaInvoicePage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formBody={formBody}
+        formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={

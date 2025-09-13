@@ -466,6 +466,16 @@ const PurchaseOrderPage: React.FC = () => {
             />
           </Grid>
           <Grid size={4}>
+            <TextField 
+              fullWidth 
+              label="Reference" 
+              {...control.register("reference")} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.field} 
+              InputLabelProps={{ shrink: true }} 
+            />
+          </Grid>
+          <Grid size={4}>
             <Autocomplete 
               size="small" 
               options={enhancedVendorOptions} 
@@ -486,16 +496,6 @@ const PurchaseOrderPage: React.FC = () => {
                 />
               } 
               disabled={mode === "view"} 
-            />
-          </Grid>
-          <Grid size={4}>
-            <TextField 
-              fullWidth 
-              label="Reference" 
-              {...control.register("reference")} 
-              disabled={mode === "view"} 
-              sx={voucherFormStyles.field} 
-              InputLabelProps={{ shrink: true }} 
             />
           </Grid>
           <Grid size={4}>
@@ -544,6 +544,9 @@ const PurchaseOrderPage: React.FC = () => {
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
+              showLineDiscountCheckbox={mode !== "view"}
+              showTotalDiscountCheckbox={mode !== "view"}
+              showDescriptionCheckbox={mode !== "view"}
             />
           </Grid>
           <Grid size={12}>
@@ -616,7 +619,7 @@ const PurchaseOrderPage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formBody={formBody}
+        formContent={formBody}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={

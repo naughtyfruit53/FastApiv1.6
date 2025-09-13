@@ -1,0 +1,71 @@
+<!-- app/templates/pdf/delivery_challan.html -->
+{% extends "base_voucher.html" %}
+
+{% block voucher_meta %}
+<tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date }}</td></tr>
+<tr><td class="label">Voucher Number</td><td class="value">{{ voucher.voucher_number|default('N/A') }}</td></tr>
+{% if voucher.reference_number %}<tr><td class="label">Ref Number</td><td class="value">{{ voucher.reference_number }}</td></tr>{% endif %}
+{% endblock %}
+
+{% block items_table %}
+<table class="items-table" role="table" aria-label="Items">
+    <thead>
+        <tr>
+            <th class="col-sr">Sr No.</th>
+            <th class="col-product">Product Name</th>
+            <th class="col-qty">Quantity</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if items|length > 0 %}
+        {% for item in items %}
+        <tr>
+            <td class="col-sr">{{ loop.index }}</td>
+            <td class="col-product">{{ item.product_name|default(item.description, 'Product') }}{% if item.description and item.product_name != item.description %}<br><small>{{ item.description }}</small>{% endif %}</td>
+            <td class="col-qty num">{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="3" class="text-center">No items available</td>
+        </tr>
+        {% endif %}
+        <!-- blank bordered row before totals -->
+        <tr class="blank-row"><td></td><td></td><td></td></tr>
+    </tbody>
+    <tfoot>
+        <tr>
+            <td></td>
+            <td class="label-cell">Totals</td>
+            <td class="num num-cell" style="text-align:right;">{{ total_quantity|default(0) }}</td>
+        </tr>
+    </tfoot>
+</table>
+{% endblock %}
+
+{% block totals_bank %}
+<table class="totals-bank" role="region" aria-label="Bank and Totals">
+    <tr>
+        <td class="bank">
+            <div style="font-weight:700;">Company’s Bank Details</div>
+            {% if company.bank_details %}
+            <div>A/c Holder’s Name : {{ company.bank_details.holder_name|default(company.name) }}</div>
+            <div>Bank Name : {{ company.bank_details.bank_name }}</div>
+            <div>A/c No. : {{ company.bank_details.account_number }}</div>
+            <div>Branch & IFS Code : {{ company.bank_details.branch }} & {{ company.bank_details.ifsc }}</div>
+            {% endif %}
+            {% if company.pan_number %}<div style="font-size:11px; color:#555; margin-top:4px;">Company’s PAN : {{ company.pan_number }}</div>{% endif %}
+        </td>
+        <td class="totals">
+            <table>
+                <tbody>
+                    <tr><td class="muted">Total Quantity</td><td class="right num">{{ total_quantity|default(0) }}</td></tr>
+                </tbody>
+            </table>
+        </td>
+    </tr>
+</table>
+{% endblock %}
+
+{% block amount_words %}{% endblock %}
+{% endblock %}

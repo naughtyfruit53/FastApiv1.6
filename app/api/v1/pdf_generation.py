@@ -15,8 +15,8 @@ from app.models import User
 from app.services.pdf_generation_service import pdf_generator
 from app.services.rbac import RBACService
 from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem
-from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn
-from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice, QuotationItem, SalesOrderItem, ProformaInvoiceItem  # Added ProformaInvoiceItem import
+from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn, DeliveryChallanItem
+from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice, QuotationItem, SalesOrderItem, ProformaInvoiceItem
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,10 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
         'purchase-return': 'voucher_read',
         'purchase-returns': 'voucher_read',
         'sales': 'voucher_read',
+        'sales-vouchers': 'voucher_read',
         'delivery-challan': 'voucher_read',
         'sales-return': 'voucher_read',
+        'sales-returns': 'voucher_read',
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
         'sales-orders': 'presales_read',
@@ -84,6 +86,12 @@ async def generate_voucher_pdf(
         voucher_type = 'proforma'
     elif voucher_type == 'sales-orders':
         voucher_type = 'sales_order'
+    elif voucher_type == 'delivery-challans':
+        voucher_type = 'delivery-challan'
+    elif voucher_type == 'sales-vouchers':
+        voucher_type = 'sales'
+    elif voucher_type == 'sales-returns':
+        voucher_type = 'sales-return'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -147,6 +155,12 @@ async def download_voucher_pdf(
         voucher_type = 'proforma'
     elif voucher_type == 'sales-orders':
         voucher_type = 'sales_order'
+    elif voucher_type == 'delivery-challans':
+        voucher_type = 'delivery-challan'
+    elif voucher_type == 'sales-vouchers':
+        voucher_type = 'sales'
+    elif voucher_type == 'sales-returns':
+        voucher_type = 'sales-return'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -228,6 +242,11 @@ async def get_available_templates(
             "type": "proforma",
             "name": "Proforma Invoice",
             "description": "Proforma invoice for advance payments"
+        },
+        {
+            "type": "delivery-challan",
+            "name": "Delivery Challan",
+            "description": "Delivery challan without prices or taxes"
         }
     ]
     
@@ -250,7 +269,9 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'purchase-returns': PurchaseReturn,
         'sales': SalesVoucher,
         'delivery-challan': DeliveryChallan,
+        'delivery-challans': DeliveryChallan,
         'sales-return': SalesReturn,
+        'sales-returns': SalesReturn,
         'quotation': Quotation,
         'sales_order': SalesOrder,
         'sales-orders': SalesOrder,
@@ -288,7 +309,9 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
                 'sales_order': SalesOrderItem,
                 'sales-orders': SalesOrderItem,
                 'proforma': ProformaInvoiceItem,
-                'proforma-invoices': ProformaInvoiceItem
+                'proforma-invoices': ProformaInvoiceItem,
+                'delivery-challan': DeliveryChallanItem,
+                'delivery-challans': DeliveryChallanItem
             }
             item_class = item_class_map.get(voucher_type)
             if item_class:
@@ -384,7 +407,7 @@ def _entity_to_dict(entity) -> Dict[str, Any]:
         'name': entity.name,
         'address': getattr(entity, 'address', ''),
         'city': getattr(entity, 'city', ''),
-        'state': getattr(entity, 'state', ''),
+        'state': entity.state,
         'pin_code': getattr(entity, 'pin_code', ''),
         'gst_number': getattr(entity, 'gst_number', ''),
         'contact_number': getattr(entity, 'contact_number', ''),

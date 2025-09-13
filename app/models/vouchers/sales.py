@@ -35,9 +35,12 @@ class DeliveryChallanItem(SimpleVoucherItemBase):
     
     delivery_challan_id = Column(Integer, ForeignKey("delivery_challans.id"), nullable=False)
     so_item_id = Column(Integer, ForeignKey("sales_order_items.id"))  # Link to SO item
+    description = Column(Text)
     
     delivery_challan = relationship("DeliveryChallan", back_populates="items")
     so_item = relationship("SalesOrderItem")
+    unit_price = Column(Float, nullable=True)
+    total_amount = Column(Float, nullable=True)
 
 # Sales Voucher - Enhanced for auto-population from delivery challan
 class SalesVoucher(BaseVoucher):

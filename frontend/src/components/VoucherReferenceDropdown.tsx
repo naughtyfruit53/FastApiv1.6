@@ -63,7 +63,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
     try {
       const typeConfig = getVoucherConfig(referenceType as any);
       const response = await api.get(
-        `${typeConfig.endpoint}?limit=100&sort=desc`,
+        `${typeConfig.endpoint}?limit=100&sort=desc&used=false`,  // Added &used=false filter
       );
       if (response.data) {
         const documents = Array.isArray(response.data)

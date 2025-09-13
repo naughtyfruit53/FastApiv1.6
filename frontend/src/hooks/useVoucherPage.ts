@@ -137,7 +137,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     if (discountDialogFor === 'line') {
       setLineDiscountType(type);
       setLineDiscountEnabled(true);
-    } else if (discountDialogFor === 'total') {
+    } else {
       setTotalDiscountType(type);
       setTotalDiscountEnabled(true);
     }
@@ -399,6 +399,16 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       ),
     onSuccess: async (newVoucher) => {
       console.log("[useVoucherPage] Voucher created successfully:", newVoucher);
+      // Mark reference as used if selected
+      if (data.reference_id && data.reference_type) {
+        try {
+          const referenceConfig = getVoucherConfig(data.reference_type as any);
+          await api.patch(`${referenceConfig.endpoint}/${data.reference_id}`, { used: true });
+          queryClient.invalidateQueries({ queryKey: [data.reference_type] });
+        } catch (error) {
+          console.error("Error marking reference as used:", error);
+        }
+      }
       // Optimistically update the voucher list by prepending the new voucher
       queryClient.setQueryData(
         [config.voucherType, currentPage, pageSize],

@@ -368,7 +368,7 @@ const PurchaseVoucherPage: React.FC = () => {
     </Box>
   );
 
-  const formBody = (
+  const formContent = (
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
@@ -401,6 +401,15 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
           <Grid size={4}>
+            <VoucherReferenceDropdown
+              voucherType="purchase-voucher"
+              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
+              onChange={(reference) => { setValue('reference_type', reference.referenceType || ''); setValue('reference_id', reference.referenceId || null); setValue('reference_number', reference.referenceNumber || ''); }}
+              disabled={mode === 'view'}
+              onReferenceSelected={handleReferenceSelected}
+            />
+          </Grid>
+          <Grid size={4}>
             <Autocomplete 
               size="small" 
               options={enhancedVendorOptions} 
@@ -421,15 +430,6 @@ const PurchaseVoucherPage: React.FC = () => {
                 />
               } 
               disabled={mode === "view"} 
-            />
-          </Grid>
-          <Grid size={4}>
-            <VoucherReferenceDropdown
-              voucherType="purchase-voucher"
-              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
-              onChange={(reference) => { setValue('reference_type', reference.referenceType || ''); setValue('reference_id', reference.referenceId || null); setValue('reference_number', reference.referenceNumber || ''); }}
-              disabled={mode === 'view'}
-              onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
           <Grid size={4}>
@@ -478,6 +478,9 @@ const PurchaseVoucherPage: React.FC = () => {
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
+              showLineDiscountCheckbox={true}
+              showTotalDiscountCheckbox={true}
+              showDescriptionCheckbox={true}
             />
           </Grid>
           <Grid size={12}>
@@ -550,7 +553,7 @@ const PurchaseVoucherPage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formBody={formBody}
+        formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={
