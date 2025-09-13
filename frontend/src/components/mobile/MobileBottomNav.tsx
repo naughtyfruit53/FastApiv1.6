@@ -6,6 +6,7 @@ import {
   People,
   Assessment,
   Settings,
+  AccountBalance,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
@@ -31,16 +32,16 @@ const bottomNavItems: BottomNavItem[] = [
     value: 'sales',
   },
   {
+    label: 'Finance',
+    icon: <AccountBalance />,
+    path: '/mobile/finance',
+    value: 'finance',
+  },
+  {
     label: 'CRM',
     icon: <People />,
     path: '/mobile/crm',
     value: 'crm',
-  },
-  {
-    label: 'Reports',
-    icon: <Assessment />,
-    path: '/mobile/reports',
-    value: 'reports',
   },
   {
     label: 'Settings',
@@ -61,8 +62,8 @@ const MobileBottomNav: React.FC = () => {
     const path = router.pathname;
     if (path.includes('/dashboard')) return 'dashboard';
     if (path.includes('/sales')) return 'sales';
+    if (path.includes('/finance')) return 'finance';
     if (path.includes('/crm')) return 'crm';
-    if (path.includes('/reports')) return 'reports';
     if (path.includes('/settings')) return 'settings';
     return 'dashboard';
   };
