@@ -6,6 +6,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/modern-theme.css";
 import "../styles/print.css";
+import "../styles/mobile/mobile-theme.css";
 import Layout from "../components/layout";
 import { useRouter } from "next/router";
 import { AuthProvider, useAuth } from "../context/AuthContext";

@@ -1,9 +1,13 @@
 // frontend/src/components/layout.tsx
-import React from "react";
+import React, { useState } from "react";
 import MegaMenu from "./MegaMenu";
 import CompanySetupGuard from "./CompanySetupGuard";
 import { Box } from "@mui/material";
 import StickyNotesPanel from "./StickyNotes/StickyNotesPanel";
+import { useMobileDetection } from "../hooks/useMobileDetection";
+import { DeviceConditional } from "../utils/mobile/DeviceConditional";
+import MobileNavigation from "./mobile/MobileNavigation";
+import { mainMenuSections } from "./menuConfig";
 
 const Layout: React.FC<{
   children: React.ReactNode;
@@ -11,13 +15,36 @@ const Layout: React.FC<{
   onLogout: () => void;
   showMegaMenu?: boolean;
 }> = ({ children, user, onLogout, showMegaMenu = true }) => {
+  const { isMobile } = useMobileDetection();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const handleMobileMenuToggle = () => {
+    setMobileNavOpen(!mobileNavOpen);
+  };
+
   return (
     <Box>
-      <MegaMenu user={user} onLogout={onLogout} isVisible={showMegaMenu} />
-      <Box sx={{ mt: showMegaMenu ? 2 : 0 }}>
+      <DeviceConditional
+        mobile={
+          <>
+            <MobileNavigation
+              open={mobileNavOpen}
+              onClose={() => setMobileNavOpen(false)}
+              user={user}
+              onLogout={onLogout}
+              menuItems={mainMenuSections}
+            />
+          </>
+        }
+        desktop={
+          <MegaMenu user={user} onLogout={onLogout} isVisible={showMegaMenu} />
+        }
+      />
+      
+      <Box sx={{ mt: showMegaMenu && !isMobile ? 2 : 0 }}>
         <CompanySetupGuard>
           {children}
-          <StickyNotesPanel />
+          {!isMobile && <StickyNotesPanel />}
         </CompanySetupGuard>
       </Box>
     </Box>
