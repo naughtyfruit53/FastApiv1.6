@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { TextField, InputAdornment, IconButton } from '@mui/material';
 import { Search, Clear } from '@mui/icons-material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';

@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Drawer, Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider } from '@mui/material';
+import { Drawer, Box, Typography } from '@mui/material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 interface MobileDrawerProps {

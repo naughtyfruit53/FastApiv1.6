@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Card, CardContent, CardHeader, CardActions, Box, Typography } from '@mui/material';
+import { Card, CardContent, CardHeader, CardActions, Typography } from '@mui/material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 interface MobileCardProps {

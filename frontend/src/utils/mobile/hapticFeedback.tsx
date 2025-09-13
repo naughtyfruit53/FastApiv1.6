@@ -3,6 +3,8 @@
  * Provides various haptic feedback patterns for enhanced mobile UX
  */
 
+import React from 'react';
+
 export enum HapticFeedbackType {
   LIGHT = 'light',
   MEDIUM = 'medium',
@@ -183,7 +185,7 @@ export const withHapticFeedback = <P extends object>(
       },
     } as P;
 
-    return <WrappedComponent {...enhancedProps} />;
+    return React.createElement(WrappedComponent, enhancedProps);
   };
 
   HapticWrappedComponent.displayName = `withHapticFeedback(${WrappedComponent.displayName || WrappedComponent.name})`;
