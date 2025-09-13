@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Navigation Demo - FastAPI v1.6</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        
+        /* App Bar */
+        .app-bar {
+            background: #001F3F;
+            color: white;
+            padding: 0 16px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Mobile Menu Button */
+        .mobile-menu-btn {
+            display: none;
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: none;
+            color: white;
+            cursor: pointer;
+            font-size: 24px;
+        }
+        
+        /* Desktop Menu */
+        .desktop-menu {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .desktop-menu button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .desktop-menu button:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* Logo */
+        .logo {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        /* User Button */
+        .user-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: none;
+            color: white;
+            cursor: pointer;
+            font-size: 24px;
+        }
+        
+        /* Mobile Drawer */
+        .mobile-drawer {
+            position: fixed;
+            top: 0;
+            left: -320px;
+            width: 320px;
+            height: 100vh;
+            background: white;
+            box-shadow: 4px 0 8px rgba(0,0,0,0.1);
+            transition: left 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .mobile-drawer.open {
+            left: 0;
+        }
+        
+        .drawer-header {
+            background: #001F3F;
+            color: white;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .drawer-header h2 {
+            font-size: 18px;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .drawer-content {
+            padding: 16px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+        
+        .menu-section {
+            margin-bottom: 16px;
+        }
+        
+        .section-header {
+            padding: 12px 16px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-items {
+            margin-top: 8px;
+            margin-left: 16px;
+        }
+        
+        .menu-item {
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 4px;
+        }
+        
+        .menu-item:hover {
+            background: #e3f2fd;
+        }
+        
+        /* Voucher Layout */
+        .voucher-container {
+            padding: 16px;
+        }
+        
+        .voucher-desktop {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .voucher-index {
+            flex: 0 0 40%;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .voucher-form {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .voucher-mobile {
+            display: none;
+        }
+        
+        .mobile-toggle {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        
+        .fab {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #1976d2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            font-size: 24px;
+        }
+        
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .desktop-menu {
+                display: none;
+            }
+            
+            .logo {
+                font-size: 16px;
+            }
+            
+            .voucher-desktop {
+                display: none;
+            }
+            
+            .voucher-mobile {
+                display: block;
+            }
+            
+            .search-box {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+        }
+        
+        /* Overlay */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        
+        .overlay.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- App Bar -->
+    <div class="app-bar">
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+        
+        <!-- Desktop Menu -->
+        <div class="desktop-menu">
+            <button>Menu ▼</button>
+            <button>Settings ▼</button>
+        </div>
+        
+        <!-- Logo -->
+        <div class="logo">FastAPI v1.6</div>
+        
+        <!-- User Button -->
+        <button class="user-btn">👤</button>
+    </div>
+    
+    <!-- Mobile Drawer -->
+    <div class="overlay" id="overlay" onclick="closeMobileMenu()"></div>
+    <div class="mobile-drawer" id="mobileDrawer">
+        <div class="drawer-header">
+            <h2>FastAPI v1.6</h2>
+            <button class="close-btn" onclick="closeMobileMenu()">✕</button>
+        </div>
+        <div class="drawer-content">
+            <input type="text" class="search-box" placeholder="Search menu items...">
+            
+            <div class="menu-section">
+                <div class="section-header" onclick="toggleSection('sales')">
+                    📊 Sales <span>▼</span>
+                </div>
+                <div class="section-items" id="sales">
+                    <div class="menu-item">Sales Vouchers</div>
+                    <div class="menu-item">Customer Management</div>
+                    <div class="menu-item">Sales Reports</div>
+                </div>
+            </div>
+            
+            <div class="menu-section">
+                <div class="section-header" onclick="toggleSection('vouchers')">
+                    📝 Vouchers <span>▼</span>
+                </div>
+                <div class="section-items" id="vouchers">
+                    <div class="menu-item">Journal Voucher</div>
+                    <div class="menu-item">Payment Voucher</div>
+                    <div class="menu-item">Receipt Voucher</div>
+                </div>
+            </div>
+            
+            <div class="menu-section">
+                <div class="section-header" onclick="toggleSection('finance')">
+                    💰 Finance <span>▼</span>
+                </div>
+                <div class="section-items" id="finance">
+                    <div class="menu-item">General Ledger</div>
+                    <div class="menu-item">Chart of Accounts</div>
+                    <div class="menu-item">Financial Reports</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="voucher-container">
+        <h2>Voucher Management</h2>
+        
+        <!-- Desktop Layout -->
+        <div class="voucher-desktop">
+            <div class="voucher-index">
+                <h3>Journal Vouchers</h3>
+                <p>Index showing side-by-side with form on desktop</p>
+                <div style="margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+                    <strong>Voucher #001</strong><br>
+                    Date: 2025-01-13<br>
+                    Amount: $1,000.00
+                </div>
+                <div style="margin-top: 8px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+                    <strong>Voucher #002</strong><br>
+                    Date: 2025-01-12<br>
+                    Amount: $750.50
+                </div>
+            </div>
+            <div class="voucher-form">
+                <h3>Journal Voucher - Create</h3>
+                <p>Form displayed side-by-side with index on desktop</p>
+                <div style="margin-top: 16px;">
+                    <label style="display: block; margin-bottom: 8px;">Voucher Number:</label>
+                    <input type="text" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" value="JV-003">
+                </div>
+                <div style="margin-top: 16px;">
+                    <label style="display: block; margin-bottom: 8px;">Date:</label>
+                    <input type="date" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div style="margin-top: 16px;">
+                    <label style="display: block; margin-bottom: 8px;">Amount:</label>
+                    <input type="number" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" placeholder="0.00">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Layout -->
+        <div class="voucher-mobile">
+            <div id="mobileView">
+                <button class="mobile-toggle" onclick="toggleVoucherView()">📝 Switch to Form</button>
+                <div id="mobileIndex">
+                    <h3>Journal Vouchers</h3>
+                    <p>Mobile: Index view only (no side-by-side)</p>
+                    <div style="margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+                        <strong>Voucher #001</strong><br>
+                        Date: 2025-01-13<br>
+                        Amount: $1,000.00
+                    </div>
+                    <div style="margin-top: 8px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+                        <strong>Voucher #002</strong><br>
+                        Date: 2025-01-12<br>
+                        Amount: $750.50
+                    </div>
+                </div>
+                <div id="mobileForm" style="display: none;">
+                    <h3>Journal Voucher - Create</h3>
+                    <p>Mobile: Form view only (no side-by-side)</p>
+                    <div style="margin-top: 16px;">
+                        <label style="display: block; margin-bottom: 8px;">Voucher Number:</label>
+                        <input type="text" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;" value="JV-003">
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <label style="display: block; margin-bottom: 8px;">Date:</label>
+                        <input type="date" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <label style="display: block; margin-bottom: 8px;">Amount:</label>
+                        <input type="number" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;" placeholder="0.00">
+                    </div>
+                </div>
+            </div>
+            <button class="fab" onclick="toggleVoucherView()">📋</button>
+        </div>
+    </div>
+    
+    <script>
+        let mobileMenuOpen = false;
+        let mobileVoucherShowingForm = false;
+        
+        function toggleMobileMenu() {
+            mobileMenuOpen = !mobileMenuOpen;
+            const drawer = document.getElementById('mobileDrawer');
+            const overlay = document.getElementById('overlay');
+            
+            if (mobileMenuOpen) {
+                drawer.classList.add('open');
+                overlay.classList.add('visible');
+            } else {
+                drawer.classList.remove('open');
+                overlay.classList.remove('visible');
+            }
+        }
+        
+        function closeMobileMenu() {
+            mobileMenuOpen = false;
+            const drawer = document.getElementById('mobileDrawer');
+            const overlay = document.getElementById('overlay');
+            drawer.classList.remove('open');
+            overlay.classList.remove('visible');
+        }
+        
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const isVisible = section.style.display !== 'none';
+            section.style.display = isVisible ? 'none' : 'block';
+        }
+        
+        function toggleVoucherView() {
+            mobileVoucherShowingForm = !mobileVoucherShowingForm;
+            const indexDiv = document.getElementById('mobileIndex');
+            const formDiv = document.getElementById('mobileForm');
+            const toggleBtn = document.querySelector('.mobile-toggle');
+            const fabBtn = document.querySelector('.fab');
+            
+            if (mobileVoucherShowingForm) {
+                indexDiv.style.display = 'none';
+                formDiv.style.display = 'block';
+                toggleBtn.textContent = '📋 Switch to List';
+                fabBtn.textContent = '📋';
+            } else {
+                indexDiv.style.display = 'block';
+                formDiv.style.display = 'none';
+                toggleBtn.textContent = '📝 Switch to Form';
+                fabBtn.textContent = '📝';
+            }
+        }
+        
+        // Initialize sections
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show all sections by default
+            document.getElementById('sales').style.display = 'block';
+            document.getElementById('vouchers').style.display = 'block';
+            document.getElementById('finance').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

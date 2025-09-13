@@ -90,6 +90,8 @@ import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers, canShowUserManagement
 import { useQuery } from '@tanstack/react-query';
 import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
+import MobileNav from './MobileNav';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 
 interface MegaMenuProps {
   user?: any;
@@ -109,6 +111,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const [filteredMenuItems, setFilteredMenuItems] = useState<any[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { isMobile } = useMobileDetection();
 
   // Common button style for enhanced UI/UX
   const modernButtonStyle = {
@@ -908,6 +911,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const renderMegaMenu = () => {
+    // Don't render mega menu on mobile (MobileNav handles navigation)
+    if (isMobile) {
+      return null;
+    }
+    
     if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {
       return null;
     }
@@ -1062,6 +1070,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const renderSubMenu = () => {
+    // Don't render sub menu on mobile
+    if (isMobile) {
+      return null;
+    }
+    
     if (!activeSubCategory) {return null;}
     return (
       <Menu
@@ -1161,29 +1174,39 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }}
       >
         <Toolbar>
-          {/* Menu and Settings on the left */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Button
-              color="inherit"
-              startIcon={<MenuIcon />}
-              endIcon={<ExpandMore />}
-              onClick={(e) => handleMenuClick(e, 'menu')}
-              className="modern-menu-button"
-              sx={modernButtonStyle}
-            >
-              Menu
-            </Button>
-            <Button
-              color="inherit"
-              startIcon={<Settings />}
-              endIcon={<ExpandMore />}
-              onClick={(e) => handleMenuClick(e, 'settings')}
-              className="modern-menu-button"
-              sx={modernButtonStyle}
-            >
-              Settings
-            </Button>
-          </Box>
+          {/* Mobile Navigation or Desktop Menu */}
+          {isMobile ? (
+            <MobileNav
+              user={user}
+              onLogout={onLogout}
+              menuItems={menuItems}
+              isVisible={isVisible}
+            />
+          ) : (
+            /* Menu and Settings on the left */
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Button
+                color="inherit"
+                startIcon={<MenuIcon />}
+                endIcon={<ExpandMore />}
+                onClick={(e) => handleMenuClick(e, 'menu')}
+                className="modern-menu-button"
+                sx={modernButtonStyle}
+              >
+                Menu
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<Settings />}
+                endIcon={<ExpandMore />}
+                onClick={(e) => handleMenuClick(e, 'settings')}
+                className="modern-menu-button"
+                sx={modernButtonStyle}
+              >
+                Settings
+              </Button>
+            </Box>
+          )}
           {/* Enhanced Logo Section in the center */}
           <Box
             sx={{
@@ -1217,29 +1240,36 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               {organizationData?.name || 'ERP'}
             </Typography>
           </Box>
-          {/* Search bar on the right */}
-          <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', ml: 2 }} ref={searchRef}>
-            <InputBase
-              placeholder="Search…"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              startAdornment={<SearchIcon />}
-              sx={{
-                color: 'inherit',
-                ml: 1,
-                '& .MuiInputBase-input': {
-                  padding: '8px 8px 8px 0',
-                  transition: 'width 0.3s',
-                  width: searchQuery ? '300px' : '200px',
-                },
-              }}
-            />
-            {renderSearchResults()}
-          </Box>
+          {/* Search bar on the right - Desktop only */}
+          {!isMobile && (
+            <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', ml: 2 }} ref={searchRef}>
+              <InputBase
+                placeholder="Search…"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                startAdornment={<SearchIcon />}
+                sx={{
+                  color: 'inherit',
+                  ml: 1,
+                  '& .MuiInputBase-input': {
+                    padding: '8px 8px 8px 0',
+                    transition: 'width 0.3s',
+                    width: searchQuery ? '300px' : '200px',
+                  },
+                }}
+              />
+              {renderSearchResults()}
+            </Box>
+          )}
+          {/* User Menu - Always visible */}
           <IconButton
             color="inherit"
             onClick={handleUserMenuClick}
-            sx={{ ml: 2 }}
+            sx={{ 
+              ml: 2,
+              minWidth: 44,
+              minHeight: 44,
+            }}
           >
             <AccountCircle />
           </IconButton>
