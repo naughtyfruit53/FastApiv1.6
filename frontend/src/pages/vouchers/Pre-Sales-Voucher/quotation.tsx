@@ -478,6 +478,9 @@ const QuotationPage: React.FC = () => {
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
+              showLineDiscountCheckbox={mode !== "view"}
+              showTotalDiscountCheckbox={mode !== "view"}
+              showDescriptionCheckbox={mode !== "view"}
             />
           </Grid>
           <Grid size={12}>
@@ -550,7 +553,7 @@ const QuotationPage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formBody={formBody}
+        formContent={formBody}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={

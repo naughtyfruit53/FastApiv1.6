@@ -1,4 +1,4 @@
-// frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
+// frontend/src/pages/vouchers/Sales-Vouchers/purchase-order.tsx
 import React, { useMemo, useState, useEffect } from "react";
 import {
   Box,
@@ -544,6 +544,9 @@ const PurchaseOrderPage: React.FC = () => {
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
+              showLineDiscountCheckbox={mode !== "view"}
+              showTotalDiscountCheckbox={mode !== "view"}
+              showDescriptionCheckbox={mode !== "view"}
             />
           </Grid>
           <Grid size={12}>
@@ -616,7 +619,7 @@ const PurchaseOrderPage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formBody={formBody}
+        formContent={formBody}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={

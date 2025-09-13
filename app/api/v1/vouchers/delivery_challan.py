@@ -95,9 +95,10 @@ async def create_delivery_challan(
         
         for item_data in invoice.items:
             from app.models.vouchers import DeliveryChallanItem
+            item_dict = item_data.dict(exclude={'discount_percentage', 'discount_amount', 'taxable_amount', 'gst_rate', 'cgst_amount', 'sgst_amount', 'igst_amount', 'total_amount', 'unit_price'})
             item = DeliveryChallanItem(
                 delivery_challan_id=db_invoice.id,
-                **item_data.dict()
+                **item_dict
             )
             db.add(item)
         
@@ -167,9 +168,10 @@ async def update_delivery_challan(
             from app.models.vouchers import DeliveryChallanItem
             db.query(DeliveryChallanItem).filter(DeliveryChallanItem.delivery_challan_id == invoice_id).delete()
             for item_data in invoice_update.items:
+                item_dict = item_data.dict(exclude={'discount_percentage', 'discount_amount', 'taxable_amount', 'gst_rate', 'cgst_amount', 'sgst_amount', 'igst_amount', 'total_amount', 'unit_price'})
                 item = DeliveryChallanItem(
                     delivery_challan_id=invoice_id,
-                    **item_data.dict()
+                    **item_dict
                 )
                 db.add(item)
         

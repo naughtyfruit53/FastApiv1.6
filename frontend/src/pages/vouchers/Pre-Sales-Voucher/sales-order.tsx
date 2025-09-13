@@ -651,7 +651,7 @@ const SalesOrderPage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formBody={formBody}
+        formContent={formBody}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={

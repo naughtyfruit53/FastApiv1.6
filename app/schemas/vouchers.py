@@ -26,15 +26,8 @@ class SimpleVoucherItem(BaseModel):
     product_id: int
     quantity: float
     unit: str
-    unit_price: float
-    discount_percentage: Optional[float] = None
-    discount_amount: Optional[float] = None
-    taxable_amount: Optional[float] = None
-    gst_rate: Optional[float] = None
-    cgst_amount: Optional[float] = None
-    sgst_amount: Optional[float] = None
-    igst_amount: Optional[float] = None
-    total_amount: Optional[float] = None
+    unit_price: Optional[float] = 0.0
+    description: Optional[str] = None
 
 class VoucherBase(BaseModel):
     voucher_number: str
@@ -367,8 +360,11 @@ class GRNAutoPopulateResponse(BaseModel):
     items: List[PurchaseVoucherItemCreate]
 
 # Delivery Challan
-class DeliveryChallanItemCreate(SimpleVoucherItem):
-    pass
+class DeliveryChallanItemCreate(BaseModel):
+    product_id: int
+    quantity: float
+    unit: str
+    description: Optional[str] = None
 
 class DeliveryChallanItemInDB(DeliveryChallanItemCreate):
     id: int
