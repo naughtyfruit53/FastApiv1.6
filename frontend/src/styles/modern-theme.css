@@ -749,6 +749,124 @@
   }
 }
 
+/* Enhanced Mobile Styles - Mobile First Approach */
+@media (max-width: 768px) {
+  /* Mobile MegaMenu Styles */
+  .MuiAppBar-root {
+    padding: 0 var(--space-2);
+  }
+  
+  .modern-menu-button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+  }
+  
+  /* Mobile navigation drawer styles */
+  .mobile-nav-drawer {
+    touch-action: pan-y;
+  }
+  
+  .mobile-nav-item {
+    min-height: 48px;
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--border-primary);
+    transition: background-color 0.2s ease;
+  }
+  
+  .mobile-nav-item:active {
+    background-color: var(--primary-light);
+    transform: scale(0.98);
+  }
+  
+  /* Mobile voucher layout styles */
+  .mobile-voucher-fab {
+    position: fixed !important;
+    bottom: 16px !important;
+    right: 16px !important;
+    z-index: 1000 !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .mobile-voucher-toggle {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-primary);
+    padding: var(--space-2);
+  }
+  
+  /* Touch-friendly form elements */
+  .MuiTextField-root input,
+  .MuiSelect-select,
+  .MuiButton-root {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Mobile voucher index table */
+  .mobile-voucher-table {
+    font-size: var(--font-size-sm);
+  }
+  
+  .mobile-voucher-table .MuiTableCell-root {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--font-size-xs);
+  }
+  
+  /* Mobile form layout improvements */
+  .MuiGrid-container {
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  
+  .MuiGrid-item {
+    padding: var(--space-1) !important;
+  }
+  
+  /* Mobile-specific utility classes */
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Tablet-specific styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .mobile-only {
+    display: none !important;
+  }
+  
+  .touch-target {
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
+
+/* Desktop-specific styles */
+@media (min-width: 1025px) {
+  .mobile-only {
+    display: none !important;
+  }
+  
+  .mobile-hidden {
+    display: block !important;
+  }
+}
+
 /* Enhanced Metric Card Styles */
 .modern-metric-card {
   background: var(--bg-surface);

@@ -1,6 +1,6 @@
 // frontend/src/components/VoucherLayout.tsx
 // Enhanced VoucherLayout component with comprehensive UI improvements
-import React from "react";
+import React, { useState } from "react";
 import {
   Container,
   Grid,
@@ -9,14 +9,21 @@ import {
   Typography,
   Button,
   Pagination,
+  IconButton,
+  Fab,
 } from "@mui/material";
+import {
+  List as ListIcon,
+  Edit as EditIcon,
+} from "@mui/icons-material";
 import { getVoucherStyles } from "../utils/voucherUtils";
+import { useMobileDetection } from "../hooks/useMobileDetection";
 interface VoucherLayoutProps {
   voucherType: string;
   voucherTitle?: string;
   indexContent: React.ReactNode;
   formHeader?: React.ReactNode;
-  formBody: React.ReactNode;
+  formContent: React.ReactNode; // Changed from formBody to formContent
   onShowAll?: () => void;
   showAllButton?: boolean;
   // Enhanced pagination props
@@ -38,7 +45,7 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   voucherTitle: _voucherTitle,
   indexContent,
   formHeader,
-  formBody,
+  formContent,
   onShowAll,
   showAllButton = true,
   pagination,
@@ -48,6 +55,178 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
   centerAligned: _centerAligned = true,
 }) => {
   const voucherStyles = getVoucherStyles();
+  const { isMobile } = useMobileDetection();
+  const [showMobileIndex, setShowMobileIndex] = useState(false);
+  const handleToggleMobileView = () => {
+    setShowMobileIndex(!showMobileIndex);
+  };
+
+  // Mobile-specific rendering
+  if (isMobile) {
+    return (
+      <>
+        <Box
+          sx={{
+            ...voucherStyles.edgeToEdgeContainer,
+            width: "100%",
+            maxWidth: "100%",
+            overflowX: "hidden",
+            boxSizing: "border-box",
+            position: 'relative',
+          }}
+        >
+          <Container
+            maxWidth={false}
+            sx={{
+              padding: 0,
+              margin: 0,
+              width: "100%",
+              maxWidth: "100%",
+              overflowX: "hidden",
+              boxSizing: "border-box",
+            }}
+          >
+            {/* Mobile: Show either index or form */}
+            {showMobileIndex ? (
+              /* Mobile Index View */
+              <Paper
+                sx={{
+                  p: 1,
+                  minHeight: "100vh",
+                  borderRadius: 0,
+                  boxShadow: "none",
+                  overflow: "auto",
+                  width: "100%",
+                  ...voucherStyles.indexContainer,
+                }}
+              >
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={1}
+                  sx={{ width: "100%" }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontSize: 18,
+                      fontWeight: "bold",
+                      flex: 1,
+                      ...voucherStyles.centerText,
+                    }}
+                  >
+                    {voucherType}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<EditIcon />}
+                    onClick={handleToggleMobileView}
+                    sx={{ ml: 1 }}
+                  >
+                    Form
+                  </Button>
+                  {showAllButton && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={onShowAll}
+                      sx={{ ml: 1 }}
+                    >
+                      Show All
+                    </Button>
+                  )}
+                </Box>
+                {/* Index Content */}
+                <Box sx={{ width: "100%" }}>{indexContent}</Box>
+                {/* Pagination for index if provided */}
+                {pagination && (
+                  <Box sx={voucherStyles.paginationContainer}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{ fontSize: "0.75rem", color: "text.secondary" }}
+                      >
+                        Page {pagination.currentPage} of {pagination.totalPages}
+                        ({pagination.totalItems} total items)
+                      </Typography>
+                      <Pagination
+                        count={pagination.totalPages}
+                        page={pagination.currentPage}
+                        onChange={(_, page) => pagination.onPageChange(page)}
+                        size="small"
+                        color="primary"
+                        showFirstButton
+                        showLastButton
+                      />
+                    </Box>
+                  </Box>
+                )}
+              </Paper>
+            ) : (
+              /* Mobile Form View */
+              <Paper
+                sx={{
+                  minHeight: "100vh",
+                  borderRadius: 0,
+                  boxShadow: "none",
+                  width: "100%",
+                  ...voucherStyles.formContainer,
+                  p: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  position: 'relative',
+                }}
+              >
+                {formHeader && (
+                  <Box
+                    sx={{
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 10,
+                      backgroundColor: "background.paper",
+                      borderBottom: "1px solid #e0e0e0",
+                      p: 1,
+                    }}
+                  >
+                    {formHeader}
+                  </Box>
+                )}
+                <Box sx={{ flex: 1, overflow: "auto", p: 1 }}>{formContent}</Box>
+                
+                {/* Mobile FAB for toggling to index */}
+                <Fab
+                  color="primary"
+                  aria-label="show voucher list"
+                  onClick={handleToggleMobileView}
+                  sx={{
+                    position: 'fixed',
+                    bottom: 16,
+                    right: 16,
+                    zIndex: 1000,
+                  }}
+                >
+                  <ListIcon />
+                </Fab>
+              </Paper>
+            )}
+          </Container>
+        </Box>
+        {/* Modal Content */}
+        {modalContent}
+      </>
+    );
+  }
+
+  // Desktop layout (unchanged)
   return (
     <>
       <Box
@@ -199,7 +378,7 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
                     {formHeader}
                   </Box>
                 )}
-                <Box sx={{ flex: 1, overflow: "auto", p: 1 }}>{formBody}</Box>
+                <Box sx={{ flex: 1, overflow: "auto", p: 1 }}>{formContent}</Box>
               </Paper>
             </Grid>
           </Grid>
