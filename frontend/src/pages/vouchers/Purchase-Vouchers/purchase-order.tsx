@@ -1,4 +1,4 @@
-// frontend/src/pages/vouchers/Sales-Vouchers/purchase-order.tsx
+// frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
 import React, { useMemo, useState, useEffect } from "react";
 import {
   Box,
@@ -466,6 +466,16 @@ const PurchaseOrderPage: React.FC = () => {
             />
           </Grid>
           <Grid size={4}>
+            <TextField 
+              fullWidth 
+              label="Reference" 
+              {...control.register("reference")} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.field} 
+              InputLabelProps={{ shrink: true }} 
+            />
+          </Grid>
+          <Grid size={4}>
             <Autocomplete 
               size="small" 
               options={enhancedVendorOptions} 
@@ -486,16 +496,6 @@ const PurchaseOrderPage: React.FC = () => {
                 />
               } 
               disabled={mode === "view"} 
-            />
-          </Grid>
-          <Grid size={4}>
-            <TextField 
-              fullWidth 
-              label="Reference" 
-              {...control.register("reference")} 
-              disabled={mode === "view"} 
-              sx={voucherFormStyles.field} 
-              InputLabelProps={{ shrink: true }} 
             />
           </Grid>
           <Grid size={4}>

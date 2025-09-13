@@ -404,6 +404,15 @@ const SalesVoucherPage: React.FC = () => {
             />
           </Grid>
           <Grid size={4}>
+            <VoucherReferenceDropdown
+              voucherType="sales-voucher"
+              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
+              onChange={(reference) => { setValue('reference_type', reference.referenceType || ''); setValue('reference_id', reference.referenceId || null); setValue('reference_number', reference.referenceNumber || ''); }}
+              disabled={mode === 'view'}
+              onReferenceSelected={handleReferenceSelected}
+            />
+          </Grid>
+          <Grid size={4}>
             <Autocomplete 
               size="small" 
               options={enhancedCustomerOptions} 
@@ -424,15 +433,6 @@ const SalesVoucherPage: React.FC = () => {
                 />
               } 
               disabled={mode === "view"} 
-            />
-          </Grid>
-          <Grid size={4}>
-            <VoucherReferenceDropdown
-              voucherType="sales-voucher"
-              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
-              onChange={(reference) => { setValue('reference_type', reference.referenceType || ''); setValue('reference_id', reference.referenceId || null); setValue('reference_number', reference.referenceNumber || ''); }}
-              disabled={mode === 'view'}
-              onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
           <Grid size={4}>
