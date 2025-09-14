@@ -1,3 +1,4 @@
+// frontend/src/pages/vouchers/Financial-Vouchers/payment-voucher.tsx
 import React, { useState } from 'react';
 import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Autocomplete, FormControl, InputLabel, Select, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from '@mui/material';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
@@ -221,7 +222,7 @@ const PaymentVoucher: React.FC = () => {
         }}
       >
         <Grid container spacing={2}>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField
               {...control.register('voucher_number')}
               label="Voucher Number"
@@ -234,7 +235,7 @@ const PaymentVoucher: React.FC = () => {
               }}
             />
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField
               {...control.register('date')}
               label="Date"
@@ -250,6 +251,26 @@ const PaymentVoucher: React.FC = () => {
               helperText={errors.date?.message as string}
             />
           </Grid>
+          <Grid item xs={4}>
+            <FormControl fullWidth disabled={isViewMode}>
+              <InputLabel>Payment Mode</InputLabel>
+              <Select
+                {...control.register('payment_method')}
+                value={watch('payment_method') || ''}
+                onChange={(e) => setValue('payment_method', e.target.value)}
+                error={!!errors.payment_method}
+                sx={{ height: 56 }} // Match height with Party Name field
+              >
+                {paymentMethods.map((method) => (
+                  <MenuItem key={method} value={method}>
+                    {method}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+        <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={6}>
             <SearchableDropdown
               label="Party Name"
@@ -279,24 +300,6 @@ const PaymentVoucher: React.FC = () => {
             />
           </Grid>
           <Grid item xs={6}>
-            <FormControl fullWidth disabled={isViewMode}>
-              <InputLabel>Payment Method</InputLabel>
-              <Select
-                {...control.register('payment_method')}
-                value={watch('payment_method') || ''}
-                onChange={(e) => setValue('payment_method', e.target.value)}
-                error={!!errors.payment_method}
-                sx={{ height: 56 }} // Match height with Party Name field
-              >
-                {paymentMethods.map((method) => (
-                  <MenuItem key={method} value={method}>
-                    {method}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={6}>
             <Autocomplete
               freeSolo
               options={referenceOptions}
@@ -313,6 +316,8 @@ const PaymentVoucher: React.FC = () => {
               )}
             />
           </Grid>
+        </Grid>
+        <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={6}>
             <TextField
               {...control.register('total_amount', {
@@ -342,7 +347,7 @@ const PaymentVoucher: React.FC = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid item xs={6}>
             <TextField
               {...control.register('notes')}
               label="Notes"
@@ -354,7 +359,9 @@ const PaymentVoucher: React.FC = () => {
               helperText={errors.notes?.message as string}
             />
           </Grid>
-          {totalAmountValue > 0 && (
+        </Grid>
+        {totalAmountValue > 0 && (
+          <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -366,8 +373,10 @@ const PaymentVoucher: React.FC = () => {
                 size="small"
               />
             </Grid>
-          )}
-          {/* Action buttons - removed Generate PDF */}
+          </Grid>
+        )}
+        {/* Action buttons - removed Generate PDF */}
+        <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={12}>
             <Box display="flex" gap={2}>
               {mode !== 'view' && (

@@ -1,3 +1,4 @@
+// frontend/src/services/activityService.ts
 import api from "../lib/api";
 
 export interface RecentActivity {
@@ -25,39 +26,7 @@ const activityService = {
       return response.data;
     } catch (error) {
       console.error("Failed to fetch recent activities:", error);
-      // Return mock data if API fails
-      return {
-        activities: [
-          {
-            id: "1",
-            type: "sale",
-            title: "New Sale Created",
-            description: "Sales voucher #SV-2024-001 created for ₹25,000",
-            timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-            user_name: "John Doe",
-            amount: 25000,
-            currency: "INR"
-          },
-          {
-            id: "2", 
-            type: "customer",
-            title: "New Customer Added",
-            description: "Customer 'ABC Corp' added to the system",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-            user_name: "Jane Smith"
-          },
-          {
-            id: "3",
-            type: "product",
-            title: "Product Updated",
-            description: "Product 'Widget A' price updated to ₹500",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
-            user_name: "Admin User"
-          }
-        ],
-        total_count: 3,
-        generated_at: new Date().toISOString()
-      };
+      throw error;
     }
   },
 
