@@ -400,11 +400,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     onSuccess: async (newVoucher) => {
       console.log("[useVoucherPage] Voucher created successfully:", newVoucher);
       // Mark reference as used if selected
-      if (data.reference_id && data.reference_type) {
+      if (newVoucher.reference_id && newVoucher.reference_type) {
         try {
-          const referenceConfig = getVoucherConfig(data.reference_type as any);
-          await api.patch(`${referenceConfig.endpoint}/${data.reference_id}`, { used: true });
-          queryClient.invalidateQueries({ queryKey: [data.reference_type] });
+          const referenceConfig = getVoucherConfig(newVoucher.reference_type as any);
+          await api.patch(`${referenceConfig.endpoint}/${newVoucher.reference_id}`, { used: true });
+          queryClient.invalidateQueries({ queryKey: [newVoucher.reference_type] });
         } catch (error) {
           console.error("Error marking reference as used:", error);
         }
@@ -477,7 +477,18 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   };
   const handleSubmitForm = (data: any) => {
     // Enhanced data preparation with reference support
-    if (config.hasItems !== false) {
+    if (config.hasItems === false) {
+      // Transform entity to vendor_id for payment voucher
+      if (data.entity?.type === 'Vendor') {
+        data.vendor_id = data.entity.id;
+      } else if (data.entity?.type === 'Customer') {
+        data.customer_id = data.entity.id;  // If model supports, else adjust
+      } else if (data.entity?.type === 'Employee') {
+        data.employee_id = data.entity.id;  // If applicable
+      }
+      // Remove entity object
+      delete data.entity;
+    } else {
       data.items = computedItems;
       data.total_amount = totalAmount;
     }

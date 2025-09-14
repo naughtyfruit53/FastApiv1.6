@@ -100,7 +100,7 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
     if (event.button === 2) {
       return;
     }
-    onVoucherClick(voucher);
+    onView?.(voucher.id);
     onClose(); // Close modal after selection
   };
   const formatDate = (dateString: string) => {

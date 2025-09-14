@@ -1,138 +1,132 @@
 // frontend/src/pages/vouchers/Financial-Vouchers/payment-voucher.tsx
-import React, { useState } from 'react';
-import {Box, Button, TextField, Typography, Grid, CircularProgress, Container, Autocomplete, FormControl, InputLabel, Select, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  CircularProgress,
+  Container,
+  Autocomplete,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
+} from '@mui/material';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
 import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {getVoucherConfig, getVoucherStyles, parseRateField} from '../../../utils/voucherUtils';
+import { getVoucherConfig, getVoucherStyles, parseRateField } from '../../../utils/voucherUtils';
 import { useReferenceOptions } from '../../../utils/nameRefUtils';
+import { getEntityBalance, getVoucherBalance } from '../../../services/ledgerService';
+import financialVoucherStyles from "../../../styles/financialVoucherStyles";
 
 const PaymentVoucher: React.FC = () => {
   const config = getVoucherConfig('payment-voucher');
   const voucherStyles = getVoucherStyles();
   const {
-    // State
     mode,
     isLoading,
     showFullModal,
     contextMenu,
-    searchTerm,
-    setSearchTerm,
-    fromDate,
-    setFromDate,
-    toDate,
-    setToDate,
-    filteredVouchers,
-    // Form
     control,
     handleSubmit,
     watch,
     setValue,
     reset,
     errors,
-    // Data
-    voucherList,
     vendorList,
     customerList,
     employeeList,
     sortedVouchers,
-    // Mutations
     createMutation,
     updateMutation,
-    // Event handlers
     handleCreate,
     handleEdit,
     handleView,
     handleSubmitForm,
     handleContextMenu,
     handleCloseContextMenu: handleContextMenuClose,
-    handleSearch,
     handleModalOpen,
     handleModalClose,
     handleGeneratePDF,
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-    // Utilities
     isViewMode,
   } = useVoucherPage(config);
 
-  // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
-    // Load the selected voucher into the form
     reset(voucher);
-    // Set the form with the voucher data
     Object.keys(voucher).forEach(key => {
       setValue(key, voucher[key]);
     });
   };
 
-  // Payment voucher specific state
   const totalAmountValue = watch('total_amount');
-  const selectedEntity = watch('entity'); // Now using entity instead of name_id/name_type
+  const selectedEntity = watch('entity');
+  const reference = watch('reference');
 
-  // Get reference options including unpaid vouchers for the selected entity
   const referenceOptions = useReferenceOptions(
-    selectedEntity?.id || null, 
+    selectedEntity?.id || null,
     selectedEntity?.type || null
   );
 
-  // Payment methods for payment vouchers
-  const paymentMethods = [
-    'Cash',
-    'Bank Transfer',
-    'Cheque',
-    'Credit Card',
-    'Debit Card',
-    'Online Payment',
-    'UPI',
-    'Net Banking'
-  ];
+  const paymentMethods = ['Cash','Bank Transfer','Cheque','Credit Card','Debit Card','Online Payment','UPI','Net Banking'];
 
-  // Handle entity creation success
-  const handleEntityCreateSuccess = (newEntity: any) => {
-    setValue('entity', {
-      id: newEntity.id,
-      name: newEntity.name,
-      type: newEntity.type || 'Customer', // Default type
-      value: newEntity.id,
-      label: newEntity.name
-    });
-    refreshMasterData();
-  };
-
-  // Combined list of all parties (customers + vendors + employees) for unified dropdown
   const allParties = [
-    ...(customerList || []).map((customer: any) => ({
-      id: customer.id,
-      name: customer.name,
-      email: customer.email,
-      type: 'Customer',
-      value: customer.id,
-      label: `${customer.name} (Customer)`
-    })),
-    ...(vendorList || []).map((vendor: any) => ({
-      id: vendor.id,
-      name: vendor.name,
-      email: vendor.email,
-      type: 'Vendor',
-      value: vendor.id,
-      label: `${vendor.name} (Vendor)`
-    })),
-    ...(employeeList || []).map((employee: any) => ({
-      id: employee.id,
-      name: employee.name,
-      email: employee.email,
-      type: 'Employee',
-      value: employee.id,
-      label: `${employee.name} (Employee)`
-    }))
+    ...(vendorList || []).map((v: any) => ({ id: v.id, name: v.name, type: 'Vendor', value: v.id, label: `${v.name}` })),
+    ...(customerList || []).map((c: any) => ({ id: c.id, name: c.name, type: 'Customer', value: c.id, label: `${c.name}` })),
+    ...(employeeList || []).map((e: any) => ({ id: e.id, name: e.name, type: 'Employee', value: e.id, label: `${e.name}` })),
   ];
 
-  // Index Content - Left Panel (40%)
+  const [entityBalance, setEntityBalance] = useState<number | null>(null);
+  const [voucherBalance, setVoucherBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (selectedEntity) {
+      console.log('Fetching entity balance for:', selectedEntity.type, selectedEntity.id);
+      getEntityBalance(selectedEntity.type, selectedEntity.id).then((balance) => {
+        console.log('Entity balance fetched:', balance);
+        setEntityBalance(balance);
+      }).catch((err) => {
+        console.error('Entity balance fetch error:', err);
+        setEntityBalance(null);
+      });
+    } else {
+      setEntityBalance(null);
+    }
+  }, [selectedEntity]);
+
+  useEffect(() => {
+    if (reference && referenceOptions.includes(reference)) {
+      console.log('Fetching voucher balance for:', reference);
+      getVoucherBalance(reference).then((balance) => {
+        console.log('Voucher balance fetched:', balance);
+        setVoucherBalance(balance);
+      }).catch((err) => {
+        console.error('Voucher balance fetch error:', err);
+        setVoucherBalance(null);
+      });
+    } else {
+      setVoucherBalance(null);
+    }
+  }, [reference, referenceOptions]);
+
+  // Grid spacing adjustments
+  const firstRowGapPx = 24;   // 3 * 8px
+  const secondRowGapPx = 8;   // 1 * 8px
+
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
       <Table stickyHeader size="small">
@@ -152,8 +146,8 @@ const PaymentVoucher: React.FC = () => {
             </TableRow>
           ) : (
             sortedVouchers?.slice(0, 7).map((voucher: any) => (
-              <TableRow 
-                key={voucher.id} 
+              <TableRow
+                key={voucher.id}
                 hover
                 onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
                 sx={{ cursor: 'pointer' }}
@@ -165,10 +159,7 @@ const PaymentVoucher: React.FC = () => {
                   {new Date(voucher.date).toLocaleDateString()}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  {voucher.entity?.name || 
-                   (voucher.name_type === 'Vendor' 
-                    ? vendorList?.find((v: any) => v.id === voucher.name_id)?.name 
-                    : customerList?.find((c: any) => c.id === voucher.name_id)?.name) || 'N/A'}
+                  {voucher.entity?.name || 'N/A'}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
                   ₹{voucher.total_amount?.toFixed(2) || '0.00'}
@@ -193,11 +184,10 @@ const PaymentVoucher: React.FC = () => {
     </TableContainer>
   );
 
-  // Form Content - Right Panel (60%)
   const formContent = (
     <Box>
-      {/* Header Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      {/* Title + Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
           Payment Voucher - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
         </Typography>
@@ -208,85 +198,77 @@ const PaymentVoucher: React.FC = () => {
           currentId={selectedEntity?.id}
         />
       </Box>
+
       {(createMutation.isPending || updateMutation.isPending) && (
         <Box display="flex" justifyContent="center" my={2}>
           <CircularProgress />
         </Box>
       )}
-      <Box 
-        component="form" 
-        onSubmit={handleSubmit(handleSubmitForm)} 
-        sx={{ 
-          mt: 2,
-          ...voucherStyles.formContainer
-        }}
-      >
-        <Grid container spacing={2}>
-          <Grid item xs={4}>
-            <TextField
-              {...control.register('voucher_number')}
-              label="Voucher Number"
-              fullWidth
-              disabled={true}
-              sx={voucherStyles.centerField}
-              InputProps={{
-                readOnly: true,
-                style: { textAlign: 'center', fontWeight: 'bold' }
-              }}
-            />
-          </Grid>
-          <Grid item xs={4}>
-            <TextField
-              {...control.register('date')}
-              label="Date"
-              type="date"
-              fullWidth
-              disabled={isViewMode}
-              sx={voucherStyles.centerField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              inputProps={{ style: { textAlign: 'center' } }}
-              error={!!errors.date}
-              helperText={errors.date?.message as string}
-            />
-          </Grid>
-          <Grid item xs={4}>
-            <FormControl fullWidth disabled={isViewMode}>
-              <InputLabel>Payment Mode</InputLabel>
+
+      <Box component="form" onSubmit={handleSubmit(handleSubmitForm)} sx={{ mt: 1, ...financialVoucherStyles.formContainer, ...voucherStyles.formContainer }}>
+        {/* FIRST ROW: 4 fields (25% each) */}
+        <Grid container spacing={1} sx={{ mt: 2 }}>
+          {[
+            { name: 'voucher_number', label: 'Voucher Number', type: 'text', disabled: true },
+            { name: 'date', label: 'Date', type: 'date' },
+          ].map((field, idx) => (
+            <Grid key={idx} item sx={{ flex: `0 0 calc((100% - ${firstRowGapPx}px) / 4)`, maxWidth: `calc((100% - ${firstRowGapPx}px) / 4)` }}>
+              <TextField
+                {...control.register(field.name)}
+                label={field.label}
+                type={field.type}
+                fullWidth
+                disabled={isViewMode || field.disabled}
+                InputLabelProps={field.type === 'date' ? { shrink: true } : {}}
+                sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
+              />
+            </Grid>
+          ))}
+
+          <Grid item sx={{ flex: `0 0 calc((100% - ${firstRowGapPx}px) / 4)`, maxWidth: `calc((100% - ${firstRowGapPx}px) / 4)` }}>
+            <FormControl fullWidth disabled={isViewMode} sx={{
+              ...financialVoucherStyles.field,
+              ...voucherStyles.centerField,
+              '& .MuiInputBase-root': { height: 27 },
+              '& .MuiSelect-select': { padding: '4px 12px', fontSize: 14, textAlign: 'center' },
+              '& .MuiInputLabel-root': { fontSize: 12 }
+            }}>
+              <InputLabel shrink>Payment Mode</InputLabel>
               <Select
                 {...control.register('payment_method')}
                 value={watch('payment_method') || ''}
                 onChange={(e) => setValue('payment_method', e.target.value)}
-                error={!!errors.payment_method}
-                sx={{ height: 56 }} // Match height with Party Name field
               >
-                {paymentMethods.map((method) => (
-                  <MenuItem key={method} value={method}>
-                    {method}
-                  </MenuItem>
-                ))}
+                <MenuItem value="" disabled>Select Payment Mode</MenuItem>
+                {paymentMethods.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
               </Select>
             </FormControl>
           </Grid>
+
+          <Grid item sx={{ flex: `0 0 calc((100% - ${firstRowGapPx}px) / 4)`, maxWidth: `calc((100% - ${firstRowGapPx}px) / 4)` }}>
+            <TextField
+              {...control.register('total_amount', { required: 'Amount is required', min: { value: 0.01, message: 'Amount must be > 0' }, setValueAs: parseRateField })}
+              label="Amount"
+              type="number"
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.total_amount}
+              helperText={errors.total_amount?.message as string}
+              sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
+            />
+          </Grid>
         </Grid>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={6}>
+
+        {/* SECOND ROW: Party Name (50%), Vendor Balance (11%), Reference (26%), Voucher Balance (11%) */}
+        <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: 1, mt: 2 }}>
+          <Box sx={{ flexBasis: '50%', minWidth: '50%' }}>
             <SearchableDropdown
               label="Party Name"
               options={allParties}
               value={selectedEntity?.id || null}
-              onChange={(value) => {
-                const party = allParties.find(p => p.id === value);
-                if (party) {
-                  setValue('entity', {
-                    id: party.id,
-                    name: party.name,
-                    type: party.type,
-                    value: party.id,
-                    label: party.name
-                  });
-                }
+              onChange={(val) => {
+                const party = allParties.find(p => p.id === val);
+                if (party) setValue('entity', party);
               }}
               getOptionLabel={(option) => option.label}
               getOptionValue={(option) => option.id}
@@ -298,105 +280,87 @@ const PaymentVoucher: React.FC = () => {
               error={!!errors.entity}
               helperText={errors.entity?.message as string}
             />
-          </Grid>
-          <Grid item xs={6}>
+          </Box>
+
+          <Box sx={{ flexBasis: '11%', minWidth: '11%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {entityBalance !== null && (
+              <Typography
+                sx={{ cursor: 'pointer', color: entityBalance < 0 ? 'red' : 'green' }}
+                onClick={() => setValue('total_amount', Math.abs(entityBalance))}
+              >
+                {entityBalance > 0 ? '+' : ''}{entityBalance}
+              </Typography>
+            )}
+          </Box>
+
+          <Box sx={{ flexBasis: '26%', minWidth: '26%' }}>
             <Autocomplete
+              size="small"
               freeSolo
               options={referenceOptions}
               value={watch('reference') || ''}
-              onChange={(_, newValue) => setValue('reference', newValue || '')}
+              onChange={(_, val) => setValue('reference', val || '')}
               disabled={isViewMode}
+              fullWidth
               renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Reference"
-                  error={!!errors.reference}
-                  helperText={errors.reference?.message as string}
-                />
+                <TextField {...params} label="Reference" fullWidth />
               )}
+            />
+          </Box>
+
+          <Box sx={{ flexBasis: '11%', minWidth: '11%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {voucherBalance !== null && (
+              <Typography
+                sx={{ cursor: 'pointer', color: voucherBalance < 0 ? 'red' : 'green' }}
+                onClick={() => setValue('total_amount', Math.abs(voucherBalance))}
+              >
+                {voucherBalance > 0 ? '+' : ''}{voucherBalance}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+
+        {/* THIRD ROW: Amount in Words (100% width) */}
+        <Grid container spacing={1} sx={{ mt: 2 }}>
+          <Grid item xs={12} sx={{ width: '100%' }}>
+            <TextField
+              fullWidth
+              label="Amount in Words"
+              value={totalAmountValue > 0 ? getAmountInWords(totalAmountValue) : ''}
+              disabled
+              size="small"
+              sx={{ width: '100%' }}
             />
           </Grid>
         </Grid>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={6}>
-            <TextField
-              {...control.register('total_amount', {
-                required: 'Amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' },
-                setValueAs: (value) => parseRateField(value)
-              })}
-              label="Amount"
-              type="number"
-              fullWidth
-              disabled={isViewMode}
-              error={!!errors.total_amount}
-              helperText={errors.total_amount?.message as string}
-              sx={{
-                ...voucherStyles.rateField,
-                ...voucherStyles.centerField
-              }}
-              InputProps={{
-                inputProps: { 
-                  step: "0.01",
-                  style: { textAlign: 'center' }
-                }
-              }}
-              onChange={(e) => {
-                const value = parseRateField(e.target.value);
-                setValue('total_amount', value);
-              }}
-            />
-          </Grid>
-          <Grid item xs={6}>
+
+        {/* FOURTH ROW: Notes (100% width) */}
+        <Grid container spacing={1} sx={{ mt: 2 }}>
+          <Grid item xs={12} sx={{ width: '100%' }}>
             <TextField
               {...control.register('notes')}
               label="Notes"
               multiline
-              rows={3}
+              rows={1}
               fullWidth
               disabled={isViewMode}
-              error={!!errors.notes}
-              helperText={errors.notes?.message as string}
+              sx={{
+                ...financialVoucherStyles.notesField,
+                width: '100%',
+                '& .MuiInputBase-root': { height: '36px', padding: '0 8px' }
+              }}
             />
           </Grid>
         </Grid>
-        {totalAmountValue > 0 && (
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Amount in Words"
-                value={getAmountInWords(totalAmountValue)}
-                disabled
-                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
-                size="small"
-              />
-            </Grid>
-          </Grid>
-        )}
-        {/* Action buttons - removed Generate PDF */}
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+
+        {/* ACTION BUTTONS */}
+        <Grid container spacing={1} sx={{ mt: 2 }}>
           <Grid item xs={12}>
             <Box display="flex" gap={2}>
               {mode !== 'view' && (
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="success"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  sx={{ fontSize: 12 }}
-                >
-                  Save
-                </Button>
+                <Button type="submit" variant="contained" color="success" size="small">Save</Button>
               )}
-              <Button
-                variant="outlined"
-                onClick={handleCreate}
-                sx={{ fontSize: 12 }}
-              >
-                Clear
-              </Button>
+              <Button variant="outlined" onClick={handleCreate} size="small">Clear</Button>
             </Box>
           </Grid>
         </Grid>
@@ -440,23 +404,13 @@ const PaymentVoucher: React.FC = () => {
           />
         }
       />
-      {/* Keep context menu for right-click functionality */}
       <VoucherContextMenu
         voucherType="Payment Voucher"
         contextMenu={contextMenu}
         onClose={handleContextMenuClose}
-        onEdit={(id) => {
-          handleEdit(id);
-          handleContextMenuClose();
-        }}
-        onView={(id) => {
-          handleView(id);
-          handleContextMenuClose();
-        }}
-        onDelete={(id) => {
-          handleDelete(id);
-          handleContextMenuClose();
-        }}
+        onEdit={(id) => { handleEdit(id); handleContextMenuClose(); }}
+        onView={(id) => { handleView(id); handleContextMenuClose(); }}
+        onDelete={(id) => { handleDelete(id); handleContextMenuClose(); }}
       />
     </>
   );

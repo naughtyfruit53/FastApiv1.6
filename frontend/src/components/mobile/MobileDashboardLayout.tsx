@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { Box, Typography, Container } from '@mui/material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import MobileLayout from './MobileLayout';
+import { useMobileNav } from '../../context/MobileNavContext';
 
 export interface MobileDashboardLayoutProps {
   title: string;
@@ -110,12 +111,15 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({
   }
 
   // Mobile layout
+  const { onMenuToggle: contextToggle } = useMobileNav();
+  const effectiveToggle = onMenuToggle || contextToggle;
+
   return (
     <MobileLayout
       title={title}
       subtitle={subtitle}
       onBack={onBack}
-      onMenuToggle={onMenuToggle}
+      onMenuToggle={effectiveToggle}
       rightActions={actions}
       showBackButton={showBackButton}
       showBottomNav={showBottomNav}
