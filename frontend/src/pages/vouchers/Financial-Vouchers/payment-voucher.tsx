@@ -85,9 +85,9 @@ const PaymentVoucher: React.FC = () => {
   const paymentMethods = ['Cash','Bank Transfer','Cheque','Credit Card','Debit Card','Online Payment','UPI','Net Banking'];
 
   const allParties = [
-    ...(customerList || []).map((c: any) => ({ id: c.id, name: c.name, type: 'Customer', value: c.id, label: `${c.name} (Customer)` })),
-    ...(vendorList || []).map((v: any) => ({ id: v.id, name: v.name, type: 'Vendor', value: v.id, label: `${v.name} (Vendor)` })),
-    ...(employeeList || []).map((e: any) => ({ id: e.id, name: e.name, type: 'Employee', value: e.id, label: `${e.name} (Employee)` }))
+    ...(vendorList || []).map((v: any) => ({ id: v.id, name: v.name, type: 'Vendor', value: v.id, label: `${v.name}` })),
+    ...(customerList || []).map((c: any) => ({ id: c.id, name: c.name, type: 'Customer', value: c.id, label: `${c.name}` })),
+    ...(employeeList || []).map((e: any) => ({ id: e.id, name: e.name, type: 'Employee', value: e.id, label: `${e.name}` })),
   ];
 
   const [entityBalance, setEntityBalance] = useState<number | null>(null);
@@ -260,7 +260,7 @@ const PaymentVoucher: React.FC = () => {
         </Grid>
 
         {/* SECOND ROW: Party Name (50%), Vendor Balance (11%), Reference (26%), Voucher Balance (11%) */}
-        <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: 1, mt: 1 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: 1, mt: 2 }}>
           <Box sx={{ flexBasis: '50%', minWidth: '50%' }}>
             <SearchableDropdown
               label="Party Name"
@@ -321,7 +321,7 @@ const PaymentVoucher: React.FC = () => {
         </Box>
 
         {/* THIRD ROW: Amount in Words (100% width) */}
-        <Grid container spacing={1} sx={{ mt: 1 }}>
+        <Grid container spacing={1} sx={{ mt: 2 }}>
           <Grid item xs={12} sx={{ width: '100%' }}>
             <TextField
               fullWidth
@@ -335,7 +335,7 @@ const PaymentVoucher: React.FC = () => {
         </Grid>
 
         {/* FOURTH ROW: Notes (100% width) */}
-        <Grid container spacing={1} sx={{ mt: 1 }}>
+        <Grid container spacing={1} sx={{ mt: 2 }}>
           <Grid item xs={12} sx={{ width: '100%' }}>
             <TextField
               {...control.register('notes')}
@@ -354,7 +354,7 @@ const PaymentVoucher: React.FC = () => {
         </Grid>
 
         {/* ACTION BUTTONS */}
-        <Grid container spacing={1} sx={{ mt: 0.5 }}>
+        <Grid container spacing={1} sx={{ mt: 2 }}>
           <Grid item xs={12}>
             <Box display="flex" gap={2}>
               {mode !== 'view' && (

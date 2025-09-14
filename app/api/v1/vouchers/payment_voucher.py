@@ -1,8 +1,7 @@
 # app/api/v1/vouchers/payment_voucher.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -10,12 +9,13 @@ from app.models import User
 from app.models.vouchers.financial import PaymentVoucher
 from app.schemas.vouchers import PaymentVoucherCreate, PaymentVoucherInDB, PaymentVoucherUpdate
 from app.services.email_service import send_voucher_email
+from app.services.voucher_service import VoucherNumberService
 import logging
-import re
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["payment-vouchers"])  # Removed prefix="/payment-vouchers" to avoid double prefixing
+router = APIRouter(tags=["payment-vouchers"])
 
+@router.get("", response_model=List[PaymentVoucherInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[PaymentVoucherInDB])
 async def get_payment_vouchers(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
@@ -27,7 +27,7 @@ async def get_payment_vouchers(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all payment vouchers with enhanced sorting and pagination"""
-    query = db.query(PaymentVoucher).filter(
+    query = db.query(PaymentVoucher).options(joinedload(PaymentVoucher.vendor)).filter(
         PaymentVoucher.organization_id == current_user.organization_id
     )
     
@@ -53,25 +53,13 @@ async def get_next_payment_voucher_number(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    org_id = current_user.organization_id
-    if org_id is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
-    
-    last_voucher = db.query(func.max(PaymentVoucher.voucher_number)).filter(
-        PaymentVoucher.organization_id == org_id
-    ).scalar()
-    
-    if last_voucher:
-        match = re.match(r"PMT-(\d+)", last_voucher)
-        if match:
-            next_number = int(match.group(1)) + 1
-        else:
-            next_number = 1
-    else:
-        next_number = 1
-    
-    return f"PMT-{next_number:06d}"
+    """Get the next available payment voucher number"""
+    return VoucherNumberService.generate_voucher_number(
+        db, "PMT", current_user.organization_id, PaymentVoucher
+    )
 
+# Register both "" and "/" for POST to support both /api/v1/payment-vouchers and /api/v1/payment-vouchers/
+@router.post("", response_model=PaymentVoucherInDB, include_in_schema=False)
 @router.post("/", response_model=PaymentVoucherInDB)
 async def create_payment_voucher(
     voucher: PaymentVoucherCreate,
@@ -80,6 +68,7 @@ async def create_payment_voucher(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Create new payment voucher"""
     try:
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
@@ -87,14 +76,18 @@ async def create_payment_voucher(
         
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
-            voucher_data['voucher_number'] = await get_next_payment_voucher_number(db=db, current_user=current_user)
+            voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                db, "PMT", current_user.organization_id, PaymentVoucher
+            )
         else:
             existing = db.query(PaymentVoucher).filter(
                 PaymentVoucher.organization_id == current_user.organization_id,
                 PaymentVoucher.voucher_number == voucher_data['voucher_number']
             ).first()
             if existing:
-                voucher_data['voucher_number'] = await get_next_payment_voucher_number(db=db, current_user=current_user)
+                voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                    db, "PMT", current_user.organization_id, PaymentVoucher
+                )
         
         db_voucher = PaymentVoucher(**voucher_data)
         db.add(db_voucher)
@@ -116,7 +109,10 @@ async def create_payment_voucher(
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating payment voucher: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create payment voucher")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create payment voucher"
+        )
 
 @router.get("/{voucher_id}", response_model=PaymentVoucherInDB)
 async def get_payment_voucher(
@@ -124,12 +120,15 @@ async def get_payment_voucher(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    voucher = db.query(PaymentVoucher).filter(
+    voucher = db.query(PaymentVoucher).options(joinedload(PaymentVoucher.vendor)).filter(
         PaymentVoucher.id == voucher_id,
         PaymentVoucher.organization_id == current_user.organization_id
     ).first()
     if not voucher:
-        raise HTTPException(status_code=404, detail="Payment voucher not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment voucher not found"
+        )
     return voucher
 
 @router.put("/{voucher_id}", response_model=PaymentVoucherInDB)
@@ -145,7 +144,10 @@ async def update_payment_voucher(
             PaymentVoucher.organization_id == current_user.organization_id
         ).first()
         if not voucher:
-            raise HTTPException(status_code=404, detail="Payment voucher not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Payment voucher not found"
+            )
         
         update_data = voucher_update.dict(exclude_unset=True)
         for field, value in update_data.items():
@@ -160,7 +162,10 @@ async def update_payment_voucher(
     except Exception as e:
         db.rollback()
         logger.error(f"Error updating payment voucher: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update payment voucher")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update payment voucher"
+        )
 
 @router.delete("/{voucher_id}")
 async def delete_payment_voucher(
@@ -174,7 +179,10 @@ async def delete_payment_voucher(
             PaymentVoucher.organization_id == current_user.organization_id
         ).first()
         if not voucher:
-            raise HTTPException(status_code=404, detail="Payment voucher not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Payment voucher not found"
+            )
         
         db.delete(voucher)
         db.commit()
@@ -185,4 +193,7 @@ async def delete_payment_voucher(
     except Exception as e:
         db.rollback()
         logger.error(f"Error deleting payment voucher: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete payment voucher")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete payment voucher"
+        )

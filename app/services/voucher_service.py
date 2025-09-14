@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Type, Union, Any
 from datetime import datetime
+from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
