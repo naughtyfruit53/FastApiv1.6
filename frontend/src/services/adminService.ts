@@ -1,4 +1,4 @@
-// New: v1/frontend/src/services/adminService.ts
+// frontend/src/services/adminService.ts
 import api from "../lib/api"; // Changed import to use the correct api instance with /api/v1 baseURL
 interface AppStatistics {
   total_licenses_issued: number;
@@ -16,11 +16,23 @@ interface AppStatistics {
 }
 interface OrgStatistics {
   total_products: number;
+  total_products_trend: number;
+  total_products_direction: 'up' | 'down' | 'neutral';
   total_customers: number;
+  total_customers_trend: number;
+  total_customers_direction: 'up' | 'down' | 'neutral';
   total_vendors: number;
+  total_vendors_trend: number;
+  total_vendors_direction: 'up' | 'down' | 'neutral';
   active_users: number;
+  active_users_trend: number;
+  active_users_direction: 'up' | 'down' | 'neutral';
   monthly_sales: number;
+  monthly_sales_trend: number;
+  monthly_sales_direction: 'up' | 'down' | 'neutral';
   inventory_value: number;
+  inventory_value_trend: number;
+  inventory_value_direction: 'up' | 'down' | 'neutral';
   plan_type: string;
   storage_used_gb: number;
   generated_at: string;

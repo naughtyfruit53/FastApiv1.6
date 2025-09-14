@@ -89,6 +89,7 @@ const StockManagement: React.FC = () => {
     unit: "",
   });
   const [editFormData, setEditFormData] = useState({ quantity: 0 });
+  const [importExportAnchorEl, setImportExportAnchorEl] = useState<null | HTMLElement>(null);
   // Params object for stock fetch - service will clean invalid values from queryKey[1]
   const stockParams = {
     search: searchText,
@@ -291,6 +292,24 @@ const StockManagement: React.FC = () => {
       );
     }
     handleMenuClose();
+  };
+  const handleImportExportClick = (event: React.MouseEvent<HTMLElement>) => {
+    setImportExportAnchorEl(event.currentTarget);
+  };
+  const handleImportExportClose = () => {
+    setImportExportAnchorEl(null);
+  };
+  const handleDownloadTemplateMenu = () => {
+    handleDownloadTemplate();
+    handleImportExportClose();
+  };
+  const handleImportMenu = () => {
+    handleImportClick();
+    handleImportExportClose();
+  };
+  const handleExportMenu = () => {
+    handleExport();
+    handleImportExportClose();
   };
 
   const renderDesktopTable = () => (
@@ -509,29 +528,36 @@ const StockManagement: React.FC = () => {
                     <Button
                       variant="contained"
                       startIcon={<GetApp />}
-                      onClick={handleDownloadTemplate}
-                      sx={{ minWidth: "120px" }}
-                    >
-                      Download Template
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<Publish />}
-                      onClick={handleImportClick}
+                      onClick={handleImportExportClick}
                       sx={{ minWidth: "120px" }}
                       disabled={!user?.organization_id}
                     >
-                      Import
+                      Import/Export
                     </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<GetApp />}
-                      onClick={handleExport}
-                      sx={{ minWidth: "120px" }}
-                      disabled={!user?.organization_id}
+                    <Menu
+                      anchorEl={importExportAnchorEl}
+                      open={Boolean(importExportAnchorEl)}
+                      onClose={handleImportExportClose}
                     >
-                      Export
-                    </Button>
+                      <MenuItem onClick={handleDownloadTemplateMenu}>
+                        <ListItemIcon>
+                          <GetApp />
+                        </ListItemIcon>
+                        <ListItemText>Download Template</ListItemText>
+                      </MenuItem>
+                      <MenuItem onClick={handleImportMenu}>
+                        <ListItemIcon>
+                          <GetApp />
+                        </ListItemIcon>
+                        <ListItemText>Import</ListItemText>
+                      </MenuItem>
+                      <MenuItem onClick={handleExportMenu}>
+                        <ListItemIcon>
+                          <Publish />
+                        </ListItemIcon>
+                        <ListItemText>Export</ListItemText>
+                      </MenuItem>
+                    </Menu>
                     <Button
                       variant="contained"
                       startIcon={<Print />}

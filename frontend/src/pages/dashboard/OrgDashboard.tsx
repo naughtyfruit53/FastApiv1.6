@@ -17,11 +17,23 @@ import { useAuth } from "../../context/AuthContext";
 import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
 interface OrgStatistics {
   total_products: number;
+  total_products_trend: number;
+  total_products_direction: 'up' | 'down' | 'neutral';
   total_customers: number;
+  total_customers_trend: number;
+  total_customers_direction: 'up' | 'down' | 'neutral';
   total_vendors: number;
+  total_vendors_trend: number;
+  total_vendors_direction: 'up' | 'down' | 'neutral';
   active_users: number;
+  active_users_trend: number;
+  active_users_direction: 'up' | 'down' | 'neutral';
   monthly_sales: number;
+  monthly_sales_trend: number;
+  monthly_sales_direction: 'up' | 'down' | 'neutral';
   inventory_value: number;
+  inventory_value_trend: number;
+  inventory_value_direction: 'up' | 'down' | 'neutral';
   plan_type: string;
   storage_used_gb: number;
   generated_at: string;
@@ -29,8 +41,8 @@ interface OrgStatistics {
   plan_status?: string;
   subscription_start?: string;
   subscription_validity_days?: number;
-  total_org_users?: number; // For super admin view
-  inactive_users?: number; // For super admin view
+  total_org_users?: number;
+  inactive_users?: number;
 }
 const OrgDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -118,9 +130,9 @@ const OrgDashboard: React.FC = () => {
       description: "Products in inventory",
       href: "/masters/products",
       trend: {
-        value: 12,
+        value: statistics.total_products_trend ?? 0,
         period: "vs last month",
-        direction: "up" as const,
+        direction: statistics.total_products_direction ?? "neutral" as const,
       },
     },
     {
@@ -131,9 +143,9 @@ const OrgDashboard: React.FC = () => {
       description: "Active customers",
       href: "/masters/customers",
       trend: {
-        value: 8,
+        value: statistics.total_customers_trend ?? 0,
         period: "vs last month",
-        direction: "up" as const,
+        direction: statistics.total_customers_direction ?? "neutral" as const,
       },
     },
     {
@@ -144,9 +156,9 @@ const OrgDashboard: React.FC = () => {
       description: "Registered vendors",
       href: "/masters/vendors",
       trend: {
-        value: 3,
+        value: statistics.total_vendors_trend ?? 0,
         period: "vs last month",
-        direction: "up" as const,
+        direction: statistics.total_vendors_direction ?? "neutral" as const,
       },
     },
     {
@@ -157,9 +169,9 @@ const OrgDashboard: React.FC = () => {
       description: "Users in organization",
       href: "/settings/user-management",
       trend: {
-        value: 5,
+        value: statistics.active_users_trend ?? 0,
         period: "vs last month",
-        direction: "up" as const,
+        direction: statistics.active_users_direction ?? "neutral" as const,
       },
     },
     {
@@ -170,9 +182,9 @@ const OrgDashboard: React.FC = () => {
       description: "Sales in last 30 days",
       href: "/sales/dashboard",
       trend: {
-        value: 15,
+        value: statistics.monthly_sales_trend ?? 0,
         period: "vs last month",
-        direction: "up" as const,
+        direction: statistics.monthly_sales_direction ?? "neutral" as const,
       },
     },
     {
@@ -183,9 +195,9 @@ const OrgDashboard: React.FC = () => {
       description: "Current stock value",
       href: "/inventory",
       trend: {
-        value: 7,
+        value: statistics.inventory_value_trend ?? 0,
         period: "vs last month",
-        direction: "up" as const,
+        direction: statistics.inventory_value_direction ?? "neutral" as const,
       },
     },
   ];
@@ -347,11 +359,7 @@ const OrgDashboard: React.FC = () => {
                 mb: 1,
               }}
             >
-              {statistics.monthly_sales !== undefined &&
-              statistics.monthly_sales !== null
-                ? Math.round((statistics.monthly_sales / 100000) * 100)
-                : 0}
-              %
+              {statistics.monthly_sales_trend ?? 0}%
             </Typography>
             <Typography variant="body2" color="textSecondary">
               Monthly Growth
