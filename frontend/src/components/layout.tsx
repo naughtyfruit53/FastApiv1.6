@@ -8,6 +8,7 @@ import { useMobileDetection } from "../hooks/useMobileDetection";
 import { DeviceConditional } from "../utils/mobile/DeviceConditional";
 import MobileNavigation from "./mobile/MobileNavigation";
 import { mainMenuSections } from "./menuConfig";
+import { MobileNavContext } from "../context/MobileNavContext";
 
 const Layout: React.FC<{
   children: React.ReactNode;
@@ -42,10 +43,12 @@ const Layout: React.FC<{
       />
       
       <Box sx={{ mt: showMegaMenu && !isMobile ? 2 : 0 }}>
-        <CompanySetupGuard>
-          {children}
-          {!isMobile && <StickyNotesPanel />}
-        </CompanySetupGuard>
+        <MobileNavContext.Provider value={{ onMenuToggle: handleMobileMenuToggle }}>
+          <CompanySetupGuard>
+            {children}
+            {!isMobile && <StickyNotesPanel />}
+          </CompanySetupGuard>
+        </MobileNavContext.Provider>
       </Box>
     </Box>
   );

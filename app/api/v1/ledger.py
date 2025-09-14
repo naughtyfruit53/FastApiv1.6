@@ -77,9 +77,9 @@ async def get_entity_balance(
         return {"balance": 0}
     
     else:
-        raise HTTPException(status_code=400, detail="Invalid entity type")
+        return {"balance": 0}
 
-@router.get("/vouchers/balance/{voucher_ref}")
+@router.get("/vouchers/balance/{voucher_ref:path}")
 async def get_voucher_balance(
     voucher_ref: str,
     db: Session = Depends(get_db),
@@ -94,7 +94,7 @@ async def get_voucher_balance(
         ).first()
         
         if not voucher:
-            raise HTTPException(status_code=404, detail="Voucher not found")
+            return {"outstanding": 0}
         
         # Placeholder: assume no linked payments, outstanding = total_amount
         # In full implementation, subtract sum of allocated receipts
@@ -103,4 +103,4 @@ async def get_voucher_balance(
     
     # Add similar for other voucher types like PV/ for Purchase
     else:
-        raise HTTPException(status_code=400, detail="Invalid voucher reference")
+        return {"outstanding": 0}

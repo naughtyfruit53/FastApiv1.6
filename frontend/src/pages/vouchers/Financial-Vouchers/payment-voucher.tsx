@@ -259,9 +259,9 @@ const PaymentVoucher: React.FC = () => {
           </Grid>
         </Grid>
 
-        {/* SECOND ROW: Party Name (50%), Vendor Balance (5%), Reference (40%), Voucher Balance (5%) */}
-        <Grid container spacing={0} sx={{ mt: 1 }}>
-          <Grid item sx={{ flex: '0 0 50%', maxWidth: '50%' }}>
+        {/* SECOND ROW: Party Name (50%), Vendor Balance (11%), Reference (26%), Voucher Balance (11%) */}
+        <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: 1, mt: 1 }}>
+          <Box sx={{ flexBasis: '50%', minWidth: '50%' }}>
             <SearchableDropdown
               label="Party Name"
               options={allParties}
@@ -280,9 +280,9 @@ const PaymentVoucher: React.FC = () => {
               error={!!errors.entity}
               helperText={errors.entity?.message as string}
             />
-          </Grid>
+          </Box>
 
-          <Grid item sx={{ flex: '0 0 5%', maxWidth: '5%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ flexBasis: '11%', minWidth: '11%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {entityBalance !== null && (
               <Typography
                 sx={{ cursor: 'pointer', color: entityBalance < 0 ? 'red' : 'green' }}
@@ -291,9 +291,9 @@ const PaymentVoucher: React.FC = () => {
                 {entityBalance > 0 ? '+' : ''}{entityBalance}
               </Typography>
             )}
-          </Grid>
+          </Box>
 
-          <Grid item sx={{ flex: '0 0 40%', maxWidth: '40%' }}>
+          <Box sx={{ flexBasis: '26%', minWidth: '26%' }}>
             <Autocomplete
               size="small"
               freeSolo
@@ -306,16 +306,19 @@ const PaymentVoucher: React.FC = () => {
                 <TextField {...params} label="Reference" fullWidth />
               )}
             />
-          </Grid>
+          </Box>
 
-          <Grid item sx={{ flex: '0 0 5%', maxWidth: '5%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ flexBasis: '11%', minWidth: '11%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {voucherBalance !== null && (
-              <Typography sx={{ color: voucherBalance < 0 ? 'red' : 'green' }}>
+              <Typography
+                sx={{ cursor: 'pointer', color: voucherBalance < 0 ? 'red' : 'green' }}
+                onClick={() => setValue('total_amount', Math.abs(voucherBalance))}
+              >
                 {voucherBalance > 0 ? '+' : ''}{voucherBalance}
               </Typography>
             )}
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
         {/* THIRD ROW: Amount in Words (100% width) */}
         <Grid container spacing={1} sx={{ mt: 1 }}>
