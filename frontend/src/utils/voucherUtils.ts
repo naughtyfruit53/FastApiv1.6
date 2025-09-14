@@ -833,12 +833,12 @@ export const getVoucherStyles = (): any => ({
   // Index and form layout containers
   indexContainer: {
     width: "100%",
-    padding: "8px",
+    padding: 0,
     margin: 0,
   },
   formContainer: {
     width: "100%",
-    padding: "8px",
+    padding: 0,
     margin: 0,
     boxSizing: "border-box" as const,
     "& .MuiTextField-root": {

@@ -84,6 +84,9 @@ from app.api.v1 import service_analytics as v1_service_analytics
 from app.api.v1 import assets as v1_assets
 from app.api.v1 import transport as v1_transport
 
+# Import ledger router
+from app.api.v1 import ledger as v1_ledger
+
 # Log imports with try/except for error handling
 try:
     from app.api import companies
@@ -499,11 +502,12 @@ logger.info("External Integrations router included successfully at prefix: /api/
 app.include_router(v1_reporting_hub.router, prefix="/api/v1/reports", tags=["reporting-hub"])
 logger.info("Reporting Hub router included successfully at prefix: /api/v1/reports")
 
-# Include dynamic path routers LAST
-app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}
-logger.info("BOM router included successfully at prefix: /api/v1")
-app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])  # Potential dynamic paths
-logger.info("Manufacturing router included successfully at prefix: /api/v1")
+# Import OAuth router
+from app.api.v1 import oauth as v1_oauth
+
+# Ledger API
+app.include_router(v1_ledger.router, prefix="/api/v1", tags=["ledger"])
+logger.info("Ledger router included successfully at prefix: /api/v1")
 
 @app.get("/routes")
 def get_routes():

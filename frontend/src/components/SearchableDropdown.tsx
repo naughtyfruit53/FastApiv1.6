@@ -1,228 +1,208 @@
-import React, { useState, useEffect } from "react";
+// frontend/src/components/SearchableDropdown.tsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Autocomplete,
   TextField,
-  Button,
+  Autocomplete,
+  CircularProgress,
   Box,
   Typography,
-  Paper,
-  Popper,
-  List,
-  ListItemText,
-  ListItemIcon,
-  Divider,
-  ListItemButton,
-} from "@mui/material";
-import { Add, Search } from "@mui/icons-material";
-interface SearchableDropdownProps {
-  options: any[];
+  Button,
+  IconButton,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
+import debounce from 'lodash/debounce';
+
+interface Option {
+  label: string;
   value: any;
-  onChange: (_value: any) => void;
-  onAddNew?: () => void;
-  getOptionLabel: (_option: any) => string;
-  getOptionValue: (_option: any) => any;
+  [key: string]: any;
+}
+
+interface SearchableDropdownProps {
+  label: string;
+  options: Option[];
+  value: any;
+  onChange: (value: any) => void;
+  getOptionLabel?: (option: Option) => string;
+  getOptionValue?: (option: Option) => any;
   placeholder?: string;
-  label?: string;
+  noOptionsText?: string;
+  loadingText?: string;
   disabled?: boolean;
+  fullWidth?: boolean;
+  required?: boolean;
   error?: boolean;
   helperText?: string;
-  required?: boolean;
-  noOptionsText?: string;
-  addNewText?: string;
-  searchFields?: string[]; // Fields to search in (e.g., ['name', 'email'])
-  fullWidth?: boolean;
+  size?: 'small' | 'medium';
+  fetchOptions?: (searchTerm: string) => Promise<Option[]>;
+  onAddNew?: () => void;
+  onRefresh?: () => void;
+  debounceTime?: number;
+  showAddButton?: boolean;
+  showRefreshButton?: boolean;
+  renderOption?: (props: any, option: Option) => React.ReactNode;
 }
+
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
-  options = [],
+  label,
+  options: initialOptions,
   value,
   onChange,
-  onAddNew,
-  getOptionLabel,
-  getOptionValue,
-  placeholder = "Search...",
-  label,
+  getOptionLabel = (option) => option.label,
+  getOptionValue = (option) => option.value,
+  placeholder = 'Search...',
+  noOptionsText = 'No options found',
+  loadingText = 'Loading...',
   disabled = false,
-  error = false,
-  helperText,
-  required = false,
-  noOptionsText = "No options found",
-  addNewText = "Add New",
-  searchFields = ["name"],
   fullWidth = true,
+  required = false,
+  error = false,
+  helperText = '',
+  size = 'small',
+  fetchOptions,
+  onAddNew,
+  onRefresh,
+  debounceTime = 300,
+  showAddButton = false,
+  showRefreshButton = false,
+  renderOption,
 }) => {
-  const [inputValue, setInputValue] = useState("");
-  const [filteredOptions, setFilteredOptions] = useState(options);
-  const [showAddNew, setShowAddNew] = useState(false);
-  // Filter options based on input value
+  const [options, setOptions] = useState<Option[]>(initialOptions);
+  const [inputValue, setInputValue] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<Option | null>(null);
+
   useEffect(() => {
-    if (!inputValue.trim()) {
-      setFilteredOptions(options);
-      setShowAddNew(false);
-      return;
+    setOptions(initialOptions);
+  }, [initialOptions]);
+
+  useEffect(() => {
+    const option = options.find((opt) => getOptionValue(opt) === value);
+    setSelectedOption(option || null);
+    if (option) {
+      setInputValue(getOptionLabel(option));
     }
-    const filtered = options.filter((option) => {
-      const searchTerm = inputValue.toLowerCase();
-      return searchFields.some((field) => {
-        const fieldValue = option[field]?.toString().toLowerCase() || "";
-        return fieldValue.includes(searchTerm);
-      });
-    });
-    setFilteredOptions(filtered);
-    // Show "Add New" option if no results found and onAddNew is provided
-    setShowAddNew(
-      filtered.length === 0 && !!onAddNew && inputValue.trim().length > 0,
-    );
-  }, [inputValue, options, searchFields, onAddNew]);
-  const handleOptionSelect = (option: any) => {
-    onChange(getOptionValue(option));
-    setInputValue(getOptionLabel(option));
-  };
-  const handleAddNew = () => {
-    if (onAddNew) {
-      onAddNew();
-    }
-  };
-  const CustomPopper = (props: any) => {
-    return (
-      <Popper
-        {...props}
-        style={{ width: props.anchorEl?.clientWidth || "auto" }}
-        placement="bottom-start"
-      >
-        <Paper elevation={3} sx={{ maxHeight: 300, overflow: "auto" }}>
-          <List dense>
-            {filteredOptions.map((option, index) => (
-              <ListItemButton
-                key={index}
-                onClick={() => handleOptionSelect(option)}
-                sx={{
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                  },
-                }}
-              >
-                <ListItemText
-                  primary={getOptionLabel(option)}
-                  secondary={
-                    option.email || option.code || option.description || ""
-                  }
-                />
-              </ListItemButton>
-            ))}
-            {filteredOptions.length === 0 && !showAddNew && (
-              <ListItemButton disabled>
-                <ListItemText
-                  primary={noOptionsText}
-                  sx={{ color: "text.secondary", fontStyle: "italic" }}
-                />
-              </ListItemButton>
-            )}
-            {showAddNew && (
-              <>
-                {filteredOptions.length > 0 && <Divider />}
-                <ListItemButton
-                  onClick={handleAddNew}
-                  sx={{
-                    backgroundColor: "primary.light",
-                    color: "primary.contrastText",
-                    "&:hover": {
-                      backgroundColor: "primary.main",
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: "inherit" }}>
-                    <Add />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={`${addNewText} &quot;${inputValue}&quot;`}
-                    sx={{ fontWeight: "medium" }}
-                  />
-                </ListItemButton>
-              </>
-            )}
-          </List>
-        </Paper>
-      </Popper>
-    );
-  };
-  return (
-    <Autocomplete
-      fullWidth={fullWidth}
-      options={filteredOptions}
-      getOptionLabel={getOptionLabel}
-      value={
-        value
-          ? options.find((option) => getOptionValue(option) === value) || null
-          : null
-      }
-      onChange={(event, newValue) => {
-        if (newValue) {
-          onChange(getOptionValue(newValue));
-        } else {
-          onChange(null);
+  }, [value, options, getOptionLabel, getOptionValue]);
+
+  const debouncedFetch = useCallback(
+    debounce(async (searchTerm: string) => {
+      if (fetchOptions) {
+        setLoading(true);
+        try {
+          const fetchedOptions = await fetchOptions(searchTerm);
+          setOptions(fetchedOptions);
+        } catch (error) {
+          console.error('Error fetching options:', error);
+        } finally {
+          setLoading(false);
         }
-      }}
-      inputValue={inputValue}
-      onInputChange={(event, newInputValue) => {
-        setInputValue(newInputValue);
-      }}
-      disabled={disabled}
-      noOptionsText={
-        showAddNew ? (
-          <Box>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              {noOptionsText}
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleAddNew}
-              size="small"
-              fullWidth
-            >
-              {addNewText} &quot;{inputValue}&quot;
-            </Button>
-          </Box>
-        ) : (
-          noOptionsText
-        )
       }
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          label={label}
-          placeholder={placeholder}
-          error={error}
-          helperText={helperText}
-          required={required}
-          InputProps={{
-            ...params.InputProps,
-            startAdornment: (
-              <Box sx={{ mr: 1, display: "flex", alignItems: "center" }}>
-                <Search color="action" fontSize="small" />
-              </Box>
-            ),
-          }}
-        />
-      )}
-      renderOption={(props, option) => (
-        <li {...props}>
-          <Box>
-            <Typography variant="body2">{getOptionLabel(option)}</Typography>
-            {(option.email || option.code || option.description) && (
-              <Typography variant="caption" color="textSecondary">
-                {option.email || option.code || option.description}
-              </Typography>
-            )}
+    }, debounceTime),
+    [fetchOptions, debounceTime]
+  );
+
+  const handleInputChange = (event: React.ChangeEvent<{}>, newInputValue: string) => {
+    setInputValue(newInputValue);
+    if (fetchOptions) {
+      debouncedFetch(newInputValue);
+    }
+  };
+
+  const handleChange = (event: React.ChangeEvent<{}>, newValue: Option | null) => {
+    setSelectedOption(newValue);
+    onChange(newValue ? getOptionValue(newValue) : null);
+    if (newValue) {
+      setInputValue(getOptionLabel(newValue));
+    } else {
+      setInputValue('');
+    }
+  };
+
+  const filterOptions = (options: Option[], { inputValue }: { inputValue: string }) => {
+    if (!fetchOptions) {
+      return options.filter((option) =>
+        getOptionLabel(option).toLowerCase().includes(inputValue.toLowerCase())
+      );
+    }
+    return options;
+  };
+
+  return (
+    <Box sx={{ position: 'relative', width: fullWidth ? '100%' : 'auto' }}>
+      <Autocomplete
+        size={size}
+        options={options}
+        getOptionLabel={getOptionLabel}
+        value={selectedOption}
+        onChange={handleChange}
+        onInputChange={handleInputChange}
+        inputValue={inputValue}
+        filterOptions={filterOptions}
+        disabled={disabled}
+        noOptionsText={
+          <Typography variant="body2" color="textSecondary">
+            {noOptionsText}
+          </Typography>
+        }
+        loading={loading}
+        loadingText={
+          <Box display="flex" alignItems="center">
+            <CircularProgress size={16} sx={{ mr: 1 }} />
+            <Typography variant="body2">{loadingText}</Typography>
           </Box>
-        </li>
+        }
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label={label}
+            placeholder={placeholder}
+            required={required}
+            error={error}
+            helperText={helperText}
+            fullWidth={fullWidth}
+            variant="outlined"
+            InputProps={{
+              ...params.InputProps,
+              endAdornment: (
+                <>
+                  {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
+            }}
+          />
+        )}
+        renderOption={renderOption}
+      />
+      {(showAddButton || showRefreshButton) && (
+        <Box
+          sx={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            pr: 1,
+          }}
+        >
+          {showAddButton && onAddNew && (
+            <IconButton size="small" onClick={onAddNew} disabled={disabled}>
+              <AddIcon fontSize="small" />
+            </IconButton>
+          )}
+          {showRefreshButton && onRefresh && (
+            <IconButton size="small" onClick={onRefresh} disabled={disabled}>
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
       )}
-      PopperComponent={CustomPopper}
-      clearOnBlur={false}
-      selectOnFocus
-      handleHomeEndKeys
-      freeSolo={false}
-    />
+    </Box>
   );
 };
+
 export default SearchableDropdown;
