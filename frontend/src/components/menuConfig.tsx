@@ -105,9 +105,10 @@ export const menuItems = {
           { name: 'Stock Movements', path: '/inventory/movements', icon: <SwapHoriz /> },
           { name: 'Low Stock Report', path: '/inventory/low-stock', icon: <TrendingUp /> },
           { name: 'Bulk Import', path: '/inventory/bulk-import', icon: <CloudUpload /> },
-          //{ name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
-          //{ name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
-          //{ name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
+          { name: 'Inventory Dashboard', path: '/inventory', icon: <Dashboard /> },
+          { name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
+          { name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
+          { name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
         ]
       },
       {
@@ -204,7 +205,8 @@ export const menuItems = {
         title: 'Financial Reports',
         items: [
           { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> },
-          { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> }
+          { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> },
+          { name: 'Financial Reports Hub', path: '/financial-reports', icon: <Assessment /> }
         ]
       },
       {
@@ -283,19 +285,14 @@ export const menuItems = {
         items: [
           { name: 'Customer Analytics', path: '/analytics/customer', icon: <TrendingUp /> },
           { name: 'Sales Analytics', path: '/analytics/sales', icon: <BarChart /> },
-          { name: 'Purchase Analytics', path: '/analytics/purchase', icon: <ShoppingCart /> },
-          { name: 'Marketing Analytics', path: '/marketing/analytics', icon: <Assessment /> },
-          { name: 'Finance Dashboard', path: '/finance-dashboard', icon: <Analytics /> },
-          { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
+          { name: 'Purchase Analytics', path: '/analytics/purchase', icon: <ShoppingCart /> }
         ]
       },
       {
         title: 'Advanced Analytics',
         items: [
           { name: 'Project Analytics', path: '/projects/analytics', icon: <Analytics /> },
-          { name: 'HR Analytics', path: '/hr/analytics', icon: <TrendingUp /> },
-          { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
-          { name: 'Performance Reports', path: '/projects/reports', icon: <Assessment /> }
+          { name: 'HR Analytics', path: '/hr/analytics', icon: <TrendingUp /> }
         ]
       },
       {
@@ -439,9 +436,10 @@ export const menuItems = {
         title: 'Employee Management',
         items: [
           { name: 'Employee Directory', path: '/hr/employees-directory', icon: <People /> },
+          { name: 'Employee Records', path: '/hr/employees', icon: <People /> },
           { name: 'Employee Onboarding', path: '/hr/onboarding', icon: <PersonAdd /> },
           { name: 'Performance Management', path: '/hr/performance', icon: <Assessment /> },
-          { name: 'Employee Records', path: '/hr/records', icon: <Storage /> }
+          { name: 'Employee Records Archive', path: '/hr/records', icon: <Storage /> }
         ]
       },
       {
@@ -469,6 +467,12 @@ export const menuItems = {
           { name: 'Candidate Management', path: '/hr/candidates', icon: <Person /> },
           { name: 'Interview Scheduling', path: '/hr/interviews', icon: <Schedule /> },
           { name: 'Hiring Pipeline', path: '/hr/hiring', icon: <Timeline /> }
+        ]
+      },
+      {
+        title: 'HR Analytics',
+        items: [
+          { name: 'HR Analytics Dashboard', path: '/hr/analytics', icon: <Analytics /> }
         ]
       }
     ]
@@ -592,19 +596,40 @@ export const menuItems = {
         items: [
           { name: 'General Settings', path: '/settings', icon: <Settings /> },
           { name: 'Company Profile', path: '/settings/company', icon: <Business /> },
-          { name: 'User Management', path: '/settings/users', icon: <People /> }
+          { name: 'User Management', path: '/settings/users', icon: <People /> },
+          { name: 'User Preferences', path: '/settings/UserPreferences', icon: <AccountCircle /> },
+          { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage /> },
+          { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build /> },
+          { name: 'Add User', path: '/settings/add-user', icon: <PersonAdd /> },
+          { name: 'Advanced User Management', path: '/settings/user-management', icon: <SupervisorAccount /> }
         ]
       },
       {
         title: 'Administration',
         items: [
+          { name: 'Admin Dashboard', path: '/admin', icon: <Dashboard /> },
           { name: 'App Users', path: '/admin/app-user-management', icon: <Groups />, superAdminOnly: true },
           { name: 'Organization Management', path: '/admin/manage-organizations', icon: <CorporateFare />, superAdminOnly: true },
+          { name: 'Organization List', path: '/admin/organizations', icon: <CorporateFare />, superAdminOnly: true },
+          { name: 'Create Organization', path: '/admin/organizations/create', icon: <AddBusiness />, superAdminOnly: true },
           { name: 'License Management', path: '/admin/license-management', icon: <Security />, superAdminOnly: true },
           { name: 'Role Management', path: '/admin/rbac', icon: <SupervisorAccount />, servicePermission: SERVICE_PERMISSIONS.CRM_ADMIN },
           { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, servicePermission: SERVICE_PERMISSIONS.CRM_SETTINGS },
           { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, role: 'org_admin' },
-          { name: 'Notification Management', path: '/admin/notifications', icon: <NotificationsActive />, role: 'org_admin' }
+          { name: 'Notification Management', path: '/admin/notifications', icon: <NotificationsActive />, role: 'org_admin' },
+          { name: 'User Administration', path: '/admin/users', icon: <People />, role: 'org_admin' }
+        ]
+      },
+      {
+        title: 'System & Utilities',
+        items: [
+          { name: 'System Reports', path: '/reports', icon: <Assessment /> },
+          { name: 'Migration Management', path: '/migration/management', icon: <SwapHoriz /> },
+          { name: 'UI Testing', path: '/ui-test', icon: <DeveloperMode /> },
+          { name: 'Notification Demo', path: '/notification-demo', icon: <NotificationsActive /> },
+          { name: 'Transport Management', path: '/transport', icon: <LocalShipping /> },
+          { name: 'Assets Management', path: '/assets', icon: <Storage /> },
+          { name: 'Bank Accounts', path: '/bank-accounts', icon: <AccountBalance /> }
         ]
       }
     ]
@@ -634,6 +659,20 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         }
       ]
     : [
+        { 
+          title: 'Dashboard', 
+          subSections: [
+            {
+              title: 'Dashboard Views',
+              items: [
+                { name: 'Main Dashboard', path: '/dashboard', icon: <Dashboard /> },
+                { name: 'HR Dashboard', path: '/hr/dashboard', icon: <Groups /> },
+                { name: 'Management Dashboard', path: '/management/dashboard', icon: <Assessment /> },
+                { name: 'Mobile Dashboard', path: '/mobile/dashboard', icon: <Dashboard /> }
+              ]
+            }
+          ]
+        },
         { title: 'Master Data', subSections: menuItems.masterData.sections },
         { title: 'ERP', subSections: menuItems.erp.sections },
         { title: 'Finance', subSections: menuItems.finance.sections },
@@ -645,5 +684,36 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         { title: 'Projects', subSections: menuItems.projects.sections },
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
         { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
-        { title: 'Email', subSections: menuItems.email.sections }
+        { title: 'Email', subSections: menuItems.email.sections },
+        { 
+          title: 'Vouchers & Transactions', 
+          subSections: [
+            {
+              title: 'All Vouchers',
+              items: [
+                { name: 'Voucher Dashboard', path: '/vouchers', icon: <Receipt /> },
+                { name: 'Financial Vouchers', path: '/vouchers/Financial-Vouchers', icon: <AccountBalance /> },
+                { name: 'Manufacturing Vouchers', path: '/vouchers/Manufacturing-Vouchers', icon: <Build /> }
+              ]
+            }
+          ]
+        },
+        { 
+          title: 'Mobile Apps', 
+          subSections: [
+            {
+              title: 'Mobile Access',
+              items: [
+                { name: 'Mobile CRM', path: '/mobile/crm', icon: <Person /> },
+                { name: 'Mobile Finance', path: '/mobile/finance', icon: <AccountBalance /> },
+                { name: 'Mobile HR', path: '/mobile/hr', icon: <Groups /> },
+                { name: 'Mobile Inventory', path: '/mobile/inventory', icon: <Inventory /> },
+                { name: 'Mobile Reports', path: '/mobile/reports', icon: <Assessment /> },
+                { name: 'Mobile Sales', path: '/mobile/sales', icon: <TrendingUp /> },
+                { name: 'Mobile Service', path: '/mobile/service', icon: <SupportAgent /> },
+                { name: 'Mobile Settings', path: '/mobile/settings', icon: <Settings /> }
+              ]
+            }
+          ]
+        }
       ];
