@@ -525,6 +525,111 @@ async def create_unit(
         raise HTTPException(status_code=500, detail="Failed to create unit")
 
 
+@router.get("/units/{unit_id}", response_model=UnitResponse)
+async def get_unit(
+    unit_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get a specific unit"""
+    unit = db.query(Unit).filter(
+        Unit.id == unit_id,
+        Unit.organization_id == organization_id
+    ).first()
+    
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    
+    return unit
+
+
+@router.put("/units/{unit_id}", response_model=UnitResponse)
+async def update_unit(
+    unit_id: int,
+    unit_data: UnitUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Update an existing unit"""
+    try:
+        unit = db.query(Unit).filter(
+            Unit.id == unit_id,
+            Unit.organization_id == organization_id
+        ).first()
+        
+        if not unit:
+            raise HTTPException(status_code=404, detail="Unit not found")
+        
+        # Check for duplicate name (excluding current unit)
+        existing = db.query(Unit).filter(
+            Unit.organization_id == organization_id,
+            Unit.name == unit_data.name,
+            Unit.id != unit_id
+        ).first()
+        
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unit with name '{unit_data.name}' already exists"
+            )
+        
+        # Update unit fields
+        update_data = unit_data.dict(exclude_unset=True)
+        update_data['updated_by'] = current_user.id
+        
+        for field, value in update_data.items():
+            setattr(unit, field, value)
+        
+        db.commit()
+        db.refresh(unit)
+        
+        logger.info(f"Unit updated: {unit.name} (ID: {unit.id})")
+        return unit
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating unit: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update unit")
+
+
+@router.delete("/units/{unit_id}")
+async def delete_unit(
+    unit_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Delete a unit"""
+    try:
+        unit = db.query(Unit).filter(
+            Unit.id == unit_id,
+            Unit.organization_id == organization_id
+        ).first()
+        
+        if not unit:
+            raise HTTPException(status_code=404, detail="Unit not found")
+        
+        # Check if unit is being used (implement business logic as needed)
+        # For now, we'll allow deletion
+        
+        db.delete(unit)
+        db.commit()
+        
+        logger.info(f"Unit deleted: {unit.name} (ID: {unit.id})")
+        return {"message": "Unit deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting unit: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete unit")
+
+
 @router.post("/units/convert", response_model=UnitConversion)
 async def convert_units(
     conversion_data: UnitConversion,
@@ -669,6 +774,111 @@ async def create_tax_code(
         db.rollback()
         logger.error(f"Error creating tax code: {e}")
         raise HTTPException(status_code=500, detail="Failed to create tax code")
+
+
+@router.get("/tax-codes/{tax_code_id}", response_model=TaxCodeResponse)
+async def get_tax_code(
+    tax_code_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get a specific tax code"""
+    tax_code = db.query(TaxCode).filter(
+        TaxCode.id == tax_code_id,
+        TaxCode.organization_id == organization_id
+    ).first()
+    
+    if not tax_code:
+        raise HTTPException(status_code=404, detail="Tax code not found")
+    
+    return tax_code
+
+
+@router.put("/tax-codes/{tax_code_id}", response_model=TaxCodeResponse)
+async def update_tax_code(
+    tax_code_id: int,
+    tax_code_data: TaxCodeUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Update an existing tax code"""
+    try:
+        tax_code = db.query(TaxCode).filter(
+            TaxCode.id == tax_code_id,
+            TaxCode.organization_id == organization_id
+        ).first()
+        
+        if not tax_code:
+            raise HTTPException(status_code=404, detail="Tax code not found")
+        
+        # Check for duplicate name (excluding current tax code)
+        existing = db.query(TaxCode).filter(
+            TaxCode.organization_id == organization_id,
+            TaxCode.name == tax_code_data.name,
+            TaxCode.id != tax_code_id
+        ).first()
+        
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tax code with name '{tax_code_data.name}' already exists"
+            )
+        
+        # Update tax code fields
+        update_data = tax_code_data.dict(exclude_unset=True)
+        update_data['updated_by'] = current_user.id
+        
+        for field, value in update_data.items():
+            setattr(tax_code, field, value)
+        
+        db.commit()
+        db.refresh(tax_code)
+        
+        logger.info(f"Tax code updated: {tax_code.name} (ID: {tax_code.id})")
+        return tax_code
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating tax code: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update tax code")
+
+
+@router.delete("/tax-codes/{tax_code_id}")
+async def delete_tax_code(
+    tax_code_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Delete a tax code"""
+    try:
+        tax_code = db.query(TaxCode).filter(
+            TaxCode.id == tax_code_id,
+            TaxCode.organization_id == organization_id
+        ).first()
+        
+        if not tax_code:
+            raise HTTPException(status_code=404, detail="Tax code not found")
+        
+        # Check if tax code is being used (implement business logic as needed)
+        # For now, we'll allow deletion
+        
+        db.delete(tax_code)
+        db.commit()
+        
+        logger.info(f"Tax code deleted: {tax_code.name} (ID: {tax_code.id})")
+        return {"message": "Tax code deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting tax code: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete tax code")
 
 
 @router.post("/tax-codes/calculate", response_model=TaxCalculation)
@@ -820,6 +1030,111 @@ async def create_payment_terms(
         db.rollback()
         logger.error(f"Error creating payment terms: {e}")
         raise HTTPException(status_code=500, detail="Failed to create payment terms")
+
+
+@router.get("/payment-terms/{payment_terms_id}", response_model=PaymentTermsExtendedResponse)
+async def get_payment_terms_by_id(
+    payment_terms_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get a specific payment terms"""
+    payment_terms = db.query(PaymentTermsExtended).filter(
+        PaymentTermsExtended.id == payment_terms_id,
+        PaymentTermsExtended.organization_id == organization_id
+    ).first()
+    
+    if not payment_terms:
+        raise HTTPException(status_code=404, detail="Payment terms not found")
+    
+    return payment_terms
+
+
+@router.put("/payment-terms/{payment_terms_id}", response_model=PaymentTermsExtendedResponse)
+async def update_payment_terms(
+    payment_terms_id: int,
+    payment_terms_data: PaymentTermsExtendedUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Update an existing payment terms"""
+    try:
+        payment_terms = db.query(PaymentTermsExtended).filter(
+            PaymentTermsExtended.id == payment_terms_id,
+            PaymentTermsExtended.organization_id == organization_id
+        ).first()
+        
+        if not payment_terms:
+            raise HTTPException(status_code=404, detail="Payment terms not found")
+        
+        # Check for duplicate name (excluding current payment terms)
+        existing = db.query(PaymentTermsExtended).filter(
+            PaymentTermsExtended.organization_id == organization_id,
+            PaymentTermsExtended.name == payment_terms_data.name,
+            PaymentTermsExtended.id != payment_terms_id
+        ).first()
+        
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Payment terms with name '{payment_terms_data.name}' already exists"
+            )
+        
+        # Update payment terms fields
+        update_data = payment_terms_data.dict(exclude_unset=True)
+        update_data['updated_by'] = current_user.id
+        
+        for field, value in update_data.items():
+            setattr(payment_terms, field, value)
+        
+        db.commit()
+        db.refresh(payment_terms)
+        
+        logger.info(f"Payment terms updated: {payment_terms.name} (ID: {payment_terms.id})")
+        return payment_terms
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating payment terms: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update payment terms")
+
+
+@router.delete("/payment-terms/{payment_terms_id}")
+async def delete_payment_terms(
+    payment_terms_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Delete a payment terms"""
+    try:
+        payment_terms = db.query(PaymentTermsExtended).filter(
+            PaymentTermsExtended.id == payment_terms_id,
+            PaymentTermsExtended.organization_id == organization_id
+        ).first()
+        
+        if not payment_terms:
+            raise HTTPException(status_code=404, detail="Payment terms not found")
+        
+        # Check if payment terms is being used (implement business logic as needed)
+        # For now, we'll allow deletion
+        
+        db.delete(payment_terms)
+        db.commit()
+        
+        logger.info(f"Payment terms deleted: {payment_terms.name} (ID: {payment_terms.id})")
+        return {"message": "Payment terms deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting payment terms: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete payment terms")
 
 
 # ============================================================================
