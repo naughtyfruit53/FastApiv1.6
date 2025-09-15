@@ -36,7 +36,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { isAppSuperAdmin } from '../types/user.types';
-import { menuItems, mainMenuSections } from './menuConfig';
+import { mainMenuSections } from './menuConfig';
 
 interface MobileNavProps {
   open: boolean;  // Changed to controlled open prop

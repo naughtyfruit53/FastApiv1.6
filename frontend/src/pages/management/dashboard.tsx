@@ -35,7 +35,7 @@ import {
   ShowChart,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
-import { Bar, Line, Doughnut } from "react-chartjs-2";
+import { Bar, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,

@@ -42,7 +42,6 @@ import {
   FilterList,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
-import api from "../../lib/api";
 
 interface Email {
   id: string;

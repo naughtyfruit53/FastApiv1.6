@@ -1,5 +1,5 @@
 import React from 'react';
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, TextField, InputAdornment, Accordion, AccordionSummary, AccordionDetails, ExpandMoreIcon } from '@mui/material';
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, TextField, InputAdornment, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import { Search, Dashboard, Receipt, Inventory, People, Business, Assessment, Settings, ShoppingCart, AccountBalance, Campaign, SupportAgent } from '@mui/icons-material';
 import { useState } from 'react';
 import { useRouter } from 'next/router';

@@ -37,7 +37,6 @@ import {
   Email,
   CheckCircle,
   Error,
-  Warning,
   PlayArrow,
   Pause,
   Stop,
@@ -49,7 +48,6 @@ import {
   Info,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
-import api from "../../lib/api";
 
 interface SyncJob {
   id: string;

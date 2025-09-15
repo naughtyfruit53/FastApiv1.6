@@ -2,7 +2,6 @@
 // Goods Receipt Note Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
 import {Box, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete} from '@mui/material';
-import {PictureAsPdf as PdfIcon} from '@mui/icons-material';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';

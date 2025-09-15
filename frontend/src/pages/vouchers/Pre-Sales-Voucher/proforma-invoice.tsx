@@ -6,15 +6,10 @@ import {
   TextField,
   Typography,
   Grid,
-  IconButton,
   CircularProgress,
   Container,
-  Paper,
   Autocomplete,
-  Fab,
   Alert,
-  Checkbox,
-  FormControlLabel,
   Dialog,
   DialogActions,
   DialogContent,
@@ -27,7 +22,6 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { Add, Remove, Clear } from "@mui/icons-material";
 import AddCustomerModal from "../../../components/AddCustomerModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
@@ -41,14 +35,12 @@ import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import {
   getVoucherConfig,
-  GST_SLABS,
   getVoucherStyles,
 } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
 import { useCompany } from "../../../context/CompanyContext";
-import { toast } from "react-toastify";
 import { useGstValidation } from "../../../hooks/useGstValidation";
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";

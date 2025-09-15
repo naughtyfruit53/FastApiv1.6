@@ -6,7 +6,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import ReportsPage from "../reports";
+import ReportsPage from "../../pages/reports";
 import { reportsService } from "../../services/authService";
 import { canAccessLedger } from "../../types/user.types";
 

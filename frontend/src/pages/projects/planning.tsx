@@ -12,13 +12,7 @@ import {
   Tabs,
   Tab,
   Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Stack,
-  Divider,
   Chip,
   Timeline,
   TimelineItem,
@@ -34,23 +28,17 @@ import {
 import {
   Add,
   Edit,
-  Delete,
   Save,
   Cancel,
-  Assignment,
   Schedule,
-  People,
-  AttachMoney,
   ExpandMore,
   Flag,
   CheckCircle,
   RadioButtonUnchecked,
 } from "@mui/icons-material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 
 // Types
 interface ProjectPlan {

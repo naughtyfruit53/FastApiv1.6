@@ -6,7 +6,6 @@ import {
   TextField,
   Typography,
   Grid,
-  IconButton,
   CircularProgress,
   Container,
   Table,
@@ -15,9 +14,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Autocomplete,
-  Fab,
   Alert,
   Checkbox,
   FormControlLabel,
@@ -28,7 +25,6 @@ import {
   Button,
   Input,
 } from "@mui/material";
-import { Add, Remove, Clear } from "@mui/icons-material";
 import AddCustomerModal from "../../../components/AddCustomerModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
@@ -42,7 +38,6 @@ import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import {
   getVoucherConfig,
-  GST_SLABS,
   getVoucherStyles,
 } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";

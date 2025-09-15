@@ -19,18 +19,13 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Chip,
   Grid,
   Switch,
   FormControlLabel
 } from '@mui/material';
 import {
   Send,
-  Close,
-  Attachment,
-  FormatBold,
-  FormatItalic,
-  FormatUnderlined
+  Close
 } from '@mui/icons-material';
 import { useOAuth } from '../hooks/useOAuth';
 

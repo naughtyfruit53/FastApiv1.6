@@ -29,16 +29,12 @@ import {
   TrendingUp,
   TrendingDown,
   Assignment,
-  People,
   AttachMoney,
   Schedule,
-  Warning,
-  CheckCircle,
-  Analytics,
   Download,
   Refresh,
 } from "@mui/icons-material";
-import { Bar, Line, Doughnut, Radar } from "react-chartjs-2";
+import { Bar, Line, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,

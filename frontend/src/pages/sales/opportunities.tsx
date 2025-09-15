@@ -19,8 +19,6 @@ import {
   Chip,
   TextField,
   InputAdornment,
-  Tabs,
-  Tab,
   CircularProgress,
   Alert
 } from '@mui/material';
@@ -28,10 +26,7 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
-  Visibility as ViewIcon,
-  TrendingUp as TrendingUpIcon,
-  MonetizationOn as MoneyIcon,
-  Timeline as TimelineIcon
+  Visibility as ViewIcon
 } from '@mui/icons-material';
 import AddOpportunityModal from '../../components/AddOpportunityModal';
 import { crmService } from '../../services/crmService';

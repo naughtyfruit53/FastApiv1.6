@@ -16,18 +16,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemSecondaryAction,
   TextField,
   FormControlLabel,
   Switch,
-  Divider,
   AppBar,
   Toolbar,
-  Badge,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -47,7 +40,6 @@ import {
   Microsoft as MicrosoftIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
-import api from "../../lib/api";
 import OAuthLoginButton from "../../components/OAuthLoginButton";
 
 interface EmailAccount {

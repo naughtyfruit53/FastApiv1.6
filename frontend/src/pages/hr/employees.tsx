@@ -8,8 +8,6 @@ import {
   Grid,
   Card,
   CardContent,
-  Tab,
-  Tabs,
   Button,
   IconButton,
   Table,
@@ -19,10 +17,6 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   FormControl,
   InputLabel,
@@ -47,7 +41,6 @@ import {
   Work as WorkIcon,
   ContactPhone as ContactIcon,
   AccountBalance as BankIcon,
-  PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
