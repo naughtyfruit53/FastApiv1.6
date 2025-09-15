@@ -421,6 +421,8 @@ class VoucherPDFGenerator:
                 template_name = 'presales_voucher.html'
             elif voucher_type == 'payment-vouchers':
                 template_name = 'payment_voucher.html'
+            elif voucher_type == 'receipt-vouchers':
+                template_name = 'receipt_voucher.html'
             else:
                 template_name = f"{voucher_type}_voucher.html"
             

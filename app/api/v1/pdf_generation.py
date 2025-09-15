@@ -17,7 +17,7 @@ from app.services.rbac import RBACService
 from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem
 from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn, DeliveryChallanItem
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice, QuotationItem, SalesOrderItem, ProformaInvoiceItem
-from app.models.vouchers.financial import PaymentVoucher
+from app.models.vouchers.financial import PaymentVoucher, ReceiptVoucher
 from app.models.customer_models import Vendor, Customer
 from app.models.hr_models import EmployeeProfile
 import logging
@@ -43,7 +43,8 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
         'sales-orders': 'presales_read',
         'proforma_invoice': 'presales_read',
         'proforma-invoices': 'presales_read',
-        'payment-vouchers': 'voucher_read'
+        'payment-vouchers': 'voucher_read',
+        'receipt-vouchers': 'voucher_read'
     }
     
     required_permission = permission_map.get(voucher_type)
@@ -285,7 +286,8 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'sales-orders': SalesOrder,
         'proforma_invoice': ProformaInvoice,
         'proforma-invoices': ProformaInvoice,
-        'payment-vouchers': PaymentVoucher
+        'payment-vouchers': PaymentVoucher,
+        'receipt-vouchers': ReceiptVoucher
     }
     
     model_class = model_map.get(voucher_type)
@@ -391,6 +393,8 @@ def _voucher_to_dict(voucher, db: Session) -> Dict[str, Any]:
         voucher_data['required_by_date'] = voucher.delivery_date  # Alias for template
     if hasattr(voucher, 'payment_method'):
         voucher_data['payment_method'] = voucher.payment_method
+    if hasattr(voucher, 'receipt_method'):
+        voucher_data['receipt_method'] = voucher.receipt_method
     if hasattr(voucher, 'reference'):
         voucher_data['reference'] = voucher.reference
     if hasattr(voucher, 'bank_account'):

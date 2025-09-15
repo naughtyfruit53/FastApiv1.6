@@ -487,8 +487,8 @@ class QuotationInDB(VoucherInDBBase):
     valid_until: Optional[datetime]
     payment_terms: Optional[str]
     terms_conditions: Optional[str]
-    line_discount_type: Optional[str] = None
-    total_discount_type: Optional[str] = None
+    line_discount_type: Optional[str]
+    total_discount_type: Optional[str]
     total_discount: Optional[float] = 0.0
     round_off: Optional[float] = 0.0
     items: List[QuotationItemInDB]
@@ -588,12 +588,14 @@ class PaymentVoucherInDB(VoucherInDBBase):
 
 # Receipt Voucher
 class ReceiptVoucherCreate(VoucherBase):
-    customer_id: int
+    entity_id: int
+    entity_type: str = "Customer"
     receipt_method: Optional[str] = None
     reference: Optional[str] = None
 
 class ReceiptVoucherUpdate(BaseModel):
-    customer_id: Optional[int] = None
+    entity_id: Optional[int] = None
+    entity_type: Optional[str] = None
     receipt_method: Optional[str] = None
     reference: Optional[str] = None
     total_amount: Optional[float] = None
@@ -601,9 +603,11 @@ class ReceiptVoucherUpdate(BaseModel):
     notes: Optional[str] = None
 
 class ReceiptVoucherInDB(VoucherInDBBase):
-    customer_id: int
+    entity_id: int
+    entity_type: str
     receipt_method: Optional[str]
     reference: Optional[str]
+    entity: Optional[Dict[str, Any]] = None
 
 # Contra Voucher
 class ContraVoucherCreate(VoucherBase):

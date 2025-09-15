@@ -101,13 +101,13 @@ async def create_receipt_voucher(
         db.commit()
         db.refresh(db_voucher)
         
-        if send_email and db_voucher.customer and db_voucher.customer.email:
+        if send_email and db_voucher.entity and db_voucher.entity.email:
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="receipt_voucher",
                 voucher_id=db_voucher.id,
-                recipient_email=db_voucher.customer.email,
-                recipient_name=db_voucher.customer.name
+                recipient_email=db_voucher.entity.email,
+                recipient_name=db_voucher.entity.name
             )
         
         logger.info(f"Receipt voucher {db_voucher.voucher_number} created by {current_user.email}")

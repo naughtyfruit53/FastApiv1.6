@@ -82,17 +82,16 @@ class PaymentVoucher(BaseVoucher):
 class ReceiptVoucher(BaseVoucher):
     __tablename__ = "receipt_vouchers"
     
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
+    entity_id = Column(Integer, nullable=False)
+    entity_type = Column(String(50), nullable=False)  # 'Vendor', 'Customer', 'Employee'
     receipt_method = Column(String)
     reference = Column(String)
     bank_account = Column(String)
     
-    customer = relationship("Customer")
-    
     __table_args__ = (
         # Unique voucher number per organization
         UniqueConstraint('organization_id', 'voucher_number', name='uq_rv_org_voucher_number'),
-        Index('idx_rv_org_customer', 'organization_id', 'customer_id'),
+        Index('idx_rv_org_entity', 'organization_id', 'entity_id'),
         Index('idx_rv_org_date', 'organization_id', 'date'),
     )
 
