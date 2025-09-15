@@ -21,12 +21,12 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
 import StockBulkImport from "../../components/StockBulkImport";
-import { canManageUsers } from "../../types/user.types";
+import { canBulkImportStock } from "../../types/user.types";
 
 const StockBulkImportPage: NextPage = () => {
   const { user } = useAuth();
 
-  const canImportStock = canManageUsers(user); // Typically admin-level permission
+  const canImportStock = canBulkImportStock(user); // Appropriate permission level
 
   if (!user || !canImportStock) {
     return (
