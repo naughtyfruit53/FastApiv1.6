@@ -71,8 +71,9 @@ export interface FinancialVoucher extends VoucherBase {
   to_account: string;
   payment_method?: string;
   receipt_method?: string;
-  name_id?: number | null;
-  name_type?: "Vendor" | "Customer";
+  entity_id?: number | null;
+  entity_type?: string | null;
+  entity?: {id: number, name: string, type: string};
 }
 export interface VoucherFormData extends VoucherBase {
   items?: VoucherItem[];
@@ -83,8 +84,9 @@ export interface VoucherFormData extends VoucherBase {
   payment_method?: string;
   receipt_method?: string;
   payment_terms?: string;
-  name_id?: number | null;
-  name_type?: "Vendor" | "Customer";
+  entity_id?: number | null;
+  entity_type?: string | null;
+  entity?: {id: number, name: string, type: string};
 }
 export interface VoucherListResponse {
   items: VoucherBase[];

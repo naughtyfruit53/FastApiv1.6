@@ -66,16 +66,15 @@ class DebitNoteItem(SimpleVoucherItemBase):
 class PaymentVoucher(BaseVoucher):
     __tablename__ = "payment_vouchers"
     
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
+    entity_id = Column(Integer, nullable=False)
+    entity_type = Column(String(50), nullable=False)  # 'Vendor', 'Customer', 'Employee'
     payment_method = Column(String)
     reference = Column(String)
     bank_account = Column(String)
     
-    vendor = relationship("Vendor")
-    
     __table_args__ = (
         UniqueConstraint('organization_id', 'voucher_number', name='uq_pv_payment_org_voucher_number'),
-        Index('idx_pv_payment_org_vendor', 'organization_id', 'vendor_id'),
+        Index('idx_pv_payment_org_entity', 'organization_id', 'entity_id'),
         Index('idx_pv_payment_org_date', 'organization_id', 'date'),
     )
 

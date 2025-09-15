@@ -61,7 +61,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           </IconButton>
         )}
 
-        {showMenuButton && onMenuToggle && !showBackButton && (
+        {showMenuButton && !showBackButton && (
           <IconButton
             edge="start"
             onClick={onMenuToggle}

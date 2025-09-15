@@ -71,6 +71,9 @@ const PaymentVoucher: React.FC = () => {
     Object.keys(voucher).forEach(key => {
       setValue(key, voucher[key]);
     });
+    if (voucher.date) {
+      setValue('date', new Date(voucher.date).toISOString().split('T')[0]);
+    }
   };
 
   const totalAmountValue = watch('total_amount');
@@ -123,6 +126,17 @@ const PaymentVoucher: React.FC = () => {
     }
   }, [reference, referenceOptions]);
 
+  const handleSubmitFormMapped = (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = watch();
+    if (data.entity) {
+      data.entity_id = data.entity.id;
+      data.entity_type = data.entity.type;
+      delete data.entity;
+    }
+    handleSubmit(handleSubmitForm)(e);  // Proceed with original submit
+  };
+
   // Grid spacing adjustments
   const firstRowGapPx = 24;   // 3 * 8px
   const secondRowGapPx = 8;   // 1 * 8px
@@ -151,8 +165,9 @@ const PaymentVoucher: React.FC = () => {
                 hover
                 onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
                 sx={{ cursor: 'pointer' }}
+                onClick={() => handleView(voucher.id)}
               >
-                <TableCell align="center" sx={{ fontSize: 11, p: 1 }} onClick={() => handleVoucherClick(voucher)}>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
                   {voucher.voucher_number}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
@@ -205,7 +220,7 @@ const PaymentVoucher: React.FC = () => {
         </Box>
       )}
 
-      <Box component="form" onSubmit={handleSubmit(handleSubmitForm)} sx={{ mt: 1, ...financialVoucherStyles.formContainer, ...voucherStyles.formContainer }}>
+      <Box component="form" onSubmit={handleSubmit(handleSubmitFormMapped)} sx={{ mt: 1, ...financialVoucherStyles.formContainer, ...voucherStyles.formContainer }}>
         {/* FIRST ROW: 4 fields (25% each) */}
         <Grid container spacing={1} sx={{ mt: 2 }}>
           {[

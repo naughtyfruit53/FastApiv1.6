@@ -1,3 +1,5 @@
+# app/core/config.py
+
 import os
 from typing import Any, Dict, Optional, List
 from dotenv import load_dotenv  # Explicitly load .env (optional, as BaseSettings handles it)
@@ -56,6 +58,7 @@ class Settings:
     
     # Database (Supabase PostgreSQL)
     DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
+    SESSION_DATABASE_URL: Optional[str] = os.getenv("SESSION_DATABASE_URL", DATABASE_URL)  # Fallback to DATABASE_URL
     SUPABASE_URL: Optional[str] = os.getenv("SUPABASE_URL")
     SUPABASE_KEY: Optional[str] = os.getenv("SUPABASE_KEY")
     SUPABASE_SERVICE_KEY: Optional[str] = os.getenv("SUPABASE_SERVICE_KEY")
