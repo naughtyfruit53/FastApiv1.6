@@ -6,7 +6,7 @@ import { Box } from "@mui/material";
 import StickyNotesPanel from "./StickyNotes/StickyNotesPanel";
 import { useMobileDetection } from "../hooks/useMobileDetection";
 import { DeviceConditional } from "../utils/mobile/DeviceConditional";
-import MobileNavigation from "./mobile/MobileNavigation";
+import MobileNav from "./MobileNav";  // Changed from MobileNavigation to MobileNav
 import { mainMenuSections } from "./menuConfig";
 import { MobileNavContext } from "../context/MobileNavContext";
 
@@ -28,8 +28,8 @@ const Layout: React.FC<{
       <DeviceConditional
         mobile={
           <>
-            <MobileNavigation
-              open={mobileNavOpen}
+            <MobileNav
+              open={mobileNavOpen}  // Changed to controlled props
               onClose={() => setMobileNavOpen(false)}
               user={user}
               onLogout={onLogout}

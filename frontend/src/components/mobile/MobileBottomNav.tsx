@@ -85,6 +85,7 @@ const MobileBottomNav: React.FC = () => {
         borderTop: '1px solid',
         borderColor: 'divider',
         boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.1)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), constant(safe-area-inset-bottom))',  // Added for iOS safe area
       }}
       elevation={3}
     >
@@ -92,7 +93,7 @@ const MobileBottomNav: React.FC = () => {
         value={getCurrentValue()}
         onChange={handleNavigation}
         sx={{
-          height: 60,
+          height: 'calc(60px + max(env(safe-area-inset-bottom), constant(safe-area-inset-bottom)))',  // Adjusted height for safe area
           '& .MuiBottomNavigationAction-root': {
             minWidth: 'auto',
             paddingTop: 1,

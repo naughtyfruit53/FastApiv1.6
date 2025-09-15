@@ -8,10 +8,14 @@ import UnifiedLoginForm from "../components/UnifiedLoginForm";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import DemoModeDialog from "../components/DemoModeDialog";
 import { useAuth } from "../context/AuthContext";
+import useMobileRouting from "../hooks/mobile/useMobileRouting";  // Added import for mobile routing
+
 const LoginPage: React.FC = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [demoModeOpen, setDemoModeOpen] = useState(false);
   const { login } = useAuth();
+  const { getMobileRoute } = useMobileRouting();  // Added hook for mobile-aware routing
+
   // Check if demo mode should be activated after login
   useEffect(() => {
     const pendingDemo = localStorage.getItem("pendingDemoMode");
@@ -20,6 +24,7 @@ const LoginPage: React.FC = () => {
       localStorage.setItem("demoMode", "true");
     }
   }, []);
+
   const handleLogin = async (token: string, loginResponse?: any) => {
     console.log("[Login] Login successful, processing response:", {
       hasToken: !!token,
@@ -31,10 +36,12 @@ const LoginPage: React.FC = () => {
       isDemoMode: loginResponse?.demo_mode,
       timestamp: new Date().toISOString(),
     });
+
     // Always save token to localStorage before anything else
     if (token) {
       localStorage.setItem("token", token);
     }
+
     try {
       console.log(
         "[Login] Calling AuthContext login method to establish session",
@@ -48,26 +55,28 @@ const LoginPage: React.FC = () => {
         hasSuperAdminFlag: !!localStorage.getItem("is_super_admin"),
         isDemoMode: !!localStorage.getItem("demoMode"),
       });
+
       // Check if this is demo mode
       if (
         loginResponse?.demo_mode ||
         localStorage.getItem("demoMode") === "true"
       ) {
         console.log("[Login] Demo mode activated - redirecting to demo page");
-        window.location.href = "/demo";
+        window.location.href = getMobileRoute("/demo");  // Updated to use mobile-aware route
         return;
       }
+
       // Check if password change is required (not mandatory for OTP login)
       if (loginResponse?.must_change_password && !loginResponse?.otp_login) {
         console.log(
           "[Login] Password change required - redirecting to password reset",
         );
         // Use hard reload to avoid SPA race condition - ensures token is present for AuthProvider's effect
-        window.location.href = "/password-reset";
+        window.location.href = getMobileRoute("/password-reset");  // Updated to use mobile-aware route
       } else {
         console.log("[Login] Login complete - redirecting to dashboard");
         // Use hard reload to avoid SPA race condition - ensures token is present for AuthProvider's effect
-        window.location.href = "/dashboard";
+        window.location.href = getMobileRoute("/dashboard");  // Updated to use mobile-aware route
       }
     } catch (err) {
       console.error("Failed to establish secure session:", err);
@@ -77,6 +86,7 @@ const LoginPage: React.FC = () => {
       });
     }
   };
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, textAlign: "center" }}>
