@@ -315,7 +315,8 @@ export const menuItems = {
           { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
           { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
           { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
-          { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> }
+          { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> },
+          { name: 'Exhibition Mode', path: '/exhibition-mode', icon: <Business /> }
         ]
       },
       {

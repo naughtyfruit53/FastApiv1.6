@@ -633,3 +633,333 @@ async def list_project_milestones(
         milestone_details.append(milestone_detail)
     
     return milestone_details
+
+
+# ============================================================================
+# DOCUMENT MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@router.post("/projects/{project_id}/documents", response_model=DocumentResponse)
+async def upload_project_document(
+    project_id: int,
+    file: UploadFile = File(...),
+    document_type: str = Query("general", description="Document type"),
+    description: Optional[str] = Query(None, description="Document description"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload a document to a project"""
+    org_id = current_user.organization_id
+    rbac = RBACService(db)
+    
+    # Verify project access
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.organization_id == org_id
+    ).first()
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    user_companies = rbac.get_user_companies(current_user.id)
+    if project.company_id and project.company_id not in user_companies:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: User does not have access to this project's company"
+        )
+    
+    try:
+        # Validate file
+        if file.size > 10 * 1024 * 1024:  # 10MB limit
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="File too large. Maximum size is 10MB"
+            )
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Create document record
+        document = ProjectDocument(
+            project_id=project_id,
+            organization_id=org_id,
+            company_id=project.company_id,
+            name=file.filename,
+            document_type=document_type,
+            file_type=file.content_type,
+            file_size=len(file_content),
+            description=description,
+            uploaded_by=current_user.id
+        )
+        
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+        
+        # In a real implementation, you would save the file to cloud storage
+        # For now, we'll just store the metadata
+        
+        return DocumentResponse(
+            id=document.id,
+            project_id=document.project_id,
+            name=document.name,
+            document_type=document.document_type,
+            file_type=document.file_type,
+            file_size=document.file_size,
+            description=document.description,
+            uploaded_at=document.created_at,
+            uploaded_by_name=current_user.full_name
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload document: {str(e)}"
+        )
+
+
+@router.get("/projects/{project_id}/documents", response_model=List[DocumentWithDetails])
+async def get_project_documents(
+    project_id: int,
+    document_type: Optional[str] = Query(None, description="Filter by document type"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all documents for a project"""
+    org_id = current_user.organization_id
+    rbac = RBACService(db)
+    
+    # Verify project access
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.organization_id == org_id
+    ).first()
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    user_companies = rbac.get_user_companies(current_user.id)
+    if project.company_id and project.company_id not in user_companies:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: User does not have access to this project's company"
+        )
+    
+    # Build query
+    query = db.query(ProjectDocument).filter(
+        ProjectDocument.project_id == project_id,
+        ProjectDocument.organization_id == org_id
+    ).options(
+        joinedload(ProjectDocument.uploader),
+        joinedload(ProjectDocument.project)
+    )
+    
+    if document_type:
+        query = query.filter(ProjectDocument.document_type == document_type)
+    
+    documents = query.order_by(desc(ProjectDocument.created_at)).all()
+    
+    # Build detailed response
+    document_details = []
+    for doc in documents:
+        doc_detail = DocumentWithDetails(
+            **doc.__dict__,
+            project_name=doc.project.name,
+            uploaded_by_name=doc.uploader.full_name if doc.uploader else "Unknown"
+        )
+        document_details.append(doc_detail)
+    
+    return document_details
+
+
+@router.get("/projects/{project_id}/documents/{document_id}", response_model=DocumentWithDetails)
+async def get_project_document(
+    project_id: int,
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific project document"""
+    org_id = current_user.organization_id
+    rbac = RBACService(db)
+    
+    # Verify project access
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.organization_id == org_id
+    ).first()
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    user_companies = rbac.get_user_companies(current_user.id)
+    if project.company_id and project.company_id not in user_companies:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: User does not have access to this project's company"
+        )
+    
+    # Get document
+    document = db.query(ProjectDocument).filter(
+        ProjectDocument.id == document_id,
+        ProjectDocument.project_id == project_id,
+        ProjectDocument.organization_id == org_id
+    ).options(
+        joinedload(ProjectDocument.uploader),
+        joinedload(ProjectDocument.project)
+    ).first()
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    return DocumentWithDetails(
+        **document.__dict__,
+        project_name=document.project.name,
+        uploaded_by_name=document.uploader.full_name if document.uploader else "Unknown"
+    )
+
+
+@router.put("/projects/{project_id}/documents/{document_id}", response_model=DocumentResponse)
+async def update_project_document(
+    project_id: int,
+    document_id: int,
+    document_data: DocumentUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update project document metadata"""
+    org_id = current_user.organization_id
+    rbac = RBACService(db)
+    
+    # Verify project access
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.organization_id == org_id
+    ).first()
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    user_companies = rbac.get_user_companies(current_user.id)
+    if project.company_id and project.company_id not in user_companies:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: User does not have access to this project's company"
+        )
+    
+    # Get document
+    document = db.query(ProjectDocument).filter(
+        ProjectDocument.id == document_id,
+        ProjectDocument.project_id == project_id,
+        ProjectDocument.organization_id == org_id
+    ).first()
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    try:
+        # Update document fields
+        for field, value in document_data.dict(exclude_unset=True).items():
+            setattr(document, field, value)
+        
+        document.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(document)
+        
+        return DocumentResponse(
+            id=document.id,
+            project_id=document.project_id,
+            name=document.name,
+            document_type=document.document_type,
+            file_type=document.file_type,
+            file_size=document.file_size,
+            description=document.description,
+            uploaded_at=document.created_at,
+            uploaded_by_name=current_user.full_name
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update document: {str(e)}"
+        )
+
+
+@router.delete("/projects/{project_id}/documents/{document_id}")
+async def delete_project_document(
+    project_id: int,
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a project document"""
+    org_id = current_user.organization_id
+    rbac = RBACService(db)
+    
+    # Verify project access
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.organization_id == org_id
+    ).first()
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    user_companies = rbac.get_user_companies(current_user.id)
+    if project.company_id and project.company_id not in user_companies:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: User does not have access to this project's company"
+        )
+    
+    # Get document
+    document = db.query(ProjectDocument).filter(
+        ProjectDocument.id == document_id,
+        ProjectDocument.project_id == project_id,
+        ProjectDocument.organization_id == org_id
+    ).first()
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    try:
+        # In a real implementation, you would also delete the file from cloud storage
+        db.delete(document)
+        db.commit()
+        
+        return {"message": "Document deleted successfully"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document: {str(e)}"
+        )
+    
+    return milestone_details
