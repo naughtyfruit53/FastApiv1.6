@@ -111,6 +111,7 @@ export const menuItems = {
           { name: 'Current Stock', path: '/inventory/stock', icon: <Inventory /> },
           { name: 'Stock Movements', path: '/inventory/movements', icon: <SwapHoriz /> },
           { name: 'Low Stock Report', path: '/inventory/low-stock', icon: <TrendingUp /> },
+          { name: 'Bulk Import', path: '/inventory/bulk-import', icon: <CloudUpload /> },
           //{ name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
           //{ name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
           //{ name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
@@ -289,7 +290,19 @@ export const menuItems = {
         items: [
           { name: 'Customer Analytics', path: '/analytics/customer', icon: <TrendingUp /> },
           { name: 'Sales Analytics', path: '/analytics/sales', icon: <BarChart /> },
-          { name: 'Purchase Analytics', path: '/analytics/purchase', icon: <ShoppingCart /> }
+          { name: 'Purchase Analytics', path: '/analytics/purchase', icon: <ShoppingCart /> },
+          { name: 'Marketing Analytics', path: '/marketing/analytics', icon: <Assessment /> },
+          { name: 'Finance Dashboard', path: '/finance-dashboard', icon: <Analytics /> },
+          { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
+        ]
+      },
+      {
+        title: 'Advanced Analytics',
+        items: [
+          { name: 'Project Analytics', path: '/projects/analytics', icon: <Analytics /> },
+          { name: 'HR Analytics', path: '/hr/analytics', icon: <TrendingUp /> },
+          { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
+          { name: 'Performance Reports', path: '/projects/reports', icon: <Assessment /> }
         ]
       },
       {
@@ -315,7 +328,8 @@ export const menuItems = {
           { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
           { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
           { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
-          { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> }
+          { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> },
+          { name: 'Exhibition Mode', path: '/exhibition-mode', icon: <Business /> }
         ]
       },
       {

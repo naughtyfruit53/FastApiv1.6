@@ -211,3 +211,27 @@ export const canAccessLedger = (user: User | null): boolean => {
     ["super_admin", "org_admin", "admin", "standard_user"].includes(role)
   );
 };
+
+export const canManageInventory = (user: User | null): boolean => {
+  if (!user) {
+    return false;
+  }
+  const role = user.role || localStorage.getItem("user_role");
+  // Super Admin, Org Admin, Admin, and Standard Users can manage inventory
+  return (
+    user.is_super_admin === true ||
+    ["super_admin", "org_admin", "admin", "standard_user"].includes(role)
+  );
+};
+
+export const canBulkImportStock = (user: User | null): boolean => {
+  if (!user) {
+    return false;
+  }
+  const role = user.role || localStorage.getItem("user_role");
+  // Super Admin, Org Admin, and Admin can perform bulk stock operations
+  return (
+    user.is_super_admin === true ||
+    ["super_admin", "org_admin", "admin"].includes(role)
+  );
+};
