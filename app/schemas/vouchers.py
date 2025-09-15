@@ -1,6 +1,6 @@
 # app/schemas/vouchers.py
 
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr
 from datetime import date, datetime
 from typing import Dict, Any
@@ -565,12 +565,14 @@ class DebitNoteInDB(VoucherInDBBase):
 
 # Payment Voucher
 class PaymentVoucherCreate(VoucherBase):
-    vendor_id: int
+    entity_id: int
+    entity_type: str = "Vendor"
     payment_method: Optional[str] = None
     reference: Optional[str] = None
 
 class PaymentVoucherUpdate(BaseModel):
-    vendor_id: Optional[int] = None
+    entity_id: Optional[int] = None
+    entity_type: Optional[str] = None
     payment_method: Optional[str] = None
     reference: Optional[str] = None
     total_amount: Optional[float] = None
@@ -578,9 +580,11 @@ class PaymentVoucherUpdate(BaseModel):
     notes: Optional[str] = None
 
 class PaymentVoucherInDB(VoucherInDBBase):
-    vendor_id: int
+    entity_id: int
+    entity_type: str
     payment_method: Optional[str]
     reference: Optional[str]
+    entity: Optional[Dict[str, Any]] = None
 
 # Receipt Voucher
 class ReceiptVoucherCreate(VoucherBase):

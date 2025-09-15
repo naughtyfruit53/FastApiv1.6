@@ -1,3 +1,5 @@
+# migrations/env.py
+
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
@@ -33,9 +35,9 @@ for (_, module_name, _) in pkgutil.iter_modules([models_dir]):
 
 config = context.config
 
-database_url = getattr(settings, "DATABASE_URL", None) or "sqlite:///./tritiq_erp.db"
+database_url = getattr(settings, "SESSION_DATABASE_URL", None) or getattr(settings, "DATABASE_URL", None) or "sqlite:///./tritiq_erp.db"
 if not database_url:
-    raise RuntimeError("DATABASE_URL must be set in app.core.config.settings or as an environment variable.")
+    raise RuntimeError("DATABASE_URL or SESSION_DATABASE_URL must be set in app.core.config.settings or as an environment variable.")
 config.set_main_option('sqlalchemy.url', database_url)
 
 if config.config_file_name is not None:

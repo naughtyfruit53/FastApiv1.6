@@ -1,12 +1,14 @@
 # app/api/v1/vouchers/payment_voucher.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
-from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional
+from sqlalchemy.orm import Session
+from typing import List, Optional, Dict, Any
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import PaymentVoucher
+from app.models.customer_models import Vendor, Customer  # Vendor and Customer are in customer_models.py
+from app.models.hr_models import EmployeeProfile as Employee  # Employee is EmployeeProfile in hr_models.py
 from app.schemas.vouchers import PaymentVoucherCreate, PaymentVoucherInDB, PaymentVoucherUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -14,6 +16,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["payment-vouchers"])
+
+def load_entity(db: Session, entity_id: int, entity_type: str) -> Optional[Dict[str, Any]]:
+    if entity_type == 'Vendor':
+        entity = db.query(Vendor).filter(Vendor.id == entity_id).first()
+        return {'id': entity.id, 'name': entity.name, 'type': 'Vendor'} if entity else None
+    elif entity_type == 'Customer':
+        entity = db.query(Customer).filter(Customer.id == entity_id).first()
+        return {'id': entity.id, 'name': entity.name, 'type': 'Customer'} if entity else None
+    elif entity_type == 'Employee':
+        entity = db.query(Employee).filter(Employee.id == entity_id).first()
+        return {'id': entity.id, 'name': entity.name, 'type': 'Employee'} if entity else None
+    return None
 
 @router.get("", response_model=List[PaymentVoucherInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[PaymentVoucherInDB])
@@ -27,7 +41,7 @@ async def get_payment_vouchers(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all payment vouchers with enhanced sorting and pagination"""
-    query = db.query(PaymentVoucher).options(joinedload(PaymentVoucher.vendor)).filter(
+    query = db.query(PaymentVoucher).filter(
         PaymentVoucher.organization_id == current_user.organization_id
     )
     
@@ -46,6 +60,8 @@ async def get_payment_vouchers(
         query = query.order_by(PaymentVoucher.created_at.desc())
     
     vouchers = query.offset(skip).limit(limit).all()
+    for voucher in vouchers:
+        voucher.entity = load_entity(db, voucher.entity_id, voucher.entity_type)
     return vouchers
 
 @router.get("/next-number", response_model=str)
@@ -70,6 +86,8 @@ async def create_payment_voucher(
 ):
     """Create new payment voucher"""
     try:
+        if voucher.entity_type not in ['Vendor', 'Customer', 'Employee']:
+            raise HTTPException(status_code=400, detail="Invalid entity_type")
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
         voucher_data['organization_id'] = current_user.organization_id
@@ -94,13 +112,15 @@ async def create_payment_voucher(
         db.commit()
         db.refresh(db_voucher)
         
-        if send_email and db_voucher.vendor and db_voucher.vendor.email:
+        db_voucher.entity = load_entity(db, db_voucher.entity_id, db_voucher.entity_type)
+        
+        if send_email and db_voucher.entity and 'email' in db_voucher.entity:  # Assuming entity has email, but for simplicity
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="payment_voucher",
                 voucher_id=db_voucher.id,
-                recipient_email=db_voucher.vendor.email,
-                recipient_name=db_voucher.vendor.name
+                recipient_email=db_voucher.entity.get('email', ''),
+                recipient_name=db_voucher.entity['name']
             )
         
         logger.info(f"Payment voucher {db_voucher.voucher_number} created by {current_user.email}")
@@ -120,7 +140,7 @@ async def get_payment_voucher(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    voucher = db.query(PaymentVoucher).options(joinedload(PaymentVoucher.vendor)).filter(
+    voucher = db.query(PaymentVoucher).filter(
         PaymentVoucher.id == voucher_id,
         PaymentVoucher.organization_id == current_user.organization_id
     ).first()
@@ -129,6 +149,7 @@ async def get_payment_voucher(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Payment voucher not found"
         )
+    voucher.entity = load_entity(db, voucher.entity_id, voucher.entity_type)
     return voucher
 
 @router.put("/{voucher_id}", response_model=PaymentVoucherInDB)
@@ -150,11 +171,15 @@ async def update_payment_voucher(
             )
         
         update_data = voucher_update.dict(exclude_unset=True)
+        if 'entity_type' in update_data and update_data['entity_type'] not in ['Vendor', 'Customer', 'Employee']:
+            raise HTTPException(status_code=400, detail="Invalid entity_type")
         for field, value in update_data.items():
             setattr(voucher, field, value)
         
         db.commit()
         db.refresh(voucher)
+        
+        voucher.entity = load_entity(db, voucher.entity_id, voucher.entity_type)
         
         logger.info(f"Payment voucher {voucher.voucher_number} updated by {current_user.email}")
         return voucher
