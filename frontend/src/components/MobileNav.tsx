@@ -10,7 +10,6 @@ import {
   ListItemIcon,
   ListItemText,
   Collapse,
-  IconButton,
   Box,
   Typography,
   Divider,
@@ -18,8 +17,6 @@ import {
   InputAdornment,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
-  Close as CloseIcon,
   ExpandLess,
   ExpandMore,
   Search as SearchIcon,
@@ -42,19 +39,20 @@ import { isAppSuperAdmin } from '../types/user.types';
 import { menuItems, mainMenuSections } from './menuConfig';
 
 interface MobileNavProps {
+  open: boolean;  // Changed to controlled open prop
+  onClose: () => void;  // Added onClose prop
   user?: any;
   onLogout: () => void;
   menuItems: any;
-  isVisible?: boolean;
 }
 
 const MobileNav: React.FC<MobileNavProps> = ({ 
+  open, 
+  onClose, 
   user, 
   onLogout, 
-  menuItems, 
-  isVisible = true 
+  menuItems 
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [expandedSubSections, setExpandedSubSections] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,13 +61,9 @@ const MobileNav: React.FC<MobileNavProps> = ({
   const isSuperAdmin = isAppSuperAdmin(user);
 
   // Don't render on desktop
-  if (!isMobile || !isVisible) {
+  if (!isMobile) {
     return null;
   }
-
-  const toggleDrawer = () => {
-    setIsOpen(!isOpen);
-  };
 
   const handleSectionToggle = (sectionTitle: string) => {
     setExpandedSections(prev => 
@@ -89,12 +83,12 @@ const MobileNav: React.FC<MobileNavProps> = ({
 
   const navigateTo = (path: string) => {
     router.push(path);
-    setIsOpen(false); // Close drawer after navigation
+    onClose(); // Close drawer after navigation
   };
 
   const handleLogout = () => {
     onLogout();
-    setIsOpen(false);
+    onClose();
   };
 
   const filterMenuItems = (items: any[], query: string) => {
@@ -257,136 +251,110 @@ const MobileNav: React.FC<MobileNavProps> = ({
   };
 
   return (
-    <>
-      {/* Mobile Menu Toggle Button */}
-      <IconButton
-        color="inherit"
-        aria-label="open mobile menu"
-        onClick={toggleDrawer}
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          minWidth: 44,
-          minHeight: 44,
-        }}
-      >
-        <MenuIcon />
-      </IconButton>
-
-      {/* Mobile Navigation Drawer */}
-      <Drawer
-        anchor="left"
-        open={isOpen}
-        onClose={toggleDrawer}
-        PaperProps={{
-          sx: {
-            width: 320,
-            backgroundColor: 'background.paper',
-          }
-        }}
-        ModalProps={{
-          keepMounted: true, // Better performance on mobile
-        }}
-      >
+    // Removed the toggle button, as it's now in the header
+    <Drawer
+      anchor="left"
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: 320,
+          backgroundColor: 'background.paper',
+        }
+      }}
+      ModalProps={{
+        keepMounted: true, // Better performance on mobile
+      }}
+    >
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%',
+        overflow: 'hidden'
+      }}>
+        {/* Header */}
         <Box sx={{ 
           display: 'flex', 
-          flexDirection: 'column', 
-          height: '100%',
-          overflow: 'hidden'
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          p: 2,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'primary.main',
+          color: 'primary.contrastText'
         }}>
-          {/* Header */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            p: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'primary.main',
-            color: 'primary.contrastText'
-          }}>
-            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-              FastAPI v1.6
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+            FastAPI v1.6
+          </Typography>
+        </Box>
+
+        {/* User Info */}
+        {user && (
+          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary">
+              Welcome, {user.name || user.email}
             </Typography>
-            <IconButton
-              onClick={toggleDrawer}
-              sx={{ 
-                color: 'primary.contrastText',
-                minWidth: 44,
-                minHeight: 44,
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
+            <Typography variant="caption" color="text.secondary">
+              {user.role || 'User'}
+            </Typography>
           </Box>
+        )}
 
-          {/* User Info */}
-          {user && (
-            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="body2" color="text.secondary">
-                Welcome, {user.name || user.email}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {user.role || 'User'}
-              </Typography>
-            </Box>
-          )}
+        {/* Search */}
+        <Box sx={{ p: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search menu items..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ fontSize: '1.2rem' }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              }
+            }}
+          />
+        </Box>
 
-          {/* Search */}
-          <Box sx={{ p: 2 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search menu items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: '1.2rem' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                }
+        {/* Menu Items */}
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          <List sx={{ p: 0 }}>
+            {renderMenuItems()}
+          </List>
+        </Box>
+
+        {/* Footer Actions */}
+        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{
+              borderRadius: 1,
+              backgroundColor: 'error.light',
+              color: 'error.contrastText',
+              minHeight: 48,
+              '&:hover': {
+                backgroundColor: 'error.main',
+              }
+            }}
+          >
+            <ListItemText 
+              primary="Logout"
+              primaryTypographyProps={{
+                textAlign: 'center',
+                fontWeight: 'bold',
               }}
             />
-          </Box>
-
-          {/* Menu Items */}
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
-            <List sx={{ p: 0 }}>
-              {renderMenuItems()}
-            </List>
-          </Box>
-
-          {/* Footer Actions */}
-          <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <ListItemButton
-              onClick={handleLogout}
-              sx={{
-                borderRadius: 1,
-                backgroundColor: 'error.light',
-                color: 'error.contrastText',
-                minHeight: 48,
-                '&:hover': {
-                  backgroundColor: 'error.main',
-                }
-              }}
-            >
-              <ListItemText 
-                primary="Logout"
-                primaryTypographyProps={{
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                }}
-              />
-            </ListItemButton>
-          </Box>
+          </ListItemButton>
         </Box>
-      </Drawer>
-    </>
+      </Box>
+    </Drawer>
   );
 };
 

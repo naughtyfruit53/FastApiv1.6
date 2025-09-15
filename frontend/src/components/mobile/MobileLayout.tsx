@@ -64,7 +64,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         sx={{
           flex: 1,
           padding: 2,
-          paddingBottom: showBottomNav ? 9 : 2, // Account for bottom nav
+          paddingBottom: showBottomNav ? 'calc(9 * 8px + max(env(safe-area-inset-bottom), constant(safe-area-inset-bottom)))' : 2,  // Updated for safe area (9 theme spacing = 72px + inset)
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
         }}

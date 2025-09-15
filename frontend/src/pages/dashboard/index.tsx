@@ -3,12 +3,20 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
+import { useMobileDetection } from "../../hooks/useMobileDetection";  // Added import for mobile detection
 import AppSuperAdminDashboard from "./AppSuperAdminDashboard";
 import OrgDashboard from "./OrgDashboard";
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
+  const { isMobile } = useMobileDetection();  // Added for mobile check
   const router = useRouter();
+
+  const isSuperAdmin =
+    user?.is_super_admin ||
+    user?.role === "super_admin" ||
+    !user?.organization_id ||
+    user?.email === "naughtyfruit53@gmail.com";
 
   useEffect(() => {
     console.log("[Dashboard] Component mounted, checking auth state:", {
@@ -24,8 +32,11 @@ const Dashboard: React.FC = () => {
         "[Dashboard] No user found and not loading - redirecting to login",
       );
       router.push("/login");
+    } else if (!loading && user && isMobile && !isSuperAdmin) {  // Added mobile redirect for non-super admins
+      console.log("[Dashboard] Mobile detected for org user - redirecting to mobile dashboard");
+      router.push("/mobile/dashboard");
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isMobile, isSuperAdmin]);
 
   // Prevent any rendering until we have confirmed auth state
   if (loading) {
@@ -70,12 +81,6 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
-
-  const isSuperAdmin =
-    user.is_super_admin ||
-    user.role === "super_admin" ||
-    !user.organization_id ||
-    user.email === "naughtyfruit53@gmail.com";
 
   console.log("[Dashboard] Auth context ready - determining dashboard type:", {
     isSuperAdmin,

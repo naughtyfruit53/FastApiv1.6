@@ -12,6 +12,7 @@ import { useRouter } from "next/router";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CompanyProvider } from "../context/CompanyContext"; // Add CompanyProvider import
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
+import Head from 'next/head';  // Added import for Head to handle meta tags
 
 // Create modern theme using our design system
 const theme = createTheme({
@@ -181,27 +182,32 @@ function MyApp({ Component, pageProps }: AppProps): any {
   };
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <CompanyProvider> {/* Add CompanyProvider here */}
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <LayoutWrapper />
-            <ToastContainer
-              position="top-right"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-            />
-          </ThemeProvider>
-        </CompanyProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />  {/* Updated for iOS safe area support */}
+      </Head>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <CompanyProvider> {/* Add CompanyProvider here */}
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <LayoutWrapper />
+              <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+              />
+            </ThemeProvider>
+          </CompanyProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </>
   );
 }
 
