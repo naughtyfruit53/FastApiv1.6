@@ -7,6 +7,7 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from app.models import Vendor, Customer
+from app.models.hr_models import EmployeeProfile
 from app.models.vouchers import (
     PaymentVoucher, ReceiptVoucher, PurchaseVoucher, SalesVoucher,
     DebitNote, CreditNote, BaseVoucher
@@ -158,10 +159,10 @@ class LedgerService:
             {
                 "model": PaymentVoucher,
                 "type": "payment_voucher",
-                "account_relation": "vendor",
-                "account_field": "vendor_id", 
+                "account_relation": None,
+                "account_field": None, 
                 "debit_amount_field": None,
-                "credit_amount_field": "total_amount"  # Decreases vendor payable
+                "credit_amount_field": "total_amount"  # Adjusted based on entity_type
             },
             {
                 "model": ReceiptVoucher,
@@ -225,19 +226,26 @@ class LedgerService:
         if filters.end_date:
             query = query.filter(model.date <= filters.end_date)
         
-        # Handle special cases for DebitNote and CreditNote which can have vendor or customer
-        if config["type"] in ["debit_note", "credit_note"]:
-            # For debit/credit notes, we need to check both vendor_id and customer_id
-            if filters.account_type == "vendor":
-                query = query.filter(model.vendor_id.isnot(None))
-            elif filters.account_type == "customer":
-                query = query.filter(model.customer_id.isnot(None))
+        # Handle special cases for DebitNote, CreditNote, and PaymentVoucher
+        if config["type"] in ["debit_note", "credit_note", "payment_voucher"]:
+            # For debit/credit notes and payments, we need to check both vendor_id and customer_id or entity_type
+            if filters.account_type != "all":
+                if config["type"] == "payment_voucher":
+                    query = query.filter(model.entity_type.ilike(filters.account_type))
+                else:
+                    if filters.account_type == "vendor":
+                        query = query.filter(model.vendor_id.isnot(None))
+                    elif filters.account_type == "customer":
+                        query = query.filter(model.customer_id.isnot(None))
                 
             if filters.account_id:
-                if filters.account_type == "vendor":
-                    query = query.filter(model.vendor_id == filters.account_id)
-                elif filters.account_type == "customer":
-                    query = query.filter(model.customer_id == filters.account_id)
+                if config["type"] == "payment_voucher":
+                    query = query.filter(model.entity_id == filters.account_id)
+                else:
+                    if filters.account_type == "vendor":
+                        query = query.filter(model.vendor_id == filters.account_id)
+                    elif filters.account_type == "customer":
+                        query = query.filter(model.customer_id == filters.account_id)
         else:
             # Regular vouchers with single account type
             if config["account_relation"]:
@@ -266,10 +274,16 @@ class LedgerService:
             debit_amount = Decimal(0)
             credit_amount = Decimal(0)
             
-            if config["debit_amount_field"]:
-                debit_amount = Decimal(str(getattr(voucher, config["debit_amount_field"], 0) or 0))
-            if config["credit_amount_field"]:
-                credit_amount = Decimal(str(getattr(voucher, config["credit_amount_field"], 0) or 0))
+            if config["type"] == "payment_voucher":
+                if account_type == "vendor" or account_type == "employee":
+                    credit_amount = Decimal(str(getattr(voucher, config["credit_amount_field"], 0) or 0))
+                elif account_type == "customer":
+                    debit_amount = Decimal(str(getattr(voucher, config["credit_amount_field"], 0) or 0))
+            else:
+                if config["debit_amount_field"]:
+                    debit_amount = Decimal(str(getattr(voucher, config["debit_amount_field"], 0) or 0))
+                if config["credit_amount_field"]:
+                    credit_amount = Decimal(str(getattr(voucher, config["credit_amount_field"], 0) or 0))
             
             transaction = LedgerTransaction(
                 id=voucher.id,
@@ -309,6 +323,19 @@ class LedgerService:
                 account_id = voucher.customer_id
                 if hasattr(voucher, 'customer') and voucher.customer:
                     account_name = voucher.customer.name
+        elif config["type"] == "payment_voucher":
+            if hasattr(voucher, 'entity_type') and voucher.entity_type:
+                account_type = voucher.entity_type.lower()
+                account_id = voucher.entity_id
+                if account_type == "vendor":
+                    vendor = db.query(Vendor).filter(Vendor.id == account_id).first()
+                    account_name = vendor.name if vendor else "Unknown Vendor"
+                elif account_type == "customer":
+                    customer = db.query(Customer).filter(Customer.id == account_id).first()
+                    account_name = customer.name if customer else "Unknown Customer"
+                elif account_type == "employee":
+                    employee = db.query(EmployeeProfile).filter(EmployeeProfile.id == account_id).first()
+                    account_name = employee.user.full_name if employee and employee.user else "Unknown Employee"
         else:
             # Regular vouchers
             account_type = config["account_relation"]
@@ -337,8 +364,8 @@ class LedgerService:
                 account_balances[account_key] = Decimal(0)
             
             # Update balance based on account type and transaction type
-            if transaction.account_type == "vendor":
-                # For vendors: debit increases payable (positive), credit decreases payable (negative)
+            if transaction.account_type == "vendor" or transaction.account_type == "employee":
+                # For vendors/employees: debit increases payable (positive), credit decreases payable (negative)
                 account_balances[account_key] += transaction.debit_amount - transaction.credit_amount
             else:  # customer
                 # For customers: credit increases receivable (positive), debit decreases receivable (negative)
@@ -376,8 +403,8 @@ class LedgerService:
                 }
             
             # Update balance
-            if transaction.account_type == "vendor":
-                # Vendor balance: positive = payable amount
+            if transaction.account_type == "vendor" or transaction.account_type == "employee":
+                # Vendor/employee balance: positive = payable amount
                 account_data[account_key]["balance"] += transaction.debit_amount - transaction.credit_amount
             else:  # customer
                 # Customer balance: positive = receivable amount  
@@ -398,23 +425,31 @@ class LedgerService:
                 ).first()
                 if vendor:
                     data["contact_info"] = vendor.contact_number
-            else:  # customer
+            elif account_type == "customer":
                 customer = db.query(Customer).filter(
                     Customer.id == account_id,
                     Customer.organization_id == organization_id
                 ).first()
                 if customer:
                     data["contact_info"] = customer.contact_number
+            elif account_type == "employee":
+                employee = db.query(EmployeeProfile).filter(
+                    EmployeeProfile.id == account_id,
+                    EmployeeProfile.organization_id == organization_id
+                ).first()
+                if employee:
+                    data["contact_info"] = employee.personal_phone
         
         # Convert to response objects
         outstanding_balances = []
         for data in account_data.values():
             # Apply correct sign convention:
-            # - Negative for amounts payable to vendors
+            # - Negative for amounts payable to vendors/employees
             # - Positive for amounts receivable from customers
             outstanding_amount = data["balance"]
-            if data["account_type"] == "vendor" and outstanding_amount > 0:
-                outstanding_amount = -outstanding_amount  # Payable to vendor
+            if (data["account_type"] == "vendor" or data["account_type"] == "employee") and outstanding_amount > 0:
+                outstanding_amount = -outstanding_amount  # Payable
+            # For customers, positive is receivable
             
             outstanding_balance = OutstandingBalance(
                 account_type=data["account_type"],

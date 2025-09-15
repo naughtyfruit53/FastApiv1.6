@@ -46,6 +46,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
   };
 

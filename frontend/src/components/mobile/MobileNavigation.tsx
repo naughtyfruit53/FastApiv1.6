@@ -1,9 +1,11 @@
 import React from 'react';
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, TextField, InputAdornment } from '@mui/material';
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, TextField, InputAdornment, Accordion, AccordionSummary, AccordionDetails, ExpandMoreIcon } from '@mui/material';
 import { Search, Dashboard, Receipt, Inventory, People, Business, Assessment, Settings, ShoppingCart, AccountBalance, Campaign, SupportAgent } from '@mui/icons-material';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
+import { menuItems, mainMenuSections } from '../menuConfig';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 
 interface MobileNavigationProps {
   open: boolean;
@@ -18,7 +20,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   onClose,
   user,
   onLogout,
-  menuItems,
 }) => {
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,9 +55,60 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       'Reports': <Assessment />,
       'Masters': <Business />,
       'Administration': <Settings />,
+      'Master Data': menuItems.masterData.icon,
+      'ERP': menuItems.erp.icon,
+      'Finance': menuItems.finance.icon,
+      'Accounting': <AccountBalance />,
+      'Reports & Analytics': <Assessment />,
+      'Sales': menuItems.sales.icon,
+      'Marketing': menuItems.marketing.icon,
+      'Service': menuItems.service.icon,
+      'Projects': <Assignment />,
+      'HR Management': <Groups />,
+      'Tasks & Calendar': <Task />,
+      'Email': <Email />,
+      'Settings': menuItems.settings.icon,
     };
     return iconMap[sectionTitle] || <Receipt />;
   };
+
+  const sections = mainMenuSections(isSuperAdmin);
+
+  // Add settings separately if not super admin
+  if (!isSuperAdmin) {
+    sections.push({
+      title: 'Settings',
+      subSections: menuItems.settings.sections,
+    });
+  }
+
+  const renderMenuItem = (item: any) => (
+    <ListItemButton 
+      onClick={() => item.subItems ? handleSectionToggle(item.name) : navigateTo(item.path)}
+      sx={{ pl: 4 }}
+    >
+      <ListItemIcon>{item.icon}</ListItemIcon>
+      <ListItemText primary={item.name} />
+      {item.subItems && <ExpandMore sx={{ transform: expandedSections.includes(item.name) ? 'rotate(180deg)' : 'rotate(0deg)' }} />}
+    </ListItemButton>
+  );
+
+  const renderSubItems = (subItems: any[]) => (
+    <AccordionDetails sx={{ p: 0 }}>
+      <List disablePadding>
+        {subItems.map((subItem, subIndex) => (
+          <ListItemButton 
+            key={subIndex}
+            onClick={() => navigateTo(subItem.path)}
+            sx={{ pl: 6 }}
+          >
+            <ListItemIcon sx={{ minWidth: 36 }}>{subItem.icon}</ListItemIcon>
+            <ListItemText primary={subItem.name} />
+          </ListItemButton>
+        ))}
+      </List>
+    </AccordionDetails>
+  );
 
   return (
     <Drawer
@@ -132,58 +184,69 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
             </ListItemButton>
             <Divider />
 
-            {/* Mobile Sales */}
-            <ListItemButton onClick={() => navigateTo('/mobile/sales')}>
-              <ListItemIcon>
-                <Receipt />
-              </ListItemIcon>
-              <ListItemText primary="Sales" />
-            </ListItemButton>
-            <Divider />
-
-            {/* Mobile CRM */}
-            <ListItemButton onClick={() => navigateTo('/mobile/crm')}>
-              <ListItemIcon>
-                <People />
-              </ListItemIcon>
-              <ListItemText primary="CRM" />
-            </ListItemButton>
-            <Divider />
-
-            {/* Mobile Inventory */}
-            <ListItemButton onClick={() => navigateTo('/mobile/inventory')}>
-              <ListItemIcon>
-                <Inventory />
-              </ListItemIcon>
-              <ListItemText primary="Inventory" />
-            </ListItemButton>
-            <Divider />
-
-            {/* Mobile Finance */}
-            <ListItemButton onClick={() => navigateTo('/mobile/finance')}>
-              <ListItemIcon>
-                <AccountBalance />
-              </ListItemIcon>
-              <ListItemText primary="Finance" />
-            </ListItemButton>
-            <Divider />
-
-            {/* Mobile Reports */}
-            <ListItemButton onClick={() => navigateTo('/mobile/reports')}>
-              <ListItemIcon>
-                <Assessment />
-              </ListItemIcon>
-              <ListItemText primary="Reports" />
-            </ListItemButton>
-            <Divider />
-
-            {/* Mobile Settings */}
-            <ListItemButton onClick={() => navigateTo('/mobile/settings')}>
-              <ListItemIcon>
-                <Settings />
-              </ListItemIcon>
-              <ListItemText primary="Settings" />
-            </ListItemButton>
+            {sections.map((section, index) => (
+              <Accordion 
+                key={index}
+                expanded={expandedSections.includes(section.title)}
+                onChange={() => handleSectionToggle(section.title)}
+                disableGutters
+                elevation={0}
+                sx={{
+                  '&:before': { display: 'none' },
+                  m: 0,
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMore />}
+                  sx={{
+                    px: 2,
+                    minHeight: 48,
+                    '& .MuiAccordionSummary-content': {
+                      margin: 0,
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    {getIconForSection(section.title)}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={section.title}
+                    primaryTypographyProps={{
+                      variant: 'subtitle2',
+                      fontWeight: 'medium'
+                    }}
+                  />
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 0 }}>
+                  {section.subSections?.map((subSection: any, subIndex: number) => (
+                    <Box key={subIndex}>
+                      {subSection.title && (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            px: 3, 
+                            py: 1, 
+                            color: 'text.secondary',
+                            fontWeight: 'medium',
+                            backgroundColor: 'action.hover'
+                          }}
+                        >
+                          {subSection.title}
+                        </Typography>
+                      )}
+                      <List disablePadding>
+                        {subSection.items.map((item: any, itemIndex: number) => (
+                          <React.Fragment key={itemIndex}>
+                            {renderMenuItem(item)}
+                            {item.subItems && expandedSections.includes(item.name) && renderSubItems(item.subItems)}
+                          </React.Fragment>
+                        ))}
+                      </List>
+                    </Box>
+                  ))}
+                </AccordionDetails>
+              </Accordion>
+            ))}
           </List>
         </Box>
 

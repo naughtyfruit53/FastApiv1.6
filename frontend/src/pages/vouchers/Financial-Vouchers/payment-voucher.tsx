@@ -126,15 +126,13 @@ const PaymentVoucher: React.FC = () => {
     }
   }, [reference, referenceOptions]);
 
-  const handleSubmitFormMapped = (e: React.FormEvent) => {
-    e.preventDefault();
-    const data = watch();
+  const handleSubmitFormMapped = (data: any) => {
     if (data.entity) {
       data.entity_id = data.entity.id;
       data.entity_type = data.entity.type;
       delete data.entity;
     }
-    handleSubmit(handleSubmitForm)(e);  // Proceed with original submit
+    handleSubmitForm(data);  // Proceed with original submit
   };
 
   // Grid spacing adjustments

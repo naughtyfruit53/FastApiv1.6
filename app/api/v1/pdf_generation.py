@@ -17,6 +17,9 @@ from app.services.rbac import RBACService
 from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem
 from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn, DeliveryChallanItem
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice, QuotationItem, SalesOrderItem, ProformaInvoiceItem
+from app.models.vouchers.financial import PaymentVoucher
+from app.models.customer_models import Vendor, Customer
+from app.models.hr_models import EmployeeProfile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,8 +41,9 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
         'quotation': 'presales_read',
         'sales_order': 'presales_read',
         'sales-orders': 'presales_read',
-        'proforma': 'presales_read',
-        'proforma-invoices': 'presales_read'
+        'proforma_invoice': 'presales_read',
+        'proforma-invoices': 'presales_read',
+        'payment-vouchers': 'voucher_read'
     }
     
     required_permission = permission_map.get(voucher_type)
@@ -64,18 +68,21 @@ async def generate_voucher_pdf(
     Generate PDF for a specific voucher
     
     Supported voucher types:
+    - - payment-vouchers: Payment Voucher
     - purchase: Purchase Voucher
     - purchase-vouchers: Purchase Voucher
     - purchase-orders: Purchase Order
     - purchase-return: Purchase Return
     - purchase-returns: Purchase Return
     - sales: Sales Voucher
+    - sales-vouchers: Sales Voucher
     - delivery-challan: Delivery Challan
     - sales-return: Sales Return
+    - sales-returns: Sales Return
     - quotation: Quotation
     - sales_order: Sales Order
     - sales-orders: Sales Order
-    - proforma: Proforma Invoice
+    - proforma_invoice: Proforma Invoice
     - proforma-invoices: Proforma Invoice
     """
     
@@ -83,7 +90,7 @@ async def generate_voucher_pdf(
     if voucher_type == 'quotations':
         voucher_type = 'quotation'
     elif voucher_type == 'proforma-invoices':
-        voucher_type = 'proforma'
+        voucher_type = 'proforma_invoice'
     elif voucher_type == 'sales-orders':
         voucher_type = 'sales_order'
     elif voucher_type == 'delivery-challans':
@@ -152,7 +159,7 @@ async def download_voucher_pdf(
     if voucher_type == 'quotations':
         voucher_type = 'quotation'
     elif voucher_type == 'proforma-invoices':
-        voucher_type = 'proforma'
+        voucher_type = 'proforma_invoice'
     elif voucher_type == 'sales-orders':
         voucher_type = 'sales_order'
     elif voucher_type == 'delivery-challans':
@@ -239,7 +246,7 @@ async def get_available_templates(
             "description": "Sales order confirmation"
         },
         {
-            "type": "proforma",
+            "type": "proforma_invoice",
             "name": "Proforma Invoice",
             "description": "Proforma invoice for advance payments"
         },
@@ -268,6 +275,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'purchase-return': PurchaseReturn,
         'purchase-returns': PurchaseReturn,
         'sales': SalesVoucher,
+        'sales-vouchers': SalesVoucher,
         'delivery-challan': DeliveryChallan,
         'delivery-challans': DeliveryChallan,
         'sales-return': SalesReturn,
@@ -275,8 +283,9 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'quotation': Quotation,
         'sales_order': SalesOrder,
         'sales-orders': SalesOrder,
-        'proforma': ProformaInvoice,
-        'proforma-invoices': ProformaInvoice
+        'proforma_invoice': ProformaInvoice,
+        'proforma-invoices': ProformaInvoice,
+        'payment-vouchers': PaymentVoucher
     }
     
     model_class = model_map.get(voucher_type)
@@ -308,7 +317,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
                 'quotation': QuotationItem,
                 'sales_order': SalesOrderItem,
                 'sales-orders': SalesOrderItem,
-                'proforma': ProformaInvoiceItem,
+                'proforma_invoice': ProformaInvoiceItem,
                 'proforma-invoices': ProformaInvoiceItem,
                 'delivery-challan': DeliveryChallanItem,
                 'delivery-challans': DeliveryChallanItem
@@ -325,7 +334,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             return None
         
         # Convert to dictionary
-        voucher_data = _voucher_to_dict(voucher)
+        voucher_data = _voucher_to_dict(voucher, db)
         voucher_data['voucher_type'] = voucher_type
         
         return voucher_data
@@ -337,7 +346,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             detail=f"Failed to retrieve voucher data"
         )
 
-def _voucher_to_dict(voucher) -> Dict[str, Any]:
+def _voucher_to_dict(voucher, db: Session) -> Dict[str, Any]:
     """
     Convert voucher ORM object to dictionary for template rendering
     """
@@ -356,6 +365,7 @@ def _voucher_to_dict(voucher) -> Dict[str, Any]:
         'total_discount_type': getattr(voucher, 'total_discount_type', None),
         'total_discount': float(getattr(voucher, 'total_discount', 0.0) or 0.0),
         'round_off': float(getattr(voucher, 'round_off', 0.0) or 0.0),
+        'total_amount': float(getattr(voucher, 'total_amount', 0.0) or 0.0),
     }
     
     # Add type-specific fields
@@ -379,12 +389,46 @@ def _voucher_to_dict(voucher) -> Dict[str, Any]:
         voucher_data['delivery_terms'] = voucher.delivery_terms
     if hasattr(voucher, 'delivery_date'):
         voucher_data['required_by_date'] = voucher.delivery_date  # Alias for template
+    if hasattr(voucher, 'payment_method'):
+        voucher_data['payment_method'] = voucher.payment_method
+    if hasattr(voucher, 'reference'):
+        voucher_data['reference'] = voucher.reference
+    if hasattr(voucher, 'bank_account'):
+        voucher_data['bank_account'] = voucher.bank_account
     
     # Add related entities
     if hasattr(voucher, 'vendor') and voucher.vendor:
         voucher_data['vendor'] = _entity_to_dict(voucher.vendor)
     if hasattr(voucher, 'customer') and voucher.customer:
         voucher_data['customer'] = _entity_to_dict(voucher.customer)
+    if hasattr(voucher, 'entity_type'):
+        voucher_data['entity_type'] = voucher.entity_type
+        voucher_data['entity_id'] = voucher.entity_id
+        # Load entity based on type
+        if voucher.entity_type.lower() == 'vendor':
+            vendor = db.query(Vendor).filter(Vendor.id == voucher.entity_id).first()
+            if vendor:
+                voucher_data['vendor'] = _entity_to_dict(vendor)
+        elif voucher.entity_type.lower() == 'customer':
+            customer = db.query(Customer).filter(Customer.id == voucher.entity_id).first()
+            if customer:
+                voucher_data['customer'] = _entity_to_dict(customer)
+        elif voucher.entity_type.lower() == 'employee':
+            employee = db.query(EmployeeProfile).filter(EmployeeProfile.id == voucher.entity_id).first()
+            if employee:
+                voucher_data['employee'] = {
+                    'id': employee.id,
+                    'name': employee.user.full_name or f"{employee.user.first_name or ''} {employee.user.last_name or ''}",
+                    'address': employee.address_line1 or '',
+                    'city': employee.city or '',
+                    'state': employee.state or '',
+                    'pin_code': employee.pin_code or '',
+                    'gst_number': '',
+                    'contact_number': employee.personal_phone or '',
+                    'email': employee.personal_email or '',
+                    'state_code': employee.state or '',
+                }
+    
     if hasattr(voucher, 'purchase_order') and voucher.purchase_order:
         voucher_data['purchase_order'] = {'voucher_number': voucher.purchase_order.voucher_number}
     if hasattr(voucher, 'sales_order') and voucher.sales_order:
