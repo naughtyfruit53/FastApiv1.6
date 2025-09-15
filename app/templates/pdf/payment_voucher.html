@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ voucher.voucher_number }} - Payment Voucher</title>
+    <style>
+        body { 
+            font-family: 'NotoSans', Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            font-size: 10pt; 
+            line-height: 1.2; 
+        }
+        .container { 
+            width: 90%;
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 10mm; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th, td { 
+            border: 0.5pt solid #000; 
+            padding: 4pt; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #f2f2f2; 
+            font-weight: bold; 
+        }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 10pt; 
+        }
+        .header img { 
+            max-height: 60pt; 
+            max-width: 200pt; 
+        }
+        .company-details { 
+            text-align: right; 
+            font-size: 9pt; 
+        }
+        .voucher-title { 
+            text-align: center; 
+            font-size: 14pt; 
+            font-weight: bold; 
+            margin: 10pt 0; 
+        }
+        .party-details { 
+            margin: 10pt 0; 
+            font-size: 9pt; 
+        }
+        .details-table th { 
+            width: 30%; 
+        }
+        .footer { 
+            margin-top: 20pt; 
+            font-size: 9pt; 
+        }
+        .amount-words { 
+            font-style: italic; 
+            margin: 10pt 0; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            {% if company.logo_url %}
+            <img src="{{ company.logo_url }}" alt="Company Logo">
+            {% endif %}
+            <div class="company-details">
+                <strong>{{ company.name }}</strong><br>
+                {{ company.address1 }}<br>
+                {% if company.address2 %}{{ company.address2 }}<br>{% endif %}
+                {{ company.city }}, {{ company.state }} - {{ company.pin_code }}<br>
+                GSTIN: {{ company.gst_number }}<br>
+                PAN: {{ company.pan_number }}<br>
+                Phone: {{ company.contact_number }}<br>
+                Email: {{ company.email }}
+            </div>
+        </div>
+
+        <!-- Voucher Title -->
+        <div class="voucher-title">Payment Voucher</div>
+
+        <!-- Voucher Details -->
+        <table class="details-table">
+            <tr>
+                <th>Voucher No:</th>
+                <td>{{ voucher.voucher_number }}</td>
+                <th>Date:</th>
+                <td>{{ voucher.date | format_date }}</td>
+            </tr>
+            <tr>
+                <th>Payment Mode:</th>
+                <td>{{ voucher.payment_method or 'N/A' }}</td>
+                <th>Amount:</th>
+                <td>{{ voucher.total_amount | format_currency }}</td>
+            </tr>
+            <tr>
+                <th>Reference:</th>
+                <td>{{ voucher.reference or 'N/A' }}</td>
+                <th>Bank Account:</th>
+                <td>{{ voucher.bank_account or 'N/A' }}</td>
+            </tr>
+        </table>
+
+        <!-- Party Details -->
+        <div class="party-details">
+            <strong>Paid To:</strong><br>
+            {{ party.name }}<br>
+            {{ party.address }}<br>
+            {{ party.city }}, {{ party.state }} - {{ party.pin_code }}<br>
+            GSTIN: {{ party.gst_number }}<br>
+            Contact: {{ party.contact_number }}<br>
+            Email: {{ party.email }}
+        </div>
+
+        <!-- Amount in Words -->
+        <div class="amount-words">
+            <strong>Amount in Words:</strong> {{ amount_in_words }}
+        </div>
+
+        <!-- Notes -->
+        {% if voucher.notes %}
+        <div class="notes">
+            <strong>Notes:</strong><br>
+            {{ voucher.notes }}
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Generated on: {{ generated_at | format_date('%d/%m/%Y %H:%M') }}</p>
+            <p>Authorized Signatory</p>
+        </div>
+    </div>
+</body>
+</html>

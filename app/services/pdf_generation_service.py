@@ -18,9 +18,6 @@ import logging
 import base64
 import re  # Added for sanitizing filenames
 
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-
 # Import settings for dynamic wkhtmltopdf path
 from app.core.config import settings
 
@@ -169,34 +166,12 @@ class VoucherPDFGenerator:
         
         # Add custom filters
         self._add_custom_filters()
-
-        # Register fonts (still using ReportLab for fonts, but pdfkit handles most)
-        self._register_fonts()
         
         # pdfkit config using dynamic path from settings (works for Windows local and Linux deploy)
         wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
         if not os.path.exists(wkhtmltopdf_path):
             raise FileNotFoundError(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Please install it and set WKHTMLTOPDF_PATH in .env.")
         self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-    
-    def _register_fonts(self):
-        """Register custom fonts for PDF generation (optional for pdfkit)"""
-        try:
-            font_path = os.path.join(os.path.dirname(__file__), '../static/fonts/NotoSans-Regular.ttf')
-            if os.path.exists(font_path):
-                pdfmetrics.registerFont(TTFont('NotoSans', font_path))
-                logger.info("NotoSans font registered successfully")
-            else:
-                logger.warning("NotoSans-Regular.ttf not found at %s. Download from https://fonts.google.com/noto/specimen/Noto+Sans and place it there for proper ₹ symbol display.", font_path)
-
-            # Optionally register bold variant
-            bold_font_path = os.path.join(os.path.dirname(__file__), '../static/fonts/NotoSans-Bold.ttf')
-            if os.path.exists(bold_font_path):
-                pdfmetrics.registerFont(TTFont('NotoSans-Bold', bold_font_path))
-                logger.info("NotoSans-Bold font registered successfully")
-
-        except Exception as e:
-            logger.error(f"Error registering fonts: {e}")
     
     def _add_custom_filters(self):
         """Add custom Jinja2 filters"""
@@ -240,7 +215,7 @@ class VoucherPDFGenerator:
                 if not state_code and company.gst_number:
                     state_code = company.gst_number[:2]  # Fallback to GST prefix
                 
-                logger.info(f"Company GST: {company.gst_number}, state_code (final): {state_code}")
+                logger.info(f"Company Company GST: {company.gst_number}, state_code (final): {state_code}")
                 
                 return {
                     'name': company.name,
@@ -296,7 +271,8 @@ class VoucherPDFGenerator:
         is_interstate = False
         vendor = voucher_data.get('vendor')
         customer = voucher_data.get('customer')
-        party = vendor or customer
+        employee = voucher_data.get('employee')
+        party = vendor or customer or employee
         party_state_code = None
         if party and company['state_code']:
             party_state_code = party.get('state_code')
@@ -320,61 +296,72 @@ class VoucherPDFGenerator:
         total_igst = 0.0
         total_quantity = 0.0  # Added for totals row
         
-        for item in items:
-            # Calculate item totals
-            quantity = float(item.get('quantity', 0))
-            unit_price = float(item.get('unit_price', 0) or 0)  # Handle None
-            discount_percentage = float(item.get('discount_percentage', 0) or 0)
-            discount_amount = float(item.get('discount_amount', 0) or 0)
-            gst_rate = float(item.get('gst_rate', 0) or 0)
-            description = item.get('description', '')
+        if items:
+            for item in items:
+                # Calculate item totals
+                quantity = float(item.get('quantity', 0))
+                unit_price = float(item.get('unit_price', 0) or 0)  # Handle None
+                discount_percentage = float(item.get('discount_percentage', 0) or 0)
+                discount_amount = float(item.get('discount_amount', 0) or 0)
+                gst_rate = float(item.get('gst_rate', 0) or 0)
+                description = item.get('description', '')
+                
+                item_subtotal = quantity * unit_price
+                if discount_percentage > 0:
+                  discount_amount = item_subtotal * (discount_percentage / 100)
+                taxable_amount = item_subtotal - discount_amount
+                
+                # Calculate GST with updated interstate check
+                gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
+                
+                item_total = taxable_amount + gst_calc['total_gst']
+                
+                processed_item = {
+                    **item,  # Unpack original item dict to include all its fields
+                    'subtotal': item_subtotal,
+                    'discount_percentage': discount_percentage,
+                    'discount_amount': discount_amount,
+                    'taxable_amount': taxable_amount,
+                    'gst_rate': gst_rate,
+                    'cgst_rate': gst_calc['cgst_rate'],
+                    'sgst_rate': gst_calc['sgst_rate'],
+                    'igst_rate': gst_calc['igst_rate'],
+                    'cgst_amount': gst_calc['cgst_amount'],
+                    'sgst_amount': gst_calc['sgst_amount'],
+                    'igst_amount': gst_calc['igst_amount'],
+                    'total_amount': item_total,
+                    'description': description
+                }
+                
+                processed_items.append(processed_item)
+                
+                subtotal += item_subtotal
+                total_taxable += taxable_amount
+                total_cgst += gst_calc['cgst_amount']
+                total_sgst += gst_calc['sgst_amount']
+                total_igst += gst_calc['igst_amount']
+                total_quantity += quantity  # Accumulate quantity
             
-            item_subtotal = quantity * unit_price
-            if discount_percentage > 0:
-              discount_amount = item_subtotal * (discount_percentage / 100)
-            taxable_amount = item_subtotal - discount_amount
+            grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
             
-            # Calculate GST with updated interstate check
-            gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
-            
-            item_total = taxable_amount + gst_calc['total_gst']
-            
-            processed_item = {
-                **item,  # Unpack original item dict to include all its fields
-                'subtotal': item_subtotal,
-                'discount_percentage': discount_percentage,
-                'discount_amount': discount_amount,
-                'taxable_amount': taxable_amount,
-                'gst_rate': gst_rate,
-                'cgst_rate': gst_calc['cgst_rate'],
-                'sgst_rate': gst_calc['sgst_rate'],
-                'igst_rate': gst_calc['igst_rate'],
-                'cgst_amount': gst_calc['cgst_amount'],
-                'sgst_amount': gst_calc['sgst_amount'],
-                'igst_amount': gst_calc['igst_amount'],
-                'total_amount': item_total,
-                'description': description
-            }
-            
-            processed_items.append(processed_item)
-            
-            subtotal += item_subtotal
-            total_taxable += taxable_amount
-            total_cgst += gst_calc['cgst_amount']
-            total_sgst += gst_calc['sgst_amount']
-            total_igst += gst_calc['igst_amount']
-            total_quantity += quantity  # Accumulate quantity
-        
-        grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
-        
-        # Calculate round off
-        decimal_part = grand_total - int(grand_total)
-        round_off = 0.0
-        if decimal_part < 0.5:
-            round_off = -decimal_part
+            # Calculate round off
+            decimal_part = grand_total - int(grand_total)
+            round_off = 0.0
+            if decimal_part < 0.5:
+                round_off = -decimal_part
+            else:
+                round_off = 1 - decimal_part
+            grand_total += round_off
         else:
-            round_off = 1 - decimal_part
-        grand_total += round_off
+            # For non-item vouchers like payments
+            subtotal = float(voucher_data.get('total_amount', 0.0))
+            total_discount = float(voucher_data.get('total_discount', 0.0))
+            total_taxable = subtotal - total_discount
+            total_cgst = 0.0
+            total_sgst = 0.0
+            total_igst = 0.0
+            round_off = float(voucher_data.get('round_off', 0.0))
+            grand_total = total_taxable + round_off  # No taxes for financial vouchers
         
         # Prepare template data
         template_data = {
@@ -395,7 +382,8 @@ class VoucherPDFGenerator:
             'total_discount_enabled': voucher_data.get('total_discount_type') is not None,  # Flag for total discount
             'amount_in_words': IndianNumberFormatter.amount_to_words(grand_total),
             'generated_at': datetime.now(),
-            'page_count': 1  # Will be updated for multi-page
+            'page_count': 1,  # Will be updated for multi-page
+            'party': party
         }
         
         return template_data
@@ -429,8 +417,10 @@ class VoucherPDFGenerator:
                 template_name = 'sales_voucher.html'
             elif voucher_type == 'delivery-challan':
                 template_name = 'delivery_challan.html'
-            elif voucher_type in ['quotation', 'sales_order', 'sales-orders', 'proforma']:
+            elif voucher_type in ['quotation', 'sales_order', 'sales-orders', 'proforma_invoice']:
                 template_name = 'presales_voucher.html'
+            elif voucher_type == 'payment-vouchers':
+                template_name = 'payment_voucher.html'
             else:
                 template_name = f"{voucher_type}_voucher.html"
             
@@ -439,7 +429,7 @@ class VoucherPDFGenerator:
             except Exception:
                 # Fallback to base template
                 template = self.jinja_env.get_template('base_voucher.html')
-                logger.warning(f"Template {template_name} not found, using base template")
+                logger.warning(f"Template {template_name} not found at at {template.filename}, using base template")
             
             # Render HTML
             html_content = template.render(**template_data)

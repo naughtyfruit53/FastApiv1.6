@@ -26,7 +26,7 @@ export const getProducts = async (context?: QueryFunctionContext): Promise<any> 
 
 // Fetch all employees
 export const getEmployees = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
-  const response = await api.get("/employees", { signal: context?.signal });
+  const response = await api.get("/hr/employees", { signal: context?.signal });
   return response.data;
 };
 
@@ -155,7 +155,7 @@ export const createEmployee = async (employeeData: {
   designation?: string;
   salary?: number;
 }): Promise<any> => {
-  const response = await api.post("/employees", employeeData);
+  const response = await api.post("/hr/employees", employeeData);
   return response.data;
 };
 

@@ -44,7 +44,14 @@ async def get_entity_balance(
             DebitNote.organization_id == org_id
         ).scalar() or 0
         
-        balance = sales - receipts - credit_notes + debit_notes
+        # Add payments to customer (refunds)
+        customer_payments = db.query(func.sum(PaymentVoucher.total_amount)).filter(
+            PaymentVoucher.entity_type.ilike('customer'),
+            PaymentVoucher.entity_id == entity_id,
+            PaymentVoucher.organization_id == org_id
+        ).scalar() or 0
+        
+        balance = sales - receipts - credit_notes + debit_notes - customer_payments
         return {"balance": balance}
     
     elif entity_type.lower() == "vendor":
@@ -55,7 +62,8 @@ async def get_entity_balance(
         ).scalar() or 0
         
         payments = db.query(func.sum(PaymentVoucher.total_amount)).filter(
-            PaymentVoucher.vendor_id == entity_id,
+            PaymentVoucher.entity_type.ilike('vendor'),
+            PaymentVoucher.entity_id == entity_id,
             PaymentVoucher.organization_id == org_id
         ).scalar() or 0
         
@@ -73,8 +81,16 @@ async def get_entity_balance(
         return {"balance": balance}
     
     elif entity_type.lower() == "employee":
-        # Placeholder for employee balance (e.g., from payroll)
-        return {"balance": 0}
+        # Employee balance: payables positive (e.g., advance payments)
+        employee_payments = db.query(func.sum(PaymentVoucher.total_amount)).filter(
+            PaymentVoucher.entity_type.ilike('employee'),
+            PaymentVoucher.entity_id == entity_id,
+            PaymentVoucher.organization_id == org_id
+        ).scalar() or 0
+        
+        # Placeholder: subtract from salaries or other debits if implemented
+        balance = -employee_payments  # Negative for advances paid
+        return {"balance": balance}
     
     else:
         return {"balance": 0}
