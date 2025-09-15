@@ -285,19 +285,14 @@ export const menuItems = {
         items: [
           { name: 'Customer Analytics', path: '/analytics/customer', icon: <TrendingUp /> },
           { name: 'Sales Analytics', path: '/analytics/sales', icon: <BarChart /> },
-          { name: 'Purchase Analytics', path: '/analytics/purchase', icon: <ShoppingCart /> },
-          { name: 'Marketing Analytics', path: '/marketing/analytics', icon: <Assessment /> },
-          { name: 'Finance Dashboard', path: '/finance-dashboard', icon: <Analytics /> },
-          { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
+          { name: 'Purchase Analytics', path: '/analytics/purchase', icon: <ShoppingCart /> }
         ]
       },
       {
         title: 'Advanced Analytics',
         items: [
           { name: 'Project Analytics', path: '/projects/analytics', icon: <Analytics /> },
-          { name: 'HR Analytics', path: '/hr/analytics', icon: <TrendingUp /> },
-          { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
-          { name: 'Performance Reports', path: '/projects/reports', icon: <Assessment /> }
+          { name: 'HR Analytics', path: '/hr/analytics', icon: <TrendingUp /> }
         ]
       },
       {
