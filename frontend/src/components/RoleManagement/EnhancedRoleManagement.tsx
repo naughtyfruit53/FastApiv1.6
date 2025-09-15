@@ -18,24 +18,14 @@ import {
   CardHeader,
   Alert,
   Button,
-  IconButton,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Switch,
-  FormControlLabel,
   Chip,
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   Checkbox,
   Table,
   TableBody,
@@ -46,32 +36,20 @@ import {
   TablePagination,
   Tabs,
   Tab,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   LinearProgress,
 } from '@mui/material';
 import {
   SupervisorAccount as SupervisorAccountIcon,
   Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  ContentCopy as ContentCopyIcon,
   Download as DownloadIcon,
-  Upload as UploadIcon,
   History as HistoryIcon,
   Group as GroupIcon,
   Person as PersonIcon,
   Security as SecurityIcon,
-  ExpandMore as ExpandMoreIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  Warning as WarningIcon,
 } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
-import { rbacService, ServiceRole, ServicePermission, UserWithServiceRoles } from '../../services/rbacService';
+import { rbacService } from '../../services/rbacService';
 
 // Enhanced interfaces for advanced features
 interface RoleTemplate {

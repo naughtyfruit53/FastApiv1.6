@@ -9,7 +9,6 @@ import {
   Typography,
   Card,
   CardContent,
-  CardActions,
   Button,
   Avatar,
   Chip,
@@ -29,8 +28,6 @@ import {
   Forward,
   MarkEmailRead,
   MarkEmailUnread,
-  Star,
-  StarBorder,
   Attachment,
   Download,
   Refresh

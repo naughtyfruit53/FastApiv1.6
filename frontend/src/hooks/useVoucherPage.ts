@@ -16,7 +16,6 @@ import { useCompany } from "../context/CompanyContext";
 import {
   calculateVoucherTotals,
   getDefaultVoucherValues,
-  numberToWords,
   voucherListUtils,
   enhancedRateUtils,
   VOUCHER_PAGINATION_DEFAULTS,
@@ -25,7 +24,6 @@ import {
 import {
   generateVoucherPDF,
   getVoucherPdfConfig,
-  VoucherPdfData,
 } from "../utils/pdfUtils";
 import { VoucherPageConfig } from "../types/voucher.types";
 import api from "../lib/api"; // Direct import for list fetch

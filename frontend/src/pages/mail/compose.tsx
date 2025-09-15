@@ -35,16 +35,13 @@ import {
   FormatItalic,
   FormatUnderlined,
   Delete,
-  CloudUpload,
   InsertEmoticon,
-  Schedule,
   AccountBox,
   ExpandMore,
   ExpandLess,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import { useForm, Controller } from "react-hook-form";
-import api from "../../lib/api";
 
 interface EmailFormData {
   to: string;

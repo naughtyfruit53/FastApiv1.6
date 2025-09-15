@@ -27,7 +27,7 @@ import {
   Checkbox,
   InputAdornment,
 } from '@mui/material';
-import { Add, Remove, Clear } from '@mui/icons-material';
+import { Add, Remove } from '@mui/icons-material';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -42,7 +42,6 @@ import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';
 import { useCompany } from "../../../context/CompanyContext";
-import { toast } from "react-toastify";
 import { useGstValidation } from "../../../hooks/useGstValidation";
 import { handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
 import voucherFormStyles from "../../../styles/voucherFormStyles";

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Grid, Typography, IconButton, Chip, Alert, List, ListItem, ListItemText, ListItemAvatar, Avatar } from '@mui/material';
-import { Refresh, Notifications, Search, Business, People, Inventory, AttachMoney, TrendingUp, AdminPanelSettings, MonitorHeart, Storage, Timeline, Security } from '@mui/icons-material';
+import { Refresh, Notifications, Business, People, Inventory, AttachMoney, TrendingUp, AdminPanelSettings, MonitorHeart, Storage, Timeline, Security } from '@mui/icons-material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { 
   MobileDashboardLayout, 

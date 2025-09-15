@@ -54,7 +54,7 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
         saveAs(blob, `${filename}.xlsx`);
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error exporting Excel:", err);
       // You might want to show a toast notification here
     } finally {
       setIsExporting(false);
@@ -72,7 +72,7 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
         saveAs(blob, `${filename}.csv`);
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error exporting CSV:", err);
       // You might want to show a toast notification here
     } finally {
       setIsExporting(false);
@@ -139,14 +139,16 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       )}
       {showPrint && (
         <Tooltip title="Print Report">
-          <IconButton
-            size="small"
-            onClick={handlePrint}
-            disabled={disabled || loading}
-            aria-label="Print report"
-          >
-            <Print />
-          </IconButton>
+          <span>
+            <IconButton
+              size="small"
+              onClick={handlePrint}
+              disabled={disabled || loading}
+              aria-label="Print report"
+            >
+              <Print />
+            </IconButton>
+          </span>
         </Tooltip>
       )}
     </Box>

@@ -2,7 +2,7 @@
  * DCF Model Builder - Interactive DCF model creation and analysis
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -30,10 +30,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  BarChart,
-  Bar,
 } from 'recharts';
-import { Calculator, Save, Play, FileDown, AlertCircle } from 'lucide-react';
+import { Calculator, FileDown, AlertCircle } from 'lucide-react';
 import { financialModelingApi } from '@/services/api/financial-modeling';
 
 interface DCFAssumptions {

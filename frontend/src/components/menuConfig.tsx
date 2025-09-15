@@ -8,7 +8,6 @@ import {
   Assessment,
   Settings,
   AccountCircle,
-  ExpandMore,
   ShoppingCart,
   LocalShipping,
   AccountBalance,
@@ -28,7 +27,6 @@ import {
   Schedule,
   Payment,
   Feedback,
-  AdminPanelSettings,
   NotificationsActive,
   History,
   CloudUpload,
@@ -37,8 +35,6 @@ import {
   Timeline,
   Groups,
   CorporateFare,
-  ChevronRight,
-  LockOutlined,
   Person,
   ContactPhone,
   PersonAdd,
@@ -51,18 +47,15 @@ import {
   Chat,
   SmartToy,
   Poll,
-  SupportAgent as ServiceDeskIcon,
   Task,
   CalendarToday,
   EventNote,
   Alarm,
   AccessTime,
-  CheckBox,
   Inbox,
   Send,
   Drafts,
-  Menu as MenuIcon,
-  Search as SearchIcon
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { SERVICE_PERMISSIONS } from '../types/rbac.types';
 
@@ -327,6 +320,7 @@ export const menuItems = {
         items: [
           { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
           { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
+          { name: 'Enhanced Leads', path: '/sales/enhanced-leads', icon: <TrendingUp /> },
           { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
           { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> },
           { name: 'Exhibition Mode', path: '/exhibition-mode', icon: <Business /> }
@@ -490,6 +484,7 @@ export const menuItems = {
           { name: 'All Projects', path: '/projects', icon: <Assignment /> },
           { name: 'Project Planning', path: '/projects/planning', icon: <Timeline /> },
           { name: 'Resource Management', path: '/projects/resources', icon: <People /> },
+          { name: 'Document Management', path: '/projects/documents', icon: <Storage /> },
           { name: 'Create Project', path: '/projects/create', icon: <NoteAdd /> }
         ]
       },

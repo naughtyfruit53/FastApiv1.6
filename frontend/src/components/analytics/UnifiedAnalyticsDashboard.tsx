@@ -21,7 +21,6 @@ import {
   Alert,
   Skeleton,
   Chip,
-  Button,
   IconButton,
   Tooltip,
   Menu,
@@ -40,7 +39,6 @@ import {
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Download as DownloadIcon,
-  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';

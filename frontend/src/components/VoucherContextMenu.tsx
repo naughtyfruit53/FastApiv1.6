@@ -8,7 +8,6 @@ import {
   Edit, 
   Delete, 
   Print, 
-  SaveAlt, 
   Email, 
   ContentCopy,
   LocalShipping 

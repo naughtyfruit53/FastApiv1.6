@@ -5,7 +5,6 @@ import {
   TextField,
   Typography,
   Grid,
-  IconButton,
   CircularProgress,
   Container,
   Table,
@@ -14,19 +13,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Autocomplete,
-  Fab,
   Alert,
   Button,
-  Checkbox,
-  FormControlLabel,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
 } from "@mui/material";
-import { Add, Remove, Clear } from "@mui/icons-material";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
@@ -37,11 +31,9 @@ import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherReferenceDropdown from "../../../components/VoucherReferenceDropdown";
 import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
-import ProductAutocomplete from "../../../components/ProductAutocomplete";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import {
   getVoucherConfig,
-  GST_SLABS,
   getVoucherStyles,
 } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
@@ -49,7 +41,6 @@ import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
 import { useCompany } from "../../../context/CompanyContext";
 import { useRouter } from "next/router";
-import { toast } from "react-toastify";
 import { useGstValidation } from "../../../hooks/useGstValidation";
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";

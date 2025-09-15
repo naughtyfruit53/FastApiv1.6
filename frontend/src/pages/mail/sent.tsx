@@ -32,14 +32,12 @@ import {
   MoreVert,
   Delete,
   Archive,
-  Reply,
   Forward,
   Refresh,
   FilterList,
   Edit,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
-import api from "../../lib/api";
 
 interface SentEmail {
   id: string;

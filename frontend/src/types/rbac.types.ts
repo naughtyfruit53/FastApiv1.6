@@ -1,5 +1,5 @@
 // frontend/src/types/rbac.types.ts
-/* eslint-disable no-unused-vars */ // Disable no-unused-vars for enum members, as they are exported types used elsewhere
+  // Disable no-unused-vars for enum members, as they are exported types used elsewhere
 
 /**
  * Service CRM RBAC Types
