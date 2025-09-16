@@ -21,9 +21,9 @@ export const useNameOptions = (): any => {
 export const useReferenceOptions = (
   selectedEntityId: number | null,
   selectedEntityType: EntityType | null,
-): any => {
+): string[] => {
   const { data: unpaidVouchers } = useQuery({
-    queryKey: ["unpaid-vouchers", selectedEntityId, selectedEntityType],
+    queryKey: ["unpaid-vouchers", selectedEntityId ?? "none", selectedEntityType ?? "none"],
     queryFn: () => {
       if (!selectedEntityId || !selectedEntityType) {
         return [];

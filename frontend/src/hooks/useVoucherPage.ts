@@ -419,9 +419,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       );
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
       await refetchVoucherList(); // Explicit refetch after invalidation
-      setMode("create");
-      setSelectedId(null);
-      setCurrentPage(1); // Reset to first page to see new voucher
+      router.push({ query: { mode: "create" } }, undefined, { shallow: true });
       reset(defaultValues);
       const { data: newNextNumber } = await refetchNextNumber();
       setValue("voucher_number", newNextNumber);
@@ -453,22 +451,16 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   });
   // Enhanced event handlers
   const handleCreate = () => {
-    setSelectedId(null);
-    setMode("create");
     setReferenceDocument(null); // Clear reference
     router.push({ query: { mode: "create" } }, undefined, { shallow: true });
     reset(defaultValues);
   };
   const handleEdit = (voucherId: number) => {
-    setSelectedId(voucherId);
-    setMode("edit");
     router.push({ query: { id: voucherId, mode: "edit" } }, undefined, {
       shallow: true,
     });
   };
   const handleView = (voucherId: number) => {
-    setSelectedId(voucherId);
-    setMode("view");
     router.push({ query: { id: voucherId, mode: "view" } }, undefined, {
       shallow: true,
     });
@@ -895,6 +887,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     config.voucherType,
     refetchVoucherList,
   ]);
+  // Sync state with query params for shallow routing
+  useEffect(() => {
+    const newMode = (router.query.mode as "create" | "edit" | "view") || "create";
+    const newId = router.query.id ? Number(router.query.id) : null;
+    setMode(newMode);
+    setSelectedId(newId);
+  }, [router.query.mode, router.query.id]);
   return {
     // Enhanced state
     mode,

@@ -1,4 +1,4 @@
-// Receipt Voucher Page - Refactored using VoucherLayout
+// frontend/src/pages/vouchers/Financial-Vouchers/receipt-voucher.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -65,12 +65,6 @@ const ReceiptVoucher: React.FC = () => {
     getAmountInWords,
     isViewMode,
   } = useVoucherPage(config);
-
-  const [isEditing, setIsEditing] = useState(mode !== 'view');
-
-  useEffect(() => {
-    setIsEditing(mode !== 'view');
-  }, [mode]);
 
   const handleVoucherClick = (voucher: any) => {
     reset(voucher);
@@ -237,6 +231,10 @@ const ReceiptVoucher: React.FC = () => {
           voucherType="Receipt Voucher"
           voucherRoute="/vouchers/Financial-Vouchers/receipt-voucher"
           currentId={selectedEntity?.id}
+          onEdit={toggleEdit}
+          onCancel={handleCancel}
+          onCreate={handleCreate}
+          showPDFButton={mode === 'view'}
         />
       </Box>
 
@@ -246,7 +244,7 @@ const ReceiptVoucher: React.FC = () => {
         </Box>
       )}
 
-      <Box component="form" onSubmit={handleSubmit(handleSubmitFormMapped)} sx={{ mt: 1, ...financialVoucherStyles.formContainer, ...voucherStyles.formContainer }}>
+      <Box component="form" onSubmit={handleSubmit(handleSubmitFormMapped)} id="voucherForm" sx={{ mt: 1, ...financialVoucherStyles.formContainer, ...voucherStyles.formContainer }}>
         {/* FIRST ROW: 4 fields (25% each) */}
         <Grid container spacing={1} sx={{ mt: 2 }}>
           {[
@@ -259,7 +257,7 @@ const ReceiptVoucher: React.FC = () => {
                 label={field.label}
                 type={field.type}
                 fullWidth
-                disabled={isViewMode || !isEditing || field.disabled}
+                disabled={isViewMode || field.disabled}
                 InputLabelProps={field.type === 'date' ? { shrink: true } : {}}
                 sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
               />
@@ -267,7 +265,7 @@ const ReceiptVoucher: React.FC = () => {
           ))}
 
           <Grid item sx={{ flex: `0 0 calc((100% - ${firstRowGapPx}px) / 4)`, maxWidth: `calc((100% - ${firstRowGapPx}px) / 4)` }}>
-            <FormControl fullWidth disabled={isViewMode || !isEditing} sx={{
+            <FormControl fullWidth disabled={isViewMode} sx={{
               ...financialVoucherStyles.field,
               ...voucherStyles.centerField,
               '& .MuiInputBase-root': { height: 27 },
@@ -292,7 +290,7 @@ const ReceiptVoucher: React.FC = () => {
               label="Amount"
               type="number"
               fullWidth
-              disabled={isViewMode || !isEditing}
+              disabled={isViewMode}
               error={!!errors.total_amount}
               helperText={errors.total_amount?.message as string}
               sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
@@ -315,7 +313,7 @@ const ReceiptVoucher: React.FC = () => {
               getOptionValue={(option) => option.id}
               placeholder="Select or search party..."
               noOptionsText="No parties found"
-              disabled={isViewMode || !isEditing}
+              disabled={isViewMode}
               fullWidth
               required
               error={!!errors.entity}
@@ -341,7 +339,7 @@ const ReceiptVoucher: React.FC = () => {
               options={referenceOptions}
               value={watch('reference') || ''}
               onChange={(_, val) => setValue('reference', val || '')}
-              disabled={isViewMode || !isEditing}
+              disabled={isViewMode}
               fullWidth
               renderInput={(params) => (
                 <TextField {...params} label="Reference" fullWidth />
@@ -384,31 +382,13 @@ const ReceiptVoucher: React.FC = () => {
               multiline
               rows={1}
               fullWidth
-              disabled={isViewMode || !isEditing}
+              disabled={isViewMode}
               sx={{
                 ...financialVoucherStyles.notesField,
                 width: '100%',
                 '& .MuiInputBase-root': { height: '36px', padding: '0 8px' }
               }}
             />
-          </Grid>
-        </Grid>
-
-        {/* ACTION BUTTONS */}
-        <Grid container spacing={1} sx={{ mt: 2 }}>
-          <Grid item xs= {12}>
-            <Box display="flex" gap={2}>
-              {mode !== 'create' && !isEditing && (
-                <Button variant="contained" color="primary" onClick={toggleEdit} size="small">Edit</Button>
-              )}
-              {isEditing && (
-                <>
-                  <Button type="submit" variant="contained" color="success" size="small">Save</Button>
-                  <Button variant="outlined" onClick={handleCancel} size="small">Cancel</Button>
-                </>
-              )}
-              <Button variant="outlined" onClick={handleCreate} size="small">Clear</Button>
-            </Box>
           </Grid>
         </Grid>
       </Box>
