@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers.presales import ProformaInvoice
+from app.models.vouchers.presales import ProformaInvoice, ProformaInvoiceItem
 from app.schemas.vouchers import ProformaInvoiceCreate, ProformaInvoiceInDB, ProformaInvoiceUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -94,7 +94,6 @@ async def create_proforma_invoice(
         db.flush()
         
         for item_data in invoice.items:
-            from app.models.vouchers import ProformaInvoiceItem
             item = ProformaInvoiceItem(
                 proforma_invoice_id=db_invoice.id,
                 **item_data.dict()
@@ -130,7 +129,10 @@ async def get_proforma_invoice(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    invoice = db.query(ProformaInvoice).options(joinedload(ProformaInvoice.customer)).filter(
+    invoice = db.query(ProformaInvoice).options(
+        joinedload(ProformaInvoice.customer),
+        joinedload(ProformaInvoice.items).joinedload(ProformaInvoiceItem.product)
+    ).filter(
         ProformaInvoice.id == invoice_id,
         ProformaInvoice.organization_id == current_user.organization_id
     ).first()
@@ -164,7 +166,6 @@ async def update_proforma_invoice(
             setattr(invoice, field, value)
         
         if invoice_update.items is not None:
-            from app.models.vouchers import ProformaInvoiceItem
             db.query(ProformaInvoiceItem).filter(ProformaInvoiceItem.proforma_invoice_id == invoice_id).delete()
             for item_data in invoice_update.items:
                 item = ProformaInvoiceItem(
@@ -204,7 +205,6 @@ async def delete_proforma_invoice(
                 detail="Proforma invoice not found"
             )
         
-        from app.models.vouchers import ProformaInvoiceItem
         db.query(ProformaInvoiceItem).filter(ProformaInvoiceItem.proforma_invoice_id == invoice_id).delete()
         
         db.delete(invoice)

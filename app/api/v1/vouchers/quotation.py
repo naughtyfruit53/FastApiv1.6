@@ -129,7 +129,10 @@ async def get_quotation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    quotation = db.query(Quotation).options(joinedload(Quotation.customer)).filter(
+    quotation = db.query(Quotation).options(
+        joinedload(Quotation.customer),
+        joinedload(Quotation.items).joinedload(QuotationItem.product)
+    ).filter(
         Quotation.id == quotation_id,
         Quotation.organization_id == current_user.organization_id
     ).first()
