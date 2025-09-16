@@ -20,11 +20,11 @@ interface VoucherContextMenuProps {
   onEdit: (voucher: any) => void;
   onDelete: (voucher: any) => void;
   onPrint?: (voucher: any) => void;
-  onEmail?: (id: number) => void;
-  onDuplicate?: (id: number) => void;
-  onCreateDispatch?: (id: number) => void;
+  onEmail?: (voucher: any) => void;
+  onDuplicate?: (voucher: any) => void;
+  onCreateDispatch?: (voucher: any) => void;
   showKebab?: boolean;
-  contextMenu?: { mouseX: number; mouseY: number } | null;
+  contextMenu?: { mouseX: number; mouseY: number; voucher?: any } | null;
   onClose: () => void;
 }
 
@@ -54,39 +54,32 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     onClose();
   };
 
-  const handleAction = (action: (voucher: any) => void) => () => {
-    if (voucher) {
-      action(voucher);
-    }
-    handleMenuClose();
-  };
+  const currentVoucher = voucher || contextMenu?.voucher;
 
-  const handlePrintAction = () => () => {
-    if (onPrint && voucher) {
-      onPrint(voucher);
-    }
+  const handleAction = (action: (voucher: any) => void) => () => {
+    action(currentVoucher);
     handleMenuClose();
   };
 
   // Determine email recipient based on voucher type (kept from original)
   const getEmailRecipient = () => {
-    if (!voucher) return '';
+    if (!currentVoucher) return '';
     const lowerType = voucherType?.toLowerCase() || '';
     if (lowerType.includes('sales')) {
-      return voucher.customer?.email || '';
+      return currentVoucher.customer?.email || '';
     } else if (lowerType.includes('purchase') || lowerType.includes('financial') || lowerType.includes('payment')) {
-      return voucher.vendor?.email || '';
+      return currentVoucher.vendor?.email || '';
     } else if (lowerType.includes('receipt')) {
-      return voucher.customer?.email || '';
+      return currentVoucher.customer?.email || '';
     }
     return '';
   };
 
   const handleEmailClick = () => {
-    if (onEmail && voucher) {
+    if (onEmail && currentVoucher) {
       const recipient = getEmailRecipient();
       if (recipient) {
-        onEmail(voucher.id);
+        onEmail(currentVoucher);
       } else {
         alert('No email recipient found for this voucher type.');
       }
@@ -131,7 +124,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
           <Delete sx={{ mr: 1 }} /> Delete {voucherType}
         </MenuItem>
         {onPrint && (
-          <MenuItem onClick={handlePrintAction()}>
+          <MenuItem onClick={handleAction(onPrint)}>
             <Print sx={{ mr: 1 }} /> Print {voucherType}
           </MenuItem>
         )}

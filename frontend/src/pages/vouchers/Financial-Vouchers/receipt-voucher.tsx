@@ -68,6 +68,10 @@ const ReceiptVoucher: React.FC = () => {
 
   const [isEditing, setIsEditing] = useState(mode !== 'view');
 
+  useEffect(() => {
+    setIsEditing(mode !== 'view');
+  }, [mode]);
+
   const handleVoucherClick = (voucher: any) => {
     reset(voucher);
     Object.keys(voucher).forEach(key => {
@@ -75,6 +79,16 @@ const ReceiptVoucher: React.FC = () => {
     });
     if (voucher.date) {
       setValue('date', new Date(voucher.date).toISOString().split('T')[0]);
+    }
+    // Reconstruct entity if not present
+    if (voucher.entity_id && voucher.entity_type && !voucher.entity) {
+      setValue('entity', {
+        id: voucher.entity_id,
+        type: voucher.entity_type,
+        name: voucher.entity?.name || '',
+        value: voucher.entity_id,
+        label: voucher.entity?.name || '',
+      });
     }
   };
 
@@ -99,7 +113,7 @@ const ReceiptVoucher: React.FC = () => {
   const [voucherBalance, setVoucherBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    if (selectedEntity) {
+    if (selectedEntity && selectedEntity.type && selectedEntity.id) {
       console.log('Fetching entity balance for:', selectedEntity.type, selectedEntity.id);
       getEntityBalance(selectedEntity.type, selectedEntity.id).then((balance) => {
         console.log('Entity balance fetched:', balance);
@@ -138,7 +152,15 @@ const ReceiptVoucher: React.FC = () => {
   };
 
   const toggleEdit = () => {
-    setIsEditing(true);
+    if (selectedEntity?.id) {
+      handleEdit(selectedEntity.id);
+    }
+  };
+
+  const handleCancel = () => {
+    if (selectedEntity?.id) {
+      handleView(selectedEntity.id);
+    }
   };
 
   // Grid spacing adjustments
@@ -190,7 +212,7 @@ const ReceiptVoucher: React.FC = () => {
                     onView={() => handleView(voucher.id)}
                     onEdit={() => handleEdit(voucher.id)}
                     onDelete={() => handleDelete(voucher)}
-                    onPrint={() => handleGeneratePDF()}
+                    onPrint={() => handleGeneratePDF(voucher)}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -380,7 +402,10 @@ const ReceiptVoucher: React.FC = () => {
                 <Button variant="contained" color="primary" onClick={toggleEdit} size="small">Edit</Button>
               )}
               {isEditing && (
-                <Button type="submit" variant="contained" color="success" size="small">Save</Button>
+                <>
+                  <Button type="submit" variant="contained" color="success" size="small">Save</Button>
+                  <Button variant="outlined" onClick={handleCancel} size="small">Cancel</Button>
+                </>
               )}
               <Button variant="outlined" onClick={handleCreate} size="small">Clear</Button>
             </Box>
@@ -430,9 +455,9 @@ const ReceiptVoucher: React.FC = () => {
         voucherType="Receipt Voucher"
         contextMenu={contextMenu}
         onClose={handleContextMenuClose}
-        onView={(id) => { handleView(id); handleContextMenuClose(); }}
-        onEdit={(id) => { handleEdit(id); handleContextMenuClose(); }}
-        onDelete={(id) => { handleDelete(id); handleContextMenuClose(); }}
+        onView={(v) => handleView(v.id)}
+        onEdit={(v) => handleEdit(v.id)}
+        onDelete={(v) => handleDelete(v)}
       />
     </>
   );

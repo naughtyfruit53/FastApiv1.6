@@ -2,6 +2,10 @@
 import api from '../lib/api';
 
 export const getEntityBalance = async (entityType: string, entityId: string): Promise<number> => {
+  if (!entityType || !entityId) {
+    console.error('entityType and entityId are required');
+    return 0;
+  }
   try {
     console.log(`Fetching entity balance for ${entityType}/${entityId}`);
     const response = await api.get(`/balances/${entityType.toLowerCase()}/${entityId}`);
@@ -14,6 +18,10 @@ export const getEntityBalance = async (entityType: string, entityId: string): Pr
 };
 
 export const getVoucherBalance = async (voucherReference: string): Promise<number> => {
+  if (!voucherReference) {
+    console.error('voucherReference is required');
+    return 0;
+  }
   try {
     console.log(`Fetching voucher balance for ${voucherReference}`);
     const response = await api.get(`/vouchers/balance/${voucherReference}`);

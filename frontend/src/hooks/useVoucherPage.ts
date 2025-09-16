@@ -783,6 +783,16 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         date: formattedDate,
       };
       reset(formattedData);
+      // Reconstruct and set 'entity' for financial vouchers
+      if (config.hasItems === false && voucherData.entity_id && voucherData.entity_type) {
+        setValue('entity', {
+          id: voucherData.entity_id,
+          type: voucherData.entity_type,
+          name: voucherData.entity?.name || '',
+          value: voucherData.entity_id,
+          label: voucherData.entity?.name || '',
+        });
+      }
       // Set discount states from loaded data
       if (config.hasItems !== false) {
         setLineDiscountEnabled(!!voucherData.line_discount_type);
