@@ -29,4 +29,11 @@ export const useRejectionIns = (id?: number): any => {
     enabled: !!id,
   });
 };
+export const useReceiptVouchers = (id?: number): any => {
+  return useQuery({
+    queryKey: ["receiptVoucher", id],
+    queryFn: () => voucherService.getReceiptVoucherById(id!),
+    enabled: !!id,
+  });
+};
 // Mutations can be added similarly if needed

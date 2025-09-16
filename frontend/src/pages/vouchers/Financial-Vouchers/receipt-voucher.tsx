@@ -1,5 +1,5 @@
 // Receipt Voucher Page - Refactored using VoucherLayout
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -65,6 +65,8 @@ const ReceiptVoucher: React.FC = () => {
     getAmountInWords,
     isViewMode,
   } = useVoucherPage(config);
+
+  const [isEditing, setIsEditing] = useState(mode !== 'view');
 
   const handleVoucherClick = (voucher: any) => {
     reset(voucher);
@@ -135,6 +137,10 @@ const ReceiptVoucher: React.FC = () => {
     handleSubmitForm(data);  // Proceed with original submit
   };
 
+  const toggleEdit = () => {
+    setIsEditing(true);
+  };
+
   // Grid spacing adjustments
   const firstRowGapPx = 24;   // 3 * 8px
   const secondRowGapPx = 8;   // 1 * 8px
@@ -154,7 +160,7 @@ const ReceiptVoucher: React.FC = () => {
         <TableBody>
           {(sortedVouchers?.length === 0) ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">No receipt vouchers available</TableCell>
+              <TableCell colSpan= {5} align="center">No receipt vouchers available</TableCell>
             </TableRow>
           ) : (
             sortedVouchers?.slice(0, 7).map((voucher: any) => (
@@ -231,7 +237,7 @@ const ReceiptVoucher: React.FC = () => {
                 label={field.label}
                 type={field.type}
                 fullWidth
-                disabled={isViewMode || field.disabled}
+                disabled={isViewMode || !isEditing || field.disabled}
                 InputLabelProps={field.type === 'date' ? { shrink: true } : {}}
                 sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
               />
@@ -239,7 +245,7 @@ const ReceiptVoucher: React.FC = () => {
           ))}
 
           <Grid item sx={{ flex: `0 0 calc((100% - ${firstRowGapPx}px) / 4)`, maxWidth: `calc((100% - ${firstRowGapPx}px) / 4)` }}>
-            <FormControl fullWidth disabled={isViewMode} sx={{
+            <FormControl fullWidth disabled={isViewMode || !isEditing} sx={{
               ...financialVoucherStyles.field,
               ...voucherStyles.centerField,
               '& .MuiInputBase-root': { height: 27 },
@@ -264,7 +270,7 @@ const ReceiptVoucher: React.FC = () => {
               label="Amount"
               type="number"
               fullWidth
-              disabled={isViewMode}
+              disabled={isViewMode || !isEditing}
               error={!!errors.total_amount}
               helperText={errors.total_amount?.message as string}
               sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
@@ -287,7 +293,7 @@ const ReceiptVoucher: React.FC = () => {
               getOptionValue={(option) => option.id}
               placeholder="Select or search party..."
               noOptionsText="No parties found"
-              disabled={isViewMode}
+              disabled={isViewMode || !isEditing}
               fullWidth
               required
               error={!!errors.entity}
@@ -313,7 +319,7 @@ const ReceiptVoucher: React.FC = () => {
               options={referenceOptions}
               value={watch('reference') || ''}
               onChange={(_, val) => setValue('reference', val || '')}
-              disabled={isViewMode}
+              disabled={isViewMode || !isEditing}
               fullWidth
               renderInput={(params) => (
                 <TextField {...params} label="Reference" fullWidth />
@@ -335,7 +341,7 @@ const ReceiptVoucher: React.FC = () => {
 
         {/* THIRD ROW: Amount in Words (100% width) */}
         <Grid container spacing={1} sx={{ mt: 2 }}>
-          <Grid item xs={12} sx={{ width: '100%' }}>
+          <Grid item xs= {12} sx={{ width: '100%' }}>
             <TextField
               fullWidth
               label="Amount in Words"
@@ -349,14 +355,14 @@ const ReceiptVoucher: React.FC = () => {
 
         {/* FOURTH ROW: Notes (100% width) */}
         <Grid container spacing={1} sx={{ mt: 2 }}>
-          <Grid item xs={12} sx={{ width: '100%' }}>
+          <Grid item xs= {12} sx={{ width: '100%' }}>
             <TextField
               {...control.register('notes')}
               label="Notes"
               multiline
               rows={1}
               fullWidth
-              disabled={isViewMode}
+              disabled={isViewMode || !isEditing}
               sx={{
                 ...financialVoucherStyles.notesField,
                 width: '100%',
@@ -368,9 +374,12 @@ const ReceiptVoucher: React.FC = () => {
 
         {/* ACTION BUTTONS */}
         <Grid container spacing={1} sx={{ mt: 2 }}>
-          <Grid item xs={12}>
+          <Grid item xs= {12}>
             <Box display="flex" gap={2}>
-              {mode !== 'view' && (
+              {mode !== 'create' && !isEditing && (
+                <Button variant="contained" color="primary" onClick={toggleEdit} size="small">Edit</Button>
+              )}
+              {isEditing && (
                 <Button type="submit" variant="contained" color="success" size="small">Save</Button>
               )}
               <Button variant="outlined" onClick={handleCreate} size="small">Clear</Button>
@@ -421,8 +430,8 @@ const ReceiptVoucher: React.FC = () => {
         voucherType="Receipt Voucher"
         contextMenu={contextMenu}
         onClose={handleContextMenuClose}
-        onEdit={(id) => { handleEdit(id); handleContextMenuClose(); }}
         onView={(id) => { handleView(id); handleContextMenuClose(); }}
+        onEdit={(id) => { handleEdit(id); handleContextMenuClose(); }}
         onDelete={(id) => { handleDelete(id); handleContextMenuClose(); }}
       />
     </>

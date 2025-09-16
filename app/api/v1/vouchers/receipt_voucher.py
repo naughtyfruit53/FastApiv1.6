@@ -16,7 +16,33 @@ import re
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["receipt-vouchers"])
 
-@router.get("/", response_model=List[ReceiptVoucherInDB])
+def add_entity_name(voucher, db: Session):
+    if voucher.entity_type == 'Customer':
+        result = db.execute("SELECT name, email FROM customers WHERE id = :id", {'id': voucher.entity_id}).first()
+        if result:
+            name, email = result
+            voucher.entity = {'name': name, 'email': email}
+        else:
+            voucher.entity = {'name': 'N/A', 'email': None}
+    elif voucher.entity_type == 'Vendor':
+        result = db.execute("SELECT name, email FROM vendors WHERE id = :id", {'id': voucher.entity_id}).first()
+        if result:
+            name, email = result
+            voucher.entity = {'name': name, 'email': email}
+        else:
+            voucher.entity = {'name': 'N/A', 'email': None}
+    elif voucher.entity_type == 'Employee':
+        result = db.execute("SELECT full_name, email FROM employees WHERE id = :id", {'id': voucher.entity_id}).first()
+        if result:
+            name, email = result
+            voucher.entity = {'name': name, 'email': email}
+        else:
+            voucher.entity = {'name': 'N/A', 'email': None}
+    else:
+        voucher.entity = {'name': 'N/A', 'email': None}
+    return voucher
+
+@router.get("", response_model=List[ReceiptVoucherInDB])
 async def get_receipt_vouchers(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
     limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
@@ -46,6 +72,8 @@ async def get_receipt_vouchers(
         query = query.order_by(ReceiptVoucher.created_at.desc())
     
     vouchers = query.offset(skip).limit(limit).all()
+    for voucher in vouchers:
+        add_entity_name(voucher, db)
     return vouchers
 
 @router.get("/next-number", response_model=str)
@@ -72,7 +100,7 @@ async def get_next_receipt_voucher_number(
     
     return f"RCT-{next_number:06d}"
 
-@router.post("/", response_model=ReceiptVoucherInDB)
+@router.post("", response_model=ReceiptVoucherInDB)
 async def create_receipt_voucher(
     voucher: ReceiptVoucherCreate,
     background_tasks: BackgroundTasks,
@@ -111,6 +139,7 @@ async def create_receipt_voucher(
             )
         
         logger.info(f"Receipt voucher {db_voucher.voucher_number} created by {current_user.email}")
+        add_entity_name(db_voucher, db)
         return db_voucher
         
     except Exception as e:
@@ -130,6 +159,7 @@ async def get_receipt_voucher(
     ).first()
     if not voucher:
         raise HTTPException(status_code=404, detail="Receipt voucher not found")
+    add_entity_name(voucher, db)
     return voucher
 
 @router.put("/{voucher_id}", response_model=ReceiptVoucherInDB)
@@ -155,6 +185,7 @@ async def update_receipt_voucher(
         db.refresh(voucher)
         
         logger.info(f"Receipt voucher {voucher.voucher_number} updated by {current_user.email}")
+        add_entity_name(voucher, db)
         return voucher
         
     except Exception as e:

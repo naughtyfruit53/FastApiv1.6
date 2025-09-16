@@ -352,10 +352,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   // Handle data sorting when vouchers data changes
   useEffect(() => {
     if (voucherList && Array.isArray(voucherList)) {
-      console.log(
-        `[useVoucherPage] Successfully fetched vouchers for ${config.voucherType}:`,
-        voucherList,
-      );
+      console.log(`[useVoucherPage] Successfully fetched vouchers for ${config.voucherType}:`, voucherList);
       const sorted = voucherListUtils.sortLatestFirst(voucherList);
       setFilteredVouchers(sorted);
     }
