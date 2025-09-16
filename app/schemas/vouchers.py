@@ -251,14 +251,15 @@ class PurchaseOrderAutoPopulateResponse(BaseModel):
     items: List[PurchaseVoucherItemCreate]
 
 # Sales Order
-class SalesOrderItemCreate(SimpleVoucherItem):
-    pass
+class SalesOrderItemCreate(VoucherItemWithTax):
+    description: Optional[str] = None
 
 class SalesOrderItemInDB(SalesOrderItemCreate):
     id: int
     sales_order_id: int
     delivered_quantity: float = 0.0
     pending_quantity: float
+    product: Optional[ProductMinimal] = None
 
 class SalesOrderCreate(VoucherBase):
     customer_id: int
@@ -415,11 +416,12 @@ class DeliveryChallanAutoPopulateResponse(BaseModel):
 
 # Proforma Invoice
 class ProformaInvoiceItemCreate(VoucherItemWithTax):
-    pass
+    description: Optional[str] = None  # Added to align
 
 class ProformaInvoiceItemInDB(ProformaInvoiceItemCreate):
     id: int
     proforma_invoice_id: int
+    product: Optional[ProductMinimal] = None  # Added to align
 
 class ProformaInvoiceCreate(VoucherBase):
     customer_id: int
@@ -450,12 +452,13 @@ class ProformaInvoiceInDB(VoucherInDBBase):
     items: List[ProformaInvoiceItemInDB]
 
 # Quotation
-class QuotationItemCreate(SimpleVoucherItem):
-    pass
+class QuotationItemCreate(VoucherItemWithTax):
+    description: Optional[str] = None
 
 class QuotationItemInDB(QuotationItemCreate):
     id: int
     quotation_id: int
+    product: Optional[ProductMinimal] = None
 
 class QuotationCreate(VoucherBase):
     customer_id: int

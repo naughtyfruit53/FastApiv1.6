@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, GoodsReceiptNote, PurchaseOrderItem, GoodsReceiptNoteItem
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, GoodsReceiptNote, PurchaseOrderItem, GoodsReceiptNoteItem, PurchaseVoucherItem
 from app.schemas.vouchers import PurchaseVoucherCreate, PurchaseVoucherInDB, PurchaseVoucherUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -174,7 +174,6 @@ async def create_purchase_voucher(
         db.flush()
         
         for item_data in invoice.items:
-            from app.models.vouchers import PurchaseVoucherItem
             item = PurchaseVoucherItem(
                 purchase_voucher_id=db_invoice.id,
                 **item_data.dict()
@@ -247,7 +246,6 @@ async def update_purchase_voucher(
             setattr(invoice, field, value)
         
         if invoice_update.items is not None:
-            from app.models.vouchers import PurchaseVoucherItem
             db.query(PurchaseVoucherItem).filter(PurchaseVoucherItem.purchase_voucher_id == invoice_id).delete()
             for item_data in invoice_update.items:
                 item = PurchaseVoucherItem(
@@ -287,7 +285,6 @@ async def delete_purchase_voucher(
                 detail="Purchase voucher not found"
             )
         
-        from app.models.vouchers import PurchaseVoucherItem
         db.query(PurchaseVoucherItem).filter(PurchaseVoucherItem.purchase_voucher_id == invoice_id).delete()
         
         db.delete(invoice)

@@ -69,7 +69,18 @@ class ProformaInvoiceItem(VoucherItemBase):
     __tablename__ = "proforma_invoice_items"
     
     proforma_invoice_id = Column(Integer, ForeignKey("proforma_invoices.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)  # Added to align with others
+    discount_percentage = Column(Float, default=0.0)  # Added GST-related fields explicitly to align
+    gst_rate = Column(Float, default=18.0)
+    discount_amount = Column(Float, default=0.0, nullable=False)
+    taxable_amount = Column(Float, default=0.0)
+    cgst_amount = Column(Float, default=0.0)
+    sgst_amount = Column(Float, default=0.0)
+    igst_amount = Column(Float, default=0.0)
+    description = Column(Text)  # Added to align
+    
     proforma_invoice = relationship("app.models.vouchers.presales.ProformaInvoice", back_populates="items")
+    product = relationship("app.models.product_models.Product")  # Added to align
 
 # Sales Order
 class SalesOrder(BaseVoucher):

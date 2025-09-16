@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers.presales import SalesOrder
+from app.models.vouchers.presales import SalesOrder, SalesOrderItem
 from app.schemas.vouchers import SalesOrderCreate, SalesOrderInDB, SalesOrderUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -94,7 +94,6 @@ async def create_sales_order(
         db.flush()
         
         for item_data in invoice.items:
-            from app.models.vouchers.presales import SalesOrderItem
             item_dict = item_data.dict()
             item_dict['pending_quantity'] = item_dict.get('quantity', 0)
             item_dict['delivered_quantity'] = 0.0
@@ -133,7 +132,10 @@ async def get_sales_order(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    invoice = db.query(SalesOrder).options(joinedload(SalesOrder.customer)).filter(
+    invoice = db.query(SalesOrder).options(
+        joinedload(SalesOrder.customer),
+        joinedload(SalesOrder.items).joinedload(SalesOrderItem.product)
+    ).filter(
         SalesOrder.id == invoice_id,
         SalesOrder.organization_id == current_user.organization_id
     ).first()
@@ -167,7 +169,6 @@ async def update_sales_order(
             setattr(invoice, field, value)
         
         if invoice_update.items is not None:
-            from app.models.vouchers.presales import SalesOrderItem
             db.query(SalesOrderItem).filter(SalesOrderItem.sales_order_id == invoice_id).delete()
             for item_data in invoice_update.items:
                 item_dict = item_data.dict()
@@ -210,7 +211,6 @@ async def delete_sales_order(
                 detail="Sales order not found"
             )
         
-        from app.models.vouchers.presales import SalesOrderItem
         db.query(SalesOrderItem).filter(SalesOrderItem.sales_order_id == invoice_id).delete()
         
         db.delete(invoice)
