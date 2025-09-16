@@ -172,7 +172,7 @@ export const menuItems = {
       }
     ]
   },
-  // Finance menu (split from Finance & Accounting)
+  // Finance menu (will be merged with Accounting)
   finance: {
     title: 'Finance',
     icon: <AccountBalance />,
@@ -219,7 +219,7 @@ export const menuItems = {
       }
     ]
   },
-  // Accounting menu (split from Finance & Accounting)
+  // Accounting menu (will be merged with Finance)
   accounting: {
     title: 'Accounting',
     icon: <AccountBalance />,
@@ -385,7 +385,7 @@ export const menuItems = {
       {
         title: 'Helpdesk & Ticketing',
         items: [
-          { name: 'Service Dashboard', path: '/service-desk', icon: <Dashboard /> },
+          { name: 'Helpdesk Dashboard', path: '/service-desk', icon: <Dashboard /> },
           { name: 'Tickets', path: '/service-desk/tickets', icon: <Assignment /> },
           { name: 'SLA Management', path: '/service-desk/sla', icon: <Schedule /> },
           { name: 'Escalations', path: '/service-desk/escalations', icon: <TrendingUp /> }
@@ -412,10 +412,10 @@ export const menuItems = {
       {
         title: 'Service CRM',
         items: [
-          { name: 'Service Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+          { name: 'Service CRM Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
           { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
           { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-          { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.CUSTOMER_SERVICE_READ }
+          { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ }
         ]
       },
       {
@@ -477,7 +477,7 @@ export const menuItems = {
       }
     ]
   },
-  // Tasks & Calendar menu (split from Workspace)
+  // Projects & Tasks
   projects: {
     title: 'Projects',
     icon: <Assignment />,
@@ -553,7 +553,7 @@ export const menuItems = {
       }
     ]
   },
-  // Email menu (split from Workspace)
+  // Email menu
   email: {
     title: 'Email',
     icon: <Email />,
@@ -651,7 +651,6 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
             {
               title: 'Administration',
               items: [
-                { name: 'Dashboard', path: '/dashboard', icon: <Dashboard /> },
                 { name: 'Demo', path: '/demo', icon: <DeveloperMode /> }
               ]
             }
@@ -659,24 +658,17 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         }
       ]
     : [
-        { 
-          title: 'Dashboard', 
-          subSections: [
-            {
-              title: 'Dashboard Views',
-              items: [
-                { name: 'Main Dashboard', path: '/dashboard', icon: <Dashboard /> },
-                { name: 'HR Dashboard', path: '/hr/dashboard', icon: <Groups /> },
-                { name: 'Management Dashboard', path: '/management/dashboard', icon: <Assessment /> },
-                { name: 'Mobile Dashboard', path: '/mobile/dashboard', icon: <Dashboard /> }
-              ]
-            }
-          ]
-        },
+        // Note: Dashboard top-level removed by user request
         { title: 'Master Data', subSections: menuItems.masterData.sections },
         { title: 'ERP', subSections: menuItems.erp.sections },
-        { title: 'Finance', subSections: menuItems.finance.sections },
-        { title: 'Accounting', subSections: menuItems.accounting.sections },
+        // Merge Finance & Accounting into single section
+        { 
+          title: 'Finance & Accounting', 
+          subSections: [
+            ...menuItems.finance.sections,
+            ...menuItems.accounting.sections
+          ]
+        },
         { title: 'Reports & Analytics', subSections: menuItems.reportsAnalytics.sections },
         { title: 'Sales', subSections: menuItems.sales.sections },
         { title: 'Marketing', subSections: menuItems.marketing.sections },
@@ -685,35 +677,7 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
         { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
         { title: 'Email', subSections: menuItems.email.sections },
-        { 
-          title: 'Vouchers & Transactions', 
-          subSections: [
-            {
-              title: 'All Vouchers',
-              items: [
-                { name: 'Voucher Dashboard', path: '/vouchers', icon: <Receipt /> },
-                { name: 'Financial Vouchers', path: '/vouchers/Financial-Vouchers', icon: <AccountBalance /> },
-                { name: 'Manufacturing Vouchers', path: '/vouchers/Manufacturing-Vouchers', icon: <Build /> }
-              ]
-            }
-          ]
-        },
-        { 
-          title: 'Mobile Apps', 
-          subSections: [
-            {
-              title: 'Mobile Access',
-              items: [
-                { name: 'Mobile CRM', path: '/mobile/crm', icon: <Person /> },
-                { name: 'Mobile Finance', path: '/mobile/finance', icon: <AccountBalance /> },
-                { name: 'Mobile HR', path: '/mobile/hr', icon: <Groups /> },
-                { name: 'Mobile Inventory', path: '/mobile/inventory', icon: <Inventory /> },
-                { name: 'Mobile Reports', path: '/mobile/reports', icon: <Assessment /> },
-                { name: 'Mobile Sales', path: '/mobile/sales', icon: <TrendingUp /> },
-                { name: 'Mobile Service', path: '/mobile/service', icon: <SupportAgent /> },
-                { name: 'Mobile Settings', path: '/mobile/settings', icon: <Settings /> }
-              ]
-            }
-          ]
-        }
+        { title: 'Settings', subSections: menuItems.settings.sections }
+        // Vouchers & Transactions removed per request
+        // Mobile Apps removed per request
       ];

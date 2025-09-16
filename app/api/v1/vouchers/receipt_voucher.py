@@ -12,27 +12,28 @@ from app.schemas.vouchers import ReceiptVoucherCreate, ReceiptVoucherInDB, Recei
 from app.services.email_service import send_voucher_email
 import logging
 import re
+from sqlalchemy.sql import text  # Added import for text
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["receipt-vouchers"])
 
 def add_entity_name(voucher, db: Session):
     if voucher.entity_type == 'Customer':
-        result = db.execute("SELECT name, email FROM customers WHERE id = :id", {'id': voucher.entity_id}).first()
+        result = db.execute(text("SELECT name, email FROM customers WHERE id = :id"), {'id': voucher.entity_id}).first()
         if result:
             name, email = result
             voucher.entity = {'name': name, 'email': email}
         else:
             voucher.entity = {'name': 'N/A', 'email': None}
     elif voucher.entity_type == 'Vendor':
-        result = db.execute("SELECT name, email FROM vendors WHERE id = :id", {'id': voucher.entity_id}).first()
+        result = db.execute(text("SELECT name, email FROM vendors WHERE id = :id"), {'id': voucher.entity_id}).first()
         if result:
             name, email = result
             voucher.entity = {'name': name, 'email': email}
         else:
             voucher.entity = {'name': 'N/A', 'email': None}
     elif voucher.entity_type == 'Employee':
-        result = db.execute("SELECT full_name, email FROM employees WHERE id = :id", {'id': voucher.entity_id}).first()
+        result = db.execute(text("SELECT full_name, email FROM employees WHERE id = :id"), {'id': voucher.entity_id}).first()
         if result:
             name, email = result
             voucher.entity = {'name': name, 'email': email}

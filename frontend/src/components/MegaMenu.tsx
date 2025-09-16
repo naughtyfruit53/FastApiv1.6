@@ -6,8 +6,6 @@ import {
   Toolbar,
   Typography,
   Button,
-  Menu,
-  MenuItem,
   Box,
   List,
   ListItemIcon,
@@ -16,7 +14,11 @@ import {
   IconButton,
   ListItemButton,
   Grid,
-  InputBase
+  InputBase,
+  Popover,
+  Tooltip,
+  Menu,
+  MenuItem, // <-- Added MenuItem import to fix ReferenceError
 } from '@mui/material';
 import {
   Settings,
@@ -52,27 +54,26 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filteredMenuItems, setFilteredMenuItems] = useState<any[]>([]);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
   const { isMobile } = useMobileDetection();
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   // Common button style for enhanced UI/UX
   const modernButtonStyle = {
     mx: 1,
-    transition: 'all 0.2s ease-in-out',
+    transition: 'all 0.18s ease-in-out',
     borderRadius: 2,
     '&:hover': {
       transform: 'translateY(-2px)',
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
     },
     '&:focus': {
       outline: '2px solid',
       outlineColor: 'primary.main',
       outlineOffset: '2px',
-    },
-    '&:active': {
-      transform: 'translateY(0) scale(0.98)',
     }
   };
 
@@ -80,11 +81,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const { data: organizationData } = useQuery({
     queryKey: ['currentOrganization'],
     queryFn: organizationService.getCurrentOrganization,
-    enabled: !isAppSuperAdmin(user), // Only for organization users
+    enabled: !isAppSuperAdmin(user),
     retry: false,
     staleTime: 0,
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 10000, // Auto-refetch every 10 seconds for testing
+    refetchOnWindowFocus: true,
+    refetchInterval: 10000,
     onSuccess: (data) => {
       console.log('Organization data fetched:', {
         enabled_modules: data.enabled_modules,
@@ -100,34 +101,36 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const { data: userPermissions = [] } = useQuery({
     queryKey: ['userServicePermissions'],
     queryFn: rbacService.getCurrentUserPermissions,
-    enabled: !!user && !isAppSuperAdmin(user), // Only fetch for organization users
+    enabled: !!user && !isAppSuperAdmin(user),
     retry: false,
-    staleTime: 0, // 5 minutes
+    staleTime: 0,
     onSuccess: (data) => {
       console.log('User permissions fetched:', data);
     }
   });
 
-  // Add keyboard event listener for Escape key
+  // Keyboard: Esc closes menus; Ctrl/Cmd+K focuses search
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (anchorEl) {
-          handleMenuClose();
-        }
-        if (userMenuAnchor) {
-          handleUserMenuClose();
-        }
-        if (subAnchorEl) {
-          handleSubClose();
+        if (anchorEl) handleMenuClose();
+        if (userMenuAnchor) handleUserMenuClose();
+        if (subAnchorEl) handleSubClose();
+        if (mobileDrawerOpen) setMobileDrawerOpen(false);
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        if (isMobile) {
+          setMobileDrawerOpen(true);
+        } else {
+          if (!anchorEl) setActiveMenu('menu');
+          setTimeout(() => searchInputRef.current?.focus(), 80);
         }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [anchorEl, userMenuAnchor, subAnchorEl]);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [anchorEl, userMenuAnchor, subAnchorEl, mobileDrawerOpen, isMobile]);
 
   // Click outside to close search results
   useEffect(() => {
@@ -143,10 +146,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     };
   }, [searchRef]);
 
-  // Don't render if not visible
-  if (!isVisible) {
-    return null;
-  }
+  // Auto-focus search when popover opens on desktop
+  useEffect(() => {
+    if (anchorEl && !isMobile) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 120);
+      return () => clearTimeout(t);
+    }
+  }, [anchorEl, isMobile]);
+
+  if (!isVisible) return null;
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
     setAnchorEl(event.currentTarget);
@@ -164,23 +172,26 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const navigateTo = (path: string) => {
+    if (!path) return;
     router.push(path);
     handleMenuClose();
     handleSubClose();
+    setMobileDrawerOpen(false);
   };
 
-  // Enhanced logo navigation function
   const navigateToHome = () => {
     router.push('/dashboard');
     handleMenuClose();
   };
 
-  // Check user roles using proper utility functions
   const isSuperAdmin = isAppSuperAdmin(user);
 
-  // Service permission helper functions
   const hasServicePermission = (permission: string): boolean => {
-    return userPermissions.includes(permission);
+    try {
+      return userPermissions.includes(permission);
+    } catch {
+      return false;
+    }
   };
 
   const hasAnyServicePermission = (permissions: string[]): boolean => {
@@ -209,9 +220,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
   };
 
-  // Helper to check if a module is enabled for the organization
   const isModuleEnabled = (module: string): boolean => {
-    if (isSuperAdmin) {return true;} // Super admins see all
+    if (isSuperAdmin) return true;
     const enabled = organizationData?.enabled_modules?.[module] ?? false;
     console.log(`Module check - ${module}:`, enabled, {
       allModules: organizationData?.enabled_modules,
@@ -221,13 +231,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const openDemoMode = () => {
-    // Navigate to demo page
     router.push('/demo');
     handleMenuClose();
   };
 
   const requestModuleActivation = () => {
-    // In production, this could open a support ticket form or email client
     window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
   };
 
@@ -244,22 +252,22 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     setAnchorEl(null);
     setActiveMenu(null);
     setSelectedSection(null);
+    setFilteredMenuItems([]);
+    setSearchQuery('');
   };
 
   const handleCreateLicense = () => {
-    // For now, we'll use a state to control the modal
-    // In a full implementation, this would be managed by parent component
     setCreateLicenseModalOpen(true);
     handleMenuClose();
   };
 
   const flattenMenuItems = (menu: any) => {
-    let items = [];
-    menu.sections.forEach(section => {
-      section.subSections.forEach(subSection => {
-        subSection.items.forEach(item => {
+    let items: any[] = [];
+    menu.sections.forEach((section: any) => {
+      (section.subSections || []).forEach((subSection: any) => {
+        (subSection.items || []).forEach((item: any) => {
           if (item.subItems) {
-            item.subItems.forEach(subItem => items.push(subItem));
+            item.subItems.forEach((subItem: any) => items.push(subItem));
           } else {
             items.push(item);
           }
@@ -273,22 +281,22 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     setSearchQuery(query);
     if (query.length >= 2) {
       const allItems = flattenMenuItems(menuItems.menu);
-      const filtered = allItems.filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
+      const filtered = allItems.filter(item =>
+        item.name && item.name.toLowerCase().includes(query.toLowerCase())
+      );
       setFilteredMenuItems(filtered);
+      if (filtered.length > 0 && !anchorEl && !isMobile) {
+        setActiveMenu('menu');
+      }
     } else {
       setFilteredMenuItems([]);
     }
   };
 
   const renderMegaMenu = () => {
-    // Don't render mega menu on mobile (MobileNav handles navigation)
-    if (isMobile) {
-      return null;
-    }
-    
-    if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) {
-      return null;
-    }
+    if (isMobile) return null;
+    if (!activeMenu || !menuItems[activeMenu as keyof typeof menuItems]) return null;
+
     let menu = menuItems[activeMenu as keyof typeof menuItems];
     if (activeMenu === 'menu') {
       menu = {
@@ -296,25 +304,18 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         sections: mainMenuSections(isSuperAdmin)
       };
     }
-    // Filter menu items based on user permissions
+
     const filterMenuItems = (subSection: any) => {
-      return subSection.items.filter((item: any) => {
-        // Check role-based permissions
-        if (item.role && !canManageUsers(user)) {
-          return false;
-        }
-        // Check super admin only items
-        if (item.superAdminOnly && !isSuperAdmin) {
-          return false;
-        }
-        // Check service permissions
-        if (item.servicePermission && !hasServicePermission(item.servicePermission)) {
-          return false;
-        }
-        return true;
+      return subSection.items.map((item: any) => {
+        const disabled =
+          (item.role && !canManageUsers(user)) ||
+          (item.superAdminOnly && !isSuperAdmin) ||
+          (item.servicePermission && !hasServicePermission(item.servicePermission));
+        return { ...item, __disabled: Boolean(disabled) };
       });
     };
-    const normalizedSections = menu.sections.map(section => {
+
+    const normalizedSections = menu.sections.map((section: any) => {
       if (!section.subSections) {
         return {
           ...section,
@@ -326,132 +327,179 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       }
       return section;
     });
-    const filteredSections = normalizedSections.map(section => ({
+
+    const filteredSections = normalizedSections.map((section: any) => ({
       ...section,
       subSections: section.subSections.map((subSection: any) => ({
         ...subSection,
         items: filterMenuItems(subSection)
       })).filter((subSection: any) => subSection.items.length > 0)
-    })).filter(section => section.subSections.length > 0);
+    })).filter((section: any) => section.subSections.length > 0);
+
     if (filteredSections.length === 0) {
       console.log(`No items in submenu for ${activeMenu} - permissions may be missing`);
       return null;
     }
+
     return (
-      <Menu
-        anchorEl={anchorEl}
+      <Popover
         open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
         onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            width: selectedSection ? 'calc(100vw - 40px)' : 'auto',
-            maxWidth: selectedSection ? 'calc(100vw - 40px)' : 'auto',
-            maxHeight: 'calc(120vh - 120px)' ,
-            overflowY: 'hidden',
-            mt: 0,
-            borderRadius: 2,
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-            border: '1px solid',
-            borderColor: 'divider',
-            left: '20px !important',
-            right: 'auto',
-            '& .MuiMenuItem-root': {
-              borderRadius: 1,
-              margin: '2px 8px',
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                backgroundColor: 'primary.50',
-                transform: 'translateX(4px)',
-              }
-            },
-            '@media (max-width: 768px)': {
-              width: 'calc(100vw - 20px)',
-              left: '10px !important',
-            }
-          }
-        }}
-        MenuListProps={{
-          sx: {
-            padding: 1
-          }
-        }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        disableAutoFocusItem
+        PaperProps={{
+          sx: {
+            width: 'calc(100% - 40px)',
+            maxWidth: '1400px',
+            left: '20px !important',
+            right: '20px !important',
+            maxHeight: '70vh',
+            overflow: 'hidden',
+            borderRadius: 2,
+            boxShadow: '0 14px 40px rgba(0,0,0,0.16)',
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            flexDirection: 'column'
+          }
+        }}
       >
-        <Grid container>
-          <Grid item xs={3}>
-            <List sx={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'visible', minHeight: filteredSections.length * 50 + 'px' }}>
-              {filteredSections.map((section, index) => (
+        <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            Menu
+          </Typography>
+          <Box sx={{ flex: 1 }} />
+          <Box ref={searchRef} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1 }}>
+            <SearchIcon fontSize="small" />
+            <InputBase
+              inputRef={searchInputRef}
+              placeholder="Search… (Press ⌘/Ctrl+K)"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              sx={{ ml: 1, width: 300 }}
+              inputProps={{ 'aria-label': 'Search menu' }}
+            />
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          <Box sx={{ width: 280, borderRight: '1px solid', borderColor: 'divider', overflowY: 'auto', flexShrink: 0 }}>
+            <List sx={{ position: 'sticky', top: 0, background: 'transparent', py: 1 }}>
+              {filteredSections.map((section: any, index: number) => (
                 <ListItemButton
                   key={index}
                   selected={selectedSection === section.title}
                   onClick={() => setSelectedSection(section.title)}
                   sx={{
-                    backgroundColor: selectedSection === section.title ? 'primary.light' : 'transparent',
-                    color: selectedSection === section.title ? 'primary.contrastText' : 'text.primary',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      color: 'primary.contrastText',
-                    },
-                    minHeight: '50px'
+                    mb: 0.5,
+                    borderRadius: 1,
+                    px: 2,
+                    justifyContent: 'space-between'
                   }}
+                  role="menuitem"
+                  aria-haspopup="true"
                 >
                   <ListItemText primary={section.title} />
                   <ChevronRight />
                 </ListItemButton>
               ))}
             </List>
-          </Grid>
-          <Grid item xs={9} sx={{ pl: 2 }}>
-            {selectedSection && (
-              <Grid container spacing={2}>
-                {filteredSections.find(s => s.title === selectedSection)?.subSections.map((subSection: any, subIndex: number) => (
-                  <Grid item xs={12} sm={6} md={4} key={subIndex}>
-                    {subSection.title && (
-                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
-                        {subSection.title}
-                      </Typography>
-                    )}
-                    <List dense>
-                      {subSection.items.map((item: any, itemIndex: number) => (
-                        <ListItemButton
-                          key={itemIndex}
-                          onClick={(e) => item.subItems ? handleSubClick(e, item) : navigateTo(item.path)}
-                          sx={{
-                            borderRadius: 1,
-                            mb: 0.5,
-                            '&:hover': {
-                              backgroundColor: 'secondary.light',
-                              color: 'secondary.contrastText'
-                            }
-                          }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 36 }}>
-                            {item.icon}
-                          </ListItemIcon>
-                          <ListItemText primary={item.name} />
-                          {item.subItems && <ChevronRight />}
-                        </ListItemButton>
-                      ))}
-                    </List>
+          </Box>
+
+          <Box sx={{ flex: 1, p: 2, overflowY: 'auto', minHeight: 0 }}>
+            {filteredMenuItems.length > 0 ? (
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Search results</Typography>
+                <List dense>
+                  {filteredMenuItems.map((item, i) => (
+                    <ListItemButton key={i} onClick={() => navigateTo(item.path)}>
+                      <ListItemText primary={item.name} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Box>
+            ) : (
+              <>
+                {selectedSection ? (
+                  <Grid container spacing={2}>
+                    {filteredSections.find((s: any) => s.title === selectedSection)?.subSections.map((subSection: any, subIndex: number) => (
+                      <Grid item xs={12} sm={6} md={4} key={subIndex}>
+                        {subSection.title && (
+                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            {subSection.title}
+                          </Typography>
+                        )}
+                        <List dense>
+                          {subSection.items.map((item: any, itemIndex: number) => {
+                            const disabled = item.__disabled;
+                            return (
+                              <Tooltip key={itemIndex} title={disabled ? 'You do not have permission. Click Request.' : ''} arrow>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                  <ListItemButton
+                                    disabled={disabled}
+                                    onClick={(e) => {
+                                      if (!disabled) {
+                                        if (item.subItems) {
+                                          handleSubClick(e as any, item);
+                                        } else {
+                                          navigateTo(item.path);
+                                        }
+                                      }
+                                    }}
+                                    sx={{
+                                      borderRadius: 1,
+                                      width: '100%',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between'
+                                    }}
+                                    role="menuitem"
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                      <ListItemIcon sx={{ minWidth: 36 }}>
+                                        {item.icon}
+                                      </ListItemIcon>
+                                      <ListItemText primary={item.name} />
+                                    </Box>
+                                    {item.subItems ? <ChevronRight /> : null}
+                                  </ListItemButton>
+
+                                  {disabled && (
+                                    <Button size="small" onClick={requestModuleActivation} sx={{ ml: 1 }}>
+                                      Request
+                                    </Button>
+                                  )}
+                                </Box>
+                              </Tooltip>
+                            );
+                          })}
+                        </List>
+                      </Grid>
+                    ))}
                   </Grid>
-                ))}
-              </Grid>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">Select a category on the left to view submenu items.</Typography>
+                )}
+              </>
             )}
-          </Grid>
-        </Grid>
-      </Menu>
+          </Box>
+        </Box>
+
+        <Box sx={{ px: 2, py: 1, borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Button size="small" onClick={() => navigateTo('/create-invoice')}>Create Invoice</Button>
+          <Button size="small" onClick={() => navigateTo('/quotes')}>New Quote</Button>
+          <Button size="small" onClick={requestModuleActivation}>Request Module</Button>
+          <Box sx={{ flex: 1 }} />
+          <Typography variant="caption" color="text.secondary">Press Esc to close</Typography>
+        </Box>
+      </Popover>
     );
   };
 
   const renderSubMenu = () => {
-    // Don't render sub menu on mobile
-    if (isMobile) {
-      return null;
-    }
-    
-    if (!activeSubCategory) {return null;}
+    if (isMobile) return null;
+    if (!activeSubCategory) return null;
     return (
       <Menu
         anchorEl={subAnchorEl}
@@ -514,7 +562,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const renderSearchResults = () => {
-    if (filteredMenuItems.length === 0) {return null;}
+    if (filteredMenuItems.length === 0) return null;
     return (
       <Menu
         open={filteredMenuItems.length > 0}
@@ -550,16 +598,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }}
       >
         <Toolbar>
-          {/* Mobile Navigation or Desktop Menu */}
           {isMobile ? (
-            <MobileNav
-              user={user}
-              onLogout={onLogout}
-              menuItems={menuItems}
-              isVisible={isVisible}
-            />
+            <IconButton color="inherit" onClick={() => setMobileDrawerOpen(true)} sx={modernButtonStyle}>
+              <MenuIcon />
+            </IconButton>
           ) : (
-            /* Menu and Settings on the left */
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Button
                 color="inherit"
@@ -568,6 +611,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 onClick={(e) => handleMenuClick(e, 'menu')}
                 className="modern-menu-button"
                 sx={modernButtonStyle}
+                aria-haspopup="true"
+                aria-expanded={Boolean(anchorEl)}
+                aria-controls="mega-menu-popover"
               >
                 Menu
               </Button>
@@ -578,12 +624,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 onClick={(e) => handleMenuClick(e, 'settings')}
                 className="modern-menu-button"
                 sx={modernButtonStyle}
+                aria-haspopup="true"
+                aria-expanded={Boolean(anchorEl)}
               >
                 Settings
               </Button>
             </Box>
           )}
-          {/* Enhanced Logo Section in the center */}
+
           <Box
             sx={{
               display: 'flex',
@@ -592,7 +640,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               flexGrow: 1,
               justifyContent: 'center',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'rgba(255, 255, 255, 0.06)',
                 borderRadius: 1
               },
               p: 1,
@@ -616,28 +664,31 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               {organizationData?.name || 'ERP'}
             </Typography>
           </Box>
-          {/* Search bar on the right - Desktop only */}
+
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', ml: 2 }} ref={searchRef}>
-              <InputBase
-                placeholder="Search…"
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                startAdornment={<SearchIcon />}
-                sx={{
-                  color: 'inherit',
-                  ml: 1,
-                  '& .MuiInputBase-input': {
-                    padding: '8px 8px 8px 0',
-                    transition: 'width 0.3s',
-                    width: searchQuery ? '300px' : '200px',
-                  },
-                }}
-              />
+              <Box sx={{ display:'flex', alignItems:'center', bgcolor:'action.hover', px:1, py:0.4, borderRadius:1 }}>
+                <SearchIcon fontSize="small" />
+                <InputBase
+                  inputRef={searchInputRef}
+                  placeholder="Search…"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  sx={{
+                    color: 'inherit',
+                    ml: 1,
+                    '& .MuiInputBase-input': {
+                      padding: '6px 6px',
+                      transition: 'width 0.3s',
+                      width: searchQuery ? '260px' : '180px',
+                    },
+                  }}
+                />
+              </Box>
               {renderSearchResults()}
             </Box>
           )}
-          {/* User Menu - Always visible */}
+
           <IconButton
             color="inherit"
             onClick={handleUserMenuClick}
@@ -646,13 +697,17 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               minWidth: 44,
               minHeight: 44,
             }}
+            aria-haspopup="true"
+            aria-expanded={Boolean(userMenuAnchor)}
           >
             <AccountCircle />
           </IconButton>
         </Toolbar>
       </AppBar>
+
       {renderMegaMenu()}
       {renderSubMenu()}
+
       <Menu
         anchorEl={userMenuAnchor}
         open={Boolean(userMenuAnchor)}
@@ -692,20 +747,28 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           </Typography>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => router.push('/profile')}>
+        <MenuItem onClick={() => { handleUserMenuClose(); router.push('/profile'); }}>
           Profile Settings
         </MenuItem>
         <MenuItem onClick={onLogout}>
           Logout
         </MenuItem>
       </Menu>
-      {/* Organization License Creation Modal */}
+
+      {/* Use your MobileNav component for mobile drawer */}
+      <MobileNav
+        open={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        user={user}
+        onLogout={onLogout}
+        menuItems={menuItems}
+      />
+
       <CreateOrganizationLicenseModal
         open={createLicenseModalOpen}
         onClose={() => setCreateLicenseModalOpen(false)}
         onSuccess={(result) => {
           console.log('License created:', result);
-          // You might want to show a success notification here
         }}
       />
     </>
