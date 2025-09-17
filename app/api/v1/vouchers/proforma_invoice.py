@@ -11,6 +11,7 @@ from app.schemas.vouchers import ProformaInvoiceCreate, ProformaInvoiceInDB, Pro
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
+from sqlalchemy import func  # Added import for func
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["proforma-invoices"])
@@ -74,20 +75,36 @@ async def create_proforma_invoice(
         invoice_data['created_by'] = current_user.id
         invoice_data['organization_id'] = current_user.organization_id
         
-        # Generate unique voucher number if not provided or blank
-        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-                db, "PI", current_user.organization_id, ProformaInvoice
-            )
-        else:
-            existing = db.query(ProformaInvoice).filter(
+        # Handle revisions: If parent_id provided, generate revised number
+        if invoice.parent_id:
+            parent = db.query(ProformaInvoice).filter(ProformaInvoice.id == invoice.parent_id).first()
+            if not parent:
+                raise HTTPException(status_code=404, detail="Parent proforma invoice not found")
+            
+            # Get latest revision number
+            latest_revision = db.query(func.max(ProformaInvoice.revision_number)).filter(
                 ProformaInvoice.organization_id == current_user.organization_id,
-                ProformaInvoice.voucher_number == invoice_data['voucher_number']
-            ).first()
-            if existing:
+                ProformaInvoice.voucher_number.like(f"{parent.voucher_number}%")
+            ).scalar() or 0
+            
+            invoice_data['revision_number'] = latest_revision + 1
+            invoice_data['voucher_number'] = f"{parent.voucher_number} Rev {invoice_data['revision_number']}"
+            invoice_data['parent_id'] = invoice.parent_id
+        else:
+            # Generate unique voucher number if not provided or blank
+            if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
                 invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "PI", current_user.organization_id, ProformaInvoice
                 )
+            else:
+                existing = db.query(ProformaInvoice).filter(
+                    ProformaInvoice.organization_id == current_user.organization_id,
+                    ProformaInvoice.voucher_number == invoice_data['voucher_number']
+                ).first()
+                if existing:
+                    invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                        db, "PI", current_user.organization_id, ProformaInvoice
+                    )
         
         db_invoice = ProformaInvoice(**invoice_data)
         db.add(db_invoice)

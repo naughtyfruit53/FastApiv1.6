@@ -428,6 +428,8 @@ class ProformaInvoiceCreate(VoucherBase):
     valid_until: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    parent_id: Optional[int] = None  # For revisions
+    revision_number: Optional[int] = 0
     items: List[ProformaInvoiceItemCreate] = []
 
 class ProformaInvoiceUpdate(BaseModel):
@@ -442,6 +444,8 @@ class ProformaInvoiceUpdate(BaseModel):
     discount_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    parent_id: Optional[int] = None  # For revisions
+    revision_number: Optional[int] = None
     items: Optional[List[ProformaInvoiceItemCreate]] = None
 
 class ProformaInvoiceInDB(VoucherInDBBase):
@@ -449,6 +453,8 @@ class ProformaInvoiceInDB(VoucherInDBBase):
     valid_until: Optional[datetime]
     payment_terms: Optional[str]
     terms_conditions: Optional[str]
+    parent_id: Optional[int]
+    revision_number: Optional[int] = 0
     items: List[ProformaInvoiceItemInDB]
 
 # Quotation
@@ -469,6 +475,8 @@ class QuotationCreate(VoucherBase):
     total_discount_type: Optional[str] = None
     total_discount: Optional[float] = 0.0
     round_off: Optional[float] = 0.0
+    parent_id: Optional[int] = None  # For revisions
+    revision_number: Optional[int] = 0
     items: List[QuotationItemCreate] = []
 
 class QuotationUpdate(BaseModel):
@@ -483,6 +491,8 @@ class QuotationUpdate(BaseModel):
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    parent_id: Optional[int] = None  # For revisions
+    revision_number: Optional[int] = None
     items: Optional[List[QuotationItemCreate]] = None
 
 class QuotationInDB(VoucherInDBBase):
@@ -494,6 +504,8 @@ class QuotationInDB(VoucherInDBBase):
     total_discount_type: Optional[str]
     total_discount: Optional[float] = 0.0
     round_off: Optional[float] = 0.0
+    parent_id: Optional[int]
+    revision_number: Optional[int] = 0
     items: List[QuotationItemInDB]
 
 # Credit Note

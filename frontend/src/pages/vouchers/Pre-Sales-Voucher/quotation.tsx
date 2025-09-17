@@ -107,6 +107,7 @@ const QuotationPage: React.FC = () => {
     refreshMasterData,
     getAmountInWords,
     totalRoundOff,
+    handleRevise,
   } = useVoucherPage(config);
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
@@ -172,8 +173,11 @@ const QuotationPage: React.FC = () => {
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
         .then(number => setValue('voucher_number', number))
         .catch(err => console.error('Failed to fetch voucher number:', err));
+    } else if (mode === 'revise' && voucherData) {
+      setValue('voucher_number', `${voucherData.voucher_number} Rev ${voucherData.revision_number + 1 || 1}`);
+      setValue('parent_id', voucherData.id);
     }
-  }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
+  }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint, voucherData]);
 
   const handleVoucherClick = async (voucher: any) => {
     try {
@@ -207,6 +211,33 @@ const QuotationPage: React.FC = () => {
     } catch (err) {
       console.error("Error fetching voucher for edit:", err);
       handleEdit(voucher);
+    }
+  };
+
+  const handleReviseWithData = async (voucher: any) => {
+    if (!voucher || !voucher.id) return;
+    try {
+      const response = await api.get(`/quotations/${voucher.id}`);
+      let fullVoucherData = response.data;
+      fullVoucherData.date = new Date().toISOString().split('T')[0];  // Set to current date for revision
+      setMode("revise");
+      reset({
+        ...fullVoucherData,
+        id: undefined,  // Clear ID for new creation
+        voucher_number: `${fullVoucherData.voucher_number} Rev ${fullVoucherData.revision_number + 1 || 1}`,
+        parent_id: fullVoucherData.id,
+        revision_number: fullVoucherData.revision_number + 1 || 1,
+        items: fullVoucherData.items.map((item: any) => ({
+          ...item,
+          id: undefined,  // Clear item IDs for new creation
+          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate,
+        })),
+      });
+    } catch (err) {
+      console.error("Error fetching voucher for revise:", err);
+      handleRevise(voucher);
     }
   };
 
@@ -331,6 +362,7 @@ const QuotationPage: React.FC = () => {
                     onDelete={handleDelete}
                     onPrint={handleGeneratePDF}
                     onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Quotation")}
+                    onRevise={handleReviseWithData}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -346,7 +378,7 @@ const QuotationPage: React.FC = () => {
   const formHeader = (
     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
-        {config.voucherTitle} - {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
+        {config.voucherTitle} - {mode === "create" ? "Create" : mode === "edit" ? "Edit" : mode === "revise" ? "Revise" : "View"}
       </Typography>
       <VoucherHeaderActions
         mode={mode}
@@ -566,7 +598,7 @@ const QuotationPage: React.FC = () => {
       <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Quotation" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Quotation")} />
+      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Quotation" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Quotation")} onRevise={handleReviseWithData} />
     </>
   );
 };

@@ -40,9 +40,10 @@ class VoucherNumberService:
         ).order_by(model.voucher_number.desc()).first()
         
         if latest_voucher:
-            # Extract sequence number from the last voucher
+            # Extract sequence number from the last voucher (handle revisions by ignoring Rev suffix)
+            voucher_num = latest_voucher.voucher_number.split(' Rev ')[0]  # Strip revision if present
             try:
-                last_sequence = int(latest_voucher.voucher_number.split('/')[-1])
+                last_sequence = int(voucher_num.split('/')[-1])
                 next_sequence = last_sequence + 1
             except (ValueError, IndexError):
                 next_sequence = 1
@@ -55,7 +56,7 @@ class VoucherNumberService:
         # Ensure uniqueness (in case of race conditions)
         while db.query(model).filter(model.voucher_number == voucher_number).first():
             next_sequence += 1
-            voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:08d}"
+            voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:05d}"
         
         return voucher_number
 
@@ -151,7 +152,7 @@ class VoucherAutoPopulationService:
                 "ordered_quantity": po_item.quantity,
                 "received_quantity": po_item.pending_quantity,
                 "accepted_quantity": po_item.pending_quantity,
-                "rejected_quantity": 0.0,
+                "rejected_quantity": 0,
                 "unit": po_item.unit,
                 "unit_price": po_item.unit_price,
                 "total_cost": po_item.pending_quantity * po_item.unit_price

@@ -11,6 +11,7 @@ from app.schemas.vouchers import QuotationCreate, QuotationInDB, QuotationUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
+from sqlalchemy import func  # Added import for func
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["quotations"])
@@ -74,20 +75,36 @@ async def create_quotation(
         quotation_data['created_by'] = current_user.id
         quotation_data['organization_id'] = current_user.organization_id
         
-        # Generate unique voucher number if not provided or blank
-        if not quotation_data.get('voucher_number') or quotation_data['voucher_number'] == '':
-            quotation_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-                db, "QT", current_user.organization_id, Quotation
-            )
-        else:
-            existing = db.query(Quotation).filter(
+        # Handle revisions: If parent_id provided, generate revised number
+        if quotation.parent_id:
+            parent = db.query(Quotation).filter(Quotation.id == quotation.parent_id).first()
+            if not parent:
+                raise HTTPException(status_code=404, detail="Parent quotation not found")
+            
+            # Get latest revision number
+            latest_revision = db.query(func.max(Quotation.revision_number)).filter(
                 Quotation.organization_id == current_user.organization_id,
-                Quotation.voucher_number == quotation_data['voucher_number']
-            ).first()
-            if existing:
+                Quotation.voucher_number.like(f"{parent.voucher_number}%")
+            ).scalar() or 0
+            
+            quotation_data['revision_number'] = latest_revision + 1
+            quotation_data['voucher_number'] = f"{parent.voucher_number} Rev {quotation_data['revision_number']}"
+            quotation_data['parent_id'] = quotation.parent_id
+        else:
+            # Generate unique voucher number if not provided or blank
+            if not quotation_data.get('voucher_number') or quotation_data['voucher_number'] == '':
                 quotation_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "QT", current_user.organization_id, Quotation
                 )
+            else:
+                existing = db.query(Quotation).filter(
+                    Quotation.organization_id == current_user.organization_id,
+                    Quotation.voucher_number == quotation_data['voucher_number']
+                ).first()
+                if existing:
+                    quotation_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                        db, "QT", current_user.organization_id, Quotation
+                    )
         
         db_quotation = Quotation(**quotation_data)
         db.add(db_quotation)

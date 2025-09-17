@@ -40,8 +40,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   );
   console.log("[useVoucherPage] config.endpoint:", config.endpoint);
   console.log("[useVoucherPage] isOrgContextReady:", isOrgContextReady);
-  const [mode, setMode] = useState<"create" | "edit" | "view">(
-    (queryMode as "create" | "edit" | "view") || "create",
+  const [mode, setMode] = useState<"create" | "edit" | "view" | "revise">(
+    (queryMode as "create" | "edit" | "view" | "revise") || "create",
   );
   const [selectedId, setSelectedId] = useState<number | null>(
     id ? Number(id) : null,
@@ -164,6 +164,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       reference_id: null as number | null,
       reference_number: "",
       round_off: 0,
+      parent_id: null as number | null,
+      revision_number: 0,
     };
     if (config.hasItems === false) {
       // Financial vouchers - use financial defaults
@@ -192,12 +194,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
             unit_price: 0.0, // Ensure 2 decimal places
             original_unit_price: 0.0,
             discount_percentage: 0,
-            discount_amount: 0.0,
-            taxable_amount: 0.0,
-            cgst_amount: 0.0,
-            sgst_amount: 0.0,
-            igst_amount: 0.0,
-            total_amount: 0.0,
+            discount_amount: 0,
           },
         ],
       };
@@ -244,7 +241,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         selectedId!,
       ),
     enabled:
-      !!selectedId && isOrgContextReady && (mode === "view" || mode === "edit"),
+      !!selectedId && isOrgContextReady && (mode === "view" || mode === "edit" || mode === "revise"),
   });
   // Extract isIntrastate as separate memo for UI usage
   const isIntrastate = useMemo(() => {
@@ -460,6 +457,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       shallow: true,
     });
   };
+  const handleRevise = (voucherId: number) => {
+    router.push({ query: { id: voucherId, mode: "revise" } }, undefined, {
+      shallow: true,
+    });
+  };
   const handleView = (voucherId: number) => {
     router.push({ query: { id: voucherId, mode: "view" } }, undefined, {
       shallow: true,
@@ -489,7 +491,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       data.reference_number =
         referenceDocument.voucher_number || referenceDocument.number;
     }
-    if (mode === "create") {
+    if (mode === "create" || mode === "revise") {
       createMutation.mutate(data);
     } else if (mode === "edit") {
       updateMutation.mutate(data);
@@ -650,7 +652,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         const newCustomer = response.data;
         // Update query data immediately
         queryClient.setQueryData(["customers"], (old: any) =>
-          old ? [...old, newCustomer] : [newCustomer],
+          old ? old.concat(newCustomer) : [newCustomer],
         );
         queryClient.invalidateQueries({ queryKey: ["customers"] });
         // Auto-select the new customer (conditional on entity type)
@@ -692,7 +694,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         const newVendor = response.data;
         // Update query data immediately
         queryClient.setQueryData(["vendors"], (old: any) =>
-          old ? [...old, newVendor] : [newVendor],
+          old ? old.concat(newVendor) : [newVendor],
         );
         queryClient.invalidateQueries({ queryKey: ["vendors"] });
         // Auto-select the new vendor (conditional on entity type)
@@ -734,7 +736,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         const newProduct = response.data;
         // Update query data immediately
         queryClient.setQueryData(["products"], (old: any) =>
-          old ? [...old, newProduct] : [newProduct],
+          old ? old.concat(newProduct) : [newProduct],
         );
         queryClient.invalidateQueries({ queryKey: ["products"] });
         setShowAddProductModal(false);
@@ -889,7 +891,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   ]);
   // Sync state with query params for shallow routing
   useEffect(() => {
-    const newMode = (router.query.mode as "create" | "edit" | "view") || "create";
+    const newMode = (router.query.mode as "create" | "edit" | "view" | "revise") || "create";
     const newId = router.query.id ? Number(router.query.id) : null;
     setMode(newMode);
     setSelectedId(newId);
@@ -980,6 +982,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     // Event handlers
     handleCreate,
     handleEdit,
+    handleRevise,
     handleView,
     handleSubmitForm,
     handleContextMenu,

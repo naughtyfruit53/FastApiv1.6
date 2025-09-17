@@ -69,9 +69,9 @@ export const handleFinalSubmit = async (
   data.items = data.items.map(({ original_unit_price, ...item }: any) => item);
 
   let response;
-  if (mode === "create") {
+  if (mode === "create" || mode === "revise") {
     response = await createMutation.mutateAsync(data);
-    if (confirm("Voucher created successfully. Generate PDF?")) {
+    if (confirm(`${mode === "revise" ? "Revision" : "Voucher"} created successfully. Generate PDF?`)) {
       handleGeneratePDF(response);
     }
   } else if (mode === "edit") {

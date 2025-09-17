@@ -182,6 +182,7 @@ export const voucherService = {
       canPrint: true,
       canEmail: Boolean(recipient?.email),
       emailRecipient: recipient,
+      canRevise: true,  // Always allow revise for now
     };
   },
 };

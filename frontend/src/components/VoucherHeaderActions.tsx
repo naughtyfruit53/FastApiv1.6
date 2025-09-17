@@ -6,12 +6,13 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Close as CloseIcon,
+  Save as SaveIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import VoucherPDFButton from "./VoucherPDFButton";
 
 interface VoucherHeaderActionsProps {
-  mode: "create" | "edit" | "view";
+  mode: "create" | "edit" | "view" | "revise";
   voucherType: string; // e.g., 'Purchase Order', 'Sales Voucher', etc.
   voucherRoute: string; // The base route for this voucher type
   currentId?: number; // Current voucher ID (for edit route)
@@ -19,7 +20,7 @@ interface VoucherHeaderActionsProps {
   onCreate?: () => void;
   onCancel?: () => void;
   // Additional props for compatibility
-  onModeChange?: (_mode: "create" | "edit" | "view") => void;
+  onModeChange?: (_mode: "create" | "edit" | "view" | "revise") => void;
   onModalOpen?: () => void;
   voucherList?: any[];
   onView?: (_voucher: any) => void;
@@ -154,6 +155,36 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
         >
           Save
         </Button>
+      )}
+      {mode === "revise" && (
+        <>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<AddIcon />}
+            onClick={onCreate ? onCreate : handleCreateFallback}
+            sx={{ fontSize: 12, textTransform: "uppercase" }}
+          >
+            Create {voucherType.toLowerCase()}
+          </Button>
+          <Button
+            form="voucherForm"
+            type="submit"
+            variant="contained"
+            color="primary"
+            sx={{ fontSize: 12, textTransform: "uppercase" }}
+          >
+            Save Revision
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<CloseIcon />}
+            onClick={onCancel}
+            sx={{ fontSize: 12, textTransform: "uppercase" }}
+          >
+            Cancel
+          </Button>
+        </>
       )}
     </Box>
   );

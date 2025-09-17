@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKe
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func  # Added import for func
 from app.core.database import Base
-from .base import BaseVoucher, VoucherItemBase, SimpleVoucherItemBase
+from app.models.vouchers.base import BaseVoucher, VoucherItemBase, SimpleVoucherItemBase
 
 # Quotation
 class Quotation(BaseVoucher):
@@ -18,9 +18,12 @@ class Quotation(BaseVoucher):
     total_discount_type = Column(String)  # 'percentage' or 'amount'
     total_discount = Column(Float, default=0.0)
     round_off = Column(Float, default=0.0)  # Added to match schema and PDF calculations
+    parent_id = Column(Integer, ForeignKey("quotations.id"), nullable=True)  # Link to original/previous revision
+    revision_number = Column(Integer, default=0)  # 0 for original, 1 for Rev 1, etc.
     
-    customer = relationship("Customer")
+    customer = relationship("app.models.customer_models.Customer")
     items = relationship("app.models.vouchers.presales.QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
+    parent = relationship("app.models.vouchers.presales.Quotation", remote_side="app.models.vouchers.presales.Quotation.id", backref="revisions")  # Use string for remote_side
     
     __table_args__ = (
         # Unique voucher number per organization
@@ -29,6 +32,7 @@ class Quotation(BaseVoucher):
         Index('idx_quotation_org_date', 'organization_id', 'date'),
     )
 
+# QuotationItem
 class QuotationItem(SimpleVoucherItemBase):
     __tablename__ = "quotation_items"
     
@@ -44,7 +48,7 @@ class QuotationItem(SimpleVoucherItemBase):
     description = Column(Text)
     
     quotation = relationship("app.models.vouchers.presales.Quotation", back_populates="items")
-    product = relationship("app.models.product_models.Product")  # Qualified Product path; adjust if location differs
+    product = relationship("app.models.product_models.Product")  # Qualified
 
 # Proforma Invoice
 class ProformaInvoice(BaseVoucher):
@@ -54,9 +58,12 @@ class ProformaInvoice(BaseVoucher):
     valid_until = Column(DateTime(timezone=True))
     payment_terms = Column(String)
     terms_conditions = Column(Text)
+    parent_id = Column(Integer, ForeignKey("proforma_invoices.id"), nullable=True)  # Link to original/previous revision
+    revision_number = Column(Integer, default=0)  # 0 for original, 1 for Rev 1, etc.
     
-    customer = relationship("Customer")
+    customer = relationship("app.models.customer_models.Customer")
     items = relationship("app.models.vouchers.presales.ProformaInvoiceItem", back_populates="proforma_invoice", cascade="all, delete-orphan")
+    parent = relationship("app.models.vouchers.presales.ProformaInvoice", remote_side="app.models.vouchers.presales.ProformaInvoice.id", backref="revisions")  # Use string for remote_side
     
     __table_args__ = (
         # Unique voucher number per organization
@@ -65,6 +72,7 @@ class ProformaInvoice(BaseVoucher):
         Index('idx_pi_org_date', 'organization_id', 'date'),
     )
 
+# ProformaInvoiceItem
 class ProformaInvoiceItem(VoucherItemBase):
     __tablename__ = "proforma_invoice_items"
     
@@ -80,7 +88,7 @@ class ProformaInvoiceItem(VoucherItemBase):
     description = Column(Text)  # Added to align
     
     proforma_invoice = relationship("app.models.vouchers.presales.ProformaInvoice", back_populates="items")
-    product = relationship("app.models.product_models.Product")  # Added to align
+    product = relationship("app.models.product_models.Product")  # Qualified
 
 # Sales Order
 class SalesOrder(BaseVoucher):
@@ -91,7 +99,7 @@ class SalesOrder(BaseVoucher):
     payment_terms = Column(String)
     terms_conditions = Column(Text)
     
-    customer = relationship("Customer")
+    customer = relationship("app.models.customer_models.Customer")
     items = relationship("app.models.vouchers.presales.SalesOrderItem", back_populates="sales_order", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -102,6 +110,7 @@ class SalesOrder(BaseVoucher):
         Index('idx_so_org_status', 'organization_id', 'status'),
     )
 
+# SalesOrderItem
 class SalesOrderItem(SimpleVoucherItemBase):
     __tablename__ = "sales_order_items"
     
@@ -118,4 +127,4 @@ class SalesOrderItem(SimpleVoucherItemBase):
     description = Column(Text)
     
     sales_order = relationship("app.models.vouchers.presales.SalesOrder", back_populates="items")
-    product = relationship("app.models.product_models.Product")  # Assuming Product model exists
+    product = relationship("app.models.product_models.Product")  # Qualified

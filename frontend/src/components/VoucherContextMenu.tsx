@@ -10,7 +10,8 @@ import {
   Print, 
   Email, 
   ContentCopy,
-  LocalShipping 
+  LocalShipping,
+  History,  // New icon for revise
 } from '@mui/icons-material';
 
 interface VoucherContextMenuProps {
@@ -23,6 +24,7 @@ interface VoucherContextMenuProps {
   onEmail?: (voucher: any) => void;
   onDuplicate?: (voucher: any) => void;
   onCreateDispatch?: (voucher: any) => void;
+  onRevise?: (voucher: any) => void;  // New prop for revise
   showKebab?: boolean;
   contextMenu?: { mouseX: number; mouseY: number; voucher?: any } | null;
   onClose: () => void;
@@ -38,6 +40,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   onEmail,
   onDuplicate,
   onCreateDispatch,
+  onRevise,
   showKebab = false,
   contextMenu = null,
   onClose,
@@ -136,6 +139,11 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
         {isDeliveryChallan && onCreateDispatch && (
           <MenuItem onClick={handleAction(onCreateDispatch)}>
             <LocalShipping sx={{ mr: 1 }} /> Create Dispatch Order
+          </MenuItem>
+        )}
+        {onRevise && (
+          <MenuItem onClick={handleAction(onRevise)}>
+            <History sx={{ mr: 1 }} /> Create Revision
           </MenuItem>
         )}
       </Menu>
