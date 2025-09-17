@@ -6,7 +6,6 @@ import secrets
 import hashlib
 import base64
 import logging
-from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Tuple
 from urllib.parse import urlencode, parse_qs, urlparse
 
@@ -24,7 +23,7 @@ from app.schemas.oauth_schemas import (
     OAuthLoginRequest, OAuthLoginResponse, OAuthCallbackRequest, 
     OAuthTokenResponse, UserEmailTokenCreate
 )
-from app.utils.encryption import EncryptionKeys
+from app.utils.encryption import encrypt_field, decrypt_field, EncryptionKeys
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class OAuthConfig:
         "client_secret": getattr(settings, "GOOGLE_CLIENT_SECRET", ""),
         "authorization_endpoint": "https://accounts.google.com/o/oauth2/auth",
         "token_endpoint": "https://oauth2.googleapis.com/token",
-        "userinfo_endpoint": "https://www.googleapis.com/oauth2/v2/userinfo",
+        "userinfo_endpoint": "https://www.googleapis.com/oauth2/v3/userinfo",
         "scopes": [
             "https://www.googleapis.com/auth/gmail.readonly",
             "https://www.googleapis.com/auth/gmail.send",
@@ -112,7 +111,12 @@ class OAuth2Service:
             expires_at=datetime.utcnow() + timedelta(minutes=10)
         )
         self.db.add(oauth_state)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to commit OAuthState: {str(e)}\n{traceback.format_exc()}")
+            raise
         
         # Build authorization URL
         params = {

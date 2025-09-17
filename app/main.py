@@ -3,6 +3,7 @@
 import logging
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
@@ -80,7 +81,7 @@ from app.api.v1 import sticky_notes as v1_sticky_notes
 # Add import for service analytics
 from app.api.v1 import service_analytics as v1_service_analytics
 
-# Add imports for new Asset Management and Transport modules
+# Add import for new Asset Management and Transport modules
 from app.api.v1 import assets as v1_assets
 from app.api.v1 import transport as v1_transport
 
@@ -545,7 +546,8 @@ async def startup_event():
     for route in app.routes:
         if isinstance(route, APIRoute):
             methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            logger.info(f"{methods} {route.path}")
+            methods_str = methods if isinstance(methods, str) else ', '.join(methods)
+            logger.info(f"{methods_str} {route.path}")
     logger.info("=" * 50)
 
 @app.on_event("shutdown")

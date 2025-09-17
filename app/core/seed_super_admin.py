@@ -95,7 +95,6 @@ def seed_super_admin(db: Session = None) -> None:
             hashed_password = get_password_hash(super_admin_password)
             super_admin = User(
                 email=super_admin_email,
-                username=super_admin_email.split("@")[0],
                 hashed_password=hashed_password,
                 full_name="Super Admin",
                 role=UserRole.SUPER_ADMIN,

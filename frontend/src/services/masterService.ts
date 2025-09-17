@@ -196,3 +196,16 @@ export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Prom
   const response = await api.get("/stock", { params, signal });
   return response.data;
 };
+
+// HSN search for GST rate auto-population
+export const hsnSearch = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
+  const [, query, limit] = queryKey;
+  const response = await api.get("/master-data/hsn-search", { // Updated path to include /master-data
+    params: {
+      query,
+      limit: limit || 10,
+    },
+    signal,
+  });
+  return response.data;
+};

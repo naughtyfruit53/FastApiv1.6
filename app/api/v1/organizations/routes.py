@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
-from app.core.permissions import PermissionChecker, Permission
+from app.core.permissions import PermissionChecker, Permission, require_platform_permission
 from app.models import Organization, User, Product, Customer, Vendor, Stock
 from app.schemas.user import UserRole
 from app.schemas import (
@@ -39,11 +39,10 @@ async def list_organizations(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: Any = Depends(require_platform_permission(Permission.VIEW_ORGANIZATIONS)),
     request: Request = None
 ):
     """List all organizations (super admin only)"""
-    PermissionChecker.require_permission(Permission.VIEW_ORGANIZATIONS, current_user, db, request)
   
     organizations = db.query(Organization).offset(skip).limit(limit).all()
     return organizations
@@ -85,7 +84,7 @@ async def update_current_organization(
             detail="User is not associated with any organization"
         )
   
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only super administrators or organization administrators can update organization details"
@@ -185,14 +184,9 @@ async def factory_default_system(
 async def create_organization(
     org_data: OrganizationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: Any = Depends(require_platform_permission(Permission.CREATE_ORGANIZATIONS))
 ):
     """Create new organization (Super admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can create organizations"
-        )
   
     try:
         existing_org = db.query(Organization).filter(
@@ -272,7 +266,7 @@ async def get_organization_members(
             detail="Access denied to this organization"
         )
   
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to view organization members"
@@ -315,7 +309,7 @@ async def request_reset_otp(
             detail="User is not associated with any organization"
         )
   
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only organization administrators can request OTP for data reset"
@@ -344,7 +338,7 @@ async def verify_reset_otp_and_reset(
             detail="User is not associated with any organization"
         )
   
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only organization administrators can reset organization data"
@@ -384,7 +378,7 @@ async def reset_organization_data(
             detail="User is not associated with any organization"
         )
   
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only organization administrators can reset organization data"

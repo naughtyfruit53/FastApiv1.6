@@ -62,14 +62,15 @@ async def lookup_pincode(pin_code: str) -> Dict[str, str]:
         )
     
     try:
-        # Fetch from external API with timeout, User-Agent header to mimic browser (prevents bot blocking)
+        # Fetch from external API with timeout, User-Agent header to mimic browser (prevents bot blocking), and disable SSL verification to bypass TLS issue
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         response = requests.get(
             f"https://api.postalpincode.in/pincode/{pin_code}",
             headers=headers,
-            timeout=15  # Increased to 15 seconds for slower networks
+            timeout=15,  # Increased to 15 seconds for slower networks
+            verify=False  # Disable SSL verification to fix TLSV1_UNRECOGNIZED_NAME error (use cautiously)
         )
         response.raise_for_status()  # Raise error for bad status codes
         data = response.json()

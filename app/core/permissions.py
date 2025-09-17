@@ -97,7 +97,7 @@ class PermissionChecker:
     
     # Role-based permission mapping for regular users
     ROLE_PERMISSIONS = {
-        UserRole.SUPER_ADMIN: [
+        'super_admin': [
             Permission.MANAGE_USERS,
             Permission.VIEW_USERS,
             Permission.CREATE_USERS,
@@ -119,7 +119,7 @@ class PermissionChecker:
             Permission.FACTORY_RESET,
             # Note: App Super Admins don't have ACCESS_ORG_SETTINGS (per requirements)
         ],
-        UserRole.ORG_ADMIN: [
+        'org_admin': [
             Permission.MANAGE_USERS,
             Permission.VIEW_USERS,
             Permission.CREATE_USERS,
@@ -131,14 +131,14 @@ class PermissionChecker:
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,  # Org admins have access to org settings
         ],
-        UserRole.ADMIN: [
+        'admin': [
             Permission.VIEW_USERS,
             Permission.CREATE_USERS,
             Permission.RESET_OWN_PASSWORD,
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,  # Regular admins also have org settings access
         ],
-        UserRole.STANDARD_USER: [
+        'standard_user': [
             Permission.RESET_OWN_PASSWORD,
             Permission.ACCESS_ORG_SETTINGS,  # Standard users can access basic org settings
         ],
@@ -146,7 +146,7 @@ class PermissionChecker:
     
     # Platform role permissions
     PLATFORM_ROLE_PERMISSIONS = {
-        PlatformUserRole.SUPER_ADMIN: [
+        'super_admin': [
             Permission.SUPER_ADMIN,
             Permission.PLATFORM_ADMIN,
             Permission.MANAGE_USERS,  # For platform users
@@ -157,7 +157,7 @@ class PermissionChecker:
             Permission.RESET_ANY_DATA,
             Permission.VIEW_ALL_AUDIT_LOGS,
         ],
-        PlatformUserRole.PLATFORM_ADMIN: [
+        'platform_admin': [
             Permission.PLATFORM_ADMIN,
             Permission.MANAGE_ORGANIZATIONS,
             Permission.CREATE_ORGANIZATIONS,
@@ -172,10 +172,10 @@ class PermissionChecker:
         if not user or not user.role:
             return False
         
-        if getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN:
+        if getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin':
             return True
         
-        user_permissions = PermissionChecker.ROLE_PERMISSIONS.get(user.role, [])
+        user_permissions = PermissionChecker.ROLE_PERMISSIONS.get(user.role.lower(), [])
         return permission in user_permissions
     
     @staticmethod
@@ -183,16 +183,16 @@ class PermissionChecker:
         """Check platform-specific permissions, handling both User and PlatformUser"""
         if isinstance(platform_user, User):
             # For User type, check if super admin
-            if platform_user.is_super_admin and platform_user.email == "naughtyfruit53@gmail.com":
+            if platform_user.is_super_admin or platform_user.role.lower() == 'super_admin':
                 return True
             # Fallback to regular permission check
             return PermissionChecker.has_permission(platform_user, permission)
         
         if isinstance(platform_user, PlatformUser):
-            if platform_user.role == PlatformUserRole.SUPER_ADMIN and platform_user.email == "naughtyfruit53@gmail.com":
+            if platform_user.role.lower() == 'super_admin':
                 return True  # Primary super admin always has all permissions
             
-            platform_permissions = PermissionChecker.PLATFORM_ROLE_PERMISSIONS.get(platform_user.role, [])
+            platform_permissions = PermissionChecker.PLATFORM_ROLE_PERMISSIONS.get(platform_user.role.lower(), [])
             return permission in platform_permissions
         
         return False
@@ -231,7 +231,7 @@ class PermissionChecker:
     def can_access_organization(user: User, organization_id: int) -> bool:
         """Check if user can access specific organization data"""
         # Super admin always can access any organization
-        if getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN:
+        if getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin':
             return True
         
         # Regular users can only access their own organization
@@ -270,11 +270,11 @@ class PermissionChecker:
     def can_reset_user_password(current_user: User, target_user: User) -> bool:
         """Check if current user can reset target user's password"""
         # Super admin can reset any password
-        if getattr(current_user, 'is_super_admin', False) or current_user.role == UserRole.SUPER_ADMIN:
+        if getattr(current_user, 'is_super_admin', False) or current_user.role.lower() == 'super_admin':
             return True
         
         # Org admin can reset passwords within their organization
-        if current_user.role == UserRole.ORG_ADMIN:
+        if current_user.role.lower() == 'org_admin':
             return current_user.organization_id == target_user.organization_id
         
         # Users can only reset their own password
@@ -284,11 +284,11 @@ class PermissionChecker:
     def can_reset_organization_data(current_user: User, organization_id: int) -> bool:
         """Check if current user can reset organization data"""
         # Super admin can reset any organization data
-        if getattr(current_user, 'is_super_admin', False) or current_user.role == UserRole.SUPER_ADMIN:
+        if getattr(current_user, 'is_super_admin', False) or current_user.role.lower() == 'super_admin':
             return True
         
         # Org admin can reset data for their own organization
-        if current_user.role == UserRole.ORG_ADMIN:
+        if current_user.role.lower() == 'org_admin':
             return current_user.organization_id == organization_id
         
         return False
@@ -297,7 +297,7 @@ class PermissionChecker:
     def get_accessible_organizations(user: User, db: Session) -> List[int]:
         """Get list of organization IDs user can access"""
         # Super admin can access all organizations
-        if getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN:
+        if getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin':
             organizations = db.query(Organization.id).all()
             return [org.id for org in organizations]
         
@@ -314,7 +314,7 @@ class PermissionChecker:
             return False
         
         # App Super Admins should NOT have access to organization settings per requirements
-        if getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN:
+        if getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin':
             return False
         
         # All other users (including org admins) can access org settings
@@ -327,7 +327,7 @@ class PermissionChecker:
             return False
         
         # Only App Super Admins can perform factory reset
-        return getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN
+        return getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin'
     
     @staticmethod
     def can_show_user_management_in_menu(user: User) -> bool:
@@ -337,7 +337,7 @@ class PermissionChecker:
         
         # Only App Super Admins should see user management in mega menu
         # Org admins should access it through Organization Settings
-        return getattr(user, 'is_super_admin', False) or user.role == UserRole.SUPER_ADMIN
+        return getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin'
 
 
 def require_permission(permission: str):
@@ -350,6 +350,30 @@ def require_permission(permission: str):
         return wrapper
     return decorator
 
+def require_platform_permission(permission: str):
+    """Decorator factory for requiring platform permissions"""
+    def dependency(current_user: Any = Depends(get_current_user), db: Session = Depends(get_db), request: Request = None) -> Any:
+        if not PermissionChecker.has_platform_permission(current_user, permission):
+            # Log permission denied event
+            if db and request:
+                AuditLogger.log_permission_denied(
+                    db=db,
+                    user_email=getattr(current_user, 'email', 'unknown'),
+                    attempted_action=permission,
+                    user_id=getattr(current_user, 'id', None),
+                    user_role=getattr(current_user, 'role', 'unknown'),
+                    organization_id=getattr(current_user, 'organization_id', None),
+                    ip_address=get_client_ip(request),
+                    user_agent=get_user_agent(request),
+                    details={"required_permission": permission}
+                )
+            
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to manage organizations. Only platform super administrators can access this page."
+            )
+        return current_user
+    return dependency
 
 # FastAPI dependencies for permission checking
 def require_super_admin(

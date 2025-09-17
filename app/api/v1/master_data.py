@@ -31,6 +31,7 @@ from app.schemas.master_data import (
     BulkCategoryUpdate, BulkUnitUpdate, BulkTaxCodeUpdate, BulkPaymentTermsUpdate,
     MasterDataStats
 )
+from app.services.master_service import search_hsn_codes  # Added import for HSN search
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -1171,3 +1172,25 @@ async def bulk_update_categories(
         db.rollback()
         logger.error(f"Error in bulk category update: {e}")
         raise HTTPException(status_code=500, detail="Failed to bulk update categories")
+
+# ============================================================================
+# HSN SEARCH ENDPOINTS
+# ============================================================================
+
+@router.get("/hsn-search", response_model=List[Dict[str, Any]])
+async def hsn_search(
+    query: str = Query(..., min_length=2, description="HSN code or description to search (min 2 chars)"),
+    limit: int = Query(10, ge=1, le=50, description="Max results to return"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Search HSN codes with dynamic GST rates from external API"""
+    try:
+        results = await search_hsn_codes(query, limit)
+        return results
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error in HSN search: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search HSN codes")

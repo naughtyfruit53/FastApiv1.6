@@ -35,9 +35,10 @@ import {
   Settings,
   DataUsage,
 } from "@mui/icons-material";
+from "../../services/organizationService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { organizationService } from "../../services/authService";
+import { organizationService } from "../../services/organizationService";
 interface Organization {
   id: number;
   name: string;
@@ -63,10 +64,19 @@ const ManageOrganizations: React.FC = () => {
   const [orgModules, setOrgModules] = useState<{ [key: string]: boolean }>({});
   const [availableModules] = useState<{ [key: string]: any }>();
   // API calls using real service
-  const { data: organizations, isLoading } = useQuery({
+  const { data: organizations, isLoading, error } = useQuery({
     queryKey: ["organizations"],
     queryFn: organizationService.getAllOrganizations,
   });
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          {error.message || "Failed to load organizations"}
+        </Alert>
+      </Container>
+    );
+  }
   // Fetch available modules
   const { data: availableModulesData } = useQuery({
     queryKey: ["available-modules"],
@@ -366,7 +376,7 @@ const ManageOrganizations: React.FC = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan= {7} align="center">
                   Loading...
                 </TableCell>
               </TableRow>
@@ -394,7 +404,7 @@ const ManageOrganizations: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="primary">
-                      {org.subdomain}.tritiq.com
+                      {org.subdomain}.trtiq.com
                     </Typography>
                   </TableCell>
                   <TableCell>

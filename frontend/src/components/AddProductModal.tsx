@@ -13,10 +13,17 @@ import {
   Box,
   Grid,
   Autocomplete,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
+import SearchIcon from '@mui/icons-material/Search';
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
-import { getProducts } from "../services/masterService";
+import { getProducts, hsnSearch } from "../services/masterService";
 import { toast } from "react-toastify";
 interface AddProductModalProps {
   open: boolean;
@@ -42,6 +49,11 @@ interface Product {
   hsn_code: string;
   part_number: string;
   unit: string;
+  gst_rate: number;
+}
+interface HsnResult {
+  hsn_code: string;
+  description: string;
   gst_rate: number;
 }
 const AddProductModal: React.FC<AddProductModalProps> = ({
@@ -72,15 +84,15 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       is_manufactured: false,
     },
   });
-  // Watch form values for bidirectional updates
+  // Watch form values
   const watchedProductName = watch("product_name");
   const watchedHsnCode = watch("hsn_code");
-  // Fetch all products for autocomplete functionality
+  // Fetch all products
   const { data: allProducts = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
-    enabled: open, // Only fetch when modal is open
-    staleTime: 300000, // 5 minutes cache
+    enabled: open,
+    staleTime: 300000,
   });
   // Create unique HSN codes list from existing products
   const uniqueHsnCodes = React.useMemo(() => {
@@ -126,6 +138,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     },
     [allProducts],
   );
+  // State for HSN suggestion popup
+  const [hsnPopupOpen, setHsnPopupOpen] = React.useState(false);
+  const [suggestedHsns, setSuggestedHsns] = React.useState<string[]>([]);
+  const [hsnSearchLoading, setHsnSearchLoading] = React.useState(false);
+  const [hsnApiSuggestions, setHsnApiSuggestions] = React.useState<HsnResult[]>([]);
   React.useEffect(() => {
     if (open && initialName) {
       reset({
@@ -142,37 +159,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       });
     }
   }, [open, initialName, reset]);
-  // Bidirectional auto-population logic
-  React.useEffect(() => {
-    // When product name changes, suggest HSN codes
-    if (watchedProductName && watchedProductName.length > 2) {
-      const suggestedHsns = getHsnByProductName(watchedProductName);
-      if (suggestedHsns.length === 1 && !watchedHsnCode) {
-        // Auto-populate if there's exactly one matching HSN and HSN field is empty
-        setValue("hsn_code", suggestedHsns[0]);
-      }
-    }
-  }, [watchedProductName, watchedHsnCode, getHsnByProductName, setValue]);
-  React.useEffect(() => {
-    // When HSN code changes, suggest product info
-    if (watchedHsnCode && watchedHsnCode.length > 2) {
-      const matchingProducts = getProductsByHsn(watchedHsnCode);
-      if (matchingProducts.length > 0 && !watchedProductName) {
-        // If there's a strong match and product name is empty, suggest the most common unit/gst_rate
-        const commonUnit = matchingProducts[0].unit;
-        const commonGstRate = matchingProducts[0].gst_rate;
-        if (commonUnit && commonUnit !== "PCS") {
-          setValue("unit", commonUnit);
-        }
-        if (commonGstRate && commonGstRate !== 18) {
-          setValue("gst_rate", commonGstRate);
-        }
-      }
-    }
-  }, [watchedHsnCode, watchedProductName, getProductsByHsn, setValue]);
   const onSubmit = async (productData: ProductFormData) => {
     try {
-      // Remove empty fields to match backend schema to match backend schema
+      // Remove empty fields to match backend schema
       const allowedFields = [
         "product_name",
         "hsn_code",
@@ -224,216 +213,315 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     reset();
     onClose();
   };
+  // Handler for searching HSN via icon click
+  const handleHsnSearchClick = async () => {
+    if (!watchedHsnCode || watchedHsnCode.length < 2) {
+      toast.info("Enter at least 2 characters in HSN Code to search");
+      return;
+    }
+    setHsnSearchLoading(true);
+    try {
+      const results = await hsnSearch({ queryKey: ["hsn-search", watchedHsnCode, 10] });
+      if (results.length === 0) {
+        toast.info("No HSN codes found - enter manually");
+      } else if (results.length === 1) {
+        // Auto-fill if single result
+        const selected = results[0];
+        setValue("hsn_code", selected.hsn_code);
+        setValue("gst_rate", selected.gst_rate);
+        if (selected.description && !watch("description")) {
+          setValue("description", selected.description);
+        }
+        toast.success("HSN details auto-filled");
+      } else {
+        // Show popup if multiple
+        setHsnApiSuggestions(results);
+        setHsnPopupOpen(true);
+      }
+    } catch (err: any) {
+      toast.error("Failed to search HSN: " + (err.message || "Unknown error"));
+    } finally {
+      setHsnSearchLoading(false);
+    }
+  };
+  // Handler for searching product name via icon click (for HSN suggestions)
+  const handleProductSearchClick = () => {
+    if (!watchedProductName || watchedProductName.length < 3) {
+      toast.info("Enter at least 3 characters in Product Name to search");
+      return;
+    }
+    const suggested = getHsnByProductName(watchedProductName);
+    if (suggested.length === 0) {
+      toast.info("No matching HSN found in existing products");
+    } else if (suggested.length === 1 && !watchedHsnCode) {
+      // Auto-populate if exactly one
+      setValue("hsn_code", suggested[0]);
+      toast.success("HSN auto-suggested from similar products");
+    } else if (suggested.length > 1 && !watchedHsnCode) {
+      // Show popup if multiple
+      setSuggestedHsns(suggested);
+      setHsnPopupOpen(true);
+    } else {
+      toast.info("HSN already entered - clear to suggest");
+    }
+  };
+  // Handler for selecting HSN from API popup
+  const handleApiHsnSelect = (selected: HsnResult) => {
+    setValue("hsn_code", selected.hsn_code);
+    setValue("gst_rate", selected.gst_rate);
+    if (selected.description && !watch("description")) {
+      setValue("description", selected.description);
+    }
+    setHsnPopupOpen(false);
+  };
+  // Handler for selecting HSN from local popup
+  const handleLocalHsnSelect = (hsn: string) => {
+    setValue("hsn_code", hsn);
+    // Fetch GST rate via API for selected HSN
+    hsnSearch({ queryKey: ["hsn-search", hsn, 1] }).then((results) => {
+      if (results.length > 0) {
+        setValue("gst_rate", results[0].gst_rate);
+      }
+    }).catch((err) => {
+      console.error("Failed to fetch GST for selected HSN:", err);
+      toast.error("Failed to fetch GST rate - enter manually");
+    });
+    setHsnPopupOpen(false);
+  };
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: { minHeight: "500px" },
-      }}
-    >
-      <DialogTitle>
-        <Typography variant="h6" component="div">
-          Add New Product
-        </Typography>
-      </DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Product Name"
-                {...register("product_name", {
-                  required: "Product name is required",
-                })}
-                error={!!errors.product_name}
-                helperText={
-                  errors.product_name?.message ||
-                  (watchedProductName &&
-                  watchedProductName.length > 2 &&
-                  getHsnByProductName(watchedProductName).length > 0
-                    ? `Suggested HSN: ${getHsnByProductName(watchedProductName).slice(0, 3).join(", ")}`
-                    : undefined)
-                }
-                disabled={loading}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Autocomplete
-                freeSolo
-                options={uniqueHsnCodes}
-                value={watchedHsnCode || ""}
-                onInputChange={(_, newValue) => {
-                  setValue("hsn_code", newValue || "");
-                }}
-                onChange={(_, newValue) => {
-                  setValue("hsn_code", newValue || "");
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    label="HSN Code"
-                    placeholder="Search or enter HSN code..."
-                    disabled={loading}
-                    helperText={
-                      watchedHsnCode &&
-                      getProductsByHsn(watchedHsnCode).length > 0
-                        ? `Found ${getProductsByHsn(watchedHsnCode).length} product(s) with this HSN`
-                        : undefined
+    <>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { minHeight: "500px" },
+        }}
+      >
+        <DialogTitle>
+          <Typography variant="h6" component="div">
+            Add New Product
+          </Typography>
+        </DialogTitle>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Product Name"
+                  {...register("product_name", {
+                    required: "Product name is required",
+                  })}
+                  error={!!errors.product_name}
+                  helperText={errors.product_name?.message}
+                  disabled={loading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={handleProductSearchClick}
+                          disabled={loading || productsLoading}
+                          aria-label="Search for HSN suggestions"
+                        >
+                          <SearchIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="HSN Code"
+                  {...register("hsn_code")}
+                  disabled={loading}
+                  helperText={
+                    watchedHsnCode &&
+                    getProductsByHsn(watchedHsnCode).length > 0
+                      ? `Found ${getProductsByHsn(watchedHsnCode).length} product(s) with this HSN`
+                      : undefined
+                  }
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={handleHsnSearchClick}
+                          disabled={loading || hsnSearchLoading}
+                          aria-label="Search HSN code"
+                        >
+                          {hsnSearchLoading ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <SearchIcon />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Part Number"
+                  {...register("part_number")}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Unit"
+                  {...register("unit", { required: "Unit is required" })}
+                  error={!!errors.unit}
+                  helperText={errors.unit?.message}
+                  disabled={loading}
+                  placeholder="e.g., PCS, KG, METER"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Unit Price"
+                  type="number"
+                  inputProps={{ step: 0.01 }}
+                  {...register("unit_price", {
+                    required: "Unit price is required",
+                    min: { value: 0.01, message: "Price must be greater than 0" },
+                    valueAsNumber: true,
+                  })}
+                  error={!!errors.unit_price}
+                  helperText={errors.unit_price?.message}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="GST Rate (%)"
+                  type="number"
+                  inputProps={{ step: 0.01 }}
+                  {...register("gst_rate", {
+                    min: { value: 0, message: "GST rate must be positive" },
+                    max: { value: 100, message: "GST rate cannot exceed 100%" },
+                    valueAsNumber: true,
+                  })}
+                  error={!!errors.gst_rate}
+                  helperText={errors.gst_rate?.message}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Reorder Level"
+                  type="number"
+                  {...register("reorder_level", {
+                    min: { value: 0, message: "Reorder level must be positive" },
+                    valueAsNumber: true,
+                  })}
+                  error={!!errors.reorder_level}
+                  helperText={errors.reorder_level?.message}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  multiline
+                  rows={3}
+                  {...register("description")}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        {...register("is_gst_inclusive")}
+                        disabled={loading}
+                      />
                     }
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {productsLoading ? (
-                            <CircularProgress color="inherit" size={20} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
+                    label="GST Inclusive"
                   />
-                )}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props}>
-                    <Box sx={{ width: "100%" }}>
-                      <Typography variant="body1" sx={{ fontWeight: "medium" }}>
-                        {option}
-                      </Typography>
-                      {getProductsByHsn(option).length > 0 && (
-                        <Typography variant="caption" color="text.secondary">
-                          {getProductsByHsn(option).length} product(s):{" "}
-                          {getProductsByHsn(option)
-                            .slice(0, 2)
-                            .map((p: Product) => p.product_name)
-                            .join(", ")}
-                          {getProductsByHsn(option).length > 2 && "..."}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Box>
-                )}
-                noOptionsText="No HSN codes found"
-              />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        {...register("is_manufactured")}
+                        disabled={loading}
+                      />
+                    }
+                    label="Manufactured Item"
+                  />
+                </Box>
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Part Number"
-                {...register("part_number")}
-                disabled={loading}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Unit"
-                {...register("unit", { required: "Unit is required" })}
-                error={!!errors.unit}
-                helperText={errors.unit?.message}
-                disabled={loading}
-                placeholder="e.g., PCS, KG, METER"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Unit Price"
-                type="number"
-                inputProps={{ step: 0.01 }}
-                {...register("unit_price", {
-                  required: "Unit price is required",
-                  min: { value: 0.01, message: "Price must be greater than 0" },
-                  valueAsNumber: true,
-                })}
-                error={!!errors.unit_price}
-                helperText={errors.unit_price?.message}
-                disabled={loading}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="GST Rate (%)"
-                type="number"
-                inputProps={{ step: 0.01 }}
-                {...register("gst_rate", {
-                  min: { value: 0, message: "GST rate must be positive" },
-                  max: { value: 100, message: "GST rate cannot exceed 100%" },
-                  valueAsNumber: true,
-                })}
-                error={!!errors.gst_rate}
-                helperText={errors.gst_rate?.message}
-                disabled={loading}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Reorder Level"
-                type="number"
-                {...register("reorder_level", {
-                  min: { value: 0, message: "Reorder level must be positive" },
-                  valueAsNumber: true,
-                })}
-                error={!!errors.reorder_level}
-                helperText={errors.reorder_level?.message}
-                disabled={loading}
-              />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                {...register("description")}
-                disabled={loading}
-              />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      {...register("is_gst_inclusive")}
-                      disabled={loading}
-                    />
-                  }
-                  label="GST Inclusive"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      {...register("is_manufactured")}
-                      disabled={loading}
-                    />
-                  }
-                  label="Manufactured Item"
-                />
-              </Box>
-            </Grid>
-          </Grid>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleClose} disabled={loading} color="inherit">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} /> : null}
+            >
+              {loading ? "Adding..." : "Add Product"}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+      {/* HSN Suggestion Popup (for both local and API) */}
+      <Dialog
+        open={hsnPopupOpen}
+        onClose={() => setHsnPopupOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Select HSN Code</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {hsnApiSuggestions.length > 0 
+              ? "Multiple HSN codes found from search. Select one:" 
+              : "Multiple HSN codes found for similar products. Select one:"}
+          </Typography>
+          <List>
+            {hsnApiSuggestions.length > 0 
+              ? hsnApiSuggestions.map((option) => (
+                  <ListItem key={option.hsn_code} disablePadding>
+                    <ListItemButton onClick={() => handleApiHsnSelect(option)}>
+                      <ListItemText 
+                        primary={`${option.hsn_code} (${option.gst_rate}%)`}
+                        secondary={option.description} 
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))
+              : suggestedHsns.map((hsn) => (
+                  <ListItem key={hsn} disablePadding>
+                    <ListItemButton onClick={() => handleLocalHsnSelect(hsn)}>
+                      <ListItemText 
+                        primary={hsn}
+                        secondary={`Used in ${getProductsByHsn(hsn).length} similar products`} 
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+          </List>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose} disabled={loading} color="inherit">
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : null}
-          >
-            {loading ? "Adding..." : "Add Product"}
+        <DialogActions>
+          <Button onClick={() => setHsnPopupOpen(false)} color="inherit">
+            Cancel (Enter Manually)
           </Button>
         </DialogActions>
-      </form>
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
 export default AddProductModal;

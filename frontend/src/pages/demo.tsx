@@ -31,7 +31,7 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 // Mock/Sample data for demo mode
-const _mockData = {
+const mockData = {
   stats: [
     {
       title: "Purchase Vouchers",
@@ -119,17 +119,17 @@ const _mockData = {
   },
 };
 export default function DemoPage() {
-  const _router = useRouter();
+  const router = useRouter();
   const [demoMode, setDemoMode] = useState(true);
   const [isDemoTempUser, setIsDemoTempUser] = useState(false);
   useEffect(() => {
     // Set demo mode flag
     localStorage.setItem("demoMode", demoMode.toString());
     // Check if this is a temporary demo user
-    const _tempUser = localStorage.getItem("isDemoTempUser");
+    const tempUser = localStorage.getItem("isDemoTempUser");
     setIsDemoTempUser(tempUser === "true");
   }, [demoMode]);
-  const _handleExitDemo = () => {
+  const handleExitDemo = () => {
     localStorage.removeItem("demoMode");
     localStorage.removeItem("isDemoTempUser");
     // If this was a temporary demo user, redirect to login
@@ -142,7 +142,7 @@ export default function DemoPage() {
       router.push("/dashboard");
     }
   };
-  const _handleToggleDemo = () => {
+  const handleToggleDemo = () => {
     setDemoMode(!demoMode);
     if (!demoMode) {
       localStorage.setItem("demoMode", "true");
@@ -227,7 +227,7 @@ export default function DemoPage() {
         </Paper>
         <Grid container spacing={3}>
           {/* Statistics Cards */}
-          {mockData.stats.map((_stat, _index) => (
+          {mockData.stats.map((stat, index) => (
             <Grid
               key={index}
               size={{
@@ -275,7 +275,7 @@ export default function DemoPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mockData.purchaseVouchers.map((_voucher) => (
+                    {mockData.purchaseVouchers.map((voucher) => (
                       <TableRow key={voucher.id}>
                         <TableCell>{voucher.voucher_number}</TableCell>
                         <TableCell>
@@ -324,7 +324,7 @@ export default function DemoPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mockData.salesVouchers.map((_voucher) => (
+                    {mockData.salesVouchers.map((voucher) => (
                       <TableRow key={voucher.id}>
                         <TableCell>{voucher.voucher_number}</TableCell>
                         <TableCell>

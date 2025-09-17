@@ -87,12 +87,12 @@ class Settings:
     
     # OAuth2 Configuration
     # Google OAuth2
-    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
-    GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET")
+    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID") or ""
+    GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET") or ""
     
     # Microsoft OAuth2
-    MICROSOFT_CLIENT_ID: Optional[str] = os.getenv("MICROSOFT_CLIENT_ID")
-    MICROSOFT_CLIENT_SECRET: Optional[str] = os.getenv("MICROSOFT_CLIENT_SECRET")
+    MICROSOFT_CLIENT_ID: Optional[str] = os.getenv("MICROSOFT_CLIENT_ID") or ""
+    MICROSOFT_CLIENT_SECRET: Optional[str] = os.getenv("MICROSOFT_CLIENT_SECRET") or ""
     MICROSOFT_TENANT_ID: Optional[str] = os.getenv("MICROSOFT_TENANT_ID", "common")
     
     # OAuth2 Redirect URIs
@@ -114,6 +114,9 @@ class Settings:
     
     # wkhtmltopdf path (dynamic for local Windows vs. deployment Linux)
     WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf")
+    
+    # FastGST API URL (for HSN/GST lookup)
+    FASTGST_API_URL: str = os.getenv("FASTGST_API_URL", "https://api.fastgst.in")
     
     @property
     def jwt_secret(self) -> str:

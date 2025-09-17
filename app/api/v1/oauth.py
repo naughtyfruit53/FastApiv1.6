@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import traceback
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user as get_current_user
@@ -92,7 +93,7 @@ async def oauth_login(
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"OAuth login error: {e}")
+        logger.error(f"OAuth login error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create authorization URL"
@@ -160,7 +161,7 @@ async def oauth_callback(
                 user_info=user_info
             )
         except Exception as e:
-            logger.error(f"Error storing tokens: {str(e)}")
+            logger.error(f"Error storing tokens: {str(e)}\n{traceback.format_exc()}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to store OAuth tokens"
@@ -180,7 +181,7 @@ async def oauth_callback(
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"OAuth callback error: {str(e)}")
+        logger.error(f"OAuth callback error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process OAuth callback"
