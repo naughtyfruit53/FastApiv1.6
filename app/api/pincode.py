@@ -3,9 +3,30 @@ from typing import Dict
 import requests
 import logging
 import traceback  # For detailed error logging
+import ssl  # For TLS adapter
+from requests.adapters import HTTPAdapter  # For TLS adapter
+from urllib3.poolmanager import PoolManager  # For TLS adapter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Custom TLS adapter to enforce minimum TLS version (helps with SSL issues)
+class TLSAdapter(HTTPAdapter):
+    def init_poolmanager(self, connections, maxsize, block=False):
+        """Create and initialize the urllib3 PoolManager."""
+        context = ssl.create_default_context()
+        context.check_hostname = False  # Added to allow verify=False without conflict (resolves ValueError)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2  # Enforce TLS 1.2 or higher
+        self.poolmanager = PoolManager(
+            num_pools=connections,
+            maxsize=maxsize,
+            block=block,
+            ssl_context=context,
+        )
+
+# Create a session with the TLS adapter mounted for HTTPS
+session = requests.Session()
+session.mount('https://', TLSAdapter())
 
 # Mapping of Indian state names to GST state codes (unchanged)
 STATE_CODE_MAP = {
@@ -62,30 +83,33 @@ async def lookup_pincode(pin_code: str) -> Dict[str, str]:
         )
     
     try:
-        # Fetch from external API with timeout, User-Agent header to mimic browser (prevents bot blocking), and disable SSL verification to bypass TLS issue
+        # Fetch from alternative external API (switched to pinlookup.in as postalpincode.in seems unreliable/unavailable)
+        # This API is free, no key needed, up to 5K requests/day
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        response = requests.get(
-            f"https://api.postalpincode.in/pincode/{pin_code}",
+        # Use the session with TLS adapter
+        response = session.get(
+            f"https://pinlookup.in/api/pincode?pincode={pin_code}",
             headers=headers,
-            timeout=15,  # Increased to 15 seconds for slower networks
-            verify=False  # Disable SSL verification to fix TLSV1_UNRECOGNIZED_NAME error (use cautiously)
+            timeout=15,  # 15 seconds for slower networks
+            verify=False  # Kept as fallback for any remaining SSL issues (use cautiously in production)
         )
         response.raise_for_status()  # Raise error for bad status codes
         data = response.json()
         
-        if not data or data[0]['Status'] != "Success":
+        # Check if data exists (API returns {'data': {...}} on success)
+        if not data.get('data'):
             raise HTTPException(
                 status_code=404,
                 detail=f"PIN code {pin_code} not found. Please enter city and state manually."
             )
         
-        # Extract from first PostOffice entry
-        post_office = data[0]['PostOffice'][0]
-        city = post_office['District']
-        state = post_office['State']
-        state_code = STATE_CODE_MAP.get(state, "00")  # Default to "00" if not found
+        # Extract from data entry
+        pin_data = data['data']
+        city = pin_data['district_name'].title()  # e.g., "South Goa"
+        state = pin_data['state_name'].title()   # e.g., "Goa"
+        state_code = STATE_CODE_MAP.get(state, "00")  # Default to "00" if not found in map
         
         # Log successful lookup for debugging
         logger.info(f"Successful PIN code lookup for {pin_code}: {city}, {state}, {state_code}")

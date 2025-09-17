@@ -4,15 +4,16 @@
 System-level reset service for factory default operations
 """
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 from typing import Dict, Any
-from app.models.user_models import Organization, User
+from app.models.user_models import Organization, User, ServiceRole, UserServiceRole
 from app.models.system_models import Company, EmailNotification, PaymentTerm, OTPVerification, AuditLog
 from app.models.customer_models import Customer, Vendor
 from app.models.product_models import Product, Stock
+from app.utils.supabase_auth import supabase_auth_service
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class ResetService:
     """Service for system-level reset operations"""
@@ -33,6 +34,14 @@ class ResetService:
             result = {"message": "System factory reset completed", "deleted": {}}
             
             # Delete in reverse dependency order to avoid foreign key constraints
+            
+            # Delete all user_service_roles (dependent on users)
+            deleted_user_service_roles = db.query(UserServiceRole).delete()
+            result["deleted"]["user_service_roles"] = deleted_user_service_roles
+            
+            # Delete all service_roles (dependent on organizations)
+            deleted_service_roles = db.query(ServiceRole).delete()
+            result["deleted"]["service_roles"] = deleted_service_roles
             
             # Delete all email notifications
             deleted_notifications = db.query(EmailNotification).delete()
@@ -76,18 +85,34 @@ class ResetService:
             deleted_organizations = db.query(Organization).delete()
             result["deleted"]["organizations"] = deleted_organizations
             
-            # Keep audit logs for compliance (optional - could also delete)
-            # Delete recent audit logs but keep some for security audit
-            # This is configurable based on requirements
+            # Reset sequence IDs to 1
+            db.execute("ALTER SEQUENCE organizations_id_seq RESTART WITH 1;")
+            db.execute("ALTER SEQUENCE users_id_seq RESTART WITH 1;")
+            db.execute("ALTER SEQUENCE service_roles_id_seq RESTART WITH 1;")
+            db.execute("ALTER SEQUENCE user_service_roles_id_seq RESTART WITH 1;")
+            # Add other sequences if needed (e.g., for companies, customers, etc.)
             
+            # Commit database changes
             db.commit()
+            
+            # Delete all Supabase auth users
+            try:
+                users = supabase_auth_service.get_all_users()
+                for user in users:
+                    supabase_auth_service.delete_user(user['id'])
+                result["deleted"]["supabase_auth_users"] = len(users)
+                logger.info(f"Deleted {len(users)} Supabase auth users")
+            except Exception as e:
+                logger.warning(f"Failed to delete Supabase auth users: {str(e)}")
+                result["deleted"]["supabase_auth_users"] = 0
+            
             logger.warning(f"FACTORY DEFAULT: Complete system reset completed - all data removed")
             
             return result
             
         except Exception as e:
             db.rollback()
-            logger.error(f"Error during factory default system reset: {str(e)}")
+            logger.error(f"Error during factory default system reset: {str(e)}", exc_info=True)
             raise e
     
     @staticmethod
@@ -112,6 +137,18 @@ class ResetService:
                 raise ValueError(f"Organization with ID {organization_id} not found")
             
             # Delete business data in reverse dependency order to avoid foreign key constraints
+            
+            # Delete all user_service_roles for this org
+            deleted_user_service_roles = db.query(UserServiceRole).filter(
+                UserServiceRole.organization_id == organization_id
+            ).delete()
+            result["deleted"]["user_service_roles"] = deleted_user_service_roles
+            
+            # Delete all service_roles for this org
+            deleted_service_roles = db.query(ServiceRole).filter(
+                ServiceRole.organization_id == organization_id
+            ).delete()
+            result["deleted"]["service_roles"] = deleted_service_roles
             
             # Delete all email notifications for this org
             deleted_notifications = db.query(EmailNotification).filter(
@@ -168,5 +205,5 @@ class ResetService:
             
         except Exception as e:
             db.rollback()
-            logger.error(f"Error during organization {organization_id} business data reset: {str(e)}")
+            logger.error(f"Error during organization {organization_id} business data reset: {str(e)}", exc_info=True)
             raise e

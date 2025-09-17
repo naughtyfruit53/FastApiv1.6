@@ -27,6 +27,8 @@ class ServiceModule(str, Enum):
     CRM_ADMIN = "crm_admin"
     CUSTOMER_FEEDBACK = "customer_feedback"
     SERVICE_CLOSURE = "service_closure"
+    MAIL = "mail"  # Added for mail permissions
+    STICKY_NOTES = "sticky_notes"  # Added for sticky notes permissions
 
 
 class ServiceAction(str, Enum):
@@ -39,6 +41,8 @@ class ServiceAction(str, Enum):
     SUBMIT = "submit"  # For customer feedback submission
     APPROVE = "approve"  # For service closure approval
     CLOSE = "close"  # For service closure
+    COMPOSE = "compose"  # Added for mail compose
+    SYNC = "sync"  # Added for mail sync
 
 
 # Service Permission Schemas

@@ -442,13 +442,13 @@ class RBACService:
         # Define default roles with their permissions
         default_roles = [
             {
-                "name": ServiceRoleType.ADMIN,
+                "name": ServiceRoleType.ADMIN.value,
                 "display_name": "Service Admin",
                 "description": "Full access to all service CRM functionality",
                 "permissions": list(permission_map.keys())  # All permissions
             },
             {
-                "name": ServiceRoleType.MANAGER,
+                "name": ServiceRoleType.MANAGER.value,
                 "display_name": "Service Manager",
                 "description": "Manage services, technicians, and appointments",
                 "permissions": [
@@ -463,7 +463,7 @@ class RBACService:
                 ]
             },
             {
-                "name": ServiceRoleType.SUPPORT,
+                "name": ServiceRoleType.SUPPORT.value,
                 "display_name": "Support Agent",
                 "description": "Handle customer service and basic operations",
                 "permissions": [
@@ -478,7 +478,7 @@ class RBACService:
                 ]
             },
             {
-                "name": ServiceRoleType.VIEWER,
+                "name": ServiceRoleType.VIEWER.value,
                 "display_name": "Viewer",
                 "description": "Read-only access to service information",
                 "permissions": [

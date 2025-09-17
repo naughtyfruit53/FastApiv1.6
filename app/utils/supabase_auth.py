@@ -46,6 +46,45 @@ class SupabaseAuthService:
             settings.SUPABASE_SERVICE_KEY
         )
     
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a user from Supabase Auth by email.
+        
+        Args:
+            email: User email address
+            
+        Returns:
+            User data if found, None otherwise
+            
+        Raises:
+            SupabaseAuthError: If request fails
+        """
+        if not self.client:
+            logger.warning("Supabase not available - user lookup skipped")
+            return None
+            
+        try:
+            # List users (assuming small number; for large, implement pagination)
+            response = self.client.auth.admin.list_users(per_page=1000)
+            
+            if hasattr(response, 'users'):
+                for user in response.users:
+                    if user.email.lower() == email.lower():
+                        return {
+                            "supabase_uuid": user.id,
+                            "email": user.email,
+                            "created_at": user.created_at,
+                            "updated_at": user.updated_at,
+                            "user_metadata": user.user_metadata or {}
+                        }
+            
+            return None
+            
+        except Exception as e:
+            error_msg = f"Failed to get user by email {email} from Supabase Auth: {str(e)}"
+            logger.error(error_msg)
+            raise SupabaseAuthError(error_msg) from e
+    
     def create_user(
         self, 
         email: str, 

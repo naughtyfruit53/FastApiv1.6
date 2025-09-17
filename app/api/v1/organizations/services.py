@@ -148,6 +148,11 @@ class OrganizationService:
     def create_license(db: Session, license_data: OrganizationLicenseCreate, current_user: User) -> Dict:
         """Create new organization license"""
         try:
+            # Check if email already exists in our database
+            existing_user = db.query(User).filter(User.email == license_data.superadmin_email).first()
+            if existing_user:
+                raise HTTPException(status_code=400, detail="Email already registered in the system")
+            
             subdomain = license_data.subdomain or generate_subdomain(license_data.organization_name)
             if db.query(Organization).filter(Organization.subdomain == subdomain).first():
                 raise ValueError(f"Subdomain '{subdomain}' is already in use")
@@ -175,7 +180,13 @@ class OrganizationService:
             db.flush()
 
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
-
+            
+            # Check for orphan Supabase user and clean up if exists
+            supabase_existing = supabase_auth_service.get_user_by_email(license_data.superadmin_email)
+            if supabase_existing:
+                logger.warning(f"Found orphan Supabase user for {license_data.superadmin_email} - deleting")
+                supabase_auth_service.delete_user(supabase_existing['supabase_uuid'])
+            
             supabase_user = supabase_auth_service.create_user(
                 email=license_data.superadmin_email,
                 password=temp_password,
@@ -189,7 +200,6 @@ class OrganizationService:
             super_admin_user = User(
                 organization_id=organization.id,
                 email=license_data.superadmin_email,
-                username=license_data.superadmin_email.split('@')[0],
                 hashed_password=get_password_hash(temp_password),
                 full_name="Organization Admin",
                 role=UserRole.ORG_ADMIN,
@@ -206,7 +216,7 @@ class OrganizationService:
             logger.info(f"Initialized {len(permissions)} default permissions")
             
             roles = rbac_service.initialize_default_roles(organization.id)
-            logger.info(f"Initialized {len(roles)} default roles for organization {organization.id}")
+            logger.info(f"Initialized {len(roles)} roles for organization {organization.id}")
 
             admin_role = db.query(ServiceRole).filter(
                 ServiceRole.organization_id == organization.id,
@@ -250,6 +260,8 @@ class OrganizationService:
             raise HTTPException(status_code=400, detail=str(e))
         except SupabaseAuthError as e:
             db.rollback()
+            if "already been registered" in str(e):
+                raise HTTPException(status_code=400, detail="Email already registered in authentication system. Please use a different email or contact support.")
             raise HTTPException(status_code=500, detail=str(e))
         except Exception as e:
             db.rollback()

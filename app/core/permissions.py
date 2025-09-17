@@ -1,10 +1,10 @@
 # Revised: v1/app/core/permissions.py
 
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Union
 from fastapi import HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
 from app.models import User, Organization, PlatformUser
-from app.schemas.user import UserRole, PlatformUserRole
+from app.schemas.user import UserRole, PlatformUserRole, UserInDB, PlatformUserInDB
 from app.core.database import get_db
 from app.core.audit import AuditLogger, get_client_ip, get_user_agent
 from app.core.security import get_current_user
@@ -154,6 +154,9 @@ class PermissionChecker:
             Permission.RESET_ANY_PASSWORD,
             Permission.RESET_ANY_DATA,
             Permission.MANAGE_ORGANIZATIONS,
+            Permission.VIEW_ORGANIZATIONS,  # Added for list organizations access
+            Permission.CREATE_ORGANIZATIONS,
+            Permission.DELETE_ORGANIZATIONS,
             Permission.RESET_ANY_DATA,
             Permission.VIEW_ALL_AUDIT_LOGS,
         ],
@@ -168,39 +171,55 @@ class PermissionChecker:
     }
     
     @staticmethod
-    def has_permission(user: User, permission: str) -> bool:
-        if not user or not user.role:
-            return False
-        
-        if getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin':
+    def has_permission(user: Union[User, UserInDB], permission: str) -> bool:
+        role = user.role.lower() if hasattr(user, 'role') else None
+        is_super_admin = getattr(user, 'is_super_admin', False)
+        if is_super_admin or role == 'super_admin':
             return True
         
-        user_permissions = PermissionChecker.ROLE_PERMISSIONS.get(user.role.lower(), [])
+        user_permissions = PermissionChecker.ROLE_PERMISSIONS.get(role, [])
         return permission in user_permissions
     
     @staticmethod
-    def has_platform_permission(platform_user: Any, permission: str) -> bool:
-        """Check platform-specific permissions, handling both User and PlatformUser"""
-        if isinstance(platform_user, User):
-            # For User type, check if super admin
-            if platform_user.is_super_admin or platform_user.role.lower() == 'super_admin':
+    def has_platform_permission(platform_user: Union[User, PlatformUser, UserInDB, PlatformUserInDB], permission: str) -> bool:
+        """Check platform-specific permissions, handling both ORM and Pydantic models"""
+        # Extract attributes consistently for both ORM and Pydantic
+        role = platform_user.role.lower() if hasattr(platform_user, 'role') else ''
+        is_super_admin = getattr(platform_user, 'is_super_admin', False)
+        user_type = type(platform_user).__name__
+        user_id = getattr(platform_user, 'id', 'None')
+        email = getattr(platform_user, 'email', 'None')
+        organization_id = getattr(platform_user, 'organization_id', 'None')
+        
+        logger.info(f"Permission check for {permission}: user_type={user_type}, id={user_id}, email={email}, role={role}, is_super_admin={is_super_admin}, organization_id={organization_id}")
+
+        # For organization users (User or UserInDB)
+        if user_type in ['User', 'UserInDB']:
+            if is_super_admin or role == 'super_admin':
+                logger.info("Permission granted: Organization user is super admin")
                 return True
             # Fallback to regular permission check
-            return PermissionChecker.has_permission(platform_user, permission)
+            granted = PermissionChecker.has_permission(platform_user, permission)
+            logger.info(f"Regular permission check result: {granted}")
+            return granted
         
-        if isinstance(platform_user, PlatformUser):
-            if platform_user.role.lower() == 'super_admin':
-                return True  # Primary super admin always has all permissions
-            
-            platform_permissions = PermissionChecker.PLATFORM_ROLE_PERMISSIONS.get(platform_user.role.lower(), [])
-            return permission in platform_permissions
+        # For platform users (PlatformUser or PlatformUserInDB)
+        if user_type in ['PlatformUser', 'PlatformUserInDB']:
+            if role == 'super_admin':
+                logger.info("Permission granted: Platform user is super admin")
+                return True
+            platform_permissions = PermissionChecker.PLATFORM_ROLE_PERMISSIONS.get(role, [])
+            granted = permission in platform_permissions
+            logger.info(f"Platform permission check result: {granted}, permissions: {platform_permissions}")
+            return granted
         
+        logger.warning("Permission denied: Unknown user type")
         return False
     
     @staticmethod
     def require_permission(
         permission: str,
-        user: User,
+        user: Union[User, UserInDB],
         db: Session,
         request: Optional[Request] = None,
         organization_id: Optional[int] = None
@@ -228,7 +247,7 @@ class PermissionChecker:
         return True
     
     @staticmethod
-    def can_access_organization(user: User, organization_id: int) -> bool:
+    def can_access_organization(user: Union[User, UserInDB], organization_id: int) -> bool:
         """Check if user can access specific organization data"""
         # Super admin always can access any organization
         if getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin':
@@ -239,7 +258,7 @@ class PermissionChecker:
     
     @staticmethod
     def require_organization_access(
-        user: User,
+        user: Union[User, UserInDB],
         organization_id: int,
         db: Session,
         request: Optional[Request] = None
@@ -267,7 +286,7 @@ class PermissionChecker:
         return True
     
     @staticmethod
-    def can_reset_user_password(current_user: User, target_user: User) -> bool:
+    def can_reset_user_password(current_user: Union[User, UserInDB], target_user: Union[User, UserInDB]) -> bool:
         """Check if current user can reset target user's password"""
         # Super admin can reset any password
         if getattr(current_user, 'is_super_admin', False) or current_user.role.lower() == 'super_admin':
@@ -281,7 +300,7 @@ class PermissionChecker:
         return current_user.id == target_user.id
     
     @staticmethod
-    def can_reset_organization_data(current_user: User, organization_id: int) -> bool:
+    def can_reset_organization_data(current_user: Union[User, UserInDB], organization_id: int) -> bool:
         """Check if current user can reset organization data"""
         # Super admin can reset any organization data
         if getattr(current_user, 'is_super_admin', False) or current_user.role.lower() == 'super_admin':
@@ -294,7 +313,7 @@ class PermissionChecker:
         return False
     
     @staticmethod
-    def get_accessible_organizations(user: User, db: Session) -> List[int]:
+    def get_accessible_organizations(user: Union[User, UserInDB], db: Session) -> List[int]:
         """Get list of organization IDs user can access"""
         # Super admin can access all organizations
         if getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin':
@@ -308,7 +327,7 @@ class PermissionChecker:
         return []
     
     @staticmethod
-    def can_access_organization_settings(user: User) -> bool:
+    def can_access_organization_settings(user: Union[User, UserInDB]) -> bool:
         """Check if user can access organization settings (hidden from App Super Admins)"""
         if not user or not user.role:
             return False
@@ -321,7 +340,7 @@ class PermissionChecker:
         return PermissionChecker.has_permission(user, Permission.ACCESS_ORG_SETTINGS)
     
     @staticmethod
-    def can_factory_reset(user: User) -> bool:
+    def can_factory_reset(user: Union[User, UserInDB]) -> bool:
         """Check if user can perform factory reset (App Super Admin only)"""
         if not user or not user.role:
             return False
@@ -330,7 +349,7 @@ class PermissionChecker:
         return getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin'
     
     @staticmethod
-    def can_show_user_management_in_menu(user: User) -> bool:
+    def can_show_user_management_in_menu(user: Union[User, UserInDB]) -> bool:
         """Check if user management should be shown in mega menu (App Super Admin only)"""
         if not user or not user.role:
             return False
