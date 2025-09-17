@@ -28,15 +28,13 @@ import {
 import { useForm } from "react-hook-form";
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
 import api from "../lib/api";
-
 interface AddVendorModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd?: (data: any) => Promise<void>;
+  onAdd?: (_data: any) => Promise<void>;
   loading?: boolean;
   initialData?: any;
 }
-
 interface VendorFormData {
   name: string;
   contact_number: string;
@@ -50,13 +48,12 @@ interface VendorFormData {
   pan_number: string;
   state_code: string;
 }
-
 const AddVendorModal: React.FC<AddVendorModalProps> = ({
   open,
   onClose,
   onAdd,
   loading = false,
-  initialData,
+  initialData = {},
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gstFile, setGstFile] = useState<File | null>(null);
@@ -64,7 +61,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   const [gstExtractedData, setGstExtractedData] = useState<any>(null);
   const [gstUploadError, setGstUploadError] = useState<string | null>(null);
   const [gstSearchLoading, setGstSearchLoading] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -87,7 +83,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       state_code: "",
     },
   });
-
   const {
     lookupPincode,
     pincodeData,
@@ -97,46 +92,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   } = usePincodeLookup();
   const watchedPincode = watch("pin_code");
   const watchedGstNumber = watch("gst_number");
-
-  // Reset form with initialData when it changes or modal opens
-  useEffect(() => {
-    if (open) {
-      reset(
-        initialData
-          ? {
-              name: initialData.name || "",
-              contact_number: initialData.contact_number || "",
-              email: initialData.email || "",
-              address1: initialData.address1 || "",
-              address2: initialData.address2 || "",
-              city: initialData.city || "",
-              state: initialData.state || "",
-              pin_code: initialData.pin_code || "",
-              gst_number: initialData.gst_number || "",
-              pan_number: initialData.pan_number || "",
-              state_code: initialData.state_code || "",
-            }
-          : {
-              name: "",
-              contact_number: "",
-              email: "",
-              address1: "",
-              address2: "",
-              city: "",
-              state: "",
-              pin_code: "",
-              gst_number: "",
-              pan_number: "",
-              state_code: "",
-            },
-      );
-      setGstFile(null);
-      setGstExtractedData(null);
-      setGstUploadError(null);
-      clearData();
-    }
-  }, [open, initialData, reset, clearData]);
-
+  // Auto-populate form fields when pincode data is available
   useEffect(() => {
     if (pincodeData) {
       setValue("city", pincodeData.city);
@@ -144,24 +100,26 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setValue("state_code", pincodeData.state_code);
     }
   }, [pincodeData, setValue]);
-
+  // Handle pincode change with debouncing
   useEffect(() => {
     if (watchedPincode && /^\d{6}$/.test(watchedPincode)) {
       const timeoutId = setTimeout(() => {
         lookupPincode(watchedPincode);
-      }, 500);
+      }, 500); // 500ms debounce
       return () => clearTimeout(timeoutId);
     } else {
       clearData();
     }
   }, [watchedPincode, lookupPincode, clearData]);
-
+  // Handle GST certificate upload with actual API call
   const handleGstFileUpload = async (file: File) => {
     setGstUploadLoading(true);
     setGstUploadError(null);
     try {
+      // Create FormData for file upload
       const formData = new FormData();
       formData.append("file", file);
+      // Call backend PDF extraction API
       const response = await api.post(
         "/pdf-extraction/extract/vendor",
         formData,
@@ -173,6 +131,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       );
       if (response.data.success) {
         const extractedData = response.data.extracted_data;
+        // Auto-populate form fields with processed extracted data
         Object.entries(extractedData).forEach(([key, value]) => {
           if (value) {
             setValue(key as keyof VendorFormData, value as string);
@@ -186,7 +145,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         throw new Error(errorMessage);
       }
     } catch (error: any) {
-      console.error("Error uploading GST file", error);
+      console.error("Error processing GST certificate:", error);
       setGstUploadError(
         error.response?.data?.detail ||
           "Failed to process GST certificate. Please try again.",
@@ -195,7 +154,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setGstUploadLoading(false);
     }
   };
-
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -206,17 +164,16 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
+        // 10MB limit
         setGstUploadError("File size should be less than 10MB");
         return;
       }
       handleGstFileUpload(file);
     }
   };
-
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
   };
-
   const removeGstFile = () => {
     setGstFile(null);
     setGstExtractedData(null);
@@ -225,7 +182,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       fileInputRef.current.value = "";
     }
   };
-
   const handleGstSearch = async () => {
     if (
       !watchedGstNumber ||
@@ -241,13 +197,13 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     try {
       const response = await api.get(`/gst/search/${watchedGstNumber}`);
       const data = response.data;
+      // Auto-populate fields from API response
       Object.entries(data).forEach(([key, value]) => {
         if (value) {
           setValue(key as keyof VendorFormData, value as string);
         }
       });
     } catch (error: any) {
-      console.error("Error searching GST", error);
       setGstUploadError(
         error.response?.data?.detail ||
           "Failed to fetch GST details. Please check GSTIN.",
@@ -256,9 +212,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setGstSearchLoading(false);
     }
   };
-
-  const onSubmit = async (data: VendorFormData) => {
+  const onSubmit = async (vendorData: VendorFormData) => {
     try {
+      // Remove empty fields to match backend schema
       const allowedFields = [
         "name",
         "contact_number",
@@ -273,38 +229,51 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         "state_code",
       ];
       const cleanData = Object.fromEntries(
-        Object.entries(data).filter(
+        Object.entries(vendorData).filter(
           ([key, value]) =>
             allowedFields.includes(key) &&
             value !== null &&
             String(value).trim() !== "",
         ),
       );
+      // Direct API call to save vendor
+      const response = await api.post("/vendors", cleanData);
+      console.log("Vendor added successfully:", response.data);
+      // Call onAdd if provided and is a function
       if (typeof onAdd === "function") {
-        await onAdd(cleanData);
+        await onAdd(response.data);
       }
+      reset();
+      onClose(); // Close modal on success
     } catch (error: any) {
-      console.error("Error submitting vendor form", error);
-      const errorMessage =
-        error.response?.data?.detail ||
-        "Failed to process vendor. Please try again.";
+      console.error("Error adding vendor:", error);
+      // Set more specific error message
+      let errorMessage = "Failed to add vendor. Please try again.";
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((err: any) => `${err.loc ? err.loc.join(' -> ') + ': ' : ''}${err.msg || err.type}`).join(', ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else {
+          errorMessage = JSON.stringify(detail);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       setGstUploadError(errorMessage);
     }
   };
-
   const handleClose = () => {
     reset();
     clearData();
     removeGstFile();
     onClose();
   };
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Typography variant="h6">
-          {initialData ? "Edit Vendor" : "Add New Vendor"}
-        </Typography>
+        <Typography variant="h6">Add New Vendor</Typography>
       </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
@@ -360,7 +329,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 {...register("gst_number")}
                 margin="normal"
                 InputProps={{
-                  style: { textTransform: "uppercase" },
+                  style: { textTransform: 'uppercase' },
                   endAdornment: (
                     <InputAdornment position="end">
                       {gstSearchLoading ? (
@@ -387,6 +356,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
+            {/* GST Certificate Upload Section */}
             <Grid size={12}>
               <Paper
                 sx={{
@@ -546,6 +516,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
+            {/* PIN Code moved to be first after address lines */}
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -652,12 +623,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? "Processing..." : initialData ? "Update Vendor" : "Add Vendor"}
+            {loading ? "Adding..." : "Add Vendor"}
           </Button>
         </DialogActions>
       </form>
     </Dialog>
   );
 };
-
 export default AddVendorModal;

@@ -352,7 +352,7 @@ const VendorsPage: React.FC = () => {
           }}
           onAdd={editVendor ? handleVendorUpdate : handleVendorAdd}
           loading={addVendorLoading}
-          initialData={editVendor} // Pass full vendor data for editing
+          initialData={editVendor || {}} // Pass {} if null to avoid null
         />
       </Box>
     </Container>
