@@ -181,7 +181,7 @@ export const menuItems = {
         title: 'Accounts Payable',
         items: [
           { name: 'Vendor Bills', path: '/accounts-payable', icon: <Receipt /> },
-          { name: 'Payment Vouchers', path: '/payment-vouchers', icon: <Payment /> },
+          { name: 'Payment Vouchers', path: '/vouchers/Financial-Vouchers/payment-voucher', icon: <Payment /> },
           { name: 'Vendor Aging', path: '/vendor-aging', icon: <Schedule /> }
         ]
       },
@@ -189,7 +189,7 @@ export const menuItems = {
         title: 'Accounts Receivable',
         items: [
           { name: 'Customer Invoices', path: '/accounts-receivable', icon: <ReceiptLong /> },
-          { name: 'Receipt Vouchers', path: '/receipt-vouchers', icon: <MonetizationOn /> },
+          { name: 'Receipt Vouchers', path: '/vouchers/Financial-Vouchers/receipt-voucher', icon: <MonetizationOn /> },
           { name: 'Customer Aging', path: '/customer-aging', icon: <Schedule /> }
         ]
       },
@@ -236,7 +236,7 @@ export const menuItems = {
         title: 'Transactions',
         items: [
           { name: 'General Ledger', path: '/general-ledger', icon: <ReceiptLong /> },
-          { name: 'Journal Entries', path: '/journal-entries', icon: <NoteAdd /> },
+          { name: 'Journal Entries', path: '/vouchers/Financial-Vouchers/journal-voucher', icon: <NoteAdd /> },
           { name: 'Bank Reconciliation', path: '/bank-reconciliation', icon: <AccountBalance /> }
         ]
       },
