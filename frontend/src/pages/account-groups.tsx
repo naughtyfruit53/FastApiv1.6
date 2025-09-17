@@ -1,4 +1,4 @@
-// pages/account-groups.tsx
+// frontend/src/pages/account-groups.tsx
 import React from 'react';
 import { 
   Box, 
@@ -12,7 +12,7 @@ import {
 import { 
   Business
 } from '@mui/icons-material';
-import DashboardLayout from '../../components/DashboardLayout';
+import DashboardLayout from '../components/DashboardLayout';
 
 const AccountGroupsPage: React.FC = () => {
   return (

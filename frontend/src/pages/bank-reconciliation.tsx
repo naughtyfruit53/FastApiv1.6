@@ -1,4 +1,4 @@
-// pages/bank-reconciliation.tsx
+// frontend/src/pages/bank-reconciliation.tsx
 import React from 'react';
 import { 
   Box, 
@@ -12,7 +12,7 @@ import {
 import { 
   AccountBalance
 } from '@mui/icons-material';
-import DashboardLayout from '../../components/DashboardLayout';
+import DashboardLayout from '../components/DashboardLayout';
 
 const BankReconciliationPage: React.FC = () => {
   return (

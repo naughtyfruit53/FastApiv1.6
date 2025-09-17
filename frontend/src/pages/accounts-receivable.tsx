@@ -1,4 +1,4 @@
-// pages/accounts-receivable.tsx
+// frontend/src/pages/accounts-receivable.tsx
 import React from 'react';
 import { 
   Box, 
@@ -12,7 +12,7 @@ import {
 import { 
   ReceiptLong
 } from '@mui/icons-material';
-import DashboardLayout from '../../components/DashboardLayout';
+import DashboardLayout from '../components/DashboardLayout';
 
 const AccountsReceivablePage: React.FC = () => {
   return (

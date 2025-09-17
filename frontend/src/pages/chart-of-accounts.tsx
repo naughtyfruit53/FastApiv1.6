@@ -1,4 +1,4 @@
-// pages/chart-of-accounts.tsx
+// frontend/src/pages/chart-of-accounts.tsx
 import React from 'react';
 import { 
   Box, 
@@ -12,7 +12,7 @@ import {
 import { 
   AccountBalance
 } from '@mui/icons-material';
-import DashboardLayout from '../../components/DashboardLayout';
+import DashboardLayout from '../components/DashboardLayout';
 
 const ChartOfAccountsPage: React.FC = () => {
   return (

@@ -1,4 +1,4 @@
-// pages/accounts-payable.tsx
+// frontend/src/pages/accounts-payable.tsx
 import React from 'react';
 import { 
   Box, 
@@ -12,7 +12,7 @@ import {
 import { 
   Receipt
 } from '@mui/icons-material';
-import DashboardLayout from '../../components/DashboardLayout';
+import DashboardLayout from '../components/DashboardLayout';
 
 const AccountsPayablePage: React.FC = () => {
   return (
