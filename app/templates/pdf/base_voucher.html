@@ -237,10 +237,20 @@
                                     {% if voucher.shipping_address %}
                                     <div style="font-weight:600;">{{ voucher.shipping_address.name|default('') }}</div>
                                     <div>{{ voucher.shipping_address.address }}</div>
-                                    <div>{{ voucher.shipping_address.city }}{% if voucher.shipping_address.state %}, {{ voucher.shipping_address.state }}{% endif %}</div>
+                                    <div>{{ voucher.shipping_address.city }}{% if voucher.shipping_address.state %}, {{ voucher.shipping_address.state }}{% endif %}{% if voucher.shipping_address.pin_code %} - {{ voucher.shipping_address.pin_code }}{% endif %}</div>
                                     {% if voucher.shipping_address.contact %}<div>Contact / GSTIN: {{ voucher.shipping_address.contact }}</div>{% endif %}
+                                    {% if voucher.shipping_address.gst_number %}<div>GSTIN/UIN: {{ voucher.shipping_address.gst_number }}</div>{% endif %}
+                                    {% if voucher.shipping_address.pan_number %}<div>PAN/IT No: {{ voucher.shipping_address.pan_number }}</div>{% endif %}
+                                    {% else %}
+                                    {% if party %}
+                                    <div style="font-weight:600;">{{ party.name|upper }}</div>
+                                    <div>{{ party.address }}{% if party.city %}, {{ party.city }}{% endif %}{% if party.state %}, {{ party.state }}{% endif %}{% if party.pin_code %} - {{ party.pin_code }}{% endif %}</div>
+                                    {% if party.contact_number %}<div>Contact: {{ party.contact_number }}</div>{% endif %}
+                                    {% if party.gst_number %}<div>GSTIN/UIN: {{ party.gst_number }}</div>{% endif %}
+                                    {% if party.pan_number %}<div>PAN/IT No: {{ party.pan_number }}</div>{% endif %}
                                     {% else %}
                                     <div style="font-weight:600;">(Same as Bill To)</div>
+                                    {% endif %}
                                     {% endif %}
                                 </div>
                             </td>
