@@ -1,3 +1,4 @@
+// frontend/src/pages/settings/add-user.tsx
 import React, { useState } from "react";
 import {
   Box,
@@ -18,9 +19,12 @@ import {
 import { ArrowBack, Person, Save, Cancel } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { canManageUsers, isAppSuperAdmin } from "../../types/user.types";
+import {
+  getDisplayRole,
+  canManageUsers,
+} from "../../types/user.types";
 const AddUser: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
@@ -30,7 +34,7 @@ const AddUser: React.FC = () => {
     email: "",
     full_name: "",
     password: "",
-    role: "standard_user",
+    role: "executive",
     department: "",
     designation: "",
     employee_id: "",
@@ -38,13 +42,12 @@ const AddUser: React.FC = () => {
   });
   // Get user info for authorization (no token here—moved to mutation)
   const canAddUser = canManageUsers(user);
-  const isSuperAdmin = isAppSuperAdmin(user);
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
       const token = localStorage.getItem("token"); // Moved here: Only runs on client during mutation
       const API_BASE_URL =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await axios.post(
+      const response = await api.post(
         `${API_BASE_URL}/api/v1/users/`,
         userData,
         {
@@ -102,7 +105,7 @@ const AddUser: React.FC = () => {
       email: "",
       full_name: "",
       password: "",
-      role: "standard_user",
+      role: "executive",
       department: "",
       designation: "",
       employee_id: "",
@@ -210,11 +213,8 @@ const AddUser: React.FC = () => {
                 label="Role *"
                 onChange={handleInputChange("role")}
               >
-                <MenuItem value="standard_user">Standard User</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
-                {isSuperAdmin && (
-                  <MenuItem value="org_admin">Organization Admin</MenuItem>
-                )}
+                <MenuItem value="executive">Executive</MenuItem>
+                <MenuItem value="manager">Manager</MenuItem>
               </Select>
             </FormControl>
           </Box>

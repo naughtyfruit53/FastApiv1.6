@@ -1,443 +1,277 @@
 // frontend/src/components/AddUserDialog.tsx
 import React, { useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
+  Box,
   Typography,
-  Alert,
-  CircularProgress,
+  Paper,
+  TextField,
+  Button,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Box,
-  Grid as Grid,
-  Checkbox,
-  FormControlLabel,
-  FormGroup,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Alert,
+  CircularProgress,
   Divider,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
-import { PersonAdd as PersonAddIcon, ExpandMore } from "@mui/icons-material";
-import { toast } from "react-toastify";
+import { Close, Person, Save, Cancel } from "@mui/icons-material";
+import { useMutation } from "@tanstack/react-query";
+import api from "../lib/api"; // Adjusted path since this is now in components/
+import { useAuth } from "../context/AuthContext"; // Adjusted path
+import {
+  getDisplayRole,
+  canManageUsers,
+} from "../types/user.types"; // Adjusted path
 
 interface AddUserDialogProps {
   open: boolean;
   onClose: () => void;
-  organizationId: number;
-  organizationName: string;
-  onSuccess?: () => void;
-}
-
-interface UserFormData {
-  email: string;
-  full_name: string;
-  password: string;
-  confirm_password: string;
-  role: string;
-  phone?: string;
-  department?: string;
+  loading: boolean;
+  onAdd: (userData: any) => void; // Callback to handle form submission in parent
+  organizationId: number; // Added prop for organization scoping
 }
 
 const AddUserDialog: React.FC<AddUserDialogProps> = ({
   open,
   onClose,
+  loading,
+  onAdd,
   organizationId,
-  organizationName,
-  onSuccess,
 }) => {
-  const [formData, setFormData] = useState<UserFormData>({
+  const { user } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
     email: "",
     full_name: "",
-    password: "",
-    confirm_password: "",
-    role: "standard_user",
-    phone: "",
+    role: "executive",
     department: "",
+    designation: "",
+    employee_id: "",
+    phone: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<UserFormData>>({});
-  const [assignedModules, setAssignedModules] = useState({
-    CRM: true,
-    ERP: true,
-    HR: true,
-    Inventory: true,
-    Service: true,
-    Analytics: true,
-    Finance: true,
-  });
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  // Get user info for authorization
+  const canAddUser = canManageUsers(user);
 
-  const roles = [
-    { value: "standard_user", label: "Standard User" },
-    { value: "admin", label: "Admin" },
-    { value: "org_admin", label: "Organization Admin" },
-  ];
-
-  // Check current user role for permission to assign modules
-  React.useEffect(() => {
-    const role = localStorage.getItem("user_role");
-    setCurrentUserRole(role);
-  }, []);
-
-  // Check if current user can assign modules (HR role or org admin)
-  const canAssignModules = (): boolean => {
-    return (
-      currentUserRole === "HR" ||
-      currentUserRole === "org_admin" ||
-      currentUserRole === "admin"
-    );
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    // Basic validation
+    if (!formData.email || !formData.full_name) {
+      setError("Please fill in all required fields");
+      return;
+    }
+    // Pass data to parent for mutation (no password included)
+    onAdd({ ...formData, organization_id: organizationId });
   };
 
-  const handleModuleChange = (module: string, enabled: boolean) => {
-    setAssignedModules((prev) => ({
-      ...prev,
-      [module]: enabled,
-    }));
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Partial<UserFormData> = {};
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    // Full name validation
-    if (!formData.full_name.trim()) {
-      newErrors.full_name = "Full name is required";
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters long";
-    }
-
-    // Confirm password validation
-    if (formData.password !== formData.confirm_password) {
-      newErrors.confirm_password = "Passwords do not match";
-    }
-
-    // Role validation
-    if (!formData.role) {
-      newErrors.role = "Role is required";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (field: keyof UserFormData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({
+  const handleInputChange =
+    (field: string) =>
+    (
+      e:
+        | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+        | { target: { value: string } },
+    ) => {
+      setFormData((prev) => ({
         ...prev,
-        [field]: undefined,
+        [field]: e.target.value,
       }));
-    }
-  };
+    };
 
-  const handleClose = () => {
+  const resetForm = () => {
     setFormData({
       email: "",
       full_name: "",
-      password: "",
-      confirm_password: "",
-      role: "standard_user",
-      phone: "",
+      role: "executive",
       department: "",
+      designation: "",
+      employee_id: "",
+      phone: "",
     });
-    setErrors({});
-    setLoading(false);
-    onClose();
+    setError(null);
+    setSuccess(null);
   };
 
-  const handleAddUser = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const userData = {
-        email: formData.email.trim(),
-        full_name: formData.full_name.trim(),
-        password: formData.password,
-        role: formData.role,
-        phone: formData.phone?.trim() || undefined,
-        department: formData.department?.trim() || undefined,
-        organization_id: organizationId,
-      };
-
-      const response = await fetch("/api/v1/users/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to add user");
-      }
-
-      const newUser = await response.json();
-
-      // If current user can assign modules and has permission, update user modules
-      if (canAssignModules()) {
-        try {
-          const moduleResponse = await fetch(
-            `/api/v1/organizations/${organizationId}/users/${newUser.id}/modules`,
-            {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-              body: JSON.stringify({ assigned_modules: assignedModules }),
-            },
-          );
-
-          if (!moduleResponse.ok) {
-            console.warn(
-              "Failed to assign modules to user, but user was created successfully",
-            );
-          }
-        } catch (moduleError) {
-          console.warn("Module assignment failed:", moduleError);
-          // Don't fail the entire operation if module assignment fails
-        }
-      }
-
-      toast.success(`User "${formData.full_name}" added successfully`);
-
-      if (onSuccess) {
-        onSuccess();
-      }
-
-      handleClose();
-    } catch (err) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to add user",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const isFormValid =
-    formData.email &&
-    formData.full_name &&
-    formData.password &&
-    formData.confirm_password &&
-    formData.role &&
-    formData.password === formData.confirm_password;
+  // Check authorization
+  if (!canAddUser) {
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>Add New User</DialogTitle>
+        <DialogContent>
+          <Alert severity="error">
+            You don&apos;t have permission to add users. Only organization
+            administrators can add users.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <PersonAddIcon color="primary" />
-        Add User to {organizationName}
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        Add New User
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{ position: "absolute", right: 8, top: 8 }}
+        >
+          <Close />
+        </IconButton>
       </DialogTitle>
-
       <DialogContent>
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            Add a new user to the organization "{organizationName}". The user
-            will receive login credentials and access based on their assigned
-            role.
-          </Typography>
-        </Alert>
-
-        <Grid container spacing={2}>
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-              error={Boolean(errors.email)}
-              helperText={errors.email}
-              disabled={loading}
-              required
-            />
-          </Grid>
-
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Full Name"
-              value={formData.full_name}
-              onChange={(e) => handleInputChange("full_name", e.target.value)}
-              error={Boolean(errors.full_name)}
-              helperText={errors.full_name}
-              disabled={loading}
-              required
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => handleInputChange("password", e.target.value)}
-              error={Boolean(errors.password)}
-              helperText={errors.password || "Minimum 8 characters"}
-              disabled={loading}
-              required
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              fullWidth
-              label="Confirm Password"
-              type="password"
-              value={formData.confirm_password}
-              onChange={(e) =>
-                handleInputChange("confirm_password", e.target.value)
-              }
-              error={Boolean(errors.confirm_password)}
-              helperText={errors.confirm_password}
-              disabled={loading}
-              required
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth required error={Boolean(errors.role)}>
-              <InputLabel>Role</InputLabel>
-              <Select
-                value={formData.role}
-                onChange={(e) => handleInputChange("role", e.target.value)}
-                label="Role"
-                disabled={loading}
-              >
-                {roles.map((role) => (
-                  <MenuItem key={role.value} value={role.value}>
-                    {role.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              fullWidth
-              label="Phone Number"
-              value={formData.phone}
-              onChange={(e) => handleInputChange("phone", e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Department"
-              value={formData.department}
-              onChange={(e) => handleInputChange("department", e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Module Assignment Section - Only show for HR role or admins */}
-        {canAssignModules() && (
-          <>
-            <Divider sx={{ my: 3 }} />
-            <Accordion defaultExpanded>
-              <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="h6">Module Assignment</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  Select which modules this user should have access to:
-                </Typography>
-                <FormGroup row>
-                  {Object.entries(assignedModules).map(([module, enabled]) => (
-                    <FormControlLabel
-                      key={module}
-                      control={
-                        <Checkbox
-                          checked={enabled}
-                          onChange={(e) =>
-                            handleModuleChange(module, e.target.checked)
-                          }
-                          color="primary"
-                          disabled={loading}
-                        />
-                      }
-                      label={module}
-                      sx={{ minWidth: "150px" }}
-                    />
-                  ))}
-                </FormGroup>
-              </AccordionDetails>
-            </Accordion>
-          </>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
         )}
-
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Role Permissions:</strong>
-          </Typography>
-          <ul>
-            <li>
-              <strong>Standard User:</strong> Basic access to view and create
-              records
-            </li>
-            <li>
-              <strong>Admin:</strong> Full access to manage organization data
-            </li>
-            <li>
-              <strong>Organization Admin:</strong> Complete control including
-              user management
-            </li>
-          </ul>
-        </Box>
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {success}
+          </Alert>
+        )}
+        <Paper sx={{ p: 4 }}>
+          <form onSubmit={handleSubmit}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ display: "flex", alignItems: "center" }}
+            >
+              <Person sx={{ mr: 1 }} />
+              User Information
+            </Typography>
+            <Divider sx={{ mb: 3 }} />
+            {/* Basic Information */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                gap: 3,
+                mb: 3,
+              }}
+            >
+              <TextField
+                fullWidth
+                label="Email *"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange("email")}
+                required
+                helperText="User's login email address (username will be auto-generated)"
+              />
+              <TextField
+                fullWidth
+                label="Full Name *"
+                value={formData.full_name}
+                onChange={handleInputChange("full_name")}
+                required
+              />
+            </Box>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                gap: 3,
+                mb: 3,
+              }}
+            >
+              <FormControl fullWidth>
+                <InputLabel>Role *</InputLabel>
+                <Select
+                  value={formData.role}
+                  label="Role *"
+                  onChange={handleInputChange("role")}
+                >
+                  <MenuItem value="executive">Executive</MenuItem>
+                  <MenuItem value="manager">Manager</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            {/* Additional Information */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                gap: 3,
+                mb: 4,
+              }}
+            >
+              <TextField
+                fullWidth
+                label="Department"
+                value={formData.department}
+                onChange={handleInputChange("department")}
+              />
+              <TextField
+                fullWidth
+                label="Designation"
+                value={formData.designation}
+                onChange={handleInputChange("designation")}
+              />
+            </Box>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                gap: 3,
+                mb: 4,
+              }}
+            >
+              <TextField
+                fullWidth
+                label="Employee ID"
+                value={formData.employee_id}
+                onChange={handleInputChange("employee_id")}
+              />
+              <TextField
+                fullWidth
+                label="Phone"
+                value={formData.phone}
+                onChange={handleInputChange("phone")}
+              />
+            </Box>
+          </form>
+        </Paper>
       </DialogContent>
-
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
+      <DialogActions sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+        <Button
+          variant="outlined"
+          startIcon={<Cancel />}
+          onClick={onClose}
+          disabled={loading}
+        >
           Cancel
         </Button>
         <Button
-          onClick={handleAddUser}
-          variant="contained"
-          disabled={!isFormValid || loading}
-          startIcon={
-            loading ? <CircularProgress size={16} /> : <PersonAddIcon />
-          }
+          variant="outlined"
+          onClick={resetForm}
+          disabled={loading}
         >
-          {loading ? "Adding User..." : "Add User"}
+          Reset
+        </Button>
+        <Button
+          type="submit"
+          variant="contained"
+          startIcon={
+            loading ? (
+              <CircularProgress size={20} />
+            ) : (
+              <Save />
+            )
+          }
+          onClick={handleSubmit} // Trigger submit on click
+          disabled={loading}
+        >
+          {loading ? "Creating..." : "Create User"}
         </Button>
       </DialogActions>
     </Dialog>

@@ -10,7 +10,7 @@ import string
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission
-from app.models import User, Organization
+from app.models import User, Organization, OrganizationRole, UserOrganizationRole
 from app.schemas.user import UserRole
 from app.schemas import UserCreate, UserInDB
 from app.core.security import get_current_user
@@ -38,7 +38,7 @@ async def list_organization_users(
             detail="Access denied to this organization"
         )
   
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN:
+    if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to list users"
@@ -59,17 +59,17 @@ async def create_user_in_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create user in organization (org admin or super admin only)"""
+    """Create user in organization (management or super admin only)"""
     if not current_user.is_super_admin and current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization"
         )
   
-    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
+    if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can create users"
+            detail="Only management can create users"
         )
   
     org = db.query(Organization).filter(Organization.id == organization_id).first()
@@ -101,10 +101,10 @@ async def create_user_in_organization(
                 detail=f"Maximum user limit ({org.max_users}) reached for this organization"
             )
   
-    if user_data.role == UserRole.ORG_ADMIN.value and not current_user.is_super_admin:
+    if user_data.role == "management" and not current_user.is_super_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can assign organization administrator role"
+            detail="Only super administrators can assign management role"
         )
   
     supabase_uuid = None
@@ -114,7 +114,7 @@ async def create_user_in_organization(
             password=user_data.password,
             user_metadata={
                 "full_name": user_data.full_name,
-                "role": user_data.role.value if user_data.role else UserRole.STANDARD_USER.value,
+                "role": user_data.role if user_data.role else "executive",
                 "organization_id": organization_id
             }
         )
@@ -132,7 +132,7 @@ async def create_user_in_organization(
             email=user_data.email,
             hashed_password=hashed_password,
             full_name=user_data.full_name,
-            role=user_data.role or UserRole.STANDARD_USER.value,
+            role=user_data.role or "executive",
             department=user_data.department,
             designation=user_data.designation,
             employee_id=user_data.employee_id,
@@ -140,11 +140,31 @@ async def create_user_in_organization(
             is_active=user_data.is_active if user_data.is_active is not None else True,
             supabase_uuid=supabase_uuid
         )
-      
+        
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-      
+        
+        # Assign OrganizationRole
+        org_role = db.query(OrganizationRole).filter(
+            OrganizationRole.organization_id == organization_id,
+            OrganizationRole.name == new_user.role
+        ).first()
+        
+        if org_role:
+            assignment = UserOrganizationRole(
+                organization_id=organization_id,
+                user_id=new_user.id,
+                role_id=org_role.id,
+                assigned_by_id=current_user.id,
+                is_active=True
+            )
+            db.add(assignment)
+            db.commit()
+            logger.info(f"Assigned role '{new_user.role}' to user {new_user.email}")
+        else:
+            logger.warning(f"Role '{new_user.role}' not found - skipping assignment")
+        
         logger.info(f"User {new_user.email} created in organization {org.name} by {current_user.email}")
 
         # Send welcome email with login link
@@ -181,7 +201,7 @@ async def update_user_in_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Update user in organization (org admin or super admin only)"""
+    """Update user in organization (management or super admin only)"""
     if not current_user.is_super_admin and current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -200,13 +220,13 @@ async def update_user_in_organization(
         )
   
     is_self_update = current_user.id == user_id
-    if not is_self_update and not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
+    if not is_self_update and not current_user.is_super_admin and current_user.role != "management":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can update other users"
+            detail="Only management can update other users"
         )
   
-    if is_self_update and not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
+    if is_self_update and not current_user.is_super_admin and current_user.role != "management":
         allowed_fields = {"email", "full_name", "phone", "department", "designation"}
         if not all(field in allowed_fields for field in user_update.keys()):
             raise HTTPException(
@@ -215,10 +235,10 @@ async def update_user_in_organization(
             )
   
     if "role" in user_update:
-        if user_update["role"] == UserRole.ORG_ADMIN.value and not current_user.is_super_admin:
+        if user_update["role"] == "management" and not current_user.is_super_admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only super administrators can assign organization administrator role"
+                detail="Only super administrators can assign management role"
             )
   
     try:
@@ -230,6 +250,32 @@ async def update_user_in_organization(
       
         db.commit()
         db.refresh(user)
+        
+        # Update OrganizationRole assignment if role changed
+        if "role" in user_update:
+            # Remove old assignment
+            old_assignment = db.query(UserOrganizationRole).filter(
+                UserOrganizationRole.user_id == user.id
+            ).first()
+            if old_assignment:
+                db.delete(old_assignment)
+            
+            # Add new
+            new_role = db.query(OrganizationRole).filter(
+                OrganizationRole.organization_id == organization_id,
+                OrganizationRole.name == user_update["role"]
+            ).first()
+            if new_role:
+                new_assignment = UserOrganizationRole(
+                    organization_id=organization_id,
+                    user_id=user.id,
+                    role_id=new_role.id,
+                    assigned_by_id=current_user.id,
+                    is_active=True
+                )
+                db.add(new_assignment)
+                db.commit()
+                logger.info(f"Updated role to '{user_update['role']}' for user {user.email}")
       
         logger.info(f"User {user.email} updated in organization {organization_id} by {current_user.email}")
         return user
@@ -249,17 +295,17 @@ async def delete_user_from_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Delete user from organization (org admin or super admin only)"""
+    """Delete user from organization (management or super admin only)"""
     if not current_user.is_super_admin and current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization"
         )
   
-    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
+    if not current_user.is_super_admin and current_user.role != "management":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can delete users"
+            detail="Only management can delete users"
         )
   
     if current_user.id == user_id:
@@ -279,23 +325,30 @@ async def delete_user_from_organization(
             detail="User not found in this organization"
         )
   
-    if user.role == UserRole.ORG_ADMIN.value and not current_user.is_super_admin:
+    if user.role == "management" and not current_user.is_super_admin:
         admin_count = db.query(User).filter(
             User.organization_id == organization_id,
-            User.role == UserRole.ORG_ADMIN.value,
+            User.role == "management",
             User.is_active == True
         ).count()
       
         if admin_count <= 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot delete the last organization administrator"
+                detail="Cannot delete the last management user"
             )
   
     try:
+        # Remove role assignment
+        assignment = db.query(UserOrganizationRole).filter(
+            UserOrganizationRole.user_id == user_id
+        ).first()
+        if assignment:
+            db.delete(assignment)
+        
         db.delete(user)
         db.commit()
-      
+        
         logger.info(f"User {user.email} deleted from organization {organization_id} by {current_user.email}")
         return {"message": f"User {user.email} deleted successfully"}
       
@@ -314,17 +367,17 @@ async def reset_user_password(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Reset user password (org admin or super admin only)"""
+    """Reset user password (management or super admin only)"""
     if not current_user.is_super_admin and current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization"
         )
   
-    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
+    if not current_user.is_super_admin and current_user.role != "management":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can reset passwords"
+            detail="Only management can reset passwords"
         )
   
     user = db.query(User).filter(
@@ -357,7 +410,7 @@ async def reset_user_password(
         # Send email with new password
         success, error = email_service.send_password_reset_email(
             user_email=user.email,
-            user_name=user.full_name or user.username,
+            user_name=user.full_name,
             new_password=new_password,
             reset_by=current_user.email
         )

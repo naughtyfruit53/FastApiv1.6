@@ -1,6 +1,6 @@
-// Revised: v1/frontend/src/pages/settings/Settings.tsx
-import React from "react";
-import { Container, Typography, Paper, Box, Button } from "@mui/material";
+// frontend/src/pages/settings/Settings.tsx
+import React, { useState } from "react";
+import { Container, Typography, Paper, Box, Button, Grid } from "@mui/material";
 import Person from "@mui/icons-material/Person";
 import PersonAdd from "@mui/icons-material/PersonAdd";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -18,6 +18,9 @@ import {
   canManageUsers,
 } from "../../types/user.types";
 import UserPreferences from "./UserPreferences";
+import AddUserDialog from "../../components/AddUserDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { organizationService } from "../../services/organizationService";
 const Settings: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
@@ -28,6 +31,22 @@ const Settings: React.FC = () => {
   const isAuthorized = canAccessAdvancedSettings(user);
   const isOrgAdmin = isOrgSuperAdmin(user);
   const canManage = canManageUsers(user);
+  const queryClient = useQueryClient();
+  const currentOrgId = user?.organization_id;
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const createUserMutation = useMutation({
+    mutationFn: (userData: any) =>
+      organizationService.createUserInOrganization(currentOrgId!, userData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["organization-users", currentOrgId],
+      });
+      setCreateDialogOpen(false);
+    },
+  });
+  const handleCreateUser = (userData: any) => {
+    createUserMutation.mutate(userData);
+  };
   console.log("Current user in Settings:", JSON.stringify(user, null, 2));
   console.log("Display Role:", displayRole);
   console.log("Is Authorized:", isAuthorized);
@@ -90,7 +109,7 @@ const Settings: React.FC = () => {
                 <Button
                   variant="outlined"
                   startIcon={<PersonAdd />}
-                  onClick={() => router.push("/settings/add-user")}
+                  onClick={() => setCreateDialogOpen(true)}
                   fullWidth
                 >
                   Add New User
@@ -173,6 +192,13 @@ const Settings: React.FC = () => {
           </Grid>
         )}
       </Grid>
+      <AddUserDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        loading={createUserMutation.isPending}
+        onAdd={handleCreateUser}
+        organizationId={user?.organization_id || 0}
+      />
     </Container>
   );
 };

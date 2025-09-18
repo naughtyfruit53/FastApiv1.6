@@ -1,3 +1,5 @@
+# app/services/user_service.py
+
 """
 User service for user management operations
 """
@@ -5,8 +7,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from datetime import datetime, timedelta, timezone
-from app.models import User, PlatformUser
-from app.models import Organization
+from app.models import User, PlatformUser, OrganizationRole, UserOrganizationRole
 from app.schemas.user import (
     UserCreate, UserUpdate, UserInDB, 
     PlatformUserCreate, PlatformUserUpdate, PlatformUserInDB,
@@ -138,7 +139,7 @@ class UserService:
     
     @staticmethod
     def create_user(db: Session, user_create: UserCreate) -> User:
-        """Create a new user with default service role"""
+        """Create a new user with default service role and organization role"""
         if user_create.organization_id is None:
             raise ValueError("Organization ID is required for creating a user")
         
@@ -157,7 +158,7 @@ class UserService:
             username=username,
             hashed_password=hashed_password,
             full_name=user_create.full_name,
-            role=user_create.role,
+            role=user_create.role or "executive",
             department=user_create.department,
             designation=user_create.designation,
             employee_id=user_create.employee_id,
@@ -169,29 +170,47 @@ class UserService:
         db.add(db_user)
         db.flush()  # Get the ID without committing
         
-        # Assign default service role based on user role
-        rbac_service = RBACService(db)
-        if user_create.role == "org_admin":
-            role_name = "admin"
-        else:
-            role_name = "viewer"  # Default for standard users
-        
-        role = db.query(ServiceRole).filter(
-            ServiceRole.organization_id == user_create.organization_id,
-            ServiceRole.name == role_name
+        # Assign organization role
+        org_role = db.query(OrganizationRole).filter(
+            OrganizationRole.organization_id == user_create.organization_id,
+            OrganizationRole.name == db_user.role
         ).first()
         
-        if role:
-            assignment = UserServiceRole(
+        if org_role:
+            org_assignment = UserOrganizationRole(
                 organization_id=user_create.organization_id,
                 user_id=db_user.id,
-                role_id=role.id,
+                role_id=org_role.id,
                 assigned_by_id=None  # System-assigned
             )
-            db.add(assignment)
-            logger.info(f"Assigned default '{role_name}' service role to new user {db_user.email}")
+            db.add(org_assignment)
+            logger.info(f"Assigned organization role '{db_user.role}' to new user {db_user.email}")
         else:
-            logger.warning(f"No '{role_name}' role found for organization {user_create.organization_id} - skipping assignment")
+            logger.warning(f"No organization role '{db_user.role}' found - skipping assignment")
+        
+        # Assign default service role based on organization role
+        rbac_service = RBACService(db)
+        if db_user.role in ["management", "manager"]:
+            service_role_name = "admin"
+        else:
+            service_role_name = "viewer"  # Default for executive
+        
+        service_role = db.query(ServiceRole).filter(
+            ServiceRole.organization_id == user_create.organization_id,
+            ServiceRole.name == service_role_name
+        ).first()
+        
+        if service_role:
+            service_assignment = UserServiceRole(
+                organization_id=user_create.organization_id,
+                user_id=db_user.id,
+                role_id=service_role.id,
+                assigned_by_id=None  # System-assigned
+            )
+            db.add(service_assignment)
+            logger.info(f"Assigned default service role '{service_role_name}' to new user {db_user.email}")
+        else:
+            logger.warning(f"No service role '{service_role_name}' found - skipping assignment")
         
         db.commit()
         db.refresh(db_user)

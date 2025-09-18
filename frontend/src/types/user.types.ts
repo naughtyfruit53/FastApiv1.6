@@ -1,3 +1,5 @@
+// frontend/src/types/user.types.ts
+
 /**
  * User Types and Permission Utilities
  *
@@ -233,5 +235,17 @@ export const canBulkImportStock = (user: User | null): boolean => {
   return (
     user.is_super_admin === true ||
     ["super_admin", "org_admin", "admin"].includes(role)
+  );
+};
+
+export const canManageRoles = (user: User | null): boolean => {
+  if (!user) {
+    return false;
+  }
+  const role = user.role || localStorage.getItem("user_role");
+  return (
+    user.is_super_admin === true ||
+    role === "super_admin" ||
+    role === "org_admin"
   );
 };

@@ -3,7 +3,8 @@
 # Import all models from the new modular structure for backward compatibility
 from .user_models import (
     PlatformUser, Organization, User, ServiceRole, ServicePermission, 
-    ServiceRolePermission, UserServiceRole
+    ServiceRolePermission, UserServiceRole, OrganizationRole, RoleModuleAssignment,
+    UserOrganizationRole, OrganizationApprovalSettings, VoucherApproval
 )
 from .customer_models import (
     Vendor, Customer, CustomerFile, CustomerInteraction, 
@@ -152,7 +153,8 @@ from .workflow_automation_models import (
 __all__ = [
     # User and organization models
     "PlatformUser", "Organization", "User", "ServiceRole", "ServicePermission",
-    "ServiceRolePermission", "UserServiceRole",
+    "ServiceRolePermission", "UserServiceRole", "OrganizationRole", "RoleModuleAssignment",
+    "UserOrganizationRole", "OrganizationApprovalSettings", "VoucherApproval",
     
     # Customer and business entity models
     "Company", "Vendor", "Customer", "CustomerFile", "CustomerInteraction",

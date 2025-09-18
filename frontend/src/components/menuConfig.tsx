@@ -596,7 +596,7 @@ export const menuItems = {
         items: [
           { name: 'General Settings', path: '/settings', icon: <Settings /> },
           { name: 'Company Profile', path: '/settings/company', icon: <Business /> },
-          { name: 'User Management', path: '/settings/users', icon: <People /> },
+          { name: 'User Management', path: '/settings/user-management', icon: <People /> },
           { name: 'User Preferences', path: '/settings/UserPreferences', icon: <AccountCircle /> },
           { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage /> },
           { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build /> },
