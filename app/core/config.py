@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict, Optional, List
 from dotenv import load_dotenv  # Explicitly load .env (optional, as BaseSettings handles it)
 import logging
+import platform  # Added for platform detection
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,7 @@ class Settings:
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
     # wkhtmltopdf path (dynamic for local Windows vs. deployment Linux)
-    WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf")
+    WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf" if platform.system() != 'Windows' else r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe")
     
     # FastGST API URL (for HSN/GST lookup)
     FASTGST_API_URL: str = os.getenv("FASTGST_API_URL", "https://api.fastgst.in")

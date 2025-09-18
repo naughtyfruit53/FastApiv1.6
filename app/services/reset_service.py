@@ -5,8 +5,9 @@ System-level reset service for factory default operations
 """
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
+from sqlalchemy import text  # Added for raw SQL execution
 from typing import Dict, Any
-from app.models.user_models import Organization, User, ServiceRole, UserServiceRole
+from app.models.user_models import Organization, User, ServiceRole, UserServiceRole, ServiceRolePermission
 from app.models.system_models import Company, EmailNotification, PaymentTerm, OTPVerification, AuditLog
 from app.models.customer_models import Customer, Vendor
 from app.models.product_models import Product, Stock
@@ -35,9 +36,13 @@ class ResetService:
             
             # Delete in reverse dependency order to avoid foreign key constraints
             
-            # Delete all user_service_roles (dependent on users)
+            # Delete all user_service_roles (dependent on users and roles)
             deleted_user_service_roles = db.query(UserServiceRole).delete()
             result["deleted"]["user_service_roles"] = deleted_user_service_roles
+            
+            # Delete all service_role_permissions (dependent on roles)
+            deleted_role_permissions = db.query(ServiceRolePermission).delete()
+            result["deleted"]["service_role_permissions"] = deleted_role_permissions
             
             # Delete all service_roles (dependent on organizations)
             deleted_service_roles = db.query(ServiceRole).delete()
@@ -85,11 +90,12 @@ class ResetService:
             deleted_organizations = db.query(Organization).delete()
             result["deleted"]["organizations"] = deleted_organizations
             
-            # Reset sequence IDs to 1
-            db.execute("ALTER SEQUENCE organizations_id_seq RESTART WITH 1;")
-            db.execute("ALTER SEQUENCE users_id_seq RESTART WITH 1;")
-            db.execute("ALTER SEQUENCE service_roles_id_seq RESTART WITH 1;")
-            db.execute("ALTER SEQUENCE user_service_roles_id_seq RESTART WITH 1;")
+            # Reset sequence IDs to 1 (wrapped in text() for SQLAlchemy)
+            db.execute(text("ALTER SEQUENCE organizations_id_seq RESTART WITH 1;"))
+            db.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1;"))
+            db.execute(text("ALTER SEQUENCE service_roles_id_seq RESTART WITH 1;"))
+            db.execute(text("ALTER SEQUENCE user_service_roles_id_seq RESTART WITH 1;"))
+            db.execute(text("ALTER SEQUENCE service_role_permissions_id_seq RESTART WITH 1;"))
             # Add other sequences if needed (e.g., for companies, customers, etc.)
             
             # Commit database changes
@@ -143,6 +149,12 @@ class ResetService:
                 UserServiceRole.organization_id == organization_id
             ).delete()
             result["deleted"]["user_service_roles"] = deleted_user_service_roles
+            
+            # Delete all service_role_permissions for this org
+            deleted_role_permissions = db.query(ServiceRolePermission).filter(
+                ServiceRolePermission.organization_id == organization_id
+            ).delete()
+            result["deleted"]["service_role_permissions"] = deleted_role_permissions
             
             # Delete all service_roles for this org
             deleted_service_roles = db.query(ServiceRole).filter(
