@@ -5,11 +5,14 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import logging  # Added for logging
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user_models import User, PlatformUser
 from app.schemas.user import UserInDB, PlatformUserInDB
+
+logger = logging.getLogger(__name__)  # Added logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
 
@@ -75,11 +78,11 @@ def get_password_hash(password: str) -> str:
 def verify_token(token: str, expected_type: Optional[str] = None) -> tuple[Union[str, None], Union[int, None], Union[str, None], Union[str, None]]:
     """Verify token and return email, organization_id, user_role, and user_type"""
     try:
-        print("DEBUG: Token to decode (security.py):", token)
+        logger.debug("Token to decode: %s...", token[:20])  # Replaced print with logger
         payload = jwt.decode(
             token, settings.jwt_secret, algorithms=[settings.ALGORITHM]
         )
-        print("DEBUG: Decoded payload (security.py):", payload)
+        logger.debug("Decoded payload: %s", payload)  # Replaced print with logger
         if expected_type and payload.get("token_type") != expected_type:
             raise exceptions.JWTError("Invalid token type")
         email = payload.get("sub")
@@ -88,13 +91,14 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> tuple[Union
         user_type = payload.get("user_type", "organization")
         return email, organization_id, user_role, user_type
     except exceptions.ExpiredSignatureError:
+        logger.warning("Token expired")  # Added logger
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except exceptions.JWTError as e:
-        print("JWT decode error (security.py):", str(e))
+        logger.error("JWT decode error: %s", str(e))  # Replaced print with logger
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
@@ -113,27 +117,27 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    print("DEBUG: get_current_user (security.py) called")
+    logger.debug("get_current_user called")  # Replaced print with logger
     email, organization_id, user_role, user_type = verify_token(token)
     if not email:
-        print("DEBUG: Invalid email in token (security.py), raising credentials_exception")
+        logger.debug("Invalid email in token, raising credentials_exception")  # Replaced print with logger
         raise credentials_exception
 
     if user_type == "platform":
         user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
         if not user:
-            print("DEBUG: Platform user not found in DB (security.py), raising credentials_exception")
+            logger.debug("Platform user not found in DB, raising credentials_exception")  # Replaced print with logger
             raise credentials_exception
         
-        print("DEBUG: Authenticated platform user (security.py):", user.email)
+        logger.debug("Authenticated platform user: %s", user.email)  # Replaced print with logger
         # Convert SQLAlchemy model to Pydantic schema
         return PlatformUserInDB.model_validate(user)
     else:
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            print("DEBUG: User not found in DB (security.py), raising credentials_exception")
+            logger.debug("User not found in DB, raising credentials_exception")  # Replaced print with logger
             raise credentials_exception
 
-        print("DEBUG: Authenticated user (security.py):", user.email)
+        logger.debug("Authenticated user: %s", user.email)  # Replaced print with logger
         # Convert SQLAlchemy model to Pydantic schema
         return UserInDB.model_validate(user)
