@@ -51,8 +51,8 @@ const ProductsPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { data: products, isLoading: productsLoading } = useQuery({
-    queryKey: ["stock", {show_zero: true}],
-    queryFn: () => masterDataService.getStock({show_zero: true}),
+    queryKey: ["products"],
+    queryFn: () => masterDataService.getProducts(),
     enabled: isOrgContextReady,
   });
 
@@ -64,13 +64,13 @@ const ProductsPage: React.FC = () => {
     return products.map((product: any) => ({
       ...product,
       product_name: product.product_name || product.name || "",
-      id: product.product_id,
+      id: product.id,
       name: product.product_name,
       unit_price: product.unit_price,
       reorder_level: product.reorder_level,
       unit: product.unit,
-      hsn_code: product.product_hsn_code,
-      part_number: product.product_part_number,
+      hsn_code: product.hsn_code,
+      part_number: product.part_number,
       gst_rate: product.gst_rate,
       is_active: product.is_active
     }));
@@ -110,8 +110,8 @@ const ProductsPage: React.FC = () => {
   const createItemMutation = useMutation({
     mutationFn: (data: any) => masterDataService.createProduct(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stock"] });
-      queryClient.refetchQueries({ queryKey: ["stock"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.refetchQueries({ queryKey: ["products"] });
       setItemDialog(false);
       setSelectedItem(null);
     },
@@ -126,8 +126,8 @@ const ProductsPage: React.FC = () => {
   const updateItemMutation = useMutation({
     mutationFn: (data: any) => masterDataService.updateProduct(data.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stock"] });
-      queryClient.refetchQueries({ queryKey: ["stock"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.refetchQueries({ queryKey: ["products"] });
       setItemDialog(false);
       setSelectedItem(null);
     },
@@ -142,7 +142,7 @@ const ProductsPage: React.FC = () => {
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => masterDataService.deleteProduct(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: (error: any) => {
       console.error(error);
@@ -160,7 +160,7 @@ const ProductsPage: React.FC = () => {
 
   const handleAddProduct = async (data: any) => {
     if (selectedItem) {
-      updateItemMutation.mutate({ id: selectedItem.product_id, ...data });
+      updateItemMutation.mutate({ id: selectedItem.id, ...data });
     } else {
       createItemMutation.mutate(data);
     }
