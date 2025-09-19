@@ -17,6 +17,7 @@ from app.core.security import get_password_hash, verify_password, is_super_admin
 from app.core.audit import AuditLogger
 from app.services.email_service import email_service
 from app.services.rbac import RBACService  # ADDED FOR ROLE ASSIGNMENT
+from app.services.otp_service import OTPService  # Import OTP service class
 import secrets
 import string
 import logging
@@ -147,10 +148,44 @@ class UserService:
         if not org:
             raise ValueError(f"Organization with ID {user_create.organization_id} does not exist")
         
+        # Role-specific validation
+        if user_create.role == "manager":
+            if not user_create.assigned_modules or not any(user_create.assigned_modules.values()):
+                raise ValueError("Managers must have at least one module assigned")
+        elif user_create.role == "executive":
+            if not user_create.reporting_manager_id:
+                raise ValueError("Executives must have a reporting manager")
+            manager = db.query(User).filter(
+                User.id == user_create.reporting_manager_id,
+                User.role == "manager",
+                User.organization_id == user_create.organization_id,
+                User.is_active == True
+            ).first()
+            if not manager:
+                raise ValueError("Invalid reporting manager - must be an active manager in the same organization")
+            if not user_create.sub_module_permissions:
+                raise ValueError("Executives must have sub-module permissions defined")
+            # Validate sub_modules against manager's assigned modules
+            for module in user_create.sub_module_permissions.keys():
+                if not manager.assigned_modules.get(module, False):
+                    raise ValueError(f"Cannot assign sub-modules for {module} - reporting manager does not have access to this module")
+        
+        # If no password provided, generate and send OTP
+        if user_create.password is None:
+            otp_service_instance = OTPService(db)
+            success, otp = otp_service_instance.generate_and_send_otp(
+                email=user_create.email,
+                purpose="registration",
+                organization_id=user_create.organization_id
+            )
+            if not success:
+                raise ValueError("Failed to generate and send OTP")
+            user_create.password = otp  # Set OTP as initial password
+        
         hashed_password = get_password_hash(user_create.password)
         
-        # Auto-generate username from email if not provided
-        username = user_create.username or user_create.email.split("@")[0]
+        # Set username to email (as per requirement)
+        username = user_create.email
         
         db_user = User(
             organization_id=user_create.organization_id,
@@ -164,7 +199,10 @@ class UserService:
             employee_id=user_create.employee_id,
             phone=user_create.phone,
             is_active=user_create.is_active,
-            must_change_password=True  # Force password change on first login
+            must_change_password=True,  # Force password change on first login
+            assigned_modules=user_create.assigned_modules,
+            reporting_manager_id=user_create.reporting_manager_id,
+            sub_module_permissions=user_create.sub_module_permissions
         )
         
         db.add(db_user)
@@ -246,8 +284,29 @@ class UserService:
         
         update_data = user_update.dict(exclude_unset=True)
         
-        if 'email' in update_data and 'username' not in update_data:
-            update_data['username'] = update_data['email'].split("@")[0]
+        if 'email' in update_data:
+            update_data['username'] = update_data['email']  # Update username to match new email
+        
+        # Role-specific validation if updating fields
+        if "assigned_modules" in update_data and user.role == "manager":
+            if not update_data["assigned_modules"] or not any(update_data["assigned_modules"].values()):
+                raise ValueError("Managers must have at least one module assigned")
+        if "reporting_manager_id" in update_data and user.role == "executive":
+            manager = db.query(User).filter(
+                User.id == update_data["reporting_manager_id"],
+                User.role == "manager",
+                User.organization_id == user.organization_id,
+                User.is_active == True
+            ).first()
+            if not manager:
+                raise ValueError("Invalid reporting manager")
+        if "sub_module_permissions" in update_data and user.role == "executive":
+            reporting_manager_id = update_data.get("reporting_manager_id", user.reporting_manager_id)
+            manager = db.query(User).filter(User.id == reporting_manager_id).first()
+            if manager:
+                for module in update_data["sub_module_permissions"].keys():
+                    if not manager.assigned_modules.get(module, False):
+                        raise ValueError(f"Cannot assign sub-modules for {module} - reporting manager does not have access")
         
         for field, value in update_data.items():
             setattr(user, field, value)

@@ -27,10 +27,10 @@ import {
   Alert,
   Divider,
   FormGroup,
-  Checkbox,
   FormControlLabel,
   Tabs,
   Tab,
+  Checkbox,
 } from "@mui/material";
 import {
   Add,
@@ -626,6 +626,8 @@ const UserManagement: React.FC = () => {
                 >
                   <MenuItem value="executive">Executive</MenuItem>
                   <MenuItem value="manager">Manager</MenuItem>
+                  <MenuItem value="management">Management</MenuItem>
+                  <MenuItem value="super_admin">Super Admin</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

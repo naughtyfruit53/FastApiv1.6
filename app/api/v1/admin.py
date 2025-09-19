@@ -15,14 +15,16 @@ from app.core.permissions import (
     require_password_reset_permission
 )
 from app.core.audit import AuditLogger, get_client_ip, get_user_agent
-from app.models import User, Organization
+from app.models import User, Organization, PlatformUser
 from app.schemas.user import (
     UserCreate, UserUpdate, UserInDB, AdminPasswordResetRequest, 
     AdminPasswordResetResponse, BulkPasswordResetRequest, BulkPasswordResetResponse,
-    TemporaryPasswordRequest, TemporaryPasswordResponse
+    TemporaryPasswordRequest, TemporaryPasswordResponse, PlatformUserCreate, PlatformUserInDB
 )
 from app.schemas.reset import ResetScope
+from app.schemas.organization import OrganizationCreate, OrganizationInDB  # Assume this exists or add if needed
 from app.services.user_service import UserService
+from app.services.organization_service import OrganizationService  # Assume service for org creation
 from app.services.email_service import email_service
 import logging
 
@@ -653,3 +655,51 @@ async def setup_organization_admin(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to setup organization admin"
         )
+
+
+@router.post("/platform-users", response_model=PlatformUserInDB)
+async def create_platform_user(
+    user_data: PlatformUserCreate,
+    db: Session = Depends(get_db),
+    current_user: PlatformUser = Depends(require_super_admin)
+):
+    """Create a new platform user (app admin) - only by app super admin"""
+    if current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only app super admin can create app admins"
+        )
+    
+    if user_data.role == "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create another super admin"
+        )
+    
+    return UserService.create_platform_user(db, user_data, current_user.email)
+
+
+@router.post("/licenses", response_model=OrganizationInDB)
+async def activate_license(
+    org_data: OrganizationCreate,
+    admin_data: UserCreate,  # Data for org_super_admin
+    db: Session = Depends(get_db),
+    current_user: PlatformUser = Depends(get_current_active_user)  # Both super_admin and platform_admin
+):
+    """Activate license: create organization and org_super_admin"""
+    if current_user.role not in ["super_admin", "platform_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only app super admin or app admin can activate licenses"
+        )
+    
+    # Create organization
+    new_org = OrganizationService.create_organization(db, org_data)  # Assume service method
+    
+    # Create org_super_admin
+    admin_data.organization_id = new_org.id
+    admin_data.role = "org_admin"
+    org_admin = UserService.create_user(db, admin_data)
+    
+    logger.info(f"License activated for org {new_org.name} with admin {org_admin.email} by {current_user.email}")
+    return new_org

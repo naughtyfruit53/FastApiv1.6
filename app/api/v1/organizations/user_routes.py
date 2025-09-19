@@ -17,6 +17,7 @@ from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
 from app.services.email_service import email_service  # Assuming email_service exists for sending emails
+from app.services.otp_service import OTPService  # Import OTP service class
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +108,61 @@ async def create_user_in_organization(
             detail="Only super administrators can assign management role"
         )
   
+    # Role-specific validation
+    if user_data.role == "manager":
+        if not user_data.assigned_modules or not any(user_data.assigned_modules.values()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Managers must have at least one module assigned"
+            )
+    elif user_data.role == "executive":
+        if not user_data.reporting_manager_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Executives must have a reporting manager"
+            )
+        manager = db.query(User).filter(
+            User.id == user_data.reporting_manager_id,
+            User.role == "manager",
+            User.organization_id == organization_id,
+            User.is_active == True
+        ).first()
+        if not manager:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid reporting manager - must be an active manager in the same organization"
+            )
+        if not user_data.sub_module_permissions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Executives must have sub-module permissions defined"
+            )
+        # Validate sub_modules against manager's assigned modules
+        for module in user_data.sub_module_permissions.keys():
+            if not manager.assigned_modules.get(module, False):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Cannot assign sub-modules for {module} - reporting manager does not have access to this module"
+                )
+  
     supabase_uuid = None
     try:
+        # If no password provided, generate and send OTP
+        if user_data.password is None:
+            otp_service_instance = OTPService(db)
+            success, otp = otp_service_instance.generate_and_send_otp(
+                email=user_data.email,
+                purpose="registration",
+                organization_id=organization_id,
+                phone_number=user_data.phone
+            )
+            if not success:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to generate and send OTP"
+                )
+            user_data.password = otp  # Set OTP as initial password
+        
         supabase_user = supabase_auth_service.create_user(
             email=user_data.email,
             password=user_data.password,
@@ -138,7 +192,10 @@ async def create_user_in_organization(
             employee_id=user_data.employee_id,
             phone=user_data.phone,
             is_active=user_data.is_active if user_data.is_active is not None else True,
-            supabase_uuid=supabase_uuid
+            supabase_uuid=supabase_uuid,
+            assigned_modules=user_data.assigned_modules,
+            reporting_manager_id=user_data.reporting_manager_id,
+            sub_module_permissions=user_data.sub_module_permissions
         )
         
         db.add(new_user)
@@ -167,7 +224,7 @@ async def create_user_in_organization(
         
         logger.info(f"User {new_user.email} created in organization {org.name} by {current_user.email}")
 
-        # Send welcome email with login link
+        # Send welcome email with login link (OTP already sent if password was None)
         success, error = email_service.send_user_creation_email(
             user_email=new_user.email,
             user_name=new_user.full_name,
@@ -221,10 +278,20 @@ async def update_user_in_organization(
   
     is_self_update = current_user.id == user_id
     if not is_self_update and not current_user.is_super_admin and current_user.role != "management":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only management can update other users"
-        )
+        # Allow managers to update their executives
+        if current_user.role == "manager" and user.reporting_manager_id == current_user.id:
+            # Managers can update limited fields for executives
+            allowed_fields = {"full_name", "phone", "department", "designation", "sub_module_permissions"}
+            if not all(field in allowed_fields for field in user_update.keys()):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Managers can only update limited fields for their executives"
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only management can update other users"
+            )
   
     if is_self_update and not current_user.is_super_admin and current_user.role != "management":
         allowed_fields = {"email", "full_name", "phone", "department", "designation"}
@@ -240,6 +307,36 @@ async def update_user_in_organization(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only super administrators can assign management role"
             )
+  
+    # Role-specific validation if updating fields
+    if "assigned_modules" in user_update and user.role == "manager":
+        if not user_update["assigned_modules"] or not any(user_update["assigned_modules"].values()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Managers must have at least one module assigned"
+            )
+    if "reporting_manager_id" in user_update and user.role == "executive":
+        manager = db.query(User).filter(
+            User.id == user_update["reporting_manager_id"],
+            User.role == "manager",
+            User.organization_id == organization_id,
+            User.is_active == True
+        ).first()
+        if not manager:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid reporting manager"
+            )
+    if "sub_module_permissions" in user_update and user.role == "executive":
+        reporting_manager_id = user_update.get("reporting_manager_id", user.reporting_manager_id)
+        manager = db.query(User).filter(User.id == reporting_manager_id).first()
+        if manager:
+            for module in user_update["sub_module_permissions"].keys():
+                if not manager.assigned_modules.get(module, False):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Cannot assign sub-modules for {module} - reporting manager does not have access"
+                    )
   
     try:
         for field, value in user_update.items():

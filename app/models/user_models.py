@@ -424,7 +424,7 @@ class User(Base):
 
     # User details
     full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    role: Mapped[str] = mapped_column(String, nullable=False, default="standard_user") # org_admin, admin, standard_user
+    role: Mapped[str] = mapped_column(String, nullable=False, default="executive") # executive, manager, management, super_admin, org_admin
     department: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     designation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     employee_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -446,6 +446,10 @@ class User(Base):
         "Finance": True,
         "Mail": True
     }) # Modules assigned to this user (subset of org enabled modules)
+
+    # Executive-specific fields
+    reporting_manager_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_reporting_manager_id"), nullable=True, index=True)
+    sub_module_permissions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # {module: [sub_module1, sub_module2]} for executives
 
     # Temporary master password support
     temp_password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Temporary password hash
@@ -480,6 +484,20 @@ class User(Base):
     organization: Mapped[Optional["Organization"]] = relationship(
         "Organization", 
         back_populates="users"
+    )
+    
+    # Executive reporting relationship
+    reporting_manager: Mapped[Optional["User"]] = relationship(
+        "User",
+        remote_side=[id],
+        foreign_keys=[reporting_manager_id]
+    )
+    
+    # Executives reporting to this manager
+    executives: Mapped[List["User"]] = relationship(
+        "User",
+        back_populates="reporting_manager",
+        foreign_keys=[reporting_manager_id]
     )
     
     # Task Management Relationships
@@ -599,6 +617,7 @@ class User(Base):
         UniqueConstraint('organization_id', 'email', name='uq_user_org_email'),
         Index('idx_user_org_email', 'organization_id', 'email'),
         Index('idx_user_org_active', 'organization_id', 'is_active'),
+        Index('idx_user_reporting_manager', 'reporting_manager_id'),
         {'extend_existing': True}
     )
 
@@ -810,7 +829,7 @@ class UserCompany(Base):
 # New Organization Role Hierarchy Models
 
 class OrganizationRole(Base):
-    """Organization-wide roles (Management, Manager, Executive) with module-based permissions"""
+    """Organization-wide roles (management, manager, executive) with module-based permissions"""
     __tablename__ = "organization_roles"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)

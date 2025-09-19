@@ -4,7 +4,7 @@
 User schemas for authentication and user management
 """
 from pydantic import BaseModel, EmailStr, field_validator, Field, ConfigDict
-from typing import Optional, Union, TypeAlias, Dict
+from typing import Optional, Union, TypeAlias, Dict, List
 from datetime import datetime
 from enum import Enum
 # Removed import of check_password_strength from security to break circular import
@@ -12,10 +12,10 @@ from enum import Enum
 
 class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
-    APP_ADMIN = "app_admin"
     ORG_ADMIN = "org_admin"
-    ADMIN = "admin"
-    STANDARD_USER = "standard_user"
+    MANAGEMENT = "management"
+    MANAGER = "manager"
+    EXECUTIVE = "executive"
 
 class EmailLogin(BaseModel):
     email: EmailStr
@@ -30,22 +30,28 @@ class PlatformUserRole(str, Enum):
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
-    role: UserRole = UserRole.STANDARD_USER
+    role: UserRole = UserRole.EXECUTIVE
     department: Optional[str] = None
     designation: Optional[str] = None
     employee_id: Optional[str] = None
     phone: Optional[str] = None
     is_active: bool = True
     has_stock_access: bool = True  # Module access for stock functionality
-    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control for managers
+    reporting_manager_id: Optional[int] = None  # For executives: ID of reporting manager
+    sub_module_permissions: Optional[Dict[str, List[str]]] = None  # For executives: {module: [sub_module1, sub_module2]}
 
 
 class UserCreate(UserBase):
-    password: str
+    password: Optional[str] = None
     organization_id: Optional[int] = None  # Optional for creation by super admin
     
-    @field_validator('password')
+    model_config = ConfigDict(extra='ignore')  # Ignore extra fields like 'username'
+    
+    @field_validator('password', mode='before')
     def validate_password(cls, v):
+        if v is None:
+            return v
         is_strong, msg = cls.check_password_strength(v)
         if not is_strong:
             raise ValueError(msg)
@@ -84,12 +90,14 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     must_change_password: Optional[bool] = None
     has_stock_access: Optional[bool] = None  # Module access for stock functionality
-    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control for managers
+    reporting_manager_id: Optional[int] = None  # For executives
+    sub_module_permissions: Optional[Dict[str, List[str]]] = None  # For executives
 
 
 class UserInDB(UserBase):
     id: int
-    organization_id: Optional[int] = None  # Optional to allow None for platform users
+    organization_id: Optional[int]
     supabase_uuid: Optional[str] = None  # Supabase user UUID for auth integration
     is_super_admin: bool = False
     must_change_password: bool = False
@@ -102,7 +110,9 @@ class UserInDB(UserBase):
     last_login: Optional[datetime] = None
     has_stock_access: bool = True  # Module access for stock functionality
     user_settings: Optional[Dict] = None  # Add user_settings here
-    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control for managers
+    reporting_manager_id: Optional[int] = None  # For executives
+    sub_module_permissions: Optional[Dict[str, List[str]]] = None  # For executives
     
     model_config = ConfigDict(from_attributes = True, use_enum_values=True)  # Added use_enum_values=True
 
@@ -377,7 +387,9 @@ class UserResponse(BaseModel):
     updated_at: Optional[datetime]
     last_login: Optional[datetime]
     has_stock_access: bool
-    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control
+    assigned_modules: Optional[Dict[str, bool]] = None  # Module access control for managers
+    reporting_manager_id: Optional[int] = None  # For executives
+    sub_module_permissions: Optional[Dict[str, List[str]]] = None  # For executives
 
     class Config:
         from_attributes = True

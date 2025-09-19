@@ -33,6 +33,9 @@ models_dir = os.path.join(APP_DIR, "models")
 for (_, module_name, _) in pkgutil.iter_modules([models_dir]):
     importlib.import_module(f"app.models.{module_name}")
 
+# Explicitly import user_models to ensure new columns are detected
+from app.models import user_models
+
 config = context.config
 
 database_url = getattr(settings, "SESSION_DATABASE_URL", None) or getattr(settings, "DATABASE_URL", None) or "sqlite:///./tritiq_erp.db"

@@ -21,8 +21,8 @@ class OTPService:
     def __init__(self, db: Session):
         self.db = db
     
-    def generate_and_send_otp(self, email: str, purpose: str = "login", organization_id: Optional[int] = None, additional_data: Optional[Dict[str, Any]] = None, phone_number: Optional[str] = None, delivery_method: str = "email") -> bool:
-        """Generate OTP and send via specified method (WhatsApp preferred, email fallback)"""
+    def generate_and_send_otp(self, email: str, purpose: str = "login", organization_id: Optional[int] = None, additional_data: Optional[Dict[str, Any]] = None, phone_number: Optional[str] = None, delivery_method: str = "email") -> Tuple[bool, Optional[str]]:
+        """Generate OTP and send via specified method (WhatsApp preferred, email fallback). Returns success and the plain OTP."""
         try:
             # Generate 6-digit OTP
             otp = ''.join(random.choices(string.digits, k=6))
@@ -73,18 +73,18 @@ class OTPService:
             
             if not delivery_success:
                 self.db.rollback()
-                return False
+                return False, None
             
             # Update the OTP record for audit purposes (using existing fields)
             # We'll log the delivery method in the application logs instead of modifying the schema
             logger.info(f"OTP delivery completed: method={delivery_method_used}, email={email}, phone={phone_number if delivery_method_used == 'whatsapp' else 'N/A'}")
             
-            return True
+            return True, otp
             
         except Exception as e:
             self.db.rollback()
             logger.error(f"Failed to generate OTP for {email}: {e}")
-            return False
+            return False, None
     
     def verify_otp(self, email: str, otp: str, purpose: str = "login", return_data: bool = False) -> Union[bool, Tuple[bool, Dict[str, Any]]]:
         """Verify OTP"""

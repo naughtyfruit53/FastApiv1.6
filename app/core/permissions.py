@@ -131,16 +131,25 @@ class PermissionChecker:
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,  # Org admins have access to org settings
         ],
-        'admin': [
+        'management': [
             Permission.VIEW_USERS,
-            Permission.CREATE_USERS,
+            Permission.RESET_OWN_PASSWORD,
+            Permission.RESET_ORG_PASSWORDS,
+            Permission.RESET_OWN_DATA,
+            Permission.RESET_ORG_DATA,
+            Permission.VIEW_AUDIT_LOGS,
+            Permission.ACCESS_ORG_SETTINGS,
+        ],
+        'manager': [
+            Permission.VIEW_USERS,  # Can view users (their executives)
+            Permission.CREATE_USERS,  # Can create executives under them
             Permission.RESET_OWN_PASSWORD,
             Permission.VIEW_AUDIT_LOGS,
-            Permission.ACCESS_ORG_SETTINGS,  # Regular admins also have org settings access
+            Permission.ACCESS_ORG_SETTINGS,  # Limited access
         ],
-        'standard_user': [
+        'executive': [
             Permission.RESET_OWN_PASSWORD,
-            Permission.ACCESS_ORG_SETTINGS,  # Standard users can access basic org settings
+            Permission.ACCESS_ORG_SETTINGS,  # Basic access
         ],
     }
     
@@ -357,6 +366,46 @@ class PermissionChecker:
         # Only App Super Admins should see user management in mega menu
         # Org admins should access it through Organization Settings
         return getattr(user, 'is_super_admin', False) or user.role.lower() == 'super_admin'
+
+    @staticmethod
+    def can_edit_user(current_user: Union[User, UserInDB], target_user: Union[User, UserInDB]) -> bool:
+        """Check if current user can edit target user based on hierarchy"""
+        if not current_user or not target_user:
+            return False
+        
+        # Super admins and org admins can edit anyone in their org
+        if current_user.is_super_admin or current_user.role in ['super_admin', 'org_admin']:
+            return current_user.organization_id == target_user.organization_id
+        
+        # Management can edit managers and executives
+        if current_user.role == 'management':
+            return target_user.role in ['manager', 'executive'] and current_user.organization_id == target_user.organization_id
+        
+        # Managers can edit their executives
+        if current_user.role == 'manager' and target_user.role == 'executive':
+            return target_user.reporting_manager_id == current_user.id
+        
+        # Self-edit always allowed
+        if current_user.id == target_user.id:
+            return True
+        
+        return False
+
+    @staticmethod
+    def can_create_user(current_user: Union[User, UserInDB], new_user_role: str) -> bool:
+        """Check if current user can create a user of specific role"""
+        if current_user.is_super_admin or current_user.role == 'super_admin':
+            return True
+        
+        if current_user.role == 'org_admin':
+            # Org admin can create all org-level roles
+            return new_user_role in ['org_admin', 'management', 'manager', 'executive']
+        
+        if current_user.role == 'manager':
+            # Managers can only create executives under them
+            return new_user_role == 'executive'
+        
+        return False
 
 
 def require_permission(permission: str):
