@@ -66,9 +66,11 @@ class ServiceDeskService {
   /**
    * Get Service Desk analytics dashboard data
    */
-  async getAnalytics(): Promise<ServiceDeskAnalytics> {
+  async getAnalytics(period_start: string, period_end: string): Promise<ServiceDeskAnalytics> {
     try {
-      const response = await api.get(`${this.endpoint}/analytics`);
+      const response = await api.get(`${this.endpoint}/analytics`, {
+        params: { period_start, period_end }
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching Service Desk analytics:", error);

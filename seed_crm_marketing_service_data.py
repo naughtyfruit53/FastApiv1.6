@@ -560,7 +560,7 @@ async def main():
         # Seed all modules
         seed_crm_data(db, org.id, user.id, customers)
         seed_marketing_data(db, org.id, user.id, customers)
-        seed_service_desk_data(db, org.id, user.id, customers)
+        # seed_service_desk_data(db, org.id, user.id, customers)  # Commented out to prevent seeding sample service desk data
         
         # Commit all changes
         db.commit()

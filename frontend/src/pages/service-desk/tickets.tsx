@@ -1,5 +1,5 @@
-// pages/service-desk/tickets.tsx
-import React from 'react';
+// frontend/src/pages/service-desk/tickets.tsx
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Card, 
@@ -7,7 +7,6 @@ import {
   Typography, 
   Button, 
   Grid,
-  Alert,
   Chip,
   Table,
   TableBody,
@@ -21,67 +20,71 @@ import {
 import { 
   Assignment, 
   Add, 
-  Support,
-  TrendingUp,
   Schedule,
   CheckCircle,
   Error,
   Warning,
   Edit,
-  Visibility
+  Visibility,
+  Timelapse
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import CreateTicketModal from '../../components/CreateTicketModal';
+import { serviceDeskService } from '../../services/serviceDeskService';
 
 const ServiceDeskTicketsPage: React.FC = () => {
-  const ticketStats = {
-    total: 156,
-    open: 42,
-    inProgress: 28,
-    resolved: 86
-  };
+  const [ticketStats, setTicketStats] = useState({
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+    avgClosingTime: 0
+  });
+  const [recentTickets, setRecentTickets] = useState([]);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
-  const recentTickets = [
-    { 
-      id: 'TKT-001', 
-      title: 'Login issues on mobile app', 
-      customer: 'John Smith',
-      status: 'open', 
-      priority: 'high', 
-      created: '2 hours ago',
-      assignee: 'Sarah Johnson'
-    },
-    { 
-      id: 'TKT-002', 
-      title: 'Report generation error', 
-      customer: 'Jane Doe',
-      status: 'in-progress', 
-      priority: 'medium', 
-      created: '1 day ago',
-      assignee: 'Mike Wilson'
-    },
-    { 
-      id: 'TKT-003', 
-      title: 'Feature request - Dark mode', 
-      customer: 'Bob Johnson',
-      status: 'resolved', 
-      priority: 'low', 
-      created: '3 days ago',
-      assignee: 'Lisa Chen'
-    },
-    { 
-      id: 'TKT-004', 
-      title: 'Database connection timeout', 
-      customer: 'Alice Brown',
-      status: 'open', 
-      priority: 'critical', 
-      created: '30 minutes ago',
-      assignee: 'Tom Davis'
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const period_start = thirtyDaysAgo.toISOString().split('T')[0];
+        const period_end = today.toISOString().split('T')[0];
+
+        const analytics = await serviceDeskService.getAnalytics(period_start, period_end);
+        setTicketStats({
+          total: analytics.total_tickets,
+          open: analytics.open_tickets,
+          inProgress: analytics.in_progress_tickets,
+          resolved: analytics.resolved_tickets,
+          avgClosingTime: analytics.average_resolution_time_hours || 0
+        });
+
+        const tickets = await serviceDeskService.getTickets(0, 10);
+        setRecentTickets(tickets.map(ticket => ({
+          id: ticket.id,  // Use actual ID for editing
+          ticket_number: ticket.ticket_number,
+          title: ticket.title,
+          customer: ticket.requested_by || 'Anonymous',
+          status: ticket.status,
+          priority: ticket.priority,
+          assignee: ticket.assigned_to ? `User ${ticket.assigned_to}` : 'Unassigned',
+          created: new Date(ticket.created_at).toLocaleString()
+        })));
+      } catch (error) {
+        console.error('Error fetching ticket data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'error';
+      case 'urgent': return 'error';
       case 'high': return 'error';
       case 'medium': return 'warning';
       case 'low': return 'info';
@@ -92,7 +95,7 @@ const ServiceDeskTicketsPage: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'resolved': return 'success';
-      case 'in-progress': return 'warning';
+      case 'in_progress': return 'warning';
       case 'open': return 'primary';
       default: return 'default';
     }
@@ -101,10 +104,34 @@ const ServiceDeskTicketsPage: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'resolved': return <CheckCircle />;
-      case 'in-progress': return <Schedule />;
+      case 'in_progress': return <Schedule />;
       case 'open': return <Assignment />;
       default: return <Assignment />;
     }
+  };
+
+  const handleRowClick = async (ticketId: number) => {
+    try {
+      const ticket = await serviceDeskService.getTicket(ticketId);
+      setSelectedTicket(ticket);
+      setOpenEditModal(true);
+    } catch (error) {
+      console.error('Error fetching ticket for edit:', error);
+    }
+  };
+
+  const handleEditClose = () => {
+    setOpenEditModal(false);
+    setSelectedTicket(null);
+  };
+
+  const handleEditSuccess = () => {
+    handleEditClose();
+    // Refresh data
+    const fetchData = async () => {
+      // ... (reuse fetch logic or extract to function)
+    };
+    fetchData();
   };
 
   return (
@@ -115,20 +142,15 @@ const ServiceDeskTicketsPage: React.FC = () => {
         <Button 
           variant="contained" 
           startIcon={<Add />}
+          onClick={() => setOpenCreateModal(true)}
         >
           Create Ticket
         </Button>
       }
     >
       <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Track and manage customer support tickets. Monitor SLA compliance and response times.
-          </Alert>
-        </Grid>
-        
         {/* Ticket Statistics */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={true}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -142,7 +164,7 @@ const ServiceDeskTicketsPage: React.FC = () => {
           </Card>
         </Grid>
         
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={true}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -156,7 +178,7 @@ const ServiceDeskTicketsPage: React.FC = () => {
           </Card>
         </Grid>
         
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={true}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -170,7 +192,7 @@ const ServiceDeskTicketsPage: React.FC = () => {
           </Card>
         </Grid>
         
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={true}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -184,6 +206,20 @@ const ServiceDeskTicketsPage: React.FC = () => {
           </Card>
         </Grid>
         
+        <Grid item xs={12} md={true}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Timelapse sx={{ mr: 1, color: 'info.main' }} />
+                <Typography variant="h6">Avg Closing Time</Typography>
+              </Box>
+              <Typography variant="h3" color="info.main">
+                {Math.round(ticketStats.avgClosingTime)} hours
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
         {/* Tickets Table */}
         <Grid item xs={12}>
           <Card>
@@ -192,29 +228,30 @@ const ServiceDeskTicketsPage: React.FC = () => {
                 Recent Support Tickets
               </Typography>
               <TableContainer>
-                <Table>
+                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Ticket ID</TableCell>
-                      <TableCell>Title</TableCell>
-                      <TableCell>Customer</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Priority</TableCell>
-                      <TableCell>Assignee</TableCell>
-                      <TableCell>Created</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell sx={{ width: '10%' }}>Ticket No.</TableCell>
+                      <TableCell sx={{ width: '15%' }}>Customer</TableCell>
+                      <TableCell sx={{ width: '10%' }}>Created At</TableCell>
+                      <TableCell sx={{ width: '20%' }}>Problem</TableCell>
+                      <TableCell sx={{ width: '10%' }}>Status</TableCell>
+                      <TableCell sx={{ width: '10%' }}>Priority</TableCell>
+                      <TableCell sx={{ width: '15%' }}>Assigned To</TableCell>
+                      <TableCell sx={{ width: '10%' }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {recentTickets.map((ticket) => (
-                      <TableRow key={ticket.id}>
+                      <TableRow key={ticket.id} onClick={() => handleRowClick(ticket.id)} sx={{ cursor: 'pointer' }}>
                         <TableCell>
                           <Typography variant="body2" fontWeight="bold">
-                            {ticket.id}
+                            {ticket.ticket_number}
                           </Typography>
                         </TableCell>
-                        <TableCell>{ticket.title}</TableCell>
                         <TableCell>{ticket.customer}</TableCell>
+                        <TableCell>{ticket.created}</TableCell>
+                        <TableCell sx={{ wordBreak: 'break-word' }}>{ticket.title}</TableCell>
                         <TableCell>
                           <Chip 
                             label={ticket.status}
@@ -231,7 +268,6 @@ const ServiceDeskTicketsPage: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell>{ticket.assignee}</TableCell>
-                        <TableCell>{ticket.created}</TableCell>
                         <TableCell align="right">
                           <IconButton size="small">
                             <Visibility />
@@ -265,9 +301,23 @@ const ServiceDeskTicketsPage: React.FC = () => {
       <Fab 
         color="primary" 
         sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        onClick={() => setOpenCreateModal(true)}
       >
         <Add />
       </Fab>
+
+      <CreateTicketModal 
+        open={openCreateModal} 
+        onClose={() => setOpenCreateModal(false)} 
+      />
+      
+      <CreateTicketModal 
+        open={openEditModal} 
+        onClose={handleEditClose}
+        mode="edit"
+        initialData={selectedTicket}
+        onSuccess={handleEditSuccess}
+      />
     </DashboardLayout>
   );
 };

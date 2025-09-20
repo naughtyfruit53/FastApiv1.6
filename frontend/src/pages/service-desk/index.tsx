@@ -86,7 +86,13 @@ export default function ServiceDeskDashboard() {
   const loadServiceDeskData = async () => {
     setLoading(true);
     try {
-      const analyticsData = await serviceDeskService.getAnalytics();
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      const period_start = thirtyDaysAgo.toISOString().split('T')[0];
+      const period_end = today.toISOString().split('T')[0];
+
+      const analyticsData = await serviceDeskService.getAnalytics(period_start, period_end);
       setAnalytics(analyticsData);
       const ticketsData = await serviceDeskService.getTickets();
       setTickets(ticketsData);
