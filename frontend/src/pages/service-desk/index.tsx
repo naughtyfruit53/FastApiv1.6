@@ -2,32 +2,34 @@
 // Comprehensive Service Desk Dashboard with enhanced integration
 import React, { useState, useEffect } from "react";
 import {
+  Avatar,
   Box,
   Button,
   Card,
   CardContent,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Chip,
+  Divider,
+  FormControl,
+  Grid,
+  InputAdornment,
+  InputLabel,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  MenuItem,
   Paper,
+  Select,
+  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Tabs,
   TextField,
   Typography,
-  Chip,
-  Grid,
-  Tabs,
-  Tab,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -42,43 +44,10 @@ import {
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { useAuth } from "@/context/AuthContext";
-interface Ticket {
-  id: number;
-  ticket_number: string;
-  title: string;
-  description?: string;
-  status: string;
-  priority: string;
-  ticket_type: string;
-  customer_id: number;
-  customer_name: string;
-  assigned_to_id?: number;
-  assigned_to_name?: string;
-  created_at: string;
-  due_date?: string;
-}
-interface ChatbotConversation {
-  id: number;
-  conversation_id: string;
-  customer_name?: string;
-  channel: string;
-  status: string;
-  intent?: string;
-  escalated_to_human: boolean;
-  started_at: string;
-  last_message_at?: string;
-}
-interface ServiceDeskAnalytics {
-  total_tickets: number;
-  open_tickets: number;
-  in_progress_tickets: number;
-  resolved_tickets: number;
-  tickets_by_priority: Record<string, number>;
-  average_resolution_time_hours: number;
-  sla_compliance_rate: number;
-  customer_satisfaction_score: number;
-  first_contact_resolution_rate: number;
-}
+import { serviceDeskService } from '@/services/serviceDeskService';
+import { Ticket, ChatbotConversation, ServiceDeskAnalytics } from '@/services/serviceDeskService';
+import CreateTicketModal from '@/components/CreateTicketModal';
+
 const ticketStatusColors: Record<string, string> = {
   open: "error",
   in_progress: "warning",
@@ -102,131 +71,63 @@ export default function ServiceDeskDashboard() {
   const { _user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [conversations, setConversations] = useState<ChatbotConversation[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<ServiceDeskAnalytics | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [openTicketDialog, setOpenTicketDialog] = useState(false);
   const [selectedPriority, setSelectedPriority] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     loadServiceDeskData();
   }, []);
+
   const loadServiceDeskData = async () => {
     setLoading(true);
     try {
-      // Simulate API calls - in production these would be real API calls
-      const mockTickets: Ticket[] = [
-        {
-          id: 1,
-          ticket_number: "TKT000001",
-          title: "Software Installation Issue",
-          description: "Unable to install the latest software update",
-          status: "open",
-          priority: "high",
-          ticket_type: "support",
-          customer_id: 1,
-          customer_name: "ABC Corp",
-          assigned_to_id: 1,
-          assigned_to_name: "John Smith",
-          created_at: "2024-08-27T09:00:00Z",
-          due_date: "2024-08-28T17:00:00Z",
-        },
-        {
-          id: 2,
-          ticket_number: "TKT000002",
-          title: "Printer Maintenance Request",
-          description: "Regular maintenance for office printer",
-          status: "in_progress",
-          priority: "medium",
-          ticket_type: "maintenance",
-          customer_id: 2,
-          customer_name: "XYZ Inc",
-          assigned_to_id: 2,
-          assigned_to_name: "Jane Doe",
-          created_at: "2024-08-26T14:30:00Z",
-          due_date: "2024-08-29T12:00:00Z",
-        },
-        {
-          id: 3,
-          ticket_number: "TKT000003",
-          title: "Network Configuration",
-          description: "Setup new network configuration",
-          status: "resolved",
-          priority: "low",
-          ticket_type: "installation",
-          customer_id: 3,
-          customer_name: "Tech Solutions",
-          assigned_to_id: 1,
-          assigned_to_name: "John Smith",
-          created_at: "2024-08-25T10:15:00Z",
-        },
-      ];
-      const mockConversations: ChatbotConversation[] = [
-        {
-          id: 1,
-          conversation_id: "conv_001",
-          customer_name: "Sarah Johnson",
-          channel: "web_chat",
-          status: "active",
-          intent: "product_inquiry",
-          escalated_to_human: false,
-          started_at: "2024-08-27T10:30:00Z",
-          last_message_at: "2024-08-27T10:35:00Z",
-        },
-        {
-          id: 2,
-          conversation_id: "conv_002",
-          customer_name: "Mike Brown",
-          channel: "whatsapp",
-          status: "escalated",
-          intent: "support_request",
-          escalated_to_human: true,
-          started_at: "2024-08-27T09:15:00Z",
-          last_message_at: "2024-08-27T09:45:00Z",
-        },
-        {
-          id: 3,
-          conversation_id: "conv_003",
-          customer_name: "Lisa Davis",
-          channel: "web_chat",
-          status: "resolved",
-          intent: "billing_inquiry",
-          escalated_to_human: false,
-          started_at: "2024-08-27T08:00:00Z",
-          last_message_at: "2024-08-27T08:15:00Z",
-        },
-      ];
-      const mockAnalytics: ServiceDeskAnalytics = {
-        total_tickets: 25,
-        open_tickets: 8,
-        in_progress_tickets: 12,
-        resolved_tickets: 5,
-        tickets_by_priority: {
-          low: 5,
-          medium: 12,
-          high: 6,
-          urgent: 2,
-        },
-        average_resolution_time_hours: 18.5,
-        sla_compliance_rate: 92.5,
-        customer_satisfaction_score: 4.3,
-        first_contact_resolution_rate: 68.5,
-      };
-      setTickets(mockTickets);
-      setConversations(mockConversations);
-      setAnalytics(mockAnalytics);
+      const analyticsData = await serviceDeskService.getAnalytics();
+      setAnalytics(analyticsData);
+      const ticketsData = await serviceDeskService.getTickets();
+      setTickets(ticketsData);
+      const messages = await serviceDeskService.getChatbotConversations();
+      const conversationsMap = messages.reduce((acc: Record<string, any>, msg: ChatbotConversation) => {
+        if (!acc[msg.session_id]) {
+          acc[msg.session_id] = {
+            id: msg.id,
+            conversation_id: msg.session_id,
+            customer_name: msg.metadata?.customer_name || "Anonymous",
+            channel: msg.metadata?.channel || "web_chat",
+            status: msg.conversation_stage,
+            intent: msg.intent_detected,
+            escalated_to_human: msg.escalated_to_human,
+            started_at: msg.created_at,
+            last_message_at: msg.created_at,
+          };
+        } else {
+          acc[msg.session_id].escalated_to_human = acc[msg.session_id].escalated_to_human || msg.escalated_to_human;
+          if (new Date(msg.created_at) > new Date(acc[msg.session_id].last_message_at)) {
+            acc[msg.session_id].last_message_at = msg.created_at;
+          }
+          if (new Date(msg.created_at) < new Date(acc[msg.session_id].started_at)) {
+            acc[msg.session_id].started_at = msg.created_at;
+          }
+        }
+        return acc;
+      }, {});
+      setConversations(Object.values(conversationsMap));
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error loading service desk data", err);
     } finally {
       setLoading(false);
     }
   };
+
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
+      (ticket.requested_by?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesPriority =
       !selectedPriority || ticket.priority === selectedPriority;
     const matchesStatus = !selectedStatus || ticket.status === selectedStatus;
@@ -270,13 +171,13 @@ export default function ServiceDeskDashboard() {
                 <ScheduleIcon color="warning" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
-                    Avg Resolution
+                    Avg Resolution Time
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {analytics.average_resolution_time_hours}h
+                    {analytics.avg_resolution_time}h
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {analytics.sla_compliance_rate}% SLA compliance
+                    Avg First Response: {analytics.first_response_time}h
                   </Typography>
                 </Box>
               </Box>
@@ -296,7 +197,7 @@ export default function ServiceDeskDashboard() {
                     {analytics.customer_satisfaction_score}/5
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {analytics.first_contact_resolution_rate}% FCR
+                    {analytics.escalation_rate}% Escalation Rate
                   </Typography>
                 </Box>
               </Box>
@@ -310,14 +211,13 @@ export default function ServiceDeskDashboard() {
                 <ChatIcon color="info" sx={{ mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
-                    Active Chats
+                    Chatbot Conversations
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {conversations.filter((c) => c.status === "active").length}
+                    {analytics.chatbot_conversations}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {conversations.filter((c) => c.escalated_to_human).length}{" "}
-                    escalated
+                    {analytics.human_handoffs} Handoffs
                   </Typography>
                 </Box>
               </Box>
@@ -338,7 +238,6 @@ export default function ServiceDeskDashboard() {
             <TableCell>Status</TableCell>
             <TableCell>Priority</TableCell>
             <TableCell>Assigned To</TableCell>
-            <TableCell>Due Date</TableCell>
             <TableCell>Created</TableCell>
           </TableRow>
         </TableHead>
@@ -351,10 +250,10 @@ export default function ServiceDeskDashboard() {
                   {ticket.title}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  {ticket.ticket_type}
+                  {ticket.category}
                 </Typography>
               </TableCell>
-              <TableCell>{ticket.customer_name}</TableCell>
+              <TableCell>{ticket.requested_by || `Customer ${ticket.customer_id || 'Unknown'}`}</TableCell>
               <TableCell>
                 <Chip
                   label={ticket.status.replace("_", " ")}
@@ -370,23 +269,7 @@ export default function ServiceDeskDashboard() {
                   variant="outlined"
                 />
               </TableCell>
-              <TableCell>{ticket.assigned_to_name || "Unassigned"}</TableCell>
-              <TableCell>
-                {ticket.due_date ? (
-                  <Typography
-                    variant="body2"
-                    color={
-                      new Date(ticket.due_date) < new Date()
-                        ? "error"
-                        : "textSecondary"
-                    }
-                  >
-                    {new Date(ticket.due_date).toLocaleDateString()}
-                  </Typography>
-                ) : (
-                  "-"
-                )}
-              </TableCell>
+              <TableCell>{ticket.assigned_to ? `User ${ticket.assigned_to}` : "Unassigned"}</TableCell>
               <TableCell>
                 {new Date(ticket.created_at).toLocaleDateString()}
               </TableCell>
@@ -399,7 +282,7 @@ export default function ServiceDeskDashboard() {
   const renderConversationsList = () => (
     <Paper>
       <List>
-        {filteredConversations.map((conversation, index) => (
+        {filteredConversations.map((conversation: any, index: number) => (
           <React.Fragment key={conversation.id}>
             <ListItem>
               <ListItemAvatar>
@@ -458,6 +341,9 @@ export default function ServiceDeskDashboard() {
       </List>
     </Paper>
   );
+  if (loading) {
+    return <Box sx={{ p: 3 }}><Typography>Loading...</Typography></Box>;
+  }
   return (
     <Box sx={{ p: 3 }}>
       <Box
@@ -545,76 +431,12 @@ export default function ServiceDeskDashboard() {
           {currentTab === 1 && renderConversationsList()}
         </CardContent>
       </Card>
-      {/* Create Ticket Dialog - Placeholder */}
-      <Dialog
+      <CreateTicketModal
         open={openTicketDialog}
         onClose={() => setOpenTicketDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Create New Ticket</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField label="Title" fullWidth required />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Customer</InputLabel>
-                  <Select>
-                    <MenuItem value="1">ABC Corp</MenuItem>
-                    <MenuItem value="2">XYZ Inc</MenuItem>
-                    <MenuItem value="3">Tech Solutions</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Priority</InputLabel>
-                  <Select defaultValue="medium">
-                    <MenuItem value="low">Low</MenuItem>
-                    <MenuItem value="medium">Medium</MenuItem>
-                    <MenuItem value="high">High</MenuItem>
-                    <MenuItem value="urgent">Urgent</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Type</InputLabel>
-                  <Select defaultValue="support">
-                    <MenuItem value="support">Support</MenuItem>
-                    <MenuItem value="maintenance">Maintenance</MenuItem>
-                    <MenuItem value="installation">Installation</MenuItem>
-                    <MenuItem value="complaint">Complaint</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Due Date"
-                  type="datetime-local"
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField label="Description" multiline rows={4} fullWidth />
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenTicketDialog(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={() => setOpenTicketDialog(false)}
-          >
-            Create Ticket
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSuccess={loadServiceDeskData}
+        organizationId={_user?.organization_id || 0}
+      />
     </Box>
   );
 }

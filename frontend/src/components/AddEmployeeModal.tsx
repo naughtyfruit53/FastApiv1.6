@@ -242,7 +242,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       reset();
       onClose();
     } catch (error: any) {
-      console.error(msg, err);
+      console.error('Error saving employee:', error);
       alert(error.response?.data?.detail || "Failed to save employee");
     }
   };
@@ -292,9 +292,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
-                  label="Email *"
+                  label="Email"
                   type="email"
-                  {...register("email", { required: "Email is required" })}
+                  {...register("email")}
                   error={!!errors.email}
                   helperText={errors.email?.message}
                   margin="normal"
@@ -303,8 +303,10 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
-                  label="Phone Number"
-                  {...register("phone")}
+                  label="Phone Number *"
+                  {...register("phone", { required: "Phone number is required" })}
+                  error={!!errors.phone}
+                  helperText={errors.phone?.message}
                   margin="normal"
                 />
               </Grid>
@@ -344,10 +346,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
-                  label="Employee Code *"
-                  {...register("employee_code", {
-                    required: "Employee code is required",
-                  })}
+                  label="Employee Code"
+                  {...register("employee_code")}
                   error={!!errors.employee_code}
                   helperText={errors.employee_code?.message}
                   margin="normal"
