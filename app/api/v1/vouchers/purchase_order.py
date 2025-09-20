@@ -93,14 +93,70 @@ async def create_purchase_order(
         db.add(db_invoice)
         db.flush()
         
+        # Initialize sums for header
+        total_amount = 0.0
+        total_cgst = 0.0
+        total_sgst = 0.0
+        total_igst = 0.0
+        total_discount = 0.0
+        
         for item_data in invoice.items:
+            item_dict = item_data.dict()
+            
+            # Set defaults for missing optional fields to prevent None values
+            item_dict.setdefault('discount_percentage', 0.0)
+            item_dict.setdefault('discount_amount', 0.0)
+            item_dict.setdefault('taxable_amount', 0.0)
+            item_dict.setdefault('gst_rate', 18.0)
+            item_dict.setdefault('cgst_amount', 0.0)
+            item_dict.setdefault('sgst_amount', 0.0)
+            item_dict.setdefault('igst_amount', 0.0)
+            item_dict.setdefault('description', None)
+            
+            # Recalculate taxable_amount if it's 0 or inconsistent
+            if item_dict['taxable_amount'] == 0:
+                gross_amount = item_dict['quantity'] * item_dict['unit_price']
+                discount_amount = gross_amount * (item_dict['discount_percentage'] / 100) if item_dict['discount_percentage'] else item_dict['discount_amount']
+                item_dict['discount_amount'] = discount_amount
+                item_dict['taxable_amount'] = gross_amount - discount_amount
+            
+            # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
+            taxable = item_dict['taxable_amount']
+            if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
+                half_rate = item_dict['gst_rate'] / 2 / 100
+                item_dict['cgst_amount'] = taxable * half_rate
+                item_dict['sgst_amount'] = taxable * half_rate
+                item_dict['igst_amount'] = 0.0
+            
+            # Always calculate total_amount to ensure it's not None or incorrect
+            item_dict['total_amount'] = (
+                item_dict['taxable_amount'] +
+                item_dict['cgst_amount'] +
+                item_dict['sgst_amount'] +
+                item_dict['igst_amount']
+            )
+            
             item = PurchaseOrderItem(
                 purchase_order_id=db_invoice.id,
                 delivered_quantity=0.0,
-                pending_quantity=item_data.quantity,  # Set pending_quantity to quantity
-                **item_data.dict()
+                pending_quantity=item_dict['quantity'],  # Set pending_quantity to quantity
+                **item_dict
             )
             db.add(item)
+            
+            # Accumulate sums for header
+            total_amount += item_dict['total_amount']
+            total_cgst += item_dict['cgst_amount']
+            total_sgst += item_dict['sgst_amount']
+            total_igst += item_dict['igst_amount']
+            total_discount += item_dict['discount_amount']
+        
+        # Override header totals with calculated sums for consistency
+        db_invoice.total_amount = total_amount
+        db_invoice.cgst_amount = total_cgst
+        db_invoice.sgst_amount = total_sgst
+        db_invoice.igst_amount = total_igst
+        db_invoice.discount_amount = total_discount
         
         db.commit()
         db.refresh(db_invoice)
@@ -167,16 +223,72 @@ async def update_purchase_order(
         for field, value in update_data.items():
             setattr(invoice, field, value)
         
+        # Initialize sums for header if items are updated
+        total_amount = 0.0
+        total_cgst = 0.0
+        total_sgst = 0.0
+        total_igst = 0.0
+        total_discount = 0.0
+        
         if invoice_update.items is not None:
             db.query(PurchaseOrderItem).filter(PurchaseOrderItem.purchase_order_id == invoice_id).delete()
             for item_data in invoice_update.items:
+                item_dict = item_data.dict()
+                
+                # Set defaults for missing optional fields to prevent None values
+                item_dict.setdefault('discount_percentage', 0.0)
+                item_dict.setdefault('discount_amount', 0.0)
+                item_dict.setdefault('taxable_amount', 0.0)
+                item_dict.setdefault('gst_rate', 18.0)
+                item_dict.setdefault('cgst_amount', 0.0)
+                item_dict.setdefault('sgst_amount', 0.0)
+                item_dict.setdefault('igst_amount', 0.0)
+                item_dict.setdefault('description', None)
+                
+                # Recalculate taxable_amount if it's 0 or inconsistent
+                if item_dict['taxable_amount'] == 0:
+                    gross_amount = item_dict['quantity'] * item_dict['unit_price']
+                    discount_amount = gross_amount * (item_dict['discount_percentage'] / 100) if item_dict['discount_percentage'] else item_dict['discount_amount']
+                    item_dict['discount_amount'] = discount_amount
+                    item_dict['taxable_amount'] = gross_amount - discount_amount
+                
+                # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
+                taxable = item_dict['taxable_amount']
+                if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
+                    half_rate = item_dict['gst_rate'] / 2 / 100
+                    item_dict['cgst_amount'] = taxable * half_rate
+                    item_dict['sgst_amount'] = taxable * half_rate
+                    item_dict['igst_amount'] = 0.0
+                
+                # Always calculate total_amount to ensure it's not None or incorrect
+                item_dict['total_amount'] = (
+                    item_dict['taxable_amount'] +
+                    item_dict['cgst_amount'] +
+                    item_dict['sgst_amount'] +
+                    item_dict['igst_amount']
+                )
+                
                 item = PurchaseOrderItem(
                     purchase_order_id=invoice_id,
                     delivered_quantity=0.0,
-                    pending_quantity=item_data.quantity,  # Set pending_quantity to quantity
-                    **item_data.dict()
+                    pending_quantity=item_dict['quantity'],  # Set pending_quantity to quantity
+                    **item_dict
                 )
                 db.add(item)
+                
+                # Accumulate sums for header
+                total_amount += item_dict['total_amount']
+                total_cgst += item_dict['cgst_amount']
+                total_sgst += item_dict['sgst_amount']
+                total_igst += item_dict['igst_amount']
+                total_discount += item_dict['discount_amount']
+            
+            # Override header totals with calculated sums for consistency
+            invoice.total_amount = total_amount
+            invoice.cgst_amount = total_cgst
+            invoice.sgst_amount = total_sgst
+            invoice.igst_amount = total_igst
+            invoice.discount_amount = total_discount
         
         db.commit()
         db.refresh(invoice)
