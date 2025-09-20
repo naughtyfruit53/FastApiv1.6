@@ -14,28 +14,6 @@ class BaseSchema(BaseModel):
     class Config:
         from_attributes = True
 
-class UserRole(str, Enum):
-    SUPER_ADMIN = "super_admin"
-    ORG_ADMIN = "org_admin"
-    ADMIN = "admin"
-    STANDARD_USER = "standard_user"
-
-    @property
-    def display_name(self):
-        if self == UserRole.SUPER_ADMIN:
-            return "App Super Admin"
-        elif self == UserRole.ORG_ADMIN:
-            return "Org Super Admin"
-        elif self == UserRole.ADMIN:
-            return "Admin"
-        elif self == UserRole.STANDARD_USER:
-            return "Standard User"
-        return self.value
-
-class PlatformUserRole(str, Enum):
-    SUPER_ADMIN = "super_admin"
-    PLATFORM_ADMIN = "platform_admin"
-
 class OrganizationStatus(str, Enum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
@@ -213,135 +191,6 @@ class PasswordChangeResponse(BaseModel):
     
     class Config:
         from_attributes = True
-
-class UserBase(BaseModel):
-    email: EmailStr
-    username: Optional[str] = None  # Made optional - will be auto-generated from email
-    full_name: Optional[str] = None
-    role: UserRole = UserRole.STANDARD_USER
-    department: Optional[str] = None
-    designation: Optional[str] = None
-    employee_id: Optional[str] = None
-    phone: Optional[str] = None
-    is_active: bool = True
-
-class UserCreate(UserBase):
-    password: str
-    organization_id: Optional[int] = None  # Optional for creation by super admin
-    
-    @validator('password')
-    def validate_password(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        return v
-    
-    def __init__(self, **data):
-        """Auto-generate username from email if not provided"""
-        if 'username' not in data or not data['username']:
-            if 'email' in data:
-                data['username'] = data['email'].split("@")[0]
-        super().__init__(**data)
-
-class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    username: Optional[str] = None  # Will be auto-updated if email changes
-    full_name: Optional[str] = None
-    role: Optional[UserRole] = None
-    department: Optional[str] = None
-    designation: Optional[str] = None
-    employee_id: Optional[str] = None
-    phone: Optional[str] = None
-    is_active: Optional[bool] = None
-    must_change_password: Optional[bool] = None
-
-class UserInDB(UserBase):
-    id: int
-    organization_id: Optional[int] = None  # <-- MADE OPTIONAL TO ALLOW None FOR PLATFORM USERS
-    is_super_admin: bool = False
-    must_change_password: bool = False
-    failed_login_attempts: int = 0
-    locked_until: Optional[datetime] = None
-    avatar_path: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    last_login: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
-
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
-    subdomain: Optional[str] = None  # For tenant-specific login
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    organization_id: Optional[int] = None
-    organization_name: Optional[str] = None
-    user_role: Optional[str] = None
-    must_change_password: bool = False
-    is_first_login: bool = False
-
-class TokenData(BaseModel):
-    email: Optional[str] = None
-    organization_id: Optional[int] = None
-
-# Platform User schemas - for SaaS platform-level users
-class PlatformUserBase(BaseModel):
-    email: EmailStr
-    full_name: Optional[str] = None
-    role: PlatformUserRole = PlatformUserRole.PLATFORM_ADMIN
-    is_active: bool = True
-
-class PlatformUserCreate(PlatformUserBase):
-    password: str
-    
-    @validator('password')
-    def validate_password(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        return v
-
-class PlatformUserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    role: Optional[PlatformUserRole] = None
-    is_active: Optional[bool] = None
-
-class PlatformUserInDB(PlatformUserBase):
-    id: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    last_login: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
-
-class PlatformUserLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-class PlatformToken(BaseModel):
-    access_token: str
-    token_type: str
-    user_role: str
-    user_type: str = "platform"  # Distinguish from organization users
-
-# OTP Authentication schemas
-class OTPRequest(BaseModel):
-    email: EmailStr
-    purpose: str = "login"  # login, password_reset, registration
-
-class OTPVerifyRequest(BaseModel):
-    email: EmailStr
-    otp: str
-    purpose: str = "login"
-
-class OTPResponse(BaseModel):
-    message: str
-    email: str
-    expires_in_minutes: int = 10
 
 # Vendor schemas
 class VendorBase(BaseModel):
@@ -846,7 +695,7 @@ class NotificationSendResponse(BaseModel):
     message: str
     
 class BulkNotificationResponse(BaseModel):
-    total_recipients: int
+    total_recipient: int
     successful_sends: int
     failed_sends: int
     notification_ids: List[int]

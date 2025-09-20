@@ -1,3 +1,5 @@
+# app/api/v1/user.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -8,7 +10,7 @@ from app.core.database import get_db
 from app.core.permissions import PermissionChecker, Permission, require_super_admin, require_org_admin
 from app.core.tenant import TenantQueryMixin
 from app.models import User, Organization
-from app.schemas.base import UserCreate, UserUpdate, UserInDB, UserRole
+from app.schemas.user import UserCreate, UserUpdate, UserInDB, UserRole
 from app.schemas.user import TokenData  # Adjust if in schemas.base
 from app.core.security import get_password_hash, get_current_user as core_get_current_user
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
@@ -283,14 +285,14 @@ async def create_user(
         return db_user
         
     except Exception as e:
-        # If local database creation fails, rollback before cleanup
-        db.rollback()
+        # If local database creation fails, cleanup Supabase user
         try:
             supabase_auth_service.delete_user(supabase_uuid)
             logger.info(f"Cleaned up Supabase user {supabase_uuid} after local DB failure")
         except Exception as cleanup_error:
             logger.error(f"Failed to cleanup Supabase user {supabase_uuid}: {cleanup_error}")
         
+        db.rollback()
         logger.error(f"Failed to create user {user.email} in local database: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

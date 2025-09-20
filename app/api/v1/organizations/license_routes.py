@@ -52,8 +52,8 @@ async def update_organization_license(
     org.license_issued_date = datetime.utcnow()
     
     if license_type == "perpetual":
-        org.license_expiry_date = None
         org.license_duration_months = None
+        org.license_expiry_date = None
     elif license_type == "month":
         org.license_duration_months = 1
         org.license_expiry_date = datetime.utcnow() + timedelta(days=30)

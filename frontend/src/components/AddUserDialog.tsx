@@ -23,7 +23,6 @@ import {
 } from "@mui/material";
 import { Close, Person, Save, Cancel } from "@mui/icons-material";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import api from "../lib/api"; // Adjusted path since this is now in components/
 import { useAuth } from "../context/AuthContext"; // Adjusted path
 import {
   getDisplayRole,
@@ -31,6 +30,8 @@ import {
 } from "../types/user.types"; // Adjusted path
 import organizationService from "../services/organizationService"; // Import to get managers
 import rbacService from "../services/rbacService"; // To get modules
+import userService from "../services/userService"; // NEW: Import userService
+import { useSnackbar } from "notistack"; // NEW: For toast notifications (assume notistack is installed)
 
 interface AddUserDialogProps {
   open: boolean;
@@ -61,6 +62,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
   organizationId,
 }) => {
   const { user } = useAuth();
+  const { enqueueSnackbar } = useSnackbar(); // NEW: For toast notifications
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -77,6 +79,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
   });
   // Get user info for authorization
   const canAddUser = canManageUsers(user);
+  const isSuperAdmin = user?.role === "super_admin";
 
   // Modal states
   const [moduleModalOpen, setModuleModalOpen] = useState(false);
@@ -110,6 +113,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       setError("Please fill in all required fields");
       return;
     }
+    const username = formData.email.split("@")[0];
+    const submitData = { ...formData, username, organization_id: organizationId };
     if (formData.role === "manager") {
       setModuleModalOpen(true); // Open module selection modal
       return;
@@ -118,7 +123,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       return;
     }
     // For other roles, submit directly
-    onAdd({ ...formData, organization_id: organizationId });
+    onAdd(submitData);
   };
 
   const handleSaveManagerModules = () => {
@@ -127,7 +132,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       return;
     }
     setModuleModalOpen(false);
-    onAdd({ ...formData, organization_id: organizationId });
+    const username = formData.email.split("@")[0];
+    onAdd({ ...formData, username, organization_id: organizationId });
   };
 
   const handleSaveExecutiveConfig = () => {
@@ -136,7 +142,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
       return;
     }
     setExecutiveModalOpen(false);
-    onAdd({ ...formData, organization_id: organizationId });
+    const username = formData.email.split("@")[0];
+    onAdd({ ...formData, username, organization_id: organizationId });
   };
 
   const handleInputChange =
@@ -292,11 +299,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
                     label="Role *"
                     onChange={handleInputChange("role")}
                   >
-                    <MenuItem value="executive">Executive</MenuItem>
-                    <MenuItem value="manager">Manager</MenuItem>
-                    <MenuItem value="management">Management</MenuItem>
-                    <MenuItem value="org_admin">Org Admin</MenuItem>
                     <MenuItem value="super_admin">Super Admin</MenuItem>
+                    <MenuItem value="org_admin">Org Admin</MenuItem>
+                    <MenuItem value="management">Management</MenuItem>
+                    <MenuItem value="manager">Manager</MenuItem>
+                    <MenuItem value="executive">Executive</MenuItem>
                   </Select>
                 </FormControl>
               </Box>

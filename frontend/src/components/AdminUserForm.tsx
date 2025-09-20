@@ -17,7 +17,6 @@ const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
     email: "",
     full_name: "",
     role: "platform_admin",
-    password: "",
   });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,15 +55,6 @@ const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
           <MenuItem value="platform_admin">Platform Admin</MenuItem>
         </Select>
       </FormControl>
-      <TextField
-        fullWidth
-        label="Password"
-        type="password"
-        value={formData.password}
-        onChange={handleChange("password")}
-        required
-        margin="normal"
-      />
       <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
         Create User
       </Button>

@@ -61,17 +61,34 @@ async def create_user_in_organization(
     current_user: User = Depends(get_current_user)
 ):
     """Create user in organization (management or super admin only)"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
+    # Determine if current_user is platform user
+    is_platform_user = not hasattr(current_user, 'organization_id') or current_user.organization_id is None
+    
+    if is_platform_user:
+        if getattr(current_user, 'role', '') != 'super_admin':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this organization"
+            )
+    else:
+        if not getattr(current_user, 'is_super_admin', False) and current_user.organization_id != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this organization"
+            )
   
-    if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only management can create users"
-        )
+    if is_platform_user:
+        if getattr(current_user, 'role', '') != 'super_admin':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only super administrators can create users"
+            )
+    else:
+        if not getattr(current_user, 'is_super_admin', False) and current_user.role not in ["management", "org_admin", "manager"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only authorized users can create users"
+            )
   
     org = db.query(Organization).filter(Organization.id == organization_id).first()
     if not org:
@@ -90,7 +107,7 @@ async def create_user_in_organization(
             detail="Email already registered in this organization"
         )
   
-    if not current_user.is_super_admin:
+    if not is_platform_user and not getattr(current_user, 'is_super_admin', False):
         user_count = db.query(User).filter(
             User.organization_id == organization_id,
             User.is_active == True
@@ -102,11 +119,20 @@ async def create_user_in_organization(
                 detail=f"Maximum user limit ({org.max_users}) reached for this organization"
             )
   
-    if user_data.role == "management" and not current_user.is_super_admin:
+    if user_data.role == "management" and not (is_platform_user or getattr(current_user, 'is_super_admin', False) or current_user.role == "org_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can assign management role"
+            detail="Only super administrators or organization administrators can assign management role"
         )
+  
+    # Additional check for managers creating users
+    if not is_platform_user and current_user.role == "manager":
+        if user_data.role != "executive":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Managers can only create executives"
+            )
+        user_data.reporting_manager_id = current_user.id
   
     # Role-specific validation
     if user_data.role == "manager":
@@ -195,7 +221,8 @@ async def create_user_in_organization(
             supabase_uuid=supabase_uuid,
             assigned_modules=user_data.assigned_modules,
             reporting_manager_id=user_data.reporting_manager_id,
-            sub_module_permissions=user_data.sub_module_permissions
+            sub_module_permissions=user_data.sub_module_permissions,
+            must_change_password=True  # Force change on first login
         )
         
         db.add(new_user)
@@ -222,7 +249,7 @@ async def create_user_in_organization(
         else:
             logger.warning(f"Role '{new_user.role}' not found - skipping assignment")
         
-        logger.info(f"User {new_user.email} created in organization {org.name} by {current_user.email}")
+        logger.info(f"User {new_user.email} created in org {org.name} by {current_user.email}")
 
         # Send welcome email with login link (OTP already sent if password was None)
         success, error = email_service.send_user_creation_email(

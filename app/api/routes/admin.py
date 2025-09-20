@@ -1,18 +1,21 @@
+# app/api/routes/admin.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 import secrets
 import string
 from datetime import datetime
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user, get_current_super_admin
-from app.models import User
-from app.schemas.base import UserCreate, UserUpdate, UserInDB, PasswordResetRequest, PasswordResetResponse
+from app.api.v1.auth import get_current_super_admin, get_current_active_user
+from app.services.user_service import UserService
+from app.schemas.user import UserCreate, UserUpdate, UserInDB, AdminPasswordResetRequest, AdminPasswordResetResponse
 from app.core.security import get_password_hash
 from app.services.email_service import email_service
 from app.core.logging import log_password_reset, log_security_event, log_database_operation
 import logging
+from app.models.user_models import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -30,9 +33,9 @@ def generate_secure_password(length: int = 12) -> str:
         password = password[:-1] + secrets.choice(string.digits)
     return password
 
-@router.post("/reset-password", response_model=PasswordResetResponse)
+@router.post("/reset-password", response_model=AdminPasswordResetResponse)
 async def reset_user_password(
-    reset_request: PasswordResetRequest,
+    reset_request: AdminPasswordResetRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
@@ -147,7 +150,7 @@ async def reset_user_password(
                     email_error = f"Email sending failed after {max_email_retries} attempts for unknown reasons. Please provide the new password manually to the user."
         else:
             email_error = "User has no email address configured. Please provide the new password manually to the user."
-            logger.warning(f"Cannot send password reset email - no email address for user {target_user.id}")
+            logger.warning(f"Cannot send password reset - no email for user {target_user.id}")
         
         # Commit the changes regardless of email status
         try:
@@ -169,9 +172,9 @@ async def reset_user_password(
             details=f"Target user: {reset_request.user_email}, Email sent: {email_sent}"
         )
         
-        return PasswordResetResponse(
+        return AdminPasswordResetResponse(
             message="Password reset successfully",
-            user_email=target_user.email,
+            target_email=target_user.email,
             new_password=new_password,  # Display to super admin
             email_sent=email_sent,
             email_error=email_error,
@@ -194,7 +197,7 @@ async def reset_user_password(
             detail="An error occurred during password reset"
         )
 
-@router.get("/users", response_model=list[UserInDB])
+@router.get("/users", response_model=List[UserInDB])
 async def list_users(
     skip: int = 0,
     limit: int = 100,

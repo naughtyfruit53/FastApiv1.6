@@ -456,7 +456,7 @@ TRITIQ ERP System
         """Generate a secure random OTP"""
         return ''.join(secrets.choice(string.digits) for i in range(length))
     
-    def send_otp_email(self, to_email: str, otp: str, purpose: str = "login") -> tuple[bool, Optional[str]]:
+    def send_otp_email(self, to_email: str, otp: str, purpose: str = "login", template: Optional[str] = None) -> tuple[bool, Optional[str]]:
         """Send OTP via email with error handling"""
         try:
             subject = f"TRITIQ ERP - OTP for {purpose.title()}"
@@ -473,7 +473,8 @@ Best regards,
 TRITIQ ERP Team
 """
             
-            return self._send_email(to_email, subject, body)
+            success, error = self._send_email(to_email, subject, body)
+            return success, error
             
         except Exception as e:
             error_msg = f"Error sending OTP email: {str(e)}"

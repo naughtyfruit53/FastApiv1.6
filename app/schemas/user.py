@@ -291,7 +291,6 @@ class PasswordChangeResponse(BaseModel):
     model_config = ConfigDict(from_attributes = True)
 
 
-# Admin password reset schemas
 class AdminPasswordResetRequest(BaseModel):
     user_email: EmailStr
 
@@ -407,3 +406,13 @@ class LoginResponse(BaseModel):
     user: Union[UserResponse, PlatformUserInDB]
 
 CurrentUser: TypeAlias = Union[UserInDB, PlatformUserInDB]
+
+class PlatformUserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class PlatformToken(BaseModel):
+    access_token: str
+    token_type: str
+    user_role: str
+    user_type: str = "platform"  # Distinguish from organization users

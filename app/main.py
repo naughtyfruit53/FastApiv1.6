@@ -11,25 +11,13 @@ from app.core.config import settings as config_settings
 from app.core.database import create_tables, SessionLocal
 from app.core.tenant import TenantMiddleware
 from app.core.seed_super_admin import seed_super_admin
-from app.api import users, companies, vendors, customers, products, reports, platform, settings, pincode, customer_analytics, notifications
+from app.api import companies, vendors, customers, products, reports, platform, settings, pincode, customer_analytics, notifications
 from app.api import management_reports
 from app.api.v1 import stock as v1_stock
 from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
 from app.api.routes import admin
 import logging
 import app.models  # Import all models to register them with Base.metadata
-from app.api.v1.auth import get_current_active_user as get_current_user
-from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.oauth_models import OAuthProvider
-from app.services.oauth_service import OAuth2Service
-from app.models.user_models import User
-
-# Configure logging at the top
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Import enhanced v1 routers
 from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
 # Added missing v1 imports (removed v1_login as merged into auth)
 from app.api.v1 import admin_setup as v1_admin_setup, master_auth as v1_master_auth, otp as v1_otp, password as v1_password, user as v1_user
@@ -88,6 +76,8 @@ from app.api.v1 import transport as v1_transport
 # Import ledger router
 from app.api.v1 import ledger as v1_ledger
 
+logger = logging.getLogger(__name__)
+
 # Log imports with try/except for error handling
 try:
     from app.api import companies
@@ -110,7 +100,7 @@ except Exception as import_error:
     logger.error(f"Failed to import stock_router: {str(import_error)}")
     raise
 
-# Import new module routers
+# Add import for new business module routers
 try:
     from app.api.v1 import crm as v1_crm
     logger.info("Successfully imported crm_router")
@@ -132,22 +122,7 @@ except Exception as import_error:
     logger.error(f"Failed to import service_desk_router: {str(import_error)}")
     raise
 
-# Import Migration and Integration Settings
-try:
-    from app.api.v1 import migration as v1_migration
-    logger.info("Successfully imported migration_router")
-except Exception as import_error:
-    logger.error(f"Failed to import migration_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import integration_settings as v1_integration_settings
-    logger.info("Successfully imported integration_settings_router")
-except Exception as import_error:
-    logger.error(f"Failed to import integration_settings_router: {str(import_error)}")
-    raise
-
-# Import new Task Management, Calendar, and Mail APIs
+# Add new Task Management, Calendar, and Mail APIs
 try:
     from app.api.v1 import tasks as v1_tasks
     logger.info("Successfully imported tasks_router")
@@ -169,7 +144,22 @@ except Exception as import_error:
     logger.error(f"Failed to import mail_router: {str(import_error)}")
     raise
 
-# Import Business Suite Core Module routers
+# Add Migration and Integration Settings
+try:
+    from app.api.v1 import migration as v1_migration
+    logger.info("Successfully imported migration_router")
+except Exception as import_error:
+    logger.error(f"Failed to import migration_router: {str(import_error)}")
+    raise
+
+try:
+    from app.api.v1 import integration_settings as v1_integration_settings
+    logger.info("Successfully imported integration_settings_router")
+except Exception as import_error:
+    logger.error(f"Failed to import integration_settings_router: {str(import_error)}")
+    raise
+
+# Add Business Suite Core Module routers
 try:
     from app.api.v1 import master_data as v1_master_data
     logger.info("Successfully imported master_data_router")
@@ -356,7 +346,7 @@ app.include_router(platform.router, prefix="/api/v1/platform", tags=["platform"]
 logger.info("Platform router included successfully at prefix: /api/v1/platform")
 app.include_router(organizations_router, prefix="/api/v1/organizations", tags=["organizations"])
 logger.info("Organizations router included successfully at prefix: /api/v1/organizations")
-app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(v1_user.router, prefix="/api/v1/users", tags=["users"])
 logger.info("Users router included successfully at prefix: /api/v1/users")
 app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
 logger.info("Admin legacy router included successfully at prefix: /api/admin")

@@ -1,3 +1,5 @@
+# app/api/platform.py
+
 """
 Platform user authentication and management endpoints
 For SaaS platform-level users (super admins, platform admins)
@@ -11,12 +13,12 @@ import datetime as dt
 from typing import Optional
 from app.core.database import get_db
 from app.core.security import create_access_token, verify_password, get_password_hash
-from app.core.config import settings
-from app.models import PlatformUser
-from app.schemas.base import (
+from app.schemas.user import (
     PlatformUserLogin, PlatformToken, PlatformUserCreate, PlatformUserUpdate, 
     PlatformUserInDB, PlatformUserRole
 )
+from app.core.config import settings
+from app.models.user_models import PlatformUser
 import logging
 
 logger = logging.getLogger(__name__)
@@ -154,7 +156,7 @@ async def platform_login(
 async def create_platform_user(
     user_data: PlatformUserCreate,
     db: Session = Depends(get_db),
-    current_platform_user: PlatformUser = Depends(get_current_platform_super_admin)
+    current_platform_user: PlatformUserInDB = Depends(get_current_platform_super_admin)
 ):
     """Create a new platform user (super admin only)"""
     try:
@@ -210,7 +212,7 @@ async def platform_logout():
 @router.post("/reset-all-data")
 async def reset_all_platform_data(
     db: Session = Depends(get_db),
-    current_platform_user = Depends(get_current_platform_super_admin)
+    current_platform_user: PlatformUserInDB = Depends(get_current_platform_super_admin)
 ):
     """Reset all system data (Platform Super Admin only)"""
     from app.services.reset_service import ResetService

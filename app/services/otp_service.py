@@ -62,7 +62,7 @@ class OTPService:
             # Fallback to email if WhatsApp failed or not requested
             if not delivery_success:
                 template = "factory_reset_otp.html" if purpose == "reset_data" else "otp.html"
-                success = email_service.send_otp_email(email, otp, purpose, template=template)
+                success, error = email_service.send_otp_email(email, otp, purpose, template=template)
                 
                 if success:
                     delivery_success = True
