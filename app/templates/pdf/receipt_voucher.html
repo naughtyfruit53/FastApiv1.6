@@ -121,6 +121,12 @@
                 <th>Bank Account:</th>
                 <td>{{ voucher.bank_account or 'N/A' }}</td>
             </tr>
+            {% if chart_account %}
+            <tr>
+                <th>Chart of Account:</th>
+                <td colspan="3">{{ chart_account.account_code }} - {{ chart_account.account_name }} ({{ chart_account.account_type }})</td>
+            </tr>
+            {% endif %}
         </table>
 
         <!-- Party Details -->
