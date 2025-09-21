@@ -63,4 +63,7 @@ out/
 temp/
 tmp/
 *.tmp
-*.temp
+*.temp# Temporary and demo files
+test_*.py
+demonstration_*.py
+ui_demo.html
