@@ -67,5 +67,23 @@
 </table>
 {% endblock %}
 
-{% block amount_words %}{% endblock %}
+{% block amount_words_block %}{% endblock %}
+
+{% block terms_block %}
+<div class="terms">
+    <table>
+        <tbody>
+            {% if voucher.terms_conditions %}
+            {% for term in voucher.terms_conditions.split('\n')|slice(4) %}
+            <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+            {% endfor %}
+            {% else %}
+            <tr><td>1. DELIVERY CHALLAN TERMS - GOODS DELIVERED AS PER ORDER.</td></tr>
+            <tr><td>2. Verify quantity and condition upon receipt.</td></tr>
+            <tr><td>3. Any discrepancies must be reported within 24 hours.</td></tr>
+            <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

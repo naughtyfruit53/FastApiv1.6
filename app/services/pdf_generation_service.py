@@ -99,7 +99,7 @@ class IndianNumberFormatter:
             # Add currency symbol and negative sign if needed
             result = f"{formatted_amount}"
             if show_symbol:
-                result = f"Rs. {result}"
+                result = f"₹ {result}"
             if is_negative:
                 result = f"-{result}"
                 
@@ -107,7 +107,7 @@ class IndianNumberFormatter:
             
         except Exception as e:
             logger.error(f"Error formatting Indian currency: {e}")
-            return f"Rs. {amount:.2f}"
+            return f"₹ {amount:.2f}"
 
 class TaxCalculator:
     """GST and tax calculation utilities"""

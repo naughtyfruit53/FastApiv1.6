@@ -8,6 +8,25 @@
 <tr><td class="label">Payment Terms</td><td class="value">{{ voucher.payment_terms|default('As per agreement') }}</td></tr>
 {% endblock %}
 
+{% block terms_block %}
+<div class="terms">
+    <table>
+        <tbody>
+            {% if voucher.terms_conditions %}
+            {% for term in voucher.terms_conditions.split('\n')|slice(4) %}
+            <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+            {% endfor %}
+            {% else %}
+            <tr><td>1. PURCHASE VOUCHER TERMS - NO RETURN WITHOUT APPROVAL.</td></tr>
+            <tr><td>2. Late payments subject to 18% interest.</td></tr>
+            <tr><td>3. Goods inspected before acceptance.</td></tr>
+            <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
 {% block voucher_specific_footer %}
 {% if voucher.notes %}
 <div class="terms" style="border-top: var(--cell-border);">

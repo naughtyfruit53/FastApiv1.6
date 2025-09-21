@@ -65,6 +65,17 @@
         .amount-words { 
             font-style: italic; 
             margin: 10pt 0; 
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .amount-words .label { font-weight: bold; margin-right: 8px; }
+        .amount-words .words { white-space: normal; word-wrap: break-word; }
+        .terms { 
+            margin: 10pt 0; 
+            font-size: 9pt; 
+            border-top: 1pt solid #ccc; 
+            padding-top: 10pt; 
         }
     </style>
 </head>
@@ -125,7 +136,8 @@
 
         <!-- Amount in Words -->
         <div class="amount-words">
-            <strong>Amount in Words:</strong> {{ amount_in_words }}
+            <div class="label">Total (In Words):</div>
+            <div class="words">{{ amount_in_words }}</div>
         </div>
 
         <!-- Notes -->
@@ -136,9 +148,24 @@
         </div>
         {% endif %}
 
+        <!-- Terms -->
+        <div class="terms">
+            <strong>Terms and Conditions:</strong><br>
+            {% if voucher.terms_conditions %}
+            {{ voucher.terms_conditions }}
+            {% else %}
+            1. Payment processed as per agreement.<br>
+            2. No refunds once processed.<br>
+            3. Verify details before confirmation.<br>
+            4. Subject to jurisdiction.
+            {% endif %}
+        </div>
+
         <!-- Footer -->
-        <div class="footer">
+        <div class="footer" style="text-align: right;">
             <p>Generated on: {{ generated_at | format_date('%d/%m/%Y %H:%M') }}</p>
+            <div style="height: 20px;"></div>
+            <p>_______________________</p>
             <p>Authorized Signatory</p>
         </div>
     </div>

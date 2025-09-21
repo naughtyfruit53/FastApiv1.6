@@ -45,6 +45,25 @@
 </div>
 {% endblock %}
 
+{% block terms_block %}
+<div class="terms">
+    <table>
+        <tbody>
+            {% if voucher.terms_conditions %}
+            {% for term in voucher.terms_conditions.split('\n')|slice(4) %}
+            <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+            {% endfor %}
+            {% else %}
+            <tr><td>1. SALES TERMS - NO RETURN NO EXCHANGE.</td></tr>
+            <tr><td>2. Late payments will be subject to an interest charge of 18%.</td></tr>
+            <tr><td>3. Goods once sold will not be taken back without prior written consent.</td></tr>
+            <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
 {% block voucher_specific_footer %}
 {% if voucher.shipping_address %}
 <div style="margin-top: 15px;">

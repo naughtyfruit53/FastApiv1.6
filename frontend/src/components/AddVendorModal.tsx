@@ -31,7 +31,7 @@ import api from "../lib/api";
 interface AddVendorModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd?: (_data: any) => Promise<void>;
+  onSave?: (_data: any) => Promise<void>;
   loading?: boolean;
   initialData?: any;
 }
@@ -51,7 +51,7 @@ interface VendorFormData {
 const AddVendorModal: React.FC<AddVendorModalProps> = ({
   open,
   onClose,
-  onAdd,
+  onSave,
   loading = false,
   initialData = {},
 }) => {
@@ -92,6 +92,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   } = usePincodeLookup();
   const watchedPincode = watch("pin_code");
   const watchedGstNumber = watch("gst_number");
+  // Reset form with initialData when it changes (for edit mode)
+  useEffect(() => {
+    reset(initialData);
+  }, [initialData, reset]);
   // Auto-populate form fields when pincode data is available
   useEffect(() => {
     if (pincodeData) {
@@ -236,19 +240,16 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             String(value).trim() !== "",
         ),
       );
-      // Direct API call to save vendor
-      const response = await api.post("/vendors", cleanData);
-      console.log("Vendor added successfully:", response.data);
-      // Call onAdd if provided and is a function
-      if (typeof onAdd === "function") {
-        await onAdd(response.data);
+      // Call onSave with the cleaned data (handles create or update in parent)
+      if (typeof onSave === "function") {
+        await onSave(cleanData);
       }
       reset();
       onClose(); // Close modal on success
     } catch (error: any) {
-      console.error("Error adding vendor:", error);
+      console.error("Error saving vendor:", error);
       // Set more specific error message
-      let errorMessage = "Failed to add vendor. Please try again.";
+      let errorMessage = "Failed to save vendor. Please try again.";
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
@@ -273,7 +274,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Typography variant="h6">Add New Vendor</Typography>
+        <Typography variant="h6">{initialData.id ? "Edit Vendor" : "Add New Vendor"}</Typography>
       </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
@@ -623,7 +624,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? "Adding..." : "Add Vendor"}
+            {loading ? "Saving..." : (initialData.id ? "Update Vendor" : "Add Vendor")}
           </Button>
         </DialogActions>
       </form>

@@ -37,6 +37,25 @@
 </div>
 {% endblock %}
 
+{% block terms_block %}
+<div class="terms">
+    <table>
+        <tbody>
+            {% if voucher.terms_conditions %}
+            {% for term in voucher.terms_conditions.split('\n')|slice(4) %}
+            <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+            {% endfor %}
+            {% else %}
+            <tr><td>1. PRE-SALES TERMS - ORDER CONFIRMATION SUBJECT TO AVAILABILITY.</td></tr>
+            <tr><td>2. Prices valid for 30 days.</td></tr>
+            <tr><td>3. Advance payment required.</td></tr>
+            <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
 {% block voucher_specific_footer %}
 {% if voucher.delivery_terms %}
 <div style="margin-top: 15px;">

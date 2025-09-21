@@ -1,5 +1,5 @@
 // frontend/src/pages/masters/vendors.tsx
-import React, { useState, useCallback, useMemo, useEffect } from "react"; // Added useEffect
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -28,15 +28,15 @@ import {
   Search as SearchIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import * as masterDataService from "../../services/masterService"; // Changed to namespace import to access all exports as an object
+import * as masterDataService from "../../services/masterService";
 import ExcelImportExport from "../../components/ExcelImportExport";
-import { useCompany } from "../../context/CompanyContext"; // Changed to useCompany instead of useAuth
+import { useCompany } from "../../context/CompanyContext";
 import AddVendorModal from "../../components/AddVendorModal";
 
 const VendorsPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
-  const { isCompanySetupNeeded, isLoading: companyLoading, company, error: companyError } = useCompany(); // Added company and companyError for debugging
+  const { isCompanySetupNeeded, isLoading: companyLoading, company, error: companyError } = useCompany();
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [editVendor, setEditVendor] = useState<any | null>(null);
   const [addVendorLoading, setAddVendorLoading] = useState(false);
@@ -46,12 +46,12 @@ const VendorsPage: React.FC = () => {
   const sortBy = "name";
   const queryClient = useQueryClient();
 
-  const vendorsEnabled = !isCompanySetupNeeded && !companyLoading; // Extracted for logging
+  const vendorsEnabled = !isCompanySetupNeeded && !companyLoading;
 
-  const { data: vendors, isLoading: vendorsLoading, error: vendorsError } = useQuery({ // Added vendorsLoading and vendorsError for better handling
+  const { data: vendors, isLoading: vendorsLoading, error: vendorsError } = useQuery({
     queryKey: ["vendors"],
     queryFn: () => masterDataService.getVendors(),
-    enabled: vendorsEnabled, // Changed enabled condition to fetch only when company setup is not needed and not loading
+    enabled: vendorsEnabled,
   });
 
   const filteredAndSortedVendors = useMemo(() => {
@@ -170,7 +170,7 @@ const VendorsPage: React.FC = () => {
     }
   }, [action, openAddVendorModal]);
 
-  useEffect(() => { // Added useEffect for debugging logs
+  useEffect(() => {
     console.log("[VendorsPage] Company setup needed:", isCompanySetupNeeded);
     console.log("[VendorsPage] Company loading:", companyLoading);
     console.log("[VendorsPage] Vendors query enabled:", vendorsEnabled);
@@ -181,23 +181,23 @@ const VendorsPage: React.FC = () => {
     console.log("[VendorsPage] Vendors error:", vendorsError);
   }, [isCompanySetupNeeded, companyLoading, vendorsEnabled, company, companyError, vendors, vendorsLoading, vendorsError]);
 
-  useEffect(() => { // Added useEffect to handle redirect if company setup needed
+  useEffect(() => {
     if (isCompanySetupNeeded && !companyLoading) {
       console.log("[VendorsPage] Redirecting to company setup as setup is needed");
-      router.push("/masters/company-details"); // Assuming this is the company setup page based on app structure
+      router.push("/masters/company-details");
     }
   }, [isCompanySetupNeeded, companyLoading, router]);
 
-  if (companyLoading || vendorsLoading) { // Updated loading check to include vendorsLoading
+  if (companyLoading || vendorsLoading) {
     return <div>Loading...</div>;
   }
 
   if (isCompanySetupNeeded) {
-    return <div>Please complete company setup first to view vendors.</div>; // Added fallback message, though redirect should handle it
+    return <div>Please complete company setup first to view vendors.</div>;
   }
 
   if (vendorsError) {
-    return <div>Error loading vendors: {vendorsError.message}</div>; // Added error display
+    return <div>Error loading vendors: {vendorsError.message}</div>;
   }
 
   return (
@@ -236,7 +236,7 @@ const VendorsPage: React.FC = () => {
             <ExcelImportExport
               data={vendors || []}
               entity="Vendors"
-              onImport={masterDataService.bulkImportVendors} // Updated to use the namespace
+              onImport={masterDataService.bulkImportVendors}
             />
           </Box>
           <Box sx={{ mb: 3 }}>
@@ -339,7 +339,7 @@ const VendorsPage: React.FC = () => {
                       No vendors found
                     </TableCell>
                   </TableRow>
-                )} {/* Added fallback row if no vendors */}
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -350,9 +350,9 @@ const VendorsPage: React.FC = () => {
             setShowAddVendorModal(false);
             setEditVendor(null);
           }}
-          onAdd={editVendor ? handleVendorUpdate : handleVendorAdd}
+          onSave={editVendor ? handleVendorUpdate : handleVendorAdd}
           loading={addVendorLoading}
-          initialData={editVendor || {}} // Pass {} if null to avoid null
+          initialData={editVendor || {}}
         />
       </Box>
     </Container>

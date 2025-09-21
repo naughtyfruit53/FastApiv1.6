@@ -194,7 +194,7 @@ const ServiceDeskSlaPage: React.FC = () => {
         </Grid>
       </Grid>
 
-      <Dialog open={openModal} onClose={handleCloseModal}>
+      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="xs" fullWidth>
         <DialogTitle>{editMode ? 'Edit SLA Policy' : 'Create SLA Policy'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
