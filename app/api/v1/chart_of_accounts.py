@@ -1,9 +1,9 @@
 # app/api/v1/chart_of_accounts.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 import logging
@@ -251,3 +251,128 @@ async def delete_chart_of_account(
         db.rollback()
         logger.error(f"Error deleting account: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete account")
+
+
+@router.get("/chart-of-accounts/payroll-eligible", response_model=ChartOfAccountsList)
+async def get_payroll_eligible_accounts(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=1000),
+    account_types: List[str] = Query(["expense", "liability"], description="Account types eligible for payroll"),
+    component_type: Optional[str] = Query(None, description="Filter by component type"),
+    is_active: bool = Query(True, description="Filter active accounts"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get chart of accounts eligible for payroll component mapping"""
+    try:
+        # Valid account types for payroll
+        valid_payroll_types = ["expense", "liability", "asset"]
+        
+        # Filter to only valid account types
+        filtered_types = [t for t in account_types if t in valid_payroll_types]
+        
+        if not filtered_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid account types. Valid types for payroll: {', '.join(valid_payroll_types)}"
+            )
+        
+        query = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.organization_id == organization_id,
+            ChartOfAccounts.account_type.in_(filtered_types),
+            ChartOfAccounts.is_active == is_active,
+            ChartOfAccounts.can_post == True  # Only accounts that can have transactions posted
+        )
+        
+        # Apply component type specific filtering
+        if component_type:
+            if component_type in ["earning", "deduction"]:
+                # For earnings and deductions, prefer expense accounts
+                query = query.filter(ChartOfAccounts.account_type == "expense")
+            elif component_type == "employer_contribution":
+                # For employer contributions, prefer liability accounts (for payables)
+                query = query.filter(ChartOfAccounts.account_type == "liability")
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination and ordering
+        accounts = query.order_by(
+            ChartOfAccounts.account_type,
+            ChartOfAccounts.account_code
+        ).offset((page - 1) * per_page).limit(per_page).all()
+        
+        logger.info(f"Retrieved {len(accounts)} payroll-eligible accounts for organization {organization_id}")
+        
+        return ChartOfAccountsList(
+            accounts=accounts,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=(total + per_page - 1) // per_page
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching payroll-eligible accounts: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching payroll-eligible accounts"
+        )
+
+
+@router.get("/chart-of-accounts/lookup")
+async def chart_accounts_lookup(
+    search: str = Query(None, description="Search term for account name or code"),
+    account_types: Optional[List[str]] = Query(None, description="Filter by account types"),
+    limit: int = Query(20, ge=1, le=100, description="Maximum number of results"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Lookup chart of accounts for dropdown/autocomplete components"""
+    try:
+        query = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.organization_id == organization_id,
+            ChartOfAccounts.is_active == True
+        )
+        
+        # Apply search filter
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    ChartOfAccounts.account_name.ilike(search_term),
+                    ChartOfAccounts.account_code.ilike(search_term)
+                )
+            )
+        
+        # Apply account type filter
+        if account_types:
+            query = query.filter(ChartOfAccounts.account_type.in_(account_types))
+        
+        # Get results with limit
+        accounts = query.order_by(ChartOfAccounts.account_code).limit(limit).all()
+        
+        # Return simplified format for lookups
+        results = [
+            {
+                "id": account.id,
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "account_type": account.account_type.value,
+                "display_name": f"{account.account_code} - {account.account_name}"
+            }
+            for account in accounts
+        ]
+        
+        return {"accounts": results, "count": len(results)}
+        
+    except Exception as e:
+        logger.error(f"Error in chart accounts lookup: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error performing account lookup"
+        )

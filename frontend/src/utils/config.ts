@@ -6,6 +6,9 @@ export const config = {
   // Feature flags
   features: {
     passwordChange: process.env.NEXT_PUBLIC_ENABLE_PASSWORD_CHANGE !== "false",
+    // Chart of Accounts Integration Feature Flags
+    coaRequiredStrict: process.env.NEXT_PUBLIC_COA_REQUIRED_STRICT === "true",
+    payrollEnabled: process.env.NEXT_PUBLIC_PAYROLL_ENABLED === "true",
     // Add more feature flags here as needed
   },
 };

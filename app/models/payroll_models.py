@@ -348,3 +348,169 @@ class PayrollSettings(Base):
     __table_args__ = (
         {'extend_existing': True}
     )
+
+
+# Chart of Accounts Integration Models for Payroll
+class PayrollComponent(Base):
+    """Payroll component chart account mapping"""
+    __tablename__ = "payroll_components"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Component identification
+    component_name: Mapped[str] = mapped_column(String(100), nullable=False)  # Basic Salary, HRA, etc.
+    component_code: Mapped[str] = mapped_column(String(50), nullable=False)  # BS, HRA, etc.
+    component_type: Mapped[str] = mapped_column(String(50), nullable=False)  # earning, deduction, employer_contribution
+    
+    # Chart account mapping
+    expense_account_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True)
+    payable_account_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True)
+    
+    # Configuration
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_taxable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    calculation_formula: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # For dynamic calculations
+    
+    # Default amounts (optional)
+    default_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    default_percentage: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    expense_account: Mapped[Optional["app.models.erp_models.ChartOfAccounts"]] = relationship(
+        "app.models.erp_models.ChartOfAccounts", 
+        foreign_keys=[expense_account_id]
+    )
+    payable_account: Mapped[Optional["app.models.erp_models.ChartOfAccounts"]] = relationship(
+        "app.models.erp_models.ChartOfAccounts", 
+        foreign_keys=[payable_account_id]
+    )
+    created_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'component_code', name='uq_payroll_component_org_code'),
+        Index('idx_payroll_component_org_type', 'organization_id', 'component_type'),
+        Index('idx_payroll_component_expense_account', 'expense_account_id'),
+        Index('idx_payroll_component_payable_account', 'payable_account_id'),
+        {'extend_existing': True}
+    )
+
+
+class PayrollRun(Base):
+    """Enhanced payroll run with GL integration"""
+    __tablename__ = "payroll_runs"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Link to payroll period
+    period_id: Mapped[int] = mapped_column(Integer, ForeignKey("payroll_periods.id"), nullable=False, index=True)
+    
+    # Run identification
+    run_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    run_date: Mapped[date] = mapped_column(Date, nullable=False)
+    
+    # Processing status
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="draft")  # draft, processed, posted, paid
+    
+    # Employee counts
+    total_employees: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    processed_employees: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    
+    # Financial totals
+    total_gross_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=0)
+    total_deductions: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=0)
+    total_net_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=0)
+    
+    # GL integration fields
+    gl_posted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    gl_posted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    gl_reversal_voucher_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Reference to reversal voucher
+    total_expense_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=0)
+    total_payable_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=0)
+    
+    # Payment tracking
+    payment_vouchers_generated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    payment_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    
+    # Approval workflow
+    approved_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Notes
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    period: Mapped["PayrollPeriod"] = relationship("PayrollPeriod")
+    approved_by: Mapped[Optional["app.models.user_models.User"]] = relationship(
+        "app.models.user_models.User", 
+        foreign_keys=[approved_by_id]
+    )
+    created_by: Mapped[Optional["app.models.user_models.User"]] = relationship(
+        "app.models.user_models.User", 
+        foreign_keys=[created_by_id]
+    )
+    payroll_lines: Mapped[List["PayrollLine"]] = relationship("PayrollLine", back_populates="payroll_run")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'period_id', 'run_name', name='uq_payroll_run_org_period_name'),
+        Index('idx_payroll_run_org_status', 'organization_id', 'status'),
+        Index('idx_payroll_run_gl_posted', 'gl_posted'),
+        Index('idx_payroll_run_period', 'period_id'),
+        {'extend_existing': True}
+    )
+
+
+class PayrollLine(Base):
+    """Individual payroll posting lines for GL integration"""
+    __tablename__ = "payroll_lines"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # References
+    payroll_run_id: Mapped[int] = mapped_column(Integer, ForeignKey("payroll_runs.id"), nullable=False, index=True)
+    employee_id: Mapped[int] = mapped_column(Integer, ForeignKey("employee_profiles.id"), nullable=False, index=True)
+    component_id: Mapped[int] = mapped_column(Integer, ForeignKey("payroll_components.id"), nullable=False, index=True)
+    chart_account_id: Mapped[int] = mapped_column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    
+    # Line details
+    line_type: Mapped[str] = mapped_column(String(50), nullable=False)  # expense, payable
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    posting_type: Mapped[str] = mapped_column(String(20), nullable=False)  # debit, credit
+    description: Mapped[str] = mapped_column(String(500), nullable=False)
+    
+    # GL posting reference
+    gl_entry_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Reference to general ledger entry
+    journal_voucher_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Reference to journal voucher
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    payroll_run: Mapped["PayrollRun"] = relationship("PayrollRun", back_populates="payroll_lines")
+    employee: Mapped["app.models.hr_models.EmployeeProfile"] = relationship("app.models.hr_models.EmployeeProfile")
+    component: Mapped["PayrollComponent"] = relationship("PayrollComponent")
+    chart_account: Mapped["app.models.erp_models.ChartOfAccounts"] = relationship("app.models.erp_models.ChartOfAccounts")
+
+    __table_args__ = (
+        Index('idx_payroll_line_org_run', 'organization_id', 'payroll_run_id'),
+        Index('idx_payroll_line_employee', 'employee_id'),
+        Index('idx_payroll_line_component', 'component_id'),
+        Index('idx_payroll_line_account', 'chart_account_id'),
+        Index('idx_payroll_line_gl_entry', 'gl_entry_id'),
+        {'extend_existing': True}
+    )
