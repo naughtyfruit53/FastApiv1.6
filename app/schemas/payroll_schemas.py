@@ -536,3 +536,186 @@ class PayrollAccountMapping(BaseModel):
     component_id: int
     expense_account_id: Optional[int] = None
     payable_account_id: Optional[int] = None
+
+
+# Phase 2: Advanced Payroll Schemas
+
+# Advanced filtering and component management
+class PayrollComponentFilter(BaseModel):
+    component_types: Optional[List[str]] = Field(None, description="Filter by component types")
+    is_active: Optional[bool] = Field(None, description="Filter by active status")
+    is_taxable: Optional[bool] = Field(None, description="Filter by taxable status")
+    has_expense_account: Optional[bool] = Field(None, description="Filter components with expense account")
+    has_payable_account: Optional[bool] = Field(None, description="Filter components with payable account")
+    search: Optional[str] = Field(None, description="Search in component name or code")
+
+class PayrollComponentDetail(PayrollComponentResponse):
+    """Enhanced component response with full account details"""
+    expense_account: Optional[ChartAccountMinimal] = None
+    payable_account: Optional[ChartAccountMinimal] = None
+
+# Bulk operations
+class BulkPayrollComponentCreate(BaseModel):
+    components: List[PayrollComponentCreate] = Field(..., description="List of components to create")
+    
+class BulkPayrollComponentResult(BaseModel):
+    total_components: int
+    created_count: int
+    error_count: int
+    created_components: List[Dict[str, Any]]
+    errors: List[Dict[str, str]]
+
+# Chart account mapping schemas
+class PayrollComponentMappingUpdate(BaseModel):
+    expense_account_id: Optional[int] = Field(None, description="Expense account for this component")
+    payable_account_id: Optional[int] = Field(None, description="Payable account for this component")
+
+class PayrollComponentMapping(BaseModel):
+    component_id: int
+    component_name: str
+    component_code: str
+    component_type: str
+    expense_account_id: Optional[int] = None
+    payable_account_id: Optional[int] = None
+    expense_account: Optional[ChartAccountMinimal] = None
+    payable_account: Optional[ChartAccountMinimal] = None
+
+# Advanced settings
+class DepartmentAccountMapping(BaseModel):
+    department_id: int
+    department_name: str
+    default_expense_account_id: Optional[int] = None
+    default_payable_account_id: Optional[int] = None
+    override_components: Dict[str, Dict[str, int]] = Field(
+        default_factory=dict,
+        description="Component-specific overrides: {component_code: {expense_account_id: int, payable_account_id: int}}"
+    )
+
+class CategoryAccountMapping(BaseModel):
+    category: str = Field(..., description="Category like 'senior_management', 'permanent', 'contract'")
+    default_expense_account_id: Optional[int] = None
+    default_payable_account_id: Optional[int] = None
+
+class AdvancedPayrollSettings(BaseModel):
+    # Multi-component settings
+    enable_multi_component_calculation: bool = Field(default=True)
+    enable_component_dependencies: bool = Field(default=False)
+    
+    # Default mappings
+    department_mappings: List[DepartmentAccountMapping] = Field(default_factory=list)
+    category_mappings: List[CategoryAccountMapping] = Field(default_factory=list)
+    
+    # Enforcement settings
+    enforce_account_mapping: bool = Field(default=False)
+    allow_legacy_accounts: bool = Field(default=True)
+    require_approval_for_new_components: bool = Field(default=False)
+    
+    # Bulk processing settings
+    enable_bulk_posting: bool = Field(default=True)
+    bulk_posting_batch_size: int = Field(default=100)
+    enable_parallel_processing: bool = Field(default=False)
+    
+    # Reversal and correction settings
+    enable_payroll_reversal: bool = Field(default=True)
+    require_approval_for_reversal: bool = Field(default=True)
+    max_reversal_days: int = Field(default=30)
+    
+    # Advanced reporting
+    enable_detailed_reporting: bool = Field(default=True)
+    enable_variance_analysis: bool = Field(default=False)
+    enable_cost_center_allocation: bool = Field(default=False)
+
+# Bulk payroll processing
+class BulkPayrollProcessing(BaseModel):
+    payroll_run_ids: List[int] = Field(..., description="List of payroll run IDs to process")
+    operation: str = Field(..., description="Operation: post_to_gl, generate_payments, reverse_posting")
+    processing_date: date = Field(..., description="Date for processing")
+    batch_size: int = Field(default=50, description="Batch size for processing")
+    
+class BulkPayrollProcessingResult(BaseModel):
+    total_runs: int
+    successful: int
+    failed: int
+    processing_details: List[Dict[str, Any]]
+    errors: List[str]
+
+# Enhanced reporting schemas
+class PayrollComponentReport(BaseModel):
+    component_id: int
+    component_name: str
+    component_code: str
+    component_type: str
+    total_amount: Decimal
+    employee_count: int
+    average_amount: Decimal
+    expense_account: Optional[ChartAccountMinimal] = None
+    payable_account: Optional[ChartAccountMinimal] = None
+
+class PayrollPeriodReport(BaseModel):
+    period_id: int
+    period_name: str
+    start_date: date
+    end_date: date
+    total_employees: int
+    total_gross: Decimal
+    total_deductions: Decimal
+    total_net: Decimal
+    components: List[PayrollComponentReport]
+    department_breakdown: Dict[str, Decimal] = Field(default_factory=dict)
+
+class PayrollEmployeeReport(BaseModel):
+    employee_id: int
+    employee_name: str
+    employee_code: str
+    department: Optional[str] = None
+    gross_amount: Decimal
+    deductions: Decimal
+    net_amount: Decimal
+    components: List[Dict[str, Any]]  # Component-wise breakdown
+
+# Migration and validation schemas
+class PayrollMigrationStatus(BaseModel):
+    total_components: int
+    mapped_components: int
+    unmapped_components: int
+    mapping_percentage: float
+    validation_errors: List[str]
+    migration_suggestions: List[str]
+
+class PayrollValidationResult(BaseModel):
+    component_id: int
+    component_name: str
+    is_valid: bool
+    validation_errors: List[str]
+    suggestions: List[str]
+
+class PayrollBackfillRequest(BaseModel):
+    target_components: Optional[List[int]] = Field(None, description="Specific components to backfill")
+    use_department_defaults: bool = Field(default=True)
+    use_category_defaults: bool = Field(default=True)
+    create_missing_accounts: bool = Field(default=False)
+    preview_mode: bool = Field(default=True)
+
+class PayrollBackfillResult(BaseModel):
+    total_components: int
+    updated_components: int
+    created_accounts: int
+    errors: List[str]
+    preview_data: Optional[List[Dict[str, Any]]] = None
+
+# Monitoring and observability
+class PayrollMonitoringMetrics(BaseModel):
+    processing_time: float  # in seconds
+    memory_usage: float  # in MB
+    database_queries: int
+    gl_posting_time: Optional[float] = None
+    validation_errors: int
+    warnings: int
+
+class PayrollHealthCheck(BaseModel):
+    status: str  # healthy, warning, error
+    last_successful_run: Optional[datetime] = None
+    unmapped_components: int
+    inactive_accounts: int
+    validation_issues: int
+    performance_metrics: PayrollMonitoringMetrics
