@@ -18,6 +18,8 @@ import { useForm } from "react-hook-form";
 import { companyService } from "../services/authService";
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
 import CompanyLogoUpload from "./CompanyLogoUpload";
+import BankAccountModal from "./BankAccountModal";
+import axios from "axios";
 
 interface CompanyDetailsModalProps {
   open: boolean;
@@ -54,6 +56,8 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+  const [bankAccountModalOpen, setBankAccountModalOpen] = useState(false);
+  const [showBankAccountPrompt, setShowBankAccountPrompt] = useState(false);
 
   const {
     register,
@@ -112,8 +116,45 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
       setError(null);
       setSuccess(false);
       setFieldErrors({});
+      setShowBankAccountPrompt(false);
       clearData();
       onClose();
+    }
+  };
+
+  const checkBankAccountsExist = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/erp/bank-accounts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data && response.data.length > 0;
+    } catch (err) {
+      console.error("Failed to check bank accounts:", err);
+      return false; // Assume no bank accounts if API call fails
+    }
+  };
+
+  const handleBankAccountPromptYes = () => {
+    setShowBankAccountPrompt(false);
+    setBankAccountModalOpen(true);
+  };
+
+  const handleBankAccountPromptNo = () => {
+    setShowBankAccountPrompt(false);
+    if (!isRequired) {
+      setTimeout(() => {
+        handleClose();
+      }, 1000);
+    }
+  };
+
+  const handleBankAccountSuccess = () => {
+    setBankAccountModalOpen(false);
+    if (!isRequired) {
+      setTimeout(() => {
+        handleClose();
+      }, 1000);
     }
   };
 
@@ -147,7 +188,12 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
       if (onSuccess) {
         onSuccess();
       }
-      if (!isRequired) {
+      
+      // Check if bank accounts exist and prompt user if none exist
+      const bankAccountsExist = await checkBankAccountsExist();
+      if (!bankAccountsExist) {
+        setShowBankAccountPrompt(true);
+      } else if (!isRequired) {
         setTimeout(() => {
           handleClose();
         }, 2000);
@@ -208,6 +254,33 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                   You can now access all features of the system.
                 </Typography>
               )}
+            </Alert>
+          )}
+
+          {showBankAccountPrompt && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Set up Bank Account
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                No bank accounts found for your company. Would you like to add a bank account now? This will help with voucher generation and financial tracking.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button 
+                  variant="contained" 
+                  size="small" 
+                  onClick={handleBankAccountPromptYes}
+                >
+                  Yes, Add Bank Account
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={handleBankAccountPromptNo}
+                >
+                  Skip for Now
+                </Button>
+              </Box>
             </Alert>
           )}
 
@@ -448,6 +521,13 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
         )}
       </DialogActions>
     </Dialog>
+    
+    {/* Bank Account Modal */}
+    <BankAccountModal
+      open={bankAccountModalOpen}
+      onClose={() => setBankAccountModalOpen(false)}
+      onSuccess={handleBankAccountSuccess}
+    />
   );
 };
 

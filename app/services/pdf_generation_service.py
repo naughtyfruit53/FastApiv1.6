@@ -14,6 +14,7 @@ from io import BytesIO
 from num2words import num2words
 from sqlalchemy.orm import Session
 from app.models import Company, User, Vendor  # Added Vendor import
+from app.models.erp_models import BankAccount  # Added for bank details in PDFs
 import logging
 import base64
 import re  # Added for sanitizing filenames
@@ -217,6 +218,31 @@ class VoucherPDFGenerator:
                 
                 logger.info(f"Company Company GST: {company.gst_number}, state_code (final): {state_code}")
                 
+                # Get bank account details (default bank account or first active one)
+                bank_details = None
+                bank_account = db.query(BankAccount).filter(
+                    BankAccount.organization_id == organization_id,
+                    BankAccount.is_active == True
+                ).filter(
+                    (BankAccount.is_default == True)  # Prefer default account
+                ).first()
+                
+                # If no default, get any active bank account
+                if not bank_account:
+                    bank_account = db.query(BankAccount).filter(
+                        BankAccount.organization_id == organization_id,
+                        BankAccount.is_active == True
+                    ).first()
+                
+                if bank_account:
+                    bank_details = {
+                        'holder_name': company.name,  # Use company name as account holder
+                        'bank_name': bank_account.bank_name,
+                        'account_number': bank_account.account_number,
+                        'branch': bank_account.branch_name or '',
+                        'ifsc': bank_account.ifsc_code or ''
+                    }
+                
                 return {
                     'name': company.name,
                     'address1': company.address1,
@@ -230,7 +256,8 @@ class VoucherPDFGenerator:
                     'contact_number': company.contact_number,
                     'email': company.email or '',
                     'website': company.website or '',
-                    'logo_url': logo_url
+                    'logo_url': logo_url,
+                    'bank_details': bank_details
                 }
             else:
                 # Fallback company data
@@ -247,7 +274,8 @@ class VoucherPDFGenerator:
                     'contact_number': '+91-1234567890',
                     'email': 'contact@company.com',
                     'website': 'www.company.com',
-                    'logo_url': None
+                    'logo_url': None,
+                    'bank_details': None
                 }
                 
         except Exception as e:
@@ -257,7 +285,8 @@ class VoucherPDFGenerator:
                 'address1': 'Company Address',
                 'city': 'City', 'state': 'State', 'pin_code': '123456',
                 'contact_number': '+91-1234567890',
-                'logo_url': None
+                'logo_url': None,
+                'bank_details': None
             }
     
     def _prepare_voucher_data(self, voucher_type: str, voucher_data: Dict[str, Any], 
@@ -273,6 +302,53 @@ class VoucherPDFGenerator:
         customer = voucher_data.get('customer')
         employee = voucher_data.get('employee')
         party = vendor or customer or employee
+        
+        # Merge address lines for party if it exists
+        if party and isinstance(party, dict):
+            address1 = party.get('address1', '') or party.get('address', '') or ''
+            address2 = party.get('address2', '') or ''
+            
+            # Merge address lines with comma separation if both exist
+            merged_address = address1
+            if address1 and address2:
+                merged_address = f"{address1}, {address2}"
+            elif address2:  # Only address2 exists
+                merged_address = address2
+            
+            # Update party data with merged address
+            party = dict(party)  # Create a copy to avoid modifying original
+            party['address'] = merged_address
+            
+            # Update the specific party type in voucher_data for template
+            if vendor:
+                voucher_data = dict(voucher_data)
+                voucher_data['vendor'] = party
+            elif customer:
+                voucher_data = dict(voucher_data)
+                voucher_data['customer'] = party
+            elif employee:
+                voucher_data = dict(voucher_data)
+                voucher_data['employee'] = party
+        
+        # Merge address lines for shipping address if it exists
+        shipping_address = voucher_data.get('shipping_address')
+        if shipping_address and isinstance(shipping_address, dict):
+            shipping_addr1 = shipping_address.get('address1', '') or shipping_address.get('address', '') or ''
+            shipping_addr2 = shipping_address.get('address2', '') or ''
+            
+            # Merge shipping address lines
+            merged_shipping_address = shipping_addr1
+            if shipping_addr1 and shipping_addr2:
+                merged_shipping_address = f"{shipping_addr1}, {shipping_addr2}"
+            elif shipping_addr2:  # Only address2 exists
+                merged_shipping_address = shipping_addr2
+            
+            # Update shipping address data
+            voucher_data = dict(voucher_data)
+            shipping_address = dict(shipping_address)
+            shipping_address['address'] = merged_shipping_address
+            voucher_data['shipping_address'] = shipping_address
+        
         party_state_code = None
         if party and company['state_code']:
             party_state_code = party.get('state_code')
