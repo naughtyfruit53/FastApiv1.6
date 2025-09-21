@@ -364,3 +364,175 @@ class SalaryUpdateResult(BaseModel):
     successful: int
     failed: int
     errors: List[str] = []
+
+
+# Chart of Accounts Integration Schemas for Payroll
+
+# Chart Account minimal schema for references
+class ChartAccountMinimal(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    account_code: str
+    account_name: str
+    account_type: str
+
+# Payroll Component Schemas
+class PayrollComponentBase(BaseModel):
+    component_name: str = Field(..., description="Component name like Basic Salary, HRA, etc.")
+    component_code: str = Field(..., description="Short code like BS, HRA, etc.")
+    component_type: str = Field(..., description="Type: earning, deduction, employer_contribution")
+    expense_account_id: Optional[int] = Field(None, description="Chart account for expense posting")
+    payable_account_id: Optional[int] = Field(None, description="Chart account for payable posting")
+    is_active: bool = Field(default=True)
+    is_taxable: bool = Field(default=True)
+    calculation_formula: Optional[str] = Field(None, description="Formula for dynamic calculations")
+    default_amount: Optional[Decimal] = Field(None, description="Default fixed amount")
+    default_percentage: Optional[Decimal] = Field(None, description="Default percentage of basic salary")
+
+class PayrollComponentCreate(PayrollComponentBase):
+    pass
+
+class PayrollComponentUpdate(BaseModel):
+    component_name: Optional[str] = None
+    component_code: Optional[str] = None
+    component_type: Optional[str] = None
+    expense_account_id: Optional[int] = None
+    payable_account_id: Optional[int] = None
+    is_active: Optional[bool] = None
+    is_taxable: Optional[bool] = None
+    calculation_formula: Optional[str] = None
+    default_amount: Optional[Decimal] = None
+    default_percentage: Optional[Decimal] = None
+
+class PayrollComponentResponse(PayrollComponentBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+    
+    # Related accounts
+    expense_account: Optional[ChartAccountMinimal] = None
+    payable_account: Optional[ChartAccountMinimal] = None
+
+class PayrollComponentList(BaseModel):
+    components: List[PayrollComponentResponse]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+
+# Payroll Run Schemas
+class PayrollRunBase(BaseModel):
+    run_name: str = Field(..., description="Payroll run name")
+    run_date: date = Field(..., description="Run date")
+    notes: Optional[str] = Field(None, description="Run notes")
+
+class PayrollRunCreate(PayrollRunBase):
+    period_id: int = Field(..., description="Reference to payroll period")
+
+class PayrollRunUpdate(BaseModel):
+    run_name: Optional[str] = None
+    run_date: Optional[date] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+class PayrollRunResponse(PayrollRunBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    period_id: int
+    status: str
+    total_employees: int
+    processed_employees: int
+    total_gross_amount: Decimal
+    total_deductions: Decimal
+    total_net_amount: Decimal
+    gl_posted: bool
+    gl_posted_at: Optional[datetime] = None
+    gl_reversal_voucher_id: Optional[int] = None
+    total_expense_amount: Decimal
+    total_payable_amount: Decimal
+    payment_vouchers_generated: bool
+    payment_date: Optional[date] = None
+    approved_by_id: Optional[int] = None
+    approved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+class PayrollRunList(BaseModel):
+    runs: List[PayrollRunResponse]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+
+# Payroll Line Schemas
+class PayrollLineBase(BaseModel):
+    line_type: str = Field(..., description="Type: expense, payable")
+    amount: Decimal = Field(..., description="Line amount")
+    posting_type: str = Field(..., description="Posting type: debit, credit")
+    description: str = Field(..., description="Line description")
+
+class PayrollLineCreate(PayrollLineBase):
+    employee_id: int = Field(..., description="Reference to employee")
+    component_id: int = Field(..., description="Reference to payroll component")
+    chart_account_id: int = Field(..., description="Reference to chart account")
+
+class PayrollLineResponse(PayrollLineBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    payroll_run_id: int
+    employee_id: int
+    component_id: int
+    chart_account_id: int
+    gl_entry_id: Optional[int] = None
+    journal_voucher_id: Optional[int] = None
+    created_at: datetime
+
+# GL Posting Schemas
+class GLPreviewLine(BaseModel):
+    account_code: str
+    account_name: str
+    account_type: str
+    debit_amount: Decimal
+    credit_amount: Decimal
+    description: str
+
+class PayrollGLPreview(BaseModel):
+    payroll_run_id: int
+    total_debit: Decimal
+    total_credit: Decimal
+    lines: List[GLPreviewLine]
+    is_balanced: bool
+
+class PayrollGLPosting(BaseModel):
+    payroll_run_id: int
+    posting_date: date = Field(..., description="GL posting date")
+    reference_number: Optional[str] = Field(None, description="Reference voucher number")
+    narration: Optional[str] = Field(None, description="Posting narration")
+
+class PayrollGLPostingResult(BaseModel):
+    success: bool
+    message: str
+    journal_voucher_id: Optional[int] = None
+    gl_entries_created: int
+    total_amount: Decimal
+
+# Chart Account Filtering Schemas
+class PayrollEligibleAccountsFilter(BaseModel):
+    account_types: Optional[List[str]] = Field(["expense", "liability"], description="Account types for payroll")
+    component_type: Optional[str] = Field(None, description="Filter by component type")
+    is_active: Optional[bool] = Field(True, description="Filter active accounts")
+
+class PayrollAccountMapping(BaseModel):
+    component_id: int
+    expense_account_id: Optional[int] = None
+    payable_account_id: Optional[int] = None
