@@ -147,6 +147,33 @@ from .workflow_automation_models import (
     BusinessRule, WorkflowTemplateAdvanced, AutomationWorkflowStep, AutomationWorkflowInstance,
     AutomationWorkflowStepExecution, BusinessRuleExecution, WorkflowSchedule
 )
+# Import project models
+from .project_models import (
+    Project, ProjectMilestone, ProjectResource, ProjectDocument, ProjectTimeLog,
+    ProjectStatus, ProjectPriority, ProjectType, MilestoneStatus, ResourceType
+)
+# Import workflow models
+from .workflow_models import (
+    WorkflowTemplate, WorkflowStep, WorkflowInstance, WorkflowStepInstance,
+    ApprovalRequest, ApprovalHistory, ApprovalAttachment,
+    WorkflowStatus, WorkflowTriggerType, ApprovalStatus, StepType, InstanceStatus, EscalationAction
+)
+# Import api gateway models
+from .api_gateway_models import (
+    APIKey, APIUsageLog, APIEndpoint, Webhook, WebhookDelivery, RateLimitRule, APIError,
+    APIKeyStatus, RateLimitType, AccessLevel, LogLevel, WebhookStatus
+)
+# Import integration models
+from .integration_models import (
+    ExternalIntegration, IntegrationMapping, IntegrationSyncJob, IntegrationSyncRecord,
+    IntegrationLog, DataTransformationRule, IntegrationSchedule,
+    IntegrationType, IntegrationStatus, AuthType, SyncDirection, SyncStatus, MappingType
+)
+# Import master data models
+from .master_data_models import (
+    Category, Unit, TaxCode, PaymentTermsExtended,
+    CategoryType, UnitType, TaxType
+)
 
 # No imports from .base as all models have been moved
 
@@ -252,5 +279,29 @@ __all__ = [
     
     # Workflow automation models
     "BusinessRule", "WorkflowTemplateAdvanced", "AutomationWorkflowStep", "AutomationWorkflowInstance",
-    "AutomationWorkflowStepExecution", "BusinessRuleExecution", "WorkflowSchedule"
+    "AutomationWorkflowStepExecution", "BusinessRuleExecution", "WorkflowSchedule",
+
+    # Project models
+    "Project", "ProjectMilestone", "ProjectResource", "ProjectDocument", "ProjectTimeLog",
+    "ProjectStatus", "ProjectPriority", "ProjectType", "MilestoneStatus", "ResourceType",
+
+    # Workflow models
+    "WorkflowTemplate", "WorkflowStep", "WorkflowInstance", "WorkflowStepInstance",
+    "ApprovalRequest", "ApprovalHistory", "ApprovalAttachment",
+    "WorkflowStatus", "WorkflowTriggerType", "ApprovalStatus", "StepType", "InstanceStatus", "EscalationAction",
+
+    # API gateway models
+    "APIKey", "APIUsageLog", "APIEndpoint", "Webhook", "WebhookDelivery", "RateLimitRule", "APIError",
+    "APIKeyStatus", "RateLimitType", "AccessLevel", "LogLevel", "WebhookStatus",
+
+    # Integration models
+    "ExternalIntegration", "IntegrationMapping", "IntegrationSyncJob", "IntegrationSyncRecord",
+    "IntegrationLog", "DataTransformationRule", "IntegrationSchedule",
+    "IntegrationType", "IntegrationStatus", "AuthType", "SyncDirection", "SyncStatus", "MappingType",
+
+    # Master data models
+    "Category", "Unit", "TaxCode", "PaymentTermsExtended",
+    "CategoryType", "UnitType", "TaxType"
 ]
+
+# No imports from .base as all models have been moved

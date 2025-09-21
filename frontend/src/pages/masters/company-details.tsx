@@ -13,6 +13,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyService } from "../../services/authService";
 import CompanyDetailsModal from "../../components/CompanyDetailsModal";
 import Grid from "@mui/material/Grid";
+
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 const CompanyDetails: React.FC = () => {
   const [openModal, setOpenModal] = useState(false);
   const queryClient = useQueryClient();
@@ -75,7 +78,7 @@ const CompanyDetails: React.FC = () => {
           <Avatar
             src={
               data?.logo_path && data?.id
-                ? companyService.getLogoUrl(data.id)
+                ? `${API_URL}${data.logo_path}`
                 : undefined
             }
             sx={{

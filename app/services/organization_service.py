@@ -10,9 +10,11 @@ from app.services.email_service import email_service
 from app.services.rbac import RBACService
 from app.services.role_management_service import RoleManagementService
 from app.services.user_service import UserService
+from app.services.ledger_service import LedgerService
 import secrets
 import string
 import logging
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,9 @@ class OrganizationService:
         db.add(org)
         db.commit()
         db.refresh(org)
+        
+        # Seed standard chart of accounts for the new organization
+        LedgerService.create_standard_chart_of_accounts(db, org.id)
         
         # Generate temp password for org super admin
         alphabet = string.ascii_letters + string.digits + string.punctuation

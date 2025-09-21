@@ -1,122 +1,90 @@
 # app/api/v1/ledger.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from typing import List, Dict, Any
+
+from app.db.session import get_db
+from app.services.ledger_service import LedgerService
+from app.schemas.ledger import (
+    LedgerFilters, CompleteLedgerResponse,
+    OutstandingLedgerResponse
+)
+from app.core.security import get_current_user
 from app.models.user_models import User
-from app.models.vouchers.sales import SalesVoucher
-from app.models.vouchers.financial import ReceiptVoucher, CreditNote, DebitNote
-from app.models.vouchers.purchase import PurchaseVoucher
-from app.models.vouchers.financial import PaymentVoucher
 
-router = APIRouter(tags=["ledger"])
+router = APIRouter(
+    prefix="/ledger",
+    tags=["Ledger"]
+)
 
-@router.get("/balances/{entity_type}/{entity_id}")
-async def get_entity_balance(
-    entity_type: str,
-    entity_id: int,
+@router.get("/complete", response_model=CompleteLedgerResponse)
+def get_complete_ledger(
+    filters: LedgerFilters = Depends(),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
-    org_id = current_user.organization_id
-    
-    if entity_type.lower() == "customer":
-        # Customer balance: receivables positive
-        sales = db.query(func.sum(SalesVoucher.total_amount)).filter(
-            SalesVoucher.customer_id == entity_id,
-            SalesVoucher.organization_id == org_id
-        ).scalar() or 0
-        
-        receipts = db.query(func.sum(ReceiptVoucher.total_amount)).filter(
-            ReceiptVoucher.customer_id == entity_id,
-            ReceiptVoucher.organization_id == org_id
-        ).scalar() or 0
-        
-        credit_notes = db.query(func.sum(CreditNote.total_amount)).filter(
-            CreditNote.customer_id == entity_id,
-            CreditNote.organization_id == org_id
-        ).scalar() or 0
-        
-        debit_notes = db.query(func.sum(DebitNote.total_amount)).filter(
-            DebitNote.customer_id == entity_id,
-            DebitNote.organization_id == org_id
-        ).scalar() or 0
-        
-        # Add payments to customer (refunds)
-        customer_payments = db.query(func.sum(PaymentVoucher.total_amount)).filter(
-            PaymentVoucher.entity_type.ilike('customer'),
-            PaymentVoucher.entity_id == entity_id,
-            PaymentVoucher.organization_id == org_id
-        ).scalar() or 0
-        
-        balance = sales - receipts - credit_notes + debit_notes - customer_payments
-        return {"balance": balance}
-    
-    elif entity_type.lower() == "vendor":
-        # Vendor balance: payables positive
-        purchases = db.query(func.sum(PurchaseVoucher.total_amount)).filter(
-            PurchaseVoucher.vendor_id == entity_id,
-            PurchaseVoucher.organization_id == org_id
-        ).scalar() or 0
-        
-        payments = db.query(func.sum(PaymentVoucher.total_amount)).filter(
-            PaymentVoucher.entity_type.ilike('vendor'),
-            PaymentVoucher.entity_id == entity_id,
-            PaymentVoucher.organization_id == org_id
-        ).scalar() or 0
-        
-        credit_notes = db.query(func.sum(CreditNote.total_amount)).filter(
-            CreditNote.vendor_id == entity_id,
-            CreditNote.organization_id == org_id
-        ).scalar() or 0
-        
-        debit_notes = db.query(func.sum(DebitNote.total_amount)).filter(
-            DebitNote.vendor_id == entity_id,
-            DebitNote.organization_id == org_id
-        ).scalar() or 0
-        
-        balance = purchases - payments + credit_notes - debit_notes
-        return {"balance": balance}
-    
-    elif entity_type.lower() == "employee":
-        # Employee balance: payables positive (e.g., advance payments)
-        employee_payments = db.query(func.sum(PaymentVoucher.total_amount)).filter(
-            PaymentVoucher.entity_type.ilike('employee'),
-            PaymentVoucher.entity_id == entity_id,
-            PaymentVoucher.organization_id == org_id
-        ).scalar() or 0
-        
-        # Placeholder: subtract from salaries or other debits if implemented
-        balance = -employee_payments  # Negative for advances paid
-        return {"balance": balance}
-    
-    else:
-        return {"balance": 0}
+    """
+    Get complete ledger with all transactions
+    """
+    try:
+        organization_id = current_user.organization_id
+        return LedgerService.get_complete_ledger(db, organization_id, filters)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error generating complete ledger"
+        )
 
-@router.get("/vouchers/balance/{voucher_ref:path}")
-async def get_voucher_balance(
-    voucher_ref: str,
+@router.get("/outstanding", response_model=OutstandingLedgerResponse)
+def get_outstanding_ledger(
+    filters: LedgerFilters = Depends(),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
-    org_id = current_user.organization_id
-    
-    if voucher_ref.startswith('SV/'):  # Sales Voucher
-        voucher = db.query(SalesVoucher).filter(
-            SalesVoucher.voucher_number == voucher_ref,
-            SalesVoucher.organization_id == org_id
-        ).first()
-        
-        if not voucher:
-            return {"outstanding": 0}
-        
-        # Placeholder: assume no linked payments, outstanding = total_amount
-        # In full implementation, subtract sum of allocated receipts
-        outstanding = voucher.total_amount
-        return {"outstanding": outstanding}
-    
-    # Add similar for other voucher types like PV/ for Purchase
-    else:
-        return {"outstanding": 0}
+    """
+    Get outstanding ledger with balances
+    """
+    try:
+        organization_id = current_user.organization_id
+        return LedgerService.get_outstanding_ledger(db, organization_id, filters)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error generating outstanding ledger"
+        )
+
+@router.get("/chart-of-accounts", response_model=List[Dict[str, Any]])
+def get_chart_of_accounts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get chart of accounts (temporarily here; consider moving to chart_of_accounts.py if separate)
+    """
+    try:
+        organization_id = current_user.organization_id
+        return LedgerService.get_chart_of_accounts(db, organization_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching chart of accounts"
+        )
+
+@router.post("/chart-of-accounts/standard")
+def create_standard_chart_of_accounts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Create standard chart of accounts (temporarily here; consider moving to chart_of_accounts.py if separate)
+    """
+    try:
+        organization_id = current_user.organization_id
+        LedgerService.create_standard_chart_of_accounts(db, organization_id)
+        return {"message": "Standard chart of accounts created successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error creating standard chart of accounts"
+        )

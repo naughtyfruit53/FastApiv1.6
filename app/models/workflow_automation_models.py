@@ -92,17 +92,17 @@ class BusinessRule(Base):
     updated_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization", back_populates="business_rules"
+    organization: Mapped["Organization"] = relationship(
+        "Organization", back_populates="business_rules"
     )
-    company: Mapped[Optional["app.models.system_models.Company"]] = relationship(
-        "app.models.system_models.Company", back_populates="business_rules"
+    company: Mapped[Optional["Company"]] = relationship(
+        "Company", back_populates="business_rules"
     )
-    workflow_steps: Mapped[List["app.models.workflow_automation_models.AutomationWorkflowStep"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStep", back_populates="business_rule"
+    workflow_steps: Mapped[List["AutomationWorkflowStep"]] = relationship(
+        "AutomationWorkflowStep", back_populates="business_rule"
     )
-    rule_executions: Mapped[List["app.models.workflow_automation_models.BusinessRuleExecution"]] = relationship(
-        "app.models.workflow_automation_models.BusinessRuleExecution", back_populates="business_rule"
+    rule_executions: Mapped[List["BusinessRuleExecution"]] = relationship(
+        "BusinessRuleExecution", back_populates="business_rule"
     )
     
     __table_args__ = (
@@ -139,7 +139,7 @@ class WorkflowTemplateAdvanced(Base):
     
     # Workflow configuration
     parallel_execution: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    timeout_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Workflow timeout
+    timeout_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     retry_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     escalation_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
@@ -165,20 +165,20 @@ class WorkflowTemplateAdvanced(Base):
     updated_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization", back_populates="workflow_templates_advanced"
+    organization: Mapped["Organization"] = relationship(
+        "Organization", back_populates="workflow_templates_advanced"
     )
-    company: Mapped[Optional["app.models.system_models.Company"]] = relationship(
-        "app.models.system_models.Company", back_populates="workflow_templates_advanced"
+    company: Mapped[Optional["Company"]] = relationship(
+        "Company", back_populates="workflow_templates_advanced"
     )
-    workflow_steps: Mapped[List["app.models.workflow_automation_models.AutomationWorkflowStep"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStep", back_populates="workflow_template", cascade="all, delete-orphan"
+    workflow_steps: Mapped[List["AutomationWorkflowStep"]] = relationship(
+        "AutomationWorkflowStep", back_populates="workflow_template", cascade="all, delete-orphan"
     )
-    workflow_instances: Mapped[List["app.models.workflow_automation_models.AutomationWorkflowInstance"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowInstance", back_populates="workflow_template"
+    workflow_instances: Mapped[List["AutomationWorkflowInstance"]] = relationship(
+        "AutomationWorkflowInstance", back_populates="workflow_template"
     )
-    workflow_schedules: Mapped[List["app.models.workflow_automation_models.WorkflowSchedule"]] = relationship(
-        "app.models.workflow_automation_models.WorkflowSchedule", back_populates="workflow_template"
+    workflow_schedules: Mapped[List["WorkflowSchedule"]] = relationship(
+        "WorkflowSchedule", back_populates="workflow_template"
     )
     
     __table_args__ = (
@@ -240,20 +240,20 @@ class AutomationWorkflowStep(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now(), nullable=False)
 
     # Relationships
-    workflow_template: Mapped["app.models.workflow_automation_models.WorkflowTemplateAdvanced"] = relationship(
-        "app.models.workflow_automation_models.WorkflowTemplateAdvanced", back_populates="workflow_steps"
+    workflow_template: Mapped["WorkflowTemplateAdvanced"] = relationship(
+        "WorkflowTemplateAdvanced", back_populates="workflow_steps"
     )
-    business_rule: Mapped[Optional["app.models.workflow_automation_models.BusinessRule"]] = relationship(
-        "app.models.workflow_automation_models.BusinessRule", back_populates="workflow_steps"
+    business_rule: Mapped[Optional["BusinessRule"]] = relationship(
+        "BusinessRule", back_populates="workflow_steps"
     )
-    next_step: Mapped[Optional["app.models.workflow_automation_models.AutomationWorkflowStep"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStep", remote_side=[id], back_populates="previous_steps"
+    next_step: Mapped[Optional["AutomationWorkflowStep"]] = relationship(
+        "AutomationWorkflowStep", remote_side=[id], back_populates="previous_steps"
     )
-    previous_steps: Mapped[List["app.models.workflow_automation_models.AutomationWorkflowStep"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStep", back_populates="next_step"
+    previous_steps: Mapped[List["AutomationWorkflowStep"]] = relationship(
+        "AutomationWorkflowStep", back_populates="next_step"
     )
-    step_executions: Mapped[List["app.models.workflow_automation_models.AutomationWorkflowStepExecution"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStepExecution", back_populates="workflow_step"
+    step_executions: Mapped[List["AutomationWorkflowStepExecution"]] = relationship(
+        "AutomationWorkflowStepExecution", back_populates="workflow_step"
     )
     
     __table_args__ = (
@@ -310,23 +310,23 @@ class AutomationWorkflowInstance(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now(), nullable=False)
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization", back_populates="workflow_instances"
+    organization: Mapped["Organization"] = relationship(
+        "Organization", back_populates="workflow_instances"
     )
-    workflow_template: Mapped["app.models.workflow_automation_models.WorkflowTemplateAdvanced"] = relationship(
-        "app.models.workflow_automation_models.WorkflowTemplateAdvanced", back_populates="workflow_instances"
+    workflow_template: Mapped["WorkflowTemplateAdvanced"] = relationship(
+        "WorkflowTemplateAdvanced", back_populates="workflow_instances"
     )
-    current_step: Mapped[Optional["app.models.workflow_automation_models.AutomationWorkflowStep"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStep", foreign_keys=[current_step_id]
+    current_step: Mapped[Optional["AutomationWorkflowStep"]] = relationship(
+        "AutomationWorkflowStep", foreign_keys=[current_step_id]
     )
-    step_executions: Mapped[List["app.models.workflow_automation_models.AutomationWorkflowStepExecution"]] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStepExecution", back_populates="workflow_instance", cascade="all, delete-orphan"
+    step_executions: Mapped[List["AutomationWorkflowStepExecution"]] = relationship(
+        "AutomationWorkflowStepExecution", back_populates="workflow_instance", cascade="all, delete-orphan"
     )
-    initiator: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", foreign_keys=[initiated_by]
+    initiator: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[initiated_by]
     )
-    assignee: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", foreign_keys=[assigned_to]
+    assignee: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[assigned_to]
     )
     
     __table_args__ = (
@@ -376,20 +376,20 @@ class AutomationWorkflowStepExecution(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now(), nullable=False)
 
     # Relationships
-    workflow_instance: Mapped["app.models.workflow_automation_models.AutomationWorkflowInstance"] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowInstance", back_populates="step_executions"
+    workflow_instance: Mapped["AutomationWorkflowInstance"] = relationship(
+        "AutomationWorkflowInstance", back_populates="step_executions"
     )
-    workflow_step: Mapped["app.models.workflow_automation_models.AutomationWorkflowStep"] = relationship(
-        "app.models.workflow_automation_models.AutomationWorkflowStep", back_populates="step_executions"
+    workflow_step: Mapped["AutomationWorkflowStep"] = relationship(
+        "AutomationWorkflowStep", back_populates="step_executions"
     )
-    approver: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", foreign_keys=[approved_by]
+    approver: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[approved_by]
     )
-    assignee: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", foreign_keys=[assigned_to]
+    assignee: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[assigned_to]
     )
-    completer: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", foreign_keys=[completed_by]
+    completer: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[completed_by]
     )
     
     __table_args__ = (
@@ -430,11 +430,11 @@ class BusinessRuleExecution(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     # Relationships
-    business_rule: Mapped["app.models.workflow_automation_models.BusinessRule"] = relationship(
-        "app.models.workflow_automation_models.BusinessRule", back_populates="rule_executions"
+    business_rule: Mapped["BusinessRule"] = relationship(
+        "BusinessRule", back_populates="rule_executions"
     )
-    triggering_user: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", foreign_keys=[triggered_by_user]
+    triggering_user: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[triggered_by_user]
     )
     
     __table_args__ = (
@@ -483,14 +483,14 @@ class WorkflowSchedule(Base):
     created_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization", back_populates="workflow_schedules"
+    organization: Mapped["Organization"] = relationship(
+        "Organization", back_populates="workflow_schedules"
     )
-    workflow_template: Mapped["app.models.workflow_automation_models.WorkflowTemplateAdvanced"] = relationship(
-        "app.models.workflow_automation_models.WorkflowTemplateAdvanced", back_populates="workflow_schedules"
+    workflow_template: Mapped["WorkflowTemplateAdvanced"] = relationship(
+        "WorkflowTemplateAdvanced", back_populates="workflow_schedules"
     )
-    creator: Mapped[Optional["app.models.user_models.User"]] = relationship(
-        "app.models.user_models.User", foreign_keys=[created_by]
+    creator: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[created_by]
     )
     
     __table_args__ = (

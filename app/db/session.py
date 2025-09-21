@@ -296,3 +296,12 @@ def get_pool_status() -> dict:
             "status": "error",
             "message": str(e)
         }
+
+# FastAPI dependency for DB session
+def get_db() -> Generator[Session, None, None]:
+    """
+    FastAPI dependency that provides a database session.
+    Yields the session and ensures it's closed after use.
+    """
+    with session_manager.get_session() as session:
+        yield session

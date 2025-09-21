@@ -76,6 +76,9 @@ from app.api.v1 import transport as v1_transport
 # Import ledger router
 from app.api.v1 import ledger as v1_ledger
 
+# Import chart of accounts router
+from app.api.v1 import chart_of_accounts as v1_chart_of_accounts
+
 logger = logging.getLogger(__name__)
 
 # Log imports with try/except for error handling
@@ -159,7 +162,7 @@ except Exception as import_error:
     logger.error(f"Failed to import integration_settings_router: {str(import_error)}")
     raise
 
-# Add Business Suite Core Module routers
+# Add import for new business suite core modules
 try:
     from app.api.v1 import master_data as v1_master_data
     logger.info("Successfully imported master_data_router")
@@ -466,15 +469,7 @@ logger.info("Migration and Data Import router included successfully at prefix: /
 app.include_router(v1_integration_settings.router, prefix="/api/v1/integrations", tags=["integration-settings"])
 logger.info("Integration Settings router included successfully at prefix: /api/v1/integrations")
 
-# Sticky Notes API
-app.include_router(
-    v1_sticky_notes.router,
-    prefix="/api/v1/sticky_notes",
-    tags=["sticky-notes"]
-)
-logger.info("Sticky notes router included successfully at prefix: /api/v1/sticky_notes")
-
-# Include Business Suite Core Module routers
+# Add import for new business suite core modules
 app.include_router(v1_master_data.router, prefix="/api/v1/master-data", tags=["master-data"])
 logger.info("Master Data router included successfully at prefix: /api/v1/master-data")
 
@@ -499,6 +494,10 @@ from app.api.v1 import oauth as v1_oauth
 # Ledger API
 app.include_router(v1_ledger.router, prefix="/api/v1", tags=["ledger"])
 logger.info("Ledger router included successfully at prefix: /api/v1")
+
+# Chart of Accounts API
+app.include_router(v1_chart_of_accounts.router, prefix="/api/v1", tags=["chart-of-accounts"])
+logger.info("Chart of Accounts router included successfully at prefix: /api/v1")
 
 @app.get("/routes")
 def get_routes():

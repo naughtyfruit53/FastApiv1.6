@@ -78,3 +78,25 @@ class LedgerSummary(BaseModel):
     total_transactions: int = Field(..., description="Total number of transactions")
     date_range: dict = Field(..., description="Date range of transactions")
     currency: str = Field(default="INR", description="Currency code")
+
+
+class ChartOfAccountsSchema(BaseModel):
+    """Schema for ChartOfAccounts model"""
+    id: int
+    organization_id: int
+    account_code: str
+    account_name: str
+    account_type: str
+    is_group: bool
+    opening_balance: Decimal
+    current_balance: Decimal
+    is_reconcilable: bool
+    parent_account_id: Optional[int] = None
+    level: int = 0
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True

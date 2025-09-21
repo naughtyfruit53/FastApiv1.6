@@ -1,0 +1,253 @@
+# app/api/v1/chart_of_accounts.py
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from typing import List
+from datetime import datetime
+from decimal import Decimal
+import logging
+
+from app.db.session import get_db
+from app.api.v1.auth import get_current_active_user
+from app.core.org_restrictions import require_current_organization_id
+from app.models.user_models import User
+from app.models.erp_models import ChartOfAccounts
+from app.schemas.master_data import (
+    ChartOfAccountsCreate, ChartOfAccountsUpdate, ChartOfAccountsResponse, ChartOfAccountsList, ChartOfAccountsFilter
+)
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+
+@router.get("/chart-of-accounts", response_model=ChartOfAccountsList)
+async def get_chart_of_accounts(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=1000),
+    coa_filter: ChartOfAccountsFilter = Depends(),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get chart of accounts with filtering and pagination"""
+    try:
+        query = db.query(ChartOfAccounts).filter(ChartOfAccounts.organization_id == organization_id)
+        
+        # Apply filters
+        if coa_filter.account_type:
+            query = query.filter(ChartOfAccounts.account_type == coa_filter.account_type)
+        
+        if coa_filter.parent_account_id is not None:
+            query = query.filter(ChartOfAccounts.parent_account_id == coa_filter.parent_account_id)
+        
+        if coa_filter.is_group is not None:
+            query = query.filter(ChartOfAccounts.is_group == coa_filter.is_group)
+        
+        if coa_filter.is_active is not None:
+            query = query.filter(ChartOfAccounts.is_active == coa_filter.is_active)
+        
+        if coa_filter.search:
+            search_term = f"%{coa_filter.search}%"
+            query = query.filter(
+                or_(
+                    ChartOfAccounts.account_name.ilike(search_term),
+                    ChartOfAccounts.account_code.ilike(search_term),
+                    ChartOfAccounts.description.ilike(search_term)
+                )
+            )
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination and ordering
+        accounts = query.order_by(ChartOfAccounts.account_code).offset((page-1)*per_page).limit(per_page).all()
+        
+        return ChartOfAccountsList(
+            items=accounts,
+            total=total,
+            page=page,
+            size=per_page,
+            pages=(total + per_page - 1) // per_page
+        )
+        
+    except Exception as e:
+        logger.error(f"Error fetching chart of accounts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch chart of accounts")
+
+
+@router.post("/chart-of-accounts", response_model=ChartOfAccountsResponse)
+async def create_chart_of_account(
+    coa_data: ChartOfAccountsCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Create a new chart of account"""
+    try:
+        # Check for duplicate code
+        existing = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.organization_id == organization_id,
+            ChartOfAccounts.account_code == coa_data.account_code
+        ).first()
+        
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Account with code '{coa_data.account_code}' already exists"
+            )
+        
+        # Validate parent account if specified
+        level = 0
+        if coa_data.parent_account_id:
+            parent = db.query(ChartOfAccounts).filter(
+                ChartOfAccounts.id == coa_data.parent_account_id,
+                ChartOfAccounts.organization_id == organization_id
+            ).first()
+            
+            if not parent:
+                raise HTTPException(status_code=404, detail="Parent account not found")
+            
+            level = parent.level + 1
+        
+        # Create account
+        account = ChartOfAccounts(
+            organization_id=organization_id,
+            account_code=coa_data.account_code,
+            account_name=coa_data.account_name,
+            account_type=coa_data.account_type,
+            parent_account_id=coa_data.parent_account_id,
+            level=level,
+            is_group=coa_data.is_group,
+            opening_balance=coa_data.opening_balance,
+            current_balance=coa_data.opening_balance,
+            is_reconcilable=coa_data.is_reconcilable,
+            description=coa_data.description,
+            notes=coa_data.notes,
+            created_by=current_user.id
+        )
+        
+        db.add(account)
+        db.commit()
+        db.refresh(account)
+        
+        logger.info(f"Account created: {account.account_name} (ID: {account.id})")
+        return account
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating account: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create account")
+
+
+@router.get("/chart-of-accounts/{account_id}", response_model=ChartOfAccountsResponse)
+async def get_chart_of_account(
+    account_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get a specific chart of account"""
+    account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == account_id,
+        ChartOfAccounts.organization_id == organization_id
+    ).first()
+    
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    return account
+
+
+@router.put("/chart-of-accounts/{account_id}", response_model=ChartOfAccountsResponse)
+async def update_chart_of_account(
+    account_id: int,
+    coa_data: ChartOfAccountsUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Update a chart of account"""
+    try:
+        account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == account_id,
+            ChartOfAccounts.organization_id == organization_id
+        ).first()
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        # Check for duplicate code if being updated
+        if coa_data.account_code and coa_data.account_code != account.account_code:
+            existing = db.query(ChartOfAccounts).filter(
+                ChartOfAccounts.organization_id == organization_id,
+                ChartOfAccounts.account_code == coa_data.account_code,
+                ChartOfAccounts.id != account_id
+            ).first()
+            
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Account with code '{coa_data.account_code}' already exists"
+                )
+        
+        # Update fields
+        update_fields = coa_data.dict(exclude_unset=True)
+        for field, value in update_fields.items():
+            setattr(account, field, value)
+        
+        account.updated_by = current_user.id
+        
+        db.commit()
+        db.refresh(account)
+        
+        logger.info(f"Account updated: {account.account_name} (ID: {account.id})")
+        return account
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating account: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update account")
+
+
+@router.delete("/chart-of-accounts/{account_id}")
+async def delete_chart_of_account(
+    account_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Delete a chart of account"""
+    try:
+        account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == account_id,
+            ChartOfAccounts.organization_id == organization_id
+        ).first()
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        # Check for sub-accounts
+        sub_accounts = db.query(ChartOfAccounts).filter(ChartOfAccounts.parent_account_id == account_id).count()
+        if sub_accounts > 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete account with sub-accounts"
+            )
+        
+        db.delete(account)
+        db.commit()
+        
+        logger.info(f"Account deleted: {account.account_name} (ID: {account.id})")
+        return {"message": "Account deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting account: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account")

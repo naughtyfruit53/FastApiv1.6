@@ -4,15 +4,20 @@
 Organization data access restrictions for app-level super admins
 """
 
-from fastapi import HTTPException, status
-from typing import Union, Optional
-from app.schemas.user import UserInDB, PlatformUserInDB, CurrentUser
+from fastapi import HTTPException, status, Depends
+from typing import Union
+from app.schemas.user import CurrentUser
+from app.core.tenant import TenantContext
+from app.core.database import get_db
+from app.core.tenant import validate_company_setup_for_operations
+from sqlalchemy.orm import Session
 import logging
+from app.api.v1.auth import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
 
-def require_organization_access(current_user: CurrentUser) -> None:
+def require_organization_access(current_user: CurrentUser = Depends(get_current_active_user)) -> None:
     """
     Ensure that app super admins cannot access organization-specific data.
     App super admins should only have access to app-level features like license management.
@@ -35,7 +40,7 @@ def require_organization_access(current_user: CurrentUser) -> None:
     logger.debug(f"[require_organization_access] Organization access allowed for user {current_user.id} (org_id: {organization_id})")
 
 
-def ensure_organization_context(current_user: CurrentUser) -> Optional[int]:
+def ensure_organization_context(current_user: CurrentUser = Depends(get_current_active_user)) -> Union[int, None]:
     """
     Ensure user has an organization context and is not an app super admin.
     
@@ -55,7 +60,7 @@ def ensure_organization_context(current_user: CurrentUser) -> Optional[int]:
     return require_current_organization_id(current_user)
 
 
-def require_current_organization_id(current_user: CurrentUser) -> int:
+def require_current_organization_id(current_user: CurrentUser = Depends(get_current_active_user)) -> int:
     """
     Require organization ID for users who need organization context.
     
@@ -73,19 +78,29 @@ def require_current_organization_id(current_user: CurrentUser) -> int:
     """
     logger.info(f"[require_current_organization_id] Checking requirement for user {current_user.id} ({current_user.email})")
     
-    organization_id = getattr(current_user, 'organization_id', None)
-    if organization_id is None:
-        logger.error(f"[require_current_organization_id] User {current_user.id} has no organization_id")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint requires an organization context"
-        )
+    if current_user.is_super_admin:
+        org_id = TenantContext.get_organization_id()
+        if org_id is None:
+            logger.error(f"[require_current_organization_id] Super admin {current_user.id} has no organization context")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Super administrators must specify an organization context for this operation"
+            )
+        return org_id
+    else:
+        organization_id = getattr(current_user, 'organization_id', None)
+        if organization_id is None:
+            logger.error(f"[require_current_organization_id] User {current_user.id} has no organization_id")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This endpoint requires an organization context"
+            )
     
     logger.info(f"[require_current_organization_id] Organization context required and found: org_id={organization_id}")
     return organization_id
 
 
-def can_access_organization_data(user: CurrentUser) -> bool:
+def can_access_organization_data(user: CurrentUser = Depends(get_current_active_user)) -> bool:
     """
     Check if user can access organization-specific business data.
     
@@ -97,3 +112,9 @@ def can_access_organization_data(user: CurrentUser) -> bool:
     """
     organization_id = getattr(user, 'organization_id', None)
     return organization_id is not None
+
+def validate_company_setup(db: Session = Depends(get_db), organization_id: int = Depends(require_current_organization_id)) -> None:
+    """
+    Dependency to validate company setup.
+    """
+    validate_company_setup_for_operations(db, organization_id)

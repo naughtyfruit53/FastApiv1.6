@@ -27,6 +27,9 @@ from .license_routes import license_router
 from app.services.otp_service import OTPService
 from app.schemas.reset import OTPRequest, OTPVerify
 
+# Import the seeding function
+from app.scripts.seed_finance_data import create_standard_chart_of_accounts
+
 router = APIRouter(tags=["organizations"])
 
 router.include_router(user_router)
@@ -203,6 +206,10 @@ async def create_organization(
         db.add(new_org)
         db.commit()
         db.refresh(new_org)
+        
+        # Seed standard chart of accounts for the new organization
+        create_standard_chart_of_accounts(db, new_org.id)
+        
         return new_org
     except HTTPException:
         raise

@@ -19,12 +19,16 @@ import {
 } from "@mui/icons-material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyService } from "../services/authService";
+
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 interface CompanyLogoUploadProps {
   companyId: number;
   currentLogoPath?: string | null;
   disabled?: boolean;
   onLogoChange?: (_logoPath: string | null) => void;
 }
+
 const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
   companyId,
   currentLogoPath,
@@ -34,7 +38,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(
-    currentLogoPath || null,
+    currentLogoPath ? `${API_URL}${currentLogoPath}` : null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -43,7 +47,7 @@ const CompanyLogoUpload: React.FC<CompanyLogoUploadProps> = ({
     mutationFn: (file: File) => companyService.uploadLogo(companyId, file),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["company"] });
-      setPreviewUrl(companyService.getLogoUrl(companyId));
+      setPreviewUrl(`${API_URL}${data.logo_path}`);
       setUploadError(null);
       if (onLogoChange) {
         onLogoChange(data.logo_path);

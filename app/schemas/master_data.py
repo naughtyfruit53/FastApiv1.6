@@ -368,3 +368,72 @@ class MasterDataStats(BaseModel):
 # Update forward references
 CategoryResponse.model_rebuild()
 UnitResponse.model_rebuild()
+
+# Chart of Accounts Schemas
+class AccountTypeEnum(str, Enum):
+    """Account types for Chart of Accounts"""
+    ASSET = "asset"
+    LIABILITY = "liability"
+    EQUITY = "equity"
+    INCOME = "income"
+    EXPENSE = "expense"
+    BANK = "bank"
+    CASH = "cash"
+
+
+class ChartOfAccountsBase(BaseModel):
+    account_code: str = Field(..., max_length=50, description="Account code")
+    account_name: str = Field(..., max_length=200, description="Account name")
+    account_type: AccountTypeEnum = Field(..., description="Account type")
+    parent_account_id: Optional[int] = Field(None, description="Parent account ID")
+    is_group: bool = Field(False, description="Is group account")
+    opening_balance: Decimal = Field(Decimal("0.00"), description="Opening balance")
+    is_reconcilable: bool = Field(False, description="Is reconcilable")
+    description: Optional[str] = Field(None, description="Account description")
+    notes: Optional[str] = Field(None, description="Account notes")
+    is_active: bool = Field(True, description="Is active")
+
+
+class ChartOfAccountsCreate(ChartOfAccountsBase):
+    pass
+
+
+class ChartOfAccountsUpdate(BaseModel):
+    account_code: Optional[str] = Field(None, max_length=50)
+    account_name: Optional[str] = Field(None, max_length=200)
+    account_type: Optional[AccountTypeEnum] = None
+    parent_account_id: Optional[int] = None
+    is_group: Optional[bool] = None
+    opening_balance: Optional[Decimal] = None
+    is_reconcilable: Optional[bool] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ChartOfAccountsResponse(ChartOfAccountsBase):
+    id: int
+    organization_id: int
+    level: int
+    current_balance: Decimal
+    created_at: datetime
+    updated_at: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+
+class ChartOfAccountsList(BaseModel):
+    items: List[ChartOfAccountsResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+
+class ChartOfAccountsFilter(BaseModel):
+    account_type: Optional[AccountTypeEnum] = None
+    parent_account_id: Optional[int] = None
+    is_group: Optional[bool] = None
+    is_active: Optional[bool] = None
+    search: Optional[str] = None

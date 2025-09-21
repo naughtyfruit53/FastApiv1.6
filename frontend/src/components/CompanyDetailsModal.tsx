@@ -217,317 +217,319 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      disableEscapeKeyDown={isRequired && !success}
-    >
-      <DialogTitle>
-        {isRequired
-          ? "Complete Company Information"
-          : mode === "edit"
-            ? "Edit Company Details"
-            : "Company Details"}
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 2 }}>
-          {isRequired && !success && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Please complete your company information to continue using the
-              system.
-            </Alert>
-          )}
+    <>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+        disableEscapeKeyDown={isRequired && !success}
+      >
+        <DialogTitle>
+          {isRequired
+            ? "Complete Company Information"
+            : mode === "edit"
+              ? "Edit Company Details"
+              : "Company Details"}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            {isRequired && !success && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Please complete your company information to continue using the
+                system.
+              </Alert>
+            )}
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
 
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Company details created successfully!
-              {isRequired && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  You can now access all features of the system.
+            {success && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Company details created successfully!
+                {isRequired && (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    You can now access all features of the system.
+                  </Typography>
+                )}
+              </Alert>
+            )}
+
+            {showBankAccountPrompt && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Set up Bank Account
                 </Typography>
-              )}
-            </Alert>
-          )}
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  No bank accounts found for your company. Would you like to add a bank account now? This will help with voucher generation and financial tracking.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button 
+                    variant="contained" 
+                    size="small" 
+                    onClick={handleBankAccountPromptYes}
+                  >
+                    Yes, Add Bank Account
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    onClick={handleBankAccountPromptNo}
+                  >
+                    Skip for Now
+                  </Button>
+                </Box>
+              </Alert>
+            )}
 
-          {showBankAccountPrompt && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Set up Bank Account
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                No bank accounts found for your company. Would you like to add a bank account now? This will help with voucher generation and financial tracking.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button 
-                  variant="contained" 
-                  size="small" 
-                  onClick={handleBankAccountPromptYes}
-                >
-                  Yes, Add Bank Account
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  size="small" 
-                  onClick={handleBankAccountPromptNo}
-                >
-                  Skip for Now
-                </Button>
-              </Box>
-            </Alert>
-          )}
-
-          {!success && (
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    label="Company Name"
-                    {...register("name", {
-                      required: "Company name is required",
-                    })}
-                    error={!!errors.name || !!fieldErrors.name}
-                    helperText={errors.name?.message || fieldErrors.name}
-                    disabled={loading}
-                  />
-                </Grid>
-
-                {/* Company Logo Upload */}
-                {mode === "edit" && companyData?.id && (
-                  <Grid size={{ xs: 12 }}>
-                    <Divider sx={{ my: 2 }} />
-                    <CompanyLogoUpload
-                      companyId={companyData.id}
-                      currentLogoPath={companyData.logo_path}
+            {!success && (
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Company Name"
+                      {...register("name", {
+                        required: "Company name is required",
+                      })}
+                      error={!!errors.name || !!fieldErrors.name}
+                      helperText={errors.name?.message || fieldErrors.name}
                       disabled={loading}
                     />
-                    <Divider sx={{ my: 2 }} />
                   </Grid>
-                )}
 
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    label="Address Line 1"
-                    {...register("address1", {
-                      required: "Address is required",
-                    })}
-                    error={!!errors.address1 || !!fieldErrors.address1}
-                    helperText={
-                      errors.address1?.message || fieldErrors.address1
-                    }
-                    disabled={loading}
-                  />
-                </Grid>
+                  {/* Company Logo Upload */}
+                  {mode === "edit" && companyData?.id && (
+                    <Grid item xs={12}>
+                      <Divider sx={{ my: 2 }} />
+                      <CompanyLogoUpload
+                        companyId={companyData.id}
+                        currentLogoPath={companyData.logo_path}
+                        disabled={loading}
+                      />
+                      <Divider sx={{ my: 2 }} />
+                    </Grid>
+                  )}
 
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    label="Address Line 2"
-                    {...register("address2")}
-                    error={!!fieldErrors.address2}
-                    helperText={fieldErrors.address2}
-                    disabled={loading}
-                  />
-                </Grid>
-
-                {/* PIN Code moved to be first after address lines */}
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField
-                    fullWidth
-                    label="Pin Code"
-                    {...register("pin_code", {
-                      required: "Pin code is required",
-                      pattern: {
-                        value: /^\d{6}$/,
-                        message: "Pin code must be 6 digits",
-                      },
-                    })}
-                    error={!!errors.pin_code || !!fieldErrors.pin_code}
-                    helperText={
-                      errors.pin_code?.message ||
-                      fieldErrors.pin_code ||
-                      (pincodeError && pincodeError)
-                    }
-                    disabled={loading}
-                    InputProps={{
-                      endAdornment: pincodeLoading ? (
-                        <InputAdornment position="end">
-                          <CircularProgress size={16} />
-                        </InputAdornment>
-                      ) : null,
-                    }}
-                  />
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField
-                    fullWidth
-                    label="City"
-                    {...register("city", { required: "City is required" })}
-                    error={!!errors.city || !!fieldErrors.city}
-                    helperText={errors.city?.message || fieldErrors.city}
-                    disabled={loading || !!pincodeData}
-                    InputProps={{
-                      readOnly: !!pincodeData,
-                    }}
-                    InputLabelProps={{
-                      shrink: !!watch("city") || !!pincodeData, // Force label shrink if value exists or auto-populated
-                    }}
-                  />
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField
-                    fullWidth
-                    label="State"
-                    {...register("state", { required: "State is required" })}
-                    error={!!errors.state || !!fieldErrors.state}
-                    helperText={errors.state?.message || fieldErrors.state}
-                    disabled={loading || !!pincodeData}
-                    InputProps={{
-                      readOnly: !!pincodeData,
-                    }}
-                    InputLabelProps={{
-                      shrink: !!watch("state") || !!pincodeData, // Force label shrink if value exists or auto-populated
-                    }}
-                  />
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="State Code"
-                    {...register("state_code", {
-                      required: "State code is required",
-                      pattern: {
-                        value: /^\d{2}$/,
-                        message: "State code must be 2 digits",
-                      },
-                    })}
-                    error={!!errors.state_code || !!fieldErrors.state_code}
-                    helperText={
-                      errors.state_code?.message || fieldErrors.state_code
-                    }
-                    disabled={loading || !!pincodeData}
-                    InputProps={{
-                      readOnly: !!pincodeData,
-                    }}
-                    InputLabelProps={{
-                      shrink: !!watch("state_code") || !!pincodeData, // Force label shrink if value exists or auto-populated
-                    }}
-                  />
-                </Grid>
-
-                {/* Removed Alert for pincode auto-population as per request */}
-
-                {pincodeError && (
-                  <Grid size={{ xs: 12 }}>
-                    <Alert severity="warning" sx={{ mt: 1 }}>
-                      {pincodeError}
-                    </Alert>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Address Line 1"
+                      {...register("address1", {
+                        required: "Address is required",
+                      })}
+                      error={!!errors.address1 || !!fieldErrors.address1}
+                      helperText={
+                        errors.address1?.message || fieldErrors.address1
+                      }
+                      disabled={loading}
+                    />
                   </Grid>
-                )}
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="GST Number"
-                    {...register("gst_number")}
-                    error={!!fieldErrors.gst_number}
-                    helperText={fieldErrors.gst_number}
-                    disabled={loading}
-                  />
-                </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Address Line 2"
+                      {...register("address2")}
+                      error={!!fieldErrors.address2}
+                      helperText={fieldErrors.address2}
+                      disabled={loading}
+                    />
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="PAN Number"
-                    {...register("pan_number")}
-                    error={!!fieldErrors.pan_number}
-                    helperText={fieldErrors.pan_number}
-                    disabled={loading}
-                  />
-                </Grid>
+                  {/* PIN Code moved to be first after address lines */}
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="Pin Code"
+                      {...register("pin_code", {
+                        required: "Pin code is required",
+                        pattern: {
+                          value: /^\d{6}$/,
+                          message: "Pin code must be 6 digits",
+                        },
+                      })}
+                      error={!!errors.pin_code || !!fieldErrors.pin_code}
+                      helperText={
+                        errors.pin_code?.message ||
+                        fieldErrors.pin_code ||
+                        (pincodeError && pincodeError)
+                      }
+                      disabled={loading}
+                      InputProps={{
+                        endAdornment: pincodeLoading ? (
+                          <InputAdornment position="end">
+                            <CircularProgress size={16} />
+                          </InputAdornment>
+                        ) : null,
+                      }}
+                    />
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Contact Number"
-                    {...register("contact_number", {
-                      required: "Contact number is required",
-                    })}
-                    error={
-                      !!errors.contact_number || !!fieldErrors.contact_number
-                    }
-                    helperText={
-                      errors.contact_number?.message ||
-                      fieldErrors.contact_number
-                    }
-                    disabled={loading}
-                  />
-                </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="City"
+                      {...register("city", { required: "City is required" })}
+                      error={!!errors.city || !!fieldErrors.city}
+                      helperText={errors.city?.message || fieldErrors.city}
+                      disabled={loading || !!pincodeData}
+                      InputProps={{
+                        readOnly: !!pincodeData,
+                      }}
+                      InputLabelProps={{
+                        shrink: !!watch("city") || !!pincodeData, // Force label shrink if value exists or auto-populated
+                      }}
+                    />
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    type="email"
-                    {...register("email", {
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: "Invalid email address",
-                      },
-                    })}
-                    error={!!errors.email || !!fieldErrors.email}
-                    helperText={errors.email?.message || fieldErrors.email}
-                    disabled={loading}
-                  />
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="State"
+                      {...register("state", { required: "State is required" })}
+                      error={!!errors.state || !!fieldErrors.state}
+                      helperText={errors.state?.message || fieldErrors.state}
+                      disabled={loading || !!pincodeData}
+                      InputProps={{
+                        readOnly: !!pincodeData,
+                      }}
+                      InputLabelProps={{
+                        shrink: !!watch("state") || !!pincodeData, // Force label shrink if value exists or auto-populated
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="State Code"
+                      {...register("state_code", {
+                        required: "State code is required",
+                        pattern: {
+                          value: /^\d{2}$/,
+                          message: "State code must be 2 digits",
+                        },
+                      })}
+                      error={!!errors.state_code || !!fieldErrors.state_code}
+                      helperText={
+                        errors.state_code?.message || fieldErrors.state_code
+                      }
+                      disabled={loading || !!pincodeData}
+                      InputProps={{
+                        readOnly: !!pincodeData,
+                      }}
+                      InputLabelProps={{
+                        shrink: !!watch("state_code") || !!pincodeData, // Force label shrink if value exists or auto-populated
+                      }}
+                    />
+                  </Grid>
+
+                  {/* Removed Alert for pincode auto-population as per request */}
+
+                  {pincodeError && (
+                    <Grid item xs={12}>
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        {pincodeError}
+                      </Alert>
+                    </Grid>
+                  )}
+
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="GST Number"
+                      {...register("gst_number")}
+                      error={!!fieldErrors.gst_number}
+                      helperText={fieldErrors.gst_number}
+                      disabled={loading}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="PAN Number"
+                      {...register("pan_number")}
+                      error={!!fieldErrors.pan_number}
+                      helperText={fieldErrors.pan_number}
+                      disabled={loading}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Contact Number"
+                      {...register("contact_number", {
+                        required: "Contact number is required",
+                      })}
+                      error={
+                        !!errors.contact_number || !!fieldErrors.contact_number
+                      }
+                      helperText={
+                        errors.contact_number?.message ||
+                        fieldErrors.contact_number
+                      }
+                      disabled={loading}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      type="email"
+                      {...register("email", {
+                        pattern: {
+                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                          message: "Invalid email address",
+                        },
+                      })}
+                      error={!!errors.email || !!fieldErrors.email}
+                      helperText={errors.email?.message || fieldErrors.email}
+                      disabled={loading}
+                    />
+                  </Grid>
                 </Grid>
-              </Grid>
-            </form>
+              </form>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          {!isRequired && (
+            <Button onClick={handleClose} disabled={loading}>
+              Cancel
+            </Button>
           )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        {!isRequired && (
-          <Button onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-        )}
-        {success && isRequired && (
-          <Button onClick={handleClose} variant="contained">
-            Continue
-          </Button>
-        )}
-        {!success && (
-          <Button
-            onClick={handleSubmit(onSubmit)}
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : null}
-          >
-            Save Company Details
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
-    
-    {/* Bank Account Modal */}
-    <BankAccountModal
-      open={bankAccountModalOpen}
-      onClose={() => setBankAccountModalOpen(false)}
-      onSuccess={handleBankAccountSuccess}
-    />
+          {success && isRequired && (
+            <Button onClick={handleClose} variant="contained">
+              Continue
+            </Button>
+          )}
+          {!success && (
+            <Button
+              onClick={handleSubmit(onSubmit)}
+              variant="contained"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} /> : null}
+            >
+              Save Company Details
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+      
+      {/* Bank Account Modal */}
+      <BankAccountModal
+        open={bankAccountModalOpen}
+        onClose={() => setBankAccountModalOpen(false)}
+        onSuccess={handleBankAccountSuccess}
+      />
+    </>
   );
 };
 

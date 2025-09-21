@@ -173,6 +173,11 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
                 ))}
               </Select>
             </FormControl>
+            {chartAccounts.length === 0 && (
+              <Alert severity="info" sx={{ mt: 1 }}>
+                No bank chart accounts found. Please create a bank-type chart account first in the Chart of Accounts section.
+              </Alert>
+            )}
           </Grid>
           
           <Grid item xs={12} sm={6}>
