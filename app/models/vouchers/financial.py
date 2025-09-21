@@ -71,11 +71,16 @@ class PaymentVoucher(BaseVoucher):
     payment_method = Column(String)
     reference = Column(String)
     bank_account = Column(String)
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    
+    # Relationships
+    chart_account = relationship("app.models.erp_models.ChartOfAccounts")
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'voucher_number', name='uq_pv_payment_org_voucher_number'),
         Index('idx_pv_payment_org_entity', 'organization_id', 'entity_id'),
         Index('idx_pv_payment_org_date', 'organization_id', 'date'),
+        Index('idx_pv_payment_chart_account', 'chart_account_id'),
     )
 
 # Receipt Voucher
@@ -87,12 +92,17 @@ class ReceiptVoucher(BaseVoucher):
     receipt_method = Column(String)
     reference = Column(String)
     bank_account = Column(String)
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    
+    # Relationships
+    chart_account = relationship("app.models.erp_models.ChartOfAccounts")
     
     __table_args__ = (
         # Unique voucher number per organization
         UniqueConstraint('organization_id', 'voucher_number', name='uq_rv_org_voucher_number'),
         Index('idx_rv_org_entity', 'organization_id', 'entity_id'),
         Index('idx_rv_org_date', 'organization_id', 'date'),
+        Index('idx_rv_chart_account', 'chart_account_id'),
     )
 
 # Contra Voucher
@@ -101,12 +111,17 @@ class ContraVoucher(BaseVoucher):
     
     from_account = Column(String, nullable=False)
     to_account = Column(String, nullable=False)
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    
+    # Relationships
+    chart_account = relationship("app.models.erp_models.ChartOfAccounts")
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'voucher_number', name='uq_contra_org_voucher_number'),
         Index('idx_contra_org_from_account', 'organization_id', 'from_account'),
         Index('idx_contra_org_to_account', 'organization_id', 'to_account'),
         Index('idx_contra_org_date', 'organization_id', 'date'),
+        Index('idx_contra_chart_account', 'chart_account_id'),
     )
 
 # Journal Voucher
@@ -114,10 +129,15 @@ class JournalVoucher(BaseVoucher):
     __tablename__ = "journal_vouchers"
     
     entries = Column(Text, nullable=False)  # JSON string for entries
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    
+    # Relationships
+    chart_account = relationship("app.models.erp_models.ChartOfAccounts")
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'voucher_number', name='uq_journal_org_voucher_number'),
         Index('idx_journal_org_date', 'organization_id', 'date'),
+        Index('idx_journal_chart_account', 'chart_account_id'),
     )
 
 # Inter Department Voucher

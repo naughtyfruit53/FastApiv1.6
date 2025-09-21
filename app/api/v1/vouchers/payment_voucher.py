@@ -9,6 +9,7 @@ from app.models import User
 from app.models.vouchers.financial import PaymentVoucher
 from app.models.customer_models import Vendor, Customer  # Vendor and Customer are in customer_models.py
 from app.models.hr_models import EmployeeProfile as Employee  # Employee is EmployeeProfile in hr_models.py
+from app.models.erp_models import ChartOfAccounts
 from app.schemas.vouchers import PaymentVoucherCreate, PaymentVoucherInDB, PaymentVoucherUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -28,6 +29,22 @@ def load_entity(db: Session, entity_id: int, entity_type: str) -> Optional[Dict[
         entity = db.query(Employee).filter(Employee.id == entity_id).first()
         return {'id': entity.id, 'name': entity.name, 'type': 'Employee'} if entity else None
     return None
+
+def validate_chart_account(db: Session, chart_account_id: int, organization_id: int) -> ChartOfAccounts:
+    """Validate that chart_account_id exists and belongs to organization"""
+    chart_account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == chart_account_id,
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.is_active == True
+    ).first()
+    
+    if not chart_account:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid chart account ID or account not found for this organization"
+        )
+    
+    return chart_account
 
 @router.get("", response_model=List[PaymentVoucherInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[PaymentVoucherInDB])
@@ -62,6 +79,11 @@ async def get_payment_vouchers(
     vouchers = query.offset(skip).limit(limit).all()
     for voucher in vouchers:
         voucher.entity = load_entity(db, voucher.entity_id, voucher.entity_type)
+        # Load chart account details
+        chart_account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == voucher.chart_account_id
+        ).first()
+        voucher.chart_account = chart_account
     return vouchers
 
 @router.get("/next-number", response_model=str)
@@ -88,6 +110,10 @@ async def create_payment_voucher(
     try:
         if voucher.entity_type not in ['Vendor', 'Customer', 'Employee']:
             raise HTTPException(status_code=400, detail="Invalid entity_type")
+        
+        # Validate chart account
+        chart_account = validate_chart_account(db, voucher.chart_account_id, current_user.organization_id)
+        
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
         voucher_data['organization_id'] = current_user.organization_id
@@ -112,7 +138,9 @@ async def create_payment_voucher(
         db.commit()
         db.refresh(db_voucher)
         
+        # Load entity and chart account details
         db_voucher.entity = load_entity(db, db_voucher.entity_id, db_voucher.entity_type)
+        db_voucher.chart_account = chart_account
         
         if send_email and db_voucher.entity and 'email' in db_voucher.entity:  # Assuming entity has email, but for simplicity
             background_tasks.add_task(
@@ -140,7 +168,9 @@ async def get_payment_voucher(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    voucher = db.query(PaymentVoucher).filter(
+    voucher = db.query(PaymentVoucher).options(
+        db.query(PaymentVoucher).join(ChartOfAccounts)
+    ).filter(
         PaymentVoucher.id == voucher_id,
         PaymentVoucher.organization_id == current_user.organization_id
     ).first()
@@ -150,6 +180,13 @@ async def get_payment_voucher(
             detail="Payment voucher not found"
         )
     voucher.entity = load_entity(db, voucher.entity_id, voucher.entity_type)
+    
+    # Load chart account details
+    chart_account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == voucher.chart_account_id
+    ).first()
+    voucher.chart_account = chart_account
+    
     return voucher
 
 @router.put("/{voucher_id}", response_model=PaymentVoucherInDB)
@@ -173,6 +210,11 @@ async def update_payment_voucher(
         update_data = voucher_update.dict(exclude_unset=True)
         if 'entity_type' in update_data and update_data['entity_type'] not in ['Vendor', 'Customer', 'Employee']:
             raise HTTPException(status_code=400, detail="Invalid entity_type")
+        
+        # Validate chart account if being updated
+        if 'chart_account_id' in update_data:
+            validate_chart_account(db, update_data['chart_account_id'], current_user.organization_id)
+        
         for field, value in update_data.items():
             setattr(voucher, field, value)
         
@@ -180,6 +222,12 @@ async def update_payment_voucher(
         db.refresh(voucher)
         
         voucher.entity = load_entity(db, voucher.entity_id, voucher.entity_type)
+        
+        # Load chart account details
+        chart_account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == voucher.chart_account_id
+        ).first()
+        voucher.chart_account = chart_account
         
         logger.info(f"Payment voucher {voucher.voucher_number} updated by {current_user.email}")
         return voucher

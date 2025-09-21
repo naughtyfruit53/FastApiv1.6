@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import ReceiptVoucher
+from app.models.erp_models import ChartOfAccounts
 from app.schemas.vouchers import ReceiptVoucherCreate, ReceiptVoucherInDB, ReceiptVoucherUpdate
 from app.services.email_service import send_voucher_email
 import logging
@@ -42,6 +43,22 @@ def add_entity_name(voucher, db: Session):
     else:
         voucher.entity = {'name': 'N/A', 'email': None}
     return voucher
+
+def validate_chart_account(db: Session, chart_account_id: int, organization_id: int) -> ChartOfAccounts:
+    """Validate that chart_account_id exists and belongs to organization"""
+    chart_account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == chart_account_id,
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.is_active == True
+    ).first()
+    
+    if not chart_account:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid chart account ID or account not found for this organization"
+        )
+    
+    return chart_account
 
 @router.get("", response_model=List[ReceiptVoucherInDB])
 async def get_receipt_vouchers(
@@ -110,6 +127,9 @@ async def create_receipt_voucher(
     current_user: User = Depends(get_current_active_user)
 ):
     try:
+        # Validate chart account
+        chart_account = validate_chart_account(db, voucher.chart_account_id, current_user.organization_id)
+        
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
         voucher_data['organization_id'] = current_user.organization_id
@@ -141,6 +161,10 @@ async def create_receipt_voucher(
         
         logger.info(f"Receipt voucher {db_voucher.voucher_number} created by {current_user.email}")
         add_entity_name(db_voucher, db)
+        
+        # Add chart account details
+        db_voucher.chart_account = chart_account
+        
         return db_voucher
         
     except Exception as e:
