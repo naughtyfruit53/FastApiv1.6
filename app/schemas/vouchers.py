@@ -6,6 +6,16 @@ from datetime import date, datetime
 from typing import Dict, Any
 from pydantic import field_validator
 
+# Minimal Chart of Account schema for inclusion in voucher responses
+class ChartOfAccountMinimal(BaseModel):
+    id: int
+    account_code: str
+    account_name: str
+    account_type: str
+    
+    class Config:
+        from_attributes = True
+
 class VoucherItemBase(BaseModel):
     product_id: int
     quantity: float
@@ -584,6 +594,7 @@ class PaymentVoucherCreate(VoucherBase):
     entity_type: str = "Vendor"
     payment_method: Optional[str] = None
     reference: Optional[str] = None
+    chart_account_id: int
 
 class PaymentVoucherUpdate(BaseModel):
     entity_id: Optional[int] = None
@@ -593,13 +604,16 @@ class PaymentVoucherUpdate(BaseModel):
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    chart_account_id: Optional[int] = None
 
 class PaymentVoucherInDB(VoucherInDBBase):
     entity_id: int
     entity_type: str
     payment_method: Optional[str]
     reference: Optional[str]
+    chart_account_id: int
     entity: Optional[Dict[str, Any]] = None
+    chart_account: Optional[ChartOfAccountMinimal] = None
 
 # Receipt Voucher
 class ReceiptVoucherCreate(VoucherBase):
@@ -607,6 +621,7 @@ class ReceiptVoucherCreate(VoucherBase):
     entity_type: str = "Customer"
     receipt_method: Optional[str] = None
     reference: Optional[str] = None
+    chart_account_id: int
 
 class ReceiptVoucherUpdate(BaseModel):
     entity_id: Optional[int] = None
@@ -616,18 +631,22 @@ class ReceiptVoucherUpdate(BaseModel):
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    chart_account_id: Optional[int] = None
 
 class ReceiptVoucherInDB(VoucherInDBBase):
     entity_id: int
     entity_type: str
     receipt_method: Optional[str]
     reference: Optional[str]
+    chart_account_id: int
     entity: Optional[Dict[str, Any]] = None
+    chart_account: Optional[ChartOfAccountMinimal] = None
 
 # Contra Voucher
 class ContraVoucherCreate(VoucherBase):
     from_account: str
     to_account: str
+    chart_account_id: int
 
 class ContraVoucherUpdate(BaseModel):
     from_account: Optional[str] = None
@@ -635,23 +654,31 @@ class ContraVoucherUpdate(BaseModel):
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    chart_account_id: Optional[int] = None
 
 class ContraVoucherInDB(VoucherInDBBase):
     from_account: str
     to_account: str
+    chart_account_id: int
+    chart_account: Optional[ChartOfAccountMinimal] = None
 
 # Journal Voucher
 class JournalVoucherCreate(VoucherBase):
     entries: str  # JSON string
+    chart_account_id: int
 
 class JournalVoucherUpdate(BaseModel):
     entries: Optional[str] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    chart_account_id: Optional[int] = None
+    notes: Optional[str] = None
 
 class JournalVoucherInDB(VoucherInDBBase):
     entries: str
+    chart_account_id: int
+    chart_account: Optional[ChartOfAccountMinimal] = None
 
 # Inter Department Voucher
 class InterDepartmentVoucherItemCreate(SimpleVoucherItem):

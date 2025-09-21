@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ voucher.voucher_number }} - Payment Voucher</title>
+    <title>{{ voucher.voucher_number }} - Contra Voucher</title>
     <style>
         body { 
             font-family: 'NotoSans', Arial, sans-serif; 
@@ -51,10 +51,6 @@
             font-weight: bold; 
             margin: 10pt 0; 
         }
-        .party-details { 
-            margin: 10pt 0; 
-            font-size: 9pt; 
-        }
         .details-table th { 
             width: 30%; 
         }
@@ -71,12 +67,6 @@
         }
         .amount-words .label { font-weight: bold; margin-right: 8px; }
         .amount-words .words { white-space: normal; word-wrap: break-word; }
-        .terms { 
-            margin: 10pt 0; 
-            font-size: 9pt; 
-            border-top: 1pt solid #ccc; 
-            padding-top: 10pt; 
-        }
     </style>
 </head>
 <body>
@@ -99,7 +89,7 @@
         </div>
 
         <!-- Voucher Title -->
-        <div class="voucher-title">Payment Voucher</div>
+        <div class="voucher-title">Contra Voucher</div>
 
         <!-- Voucher Details -->
         <table class="details-table">
@@ -110,16 +100,16 @@
                 <td>{{ voucher.date | format_date }}</td>
             </tr>
             <tr>
-                <th>Payment Mode:</th>
-                <td>{{ voucher.payment_method or 'N/A' }}</td>
-                <th>Amount:</th>
-                <td>{{ voucher.total_amount | format_currency }}</td>
+                <th>From Account:</th>
+                <td>{{ voucher.from_account }}</td>
+                <th>To Account:</th>
+                <td>{{ voucher.to_account }}</td>
             </tr>
             <tr>
-                <th>Reference:</th>
-                <td>{{ voucher.reference or 'N/A' }}</td>
-                <th>Bank Account:</th>
-                <td>{{ voucher.bank_account or 'N/A' }}</td>
+                <th>Amount:</th>
+                <td>{{ voucher.total_amount | format_currency }}</td>
+                <th>Status:</th>
+                <td>{{ voucher.status | title }}</td>
             </tr>
             {% if chart_account %}
             <tr>
@@ -128,17 +118,6 @@
             </tr>
             {% endif %}
         </table>
-
-        <!-- Party Details -->
-        <div class="party-details">
-            <strong>Paid To:</strong><br>
-            {{ party.name }}<br>
-            {{ party.address }}<br>
-            {{ party.city }}, {{ party.state }} - {{ party.pin_code }}<br>
-            GSTIN: {{ party.gst_number }}<br>
-            Contact: {{ party.contact_number }}<br>
-            Email: {{ party.email }}
-        </div>
 
         <!-- Amount in Words -->
         <div class="amount-words">
@@ -153,19 +132,6 @@
             {{ voucher.notes }}
         </div>
         {% endif %}
-
-        <!-- Terms -->
-        <div class="terms">
-            <strong>Terms and Conditions:</strong><br>
-            {% if voucher.terms_conditions %}
-            {{ voucher.terms_conditions }}
-            {% else %}
-            1. Payment processed as per agreement.<br>
-            2. No refunds once processed.<br>
-            3. Verify details before confirmation.<br>
-            4. Subject to jurisdiction.
-            {% endif %}
-        </div>
 
         <!-- Footer -->
         <div class="footer" style="text-align: right;">

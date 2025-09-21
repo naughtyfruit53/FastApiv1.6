@@ -7,12 +7,29 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import ContraVoucher
+from app.models.erp_models import ChartOfAccounts
 from app.schemas.vouchers import ContraVoucherCreate, ContraVoucherInDB, ContraVoucherUpdate
 from app.services.voucher_service import VoucherNumberService
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/contra-vouchers", tags=["contra-vouchers"])
+
+def validate_chart_account(db: Session, chart_account_id: int, organization_id: int) -> ChartOfAccounts:
+    """Validate that chart_account_id exists and belongs to organization"""
+    chart_account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == chart_account_id,
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.is_active == True
+    ).first()
+    
+    if not chart_account:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid chart account ID or account not found for this organization"
+        )
+    
+    return chart_account
 
 @router.get("/", response_model=List[ContraVoucherInDB])
 async def get_contra_vouchers(
@@ -44,6 +61,14 @@ async def get_contra_vouchers(
         query = query.order_by(ContraVoucher.created_at.desc())
     
     vouchers = query.offset(skip).limit(limit).all()
+    
+    # Load chart account details for each voucher
+    for voucher in vouchers:
+        chart_account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == voucher.chart_account_id
+        ).first()
+        voucher.chart_account = chart_account
+    
     return vouchers
 
 @router.get("/next-number", response_model=str)
@@ -62,6 +87,9 @@ async def create_contra_voucher(
     current_user: User = Depends(get_current_active_user)
 ):
     try:
+        # Validate chart account
+        chart_account = validate_chart_account(db, voucher.chart_account_id, current_user.organization_id)
+        
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
         voucher_data['organization_id'] = current_user.organization_id
@@ -86,6 +114,9 @@ async def create_contra_voucher(
         db.commit()
         db.refresh(db_voucher)
         
+        # Add chart account details
+        db_voucher.chart_account = chart_account
+        
         logger.info(f"Contra voucher {db_voucher.voucher_number} created by {current_user.email}")
         return db_voucher
         
@@ -106,6 +137,13 @@ async def get_contra_voucher(
     ).first()
     if not voucher:
         raise HTTPException(status_code=404, detail="Contra voucher not found")
+    
+    # Load chart account details
+    chart_account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == voucher.chart_account_id
+    ).first()
+    voucher.chart_account = chart_account
+    
     return voucher
 
 @router.put("/{voucher_id}", response_model=ContraVoucherInDB)
@@ -124,11 +162,22 @@ async def update_contra_voucher(
             raise HTTPException(status_code=404, detail="Contra voucher not found")
         
         update_data = voucher_update.dict(exclude_unset=True)
+        
+        # Validate chart account if being updated
+        if 'chart_account_id' in update_data:
+            validate_chart_account(db, update_data['chart_account_id'], current_user.organization_id)
+        
         for field, value in update_data.items():
             setattr(voucher, field, value)
         
         db.commit()
         db.refresh(voucher)
+        
+        # Load chart account details
+        chart_account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == voucher.chart_account_id
+        ).first()
+        voucher.chart_account = chart_account
         
         logger.info(f"Contra voucher {voucher.voucher_number} updated by {current_user.email}")
         return voucher
