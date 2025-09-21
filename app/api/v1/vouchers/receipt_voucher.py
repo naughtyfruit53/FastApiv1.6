@@ -92,6 +92,11 @@ async def get_receipt_vouchers(
     vouchers = query.offset(skip).limit(limit).all()
     for voucher in vouchers:
         add_entity_name(voucher, db)
+        # Load chart account details
+        chart_account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == voucher.chart_account_id
+        ).first()
+        voucher.chart_account = chart_account
     return vouchers
 
 @router.get("/next-number", response_model=str)
@@ -185,6 +190,13 @@ async def get_receipt_voucher(
     if not voucher:
         raise HTTPException(status_code=404, detail="Receipt voucher not found")
     add_entity_name(voucher, db)
+    
+    # Load chart account details
+    chart_account = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.id == voucher.chart_account_id
+    ).first()
+    voucher.chart_account = chart_account
+    
     return voucher
 
 @router.put("/{voucher_id}", response_model=ReceiptVoucherInDB)
@@ -203,6 +215,11 @@ async def update_receipt_voucher(
             raise HTTPException(status_code=404, detail="Receipt voucher not found")
         
         update_data = voucher_update.dict(exclude_unset=True)
+        
+        # Validate chart account if being updated
+        if 'chart_account_id' in update_data:
+            validate_chart_account(db, update_data['chart_account_id'], current_user.organization_id)
+        
         for field, value in update_data.items():
             setattr(voucher, field, value)
         
@@ -211,6 +228,13 @@ async def update_receipt_voucher(
         
         logger.info(f"Receipt voucher {voucher.voucher_number} updated by {current_user.email}")
         add_entity_name(voucher, db)
+        
+        # Load chart account details
+        chart_account = db.query(ChartOfAccounts).filter(
+            ChartOfAccounts.id == voucher.chart_account_id
+        ).first()
+        voucher.chart_account = chart_account
+        
         return voucher
         
     except Exception as e:
