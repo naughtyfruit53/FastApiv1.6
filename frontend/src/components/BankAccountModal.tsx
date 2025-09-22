@@ -207,20 +207,33 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
     onClose();
   };
 
+  const isFormValid = () => {
+    return createData.chart_account_id && createData.bank_name && createData.account_number;
+  };
+
+  const onSubmit = () => {
+    if (!isFormValid()) {
+      alert("Chart Account, Bank Name, and Account Number are required.");
+      return;
+    }
+    handleCreateBankAccount();
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Add Bank Account</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth={false} PaperProps={{ sx: { width: '360px' } }}>
+      <DialogTitle sx={{ textAlign: 'center' }}>
+        Add Bank Account
+      </DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-        
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={12}>
+        <Grid container direction="column" alignItems="center" spacing={2} sx={{ mt: 1 }}>
+          <Grid item sx={{ width: '315px' }}>
             <FormControl fullWidth required>
-              <InputLabel>Chart Account</InputLabel>
+              <InputLabel>Chart Account *</InputLabel>
               <Select
                 value={createData.chart_account_id}
                 onChange={(e) =>
@@ -251,19 +264,21 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             )}
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid item sx={{ width: '315px' }}>
             <TextField
               fullWidth
               required
-              label="Bank Name"
+              label="Bank Name *"
               value={createData.bank_name}
               onChange={(e) =>
                 setCreateData({ ...createData, bank_name: e.target.value })
               }
+              error={!createData.bank_name}
+              helperText={!createData.bank_name ? "Required" : ""}
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid item sx={{ width: '315px' }}>
             <TextField
               fullWidth
               label="Branch Name"
@@ -274,19 +289,21 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid item sx={{ width: '315px' }}>
             <TextField
               fullWidth
               required
-              label="Account Number"
+              label="Account Number *"
               value={createData.account_number}
               onChange={(e) =>
                 setCreateData({ ...createData, account_number: e.target.value })
               }
+              error={!createData.account_number}
+              helperText={!createData.account_number ? "Required" : ""}
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid item sx={{ width: '315px' }}>
             <TextField
               fullWidth
               label="IFSC Code"
@@ -297,9 +314,9 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid item sx={{ width: '315px' }}>
             <FormControl fullWidth required>
-              <InputLabel>Account Type</InputLabel>
+              <InputLabel>Account Type *</InputLabel>
               <Select
                 value={createData.account_type}
                 onChange={(e) =>
@@ -316,7 +333,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid item sx={{ width: '315px' }}>
             <FormControl fullWidth>
               <InputLabel>Currency</InputLabel>
               <Select
@@ -335,7 +352,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             </FormControl>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid item sx={{ width: '315px' }}>
             <TextField
               fullWidth
               label="Opening Balance"
@@ -350,7 +367,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             />
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid item sx={{ width: '315px' }}>
             <FormControlLabel
               control={
                 <Switch
@@ -364,7 +381,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             />
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid item sx={{ width: '315px' }}>
             <FormControlLabel
               control={
                 <Switch
@@ -382,14 +399,14 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           </Grid>
         </Grid>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ justifyContent: 'center' }}>
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
         <Button
-          onClick={handleCreateBankAccount}
+          onClick={onSubmit}
           variant="contained"
-          disabled={loading || !createData.chart_account_id || !createData.bank_name || !createData.account_number}
+          disabled={loading || !isFormValid()}
           startIcon={loading ? <CircularProgress size={20} /> : null}
         >
           Add Bank Account
