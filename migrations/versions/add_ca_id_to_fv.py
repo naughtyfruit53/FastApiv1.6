@@ -1,6 +1,6 @@
 """add chart_account_id to financial vouchers
 
-Revision ID: add_chart_account_id_financial_vouchers
+Revision ID: add_ca_id_to_fv.py
 Revises: 76016d4a23bc
 Create Date: 2024-12-19 00:00:00.000000
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'add_chart_account_id_financial_vouchers'
+revision = 'add_ca_id_to_fv'
 down_revision = '76016d4a23bc'
 branch_labels = None
 depends_on = None

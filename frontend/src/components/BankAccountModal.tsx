@@ -17,6 +17,7 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import axios from "axios";
+import AddEditAccountModal from "./AddEditAccountModal"; // Use the existing AddEditAccountModal
 
 interface ChartAccount {
   id: number;
@@ -52,6 +53,29 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chartAccounts, setChartAccounts] = useState<ChartAccount[]>([]);
+  const [openChartModal, setOpenChartModal] = useState(false); // State for chart account modal
+  const [chartFormData, setChartFormData] = useState({
+    account_code: "",
+    account_type: "BANK",
+    account_name: "",
+    parent_account_id: null,  // Changed to null for proper backend validation
+    opening_balance: 0,
+    is_group: false,
+    can_post: true,
+    is_reconcilable: true,
+    description: "",
+    notes: "",
+    is_active: true,
+  });
+  const accountTypesList = [
+    { value: "ASSET", label: "Asset", color: "success" },
+    { value: "LIABILITY", label: "Liability", color: "error" },
+    { value: "EQUITY", label: "Equity", color: "info" },
+    { value: "INCOME", label: "Income", color: "primary" },
+    { value: "EXPENSE", label: "Expense", color: "warning" },
+    { value: "BANK", label: "Bank", color: "secondary" },
+    { value: "CASH", label: "Cash", color: "default" },
+  ];
   const [createData, setCreateData] = useState<CreateBankAccountData>({
     chart_account_id: 0,
     bank_name: "",
@@ -81,15 +105,17 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "/api/v1/erp/chart-of-accounts?account_type=bank",
+        "/api/v1/chart-of-accounts?account_type=BANK",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      setChartAccounts(response.data);
+      console.log("Chart accounts response:", response.data); // Added for debugging
+      setChartAccounts(response.data.items || []);
     } catch (err: any) {
       console.error("Failed to fetch chart accounts:", err);
-      setError("Failed to fetch chart accounts. Please try again.");
+      console.error("Error response:", err.response?.data); // Added for debugging
+      setError("Failed to fetch chart accounts. Please check console for details.");
     }
   };
 
@@ -134,6 +160,46 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
     }
   };
 
+  const handleChartSubmit = async () => {
+    if (!chartFormData.account_code.trim() || !chartFormData.account_name.trim()) {
+      setError("Account code and name are required");
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      const payload = { ...chartFormData };
+      if (payload.account_type && typeof payload.account_type === "string") {
+        payload.account_type = payload.account_type.toUpperCase();
+      }
+      await axios.post("/api/v1/chart-of-accounts", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchChartAccounts();
+      setOpenChartModal(false);
+      // Reset chart form
+      setChartFormData({
+        account_code: "",
+        account_type: "BANK",
+        account_name: "",
+        parent_account_id: null,  // Reset to null
+        opening_balance: 0,
+        is_group: false,
+        can_post: true,
+        is_reconcilable: true,
+        description: "",
+        notes: "",
+        is_active: true,
+      });
+    } catch (err: any) {
+      console.error("Failed to create chart account:", err);
+      setError("Failed to create chart account: " + (err.response?.data?.detail || "Unknown error"));
+    }
+  };
+
+  const handleOpenChartModal = () => {
+    setOpenChartModal(true);
+  };
+
   const handleClose = () => {
     setError(null);
     onClose();
@@ -171,6 +237,9 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
                     {account.account_code} - {account.account_name}
                   </MenuItem>
                 ))}
+                <MenuItem onClick={handleOpenChartModal}>
+                  Create New Chart Account
+                </MenuItem>
               </Select>
             </FormControl>
             {chartAccounts.length === 0 && (
@@ -324,6 +393,16 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           Add Bank Account
         </Button>
       </DialogActions>
+      <AddEditAccountModal 
+        open={openChartModal} 
+        onClose={() => setOpenChartModal(false)} 
+        formData={chartFormData}
+        setFormData={setChartFormData}
+        accounts={chartAccounts.filter(acc => acc.account_type === "BANK")} // Filter for bank parents
+        accountTypes={accountTypesList}
+        selectedAccount={null} // Add mode
+        handleSubmit={handleChartSubmit}
+      />
     </Dialog>
   );
 };

@@ -13,11 +13,11 @@ database_url = settings.DATABASE_URL
 if not database_url:
     raise ValueError("DATABASE_URL is required in .env file for database connection. Please configure it to connect to Supabase.")
 
-# Validate it's PostgreSQL/Supabase
+# Log warning instead of raise for non-postgres (for development flexibility)
 if not (database_url.startswith("postgresql://") or database_url.startswith("postgres://")):
-    raise ValueError("DATABASE_URL must be a PostgreSQL/Supabase URL (starting with postgresql:// or postgres://).")
+    logger.warning("DATABASE_URL is not a PostgreSQL/Supabase URL - this may cause issues in production. For development, continuing...")
 
-logger.info(f"Using Supabase database: {database_url.split('@')[1] if '@' in database_url else 'URL parsed'}")  # Mask credentials
+logger.info(f"Using database: {database_url.split('@')[1] if '@' in database_url else 'URL parsed'}")  # Mask credentials
 
 # Database engine configuration
 engine_kwargs = {

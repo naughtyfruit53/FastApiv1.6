@@ -209,3 +209,11 @@ export const hsnSearch = async ({ queryKey, signal }: QueryFunctionContext): Pro
   });
   return response.data;
 };
+
+// New function: Get next account code for a type
+export const getNextAccountCode = async (accountType: string): Promise<string> => {
+  const response = await api.get("/chart-of-accounts/get-next-code", {
+    params: { type: accountType },
+  });
+  return response.data.next_code;
+};

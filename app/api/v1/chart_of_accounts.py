@@ -16,6 +16,7 @@ from app.models.erp_models import ChartOfAccounts
 from app.schemas.master_data import (
     ChartOfAccountsCreate, ChartOfAccountsUpdate, ChartOfAccountsResponse, ChartOfAccountsList, ChartOfAccountsFilter
 )
+from app.services.ledger_service import LedgerService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -85,16 +86,21 @@ async def create_chart_of_account(
 ):
     """Create a new chart of account"""
     try:
+        # Generate code if not provided or empty
+        account_code = coa_data.account_code.strip() if coa_data.account_code else ""
+        if not account_code:
+            account_code = LedgerService.generate_account_code(db, organization_id, coa_data.account_type)
+        
         # Check for duplicate code
         existing = db.query(ChartOfAccounts).filter(
             ChartOfAccounts.organization_id == organization_id,
-            ChartOfAccounts.account_code == coa_data.account_code
+            ChartOfAccounts.account_code == account_code
         ).first()
         
         if existing:
             raise HTTPException(
                 status_code=400,
-                detail=f"Account with code '{coa_data.account_code}' already exists"
+                detail=f"Account with code '{account_code}' already exists"
             )
         
         # Validate parent account if specified
@@ -113,7 +119,7 @@ async def create_chart_of_account(
         # Create account
         account = ChartOfAccounts(
             organization_id=organization_id,
-            account_code=coa_data.account_code,
+            account_code=account_code,
             account_name=coa_data.account_name,
             account_type=coa_data.account_type,
             parent_account_id=coa_data.parent_account_id,
@@ -140,6 +146,22 @@ async def create_chart_of_account(
         db.rollback()
         logger.error(f"Error creating account: {e}")
         raise HTTPException(status_code=500, detail="Failed to create account")
+
+
+@router.get("/chart-of-accounts/get-next-code")
+async def get_next_account_code(
+    account_type: str = Query(..., alias="type", description="Account type for code generation"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get next suggested account code for a type"""
+    try:
+        next_code = LedgerService.generate_account_code(db, organization_id, account_type.upper())
+        return {"next_code": next_code}
+    except Exception as e:
+        logger.error(f"Error generating next account code: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate next account code")
 
 
 @router.get("/chart-of-accounts/{account_id}", response_model=ChartOfAccountsResponse)
@@ -362,7 +384,7 @@ async def chart_accounts_lookup(
                 "id": account.id,
                 "account_code": account.account_code,
                 "account_name": account.account_name,
-                "account_type": account.account_type.value,
+                "account_type": account.account_type,
                 "display_name": f"{account.account_code} - {account.account_name}"
             }
             for account in accounts

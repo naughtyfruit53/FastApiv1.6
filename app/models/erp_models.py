@@ -1,3 +1,5 @@
+# app/models/erp_models.py
+
 """
 ERP Core Models - Chart of Accounts, AP/AR, GST, and Financial Management
 """
@@ -12,25 +14,25 @@ import enum
 from .base import Base
 
 
-class AccountType(enum.Enum):
-    """Account types for Chart of Accounts"""
-    ASSET = "asset"
-    LIABILITY = "liability"
-    EQUITY = "equity"
-    INCOME = "income"
-    EXPENSE = "expense"
-    BANK = "bank"
-    CASH = "cash"
-
-
 class TaxType(enum.Enum):
     """Tax types for GST compliance"""
-    CGST = "cgst"
-    SGST = "sgst"
-    IGST = "igst"
-    CESS = "cess"
-    TCS = "tcs"
-    TDS = "tds"
+    CGST = "CGST"
+    SGST = "SGST"
+    IGST = "IGST"
+    CESS = "CESS"
+    TCS = "TCS"
+    TDS = "TDS"
+
+
+class AccountType(enum.Enum):
+    """Account types for Chart of Accounts"""
+    ASSET = "ASSET"
+    BANK = "BANK"
+    CASH = "CASH"
+    LIABILITY = "LIABILITY"
+    EQUITY = "EQUITY"
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
 
 
 class ChartOfAccounts(Base):
@@ -64,8 +66,8 @@ class ChartOfAccounts(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="chart_of_accounts")
@@ -211,7 +213,7 @@ class JournalEntry(Base):
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="journal_entries")
@@ -345,7 +347,7 @@ class PaymentRecord(Base):
     # Metadata
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="payment_records")
@@ -395,7 +397,7 @@ class GeneralLedger(Base):
     
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="general_ledger")
@@ -432,13 +434,13 @@ class CostCenter(Base):
     # Configuration
     is_active = Column(Boolean, default=True, nullable=False)
     department = Column(String(100), nullable=True)
-    manager_id = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
     
     # Metadata
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="cost_centers")
@@ -522,7 +524,7 @@ class BankReconciliation(Base):
     # Metadata
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="bank_reconciliations")
@@ -558,7 +560,7 @@ class FinancialStatement(Base):
     
     # Metadata
     generated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    generated_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    generated_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="financial_statements")
@@ -596,7 +598,7 @@ class FinancialKPI(Base):
     
     # Metadata
     calculated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    calculated_by = Column(Integer, ForeignKey("platform_users.id"), nullable=True)
+    calculated_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Changed from platform_users to users
 
     # Relationships
     organization = relationship("Organization", back_populates="financial_kpis")

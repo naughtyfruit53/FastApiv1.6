@@ -11,24 +11,12 @@ import {
   TableRow,
   Typography,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Chip,
   IconButton,
   Alert,
   CircularProgress,
   Card,
   CardContent,
-  Switch,
-  FormControlLabel,
   Tooltip,
 } from "@mui/material";
 import {
@@ -43,6 +31,8 @@ import {
   Visibility,
 } from "@mui/icons-material";
 import axios from "axios";
+import BankAccountModal from "../components/BankAccountModal"; // Import BankAccountModal
+
 interface ChartAccount {
   id: number;
   account_code: string;
@@ -67,46 +57,12 @@ interface BankAccount {
   created_at: string;
   updated_at: string;
 }
-interface CreateBankAccountData {
-  chart_account_id: number;
-  bank_name: string;
-  branch_name?: string;
-  account_number: string;
-  ifsc_code?: string;
-  swift_code?: string;
-  account_type: string;
-  currency: string;
-  opening_balance: number;
-  is_default: boolean;
-  auto_reconcile: boolean;
-}
 const BankAccounts: React.FC = () => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [chartAccounts, setChartAccounts] = useState<ChartAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  // Create bank account form state
-  const [createData, setCreateData] = useState<CreateBankAccountData>({
-    chart_account_id: 0,
-    bank_name: "",
-    account_number: "",
-    account_type: "Savings",
-    currency: "INR",
-    opening_balance: 0,
-    is_default: false,
-    auto_reconcile: false,
-  });
-  const accountTypes = [
-    "Savings",
-    "Current",
-    "Fixed Deposit",
-    "Recurring Deposit",
-    "NRI Account",
-    "Overdraft",
-    "Cash Credit",
-  ];
-  const currencies = ["INR", "USD", "EUR", "GBP", "AED", "SAR"];
+
   const fetchBankAccounts = async () => {
     try {
       setLoading(true);
@@ -122,46 +78,9 @@ const BankAccounts: React.FC = () => {
       setLoading(false);
     }
   };
-  const fetchChartAccounts = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        "/api/v1/erp/chart-of-accounts?account_type=bank",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      setChartAccounts(response.data);
-    } catch (err: any) {
-      console.error("Failed to fetch chart accounts:", err);
-    }
-  };
   useEffect(() => {
-    fetchChartAccounts();
     fetchBankAccounts();
   }, []);
-  const handleCreateBankAccount = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post("/api/v1/erp/bank-accounts", createData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCreateDialogOpen(false);
-      setCreateData({
-        chart_account_id: 0,
-        bank_name: "",
-        account_number: "",
-        account_type: "Savings",
-        currency: "INR",
-        opening_balance: 0,
-        is_default: false,
-        auto_reconcile: false,
-      });
-      fetchBankAccounts();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to create bank account");
-    }
-  };
   const formatCurrency = (amount: number, currency: string = "INR") => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -436,201 +355,11 @@ const BankAccounts: React.FC = () => {
         </TableContainer>
       </Paper>
       {/* Create Bank Account Dialog */}
-      <Dialog
+      <BankAccountModal 
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Create Bank Account</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Chart Account</InputLabel>
-                <Select
-                  value={createData.chart_account_id}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      chart_account_id: e.target.value as number,
-                    }))
-                  }
-                  label="Chart Account"
-                >
-                  {chartAccounts.map((account) => (
-                    <MenuItem key={account.id} value={account.id}>
-                      {account.account_code} - {account.account_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Bank Name"
-                value={createData.bank_name}
-                onChange={(e) =>
-                  setCreateData((prev) => ({
-                    ...prev,
-                    bank_name: e.target.value,
-                  }))
-                }
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Account Number"
-                value={createData.account_number}
-                onChange={(e) =>
-                  setCreateData((prev) => ({
-                    ...prev,
-                    account_number: e.target.value,
-                  }))
-                }
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Account Type</InputLabel>
-                <Select
-                  value={createData.account_type}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      account_type: e.target.value,
-                    }))
-                  }
-                  label="Account Type"
-                >
-                  {accountTypes.map((type) => (
-                    <MenuItem key={type} value={type}>
-                      {type}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Branch Name"
-                value={createData.branch_name || ""}
-                onChange={(e) =>
-                  setCreateData((prev) => ({
-                    ...prev,
-                    branch_name: e.target.value,
-                  }))
-                }
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="IFSC Code"
-                value={createData.ifsc_code || ""}
-                onChange={(e) =>
-                  setCreateData((prev) => ({
-                    ...prev,
-                    ifsc_code: e.target.value,
-                  }))
-                }
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="SWIFT Code"
-                value={createData.swift_code || ""}
-                onChange={(e) =>
-                  setCreateData((prev) => ({
-                    ...prev,
-                    swift_code: e.target.value,
-                  }))
-                }
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Currency</InputLabel>
-                <Select
-                  value={createData.currency}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      currency: e.target.value,
-                    }))
-                  }
-                  label="Currency"
-                >
-                  {currencies.map((currency) => (
-                    <MenuItem key={currency} value={currency}>
-                      {currency}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Opening Balance"
-                value={createData.opening_balance}
-                onChange={(e) =>
-                  setCreateData((prev) => ({
-                    ...prev,
-                    opening_balance: parseFloat(e.target.value) || 0,
-                  }))
-                }
-                inputProps={{ step: 0.01 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={createData.is_default}
-                    onChange={(e) =>
-                      setCreateData((prev) => ({
-                        ...prev,
-                        is_default: e.target.checked,
-                      }))
-                    }
-                  />
-                }
-                label="Set as Default Account"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={createData.auto_reconcile}
-                    onChange={(e) =>
-                      setCreateData((prev) => ({
-                        ...prev,
-                        auto_reconcile: e.target.checked,
-                      }))
-                    }
-                  />
-                }
-                label="Enable Auto Reconciliation"
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateBankAccount} variant="contained">
-            Create Account
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSuccess={fetchBankAccounts}
+      />
     </Box>
   );
 };

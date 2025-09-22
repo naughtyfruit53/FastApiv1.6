@@ -1,4 +1,5 @@
 # app/schemas/master_data.py
+
 """
 Master Data Schemas - Categories, Units, Payment Terms, and Tax Codes
 These schemas provide validation and serialization for master data operations
@@ -372,13 +373,13 @@ UnitResponse.model_rebuild()
 # Chart of Accounts Schemas
 class AccountTypeEnum(str, Enum):
     """Account types for Chart of Accounts"""
-    ASSET = "asset"
-    LIABILITY = "liability"
-    EQUITY = "equity"
-    INCOME = "income"
-    EXPENSE = "expense"
-    BANK = "bank"
-    CASH = "cash"
+    asset = "ASSET"
+    liability = "LIABILITY"
+    equity = "EQUITY"
+    income = "INCOME"
+    expense = "EXPENSE"
+    bank = "BANK"
+    cash = "CASH"
 
 
 class ChartOfAccountsBase(BaseModel):
