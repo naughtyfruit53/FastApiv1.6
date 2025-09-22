@@ -58,7 +58,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
     account_code: "",
     account_type: "BANK",
     account_name: "",
-    parent_account_id: null,  // Changed to null for proper backend validation
+    parent_account_id: null, // Reset to null
     opening_balance: 0,
     is_group: false,
     can_post: true,
@@ -167,10 +167,12 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
     }
     try {
       const token = localStorage.getItem("token");
+      console.log(`Account type before send: ${chartFormData.account_type}`);
       const payload = { ...chartFormData };
       if (payload.account_type && typeof payload.account_type === "string") {
         payload.account_type = payload.account_type.toUpperCase();
       }
+      console.log("Payload being sent to backend:", payload); // Debug log
       await axios.post("/api/v1/chart-of-accounts", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -181,7 +183,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
         account_code: "",
         account_type: "BANK",
         account_name: "",
-        parent_account_id: null,  // Reset to null
+        parent_account_id: null, // Reset to null
         opening_balance: 0,
         is_group: false,
         can_post: true,

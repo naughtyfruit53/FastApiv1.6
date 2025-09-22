@@ -5,7 +5,7 @@ Master Data Schemas - Categories, Units, Payment Terms, and Tax Codes
 These schemas provide validation and serialization for master data operations
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from decimal import Decimal
@@ -272,10 +272,11 @@ class PaymentTermsExtendedBase(BaseModel):
     description: Optional[str] = Field(None, description="Payment terms description")
     terms_conditions: Optional[str] = Field(None, description="Terms and conditions")
 
-    @validator('payment_schedule')
+    @field_validator('payment_schedule', mode='before')
+    @classmethod
     def validate_payment_schedule(cls, v):
         if v:
-            total_percentage = sum(item.percentage for item in v)
+            total_percentage = sum(item['percentage'] for item in v)
             if total_percentage != 100:
                 raise ValueError("Payment schedule percentages must total 100%")
         return v
@@ -393,6 +394,14 @@ class ChartOfAccountsBase(BaseModel):
     description: Optional[str] = Field(None, description="Account description")
     notes: Optional[str] = Field(None, description="Account notes")
     is_active: bool = Field(True, description="Is active")
+
+    @field_validator("account_type", mode="before")
+    @classmethod
+    def uppercase_account_type(cls, v):
+        """Automatically uppercase the account_type before enum validation"""
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
 
 class ChartOfAccountsCreate(ChartOfAccountsBase):

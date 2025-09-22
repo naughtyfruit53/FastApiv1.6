@@ -5,7 +5,7 @@ ERP Core Models - Chart of Accounts, AP/AR, GST, and Financial Management
 """
 
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric, Enum, and_
-from sqlalchemy.orm import relationship, foreign
+from sqlalchemy.orm import relationship, foreign, validates
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from decimal import Decimal
@@ -101,6 +101,12 @@ class ChartOfAccounts(Base):
         Index('idx_coa_org_type', 'organization_id', 'account_type'),
         Index('idx_coa_parent', 'parent_account_id'),
     )
+
+    @validates('account_type')
+    def validate_account_type(self, key, value):
+        if isinstance(value, str):
+            return value.upper()
+        return value
 
 
 class GSTConfiguration(Base):

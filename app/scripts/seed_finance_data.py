@@ -1,4 +1,4 @@
-# app/scripts/seed_finance_data.py
+# seed_finance_data.py
 """
 Script to seed a standard Chart of Accounts structure (no balances or sample transactions).
 This creates a pre-loaded template hierarchy for actual data entry.

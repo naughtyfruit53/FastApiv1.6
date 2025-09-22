@@ -39,6 +39,7 @@ const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
 }) => {
   const handleTypeChange = async (e: any) => {
     const newType = e.target.value.toUpperCase();
+    console.log(newType); // Debug log for uppercased type
     setFormData({ ...formData, account_type: newType });
 
     // Auto-generate account code if creating new (not editing)
@@ -139,7 +140,7 @@ const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
                 onChange={handleTypeChange}
               >
                 {accountTypes.map((type) => (
-                  <MenuItem key={type.value} value={type.value}>
+                  <MenuItem key={type.value} value={type.value.toUpperCase()}>
                     {type.label}
                   </MenuItem>
                 ))}

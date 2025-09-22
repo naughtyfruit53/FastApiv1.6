@@ -17,6 +17,7 @@ from app.schemas.master_data import (
     ChartOfAccountsCreate, ChartOfAccountsUpdate, ChartOfAccountsResponse, ChartOfAccountsList, ChartOfAccountsFilter
 )
 from app.services.ledger_service import LedgerService
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -37,7 +38,7 @@ async def get_chart_of_accounts(
         
         # Apply filters
         if coa_filter.account_type:
-            query = query.filter(ChartOfAccounts.account_type == coa_filter.account_type)
+            query = query.filter(ChartOfAccounts.account_type == coa_filter.account_type.upper())
         
         if coa_filter.parent_account_id is not None:
             query = query.filter(ChartOfAccounts.parent_account_id == coa_filter.parent_account_id)
@@ -86,10 +87,11 @@ async def create_chart_of_account(
 ):
     """Create a new chart of account"""
     try:
+        logger.info(f"master_data.py validator loaded - received raw account_type: {coa_data.account_type}")
         # Generate code if not provided or empty
         account_code = coa_data.account_code.strip() if coa_data.account_code else ""
         if not account_code:
-            account_code = LedgerService.generate_account_code(db, organization_id, coa_data.account_type)
+            account_code = LedgerService.generate_account_code(db, organization_id, coa_data.account_type.upper())
         
         # Check for duplicate code
         existing = db.query(ChartOfAccounts).filter(
@@ -121,7 +123,7 @@ async def create_chart_of_account(
             organization_id=organization_id,
             account_code=account_code,
             account_name=coa_data.account_name,
-            account_type=coa_data.account_type,
+            account_type=coa_data.account_type.upper(),
             parent_account_id=coa_data.parent_account_id,
             level=level,
             is_group=coa_data.is_group,
@@ -140,6 +142,9 @@ async def create_chart_of_account(
         logger.info(f"Account created: {account.account_name} (ID: {account.id})")
         return account
         
+    except ValidationError as ve:
+        logger.error(f"Validation error: {ve}")
+        raise HTTPException(status_code=422, detail=str(ve))
     except HTTPException:
         raise
     except Exception as e:
@@ -217,6 +222,8 @@ async def update_chart_of_account(
         
         # Update fields
         update_fields = coa_data.dict(exclude_unset=True)
+        if "account_type" in update_fields:
+            update_fields["account_type"] = update_fields["account_type"].upper()
         for field, value in update_fields.items():
             setattr(account, field, value)
         
@@ -228,6 +235,9 @@ async def update_chart_of_account(
         logger.info(f"Account updated: {account.account_name} (ID: {account.id})")
         return account
         
+    except ValidationError as ve:
+        logger.error(f"Validation error: {ve}")
+        raise HTTPException(status_code=422, detail=str(ve))
     except HTTPException:
         raise
     except Exception as e:
@@ -292,7 +302,7 @@ async def get_payroll_eligible_accounts(
         valid_payroll_types = ["expense", "liability", "asset"]
         
         # Filter to only valid account types
-        filtered_types = [t for t in account_types if t in valid_payroll_types]
+        filtered_types = [t.upper() for t in account_types if t.lower() in valid_payroll_types]
         
         if not filtered_types:
             raise HTTPException(
@@ -311,10 +321,10 @@ async def get_payroll_eligible_accounts(
         if component_type:
             if component_type in ["earning", "deduction"]:
                 # For earnings and deductions, prefer expense accounts
-                query = query.filter(ChartOfAccounts.account_type == "expense")
+                query = query.filter(ChartOfAccounts.account_type == "EXPENSE")
             elif component_type == "employer_contribution":
                 # For employer contributions, prefer liability accounts (for payables)
-                query = query.filter(ChartOfAccounts.account_type == "liability")
+                query = query.filter(ChartOfAccounts.account_type == "LIABILITY")
         
         # Get total count
         total = query.count()
@@ -373,6 +383,7 @@ async def chart_accounts_lookup(
         
         # Apply account type filter
         if account_types:
+            account_types = [t.upper() for t in account_types]
             query = query.filter(ChartOfAccounts.account_type.in_(account_types))
         
         # Get results with limit
