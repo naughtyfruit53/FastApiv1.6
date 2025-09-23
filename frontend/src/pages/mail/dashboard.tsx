@@ -1,39 +1,39 @@
 // frontend/src/pages/mail/dashboard.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Box,
   Grid,
-  Card,
-  CardContent,
   Typography,
   CircularProgress,
   Alert,
   Button,
-  Chip,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  ListItemSecondaryAction,
-  Divider,
   Avatar,
-  Badge,
+  Dialog,
+  CssBaseline,
+  Divider,
 } from "@mui/material";
 import {
-  Email,
-  Dashboard,
   Inbox,
   Send,
   Drafts,
   Flag,
   Today,
-  AttachFile,
+  DateRange as DateRangeIcon,
+  Report as ReportIcon,
+  MarkEmailUnread,
   Person,
   Add,
   Sync,
-  MarkEmailRead,
-  MarkEmailUnread,
-  Archive,
+  Star as StarIcon,
+  AccessTime as SnoozeIcon,
+  LabelImportant as ImportantIcon,
+  Archive as ArchiveIcon,
+  Delete as TrashIcon,
+  Category as CategoryIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import api from "../../lib/api";
@@ -41,6 +41,45 @@ import { useAuth } from "../../context/AuthContext";
 import { useOAuth } from "../../hooks/useOAuth";
 import OAuthLoginButton from "../../components/OAuthLoginButton";
 import EmailReader from "../../components/EmailReader";  // Assume this component exists for displaying email body
+import MetricCard from "../../components/MetricCard";
+import EmailCompose from "../../components/EmailCompose";
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1a73e8',
+    },
+    secondary: {
+      main: '#ea4335',
+    },
+    background: {
+      default: '#f1f3f4',
+      paper: '#ffffff',
+    },
+    text: {
+      primary: '#202124',
+      secondary: '#5f6368',
+    },
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+  },
+  components: {
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          '&:hover': {
+            backgroundColor: '#f2f2f2',
+          },
+          '&.Mui-selected': {
+            backgroundColor: '#d2e3fc',
+          },
+        },
+      },
+    },
+  },
+});
 
 interface MailStats {
   total_emails: number;
@@ -83,13 +122,20 @@ const MailDashboard: React.FC = () => {
   const { logout } = useAuth();
   const { getUserTokens } = useOAuth();
   const [stats, setStats] = useState<MailStats | null>(null);
-  const [recentEmails, setRecentEmails] = useState<RecentEmail[]>([]);
+  const [emails, setEmails] = useState<RecentEmail[]>([]);
   const [emailTokens, setEmailTokens] = useState<UserEmailToken[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<RecentEmail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [currentFolder, setCurrentFolder] = useState('INBOX');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const observer = useRef<IntersectionObserver | null>(null);
   const maxRetries = 3;
+  const perPage = 20; // Smaller batches for infinite scroll
 
   useEffect(() => {
     const fetchData = async () => {
@@ -109,12 +155,6 @@ const MailDashboard: React.FC = () => {
         // Fetch mail dashboard stats
         const statsResponse = await api.get('/mail/dashboard');
         setStats(statsResponse.data);
-
-        // Fetch recent emails (assume API returns full details including body)
-        const emailsResponse = await api.get('/mail/emails', {
-          params: { page: 1, per_page: 20, sort_by: 'received_at', sort_order: 'desc' },  // Increased per_page for full inbox list
-        });
-        setRecentEmails(emailsResponse.data.emails);
       } catch (error: any) {
         console.error('Error fetching mail dashboard data:', error);
         let errorMessage = 'Failed to load mail dashboard data';
@@ -154,7 +194,7 @@ const MailDashboard: React.FC = () => {
             draft_emails: 0,
             spam_emails: 0,
           });
-          setRecentEmails([]);
+          setEmails([]);
         }
       } finally {
         setLoading(false);
@@ -164,12 +204,58 @@ const MailDashboard: React.FC = () => {
     fetchData();
   }, [retryCount, logout, router, getUserTokens]);
 
-  const handleNavigate = (path: string) => {
-    router.push(path);
-  };
+  const fetchEmails = useCallback(async (pageNum: number) => {
+    setListLoading(true);
+    try {
+      const emailsResponse = await api.get('/mail/emails', {
+        params: { folder: currentFolder, page: pageNum, per_page: perPage, sort_by: 'received_at', sort_order: 'desc' },
+      });
+      const newEmails = emailsResponse.data.emails;
+      setEmails(prev => pageNum === 1 ? newEmails : [...prev, ...newEmails]);
+      setHasMore(newEmails.length === perPage);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch emails');
+    } finally {
+      setListLoading(false);
+    }
+  }, [currentFolder]);
+
+  useEffect(() => {
+    setPage(1);
+    setEmails([]);
+    setHasMore(true);
+    fetchEmails(1);
+  }, [currentFolder, fetchEmails]);
+
+  const lastEmailRef = useCallback((node: HTMLLIElement | null) => {
+    if (listLoading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prev => prev + 1);
+        fetchEmails(page + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [listLoading, hasMore, fetchEmails, page]);
 
   const handleEmailSelect = (email: RecentEmail) => {
     setSelectedEmail(email);
+  };
+
+  const handleSync = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post('/mail/sync', { force_sync: false });
+      const statsResponse = await api.get('/mail/dashboard');
+      setStats(statsResponse.data);
+      fetchEmails(1); // Refresh email list after sync
+    } catch (err: any) {
+      setError(err.message || 'Failed to sync emails');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatTimeAgo = (dateTime: string) => {
@@ -186,22 +272,41 @@ const MailDashboard: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent": return "error";
-      case "high": return "warning";
-      case "normal": return "default";
-      case "low": return "info";
-      default: return "default";
+  const getStatIcon = (key: keyof MailStats) => {
+    switch (key) {
+      case 'total_emails': return <Inbox />;
+      case 'flagged_emails': return <Flag />;
+      case 'today_emails': return <Today />;
+      case 'this_week_emails': return <DateRangeIcon />;
+      default: return <Inbox />;
     }
   };
 
-  const getSyncStatusColor = (status: string) => {
-    switch (status) {
-      case "SUCCESS": return "success";
-      case "ERROR": return "error";
-      default: return "default";
+  const formatStatTitle = (key: string) => {
+    return key.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  const handleStatClick = (key: string) => {
+    switch (key) {
+      case 'total_emails':
+        setCurrentFolder('INBOX');
+        break;
+      case 'flagged_emails':
+        setCurrentFolder('FLAGGED');
+        break;
+      case 'today_emails':
+        setCurrentFolder('TODAY');
+        break;
+      case 'this_week_emails':
+        setCurrentFolder('THIS_WEEK');
+        break;
+      default:
+        setCurrentFolder('INBOX');
     }
+  };
+
+  const handleFolderChange = (folder: string) => {
+    setCurrentFolder(folder);
   };
 
   if (loading) {
@@ -250,155 +355,154 @@ const MailDashboard: React.FC = () => {
   }
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        height: "100vh",
-        width: "100vw",
-        overflow: "hidden",
-      }}
-    >
-      {/* Left Sidebar: 10% width - Stacked tiles (stats) and quick actions */}
-      <Box
-        sx={{
-          width: "10%",
-          borderRight: 1,
-          borderColor: "divider",
-          overflowY: "auto",
-          p: 2,
-          bgcolor: "background.paper",
-        }}
-      >
-        <Typography variant="h6" gutterBottom sx={{ textAlign: "center" }}>
-          Quick View
-        </Typography>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {/* Stacked Stats Tiles */}
-          <Card>
-            <CardContent sx={{ p: 1 }}>
-              <Typography variant="body2" color="textSecondary">
-                Total
-              </Typography>
-              <Typography variant="h6">{stats.total_emails}</Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent sx={{ p: 1 }}>
-              <Typography variant="body2" color="textSecondary">
-                Unread
-              </Typography>
-              <Typography variant="h6" color="warning.main">{stats.unread_emails}</Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent sx={{ p: 1 }}>
-              <Typography variant="body2" color="textSecondary">
-                Flagged
-              </Typography>
-              <Typography variant="h6">{stats.flagged_emails}</Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent sx={{ p: 1 }}>
-              <Typography variant="body2" color="textSecondary">
-                Today
-              </Typography>
-              <Typography variant="h6">{stats.today_emails}</Typography>
-            </CardContent>
-          </Card>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        {/* Stats Row (Tiles) */}
+        <Box p={2} bgcolor="white" borderBottom="1px solid #dadce0" boxShadow={1}>
+          <Grid container spacing={2} alignItems="center">
+            {stats && ['total_emails', 'flagged_emails', 'today_emails', 'this_week_emails'].map((key) => (
+              <Grid item xs={3} key={key}>
+                <MetricCard
+                  title={formatStatTitle(key)}
+                  value={stats[key as keyof MailStats]}
+                  icon={getStatIcon(key as keyof MailStats)}
+                  color="info"
+                  onClick={() => handleStatClick(key)}
+                />
+              </Grid>
+            ))}
+            <Grid item xs={12} container justifyContent="center" spacing={2}>
+              <Grid item>
+                <Button variant="outlined" color="primary" startIcon={<Sync />} onClick={handleSync} disabled={loading}>
+                  Sync
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => setComposeOpen(true)}>
+                  Compose
+                </Button>
+              </Grid>
+            </Grid>
+          </Grid>
+        </Box>
 
-          {/* Quick Actions */}
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="h6" gutterBottom sx={{ textAlign: "center" }}>
-            Actions
-          </Typography>
-          <Button variant="text" startIcon={<Inbox />} onClick={() => handleNavigate("/mail/inbox")} fullWidth>
-            Inbox
-          </Button>
-          <Button variant="text" startIcon={<Send />} onClick={() => handleNavigate("/mail/sent")} fullWidth>
-            Sent
-          </Button>
-          <Button variant="text" startIcon={<Drafts />} onClick={() => handleNavigate("/mail/drafts")} fullWidth>
-            Drafts
-          </Button>
-          <Button variant="text" startIcon={<Archive />} onClick={() => handleNavigate("/mail/archived")} fullWidth>
-            Archived
-          </Button>
-          <Button variant="text" startIcon={<Add />} onClick={() => handleNavigate("/mail/compose")} fullWidth>
-            Compose
-          </Button>
-          <Button variant="text" startIcon={<Sync />} onClick={() => handleNavigate("/mail/sync")} fullWidth>
-            Sync
-          </Button>
+        {/* Main Content Flex Row */}
+        <Box display="flex" flexGrow={1} overflow="hidden">
+          {/* Left Sidebar */}
+          <Box
+            width="15%"
+            overflowY="auto"
+            borderRight="1px solid #dadce0"
+            bgcolor="#f1f3f4"
+          >
+            <List component="nav">
+              <ListItem button selected={currentFolder === 'INBOX'} onClick={() => handleFolderChange('INBOX')}>
+                <ListItemIcon><Inbox sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Inbox" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'STARRED'} onClick={() => handleFolderChange('STARRED')}>
+                <ListItemIcon><StarIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Starred" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'SNOOZED'} onClick={() => handleFolderChange('SNOOZED')}>
+                <ListItemIcon><SnoozeIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Snoozed" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'IMPORTANT'} onClick={() => handleFolderChange('IMPORTANT')}>
+                <ListItemIcon><ImportantIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Important" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'SENT'} onClick={() => handleFolderChange('SENT')}>
+                <ListItemIcon><Send sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Sent" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'DRAFTS'} onClick={() => handleFolderChange('DRAFTS')}>
+                <ListItemIcon><Drafts sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Drafts" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'SPAM'} onClick={() => handleFolderChange('SPAM')}>
+                <ListItemIcon><ReportIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Spam" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'TRASH'} onClick={() => handleFolderChange('TRASH')}>
+                <ListItemIcon><TrashIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Trash" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'ARCHIVED'} onClick={() => handleFolderChange('ARCHIVED')}>
+                <ListItemIcon><ArchiveIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Archived" sx={{ color: '#202124' }} />
+              </ListItem>
+              <ListItem button selected={currentFolder === 'CATEGORIES'} onClick={() => handleFolderChange('CATEGORIES')}>
+                <ListItemIcon><CategoryIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
+                <ListItemText primary="Categories" sx={{ color: '#202124' }} />
+              </ListItem>
+            </List>
+            <Divider />
+            {/* Add more custom labels or sections if needed */}
+          </Box>
+
+          {/* Email List */}
+          <Box width="35%" overflowY="auto" pr={2} borderRight="1px solid #dadce0" bgcolor="white">
+            <Typography variant="subtitle1" sx={{ p: 2, color: '#202124', textAlign: 'center' }}>
+              {currentFolder} ({emails.length})
+            </Typography>
+            <List disablePadding>
+              {emails.map((email, index) => (
+                <ListItem
+                  ref={emails.length === index + 1 ? lastEmailRef : null}
+                  key={email.id}
+                  button
+                  selected={selectedEmail?.id === email.id}
+                  onClick={() => handleEmailSelect(email)}
+                  sx={{
+                    py: 1.5,
+                    borderBottom: '1px solid #f1f3f4',
+                    '&:hover': { bgcolor: '#f2f2f2' },
+                    '&.Mui-selected': { bgcolor: '#d2e3fc' },
+                  }}
+                >
+                  <ListItemIcon>
+                    <Avatar sx={{ width: 40, height: 40, bgcolor: '#e8f0fe', color: '#1967d2' }}>
+                      {email.from_name ? email.from_name[0] : <Person />}
+                    </Avatar>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={email.subject}
+                    secondary={`${email.from_name || email.from_address} • ${formatTimeAgo(email.received_at)}`}
+                    primaryTypographyProps={{
+                      noWrap: true,
+                      fontWeight: email.is_unread ? "bold" : "normal",
+                      color: '#202124',
+                    }}
+                    secondaryTypographyProps={{ noWrap: true, color: '#5f6368' }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+            {listLoading && <Box display="flex" justifyContent="center" p={2}><CircularProgress size={24} /></Box>}
+            {emails.length === 0 && <Typography sx={{ p: 2, color: '#5f6368' }}>No emails</Typography>}
+          </Box>
+
+          {/* Email Viewer */}
+          <Box flexGrow={1} p={3} overflowY="auto" bgcolor="white">
+            {selectedEmail ? (
+              <EmailReader email={selectedEmail} />
+            ) : (
+              <Box sx={{ textAlign: "center", mt: 10 }}>
+                <Typography variant="h6" color="textSecondary">
+                  Select an email to view
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
       </Box>
 
-      {/* Middle: 25% width - List of emails (inbox) */}
-      <Box
-        sx={{
-          width: "25%",
-          borderRight: 1,
-          borderColor: "divider",
-          overflowY: "auto",
-          p: 2,
-        }}
-      >
-        <Typography variant="h6" gutterBottom>
-          Inbox
-        </Typography>
-        <List>
-          {recentEmails.map((email) => (
-            <ListItem
-              key={email.id}
-              button
-              selected={selectedEmail?.id === email.id}
-              onClick={() => handleEmailSelect(email)}
-              sx={{
-                mb: 1,
-                borderRadius: 1,
-                bgcolor: email.is_unread ? "action.hover" : "transparent",
-              }}
-            >
-              <ListItemIcon>
-                <Avatar sx={{ width: 32, height: 32 }}>
-                  {email.from_name ? email.from_name[0] : <Person />}
-                </Avatar>
-              </ListItemIcon>
-              <ListItemText
-                primary={email.subject}
-                secondary={`${email.from_name || email.from_address} • ${formatTimeAgo(email.received_at)}`}
-                primaryTypographyProps={{
-                  noWrap: true,
-                  fontWeight: email.is_unread ? "bold" : "normal",
-                }}
-                secondaryTypographyProps={{ noWrap: true }}
-              />
-              {email.has_attachments && <AttachFile sx={{ fontSize: 16, mr: 1 }} />}
-            </ListItem>
-          ))}
-        </List>
-        {recentEmails.length === 0 && <Typography color="textSecondary">No emails</Typography>}
-      </Box>
-
-      {/* Right: Remaining screen - Email body */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          overflowY: "auto",
-        }}
-      >
-        {selectedEmail ? (
-          <EmailReader email={selectedEmail} />  // Use EmailReader component to show body
-        ) : (
-          <Box sx={{ textAlign: "center", mt: 10 }}>
-            <Typography variant="h6" color="textSecondary">
-              Select an email to view
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    </Box>
+      <Dialog open={composeOpen} onClose={() => setComposeOpen(false)} fullWidth maxWidth="md">
+        <EmailCompose open={composeOpen} onClose={() => setComposeOpen(false)} />
+      </Dialog>
+    </ThemeProvider>
   );
 };
 

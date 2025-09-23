@@ -5,7 +5,7 @@ Email API Service for fetching and sending emails using OAuth providers
 import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
 from sqlalchemy.orm import Session
@@ -38,10 +38,23 @@ class EmailAPIService:
         query = self.db.query(Email).filter(Email.organization_id == user.organization_id)
         
         if token_id:
-            query = query.filter(Email.account_id == token_id)  # Assume added token_id to Email model
+            query = query.filter(Email.account_id == token_id)
         
         if folder:
-            query = query.filter(Email.folder == folder)
+            folder_upper = folder.upper()
+            if folder_upper in ['INBOX', 'SENT', 'DRAFTS', 'SPAM', 'TRASH', 'ARCHIVED']:
+                query = query.filter(Email.folder == folder_upper)
+            elif folder_upper == 'STARRED':
+                query = query.filter(Email.is_flagged == True)
+            elif folder_upper == 'IMPORTANT':
+                query = query.filter(Email.is_important == True)
+            elif folder_upper == 'SNOOZED':
+                # Assuming snoozed is a custom status or label; adjust as needed
+                query = query.filter(Email.status == 'SNOOZED')
+            elif folder_upper == 'CATEGORIES':
+                # Assuming categories use labels; filter if has labels
+                query = query.filter(Email.labels != None)
+            # Add more custom filters as needed
         
         total = query.count()
         emails = query.offset((page - 1) * per_page).limit(per_page).all()
@@ -337,9 +350,12 @@ class EmailAPIService:
         
         service = build('gmail', 'v1', credentials=creds)
         
-        # List messages
-        results = service.users().messages().list(userId='me', labelIds=['INBOX']).execute()
+        # List all messages without label filter to sync everything
+        results = service.users().messages().list(userId='me', maxResults=500).execute()  # Increased maxResults
         messages = results.get('messages', [])
+        while 'nextPageToken' in results:
+            results = service.users().messages().list(userId='me', maxResults=500, pageToken=results['nextPageToken']).execute()
+            messages.extend(results.get('messages', []))
         
         new_emails = 0
         for msg in messages:
@@ -352,6 +368,30 @@ class EmailAPIService:
             # Parse headers
             headers = {h['name'].lower(): h['value'] for h in msg_detail['payload']['headers']}
             
+            # Determine folder based on primary label
+            labels = msg_detail.get('labelIds', [])
+            folder = 'INBOX'
+            is_flagged = False
+            is_important = False
+            
+            if 'SENT' in labels:
+                folder = 'SENT'
+            elif 'DRAFT' in labels:
+                folder = 'DRAFTS'
+            elif 'SPAM' in labels:
+                folder = 'SPAM'
+            elif 'TRASH' in labels:
+                folder = 'TRASH'
+            elif 'UNREAD' in labels:
+                folder = 'INBOX'  # Default
+            if 'STARRED' in labels:
+                is_flagged = True
+            if 'IMPORTANT' in labels:
+                is_important = True
+            if 'CATEGORY_PERSONAL' in labels or 'CATEGORY_SOCIAL' in labels:  # Example for categories
+                folder = 'CATEGORIES'
+            # Add archived if no standard labels
+            
             email = Email(
                 message_id=msg['id'],
                 thread_id=msg_detail['threadId'],
@@ -361,7 +401,11 @@ class EmailAPIService:
                 sent_at=datetime.fromtimestamp(int(msg_detail['internalDate'])/1000),
                 received_at=datetime.fromtimestamp(int(msg_detail['internalDate'])/1000),
                 body_text=msg_detail['snippet'],
-                status="UNREAD",
+                status="UNREAD" if 'UNREAD' in labels else "READ",
+                is_flagged=is_flagged,
+                is_important=is_important,
+                labels=labels,
+                folder=folder,
                 account_id=token.id,
                 organization_id=token.organization_id
             )
@@ -369,6 +413,7 @@ class EmailAPIService:
             self.db.add(email)
             new_emails += 1
         
+        self.db.commit()
         return new_emails
 
     async def _sync_microsoft_emails(self, token: UserEmailToken) -> int:
@@ -403,29 +448,37 @@ class EmailAPIService:
         
         graph_client = GraphServiceClient(credentials=credential)
         
-        messages = await graph_client.me.mail_folders.by_mail_folder_id('inbox').messages.get()
-        
+        folders = ['inbox', 'sentitems', 'drafts', 'junkemail', 'deleteditems']
         new_emails = 0
-        for msg in messages.value:
-            # Check if exists
-            if self.db.query(Email).filter(Email.message_id == msg.id).first():
-                continue
-            
-            email = Email(
-                message_id=msg.id,
-                subject=msg.subject,
-                from_address=msg.from_.email_address.address,
-                to_addresses=[r.email_address.address for r in msg.to_recipient],
-                sent_at=msg.sent_date_time,
-                received_at=msg.received_date_time,
-                body_text=msg.body_preview,
-                body_html=msg.body.content if msg.body.content_type == 'html' else None,
-                status="UNREAD" if not msg.is_read else "READ",
-                account_id=token.id,
-                organization_id=token.organization_id
-            )
-            
-            self.db.add(email)
-            new_emails += 1
         
+        for folder_id in folders:
+            messages = await graph_client.me.mail_folders.by_mail_folder_id(folder_id).messages.get()
+            
+            for msg in messages.value:
+                # Check if exists
+                if self.db.query(Email).filter(Email.message_id == msg.id).first():
+                    continue
+                
+                email = Email(
+                    message_id=msg.id,
+                    subject=msg.subject,
+                    from_address=msg.from_.email_address.address,
+                    to_addresses=[r.email_address.address for r in msg.to_recipient],
+                    sent_at=msg.sent_date_time,
+                    received_at=msg.received_date_time,
+                    body_text=msg.body_preview,
+                    body_html=msg.body.content if msg.body.content_type == 'html' else None,
+                    status="UNREAD" if not msg.is_read else "READ",
+                    is_flagged=msg.flag.flag_status == 'flagged',
+                    is_important=msg.importance == 'high',
+                    labels=[],  # Microsoft doesn't have labels like Google; use categories if needed
+                    folder=folder_id.upper(),
+                    account_id=token.id,
+                    organization_id=token.organization_id
+                )
+                
+                self.db.add(email)
+                new_emails += 1
+        
+        self.db.commit()
         return new_emails
