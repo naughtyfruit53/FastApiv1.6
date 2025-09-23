@@ -48,12 +48,13 @@ import {
   Info,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
+import api from "../../lib/api";
+import { useOAuth } from "../../hooks/useOAuth";
 
 interface SyncJob {
   id: string;
-  account_id: number;
-  account_name: string;
-  account_email: string;
+  token_id: number;
+  email_address: string;
   status: "running" | "completed" | "failed" | "paused" | "queued";
   progress: number;
   total_emails: number;
@@ -86,142 +87,85 @@ interface SyncStats {
 
 const SyncPage: React.FC = () => {
   const router = useRouter();
+  const { getUserTokens } = useOAuth();
   const [syncJobs, setSyncJobs] = useState<SyncJob[]>([]);
   const [syncSettings, setSyncSettings] = useState<SyncSettings | null>(null);
   const [syncStats, setSyncStats] = useState<SyncStats | null>(null);
+  const [emailTokens, setEmailTokens] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   useEffect(() => {
-    fetchSyncData();
+    const fetchData = async () => {
+      try {
+        const tokens = await getUserTokens();
+        setEmailTokens(tokens);
+        await fetchSyncData();
+      } catch (err) {
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
     
     let interval: NodeJS.Timeout;
     if (autoRefresh) {
-      interval = setInterval(fetchSyncData, 5000); // Refresh every 5 seconds
+      interval = setInterval(fetchSyncData, 5000);
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoRefresh]);
+  }, [autoRefresh, getUserTokens]);
 
   const fetchSyncData = async () => {
     try {
-      if (syncJobs.length === 0) setLoading(true); // Only show loading for initial load
-      setError(null);
+      const [jobsRes, settingsRes, statsRes] = await Promise.all([
+        api.get('/api/v1/mail/sync/jobs'),
+        api.get('/api/v1/mail/sync/settings'),
+        api.get('/api/v1/mail/sync/stats')
+      ]);
       
-      // Mock data for sync jobs
-      const mockJobs: SyncJob[] = [
-        {
-          id: "job-1",
-          account_id: 1,
-          account_name: "Primary Work Email",
-          account_email: "john.doe@company.com",
-          status: "running",
-          progress: 65,
-          total_emails: 1500,
-          processed_emails: 975,
-          errors: 0,
-          started_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-          estimated_completion: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
-          folders_synced: ["INBOX", "SENT"],
-        },
-        {
-          id: "job-2",
-          account_id: 2,
-          account_name: "Support Email",
-          account_email: "support@company.com",
-          status: "failed",
-          progress: 30,
-          total_emails: 800,
-          processed_emails: 240,
-          errors: 1,
-          started_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-          completed_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-          folders_synced: ["inbox"],
-          last_error: "Authentication failed - token expired",
-        },
-      ];
-      
-      const mockSettings: SyncSettings = {
-        auto_sync_enabled: true,
-        sync_interval_minutes: 15,
-        max_concurrent_syncs: 3,
-        sync_folders: ["INBOX", "SENT", "DRAFTS"],
-        sync_attachments: true,
-        keep_local_copies: true,
-      };
-      
-      const mockStats: SyncStats = {
-        total_syncs_today: 24,
-        successful_syncs: 22,
-        failed_syncs: 2,
-        emails_synced_today: 1850,
-        last_full_sync: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        next_scheduled_sync: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      };
-      
-      setSyncJobs(mockJobs);
-      setSyncSettings(mockSettings);
-      setSyncStats(mockStats);
+      setSyncJobs(jobsRes.data);
+      setSyncSettings(settingsRes.data);
+      setSyncStats(statsRes.data);
     } catch (err: any) {
       console.error('Error fetching sync data:', err);
       setError('Failed to load sync data. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleStartSync = async (accountId?: number) => {
+  const handleStartSync = async (tokenId?: number) => {
     try {
-      console.log('Starting sync for account:', accountId || 'all accounts');
-      
-      // TODO: Implement actual API call
-      // const response = await api.post('/api/v1/email/sync/start', { account_id: accountId });
-      
-      // Update job status to running
-      if (accountId) {
-        setSyncJobs(prev => prev.map(job => 
-          job.account_id === accountId 
-            ? { ...job, status: "running", started_at: new Date().toISOString() }
-            : job
-        ));
+      const response = await api.post('/api/v1/mail/sync', {
+        token_id: tokenId
+      });
+      if (response.data.success) {
+        fetchSyncData();
+      } else {
+        setError(response.data.message);
       }
     } catch (err: any) {
-      console.error('Error starting sync:', err);
       setError('Failed to start sync. Please try again.');
     }
   };
 
   const handleStopSync = async (jobId: string) => {
     try {
-      console.log('Stopping sync job:', jobId);
-      
-      // TODO: Implement actual API call
-      // const response = await api.post(`/api/v1/email/sync/${jobId}/stop`);
-      
-      setSyncJobs(prev => prev.map(job => 
-        job.id === jobId 
-          ? { ...job, status: "paused" }
-          : job
-      ));
+      await api.post(`/api/v1/mail/sync/jobs/${jobId}/stop`);
+      fetchSyncData();
     } catch (err: any) {
-      console.error('Error stopping sync:', err);
       setError('Failed to stop sync. Please try again.');
     }
   };
 
   const handleUpdateSettings = async (newSettings: Partial<SyncSettings>) => {
     try {
-      console.log('Updating sync settings:', newSettings);
-      
-      // TODO: Implement actual API call
-      // const response = await api.put('/api/v1/email/sync/settings', newSettings);
-      
-      setSyncSettings(prev => prev ? { ...prev, ...newSettings } : null);
+      await api.put('/api/v1/mail/sync/settings', newSettings);
+      fetchSyncData();
     } catch (err: any) {
-      console.error('Error updating settings:', err);
       setError('Failed to update settings. Please try again.');
     }
   };
@@ -275,7 +219,7 @@ const SyncPage: React.FC = () => {
     }
   };
 
-  if (loading && syncJobs.length === 0) {
+  if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
@@ -417,7 +361,7 @@ const SyncPage: React.FC = () => {
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                             <Typography variant="subtitle1">
-                              {job.account_name}
+                              {job.email_address}
                             </Typography>
                             <Chip
                               icon={getStatusIcon(job.status)}
@@ -429,9 +373,6 @@ const SyncPage: React.FC = () => {
                         }
                         secondary={
                           <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {job.account_email}
-                            </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {job.processed_emails.toLocaleString()} / {job.total_emails.toLocaleString()} emails
                               {job.errors > 0 && (
@@ -478,7 +419,7 @@ const SyncPage: React.FC = () => {
                           {(job.status === 'paused' || job.status === 'failed') && (
                             <IconButton
                               size="small"
-                              onClick={() => handleStartSync(job.account_id)}
+                              onClick={() => handleStartSync(job.token_id)}
                               color="primary"
                             >
                               <PlayArrow />

@@ -38,9 +38,10 @@ import {
   Edit,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
+import api from "../../lib/api";
 
 interface SentEmail {
-  id: string;
+  id: number;
   subject: string;
   to_addresses: string[];
   cc_addresses?: string[];
@@ -49,7 +50,7 @@ interface SentEmail {
   has_attachments: boolean;
   priority: "low" | "normal" | "high" | "urgent";
   snippet: string;
-  status: "sent" | "delivered" | "read" | "failed";
+  status: "SENT" | "PENDING" | "FAILED";
 }
 
 const SentPage: React.FC = () => {
@@ -57,12 +58,12 @@ const SentPage: React.FC = () => {
   const [emails, setEmails] = useState<SentEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
+  const [selectedEmails, setSelectedEmails] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSentEmails();
@@ -73,44 +74,18 @@ const SentPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Mock data for sent emails
-      const mockSentEmails: SentEmail[] = [
-        {
-          id: "sent-1",
-          subject: "Monthly Report Submission",
-          to_addresses: ["manager@company.com", "hr@company.com"],
-          cc_addresses: ["team@company.com"],
-          sent_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          has_attachments: true,
-          priority: "normal",
-          snippet: "Please find attached the monthly report for your review...",
-          status: "delivered",
-        },
-        {
-          id: "sent-2",
-          subject: "Meeting Confirmation - Project Review",
-          to_addresses: ["client@external.com"],
-          sent_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-          has_attachments: false,
-          priority: "high",
-          snippet: "This is to confirm our meeting scheduled for tomorrow at 2 PM...",
-          status: "read",
-        },
-        {
-          id: "sent-3",
-          subject: "Invoice #INV-2024-001",
-          to_addresses: ["billing@client.com"],
-          cc_addresses: ["accounts@company.com"],
-          sent_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          has_attachments: true,
-          priority: "normal",
-          snippet: "Please find attached invoice INV-2024-001 for the services provided...",
-          status: "sent",
-        },
-      ];
+      const response = await api.get('/api/v1/mail/sent-emails', {
+        params: { 
+          page, 
+          per_page: 20, 
+          search: searchTerm || undefined,
+          sort_by: 'sent_at', 
+          sort_order: 'desc' 
+        }
+      });
       
-      setEmails(mockSentEmails);
-      setTotalPages(1);
+      setEmails(response.data.emails);
+      setTotalPages(response.data.total_pages);
     } catch (err: any) {
       console.error('Error fetching sent emails:', err);
       setError('Failed to load sent emails. Please try again.');
@@ -119,7 +94,7 @@ const SentPage: React.FC = () => {
     }
   };
 
-  const handleEmailSelect = (emailId: string) => {
+  const handleEmailSelect = (emailId: number) => {
     const newSelected = new Set(selectedEmails);
     if (newSelected.has(emailId)) {
       newSelected.delete(emailId);
@@ -141,7 +116,7 @@ const SentPage: React.FC = () => {
     router.push(`/mail/emails/${email.id}`);
   };
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, emailId: string) => {
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, emailId: number) => {
     setAnchorEl(event.currentTarget);
     setSelectedEmailId(emailId);
   };
@@ -154,18 +129,15 @@ const SentPage: React.FC = () => {
   const handleBulkAction = async (action: string) => {
     try {
       const emailIds = Array.from(selectedEmails);
-      console.log(`Performing bulk action ${action} on emails:`, emailIds);
-      
-      switch (action) {
-        case 'delete':
-          // TODO: Implement bulk delete API call
-          break;
-        case 'archive':
-          // TODO: Implement bulk archive API call
-          break;
+      for (const id of emailIds) {
+        if (action === 'delete') {
+          await api.delete(`/api/v1/mail/sent-emails/${id}`);
+        } else if (action === 'archive') {
+          await api.put(`/api/v1/mail/sent-emails/${id}`, { status: 'ARCHIVED' });
+        }
       }
-      
       setSelectedEmails(new Set());
+      fetchSentEmails();
     } catch (err: any) {
       console.error(`Error performing bulk action ${action}:`, err);
     }
@@ -198,20 +170,18 @@ const SentPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "delivered": return "success";
-      case "read": return "info";
-      case "sent": return "default";
-      case "failed": return "error";
+      case "SENT": return "default";
+      case "PENDING": return "warning";
+      case "FAILED": return "error";
       default: return "default";
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "delivered": return "Delivered";
-      case "read": return "Read";
-      case "sent": return "Sent";
-      case "failed": return "Failed";
+      case "SENT": return "Sent";
+      case "PENDING": return "Pending";
+      case "FAILED": return "Failed";
       default: return "Unknown";
     }
   };
@@ -414,7 +384,7 @@ const SentPage: React.FC = () => {
 
             {emails.length === 0 && (
               <Box sx={{ textAlign: 'center', py: 4 }}>
-                <SendIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <SendIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
                 <Typography variant="h6" color="text.secondary">
                   No sent emails
                 </Typography>

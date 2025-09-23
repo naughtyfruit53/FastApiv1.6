@@ -192,11 +192,31 @@ async def get_user_tokens(
     # Convert to response format with computed fields
     token_responses = []
     for token in tokens:
-        response = UserEmailTokenResponse.model_validate(token)
-        response.has_access_token = bool(token.access_token)
-        response.has_refresh_token = bool(token.refresh_token)
-        response.is_expired = token.is_expired()
-        response.is_active = token.is_active()
+        response = UserEmailTokenResponse(
+            id=token.id,
+            user_id=token.user_id,
+            organization_id=token.organization_id,
+            provider=token.provider,
+            email_address=token.email_address,
+            display_name=token.display_name,
+            token_type=token.token_type,
+            expires_at=token.expires_at,
+            status=token.status,
+            last_sync_at=token.last_sync_at,
+            last_sync_status=token.last_sync_status,
+            last_sync_error=token.last_sync_error,
+            created_at=token.created_at,
+            updated_at=token.updated_at,
+            last_used_at=token.last_used_at,
+            refresh_count=token.refresh_count,
+            has_access_token=bool(token.access_token_encrypted),
+            has_refresh_token=bool(token.refresh_token_encrypted),
+            is_expired=token.is_expired(),
+            is_active=token.is_active(),
+            sync_enabled=token.sync_enabled,
+            sync_folders=token.sync_folders,
+            scope=token.scope
+        )
         token_responses.append(response)
     
     return token_responses
@@ -223,11 +243,32 @@ async def get_token_details(
             detail="Token not found"
         )
     
-    response = UserEmailTokenWithDetails.model_validate(token)
-    response.has_access_token = bool(token.access_token)
-    response.has_refresh_token = bool(token.refresh_token)
-    response.is_expired = token.is_expired()
-    response.is_active = token.is_active()
+    response = UserEmailTokenWithDetails(
+        id=token.id,
+        user_id=token.user_id,
+        organization_id=token.organization_id,
+        provider=token.provider,
+        email_address=token.email_address,
+        display_name=token.display_name,
+        token_type=token.token_type,
+        expires_at=token.expires_at,
+        status=token.status,
+        last_sync_at=token.last_sync_at,
+        last_sync_status=token.last_sync_status,
+        last_sync_error=token.last_sync_error,
+        created_at=token.created_at,
+        updated_at=token.updated_at,
+        last_used_at=token.last_used_at,
+        refresh_count=token.refresh_count,
+        has_access_token=bool(token.access_token_encrypted),
+        has_refresh_token=bool(token.refresh_token_encrypted),
+        is_expired=token.is_expired(),
+        is_active=token.is_active(),
+        sync_enabled=token.sync_enabled,
+        sync_folders=token.sync_folders,
+        scope=token.scope,
+        provider_metadata=token.provider_metadata
+    )
     
     return response
 
@@ -262,11 +303,31 @@ async def update_token(
     token.updated_at = datetime.utcnow()
     db.commit()
     
-    response = UserEmailTokenResponse.model_validate(token)
-    response.has_access_token = bool(token.access_token)
-    response.has_refresh_token = bool(token.refresh_token)
-    response.is_expired = token.is_expired()
-    response.is_active = token.is_active()
+    response = UserEmailTokenResponse(
+        id=token.id,
+        user_id=token.user_id,
+        organization_id=token.organization_id,
+        provider=token.provider,
+        email_address=token.email_address,
+        display_name=token.display_name,
+        token_type=token.token_type,
+        expires_at=token.expires_at,
+        status=token.status,
+        last_sync_at=token.last_sync_at,
+        last_sync_status=token.last_sync_status,
+        last_sync_error=token.last_sync_error,
+        created_at=token.created_at,
+        updated_at=token.updated_at,
+        last_used_at=token.last_used_at,
+        refresh_count=token.refresh_count,
+        has_access_token=bool(token.access_token_encrypted),
+        has_refresh_token=bool(token.refresh_token_encrypted),
+        is_expired=token.is_expired(),
+        is_active=token.is_active(),
+        sync_enabled=token.sync_enabled,
+        sync_folders=token.sync_folders,
+        scope=token.scope
+    )
     
     return response
 

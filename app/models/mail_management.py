@@ -102,7 +102,7 @@ class Email(Base):
     from_address = Column(String(255), nullable=False, index=True)
     from_name = Column(String(255), nullable=True)
     to_addresses = Column(JSON, nullable=False)  # Array of recipient emails
-    cc_addresses = Column(JSON, nullable=True)   # Array of CC emails
+    cc_addresses = Column(JSON, nullable=True)  # Array of CC emails
     bcc_addresses = Column(JSON, nullable=True)  # Array of BCC emails
     reply_to = Column(String(255), nullable=True)
     

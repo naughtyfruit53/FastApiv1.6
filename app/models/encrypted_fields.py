@@ -1,11 +1,13 @@
 """
 Encrypted field types for SQLAlchemy models
 """
-from typing import Any, Optional
+from typing import Optional
 from sqlalchemy import TypeDecorator, String
 from sqlalchemy.dialects import postgresql
 from app.utils.encryption import encrypt_field, decrypt_field, EncryptionKeys
+import logging
 
+logger = logging.getLogger(__name__)
 
 class EncryptedString(TypeDecorator):
     """
@@ -37,9 +39,10 @@ class EncryptedString(TypeDecorator):
         if isinstance(value, str) and value.strip():
             try:
                 return decrypt_field(value, self.key_id)
-            except Exception:
-                # If decryption fails, return original value
-                # This handles cases where data might not be encrypted yet
+            except Exception as e:
+                # Log decryption failure
+                logger.error(f"Decryption failed for key_id {self.key_id}: {str(e)}")
+                # Return original value as fallback
                 return value
         return value
 

@@ -32,35 +32,44 @@ import {
   Download,
   Refresh
 } from '@mui/icons-material';
+import api from '../../lib/api';
 
 interface EmailAttachment {
-  id: string;
-  name: string;
+  id: number;
+  filename: string;
+  size_bytes: number;
   content_type: string;
-  size: number;
-  download_url?: string;
+  file_path: string | null;
 }
 
 interface EmailDetail {
-  id: string;
+  id: number;
+  message_id: string;
   subject: string;
-  sender: string;
-  recipients: string[];
+  from_address: string;
+  from_name: string | null;
+  to_addresses: string[];
+  cc_addresses: string[] | null;
+  bcc_addresses: string[] | null;
+  sent_at: string;
   received_at: string;
-  body_preview?: string;
-  is_read: boolean;
+  body_text: string | null;
+  body_html: string | null;
+  status: string;
+  priority: string;
+  is_flagged: boolean;
+  is_important: boolean;
+  folder: string | null;
+  labels: string[] | null;
+  size_bytes: number | null;
   has_attachments: boolean;
-  folder: string;
-  body_html?: string;
-  body_text?: string;
   attachments: EmailAttachment[];
-  headers?: Record<string, string>;
 }
 
 interface EmailReaderProps {
   tokenId: number;
-  messageId: string | null;
-  onReply?: (messageId: string, subject: string, sender: string) => void;
+  messageId: number | null;
+  onReply?: (messageId: number, subject: string, sender: string) => void;
   onClose?: () => void;
 }
 
@@ -88,25 +97,12 @@ const EmailReader: React.FC<EmailReaderProps> = ({
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/v1/email/tokens/${tokenId}/emails/${messageId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      const response = await api.get(`/api/v1/mail/emails/${messageId}`);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to load email');
-      }
-
-      const emailData = await response.json();
-      setEmail(emailData);
+      setEmail(response.data);
 
       // Auto-mark as read if it's unread
-      if (!emailData.is_read) {
+      if (response.data.status === 'UNREAD') {
         markAsRead();
       }
     } catch (err: any) {
@@ -117,23 +113,12 @@ const EmailReader: React.FC<EmailReaderProps> = ({
   };
 
   const markAsRead = async () => {
-    if (!messageId || !email || email.is_read) return;
+    if (!messageId || !email || email.status !== 'UNREAD') return;
 
     setMarkingRead(true);
     try {
-      const response = await fetch(
-        `/api/v1/email/tokens/${tokenId}/emails/${messageId}/mark-read`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
-      if (response.ok) {
-        setEmail(prev => prev ? { ...prev, is_read: true } : null);
-      }
+      await api.put(`/api/v1/mail/emails/${messageId}`, { status: 'READ' });
+      setEmail(prev => prev ? { ...prev, status: 'READ' } : null);
     } catch (err) {
       console.error('Failed to mark email as read:', err);
     } finally {
@@ -142,22 +127,11 @@ const EmailReader: React.FC<EmailReaderProps> = ({
   };
 
   const markAsUnread = async () => {
-    if (!messageId || !email || !email.is_read) return;
+    if (!messageId || !email || email.status === 'UNREAD') return;
 
     try {
-      const response = await fetch(
-        `/api/v1/email/tokens/${tokenId}/emails/${messageId}/mark-unread`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-
-      if (response.ok) {
-        setEmail(prev => prev ? { ...prev, is_read: false } : null);
-      }
+      await api.put(`/api/v1/mail/emails/${messageId}`, { status: 'UNREAD' });
+      setEmail(prev => prev ? { ...prev, status: 'UNREAD' } : null);
     } catch (err) {
       console.error('Failed to mark email as unread:', err);
     }
@@ -165,7 +139,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
 
   const handleReply = () => {
     if (email && onReply) {
-      onReply(email.id, email.subject, email.sender);
+      onReply(email.id, email.subject, email.from_address);
     }
   };
 
@@ -265,17 +239,17 @@ const EmailReader: React.FC<EmailReaderProps> = ({
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
             <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-              {getInitials(email.sender)}
+              {getInitials(email.from_address)}
             </Avatar>
             <Box sx={{ flex: 1 }}>
               <Typography variant="h6" sx={{ mb: 1 }}>
                 {email.subject}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                From: {email.sender}
+                From: {email.from_name || email.from_address}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                To: {email.recipients.join(', ')}
+                To: {email.to_addresses.join(', ')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {formatDate(email.received_at)}
@@ -283,9 +257,9 @@ const EmailReader: React.FC<EmailReaderProps> = ({
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Chip 
-                label={email.is_read ? 'Read' : 'Unread'} 
+                label={email.status} 
                 size="small"
-                color={email.is_read ? 'default' : 'primary'}
+                color={email.status === 'UNREAD' ? 'primary' : 'default'}
               />
               {email.has_attachments && (
                 <Chip 
@@ -324,11 +298,11 @@ const EmailReader: React.FC<EmailReaderProps> = ({
             <Divider orientation="vertical" flexItem />
             <IconButton
               size="small"
-              onClick={email.is_read ? markAsUnread : markAsRead}
+              onClick={email.status === 'READ' ? markAsUnread : markAsRead}
               disabled={markingRead}
             >
-              <Tooltip title={email.is_read ? 'Mark as unread' : 'Mark as read'}>
-                {email.is_read ? <MarkEmailUnread /> : <MarkEmailRead />}
+              <Tooltip title={email.status === 'READ' ? 'Mark as unread' : 'Mark as read'}>
+                {email.status === 'READ' ? <MarkEmailUnread /> : <MarkEmailRead />}
               </Tooltip>
             </IconButton>
             <IconButton size="small" onClick={loadEmailDetail}>
@@ -365,7 +339,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
                   fontSize: 'inherit'
                 }}
               >
-                {email.body_text || email.body_preview || 'No content to display'}
+                {email.body_text || 'No content to display'}
               </Typography>
             )}
           </Box>
@@ -391,13 +365,14 @@ const EmailReader: React.FC<EmailReaderProps> = ({
                       <Attachment />
                     </ListItemIcon>
                     <ListItemText
-                      primary={attachment.name}
-                      secondary={`${attachment.content_type} • ${formatFileSize(attachment.size)}`}
+                      primary={attachment.filename}
+                      secondary={`${attachment.content_type} • ${formatFileSize(attachment.size_bytes)}`}
                     />
                     <IconButton
                       edge="end"
-                      disabled={!attachment.download_url}
+                      disabled={!attachment.file_path}
                       title="Download attachment"
+                      onClick={() => window.open(attachment.file_path || '', '_blank')}
                     >
                       <Download />
                     </IconButton>

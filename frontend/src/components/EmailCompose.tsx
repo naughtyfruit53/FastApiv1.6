@@ -28,6 +28,7 @@ import {
   Close
 } from '@mui/icons-material';
 import { useOAuth } from '../hooks/useOAuth';
+import api from '../../lib/api';
 
 interface UserEmailToken {
   id: number;
@@ -124,38 +125,24 @@ const EmailCompose: React.FC<EmailComposeProps> = ({
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/email/tokens/${selectedTokenId}/emails/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          token_id: selectedTokenId,
-          to: to.split(',').map(email => email.trim()).filter(email => email),
-          cc: cc ? cc.split(',').map(email => email.trim()).filter(email => email) : undefined,
-          bcc: bcc ? bcc.split(',').map(email => email.trim()).filter(email => email) : undefined,
-          subject: subject,
-          body: body,
-          html_body: useHtml ? htmlBody : undefined
-        })
+      const response = await api.post(`/api/v1/mail/tokens/${selectedTokenId}/emails/send`, {
+        to: to.split(',').map(email => email.trim()).filter(email => email),
+        cc: cc ? cc.split(',').map(email => email.trim()).filter(email => email) : undefined,
+        bcc: bcc ? bcc.split(',').map(email => email.trim()).filter(email => email) : undefined,
+        subject: subject,
+        body_text: body,
+        body_html: useHtml ? htmlBody : undefined,
+        in_reply_to_id: replyTo ? replyTo.messageId : undefined
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to send email');
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
+      if (response.data.success) {
         setSuccess('Email sent successfully!');
         setTimeout(() => {
           onSuccess?.();
           handleClose();
         }, 1500);
       } else {
-        setError(result.message || 'Failed to send email');
+        setError(response.data.message || 'Failed to send email');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to send email');
@@ -178,10 +165,6 @@ const EmailCompose: React.FC<EmailComposeProps> = ({
     setSuccess(null);
     setSelectedTokenId(null);
     onClose();
-  };
-
-  const parseEmailAddresses = (value: string) => {
-    return value.split(',').map(email => email.trim()).filter(email => email);
   };
 
   return (

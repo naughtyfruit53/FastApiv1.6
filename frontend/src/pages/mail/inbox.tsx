@@ -42,92 +42,55 @@ import {
   FilterList,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
+import api from "../../lib/api";
 
 interface Email {
-  id: string;
+  id: number;
   subject: string;
   from_address: string;
   from_name?: string;
   received_at: string;
-  is_read: boolean;
+  is_unread: boolean;
   is_flagged: boolean;
   has_attachments: boolean;
   priority: "low" | "normal" | "high" | "urgent";
   snippet: string;
 }
 
-interface EmailFolder {
-  id: string;
-  name: string;
-  type: string;
-}
-
 const InboxPage: React.FC = () => {
   const router = useRouter();
   const [emails, setEmails] = useState<Email[]>([]);
-  const [folders, setFolders] = useState<EmailFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
+  const [selectedEmails, setSelectedEmails] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentFolder, setCurrentFolder] = useState("INBOX");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchEmails();
-    fetchFolders();
-  }, [currentFolder, page, searchTerm]);
+  }, [page, searchTerm]);
 
   const fetchEmails = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // For now, use mock data since backend endpoints might not be fully implemented
-      const mockEmails: Email[] = [
-        {
-          id: "1",
-          subject: "Quarterly Financial Report Q4 2024",
-          from_address: "finance@company.com",
-          from_name: "Finance Team",
-          received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          is_read: false,
-          is_flagged: true,
-          has_attachments: true,
-          priority: "high",
-          snippet: "Please find attached the quarterly financial report for Q4 2024. The results show strong performance across all divisions...",
-        },
-        {
-          id: "2",
-          subject: "Team Meeting - Project Status Update",
-          from_address: "manager@company.com",
-          from_name: "Project Manager",
-          received_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          is_read: true,
-          is_flagged: false,
-          has_attachments: false,
-          priority: "normal",
-          snippet: "Hi team, we're scheduling a meeting to discuss the current project status and upcoming milestones...",
-        },
-        {
-          id: "3",
-          subject: "System Maintenance Notification",
-          from_address: "noreply@company.com",
-          from_name: "IT Department",
-          received_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          is_read: true,
-          is_flagged: false,
-          has_attachments: false,
-          priority: "normal",
-          snippet: "This is to inform you that scheduled system maintenance will be performed this weekend...",
-        },
-      ];
+      const response = await api.get('/api/v1/mail/emails', {
+        params: { 
+          page, 
+          per_page: 20, 
+          folders: ['INBOX'],
+          search: searchTerm || undefined,
+          sort_by: 'received_at', 
+          sort_order: 'desc' 
+        }
+      });
       
-      setEmails(mockEmails);
-      setTotalPages(1);
+      setEmails(response.data.emails);
+      setTotalPages(response.data.total_pages);
     } catch (err: any) {
       console.error('Error fetching emails:', err);
       setError('Failed to load emails. Please try again.');
@@ -136,23 +99,7 @@ const InboxPage: React.FC = () => {
     }
   };
 
-  const fetchFolders = async () => {
-    try {
-      // Mock folder data for now
-      const mockFolders: EmailFolder[] = [
-        { id: "INBOX", name: "Inbox", type: "inbox" },
-        { id: "SENT", name: "Sent", type: "sent" },
-        { id: "DRAFTS", name: "Drafts", type: "drafts" },
-        { id: "SPAM", name: "Spam", type: "spam" },
-        { id: "TRASH", name: "Trash", type: "trash" },
-      ];
-      setFolders(mockFolders);
-    } catch (err: any) {
-      console.error('Error fetching folders:', err);
-    }
-  };
-
-  const handleEmailSelect = (emailId: string) => {
+  const handleEmailSelect = (emailId: number) => {
     const newSelected = new Set(selectedEmails);
     if (newSelected.has(emailId)) {
       newSelected.delete(emailId);
@@ -171,20 +118,19 @@ const InboxPage: React.FC = () => {
   };
 
   const handleEmailClick = (email: Email) => {
-    // Mark as read and navigate to email detail
     router.push(`/mail/emails/${email.id}`);
   };
 
-  const handleStarToggle = async (emailId: string, starred: boolean) => {
+  const handleStarToggle = async (emailId: number, flagged: boolean) => {
     try {
-      // TODO: Implement API call to toggle star
-      console.log(`Toggling star for email ${emailId}: ${starred}`);
+      await api.put(`/api/v1/mail/emails/${emailId}`, { is_flagged: flagged });
+      fetchEmails(); // Refresh list
     } catch (err: any) {
-      console.error('Error toggling star:', err);
+      console.error('Error toggling flag:', err);
     }
   };
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, emailId: string) => {
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, emailId: number) => {
     setAnchorEl(event.currentTarget);
     setSelectedEmailId(emailId);
   };
@@ -197,24 +143,19 @@ const InboxPage: React.FC = () => {
   const handleBulkAction = async (action: string) => {
     try {
       const emailIds = Array.from(selectedEmails);
-      console.log(`Performing bulk action ${action} on emails:`, emailIds);
-      
-      switch (action) {
-        case 'delete':
-          // TODO: Implement bulk delete API call
-          break;
-        case 'archive':
-          // TODO: Implement bulk archive API call
-          break;
-        case 'markRead':
-          // TODO: Implement bulk mark read API call
-          break;
-        case 'markUnread':
-          // TODO: Implement bulk mark unread API call
-          break;
+      for (const id of emailIds) {
+        if (action === 'delete') {
+          await api.delete(`/api/v1/mail/emails/${id}`);
+        } else if (action === 'archive') {
+          await api.put(`/api/v1/mail/emails/${id}`, { folder: 'ARCHIVE' });
+        } else if (action === 'markRead') {
+          await api.put(`/api/v1/mail/emails/${id}`, { status: 'READ' });
+        } else if (action === 'markUnread') {
+          await api.put(`/api/v1/mail/emails/${id}`, { status: 'UNREAD' });
+        }
       }
-      
       setSelectedEmails(new Set());
+      fetchEmails();
     } catch (err: any) {
       console.error(`Error performing bulk action ${action}:`, err);
     }
@@ -355,7 +296,7 @@ const InboxPage: React.FC = () => {
                   sx={{
                     borderBottom: 1,
                     borderColor: 'divider',
-                    backgroundColor: email.is_read ? 'transparent' : 'action.hover',
+                    backgroundColor: email.is_unread ? 'action.hover' : 'transparent',
                     '&:hover': {
                       backgroundColor: 'action.selected',
                     },
@@ -397,7 +338,7 @@ const InboxPage: React.FC = () => {
                         <Typography
                           variant="subtitle2"
                           sx={{
-                            fontWeight: email.is_read ? 'normal' : 'bold',
+                            fontWeight: email.is_unread ? 'bold' : 'normal',
                             maxWidth: 200,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -423,7 +364,7 @@ const InboxPage: React.FC = () => {
                         <Typography
                           variant="body2"
                           sx={{
-                            fontWeight: email.is_read ? 'normal' : 'bold',
+                            fontWeight: email.is_unread ? 'bold' : 'normal',
                             mb: 0.5,
                           }}
                         >
@@ -464,7 +405,7 @@ const InboxPage: React.FC = () => {
 
             {emails.length === 0 && (
               <Box sx={{ textAlign: 'center', py: 4 }}>
-                <InboxIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <InboxIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
                 <Typography variant="h6" color="text.secondary">
                   No emails in inbox
                 </Typography>

@@ -30,6 +30,7 @@ class UserEmailToken(Base):
     Encrypted storage for OAuth2 email tokens with automatic refresh capability
     """
     __tablename__ = "user_email_tokens"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     
@@ -124,6 +125,7 @@ class OAuthState(Base):
     Temporary storage for OAuth2 state during authorization flow
     """
     __tablename__ = "oauth_states"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     

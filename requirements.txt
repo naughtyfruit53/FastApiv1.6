@@ -36,6 +36,8 @@ google-api-python-client==2.151.0
 msal==1.31.0
 imaplib2==3.6
 cryptography==45.0.7  # Already specified above but ensuring version
+azure-identity==1.17.1  # For Microsoft Graph authentication
+msgraph-sdk==1.4.0  # Microsoft Graph SDK
 
 # ML and Financial Modeling Dependencies
 scikit-learn==1.5.2
