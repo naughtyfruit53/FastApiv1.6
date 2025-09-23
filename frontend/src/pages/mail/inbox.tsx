@@ -78,7 +78,7 @@ const InboxPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/api/v1/mail/emails', {
+      const response = await api.get('/mail/emails', {
         params: { 
           page, 
           per_page: 20, 
@@ -123,7 +123,7 @@ const InboxPage: React.FC = () => {
 
   const handleStarToggle = async (emailId: number, flagged: boolean) => {
     try {
-      await api.put(`/api/v1/mail/emails/${emailId}`, { is_flagged: flagged });
+      await api.put(`/mail/emails/${emailId}`, { is_flagged: flagged });
       fetchEmails(); // Refresh list
     } catch (err: any) {
       console.error('Error toggling flag:', err);
@@ -145,13 +145,13 @@ const InboxPage: React.FC = () => {
       const emailIds = Array.from(selectedEmails);
       for (const id of emailIds) {
         if (action === 'delete') {
-          await api.delete(`/api/v1/mail/emails/${id}`);
+          await api.delete(`/mail/emails/${id}`);
         } else if (action === 'archive') {
-          await api.put(`/api/v1/mail/emails/${id}`, { folder: 'ARCHIVE' });
+          await api.put(`/mail/emails/${id}`, { folder: 'ARCHIVE' });
         } else if (action === 'markRead') {
-          await api.put(`/api/v1/mail/emails/${id}`, { status: 'READ' });
+          await api.put(`/mail/emails/${id}`, { status: 'READ' });
         } else if (action === 'markUnread') {
-          await api.put(`/api/v1/mail/emails/${id}`, { status: 'UNREAD' });
+          await api.put(`/mail/emails/${id}`, { status: 'UNREAD' });
         }
       }
       setSelectedEmails(new Set());

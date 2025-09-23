@@ -38,7 +38,7 @@ class EmailAPIService:
         query = self.db.query(Email).filter(Email.organization_id == user.organization_id)
         
         if token_id:
-            query = query.filter(Email.token_id == token_id)  # Assume added token_id to Email model
+            query = query.filter(Email.account_id == token_id)  # Assume added token_id to Email model
         
         if folder:
             query = query.filter(Email.folder == folder)
@@ -140,7 +140,7 @@ class EmailAPIService:
             bcc_addresses=compose_request.bcc_addresses,
             body_text=compose_request.body_text,
             body_html=compose_request.body_html,
-            token_id=token_id,
+            account_id=token_id,
             organization_id=user.organization_id,
             sent_by=user.id,
             status="SENT",
@@ -239,8 +239,8 @@ class EmailAPIService:
                     content_type=BodyType.HTML if compose_request.body_html else BodyType.TEXT,
                     content=compose_request.body_html or compose_request.body_text
                 ),
-                to_recipients=[Recipient(email_address=EmailAddress(address=addr)) for addr in compose_request.to_addresses],
-                cc_recipients=[Recipient(email_address=EmailAddress(address=addr)) for addr in compose_request.cc_addresses or []],
+                to_recipient = [Recipient(email_address=EmailAddress(address=addr)) for addr in compose_request.to_addresses],
+                cc_recipient = [Recipient(email_address=EmailAddress(address=addr)) for addr in compose_request.cc_addresses or []],
                 bcc_recipient = [Recipient(email_address=EmailAddress(address=addr)) for addr in compose_request.bcc_addresses or []]
             )
             
@@ -274,7 +274,7 @@ class EmailAPIService:
         
         return message
 
-    async def sync_emails(self, user, token_id: Optional[int], force: bool) -> MailSyncResponse:
+    async def sync_emails(self, user, token_id: Optional[int], force_sync: bool) -> MailSyncResponse:
         """Sync emails from providers"""
         tokens = self.db.query(UserEmailToken).filter(
             UserEmailToken.user_id == user.id,
@@ -362,7 +362,7 @@ class EmailAPIService:
                 received_at=datetime.fromtimestamp(int(msg_detail['internalDate'])/1000),
                 body_text=msg_detail['snippet'],
                 status="UNREAD",
-                token_id=token.id,
+                account_id=token.id,
                 organization_id=token.organization_id
             )
             
@@ -415,13 +415,13 @@ class EmailAPIService:
                 message_id=msg.id,
                 subject=msg.subject,
                 from_address=msg.from_.email_address.address,
-                to_addresses=[r.email_address.address for r in msg.to_recipients],
+                to_addresses=[r.email_address.address for r in msg.to_recipient],
                 sent_at=msg.sent_date_time,
                 received_at=msg.received_date_time,
                 body_text=msg.body_preview,
                 body_html=msg.body.content if msg.body.content_type == 'html' else None,
                 status="UNREAD" if not msg.is_read else "READ",
-                token_id=token.id,
+                account_id=token.id,
                 organization_id=token.organization_id
             )
             

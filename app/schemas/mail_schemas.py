@@ -342,7 +342,6 @@ class EmailList(BaseModel):
 
 # Mail compose schemas
 class MailComposeRequest(BaseModel):
-    account_id: int
     to_addresses: List[EmailStr]
     cc_addresses: Optional[List[EmailStr]] = None
     bcc_addresses: Optional[List[EmailStr]] = None
@@ -358,7 +357,7 @@ class MailComposeRequest(BaseModel):
     attachments: Optional[List[Dict[str, Any]]] = None
 
 class MailSyncRequest(BaseModel):
-    account_id: Optional[int] = None  # If None, sync all accounts
+    token_id: Optional[int] = None  # If None, sync all accounts
     force_sync: bool = False
 
 class MailSyncResponse(BaseModel):

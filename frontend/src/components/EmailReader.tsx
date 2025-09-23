@@ -32,7 +32,7 @@ import {
   Download,
   Refresh
 } from '@mui/icons-material';
-import api from '../../lib/api';
+import api from '../lib/api';
 
 interface EmailAttachment {
   id: number;
@@ -97,7 +97,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
     setError(null);
 
     try {
-      const response = await api.get(`/api/v1/mail/emails/${messageId}`);
+      const response = await api.get(`/mail/emails/${messageId}`);
 
       setEmail(response.data);
 
@@ -117,7 +117,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
 
     setMarkingRead(true);
     try {
-      await api.put(`/api/v1/mail/emails/${messageId}`, { status: 'READ' });
+      await api.put(`/mail/emails/${messageId}`, { status: 'READ' });
       setEmail(prev => prev ? { ...prev, status: 'READ' } : null);
     } catch (err) {
       console.error('Failed to mark email as read:', err);
@@ -130,7 +130,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
     if (!messageId || !email || email.status === 'UNREAD') return;
 
     try {
-      await api.put(`/api/v1/mail/emails/${messageId}`, { status: 'UNREAD' });
+      await api.put(`/mail/emails/${messageId}`, { status: 'UNREAD' });
       setEmail(prev => prev ? { ...prev, status: 'UNREAD' } : null);
     } catch (err) {
       console.error('Failed to mark email as unread:', err);
@@ -139,7 +139,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
 
   const handleReply = () => {
     if (email && onReply) {
-      onReply(email.id, email.subject, email.from_address);
+      onReply(email.id, email.subject, email.sender);
     }
   };
 

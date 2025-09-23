@@ -123,9 +123,9 @@ const SyncPage: React.FC = () => {
   const fetchSyncData = async () => {
     try {
       const [jobsRes, settingsRes, statsRes] = await Promise.all([
-        api.get('/api/v1/mail/sync/jobs'),
-        api.get('/api/v1/mail/sync/settings'),
-        api.get('/api/v1/mail/sync/stats')
+        api.get('/mail/sync/jobs'),
+        api.get('/mail/sync/settings'),
+        api.get('/mail/sync/stats')
       ]);
       
       setSyncJobs(jobsRes.data);
@@ -139,7 +139,7 @@ const SyncPage: React.FC = () => {
 
   const handleStartSync = async (tokenId?: number) => {
     try {
-      const response = await api.post('/api/v1/mail/sync', {
+      const response = await api.post('/mail/sync', {
         token_id: tokenId
       });
       if (response.data.success) {
@@ -154,7 +154,7 @@ const SyncPage: React.FC = () => {
 
   const handleStopSync = async (jobId: string) => {
     try {
-      await api.post(`/api/v1/mail/sync/jobs/${jobId}/stop`);
+      await api.post(`/mail/sync/jobs/${jobId}/stop`);
       fetchSyncData();
     } catch (err: any) {
       setError('Failed to stop sync. Please try again.');
@@ -163,7 +163,7 @@ const SyncPage: React.FC = () => {
 
   const handleUpdateSettings = async (newSettings: Partial<SyncSettings>) => {
     try {
-      await api.put('/api/v1/mail/sync/settings', newSettings);
+      await api.put('/mail/sync/settings', newSettings);
       fetchSyncData();
     } catch (err: any) {
       setError('Failed to update settings. Please try again.');

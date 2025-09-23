@@ -4,12 +4,13 @@
 Mail and Email Management API endpoints
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, Form, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
 import traceback
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_, func, desc, asc
+import json
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user as get_current_user
@@ -153,11 +154,28 @@ async def list_sent_emails(
 @router.post("/tokens/{token_id}/emails/send", response_model=SentEmailResponse)
 async def send_email(
     token_id: int,
-    compose_request: MailComposeRequest,
+    to_addresses: str = Form(...),
+    cc_addresses: str = Form("[]"),
+    bcc_addresses: str = Form("[]"),
+    subject: str = Form(...),
+    body_html: str = Form(""),
+    body_text: str = Form(""),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    attachments: List[UploadFile] = File(None)
 ):
     """Send email using specific token"""
+    try:
+        compose_request = MailComposeRequest(
+            to_addresses=json.loads(to_addresses),
+            cc_addresses=json.loads(cc_addresses),
+            bcc_addresses=json.loads(bcc_addresses),
+            subject=subject,
+            body_html=body_html,
+            body_text=body_text
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Invalid input format: {str(e)}")
     email_service = EmailAPIService(db)
     return await email_service.send_email(current_user, token_id, compose_request)
 

@@ -40,6 +40,7 @@ import api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useOAuth } from "../../hooks/useOAuth";
 import OAuthLoginButton from "../../components/OAuthLoginButton";
+import EmailReader from "../../components/EmailReader";  // Assume this component exists for displaying email body
 
 interface MailStats {
   total_emails: number;
@@ -62,6 +63,8 @@ interface RecentEmail {
   is_flagged: boolean;
   has_attachments: boolean;
   priority: "low" | "normal" | "high" | "urgent";
+  body_text: string;  // Added for body display
+  body_html?: string;  // Added for body display
 }
 
 interface UserEmailToken {
@@ -82,6 +85,7 @@ const MailDashboard: React.FC = () => {
   const [stats, setStats] = useState<MailStats | null>(null);
   const [recentEmails, setRecentEmails] = useState<RecentEmail[]>([]);
   const [emailTokens, setEmailTokens] = useState<UserEmailToken[]>([]);
+  const [selectedEmail, setSelectedEmail] = useState<RecentEmail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -106,9 +110,9 @@ const MailDashboard: React.FC = () => {
         const statsResponse = await api.get('/mail/dashboard');
         setStats(statsResponse.data);
 
-        // Fetch recent emails
+        // Fetch recent emails (assume API returns full details including body)
         const emailsResponse = await api.get('/mail/emails', {
-          params: { page: 1, per_page: 5, sort_by: 'received_at', sort_order: 'desc' },
+          params: { page: 1, per_page: 20, sort_by: 'received_at', sort_order: 'desc' },  // Increased per_page for full inbox list
         });
         setRecentEmails(emailsResponse.data.emails);
       } catch (error: any) {
@@ -162,6 +166,10 @@ const MailDashboard: React.FC = () => {
 
   const handleNavigate = (path: string) => {
     router.push(path);
+  };
+
+  const handleEmailSelect = (email: RecentEmail) => {
+    setSelectedEmail(email);
   };
 
   const formatTimeAgo = (dateTime: string) => {
@@ -244,336 +252,152 @@ const MailDashboard: React.FC = () => {
   return (
     <Box
       sx={{
-        p: 3,
-        opacity: 0,
-        animation: "fadeInUp 0.6s ease-out forwards",
-        "@keyframes fadeInUp": {
-          from: { opacity: 0, transform: "translateY(30px)" },
-          to: { opacity: 1, transform: "translateY(0)" },
-        },
+        display: "flex",
+        height: "100vh",
+        width: "100vw",
+        overflow: "hidden",
       }}
     >
-      {/* Header */}
+      {/* Left Sidebar: 10% width - Stacked tiles (stats) and quick actions */}
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 4,
-          pb: 2,
-          borderBottom: "1px solid",
+          width: "10%",
+          borderRight: 1,
           borderColor: "divider",
-          position: "relative",
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            bottom: "-1px",
-            left: 0,
-            width: "60px",
-            height: "3px",
-            background: "linear-gradient(90deg, primary.main, primary.light)",
-            borderRadius: "2px",
-          },
+          overflowY: "auto",
+          p: 2,
+          bgcolor: "background.paper",
         }}
       >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            fontWeight: "bold",
-            color: "text.primary",
-          }}
-        >
-          <Dashboard color="primary" />
-          Mail Dashboard
+        <Typography variant="h6" gutterBottom sx={{ textAlign: "center" }}>
+          Quick View
         </Typography>
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<Sync />}
-            onClick={() => handleNavigate("/mail/sync")}
-            sx={{
-              borderRadius: 2,
-              transition: "all 0.2s ease-in-out",
-              "&:hover": {
-                transform: "translateY(-2px)",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-              },
-            }}
-          >
-            Sync Mail
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {/* Stacked Stats Tiles */}
+          <Card>
+            <CardContent sx={{ p: 1 }}>
+              <Typography variant="body2" color="textSecondary">
+                Total
+              </Typography>
+              <Typography variant="h6">{stats.total_emails}</Typography>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent sx={{ p: 1 }}>
+              <Typography variant="body2" color="textSecondary">
+                Unread
+              </Typography>
+              <Typography variant="h6" color="warning.main">{stats.unread_emails}</Typography>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent sx={{ p: 1 }}>
+              <Typography variant="body2" color="textSecondary">
+                Flagged
+              </Typography>
+              <Typography variant="h6">{stats.flagged_emails}</Typography>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent sx={{ p: 1 }}>
+              <Typography variant="body2" color="textSecondary">
+                Today
+              </Typography>
+              <Typography variant="h6">{stats.today_emails}</Typography>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="h6" gutterBottom sx={{ textAlign: "center" }}>
+            Actions
+          </Typography>
+          <Button variant="text" startIcon={<Inbox />} onClick={() => handleNavigate("/mail/inbox")} fullWidth>
+            Inbox
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => handleNavigate("/mail/compose")}
-          >
+          <Button variant="text" startIcon={<Send />} onClick={() => handleNavigate("/mail/sent")} fullWidth>
+            Sent
+          </Button>
+          <Button variant="text" startIcon={<Drafts />} onClick={() => handleNavigate("/mail/drafts")} fullWidth>
+            Drafts
+          </Button>
+          <Button variant="text" startIcon={<Archive />} onClick={() => handleNavigate("/mail/archived")} fullWidth>
+            Archived
+          </Button>
+          <Button variant="text" startIcon={<Add />} onClick={() => handleNavigate("/mail/compose")} fullWidth>
             Compose
+          </Button>
+          <Button variant="text" startIcon={<Sync />} onClick={() => handleNavigate("/mail/sync")} fullWidth>
+            Sync
           </Button>
         </Box>
       </Box>
-      {/* Overview Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Total Emails
-                  </Typography>
-                  <Typography variant="h5">{stats.total_emails.toLocaleString()}</Typography>
-                </Box>
-                <Email color="primary" sx={{ fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Unread
-                  </Typography>
-                  <Typography variant="h5" color="warning.main">{stats.unread_emails}</Typography>
-                </Box>
-                <Badge badgeContent={stats.unread_emails} color="warning">
-                  <MarkEmailUnread color="warning" sx={{ fontSize: 40 }} />
-                </Badge>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Flagged
-                  </Typography>
-                  <Typography variant="h5">{stats.flagged_emails}</Typography>
-                </Box>
-                <Flag color="error" sx={{ fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Today's Emails
-                  </Typography>
-                  <Typography variant="h5">{stats.today_emails}</Typography>
-                </Box>
-                <Today color="info" sx={{ fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-      {/* Main Content */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <Inbox color="primary" />
-                Recent Emails
-              </Typography>
-              <List>
-                {recentEmails.map((email, index) => (
-                  <React.Fragment key={email.id}>
-                    <ListItem
-                      sx={{
-                        cursor: "pointer",
-                        borderRadius: 1,
-                        backgroundColor: email.is_unread ? "action.hover" : "transparent",
-                        "&:hover": { backgroundColor: "action.selected" },
-                      }}
-                      onClick={() => handleNavigate(`/mail/emails/${email.id}`)}
-                    >
-                      <ListItemIcon>
-                        <Avatar sx={{ bgcolor: "primary.main", width: 32, height: 32 }}>
-                          {email.from_name ? email.from_name.charAt(0).toUpperCase() : <Person />}
-                        </Avatar>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-                            <Typography
-                              variant="subtitle2"
-                              sx={{ fontWeight: email.is_unread ? "bold" : "normal" }}
-                            >
-                              {email.subject}
-                            </Typography>
-                            {email.priority !== "normal" && (
-                              <Chip
-                                label={email.priority}
-                                size="small"
-                                color={getPriorityColor(email.priority) as any}
-                              />
-                            )}
-                            {email.is_flagged && <Flag color="error" sx={{ fontSize: 16 }} />}
-                            {email.has_attachments && <AttachFile sx={{ fontSize: 16 }} />}
-                          </Box>
-                        }
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="textSecondary">
-                              From: {email.from_name || email.from_address}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {formatTimeAgo(email.received_at)}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                      <ListItemSecondaryAction>
-                        {email.is_unread ? (
-                          <MarkEmailUnread color="warning" />
-                        ) : (
-                          <MarkEmailRead color="disabled" />
-                        )}
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                    {index < recentEmails.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-              {recentEmails.length === 0 && (
-                <Box sx={{ textAlign: "center", py: 4 }}>
-                  <Typography color="textSecondary">No recent emails</Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Quick Actions
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Inbox />}
-                      onClick={() => handleNavigate("/mail/inbox")}
-                      fullWidth
-                    >
-                      View Inbox
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Send />}
-                      onClick={() => handleNavigate("/mail/sent")}
-                      fullWidth
-                    >
-                      Sent Items
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Drafts />}
-                      onClick={() => handleNavigate("/mail/drafts")}
-                      fullWidth
-                    >
-                      Drafts ({stats.draft_emails})
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Archive />}
-                      onClick={() => handleNavigate("/mail/archived")}
-                      fullWidth
-                    >
-                      Archived
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Email Accounts</Typography>
-                  <List dense>
-                    {emailTokens.map((token, index) => (
-                      <ListItem
-                        key={token.id}
-                        sx={{ borderRadius: 1, mb: 1, border: "1px solid", borderColor: "divider" }}
-                      >
-                        <ListItemIcon>
-                          <Avatar sx={{ bgcolor: getSyncStatusColor(token.last_sync_status || 'pending') + ".main", width: 32, height: 32 }}>
-                            <Email />
-                          </Avatar>
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={token.display_name || token.email_address}
-                          secondary={
-                            <Box>
-                              <Typography variant="caption" display="block">{token.email_address}</Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                Last sync: {token.last_sync_at ? formatTimeAgo(token.last_sync_at) : 'Never'}
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                        <ListItemSecondaryAction>
-                          <Badge badgeContent={token.unread_count} color="warning">
-                            <Inbox />
-                          </Badge>
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))}
-                  </List>
-                  <OAuthLoginButton />
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Mail Stats</Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                      <Typography variant="body2">Sent Emails</Typography>
-                      <Typography variant="body2">{stats.sent_emails}</Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                      <Typography variant="body2">This Week</Typography>
-                      <Typography variant="body2">{stats.this_week_emails}</Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                      <Typography variant="body2">Drafts</Typography>
-                      <Typography variant="body2">{stats.draft_emails}</Typography>
-                    </Box>
-                    {stats.spam_emails > 0 && (
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                        <Typography variant="body2" color="error">Spam</Typography>
-                        <Typography variant="body2" color="error">{stats.spam_emails}</Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Grid>
+
+      {/* Middle: 25% width - List of emails (inbox) */}
+      <Box
+        sx={{
+          width: "25%",
+          borderRight: 1,
+          borderColor: "divider",
+          overflowY: "auto",
+          p: 2,
+        }}
+      >
+        <Typography variant="h6" gutterBottom>
+          Inbox
+        </Typography>
+        <List>
+          {recentEmails.map((email) => (
+            <ListItem
+              key={email.id}
+              button
+              selected={selectedEmail?.id === email.id}
+              onClick={() => handleEmailSelect(email)}
+              sx={{
+                mb: 1,
+                borderRadius: 1,
+                bgcolor: email.is_unread ? "action.hover" : "transparent",
+              }}
+            >
+              <ListItemIcon>
+                <Avatar sx={{ width: 32, height: 32 }}>
+                  {email.from_name ? email.from_name[0] : <Person />}
+                </Avatar>
+              </ListItemIcon>
+              <ListItemText
+                primary={email.subject}
+                secondary={`${email.from_name || email.from_address} • ${formatTimeAgo(email.received_at)}`}
+                primaryTypographyProps={{
+                  noWrap: true,
+                  fontWeight: email.is_unread ? "bold" : "normal",
+                }}
+                secondaryTypographyProps={{ noWrap: true }}
+              />
+              {email.has_attachments && <AttachFile sx={{ fontSize: 16, mr: 1 }} />}
+            </ListItem>
+          ))}
+        </List>
+        {recentEmails.length === 0 && <Typography color="textSecondary">No emails</Typography>}
+      </Box>
+
+      {/* Right: Remaining screen - Email body */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          overflowY: "auto",
+        }}
+      >
+        {selectedEmail ? (
+          <EmailReader email={selectedEmail} />  // Use EmailReader component to show body
+        ) : (
+          <Box sx={{ textAlign: "center", mt: 10 }}>
+            <Typography variant="h6" color="textSecondary">
+              Select an email to view
+            </Typography>
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };

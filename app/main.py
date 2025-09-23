@@ -499,6 +499,10 @@ logger.info("Ledger router included successfully at prefix: /api/v1")
 app.include_router(v1_chart_of_accounts.router, prefix="/api/v1", tags=["chart-of-accounts"])
 logger.info("Chart of Accounts router included successfully at prefix: /api/v1")
 
+# Sticky Notes API (fixed prefix to match frontend calls)
+app.include_router(v1_sticky_notes.router, prefix="/api/v1/sticky_notes", tags=["sticky-notes"])
+logger.info("Sticky Notes router included successfully at prefix: /api/v1/sticky_notes")
+
 @app.get("/routes")
 def get_routes():
     """Temporary endpoint to list all registered routes for debugging 404 issues"""

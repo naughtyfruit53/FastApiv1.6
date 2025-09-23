@@ -1,5 +1,5 @@
 // frontend/src/pages/mail/compose.tsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Box,
   Typography,

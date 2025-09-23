@@ -86,7 +86,6 @@ class EmailAccount(Base):
     organization = relationship("Organization", back_populates="email_accounts")
     user = relationship("User", back_populates="email_accounts")
     emails = relationship("Email", back_populates="account", cascade="all, delete-orphan")
-    sent_emails = relationship("SentEmail", back_populates="account", cascade="all, delete-orphan")
 
 class Email(Base):
     __tablename__ = "emails"
@@ -195,7 +194,7 @@ class SentEmail(Base):
     body_html = Column(Text, nullable=True)
     
     # Relations
-    account_id = Column(Integer, ForeignKey("email_accounts.id"), nullable=False)
+    account_id = Column(Integer, ForeignKey("user_email_tokens.id"), nullable=False)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
     sent_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     
@@ -216,7 +215,7 @@ class SentEmail(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
-    account = relationship("EmailAccount", back_populates="sent_emails")
+    account = relationship("UserEmailToken", back_populates="sent_emails")
     organization = relationship("Organization", back_populates="sent_emails")
     sender = relationship("User", back_populates="sent_emails")
     task = relationship("Task", back_populates="sent_emails")

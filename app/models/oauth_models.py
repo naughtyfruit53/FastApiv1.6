@@ -73,6 +73,7 @@ class UserEmailToken(Base):
     # Relationships
     user = relationship("User", back_populates="email_tokens")
     organization = relationship("Organization", back_populates="email_tokens")
+    sent_emails = relationship("SentEmail", back_populates="account", cascade="all, delete-orphan")
     
     # Properties for transparent access to encrypted tokens
     @property
