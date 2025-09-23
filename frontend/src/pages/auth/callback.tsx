@@ -3,7 +3,7 @@
  * Handles OAuth2 callback from providers and completes the authentication flow
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
@@ -23,9 +23,13 @@ const OAuthCallback: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState<string>('');
   const [result, setResult] = useState<any>(null);
+  const processedRef = useRef(false);
 
   useEffect(() => {
     const processCallback = async () => {
+      if (processedRef.current) return;
+      processedRef.current = true;
+
       const { code, state, error, error_description, provider } = router.query;
 
       if (!code && !error) {
@@ -75,9 +79,7 @@ const OAuthCallback: React.FC = () => {
       }
     };
 
-    if (router.isReady) {
-      processCallback();
-    }
+    if (router.isReady) processCallback();
   }, [router.isReady, router.query, handleOAuthCallback, router]);
 
   const handleRetry = () => {

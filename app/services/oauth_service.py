@@ -8,6 +8,7 @@ import base64
 import logging
 from typing import Optional, Dict, Any, Tuple
 from urllib.parse import urlencode, parse_qs, urlparse
+from datetime import datetime, timedelta
 
 import requests
 import json
@@ -146,7 +147,7 @@ class OAuth2Service:
         code: str, 
         state: str, 
         redirect_uri: str
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    ) -> Tuple[Dict[str, Any], Dict[str, Any], int, Optional[int]]:
         """
         Exchange authorization code for access tokens
         """
@@ -198,11 +199,14 @@ class OAuth2Service:
         # Get user info
         user_info = self._get_user_info(provider, token_response["access_token"])
         
+        user_id = oauth_state.user_id
+        organization_id = oauth_state.organization_id
+        
         # Clean up state
         self.db.delete(oauth_state)
         self.db.commit()
         
-        return token_response, user_info
+        return token_response, user_info, user_id, organization_id
     
     def _get_user_info(self, provider: OAuthProvider, access_token: str) -> Dict[str, Any]:
         """Get user information from provider"""
@@ -323,7 +327,7 @@ class OAuth2Service:
             )
             
             if not response.ok:
-                logger.error(f"Token refresh failed: {response.text}")
+                logger.error("Token refresh failed: %s - %s", response.status_code, response.text)
                 user_token.status = TokenStatus.REFRESH_FAILED
                 self.db.commit()
                 return False
@@ -331,7 +335,7 @@ class OAuth2Service:
             try:
                 token_response = response.json()
             except json.JSONDecodeError:
-                logger.error(f"Invalid JSON in refresh token response: {response.text}")
+                logger.error("Invalid JSON in refresh token response: %s", response.text)
                 user_token.status = TokenStatus.REFRESH_FAILED
                 self.db.commit()
                 return False

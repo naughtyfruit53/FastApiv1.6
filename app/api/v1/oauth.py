@@ -132,30 +132,18 @@ async def oauth_callback(
     oauth_service = OAuth2Service(db)
     try:
         redirect_uri = settings.OAUTH_REDIRECT_URI
-        token_response, user_info = oauth_service.exchange_code_for_tokens(
+        token_response, user_info, user_id, organization_id = oauth_service.exchange_code_for_tokens(
             provider=oauth_provider,
             code=code,
             state=state,
             redirect_uri=redirect_uri
         )
         
-        # Get user from state (this is a simplified approach)
-        from app.models.oauth_models import OAuthState
-        oauth_state = db.query(OAuthState).filter(
-            OAuthState.state == state
-        ).first()
-        
-        if not oauth_state:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid state parameter"
-            )
-        
         # Store tokens
         try:
             user_token = oauth_service.store_user_tokens(
-                user_id=oauth_state.user_id,
-                organization_id=oauth_state.organization_id,
+                user_id=user_id,
+                organization_id=organization_id,
                 provider=oauth_provider,
                 token_response=token_response,
                 user_info=user_info

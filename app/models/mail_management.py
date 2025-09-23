@@ -13,26 +13,26 @@ from enum import Enum as PyEnum
 from app.core.database import Base
 
 class EmailAccountType(PyEnum):
-    IMAP = "imap"
-    POP3 = "pop3"
-    EXCHANGE = "exchange"
-    GMAIL = "gmail"
-    OUTLOOK = "outlook"
+    IMAP = "IMAP"
+    POP3 = "POP3"
+    EXCHANGE = "EXCHANGE"
+    GMAIL = "GMAIL"
+    OUTLOOK = "OUTLOOK"
 
 class EmailStatus(PyEnum):
-    UNREAD = "unread"
-    READ = "read"
-    REPLIED = "replied"
-    FORWARDED = "forwarded"
-    ARCHIVED = "archived"
-    DELETED = "deleted"
-    SPAM = "spam"
+    UNREAD = "UNREAD"
+    READ = "READ"
+    REPLIED = "REPLIED"
+    FORWARDED = "FORWARDED"
+    ARCHIVED = "ARCHIVED"
+    DELETED = "DELETED"
+    SPAM = "SPAM"
 
 class EmailPriority(PyEnum):
-    LOW = "low"
-    NORMAL = "normal"
-    HIGH = "high"
-    URGENT = "urgent"
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
 
 class EmailAccount(Base):
     __tablename__ = "email_accounts"
@@ -205,7 +205,7 @@ class SentEmail(Base):
     in_reply_to_id = Column(Integer, ForeignKey("emails.id"), nullable=True)  # Reply to original email
     
     # Status
-    status = Column(String(20), default="sent", nullable=False)  # sent, failed, pending
+    status = Column(String(20), default="SENT", nullable=False)  # sent, failed, pending
     delivery_status = Column(String(20), nullable=True)  # delivered, bounced, etc.
     
     # Timing

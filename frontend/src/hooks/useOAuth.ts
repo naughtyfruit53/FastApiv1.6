@@ -133,7 +133,7 @@ export const useOAuth = () => {
         throw new Error(errorDescription || error);
       }
 
-      const response = await apiClient.get(`/api/v1/oauth/callback/${provider}`, {
+      const response = await apiClient.get(`/api/v1/oauth/callback/${provider.toLowerCase()}`, {
         params: { code, state, error, error_description: errorDescription }
       });
       return response.data;
@@ -141,6 +141,8 @@ export const useOAuth = () => {
       let errorMsg = err.response?.data?.detail || `OAuth callback failed for ${provider}. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).`;
       if (err.response?.status === 404) {
         errorMsg = 'Backend OAuth callback endpoint not found. Ensure the backend server is running on port 8000 and that the route /api/v1/oauth/callback/{provider} is defined.';
+      } else if (err.response?.status === 400) {
+        errorMsg = err.response.data.detail || 'Invalid OAuth callback parameters. Please try the authentication process again.';
       }
       setError(errorMsg);
       throw err;

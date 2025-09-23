@@ -10,26 +10,26 @@ from datetime import datetime
 from enum import Enum
 
 class EmailAccountType(str, Enum):
-    IMAP = "imap"
-    POP3 = "pop3"
-    EXCHANGE = "exchange"
-    GMAIL = "gmail"
-    OUTLOOK = "outlook"
+    IMAP = "IMAP"
+    POP3 = "POP3"
+    EXCHANGE = "EXCHANGE"
+    GMAIL = "GMAIL"
+    OUTLOOK = "OUTLOOK"
 
 class EmailStatus(str, Enum):
-    UNREAD = "unread"
-    READ = "read"
-    REPLIED = "replied"
-    FORWARDED = "forwarded"
-    ARCHIVED = "archived"
-    DELETED = "deleted"
-    SPAM = "spam"
+    UNREAD = "UNREAD"
+    READ = "READ"
+    REPLIED = "REPLIED"
+    FORWARDED = "FORWARDED"
+    ARCHIVED = "ARCHIVED"
+    DELETED = "DELETED"
+    SPAM = "SPAM"
 
 class EmailPriority(str, Enum):
-    LOW = "low"
-    NORMAL = "normal"
-    HIGH = "high"
-    URGENT = "urgent"
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
 
 # Email Account schemas
 class EmailAccountBase(BaseModel):

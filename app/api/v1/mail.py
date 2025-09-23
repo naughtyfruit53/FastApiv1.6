@@ -76,7 +76,7 @@ async def get_mail_dashboard(
         total_emails = base_query.count()
 
         # Unread emails
-        unread_emails = base_query.filter(Email.status == "unread").count()
+        unread_emails = base_query.filter(Email.status == "UNREAD").count()
 
         # Flagged emails
         flagged_emails = base_query.filter(Email.is_flagged == True).count()
@@ -106,12 +106,12 @@ async def get_mail_dashboard(
         draft_emails = db.query(SentEmail).filter(
             and_(
                 SentEmail.organization_id == current_user.organization_id,
-                SentEmail.status == "pending"
+                SentEmail.status == "PENDING"
             )
         ).count()
 
         # Spam emails
-        spam_emails = base_query.filter(Email.status == "spam").count()
+        spam_emails = base_query.filter(Email.status == "SPAM").count()
 
         logger.info(f"Successfully fetched mail dashboard stats for user {current_user.id}")
         return MailDashboardStats(
@@ -151,7 +151,7 @@ async def get_email_accounts(
     for account in accounts:
         emails_count = db.query(Email).filter(Email.account_id == account.id).count()
         unread_count = db.query(Email).filter(
-            and_(Email.account_id == account.id, Email.status == "unread")
+            and_(Email.account_id == account.id, Email.status == "UNREAD")
         ).count()
 
         account_dict = {
@@ -228,7 +228,7 @@ async def get_email_account(
 
     emails_count = db.query(Email).filter(Email.account_id == account.id).count()
     unread_count = db.query(Email).filter(
-        and_(Email.account_id == account.id, Email.status == "unread")
+        and_(Email.account_id == account.id, Email.status == "UNREAD")
     ).count()
 
     account_dict = {
@@ -450,12 +450,12 @@ async def get_email(
             detail="Email not found"
         )
 
-    if email.status == "unread":
-        email.status = "read"
+    if email.status == "UNREAD":
+        email.status = "READ"
         action = EmailAction(
             email_id=email.id,
             user_id=current_user.id,
-            action_type="read"
+            action_type="READ"
         )
         db.add(action)
         db.commit()
@@ -524,7 +524,7 @@ async def update_email(
     if "status" in update_data and update_data["status"] != email.status:
         actions_to_log.append(update_data["status"])
     if "is_flagged" in update_data and update_data["is_flagged"] != email.is_flagged:
-        actions_to_log.append("flag" if update_data["is_flagged"] else "unflag")
+        actions_to_log.append("FLAG" if update_data["is_flagged"] else "UNFLAG")
 
     for field, value in update_data.items():
         setattr(email, field, value)
@@ -566,7 +566,7 @@ async def compose_and_send_email(
 
     subject = compose_request.subject
     body_text = compose_request.body_text
-    body_html = compose_request.body_html
+    html_body = compose_request.body_html
 
     if compose_request.template_id:
         template = db.query(EmailTemplate).filter(
@@ -580,15 +580,15 @@ async def compose_and_send_email(
             template_vars = compose_request.template_variables or {}
             subject = template.subject_template
             body_text = template.body_text_template
-            body_html = template.body_html_template
+            html_body = template.body_html_template
 
             for var, value in template_vars.items():
                 if subject:
                     subject = subject.replace(f"{{{var}}}", str(value))
                 if body_text:
                     body_text = body_text.replace(f"{{{var}}}", str(value))
-                if body_html:
-                    body_html = body_html.replace(f"{{{var}}}", str(value))
+                if html_body:
+                    html_body = html_body.replace(f"{{{var}}}", str(value))
 
     sent_email = SentEmail(
         subject=subject,
@@ -596,7 +596,7 @@ async def compose_and_send_email(
         cc_addresses=compose_request.cc_addresses,
         bcc_addresses=compose_request.bcc_addresses,
         body_text=body_text,
-        body_html=body_html,
+        body_html=html_body,
         account_id=compose_request.account_id,
         organization_id=current_user.organization_id,
         sent_by=current_user.id,
@@ -605,7 +605,7 @@ async def compose_and_send_email(
         in_reply_to_id=compose_request.in_reply_to_id,
         scheduled_at=compose_request.scheduled_at,
         sent_at=datetime.utcnow() if not compose_request.scheduled_at else None,
-        status="sent" if not compose_request.scheduled_at else "pending"
+        status="SENT" if not compose_request.scheduled_at else "PENDING"
     )
 
     db.add(sent_email)
@@ -657,12 +657,12 @@ async def sync_emails(
     for account in accounts:
         try:
             account.last_sync_at = datetime.utcnow()
-            account.last_sync_status = "success"
+            account.last_sync_status = "SUCCESS"
             account.last_sync_error = None
             accounts_synced += 1
         except Exception as e:
             errors.append(f"Account {account.name}: {str(e)}")
-            account.last_sync_status = "error"
+            account.last_sync_status = "ERROR"
             account.last_sync_error = str(e)
 
     db.commit()
