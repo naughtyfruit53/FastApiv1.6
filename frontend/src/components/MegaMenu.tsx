@@ -18,7 +18,7 @@ import {
   Popover,
   Tooltip,
   Menu,
-  MenuItem, // <-- Added MenuItem import to fix ReferenceError
+  MenuItem,
 } from '@mui/material';
 import {
   Settings,
@@ -26,7 +26,8 @@ import {
   ExpandMore,
   ChevronRight,
   Menu as MenuIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Email,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
@@ -74,7 +75,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       outline: '2px solid',
       outlineColor: 'primary.main',
       outlineOffset: '2px',
-    }
+    },
   };
 
   // Query for current organization (to get enabled_modules)
@@ -89,12 +90,12 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     onSuccess: (data) => {
       console.log('Organization data fetched:', {
         enabled_modules: data.enabled_modules,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     },
     onError: (error) => {
       console.error('Error fetching organization data:', error);
-    }
+    },
   });
 
   // Query for current user's service permissions
@@ -106,7 +107,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     staleTime: 0,
     onSuccess: (data) => {
       console.log('User permissions fetched:', data);
-    }
+    },
   });
 
   // Keyboard: Esc closes menus; Ctrl/Cmd+K focuses search
@@ -157,9 +158,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   if (!isVisible) return null;
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
-    setAnchorEl(event.currentTarget);
-    setActiveMenu(menuName);
-    setSelectedSection(null);
+    const menuItem = menuItems[menuName as keyof typeof menuItems];
+    // Check if the menu item has a direct path and no subsections
+    if (menuItem && 'path' in menuItem && menuItem.path && (!menuItem.sections || menuItem.sections.length === 0)) {
+      router.push(menuItem.path); // Navigate directly to the path
+    } else {
+      setAnchorEl(event.currentTarget);
+      setActiveMenu(menuName);
+      setSelectedSection(null);
+    }
   };
 
   const handleSubClick = (event: React.MouseEvent<HTMLElement>, category: any) => {
@@ -195,7 +202,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const hasAnyServicePermission = (permissions: string[]): boolean => {
-    return permissions.some(permission => userPermissions.includes(permission));
+    return permissions.some((permission) => userPermissions.includes(permission));
   };
 
   const canAccessService = (): boolean => {
@@ -203,11 +210,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       SERVICE_PERMISSIONS.SERVICE_READ,
       SERVICE_PERMISSIONS.APPOINTMENT_READ,
       SERVICE_PERMISSIONS.TECHNICIAN_READ,
-      SERVICE_PERMISSIONS.WORK_ORDER_READ
+      SERVICE_PERMISSIONS.WORK_ORDER_READ,
     ]);
     console.log('Permission check - canAccessService:', hasAccess, {
       userPermissions,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     return hasAccess;
   };
@@ -225,7 +232,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     const enabled = organizationData?.enabled_modules?.[module] ?? false;
     console.log(`Module check - ${module}:`, enabled, {
       allModules: organizationData?.enabled_modules,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     return enabled;
   };
@@ -236,7 +243,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const requestModuleActivation = () => {
-    window.location.href = 'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
+    window.location.href =
+      'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
   };
 
   const handleSubClose = () => {
@@ -281,7 +289,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     setSearchQuery(query);
     if (query.length >= 2) {
       const allItems = flattenMenuItems(menuItems.menu);
-      const filtered = allItems.filter(item =>
+      const filtered = allItems.filter((item) =>
         item.name && item.name.toLowerCase().includes(query.toLowerCase())
       );
       setFilteredMenuItems(filtered);
@@ -301,8 +309,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     if (activeMenu === 'menu') {
       menu = {
         ...menu,
-        sections: mainMenuSections(isSuperAdmin)
+        sections: mainMenuSections(isSuperAdmin),
       };
+    }
+
+    // If the menu has a direct path and no subsections, do not render the popover
+    if ('path' in menu && menu.path && (!menu.sections || menu.sections.length === 0)) {
+      return null;
     }
 
     const filterMenuItems = (subSection: any) => {
@@ -319,22 +332,41 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       if (!section.subSections) {
         return {
           ...section,
-          subSections: [{
-            title: '',
-            items: section.items || []
-          }]
+          subSections: [
+            {
+              title: '',
+              items: section.items || [],
+            },
+          ],
         };
       }
       return section;
     });
 
-    const filteredSections = normalizedSections.map((section: any) => ({
-      ...section,
-      subSections: section.subSections.map((subSection: any) => ({
-        ...subSection,
-        items: filterMenuItems(subSection)
-      })).filter((subSection: any) => subSection.items.length > 0)
-    })).filter((section: any) => section.subSections.length > 0);
+    // Modified filter to include sections with direct paths even if subSections are empty
+    const filteredSections = normalizedSections
+      .map((section: any) => {
+        // Check if this section has a direct path (e.g., Email)
+        const menuItemKey = Object.keys(menuItems).find(
+          (key) => menuItems[key as keyof typeof menuItems]?.title === section.title
+        );
+        const menuItemWithPath = menuItemKey ? menuItems[menuItemKey as keyof typeof menuItems] : null;
+        const hasDirectPath = menuItemWithPath && 'path' in menuItemWithPath && menuItemWithPath.path;
+
+        const processedSubSections = section.subSections
+          .map((subSection: any) => ({
+            ...subSection,
+            items: filterMenuItems(subSection),
+          }))
+          .filter((subSection: any) => subSection.items.length > 0);
+
+        return {
+          ...section,
+          subSections: processedSubSections,
+          hasDirectPath: hasDirectPath,
+        };
+      })
+      .filter((section: any) => section.subSections.length > 0 || section.hasDirectPath);
 
     if (filteredSections.length === 0) {
       console.log(`No items in submenu for ${activeMenu} - permissions may be missing`);
@@ -361,8 +393,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             border: '1px solid',
             borderColor: 'divider',
             display: 'flex',
-            flexDirection: 'column'
-          }
+            flexDirection: 'column',
+          },
         }}
       >
         <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -392,11 +424,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   selected={selectedSection === section.title}
                   onClick={() => {
                     // Check if this section corresponds to a menu item with a direct path (like Email)
-                    const menuItemKey = Object.keys(menuItems).find(key => 
-                      menuItems[key as keyof typeof menuItems]?.title === section.title
+                    const menuItemKey = Object.keys(menuItems).find(
+                      (key) => menuItems[key as keyof typeof menuItems]?.title === section.title
                     );
                     const menuItemWithPath = menuItemKey ? menuItems[menuItemKey as keyof typeof menuItems] : null;
-                    
+
                     if (menuItemWithPath && 'path' in menuItemWithPath && menuItemWithPath.path) {
                       // Navigate directly if menu item has a path
                       navigateTo(menuItemWithPath.path);
@@ -409,13 +441,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                     mb: 0.5,
                     borderRadius: 1,
                     px: 2,
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
                   }}
                   role="menuitem"
                   aria-haspopup="true"
                 >
                   <ListItemText primary={section.title} />
-                  <ChevronRight />
+                  {section.hasDirectPath ? null : <ChevronRight />}
                 </ListItemButton>
               ))}
             </List>
@@ -437,60 +469,60 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               <>
                 {selectedSection ? (
                   <Grid container spacing={2}>
-                    {filteredSections.find((s: any) => s.title === selectedSection)?.subSections.map((subSection: any, subIndex: number) => (
-                      <Grid item xs={12} sm={6} md={4} key={subIndex}>
-                        {subSection.title && (
-                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                            {subSection.title}
-                          </Typography>
-                        )}
-                        <List dense>
-                          {subSection.items.map((item: any, itemIndex: number) => {
-                            const disabled = item.__disabled;
-                            return (
-                              <Tooltip key={itemIndex} title={disabled ? 'You do not have permission. Click Request.' : ''} arrow>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                  <ListItemButton
-                                    disabled={disabled}
-                                    onClick={(e) => {
-                                      if (!disabled) {
-                                        if (item.subItems) {
-                                          handleSubClick(e as any, item);
-                                        } else {
-                                          navigateTo(item.path);
+                    {filteredSections
+                      .find((s: any) => s.title === selectedSection)
+                      ?.subSections.map((subSection: any, subIndex: number) => (
+                        <Grid item xs={12} sm={6} md={4} key={subIndex}>
+                          {subSection.title && (
+                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                              {subSection.title}
+                            </Typography>
+                          )}
+                          <List dense>
+                            {subSection.items.map((item: any, itemIndex: number) => {
+                              const disabled = item.__disabled;
+                              return (
+                                <Tooltip key={itemIndex} title={disabled ? 'You do not have permission. Click Request.' : ''} arrow>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                    <ListItemButton
+                                      disabled={disabled}
+                                      onClick={(e) => {
+                                        if (!disabled) {
+                                          if (item.subItems) {
+                                            handleSubClick(e as any, item);
+                                          } else {
+                                            navigateTo(item.path);
+                                          }
                                         }
-                                      }
-                                    }}
-                                    sx={{
-                                      borderRadius: 1,
-                                      width: '100%',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between'
-                                    }}
-                                    role="menuitem"
-                                  >
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                      <ListItemIcon sx={{ minWidth: 36 }}>
-                                        {item.icon}
-                                      </ListItemIcon>
-                                      <ListItemText primary={item.name} />
-                                    </Box>
-                                    {item.subItems ? <ChevronRight /> : null}
-                                  </ListItemButton>
+                                      }}
+                                      sx={{
+                                        borderRadius: 1,
+                                        width: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                      }}
+                                      role="menuitem"
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+                                        <ListItemText primary={item.name} />
+                                      </Box>
+                                      {item.subItems ? <ChevronRight /> : null}
+                                    </ListItemButton>
 
-                                  {disabled && (
-                                    <Button size="small" onClick={requestModuleActivation} sx={{ ml: 1 }}>
-                                      Request
-                                    </Button>
-                                  )}
-                                </Box>
-                              </Tooltip>
-                            );
-                          })}
-                        </List>
-                      </Grid>
-                    ))}
+                                    {disabled && (
+                                      <Button size="small" onClick={requestModuleActivation} sx={{ ml: 1 }}>
+                                        Request
+                                      </Button>
+                                    )}
+                                  </Box>
+                                </Tooltip>
+                              );
+                            })}
+                          </List>
+                        </Grid>
+                      ))}
                   </Grid>
                 ) : (
                   <Typography variant="body2" color="text.secondary">Select a category on the left to view submenu items.</Typography>
@@ -501,9 +533,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         </Box>
 
         <Box sx={{ px: 2, py: 1, borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Button size="small" onClick={() => navigateTo('/create-invoice')}>Create Invoice</Button>
-          <Button size="small" onClick={() => navigateTo('/quotes')}>New Quote</Button>
-          <Button size="small" onClick={requestModuleActivation}>Request Module</Button>
+          <Button size="small" onClick={() => navigateTo('/create-invoice')}>
+            Create Invoice
+          </Button>
+          <Button size="small" onClick={() => navigateTo('/quotes')}>
+            New Quote
+          </Button>
+          <Button size="small" onClick={requestModuleActivation}>
+            Request Module
+          </Button>
           <Box sx={{ flex: 1 }} />
           <Typography variant="caption" color="text.secondary">Press Esc to close</Typography>
         </Box>
@@ -535,14 +573,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               '&:hover': {
                 backgroundColor: 'primary.50',
                 transform: 'translateX(4px)',
-              }
-            }
-          }
+              },
+            },
+          },
         }}
         MenuListProps={{
           sx: {
-            padding: 1
-          }
+            padding: 1,
+          },
         }}
       >
         <Typography variant="subtitle2" sx={{ px: 2, py: 1, fontWeight: 'bold' }}>
@@ -560,13 +598,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 minWidth: 200,
                 '&:hover': {
                   backgroundColor: 'primary.light',
-                  color: 'primary.contrastText'
-                }
+                  color: 'primary.contrastText',
+                },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                {subItem.icon}
-              </ListItemIcon>
+              <ListItemIcon sx={{ minWidth: 36 }}>{subItem.icon}</ListItemIcon>
               <ListItemText primary={subItem.name} />
             </ListItemButton>
           ))}
@@ -587,7 +623,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           sx: {
             width: 300,
             maxHeight: 400,
-          }
+          },
         }}
       >
         {filteredMenuItems.map((item, index) => (
@@ -608,7 +644,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           backgroundColor: '#001F3F',
           color: 'white',
           boxShadow: 'var(--shadow-sm)',
-          borderBottom: '1px solid var(--border-primary)'
+          borderBottom: '1px solid var(--border-primary)',
         }}
       >
         <Toolbar>
@@ -630,6 +666,16 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 aria-controls="mega-menu-popover"
               >
                 Menu
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<Email />}
+                onClick={(e) => handleMenuClick(e, 'email')}
+                className="modern-menu-button"
+                sx={modernButtonStyle}
+                aria-haspopup="true"
+              >
+                Email
               </Button>
               <Button
                 color="inherit"
@@ -655,11 +701,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               justifyContent: 'center',
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                borderRadius: 1
+                borderRadius: 1,
               },
               p: 1,
               borderRadius: 1,
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.2s',
             }}
             onClick={navigateToHome}
           >
@@ -671,7 +717,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 width: 40,
                 height: 40,
                 mr: 1,
-                objectFit: 'contain'
+                objectFit: 'contain',
               }}
             />
             <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
@@ -681,7 +727,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', ml: 2 }} ref={searchRef}>
-              <Box sx={{ display:'flex', alignItems:'center', bgcolor:'action.hover', px:1, py:0.4, borderRadius:1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', px: 1, py: 0.4, borderRadius: 1 }}>
                 <SearchIcon fontSize="small" />
                 <InputBase
                   inputRef={searchInputRef}
@@ -706,7 +752,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           <IconButton
             color="inherit"
             onClick={handleUserMenuClick}
-            sx={{ 
+            sx={{
               ml: 2,
               minWidth: 44,
               minHeight: 44,
@@ -740,20 +786,18 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               '&:hover': {
                 backgroundColor: 'primary.50',
                 transform: 'translateX(4px)',
-              }
-            }
-          }
+              },
+            },
+          },
         }}
         MenuListProps={{
           sx: {
-            padding: 1
-          }
+            padding: 1,
+          },
         }}
       >
         <MenuItem onClick={handleUserMenuClose}>
-          <Typography variant="body2">
-            {user?.full_name || user?.email || 'User'}
-          </Typography>
+          <Typography variant="body2">{user?.full_name || user?.email || 'User'}</Typography>
         </MenuItem>
         <MenuItem onClick={handleUserMenuClose}>
           <Typography variant="body2" color="textSecondary">
@@ -761,15 +805,17 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           </Typography>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => { handleUserMenuClose(); router.push('/profile'); }}>
+        <MenuItem
+          onClick={() => {
+            handleUserMenuClose();
+            router.push('/profile');
+          }}
+        >
           Profile Settings
         </MenuItem>
-        <MenuItem onClick={onLogout}>
-          Logout
-        </MenuItem>
+        <MenuItem onClick={onLogout}>Logout</MenuItem>
       </Menu>
 
-      {/* Use your MobileNav component for mobile drawer */}
       <MobileNav
         open={mobileDrawerOpen}
         onClose={() => setMobileDrawerOpen(false)}

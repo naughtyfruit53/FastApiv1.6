@@ -77,6 +77,34 @@ class FieldEncryption:
         except Exception as e:
             logger.error(f"Decryption failed for key_id {self.key_id}: {e}")
             raise ValueError(f"Decryption failed: {e}")
+    
+    def encrypt_bytes(self, plain_bytes: bytes) -> bytes:
+        """
+        Encrypt binary data
+        """
+        if not plain_bytes:
+            return b""
+        
+        try:
+            encrypted = self._cipher.encrypt(plain_bytes)
+            return encrypted
+        except Exception as e:
+            logger.error(f"Binary encryption failed for key_id {self.key_id}: {e}")
+            raise ValueError(f"Binary encryption failed: {e}")
+    
+    def decrypt_bytes(self, encrypted_bytes: bytes) -> bytes:
+        """
+        Decrypt binary data
+        """
+        if not encrypted_bytes:
+            return b""
+        
+        try:
+            decrypted = self._cipher.decrypt(encrypted_bytes)
+            return decrypted
+        except Exception as e:
+            logger.error(f"Binary decryption failed for key_id {self.key_id}: {e}")
+            raise ValueError(f"Binary decryption failed: {e}")
 
 
 # Global encryption instances for different data types
@@ -103,6 +131,20 @@ def decrypt_field(value: str, key_id: str = "default") -> str:
     Decrypt a field value
     """
     return get_encryption_instance(key_id).decrypt(value)
+
+
+def encrypt_file_data(plain_bytes: bytes, key_id: str = "default") -> bytes:
+    """
+    Encrypt binary file data
+    """
+    return get_encryption_instance(key_id).encrypt_bytes(plain_bytes)
+
+
+def decrypt_file_data(encrypted_bytes: bytes, key_id: str = "default") -> bytes:
+    """
+    Decrypt binary file data
+    """
+    return get_encryption_instance(key_id).decrypt_bytes(encrypted_bytes)
 
 
 # Predefined key IDs for different types of sensitive data

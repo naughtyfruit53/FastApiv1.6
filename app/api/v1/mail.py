@@ -4,7 +4,7 @@
 Mail and Email Management API endpoints
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Request, Query, Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, Form, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
 import traceback
@@ -12,6 +12,9 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, or_, func, desc, asc
 import json
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user as get_current_user
@@ -224,7 +227,8 @@ async def send_email_with_attachment(
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
 
-async def sync_emails(
+@router.post("/sync", response_model=MailSyncResponse)
+async def sync_emails_endpoint(
     sync_request: MailSyncRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

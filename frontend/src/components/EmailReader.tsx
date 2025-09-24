@@ -142,6 +142,22 @@ const EmailReader: React.FC<EmailReaderProps> = ({
     }
   };
 
+  const handleDownloadAttachment = async (attachmentId: number) => {
+    try {
+      const response = await api.get(`/mail/attachments/${attachmentId}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = email?.attachments?.find(att => att.id === attachmentId)?.filename || 'attachment';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download attachment:', err);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -247,6 +263,11 @@ const EmailReader: React.FC<EmailReaderProps> = ({
               <Typography variant="body2" color="text.secondary">
                 From: {email.from_name || email.from_address}
               </Typography>
+              {email.cc_addresses && email.cc_addresses.length > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  Cc: {email.cc_addresses.join(', ')}
+                </Typography>
+              )}
               <Typography variant="body2" color="text.secondary">
                 To: {email.to_addresses.join(', ')}
               </Typography>
@@ -326,6 +347,15 @@ const EmailReader: React.FC<EmailReaderProps> = ({
                   },
                   '& a': {
                     color: 'primary.main'
+                  },
+                  '& table': {
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    border: '1px solid #ddd'
+                  },
+                  '& td, & th': {
+                    border: '1px solid #ddd',
+                    padding: '8px'
                   }
                 }}
               />
@@ -370,9 +400,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
                     <ListItemSecondaryAction>
                       <IconButton
                         edge="end"
-                        disabled={!attachment.file_path}
-                        title="Download attachment"
-                        onClick={() => window.open(attachment.file_path || '', '_blank')}
+                        onClick={() => handleDownloadAttachment(attachment.id)}
                       >
                         <Download />
                       </IconButton>
