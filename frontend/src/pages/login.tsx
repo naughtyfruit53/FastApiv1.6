@@ -56,10 +56,11 @@ const LoginPage: React.FC = () => {
         isDemoMode: !!localStorage.getItem("demoMode"),
       });
 
-      // Check if this is demo mode
+      // Check if this is demo mode - only redirect to demo if explicitly in demo mode
+      // Organization users should go to dashboard, not demo page
       if (
         loginResponse?.demo_mode ||
-        localStorage.getItem("demoMode") === "true"
+        (localStorage.getItem("demoMode") === "true" && !loginResponse?.organization_id)
       ) {
         console.log("[Login] Demo mode activated - redirecting to demo page");
         window.location.href = getMobileRoute("/demo");  // Updated to use mobile-aware route

@@ -553,39 +553,12 @@ export const menuItems = {
       }
     ]
   },
-  // Email menu
+  // Email menu - simplified to direct dashboard navigation
   email: {
     title: 'Email',
     icon: <Email />,
-    sections: [
-      {
-        title: 'Email Management',
-        items: [
-          { name: 'Mail Dashboard', path: '/mail/dashboard', icon: <Dashboard /> },
-          { name: 'Inbox', path: '/mail/inbox', icon: <Inbox /> },
-          { name: 'Sent Items', path: '/mail/sent', icon: <Send /> },
-          { name: 'Drafts', path: '/mail/drafts', icon: <Drafts /> }
-        ]
-      },
-      {
-        title: 'Mail Operations',
-        items: [
-          { name: 'Compose Mail', path: '/mail/compose', icon: <NoteAdd /> },
-          { name: 'Email Accounts', path: '/mail/accounts', icon: <AccountCircle /> },
-          { name: 'Email Templates', path: '/mail/templates', icon: <Storage /> },
-          { name: 'Email Rules', path: '/mail/rules', icon: <Settings /> }
-        ]
-      },
-      {
-        title: 'Integration & Sync',
-        items: [
-          { name: 'Email Sync', path: '/mail/sync', icon: <CloudUpload /> },
-          { name: 'Task Linking', path: '/mail/task-linking', icon: <Task /> },
-          { name: 'Calendar Linking', path: '/mail/calendar-linking', icon: <CalendarToday /> },
-          { name: 'Email Analytics', path: '/mail/analytics', icon: <Analytics /> }
-        ]
-      }
-    ]
+    path: '/mail/dashboard', // Direct navigation to dashboard
+    sections: [] // Remove all submenu sections
   },
   settings: {
     title: 'Settings',

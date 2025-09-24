@@ -390,7 +390,21 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 <ListItemButton
                   key={index}
                   selected={selectedSection === section.title}
-                  onClick={() => setSelectedSection(section.title)}
+                  onClick={() => {
+                    // Check if this section corresponds to a menu item with a direct path (like Email)
+                    const menuItemKey = Object.keys(menuItems).find(key => 
+                      menuItems[key as keyof typeof menuItems]?.title === section.title
+                    );
+                    const menuItemWithPath = menuItemKey ? menuItems[menuItemKey as keyof typeof menuItems] : null;
+                    
+                    if (menuItemWithPath && 'path' in menuItemWithPath && menuItemWithPath.path) {
+                      // Navigate directly if menu item has a path
+                      navigateTo(menuItemWithPath.path);
+                    } else {
+                      // Default behavior - set selected section
+                      setSelectedSection(section.title);
+                    }
+                  }}
                   sx={{
                     mb: 0.5,
                     borderRadius: 1,

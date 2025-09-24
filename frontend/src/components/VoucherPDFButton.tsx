@@ -10,13 +10,22 @@ import {
   Tooltip,
   Box,
   Alert,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  TextField,
+  Divider
 } from '@mui/material';
 import {
   PictureAsPdf as PdfIcon,
   Download as DownloadIcon,
   Preview as PreviewIcon,
-  MoreVert as MoreIcon
+  MoreVert as MoreIcon,
+  Email as EmailIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
 import api from '../lib/api'; // Changed to default import since it's exported as default in api.ts
 
@@ -28,6 +37,9 @@ interface VoucherPDFButtonProps {
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   className?: string;
+  // New props for email functionality
+  vendorEmail?: string;
+  customerEmail?: string;
 }
 
 interface PDFError {
@@ -42,11 +54,42 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
   variant = 'button',
   size = 'medium',
   disabled = false,
-  className = ''
+  className = '',
+  vendorEmail,
+  customerEmail
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [error, setError] = useState<PDFError | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [isEmailSetup, setIsEmailSetup] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  
+  // Check if email is configured on component mount
+  React.useEffect(() => {
+    const checkEmailSetup = async () => {
+      try {
+        const response = await api.get('/mail/tokens');
+        setIsEmailSetup(response.data && response.data.length > 0);
+      } catch (err) {
+        setIsEmailSetup(false);
+      }
+    };
+    checkEmailSetup();
+  }, []);
+
+  const getRecipientEmail = () => {
+    // For purchase vouchers, send to vendor
+    // For sales vouchers, send to customer
+    if (['purchase'].includes(voucherType)) {
+      return vendorEmail;
+    } else if (['sales', 'quotation', 'sales_order', 'proforma'].includes(voucherType)) {
+      return customerEmail;
+    }
+    return null;
+  };
 
   const open = Boolean(anchorEl);
 
@@ -70,6 +113,83 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
   const handleDownloadPDF = async () => {
     await generatePDF(true);
     handleClose();
+  };
+
+  const showEmailPrompt = () => {
+    if (!isEmailSetup) {
+      setError({ 
+        message: 'Email not configured. Please setup your email account first.', 
+        type: 'warning' 
+      });
+      return;
+    }
+
+    const recipientEmail = getRecipientEmail();
+    if (!recipientEmail) {
+      setError({ 
+        message: 'Email ID not available for this contact.', 
+        type: 'warning' 
+      });
+      return;
+    }
+
+    // Set default email content
+    const voucherTypeLabel = voucherType.charAt(0).toUpperCase() + voucherType.slice(1).replace('_', ' ');
+    setEmailSubject(`${voucherTypeLabel} - ${voucherNumber || `#${voucherId}`}`);
+    setEmailBody(`Dear Customer/Vendor,\n\nPlease find attached the ${voucherTypeLabel.toLowerCase()} document.\n\nThank you for your business.\n\nBest regards,\nYour Company Team`);
+    setEmailDialogOpen(true);
+  };
+
+  const sendEmailWithPDF = async () => {
+    setEmailSending(true);
+    try {
+      const recipientEmail = getRecipientEmail();
+      if (!recipientEmail) {
+        throw new Error('Recipient email not available');
+      }
+
+      // For now, send email without PDF attachment
+      // In a production system, you'd want to implement proper attachment support
+      const emailData = {
+        to_addresses: [recipientEmail],
+        subject: emailSubject,
+        body_html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>`,
+        body_text: emailBody
+      };
+
+      // Get user's first email token
+      const tokensResponse = await api.get('/mail/tokens');
+      if (!tokensResponse.data || tokensResponse.data.length === 0) {
+        throw new Error('No email account configured');
+      }
+
+      const tokenId = tokensResponse.data[0].id;
+      
+      // Send email using existing endpoint
+      const formData = new FormData();
+      formData.append('to_addresses', JSON.stringify(emailData.to_addresses));
+      formData.append('cc_addresses', JSON.stringify([]));
+      formData.append('bcc_addresses', JSON.stringify([]));
+      formData.append('subject', emailData.subject);
+      formData.append('body_html', emailData.body_html);
+      formData.append('body_text', emailData.body_text);
+
+      await api.post(`/mail/tokens/${tokenId}/emails/send`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setEmailDialogOpen(false);
+      setError({ message: 'Email sent successfully! (PDF attachment will be added in future update)', type: 'info' });
+      
+    } catch (err: any) {
+      console.error('Email sending error:', err);
+      setError({ 
+        message: err.response?.data?.detail || err.message || 'Failed to send email', 
+        type: 'error' 
+      });
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const generatePDF = async (download: boolean = false) => {
@@ -102,9 +222,15 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
+          
+          // Show email prompt after successful PDF generation
+          setTimeout(() => showEmailPrompt(), 500);
         } else {
           // Open in new tab for preview
           window.open(url, '_blank');
+          
+          // Show email prompt after successful PDF generation
+          setTimeout(() => showEmailPrompt(), 500);
         }
 
         window.URL.revokeObjectURL(url);
@@ -235,6 +361,62 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
           {error?.message}
         </Alert>
       </Snackbar>
+
+      {/* Email Dialog */}
+      <Dialog 
+        open={emailDialogOpen} 
+        onClose={() => setEmailDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <EmailIcon />
+          Send Voucher via Email
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Send this voucher to: <strong>{getRecipientEmail()}</strong>
+            </Typography>
+            
+            <TextField
+              fullWidth
+              label="Subject"
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              sx={{ mb: 2 }}
+              variant="outlined"
+            />
+            
+            <TextField
+              fullWidth
+              multiline
+              rows={6}
+              label="Message"
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+              variant="outlined"
+              placeholder="Enter your message here..."
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button 
+            onClick={() => setEmailDialogOpen(false)}
+            disabled={emailSending}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained"
+            onClick={sendEmailWithPDF}
+            disabled={emailSending || !emailSubject.trim()}
+            startIcon={emailSending ? <CircularProgress size={16} /> : <SendIcon />}
+          >
+            {emailSending ? 'Sending...' : 'Send Email'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

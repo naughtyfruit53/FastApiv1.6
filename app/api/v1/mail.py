@@ -182,7 +182,48 @@ async def send_email(
     return await email_service.send_email(current_user, token_id, compose_request)
 
 
-@router.post("/sync", response_model=MailSyncResponse)
+@router.post("/send-with-attachment")
+async def send_email_with_attachment(
+    to_email: str = Form(...),
+    subject: str = Form(...),
+    body: str = Form(...),
+    attachment: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send email with PDF attachment - simplified endpoint for voucher emails"""
+    try:
+        # Get user's first email token
+        token = db.query(UserEmailToken).filter(
+            UserEmailToken.user_id == current_user.id,
+            UserEmailToken.organization_id == current_user.organization_id,
+            UserEmailToken.status == 'active'
+        ).first()
+        
+        if not token:
+            raise HTTPException(
+                status_code=400, 
+                detail="No active email account found. Please setup your email account first."
+            )
+        
+        compose_request = MailComposeRequest(
+            to_addresses=[to_email],
+            cc_addresses=[],
+            bcc_addresses=[],
+            subject=subject,
+            body_html=f"<p>{body.replace(chr(10), '<br>')}</p>",
+            body_text=body
+        )
+        
+        email_service = EmailAPIService(db)
+        return await email_service.send_email(current_user, token.id, compose_request, [attachment])
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
 async def sync_emails(
     sync_request: MailSyncRequest,
     current_user: User = Depends(get_current_user),

@@ -208,7 +208,7 @@ class EmailAPIService:
             "total_pages": (total + per_page - 1) // per_page
         }
 
-    async def send_email(self, user, token_id: int, compose_request: MailComposeRequest) -> SentEmailResponse:
+    async def send_email(self, user, token_id: int, compose_request: MailComposeRequest, attachments: List = None) -> SentEmailResponse:
         """Send email using provider API"""
         token = self.db.query(UserEmailToken).filter(
             UserEmailToken.id == token_id,
@@ -219,9 +219,9 @@ class EmailAPIService:
             raise HTTPException(404, "Token not found")
         
         if token.provider == OAuthProvider.GOOGLE:
-            success = self._send_google_email(token, compose_request)
+            success = self._send_google_email(token, compose_request, attachments)
         elif token.provider == OAuthProvider.MICROSOFT:
-            success = await self._send_microsoft_email(token, compose_request)
+            success = await self._send_microsoft_email(token, compose_request, attachments)
         else:
             raise HTTPException(400, "Unsupported provider")
         
