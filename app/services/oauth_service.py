@@ -39,9 +39,7 @@ class OAuthConfig:
         "token_endpoint": "https://oauth2.googleapis.com/token",
         "userinfo_endpoint": "https://www.googleapis.com/oauth2/v3/userinfo",
         "scopes": [
-            "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/gmail.send",
-            "https://www.googleapis.com/auth/gmail.modify",
+            "https://mail.google.com/",
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/userinfo.profile"
         ]
@@ -54,9 +52,8 @@ class OAuthConfig:
         "token_endpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
         "userinfo_endpoint": "https://graph.microsoft.com/v1.0/me",
         "scopes": [
-            "https://graph.microsoft.com/Mail.Read",
-            "https://graph.microsoft.com/Mail.Send",
             "https://graph.microsoft.com/Mail.ReadWrite",
+            "https://graph.microsoft.com/Mail.Send",
             "https://graph.microsoft.com/User.Read"
         ]
     }

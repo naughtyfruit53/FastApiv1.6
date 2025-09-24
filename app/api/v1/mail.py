@@ -42,8 +42,8 @@ async def get_mail_dashboard(
         # Base query for emails
         email_query = db.query(Email).filter(Email.organization_id == org_id)
         
-        # Total emails
-        total_emails = email_query.count()
+        # Total emails in INBOX only
+        total_emails = email_query.filter(Email.folder == 'INBOX').count()
         
         # Unread emails
         unread_emails = email_query.filter(Email.status == "UNREAD").count()

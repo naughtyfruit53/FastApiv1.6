@@ -25,6 +25,7 @@ import {
   Google as GoogleIcon,
   Microsoft as MicrosoftIcon,
   Email as EmailIcon,
+  Add as AddIcon,
   Security as SecurityIcon
 } from '@mui/icons-material';
 import { useOAuth } from '../hooks/useOAuth';
@@ -151,7 +152,7 @@ const OAuthLoginButton: React.FC<OAuthLoginButtonProps> = ({
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SecurityIcon />
             <Typography variant="h6">Connect Email Account</Typography>
           </Box>

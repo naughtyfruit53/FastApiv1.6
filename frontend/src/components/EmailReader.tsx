@@ -20,7 +20,8 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  ListItemSecondaryAction
 } from '@mui/material';
 import {
   Reply,
@@ -67,14 +68,12 @@ interface EmailDetail {
 }
 
 interface EmailReaderProps {
-  tokenId: number;
   messageId: number | null;
   onReply?: (messageId: number, subject: string, sender: string) => void;
   onClose?: () => void;
 }
 
 const EmailReader: React.FC<EmailReaderProps> = ({
-  tokenId,
   messageId,
   onReply,
   onClose
@@ -85,10 +84,10 @@ const EmailReader: React.FC<EmailReaderProps> = ({
   const [markingRead, setMarkingRead] = useState<boolean>(false);
 
   useEffect(() => {
-    if (messageId && tokenId) {
+    if (messageId) {
       loadEmailDetail();
     }
-  }, [messageId, tokenId]);
+  }, [messageId]);
 
   const loadEmailDetail = async () => {
     if (!messageId) return;
@@ -139,7 +138,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
 
   const handleReply = () => {
     if (email && onReply) {
-      onReply(email.id, email.subject, email.sender);
+      onReply(email.id, email.subject, email.from_address);
     }
   };
 
@@ -264,7 +263,7 @@ const EmailReader: React.FC<EmailReaderProps> = ({
               {email.has_attachments && (
                 <Chip 
                   icon={<Attachment />}
-                  label={`${email.attachments.length}`}
+                  label={`${email.attachments?.length ?? 0}`}
                   size="small"
                   variant="outlined"
                 />
@@ -345,10 +344,10 @@ const EmailReader: React.FC<EmailReaderProps> = ({
           </Box>
 
           {/* Attachments */}
-          {email.attachments.length > 0 && (
+          {email.attachments?.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="h6" sx={{ mb: 2 }}>
-                Attachments ({email.attachments.length})
+                Attachments ({email.attachments?.length ?? 0})
               </Typography>
               <List dense>
                 {email.attachments.map((attachment) => (
@@ -368,14 +367,16 @@ const EmailReader: React.FC<EmailReaderProps> = ({
                       primary={attachment.filename}
                       secondary={`${attachment.content_type} • ${formatFileSize(attachment.size_bytes)}`}
                     />
-                    <IconButton
-                      edge="end"
-                      disabled={!attachment.file_path}
-                      title="Download attachment"
-                      onClick={() => window.open(attachment.file_path || '', '_blank')}
-                    >
-                      <Download />
-                    </IconButton>
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        disabled={!attachment.file_path}
+                        title="Download attachment"
+                        onClick={() => window.open(attachment.file_path || '', '_blank')}
+                      >
+                        <Download />
+                      </IconButton>
+                    </ListItemSecondaryAction>
                   </ListItem>
                 ))}
               </List>

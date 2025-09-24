@@ -4,7 +4,7 @@
 Mail and Email Management Models for inbox sync and email operations
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum, JSON, LargeBinary
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum, JSON, LargeBinary, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -89,6 +89,9 @@ class EmailAccount(Base):
 
 class Email(Base):
     __tablename__ = "emails"
+    __table_args__ = (
+        UniqueConstraint('message_id', 'organization_id', name='uix_message_org'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     

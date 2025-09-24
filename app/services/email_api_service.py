@@ -7,6 +7,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.orm import Session
 from google.oauth2.credentials import Credentials
@@ -307,9 +310,9 @@ class EmailAPIService:
             try:
                 new_emails = 0
                 if token.provider == OAuthProvider.GOOGLE:
-                    new_emails = self._sync_google_emails(token)
+                    new_emails = self._sync_google_emails(token, force_sync)
                 elif token.provider == OAuthProvider.MICROSOFT:
-                    new_emails = await self._sync_microsoft_emails(token)
+                    new_emails = await self._sync_microsoft_emails(token, force_sync)
                 
                 token.last_sync_at = datetime.utcnow()
                 token.last_sync_status = "SUCCESS"
@@ -331,7 +334,7 @@ class EmailAPIService:
             errors=errors if errors else None
         )
 
-    def _sync_google_emails(self, token: UserEmailToken) -> int:
+    def _sync_google_emails(self, token: UserEmailToken, force_sync: bool) -> int:
         """Sync emails from Gmail"""
         creds = Credentials(
             token=token.access_token,
@@ -350,31 +353,38 @@ class EmailAPIService:
         
         service = build('gmail', 'v1', credentials=creds)
         
-        # List all messages without label filter to sync everything
-        results = service.users().messages().list(userId='me', maxResults=500).execute()  # Increased maxResults
+        q = None
+        if not force_sync and token.last_sync_at:
+            last_sync_date = token.last_sync_at - timedelta(days=1)
+            q = f"after:{int(last_sync_date.timestamp())}"
+        
+        logger.info(f"Syncing Gmail with query: {q}")
+        
+        # Fetch all messages
+        results = service.users().messages().list(userId='me', q=q, maxResults=500, includeSpamTrash=True).execute()
         messages = results.get('messages', [])
+        logger.info(f"Found {len(messages)} messages in first page")
         while 'nextPageToken' in results:
-            results = service.users().messages().list(userId='me', maxResults=500, pageToken=results['nextPageToken']).execute()
+            logger.info("Fetching next page")
+            results = service.users().messages().list(userId='me', q=q, maxResults=500, pageToken=results['nextPageToken'], includeSpamTrash=True).execute()
             messages.extend(results.get('messages', []))
+        
+        logger.info(f"Total messages found: {len(messages)}")
         
         new_emails = 0
         for msg in messages:
-            # Check if exists
             if self.db.query(Email).filter(Email.message_id == msg['id']).first():
                 continue
             
             msg_detail = service.users().messages().get(userId='me', id=msg['id'], format='full').execute()
             
-            # Parse headers
             headers = {h['name'].lower(): h['value'] for h in msg_detail['payload']['headers']}
-            
-            # Determine folder based on primary label
             labels = msg_detail.get('labelIds', [])
-            folder = 'INBOX'
-            is_flagged = False
-            is_important = False
             
-            if 'SENT' in labels:
+            folder = 'ARCHIVED'  # Default
+            if 'INBOX' in labels:
+                folder = 'INBOX'
+            elif 'SENT' in labels:
                 folder = 'SENT'
             elif 'DRAFT' in labels:
                 folder = 'DRAFTS'
@@ -382,15 +392,11 @@ class EmailAPIService:
                 folder = 'SPAM'
             elif 'TRASH' in labels:
                 folder = 'TRASH'
-            elif 'UNREAD' in labels:
-                folder = 'INBOX'  # Default
-            if 'STARRED' in labels:
-                is_flagged = True
-            if 'IMPORTANT' in labels:
-                is_important = True
-            if 'CATEGORY_PERSONAL' in labels or 'CATEGORY_SOCIAL' in labels:  # Example for categories
+            elif any(label.startswith('CATEGORY_') for label in labels):
                 folder = 'CATEGORIES'
-            # Add archived if no standard labels
+            
+            is_flagged = 'STARRED' in labels
+            is_important = 'IMPORTANT' in labels
             
             email = Email(
                 message_id=msg['id'],
@@ -414,9 +420,10 @@ class EmailAPIService:
             new_emails += 1
         
         self.db.commit()
+        logger.info(f"Imported {new_emails} new emails")
         return new_emails
 
-    async def _sync_microsoft_emails(self, token: UserEmailToken) -> int:
+    async def _sync_microsoft_emails(self, token: UserEmailToken, force_sync: bool) -> int:
         """Sync emails from Microsoft"""
         app = ConfidentialClientApplication(
             client_id=settings.MICROSOFT_CLIENT_ID,
@@ -451,10 +458,36 @@ class EmailAPIService:
         folders = ['inbox', 'sentitems', 'drafts', 'junkemail', 'deleteditems']
         new_emails = 0
         
+        # Determine filter for recent emails
+        odata_filter = None
+        if force_sync:
+            # Force sync last 90 days
+            initial_date = (datetime.utcnow() - timedelta(days=90)).isoformat() + 'Z'
+            odata_filter = f"receivedDateTime ge {initial_date}"
+        elif token.last_sync_at:
+            odata_filter = f"receivedDateTime ge {token.last_sync_at.isoformat()}Z"
+        else:
+            # Initial sync: last 90 days
+            initial_date = (datetime.utcnow() - timedelta(days=90)).isoformat() + 'Z'
+            odata_filter = f"receivedDateTime ge {initial_date}"
+        
+        logger.info(f"Syncing Microsoft with filter: {odata_filter}")
         for folder_id in folders:
-            messages = await graph_client.me.mail_folders.by_mail_folder_id(folder_id).messages.get()
+            request_builder = graph_client.me.mail_folders.by_mail_folder_id(folder_id).messages
+            messages = []
+            page_iterator = request_builder.get_all_request_builder(
+                query_params=MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
+                    top=100,
+                    filter=odata_filter,
+                    orderby=["receivedDateTime DESC"]
+                )
+            )
             
-            for msg in messages.value:
+            async for msg in page_iterator:
+                messages.append(msg)
+            
+            logger.info(f"Found {len(messages)} messages in folder {folder_id}")
+            for msg in messages:
                 # Check if exists
                 if self.db.query(Email).filter(Email.message_id == msg.id).first():
                     continue
@@ -481,4 +514,5 @@ class EmailAPIService:
                 new_emails += 1
         
         self.db.commit()
+        logger.info(f"Imported {new_emails} new emails")
         return new_emails

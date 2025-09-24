@@ -13,8 +13,13 @@ import {
   ListItemText,
   Avatar,
   Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   CssBaseline,
   Divider,
+  Pagination,
+  Snackbar,
 } from "@mui/material";
 import {
   Inbox,
@@ -34,6 +39,7 @@ import {
   Archive as ArchiveIcon,
   Delete as TrashIcon,
   Category as CategoryIcon,
+  Email as EmailIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import api from "../../lib/api";
@@ -104,6 +110,7 @@ interface RecentEmail {
   priority: "low" | "normal" | "high" | "urgent";
   body_text: string;  // Added for body display
   body_html?: string;  // Added for body display
+  thread_id: string;  // Added for threading
 }
 
 interface UserEmailToken {
@@ -117,25 +124,33 @@ interface UserEmailToken {
   unread_count: number;
 }
 
+interface Thread {
+  thread_id: string;
+  emails: RecentEmail[];
+}
+
 const MailDashboard: React.FC = () => {
   const router = useRouter();
   const { logout } = useAuth();
   const { getUserTokens } = useOAuth();
   const [stats, setStats] = useState<MailStats | null>(null);
   const [emails, setEmails] = useState<RecentEmail[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [emailTokens, setEmailTokens] = useState<UserEmailToken[]>([]);
-  const [selectedEmail, setSelectedEmail] = useState<RecentEmail | null>(null);
+  const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
   const [currentFolder, setCurrentFolder] = useState('INBOX');
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const observer = useRef<IntersectionObserver | null>(null);
+  const [totalPages, setTotalPages] = useState(1);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [newEmailCount, setNewEmailCount] = useState(0);
   const maxRetries = 3;
-  const perPage = 20; // Smaller batches for infinite scroll
+  const perPage = 50;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -210,9 +225,8 @@ const MailDashboard: React.FC = () => {
       const emailsResponse = await api.get('/mail/emails', {
         params: { folder: currentFolder, page: pageNum, per_page: perPage, sort_by: 'received_at', sort_order: 'desc' },
       });
-      const newEmails = emailsResponse.data.emails;
-      setEmails(prev => pageNum === 1 ? newEmails : [...prev, ...newEmails]);
-      setHasMore(newEmails.length === perPage);
+      setEmails(emailsResponse.data.emails);
+      setTotalPages(emailsResponse.data.total_pages);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch emails');
     } finally {
@@ -222,39 +236,83 @@ const MailDashboard: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
-    setEmails([]);
-    setHasMore(true);
     fetchEmails(1);
   }, [currentFolder, fetchEmails]);
 
-  const lastEmailRef = useCallback((node: HTMLLIElement | null) => {
-    if (listLoading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        setPage(prev => prev + 1);
-        fetchEmails(page + 1);
+  useEffect(() => {
+    // Group emails into threads
+    const grouped = emails.reduce((acc: {[key: string]: Thread}, email) => {
+      if (!acc[email.thread_id]) {
+        acc[email.thread_id] = { thread_id: email.thread_id, emails: [] };
       }
-    });
-    if (node) observer.current.observe(node);
-  }, [listLoading, hasMore, fetchEmails, page]);
+      acc[email.thread_id].emails.push(email);
+      return acc;
+    }, {});
+    setThreads(Object.values(grouped));
+  }, [emails]);
 
-  const handleEmailSelect = (email: RecentEmail) => {
-    setSelectedEmail(email);
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+    fetchEmails(value);
+  };
+
+  const handleEmailSelect = (emailId: number) => {
+    setSelectedEmailId(emailId);
   };
 
   const handleSync = async () => {
     setLoading(true);
     setError(null);
     try {
-      await api.post('/mail/sync', { force_sync: false });
+      await api.post('/mail/sync', { force_sync: true });
       const statsResponse = await api.get('/mail/dashboard');
       setStats(statsResponse.data);
-      fetchEmails(1); // Refresh email list after sync
+      fetchEmails(page); // Refresh current page
     } catch (err: any) {
       setError(err.message || 'Failed to sync emails');
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      try {
+        const prevUnread = stats?.unread_emails ?? 0;
+        const statsResponse = await api.get('/mail/dashboard');
+        setStats(statsResponse.data);
+        if (statsResponse.data.unread_emails > prevUnread) {
+          const newCount = statsResponse.data.unread_emails - prevUnread;
+          setNewEmailCount(newCount);
+          setToastOpen(true);
+          fetchEmails(page); // Refresh list
+        }
+      } catch (err) {
+        console.error('Auto-sync error:', err);
+      }
+    }, 60000); // Sync every minute
+
+    return () => clearInterval(syncInterval);
+  }, [stats, page, fetchEmails]);
+
+  const handleToastClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setToastOpen(false);
+  };
+
+  const handleToastClick = () => {
+    setToastOpen(false);
+    setCurrentFolder('INBOX');
+    fetchEmails(1);
+  };
+
+  const handleSetupOrManage = () => {
+    if (emailTokens.length === 0) {
+      setSetupOpen(true);
+    } else {
+      router.push('/mail/accounts');
     }
   };
 
@@ -309,6 +367,12 @@ const MailDashboard: React.FC = () => {
     setCurrentFolder(folder);
   };
 
+  const handleThreadSelect = (thread: Thread) => {
+    // Select the latest email in the thread
+    const latestEmail = thread.emails.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime())[0];
+    setSelectedEmailId(latestEmail.id);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -341,7 +405,22 @@ const MailDashboard: React.FC = () => {
         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
           Connect your email account to start sending and receiving emails.
         </Typography>
-        <OAuthLoginButton variant="list" />
+        <Button
+          variant="contained"
+          startIcon={<EmailIcon />}
+          onClick={() => setSetupOpen(true)}
+        >
+          Setup Email Account
+        </Button>
+        <Dialog open={setupOpen} onClose={() => setSetupOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle>Setup Email Account</DialogTitle>
+          <DialogContent>
+            <OAuthLoginButton variant="list" />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSetupOpen(false)}>Cancel</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     );
   }
@@ -383,57 +462,68 @@ const MailDashboard: React.FC = () => {
                   Compose
                 </Button>
               </Grid>
+              <Grid item>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  startIcon={<EmailIcon />} 
+                  onClick={handleSetupOrManage}
+                >
+                  {emailTokens.length > 0 ? 'Manage Accounts' : 'Setup Email Account'}
+                </Button>
+              </Grid>
             </Grid>
           </Grid>
         </Box>
 
         {/* Main Content Flex Row */}
-        <Box display="flex" flexGrow={1} overflow="hidden">
+        <Box display="flex" flexGrow={1}>
           {/* Left Sidebar */}
           <Box
             width="15%"
+            height="100%"
             overflowY="auto"
             borderRight="1px solid #dadce0"
             bgcolor="#f1f3f4"
           >
             <List component="nav">
-              <ListItem button selected={currentFolder === 'INBOX'} onClick={() => handleFolderChange('INBOX')}>
+              <ListItem button selected={currentFolder === 'INBOX'} onClick={() => handleFolderChange('INBOX')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><Inbox sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Inbox" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'STARRED'} onClick={() => handleFolderChange('STARRED')}>
+              <ListItem button selected={currentFolder === 'STARRED'} onClick={() => handleFolderChange('STARRED')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><StarIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Starred" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'SNOOZED'} onClick={() => handleFolderChange('SNOOZED')}>
+              <ListItem button selected={currentFolder === 'SNOOZED'} onClick={() => handleFolderChange('SNOOZED')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><SnoozeIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Snoozed" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'IMPORTANT'} onClick={() => handleFolderChange('IMPORTANT')}>
+              <ListItem button selected={currentFolder === 'IMPORTANT'} onClick={() => handleFolderChange('IMPORTANT')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><ImportantIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Important" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'SENT'} onClick={() => handleFolderChange('SENT')}>
+              <ListItem button selected={currentFolder === 'SENT'} onClick={() => handleFolderChange('SENT')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><Send sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Sent" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'DRAFTS'} onClick={() => handleFolderChange('DRAFTS')}>
+              <ListItem button selected={currentFolder === 'DRAFTS'} onClick={() => handleFolderChange('DRAFTS')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><Drafts sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Drafts" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'SPAM'} onClick={() => handleFolderChange('SPAM')}>
+              <ListItem button selected={currentFolder === 'SPAM'} onClick={() => handleFolderChange('SPAM')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><ReportIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Spam" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'TRASH'} onClick={() => handleFolderChange('TRASH')}>
+              <ListItem button selected={currentFolder === 'TRASH'} onClick={() => handleFolderChange('TRASH')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><TrashIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Trash" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'ARCHIVED'} onClick={() => handleFolderChange('ARCHIVED')}>
+              <ListItem button selected={currentFolder === 'ARCHIVED'} onClick={() => handleFolderChange('ARCHIVED')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><ArchiveIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Archived" sx={{ color: '#202124' }} />
               </ListItem>
-              <ListItem button selected={currentFolder === 'CATEGORIES'} onClick={() => handleFolderChange('CATEGORIES')}>
+              <ListItem button selected={currentFolder === 'CATEGORIES'} onClick={() => handleFolderChange('CATEGORIES')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><CategoryIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Categories" sx={{ color: '#202124' }} />
               </ListItem>
@@ -443,36 +533,44 @@ const MailDashboard: React.FC = () => {
           </Box>
 
           {/* Email List */}
-          <Box width="35%" overflowY="auto" pr={2} borderRight="1px solid #dadce0" bgcolor="white">
-            <Typography variant="subtitle1" sx={{ p: 2, color: '#202124', textAlign: 'center' }}>
-              {currentFolder} ({emails.length})
-            </Typography>
+          <Box width="25%" height="100%" overflowY="auto" pr={2} borderRight="1px solid #dadce0" bgcolor="white">
+            <Box sx={{ display: 'flex', alignItems: 'center', p: 2, color: '#202124' }}>
+              <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
+                {currentFolder} ({threads.length})
+              </Typography>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+                size="small"
+              />
+            </Box>
             <List disablePadding>
-              {emails.map((email, index) => (
+              {threads.map((thread, index) => (
                 <ListItem
-                  ref={emails.length === index + 1 ? lastEmailRef : null}
-                  key={email.id}
+                  key={thread.thread_id}
                   button
-                  selected={selectedEmail?.id === email.id}
-                  onClick={() => handleEmailSelect(email)}
+                  onClick={() => handleThreadSelect(thread)}
                   sx={{
                     py: 1.5,
                     borderBottom: '1px solid #f1f3f4',
                     '&:hover': { bgcolor: '#f2f2f2' },
                     '&.Mui-selected': { bgcolor: '#d2e3fc' },
+                    bgcolor: thread.emails.some(e => e.is_unread) ? '#f5f5f5' : 'transparent', // 10% grey for unread
                   }}
                 >
                   <ListItemIcon>
                     <Avatar sx={{ width: 40, height: 40, bgcolor: '#e8f0fe', color: '#1967d2' }}>
-                      {email.from_name ? email.from_name[0] : <Person />}
+                      {thread.emails[0].from_name ? thread.emails[0].from_name[0] : <Person />}
                     </Avatar>
                   </ListItemIcon>
                   <ListItemText
-                    primary={email.subject}
-                    secondary={`${email.from_name || email.from_address} • ${formatTimeAgo(email.received_at)}`}
+                    primary={thread.emails[0].subject}
+                    secondary={`${thread.emails[0].from_name || thread.emails[0].from_address} • ${formatTimeAgo(thread.emails[0].received_at)} (${thread.emails.length} messages)`}
                     primaryTypographyProps={{
                       noWrap: true,
-                      fontWeight: email.is_unread ? "bold" : "normal",
+                      fontWeight: thread.emails.some(e => e.is_unread) ? "bold" : "normal",
                       color: '#202124',
                     }}
                     secondaryTypographyProps={{ noWrap: true, color: '#5f6368' }}
@@ -481,13 +579,13 @@ const MailDashboard: React.FC = () => {
               ))}
             </List>
             {listLoading && <Box display="flex" justifyContent="center" p={2}><CircularProgress size={24} /></Box>}
-            {emails.length === 0 && <Typography sx={{ p: 2, color: '#5f6368' }}>No emails</Typography>}
+            {threads.length === 0 && <Typography sx={{ p: 2, color: '#5f6368' }}>No emails</Typography>}
           </Box>
 
           {/* Email Viewer */}
-          <Box flexGrow={1} p={3} overflowY="auto" bgcolor="white">
-            {selectedEmail ? (
-              <EmailReader email={selectedEmail} />
+          <Box flexGrow={1} height="100%" p={3} overflowY="auto" bgcolor="white">
+            {selectedEmailId ? (
+              <EmailReader messageId={selectedEmailId} />
             ) : (
               <Box sx={{ textAlign: "center", mt: 10 }}>
                 <Typography variant="h6" color="textSecondary">
@@ -502,6 +600,28 @@ const MailDashboard: React.FC = () => {
       <Dialog open={composeOpen} onClose={() => setComposeOpen(false)} fullWidth maxWidth="md">
         <EmailCompose open={composeOpen} onClose={() => setComposeOpen(false)} />
       </Dialog>
+
+      <Dialog open={setupOpen} onClose={() => setSetupOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Setup Email Account</DialogTitle>
+        <DialogContent>
+          <OAuthLoginButton variant="list" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSetupOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={6000}
+        onClose={handleToastClose}
+        message={`${newEmailCount} new email${newEmailCount > 1 ? 's' : ''} arrived`}
+        action={
+          <Button color="inherit" size="small" onClick={handleToastClick}>
+            View
+          </Button>
+        }
+      />
     </ThemeProvider>
   );
 };
