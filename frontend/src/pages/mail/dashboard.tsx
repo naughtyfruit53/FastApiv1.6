@@ -925,9 +925,6 @@ const MailDashboard: React.FC = () => {
           </Box>
         </Box>
       </Box>
-          </Box>
-        </Box>
-      </Box>
 
       <Dialog open={composeOpen} onClose={() => setComposeOpen(false)} fullWidth maxWidth="md">
         <EmailCompose open={composeOpen} onClose={() => setComposeOpen(false)} />
