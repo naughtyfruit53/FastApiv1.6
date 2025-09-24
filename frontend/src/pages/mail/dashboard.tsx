@@ -55,32 +55,102 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1a73e8',
+      main: '#1976d2',
     },
     secondary: {
-      main: '#ea4335',
+      main: '#dc004e',
     },
     background: {
-      default: '#f1f3f4',
+      default: '#f5f7fa',
       paper: '#ffffff',
     },
     text: {
-      primary: '#202124',
-      secondary: '#5f6368',
+      primary: '#1a1a1a',
+      secondary: '#6c757d',
+    },
+    grey: {
+      50: '#fafafa',
+      100: '#f5f5f5',
+      200: '#eeeeee',
+      300: '#e0e0e0',
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 700,
+      fontSize: '1.75rem',
+    },
+    h6: {
+      fontWeight: 600,
+      fontSize: '1.125rem',
+    },
+    subtitle1: {
+      fontWeight: 600,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 500,
+    },
+  },
+  shape: {
+    borderRadius: 12,
   },
   components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+          border: '1px solid #f0f0f0',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          padding: '8px 24px',
+          boxShadow: 'none',
+          '&:hover': {
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          },
+        },
+        contained: {
+          background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+        },
+      },
+    },
     MuiListItem: {
       styleOverrides: {
         root: {
+          borderRadius: 8,
+          margin: '2px 8px',
           '&:hover': {
-            backgroundColor: '#f2f2f2',
+            backgroundColor: '#f8fafc',
+            transform: 'translateX(4px)',
+            transition: 'all 0.2s ease-in-out',
           },
           '&.Mui-selected': {
-            backgroundColor: '#d2e3fc',
+            backgroundColor: '#e3f2fd',
+            borderLeft: '3px solid #1976d2',
+          },
+        },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          margin: '2px 8px',
+          '&:hover': {
+            backgroundColor: '#f8fafc',
+            transform: 'translateX(4px)',
+            transition: 'all 0.2s ease-in-out',
+          },
+          '&.Mui-selected': {
+            backgroundColor: '#e3f2fd',
+            borderLeft: '3px solid #1976d2',
           },
         },
       },
@@ -267,18 +337,45 @@ const MailDashboard: React.FC = () => {
     }
   };
 
-  const handleSync = async () => {
-    setLoading(true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+
+  const handleSync = async (background = false) => {
+    if (!background) setLoading(true);
+    setSyncStatus('syncing');
     setError(null);
     try {
-      await api.post('/mail/sync', { force_sync: true });
-      const statsResponse = await api.get('/mail/dashboard');
-      setStats(statsResponse.data);
-      fetchEmails(page); // Refresh current page
+      // Start background sync without blocking UI
+      api.post('/mail/sync', { force_sync: true })
+        .then(() => {
+          setSyncStatus('success');
+          // Refresh data after sync completes
+          return api.get('/mail/dashboard');
+        })
+        .then((statsResponse) => {
+          setStats(statsResponse.data);
+          fetchEmails(page);
+          setTimeout(() => setSyncStatus('idle'), 3000); // Reset status after 3 seconds
+        })
+        .catch((err) => {
+          setSyncStatus('error');
+          console.error('Background sync error:', err);
+          setTimeout(() => setSyncStatus('idle'), 5000);
+        });
+      
+      if (!background) {
+        // For manual sync, update UI immediately
+        const statsResponse = await api.get('/mail/dashboard');
+        setStats(statsResponse.data);
+        fetchEmails(page);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to sync emails');
+      setSyncStatus('error');
+      if (!background) {
+        setError(err.message || 'Failed to sync emails');
+      }
+      setTimeout(() => setSyncStatus('idle'), 5000);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
@@ -286,13 +383,15 @@ const MailDashboard: React.FC = () => {
     const syncInterval = setInterval(async () => {
       try {
         const prevUnread = stats?.unread_emails ?? 0;
+        // Background sync without blocking UI
+        handleSync(true);
+        
+        // Check for new emails
         const statsResponse = await api.get('/mail/dashboard');
-        setStats(statsResponse.data);
         if (statsResponse.data.unread_emails > prevUnread) {
           const newCount = statsResponse.data.unread_emails - prevUnread;
           setNewEmailCount(newCount);
           setToastOpen(true);
-          fetchEmails(page); // Refresh list
         }
       } catch (err) {
         console.error('Auto-sync error:', err);
@@ -443,158 +542,383 @@ const MailDashboard: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        {/* Stats Row (Tiles) */}
-        <Box p={2} bgcolor="white" borderBottom="1px solid #dadce0" boxShadow={1}>
-          <Grid container spacing={2} alignItems="center">
-            {stats && ['total_emails', 'flagged_emails', 'today_emails', 'this_week_emails'].map((key) => (
-              <Grid item xs={3} key={key}>
-                <MetricCard
-                  title={formatStatTitle(key)}
-                  value={stats[key as keyof MailStats]}
-                  icon={getStatIcon(key as keyof MailStats)}
-                  color="info"
-                  onClick={() => handleStatClick(key)}
-                />
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        minHeight: '100vh',
+        bgcolor: 'background.default'
+      }}>
+        {/* Enhanced Header with Stats */}
+        <Box 
+          sx={{ 
+            p: 3, 
+            bgcolor: 'background.paper', 
+            borderBottom: '1px solid #e0e0e0',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box>
+              <Typography variant="h4" component="h1" sx={{ 
+                color: 'text.primary',
+                background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                Mail Dashboard
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary">
+                Manage your email communications efficiently
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => setComposeOpen(true)}
+                sx={{ 
+                  px: 3,
+                  py: 1.5,
+                  fontSize: '0.95rem'
+                }}
+              >
+                Compose
+              </Button>
+              <Button 
+                variant="outlined" 
+                startIcon={syncStatus === 'syncing' ? <CircularProgress size={16} /> : <SyncIcon />}
+                onClick={() => handleSync(false)}
+                disabled={syncStatus === 'syncing'}
+                sx={{ 
+                  px: 3, 
+                  py: 1.5,
+                  color: syncStatus === 'success' ? 'success.main' : 
+                         syncStatus === 'error' ? 'error.main' : 'primary.main',
+                  borderColor: syncStatus === 'success' ? 'success.main' : 
+                               syncStatus === 'error' ? 'error.main' : 'primary.main',
+                }}
+              >
+                {syncStatus === 'syncing' ? 'Syncing...' : 
+                 syncStatus === 'success' ? 'Synced' : 
+                 syncStatus === 'error' ? 'Retry' : 'Sync'}
+              </Button>
+              <Button 
+                variant="outlined" 
+                startIcon={<EmailIcon />} 
+                onClick={handleSetupOrManage}
+                sx={{ px: 3, py: 1.5 }}
+              >
+                {emailTokens.length > 0 ? 'Accounts' : 'Setup'}
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Enhanced Stats Grid */}
+          <Grid container spacing={3}>
+            {stats && [
+              { key: 'total_emails', label: 'Total Emails', color: '#1976d2' },
+              { key: 'unread_emails', label: 'Unread', color: '#dc004e' },
+              { key: 'today_emails', label: 'Today', color: '#388e3c' },
+              { key: 'this_week_emails', label: 'This Week', color: '#f57c00' },
+            ].map((item) => (
+              <Grid item xs={12} sm={6} md={3} key={item.key}>
+                <Box
+                  onClick={() => handleStatClick(item.key)}
+                  sx={{
+                    p: 2.5,
+                    bgcolor: 'background.paper',
+                    borderRadius: 2,
+                    border: '1px solid #e0e0e0',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                      borderColor: item.color,
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: `${item.color}20`,
+                        color: item.color,
+                        mr: 2,
+                      }}
+                    >
+                      {getStatIcon(item.key as keyof MailStats)}
+                    </Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      {item.label}
+                    </Typography>
+                  </Box>
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 700, 
+                    color: item.color,
+                    lineHeight: 1
+                  }}>
+                    {stats[item.key as keyof MailStats].toLocaleString()}
+                  </Typography>
+                </Box>
               </Grid>
             ))}
-            <Grid item xs={12} container justifyContent="center" spacing={2}>
-              <Grid item>
-                <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => setComposeOpen(true)}>
-                  Compose
-                </Button>
-              </Grid>
-              <Grid item>
-                <Button 
-                  variant="outlined" 
-                  color="primary" 
-                  startIcon={<EmailIcon />} 
-                  onClick={handleSetupOrManage}
-                >
-                  {emailTokens.length > 0 ? 'Manage Accounts' : 'Setup Email Account'}
-                </Button>
-              </Grid>
-            </Grid>
           </Grid>
         </Box>
 
-        {/* Main Content Flex Row */}
-        <Box display="flex" flexGrow={1}>
-          {/* Left Sidebar */}
+        {/* Main Content with improved layout */}
+        <Box display="flex" flexGrow={1} sx={{ height: 'calc(100vh - 280px)' }}>
+          {/* Enhanced Left Sidebar */}
           <Box
-            width="15%"
-            height="calc(100vh - 140px)" // Adjust based on header height; assumes stats row ~140px
-            overflowY="auto"
-            borderRight="1px solid #dadce0"
-            bgcolor="#f1f3f4"
+            sx={{
+              width: '280px',
+              bgcolor: 'background.paper',
+              borderRight: '1px solid #e0e0e0',
+              overflowY: 'auto',
+              p: 2,
+            }}
           >
-            <List component="nav">
-              <ListItem button selected={currentFolder === 'INBOX'} onClick={() => handleFolderChange('INBOX')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><Inbox sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Inbox" sx={{ color: '#202124' }} />
-                <IconButton onClick={handleSync} size="small" sx={{ ml: 1 }}>
-                  <SyncIcon fontSize="small" />
-                </IconButton>
-              </ListItem>
-              <ListItem button selected={currentFolder === 'STARRED'} onClick={() => handleFolderChange('STARRED')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><StarIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Starred" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'SNOOZED'} onClick={() => handleFolderChange('SNOOZED')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><SnoozeIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Snoozed" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'IMPORTANT'} onClick={() => handleFolderChange('IMPORTANT')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><ImportantIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Important" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'SENT'} onClick={() => handleFolderChange('SENT')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><Send sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Sent" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'DRAFTS'} onClick={() => handleFolderChange('DRAFTS')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><Drafts sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Drafts" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'SPAM'} onClick={() => handleFolderChange('SPAM')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><ReportIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Spam" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'TRASH'} onClick={() => handleFolderChange('TRASH')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><TrashIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Trash" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'ARCHIVED'} onClick={() => handleFolderChange('ARCHIVED')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><ArchiveIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Archived" sx={{ color: '#202124' }} />
-              </ListItem>
-              <ListItem button selected={currentFolder === 'CATEGORIES'} onClick={() => handleFolderChange('CATEGORIES')} sx={{ cursor: 'pointer' }}>
-                <ListItemIcon><CategoryIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
-                <ListItemText primary="Categories" sx={{ color: '#202124' }} />
-              </ListItem>
-            </List>
-            <Divider />
-            {/* Add more custom labels or sections if needed */}
-          </Box>
-
-          {/* Email List */}
-          <Box width="25%" height="calc(100vh - 140px)" overflowY="auto" pr={2} borderRight="1px solid #dadce0" bgcolor="white">
-            <Box sx={{ display: 'flex', alignItems: 'center', p: 2, color: '#202124' }}>
-              <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
-                {currentFolder} ({threads.length})
-              </Typography>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={handlePageChange}
-                color="primary"
-                size="small"
-              />
-            </Box>
-            <List disablePadding sx={{ height: 'calc(100% - 64px)', overflowY: 'auto' }}>
-              {threads.map((thread, index) => (
+            <Typography variant="subtitle1" sx={{ mb: 2, px: 1, color: 'text.primary' }}>
+              Folders
+            </Typography>
+            <List component="nav" sx={{ px: 0 }}>
+              {[
+                { key: 'INBOX', label: 'Inbox', icon: <Inbox />, badge: stats?.unread_emails },
+                { key: 'STARRED', label: 'Starred', icon: <StarIcon /> },
+                { key: 'SNOOZED', label: 'Snoozed', icon: <SnoozeIcon /> },
+                { key: 'IMPORTANT', label: 'Important', icon: <ImportantIcon /> },
+                { key: 'SENT', label: 'Sent', icon: <Send /> },
+                { key: 'DRAFTS', label: 'Drafts', icon: <Drafts /> },
+                { key: 'SPAM', label: 'Spam', icon: <ReportIcon /> },
+                { key: 'TRASH', label: 'Trash', icon: <TrashIcon /> },
+                { key: 'ARCHIVED', label: 'Archived', icon: <ArchiveIcon /> },
+              ].map((folder) => (
                 <ListItem
-                  key={thread.thread_id}
+                  key={folder.key}
                   button
-                  onClick={() => handleThreadSelect(thread)}
-                  sx={{
-                    py: 1.5,
-                    borderBottom: '1px solid #f1f3f4',
-                    '&:hover': { bgcolor: '#f2f2f2' },
-                    '&.Mui-selected': { bgcolor: '#d2e3fc' },
-                    bgcolor: thread.emails.some(e => e.status === "UNREAD") ? 'rgba(255, 255, 0, 0.8)' : 'transparent',
-                  }}
+                  selected={currentFolder === folder.key}
+                  onClick={() => handleFolderChange(folder.key)}
+                  sx={{ py: 1, mb: 0.5 }}
                 >
-                  <ListItemIcon>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: '#e8f0fe', color: '#1967d2' }}>
-                      {thread.emails[0].from_name ? thread.emails[0].from_name[0] : <Person />}
-                    </Avatar>
+                  <ListItemIcon sx={{ minWidth: 36, color: 'primary.main' }}>
+                    {folder.icon}
                   </ListItemIcon>
-                  <ListItemText
-                    primary={thread.emails[0].subject}
-                    secondary={`${thread.emails[0].from_name || thread.emails[0].from_address} • ${formatTimeAgo(thread.emails[0].received_at)} (${thread.emails.length} messages)`}
-                    primaryTypographyProps={{
-                      noWrap: true,
-                      fontWeight: thread.emails.some(e => e.status === "UNREAD") ? "bold" : "normal",
-                      color: '#202124',
-                    }}
-                    secondaryTypographyProps={{ noWrap: true, color: '#5f6368' }}
+                  <ListItemText 
+                    primary={folder.label} 
+                    sx={{ 
+                      '& .MuiListItemText-primary': { 
+                        fontSize: '0.9rem',
+                        fontWeight: currentFolder === folder.key ? 600 : 400
+                      }
+                    }} 
                   />
+                  {folder.badge && folder.badge > 0 && (
+                    <Box
+                      sx={{
+                        bgcolor: 'error.main',
+                        color: 'white',
+                        borderRadius: '12px',
+                        px: 1,
+                        py: 0.2,
+                        fontSize: '0.75rem',
+                        minWidth: '20px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {folder.badge}
+                    </Box>
+                  )}
                 </ListItem>
               ))}
             </List>
-            {listLoading && <Box display="flex" justifyContent="center" p={2}><CircularProgress size={24} /></Box>}
-            {threads.length === 0 && <Typography sx={{ p: 2, color: '#5f6368' }}>No emails</Typography>}
           </Box>
 
-          {/* Email Viewer */}
-          <Box flexGrow={1} height="calc(100vh - 140px)" p={3} overflowY="auto" bgcolor="white">
+          {/* Enhanced Email List */}
+          <Box 
+            sx={{ 
+              width: '420px', 
+              bgcolor: 'background.paper',
+              borderRight: '1px solid #e0e0e0',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', bgcolor: 'grey.50' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {currentFolder.charAt(0) + currentFolder.slice(1).toLowerCase()} ({threads.length})
+                </Typography>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={handlePageChange}
+                  color="primary"
+                  size="small"
+                  sx={{
+                    '& .MuiPaginationItem-root': {
+                      fontSize: '0.75rem',
+                    }
+                  }}
+                />
+              </Box>
+            </Box>
+            
+            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+              {listLoading && (
+                <Box display="flex" justifyContent="center" p={3}>
+                  <CircularProgress size={32} />
+                </Box>
+              )}
+              
+              <List disablePadding>
+                {threads.map((thread, index) => (
+                  <ListItem
+                    key={thread.thread_id}
+                    button
+                    onClick={() => handleThreadSelect(thread)}
+                    sx={{
+                      py: 2,
+                      px: 3,
+                      borderBottom: '1px solid #f0f0f0',
+                      bgcolor: thread.emails.some(e => e.status === "UNREAD") 
+                        ? '#fff3cd' 
+                        : 'transparent',
+                      '&:hover': { 
+                        bgcolor: thread.emails.some(e => e.status === "UNREAD")
+                          ? '#ffeaa7'
+                          : '#f8fafc'
+                      },
+                      '&.Mui-selected': { 
+                        bgcolor: '#e3f2fd',
+                        borderLeft: '4px solid #1976d2'
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ mr: 2 }}>
+                      <Avatar 
+                        sx={{ 
+                          width: 48, 
+                          height: 48, 
+                          bgcolor: 'primary.main',
+                          fontSize: '1.1rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        {thread.emails[0].from_name 
+                          ? thread.emails[0].from_name[0].toUpperCase() 
+                          : <Person />
+                        }
+                      </Avatar>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            fontWeight: thread.emails.some(e => e.status === "UNREAD") ? 700 : 500,
+                            color: 'text.primary',
+                            fontSize: '0.95rem',
+                            lineHeight: 1.3,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {thread.emails[0].subject || '(No Subject)'}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: 'text.secondary',
+                              fontSize: '0.85rem',
+                              mb: 0.5
+                            }}
+                          >
+                            {thread.emails[0].from_name || thread.emails[0].from_address}
+                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography 
+                              variant="caption" 
+                              sx={{ color: 'text.secondary' }}
+                            >
+                              {formatTimeAgo(thread.emails[0].received_at)}
+                            </Typography>
+                            {thread.emails.length > 1 && (
+                              <Box
+                                sx={{
+                                  bgcolor: 'primary.main',
+                                  color: 'white',
+                                  borderRadius: '10px',
+                                  px: 1,
+                                  py: 0.2,
+                                  fontSize: '0.7rem',
+                                }}
+                              >
+                                {thread.emails.length}
+                              </Box>
+                            )}
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              
+              {threads.length === 0 && !listLoading && (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 8,
+                  color: 'text.secondary' 
+                }}>
+                  <Inbox sx={{ fontSize: 48, opacity: 0.5, mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    No emails in {currentFolder.toLowerCase()}
+                  </Typography>
+                  <Typography variant="body2">
+                    Your emails will appear here when available.
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          {/* Enhanced Email Viewer */}
+          <Box 
+            sx={{ 
+              flexGrow: 1, 
+              bgcolor: 'background.paper',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
             {selectedEmailId ? (
-              <EmailReader messageId={selectedEmailId} />
+              <Box sx={{ height: '100%', overflow: 'hidden' }}>
+                <EmailReader messageId={selectedEmailId} />
+              </Box>
             ) : (
-              <Box sx={{ textAlign: "center", mt: 10 }}>
-                <Typography variant="h6" color="textSecondary">
+              <Box sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: 'text.secondary',
+                bgcolor: 'grey.50'
+              }}>
+                <EmailIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 300 }}>
                   Select an email to view
+                </Typography>
+                <Typography variant="body2">
+                  Choose an email from the list to read its contents
                 </Typography>
               </Box>
             )}
