@@ -20,6 +20,7 @@ import {
   Divider,
   Pagination,
   Snackbar,
+  IconButton,
 } from "@mui/material";
 import {
   Inbox,
@@ -32,7 +33,7 @@ import {
   MarkEmailUnread,
   Person,
   Add,
-  Sync,
+  Sync as SyncIcon,
   Star as StarIcon,
   AccessTime as SnoozeIcon,
   LabelImportant as ImportantIcon,
@@ -104,7 +105,7 @@ interface RecentEmail {
   from_address: string;
   from_name?: string;
   received_at: string;
-  is_unread: boolean;
+  status: string;  // Changed from is_unread to status
   is_flagged: boolean;
   has_attachments: boolean;
   priority: "low" | "normal" | "high" | "urgent";
@@ -256,8 +257,14 @@ const MailDashboard: React.FC = () => {
     fetchEmails(value);
   };
 
-  const handleEmailSelect = (emailId: number) => {
+  const handleEmailSelect = async (emailId: number) => {
     setSelectedEmailId(emailId);
+    try {
+      await api.put(`/emails/${emailId}`, { status: 'READ' });
+      fetchEmails(page);  // Refresh the list to remove highlight
+    } catch (err) {
+      console.error('Failed to mark email as read:', err);
+    }
   };
 
   const handleSync = async () => {
@@ -290,7 +297,7 @@ const MailDashboard: React.FC = () => {
       } catch (err) {
         console.error('Auto-sync error:', err);
       }
-    }, 60000); // Sync every minute
+    }, 600000); // Sync every 10 minutes
 
     return () => clearInterval(syncInterval);
   }, [stats, page, fetchEmails]);
@@ -367,10 +374,10 @@ const MailDashboard: React.FC = () => {
     setCurrentFolder(folder);
   };
 
-  const handleThreadSelect = (thread: Thread) => {
+  const handleThreadSelect = async (thread: Thread) => {
     // Select the latest email in the thread
     const latestEmail = thread.emails.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime())[0];
-    setSelectedEmailId(latestEmail.id);
+    await handleEmailSelect(latestEmail.id);
   };
 
   if (loading) {
@@ -453,11 +460,6 @@ const MailDashboard: React.FC = () => {
             ))}
             <Grid item xs={12} container justifyContent="center" spacing={2}>
               <Grid item>
-                <Button variant="outlined" color="primary" startIcon={<Sync />} onClick={handleSync} disabled={loading}>
-                  Sync
-                </Button>
-              </Grid>
-              <Grid item>
                 <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => setComposeOpen(true)}>
                   Compose
                 </Button>
@@ -481,7 +483,7 @@ const MailDashboard: React.FC = () => {
           {/* Left Sidebar */}
           <Box
             width="15%"
-            height="100%"
+            height="calc(100vh - 140px)" // Adjust based on header height; assumes stats row ~140px
             overflowY="auto"
             borderRight="1px solid #dadce0"
             bgcolor="#f1f3f4"
@@ -490,6 +492,9 @@ const MailDashboard: React.FC = () => {
               <ListItem button selected={currentFolder === 'INBOX'} onClick={() => handleFolderChange('INBOX')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><Inbox sx={{ color: '#5f6368' }} /></ListItemIcon>
                 <ListItemText primary="Inbox" sx={{ color: '#202124' }} />
+                <IconButton onClick={handleSync} size="small" sx={{ ml: 1 }}>
+                  <SyncIcon fontSize="small" />
+                </IconButton>
               </ListItem>
               <ListItem button selected={currentFolder === 'STARRED'} onClick={() => handleFolderChange('STARRED')} sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><StarIcon sx={{ color: '#5f6368' }} /></ListItemIcon>
@@ -533,7 +538,7 @@ const MailDashboard: React.FC = () => {
           </Box>
 
           {/* Email List */}
-          <Box width="25%" height="100%" overflowY="auto" pr={2} borderRight="1px solid #dadce0" bgcolor="white">
+          <Box width="25%" height="calc(100vh - 140px)" overflowY="auto" pr={2} borderRight="1px solid #dadce0" bgcolor="white">
             <Box sx={{ display: 'flex', alignItems: 'center', p: 2, color: '#202124' }}>
               <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
                 {currentFolder} ({threads.length})
@@ -546,7 +551,7 @@ const MailDashboard: React.FC = () => {
                 size="small"
               />
             </Box>
-            <List disablePadding>
+            <List disablePadding sx={{ height: 'calc(100% - 64px)', overflowY: 'auto' }}>
               {threads.map((thread, index) => (
                 <ListItem
                   key={thread.thread_id}
@@ -557,7 +562,7 @@ const MailDashboard: React.FC = () => {
                     borderBottom: '1px solid #f1f3f4',
                     '&:hover': { bgcolor: '#f2f2f2' },
                     '&.Mui-selected': { bgcolor: '#d2e3fc' },
-                    bgcolor: thread.emails.some(e => e.is_unread) ? '#f5f5f5' : 'transparent', // 10% grey for unread
+                    bgcolor: thread.emails.some(e => e.status === "UNREAD") ? 'rgba(255, 255, 0, 0.8)' : 'transparent',
                   }}
                 >
                   <ListItemIcon>
@@ -570,7 +575,7 @@ const MailDashboard: React.FC = () => {
                     secondary={`${thread.emails[0].from_name || thread.emails[0].from_address} • ${formatTimeAgo(thread.emails[0].received_at)} (${thread.emails.length} messages)`}
                     primaryTypographyProps={{
                       noWrap: true,
-                      fontWeight: thread.emails.some(e => e.is_unread) ? "bold" : "normal",
+                      fontWeight: thread.emails.some(e => e.status === "UNREAD") ? "bold" : "normal",
                       color: '#202124',
                     }}
                     secondaryTypographyProps={{ noWrap: true, color: '#5f6368' }}
@@ -583,7 +588,7 @@ const MailDashboard: React.FC = () => {
           </Box>
 
           {/* Email Viewer */}
-          <Box flexGrow={1} height="100%" p={3} overflowY="auto" bgcolor="white">
+          <Box flexGrow={1} height="calc(100vh - 140px)" p={3} overflowY="auto" bgcolor="white">
             {selectedEmailId ? (
               <EmailReader messageId={selectedEmailId} />
             ) : (

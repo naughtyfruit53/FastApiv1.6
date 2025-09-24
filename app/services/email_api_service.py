@@ -83,7 +83,7 @@ class EmailAPIService:
         return email.__dict__
 
     async def update_email(self, user, email_id: int, update_data: Dict) -> Dict:
-        """Update email in DB"""
+        """Update email in DB and sync to provider"""
         email = self.db.query(Email).filter(
             Email.id == email_id,
             Email.organization_id == user.organization_id
@@ -92,12 +92,92 @@ class EmailAPIService:
         if not email:
             raise HTTPException(404, "Email not found")
         
+        old_status = email.status
         for key, value in update_data.items():
             setattr(email, key, value)
         
         self.db.commit()
         self.db.refresh(email)
+        
+        # Sync to provider if status changed
+        if 'status' in update_data and update_data['status'] != old_status:
+            token = self.db.query(UserEmailToken).filter(UserEmailToken.id == email.account_id).first()
+            if token:
+                await self._sync_status_to_provider(token, email, update_data['status'])
+        
         return email.__dict__
+
+    async def _sync_status_to_provider(self, token: UserEmailToken, email: Email, new_status: str):
+        """Sync status change to email provider"""
+        try:
+            if token.provider == OAuthProvider.GOOGLE:
+                creds = Credentials(
+                    token=token.access_token,
+                    refresh_token=token.refresh_token,
+                    token_uri="https://oauth2.googleapis.com/token",
+                    client_id=settings.GOOGLE_CLIENT_ID,
+                    client_secret=settings.GOOGLE_CLIENT_SECRET
+                )
+                
+                if creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                    token.access_token = creds.token
+                    token.refresh_token = creds.refresh_token
+                    token.expires_at = creds.expiry
+                    self.db.commit()
+                
+                service = build('gmail', 'v1', credentials=creds)
+                
+                if new_status == 'READ':
+                    service.users().messages().modify(
+                        userId='me',
+                        id=email.message_id,
+                        body={'removeLabelIds': ['UNREAD']}
+                    ).execute()
+                elif new_status == 'UNREAD':
+                    service.users().messages().modify(
+                        userId='me',
+                        id=email.message_id,
+                        body={'addLabelIds': ['UNREAD']}
+                    ).execute()
+                
+            elif token.provider == OAuthProvider.MICROSOFT:
+                app = ConfidentialClientApplication(
+                    client_id=settings.MICROSOFT_CLIENT_ID,
+                    authority=f"https://login.microsoftonline.com/common",
+                    client_credential=settings.MICROSOFT_CLIENT_SECRET
+                )
+                
+                result = app.acquire_token_by_refresh_token(
+                    token.refresh_token,
+                    scopes=["https://graph.microsoft.com/Mail.ReadWrite"]
+                )
+                
+                if "access_token" in result:
+                    access_token = result["access_token"]
+                    token.access_token = access_token
+                    if "refresh_token" in result:
+                        token.refresh_token = result["refresh_token"]
+                    if "expires_in" in result:
+                        token.expires_at = datetime.utcnow() + timedelta(seconds=result["expires_in"])
+                    self.db.commit()
+                
+                credential = ClientSecretCredential(
+                    tenant_id="common",
+                    client_id=settings.MICROSOFT_CLIENT_ID,
+                    client_secret=settings.MICROSOFT_CLIENT_SECRET
+                )
+                
+                graph_client = GraphServiceClient(credentials=credential)
+                
+                await graph_client.me.messages.by_message_id(email.message_id).patch(
+                    Message(is_read=(new_status == 'READ'))
+                )
+            
+            logger.info(f"Synced status {new_status} for email {email.id} to provider")
+            
+        except Exception as e:
+            logger.error(f"Failed to sync status for email {email.id}: {str(e)}")
 
     async def delete_email(self, user, email_id: int) -> Dict:
         """Delete email from DB"""
@@ -319,6 +399,11 @@ class EmailAPIService:
                 token.last_sync_error = None
                 emails_imported += new_emails
                 accounts_synced += 1
+
+                # Setup watch for Google after sync
+                if token.provider == OAuthProvider.GOOGLE:
+                    self._setup_google_watch(token)
+
             except Exception as e:
                 errors.append(f"{token.email_address}: {str(e)}")
                 token.last_sync_status = "ERROR"
@@ -334,8 +419,8 @@ class EmailAPIService:
             errors=errors if errors else None
         )
 
-    def _sync_google_emails(self, token: UserEmailToken, force_sync: bool) -> int:
-        """Sync emails from Gmail"""
+    def _sync_google_emails(self, token: UserEmailToken, force_sync: bool, history_id: Optional[str] = None) -> int:
+        """Sync emails from Gmail, with optional incremental sync using history_id"""
         creds = Credentials(
             token=token.access_token,
             refresh_token=token.refresh_token,
@@ -353,12 +438,50 @@ class EmailAPIService:
         
         service = build('gmail', 'v1', credentials=creds)
         
+        new_emails = 0
+        
+        if history_id and token.last_history_id:
+            # Incremental sync using history
+            logger.info(f"Performing incremental sync with history_id: {history_id}")
+            try:
+                history_response = service.users().history().list(
+                    userId='me',
+                    startHistoryId=token.last_history_id,
+                    labelId=['INBOX']
+                ).execute()
+                
+                history = history_response.get('history', [])
+                for hist in history:
+                    for msg_added in hist.get('messagesAdded', []):
+                        msg = msg_added['message']
+                        # Process the added message
+                        new_emails += self._process_google_message(service, token, msg['id'])
+                
+                # Update last_history_id
+                token.last_history_id = history_id
+                self.db.commit()
+                
+            except HttpError as e:
+                if e.resp.status == 404:  # History ID too old, fallback to full sync
+                    logger.warning("History ID too old, falling back to full sync")
+                    new_emails = self._full_sync_google_emails(service, token, force_sync)
+                else:
+                    raise
+        else:
+            # Full sync
+            new_emails = self._full_sync_google_emails(service, token, force_sync)
+        
+        logger.info(f"Imported {new_emails} new emails")
+        return new_emails
+
+    def _full_sync_google_emails(self, service, token: UserEmailToken, force_sync: bool) -> int:
+        """Perform full sync of Gmail emails"""
         q = None
         if not force_sync and token.last_sync_at:
             last_sync_date = token.last_sync_at - timedelta(days=1)
             q = f"after:{int(last_sync_date.timestamp())}"
         
-        logger.info(f"Syncing Gmail with query: {q}")
+        logger.info(f"Full syncing Gmail with query: {q}")
         
         # Fetch all messages
         results = service.users().messages().list(userId='me', q=q, maxResults=500, includeSpamTrash=True).execute()
@@ -372,11 +495,28 @@ class EmailAPIService:
         logger.info(f"Total messages found: {len(messages)}")
         
         new_emails = 0
+        latest_history_id = None
         for msg in messages:
             if self.db.query(Email).filter(Email.message_id == msg['id']).first():
                 continue
             
-            msg_detail = service.users().messages().get(userId='me', id=msg['id'], format='full').execute()
+            new_emails += self._process_google_message(service, token, msg['id'])
+            
+            # Update latest history id if available
+            msg_detail = service.users().messages().get(userId='me', id=msg['id']).execute()
+            if 'historyId' in msg_detail and (not latest_history_id or msg_detail['historyId'] > latest_history_id):
+                latest_history_id = msg_detail['historyId']
+        
+        if latest_history_id:
+            token.last_history_id = latest_history_id
+            self.db.commit()
+        
+        return new_emails
+
+    def _process_google_message(self, service, token: UserEmailToken, message_id: str) -> int:
+        """Process and store a single Google message"""
+        try:
+            msg_detail = service.users().messages().get(userId='me', id=message_id, format='full').execute()
             
             headers = {h['name'].lower(): h['value'] for h in msg_detail['payload']['headers']}
             labels = msg_detail.get('labelIds', [])
@@ -399,7 +539,7 @@ class EmailAPIService:
             is_important = 'IMPORTANT' in labels
             
             email = Email(
-                message_id=msg['id'],
+                message_id=message_id,
                 thread_id=msg_detail['threadId'],
                 subject=headers.get('subject', ''),
                 from_address=headers.get('from', ''),
@@ -417,11 +557,44 @@ class EmailAPIService:
             )
             
             self.db.add(email)
-            new_emails += 1
-        
-        self.db.commit()
-        logger.info(f"Imported {new_emails} new emails")
-        return new_emails
+            self.db.commit()
+            return 1
+            
+        except Exception as e:
+            logger.error(f"Error processing Google message {message_id}: {str(e)}")
+            return 0
+
+    def _setup_google_watch(self, token: UserEmailToken):
+        """Setup Gmail watch for push notifications"""
+        try:
+            creds = Credentials(
+                token=token.access_token,
+                refresh_token=token.refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=settings.GOOGLE_CLIENT_ID,
+                client_secret=settings.GOOGLE_CLIENT_SECRET
+            )
+            
+            if creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                token.access_token = creds.token
+                token.refresh_token = creds.refresh_token
+                token.expires_at = creds.expiry
+                self.db.commit()
+            
+            service = build('gmail', 'v1', credentials=creds)
+            
+            watch_request = {
+                "labelIds": ["INBOX"],
+                "labelFilterAction": "include",
+                "topicName": settings.PUBSUB_TOPIC
+            }
+            
+            response = service.users().watch(userId='me', body=watch_request).execute()
+            logger.info(f"Watch setup for {token.email_address}: expires {response.get('expiration')}")
+            
+        except Exception as e:
+            logger.error(f"Failed to setup watch for {token.email_address}: {str(e)}")
 
     async def _sync_microsoft_emails(self, token: UserEmailToken, force_sync: bool) -> int:
         """Sync emails from Microsoft"""

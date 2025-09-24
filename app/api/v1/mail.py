@@ -4,13 +4,14 @@
 Mail and Email Management API endpoints
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Request, Query, Form, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
 import traceback
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_, func, desc, asc
 import json
+import base64
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user as get_current_user
@@ -21,6 +22,7 @@ from app.schemas.mail_schemas import MailDashboardStats, MailSyncRequest, MailSy
 from app.services.oauth_service import OAuth2Service
 from app.services.email_api_service import EmailAPIService
 from app.models.mail_management import Email, SentEmail
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -189,6 +191,57 @@ async def sync_emails(
     """Sync emails from one or all tokens"""
     email_service = EmailAPIService(db)
     return await email_service.sync_emails(current_user, sync_request.token_id, sync_request.force_sync)
+
+
+@router.post("/webhook/gmail")
+async def handle_gmail_notification(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Handle Gmail push notification webhook from Pub/Sub"""
+    try:
+        # Optional: Verify token if set
+        if settings.PUBSUB_VERIFY_TOKEN:
+            token = request.query_params.get('token')
+            if token != settings.PUBSUB_VERIFY_TOKEN:
+                raise HTTPException(status_code=403, detail="Invalid verification token")
+
+        data = await request.json()
+        if 'message' not in data or 'data' not in data['message']:
+            raise HTTPException(status_code=400, detail="Invalid notification format")
+
+        # Decode the Pub/Sub message
+        encoded_data = data['message']['data']
+        decoded_data = base64.b64decode(encoded_data).decode('utf-8')
+        push_info = json.loads(decoded_data)
+
+        email_address = push_info.get('emailAddress')
+        new_history_id = push_info.get('historyId')
+
+        if not email_address or not new_history_id:
+            raise HTTPException(status_code=400, detail="Missing email or historyId")
+
+        # Find the token for this email
+        token = db.query(UserEmailToken).filter(
+            UserEmailToken.email_address == email_address,
+            UserEmailToken.provider == OAuthProvider.GOOGLE
+        ).first()
+
+        if not token:
+            logger.warning(f"No token found for email: {email_address}")
+            return {"status": "ignored"}
+
+        # Trigger incremental sync using historyId
+        email_service = EmailAPIService(db)
+        new_emails = email_service._sync_google_emails(token, force_sync=False, history_id=new_history_id)
+
+        logger.info(f"Processed notification for {email_address}: {new_emails} new emails")
+
+        return {"status": "success"}
+
+    except Exception as e:
+        logger.error(f"Error handling Gmail notification: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Notification processing failed")
 
 
 @router.get("/sync/jobs")
