@@ -1,10 +1,21 @@
 # scripts/seed_snappymail_config.py
 
 import os
-from app.db.session import get_db
+import sys
+import logging
+from pathlib import Path
+
+# Add the project root to the Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from app.core.database import get_db
 from app.models.system_models import SnappyMailConfig
 from app.models.user_models import User
 from sqlalchemy.orm import Session
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def seed_snappymail_config(db: Session):
     # Find the user by email (adjust email if needed)
