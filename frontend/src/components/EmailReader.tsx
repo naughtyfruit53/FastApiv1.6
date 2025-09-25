@@ -98,6 +98,9 @@ const EmailReader: React.FC<EmailReaderProps> = ({
     try {
       const response = await api.get(`/mail/emails/${messageId}`);
 
+      // Added console.log for body_html - open browser dev tools (F12) > Console tab to see it when loading an email
+      console.log('Body HTML:', response.data.body_html);
+
       setEmail(response.data);
 
       // Auto-mark as read if it's unread
@@ -356,7 +359,30 @@ const EmailReader: React.FC<EmailReaderProps> = ({
                   '& td, & th': {
                     border: '1px solid #ddd',
                     padding: '8px'
-                  }
+                  },
+                  '& p': {
+                    marginBottom: '16px',
+                    lineHeight: 1.5,
+                    fontSize: '1rem',
+                    whiteSpace: 'pre-wrap'
+                  },
+                  '& div': {
+                    marginBottom: '16px',
+                    lineHeight: 1.5
+                  },
+                  '& span': {
+                    lineHeight: 1.5
+                  },
+                  '& .gmail_extra': {
+                    display: 'none'
+                  },
+                  '& .highlight': {
+                    backgroundColor: 'initial'  // Remove yellow highlight if unwanted
+                  },
+                  whiteSpace: 'pre-wrap',  // Preserve whitespace and wrap lines
+                  wordBreak: 'break-word',  // Break long words
+                  overflowWrap: 'break-word',  // Break long words
+                  lineHeight: 1.5  // Standard line spacing
                 }}
               />
             ) : (
@@ -365,7 +391,8 @@ const EmailReader: React.FC<EmailReaderProps> = ({
                 sx={{
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'inherit',
-                  fontSize: 'inherit'
+                  fontSize: 'inherit',
+                  lineHeight: 1.5
                 }}
               >
                 {email.body_text || 'No content to display'}

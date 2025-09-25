@@ -1,0 +1,41 @@
+.email-body {
+  font-family: 'Arial', sans-serif;
+  font-size: 14px;
+  color: #333333;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.email-body p {
+  margin: 0 0 16px 0;
+}
+
+.email-body div {
+  margin: 0 0 16px 0;
+}
+
+.email-body a {
+  color: #1155cc;
+  text-decoration: underline;
+}
+
+.email-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.email-body table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.email-body td, .email-body th {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+.email-body .gmail_extra {
+  display: none;
+}

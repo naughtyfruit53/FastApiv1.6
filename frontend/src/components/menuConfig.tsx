@@ -649,7 +649,6 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         { title: 'Projects', subSections: menuItems.projects.sections },
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
         { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
-        { title: 'Email', subSections: menuItems.email.sections },
         { title: 'Settings', subSections: menuItems.settings.sections }
         // Vouchers & Transactions removed per request
         // Mobile Apps removed per request

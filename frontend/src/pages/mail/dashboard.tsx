@@ -557,22 +557,57 @@ const MailDashboard: React.FC = () => {
             boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box>
-              <Typography variant="h4" component="h1" sx={{ 
-                color: 'text.primary',
-                background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>
-                Mail Dashboard
-              </Typography>
-              <Typography variant="subtitle1" color="text.secondary">
-                Manage your email communications efficiently
-              </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {stats && [
+                { key: 'total_emails', label: 'Total Emails', color: '#1976d2' },
+                { key: 'unread_emails', label: 'Unread', color: '#dc004e' },
+                { key: 'today_emails', label: 'Today', color: '#388e3c' },
+                { key: 'this_week_emails', label: 'This Week', color: '#f57c00' },
+              ].map((item) => (
+                <Box
+                  key={item.key}
+                  onClick={() => handleStatClick(item.key)}
+                  sx={{
+                    p: 2.5,
+                    bgcolor: 'background.paper',
+                    borderRadius: 2,
+                    border: '1px solid #e0e0e0',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                      borderColor: item.color,
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: `${item.color}20`,
+                        color: item.color,
+                        mr: 2,
+                      }}
+                    >
+                      {getStatIcon(item.key as keyof MailStats)}
+                    </Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      {item.label}
+                    </Typography>
+                  </Box>
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 700, 
+                    color: item.color,
+                    lineHeight: 1
+                  }}>
+                    {stats[item.key as keyof MailStats].toLocaleString()}
+                  </Typography>
+                </Box>
+              ))}
             </Box>
-            
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button 
                 variant="contained" 
@@ -614,59 +649,6 @@ const MailDashboard: React.FC = () => {
               </Button>
             </Box>
           </Box>
-
-          {/* Enhanced Stats Grid */}
-          <Grid container spacing={3}>
-            {stats && [
-              { key: 'total_emails', label: 'Total Emails', color: '#1976d2' },
-              { key: 'unread_emails', label: 'Unread', color: '#dc004e' },
-              { key: 'today_emails', label: 'Today', color: '#388e3c' },
-              { key: 'this_week_emails', label: 'This Week', color: '#f57c00' },
-            ].map((item) => (
-              <Grid item xs={12} sm={6} md={3} key={item.key}>
-                <Box
-                  onClick={() => handleStatClick(item.key)}
-                  sx={{
-                    p: 2.5,
-                    bgcolor: 'background.paper',
-                    borderRadius: 2,
-                    border: '1px solid #e0e0e0',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                      borderColor: item.color,
-                    },
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Box
-                      sx={{
-                        p: 1,
-                        borderRadius: 2,
-                        bgcolor: `${item.color}20`,
-                        color: item.color,
-                        mr: 2,
-                      }}
-                    >
-                      {getStatIcon(item.key as keyof MailStats)}
-                    </Box>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      {item.label}
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" sx={{ 
-                    fontWeight: 700, 
-                    color: item.color,
-                    lineHeight: 1
-                  }}>
-                    {stats[item.key as keyof MailStats].toLocaleString()}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
         </Box>
 
         {/* Main Content with improved layout */}
@@ -914,7 +896,7 @@ const MailDashboard: React.FC = () => {
                 bgcolor: 'grey.50'
               }}>
                 <EmailIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
-                <Typography variant="h5" gutterBottom sx={{ fontWeight: 300 }}>
+                <Typography variant="h5" gutterBottom sx={ { fontWeight: 300 }}>
                   Select an email to view
                 </Typography>
                 <Typography variant="body2">
