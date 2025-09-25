@@ -30,3 +30,6 @@ export * as TransportService from "./transportService";
 export * as AdminService from "./adminService";
 export * as PdfService from "./pdfService";
 export * as NotificationWorkflow from "./notificationWorkflow";
+
+// New Email Service
+export * as EmailService from "./emailService";

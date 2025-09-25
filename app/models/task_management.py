@@ -67,8 +67,6 @@ class Task(Base):
     time_logs = relationship("TaskTimeLog", back_populates="task", cascade="all, delete-orphan")
     reminders = relationship("TaskReminder", back_populates="task", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="task", cascade="all, delete-orphan")
-    linked_emails = relationship("Email", back_populates="task")
-    sent_emails = relationship("SentEmail", back_populates="task")
 
 class TaskProject(Base):
     __tablename__ = "task_projects"

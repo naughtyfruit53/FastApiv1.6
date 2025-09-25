@@ -93,8 +93,6 @@ class CalendarEvent(Base):
     task = relationship("Task", back_populates="calendar_events")
     attendees = relationship("EventAttendee", back_populates="event", cascade="all, delete-orphan")
     reminders = relationship("EventReminder", back_populates="event", cascade="all, delete-orphan")
-    linked_emails = relationship("Email", back_populates="calendar_event")
-    sent_emails = relationship("SentEmail", back_populates="calendar_event")
 
 class EventAttendee(Base):
     __tablename__ = "event_attendees"

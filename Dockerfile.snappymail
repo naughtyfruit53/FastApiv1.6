@@ -1,0 +1,38 @@
+# Dockerfile.snappymail
+
+FROM php:8.2-apache
+
+# Install system dependencies and PHP extensions for SnappyMail
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    libicu-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+    pdo_mysql \
+    zip \
+    intl \
+    gd \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Download and install SnappyMail
+RUN curl -L -o /tmp/snappymail.zip https://github.com/the-djmaze/snappymail/releases/download/v2.37.1/snappymail-2.37.1.zip \
+    && unzip /tmp/snappymail.zip -d /var/www/html \
+    && chown -R www-data:www-data /var/www/html \
+    && rm /tmp/snappymail.zip
+
+# Apache configuration
+RUN a2enmod rewrite
+COPY snappymail.conf /etc/apache2/sites-available/000-default.conf
+
+# Copy entrypoint script for auto-configuration
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Expose port
+EXPOSE 80
+
+# Use entrypoint to configure on start, then run Apache
+ENTRYPOINT ["/entrypoint.sh"]

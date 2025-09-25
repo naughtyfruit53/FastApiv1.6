@@ -119,6 +119,9 @@ class Settings:
     # FastGST API URL (for HSN/GST lookup)
     FASTGST_API_URL: str = os.getenv("FASTGST_API_URL", "https://api.fastgst.in")
     
+    # SnappyMail URL (for backend reference, e.g., API endpoints)
+    SNAPPYMAIL_URL: str = os.getenv("SNAPPYMAIL_URL", "http://localhost:8888")
+    
     @property
     def jwt_secret(self) -> str:
         """

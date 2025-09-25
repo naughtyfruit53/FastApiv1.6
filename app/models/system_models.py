@@ -362,3 +362,33 @@ class OTPVerification(Base):
         Index('idx_otp_expires', 'expires_at'),
         {'extend_existing': True}
     )
+
+class SnappyMailConfig(Base):
+    """
+    Model for SnappyMail email client configuration per user.
+    """
+    __tablename__ = "snappymail_configs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_snappymail_config_user_id"), nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    imap_host: Mapped[str] = mapped_column(String, nullable=False)
+    imap_port: Mapped[int] = mapped_column(Integer, nullable=False)
+    smtp_host: Mapped[str] = mapped_column(String, nullable=False)
+    smtp_port: Mapped[int] = mapped_column(Integer, nullable=False)
+    use_ssl: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    password: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationship to User - Use singular consistent with User model
+    user: Mapped["app.models.user_models.User"] = relationship(
+        "app.models.user_models.User",
+        back_populates="snappymail_config"
+    )
+
+    __table_args__ = (
+        UniqueConstraint('user_id', name='uq_snappymail_config_user'),
+        Index('idx_snappymail_config_email', 'email'),
+        {'extend_existing': True}
+    )

@@ -42,8 +42,8 @@ import {
   MonetizationOn,
   Campaign,
   LocalOffer,
-  Email,
   Sms,
+  Email,
   Chat,
   SmartToy,
   Poll,
@@ -52,9 +52,6 @@ import {
   EventNote,
   Alarm,
   AccessTime,
-  Inbox,
-  Send,
-  Drafts,
   Menu as MenuIcon
 } from '@mui/icons-material';
 import { SERVICE_PERMISSIONS } from '../types/rbac.types';
@@ -556,7 +553,6 @@ export const menuItems = {
   // Email menu - simplified to direct dashboard navigation
   email: {
     title: 'Email',
-    icon: <Email />,
     path: '/mail/dashboard', // Direct navigation to dashboard
     sections: [] // Remove all submenu sections
   },

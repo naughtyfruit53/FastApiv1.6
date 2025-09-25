@@ -103,7 +103,7 @@ class Organization(Base):
         "Service": True,
         "Analytics": True,
         "Finance": True,
-        "Mail": True
+        # Removed "Mail": True as custom mail module is replaced by SnappyMail
     }) # Modules enabled for this organization
 
     # Onboarding status
@@ -358,28 +358,6 @@ class Organization(Base):
         back_populates="organization"
     )
     
-    # Email Management relationships
-    email_accounts: Mapped[List["app.models.mail_management.EmailAccount"]] = relationship(
-        "app.models.mail_management.EmailAccount",
-        back_populates="organization"
-    )
-    emails: Mapped[List["app.models.mail_management.Email"]] = relationship(
-        "app.models.mail_management.Email",
-        back_populates="organization"
-    )
-    sent_emails: Mapped[List["app.models.mail_management.SentEmail"]] = relationship(
-        "app.models.mail_management.SentEmail",
-        back_populates="organization"
-    )
-    email_templates: Mapped[List["app.models.mail_management.EmailTemplate"]] = relationship(
-        "app.models.mail_management.EmailTemplate",
-        back_populates="organization"
-    )
-    email_rules: Mapped[List["app.models.mail_management.EmailRule"]] = relationship(
-        "app.models.mail_management.EmailRule",
-        back_populates="organization"
-    )
-    
     # OAuth2 Email Token relationships
     email_tokens: Mapped[List["app.models.oauth_models.UserEmailToken"]] = relationship(
         "app.models.oauth_models.UserEmailToken",
@@ -444,7 +422,7 @@ class User(Base):
         "Service": True,
         "Analytics": True,
         "Finance": True,
-        "Mail": True
+        # Removed "Mail": True as custom mail module is replaced by SnappyMail
     }) # Modules assigned to this user (subset of org enabled modules)
 
     # Executive-specific fields
@@ -564,28 +542,6 @@ class User(Base):
         back_populates="user"
     )
     
-    # Email Management Relationships
-    email_accounts: Mapped[List["app.models.mail_management.EmailAccount"]] = relationship(
-        "app.models.mail_management.EmailAccount",
-        back_populates="user"
-    )
-    sent_emails: Mapped[List["app.models.mail_management.SentEmail"]] = relationship(
-        "app.models.mail_management.SentEmail",
-        back_populates="sender"
-    )
-    email_actions: Mapped[List["app.models.mail_management.EmailAction"]] = relationship(
-        "app.models.mail_management.EmailAction",
-        back_populates="user"
-    )
-    created_email_templates: Mapped[List["app.models.mail_management.EmailTemplate"]] = relationship(
-        "app.models.mail_management.EmailTemplate",
-        back_populates="creator"
-    )
-    email_rules: Mapped[List["app.models.mail_management.EmailRule"]] = relationship(
-        "app.models.mail_management.EmailRule",
-        back_populates="user"
-    )
-    
     # OAuth2 Email Token relationship
     email_tokens: Mapped[List["app.models.oauth_models.UserEmailToken"]] = relationship(
         "app.models.oauth_models.UserEmailToken",
@@ -610,6 +566,13 @@ class User(Base):
         "UserOrganizationRole",
         foreign_keys="UserOrganizationRole.user_id",
         back_populates="user"
+    )
+
+    # SnappyMail Configuration (one-to-one per user) - Use fully qualified path to avoid registry conflict
+    snappymail_config: Mapped[Optional["app.models.system_models.SnappyMailConfig"]] = relationship(
+        "app.models.system_models.SnappyMailConfig",
+        back_populates="user",
+        uselist=False
     )
 
     __table_args__ = (
@@ -1013,7 +976,7 @@ class VoucherApproval(Base):
     
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization")

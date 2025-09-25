@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # FastAPI Backend
   api:
@@ -43,12 +41,53 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_SNAPPYMAIL_URL=${NEXT_PUBLIC_SNAPPYMAIL_URL}
     depends_on:
       - api
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    env_file:
+      - .env
+
+  # SnappyMail Webmail Service
+  snappymail:
+    build:
+      context: .
+      dockerfile: Dockerfile.snappymail
+    ports:
+      - "8888:80"
+    volumes:
+      - ./snappymail/data:/var/www/html/data
+    environment:
+      - SNAPPYMAIL_DB_HOST=${SNAPPYMAIL_DB_HOST}
+      - SNAPPYMAIL_DB_NAME=${SNAPPYMAIL_DB_NAME}
+      - SNAPPYMAIL_DB_USER=${SNAPPYMAIL_DB_USER}
+      - SNAPPYMAIL_DB_PASS=${SNAPPYMAIL_DB_PASS}
+      - SNAPPYMAIL_ADMIN_USER=${SNAPPYMAIL_ADMIN_USER}
+      - SNAPPYMAIL_ADMIN_PASS=${SNAPPYMAIL_ADMIN_PASS}
+    depends_on:
+      snappymail_db:
+        condition: service_healthy
+    env_file:
+      - .env
+
+  # SnappyMail Database (SQLite or MySQL; using MySQL for example)
+  snappymail_db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=${SNAPPYMAIL_DB_NAME}
+      - MYSQL_USER=${SNAPPYMAIL_DB_USER}
+      - MYSQL_PASSWORD=${SNAPPYMAIL_DB_PASS}
+      - MYSQL_ROOT_PASSWORD=root_password
+    volumes:
+      - snappymail_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
 volumes:
   postgres_data:
   redis_data:
+  snappymail_db_data:

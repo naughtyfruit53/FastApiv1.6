@@ -27,7 +27,6 @@ import {
   ChevronRight,
   Menu as MenuIcon,
   Search as SearchIcon,
-  Email,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
@@ -669,7 +668,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               </Button>
               <Button
                 color="inherit"
-                startIcon={<Email />}
                 onClick={(e) => handleMenuClick(e, 'email')}
                 className="modern-menu-button"
                 sx={modernButtonStyle}

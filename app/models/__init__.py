@@ -124,11 +124,6 @@ from .calendar_management import (
     CalendarEvent, EventAttendee, EventReminder, Calendar, CalendarShare,
     GoogleCalendarIntegration, EventType, RecurrenceType, EventStatus
 )
-# Import mail management models
-from .mail_management import (
-    EmailAccount, Email, EmailAttachment, SentEmail, EmailAction,
-    EmailTemplate, EmailRule, EmailAccountType, EmailStatus, EmailPriority
-)
 # Import OAuth2 models
 from .oauth_models import (
     UserEmailToken, OAuthState, OAuthProvider, TokenStatus
@@ -258,10 +253,6 @@ __all__ = [
     # Calendar management models
     "CalendarEvent", "EventAttendee", "EventReminder", "Calendar", "CalendarShare",
     "GoogleCalendarIntegration", "EventType", "RecurrenceType", "EventStatus",
-    
-    # Mail management models
-    "EmailAccount", "Email", "EmailAttachment", "SentEmail", "EmailAction",
-    "EmailTemplate", "EmailRule", "EmailAccountType", "EmailStatus", "EmailPriority",
     
     # OAuth2 models
     "UserEmailToken", "OAuthState", "OAuthProvider", "TokenStatus",
