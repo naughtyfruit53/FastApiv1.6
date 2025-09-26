@@ -67,3 +67,6 @@ tmp/
 test_*.py
 demonstration_*.py
 ui_demo.html
+
+# SnappyMail data (Docker volume folder)
+snappymail/

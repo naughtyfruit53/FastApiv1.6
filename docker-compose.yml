@@ -2,6 +2,7 @@ services:
   # FastAPI Backend
   api:
     build: .
+    image: tritiq-api:latest  # Explicit name to avoid invalid auto-generated names
     ports:
       - "8000:8000"
     environment:
@@ -37,6 +38,7 @@ services:
   # Next.js Frontend
   frontend:
     build: ./frontend
+    image: tritiq-frontend:latest  # Explicit name to avoid invalid auto-generated names
     ports:
       - "3000:3000"
     environment:
@@ -55,17 +57,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.snappymail
+    image: tritiq-snappymail:latest  # Explicit name to avoid invalid auto-generated names
     ports:
       - "8888:80"
     volumes:
       - ./snappymail/data:/var/www/html/data
     environment:
+      - SNAPPYMAIL_ADMIN_USER=${SNAPPYMAIL_ADMIN_USER}
+      - SNAPPYMAIL_ADMIN_PASS=${SNAPPYMAIL_ADMIN_PASS}
       - SNAPPYMAIL_DB_HOST=${SNAPPYMAIL_DB_HOST}
       - SNAPPYMAIL_DB_NAME=${SNAPPYMAIL_DB_NAME}
       - SNAPPYMAIL_DB_USER=${SNAPPYMAIL_DB_USER}
       - SNAPPYMAIL_DB_PASS=${SNAPPYMAIL_DB_PASS}
-      - SNAPPYMAIL_ADMIN_USER=${SNAPPYMAIL_ADMIN_USER}
-      - SNAPPYMAIL_ADMIN_PASS=${SNAPPYMAIL_ADMIN_PASS}
     depends_on:
       snappymail_db:
         condition: service_healthy

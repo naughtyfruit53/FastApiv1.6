@@ -22,10 +22,10 @@ export const getSnappyMailConfig = async (userId: number): Promise<SnappyMailCon
 
 export const getSnappyMailUrl = async (userId: number): Promise<string> => {
   const config = await getSnappyMailConfig(userId);
+  const fallbackUrl = process.env.NEXT_PUBLIC_SNAPPYMAIL_URL || 'http://localhost:8888';
   if (config) {
-    const protocol = config.use_ssl ? 'https' : 'http';
-    return `${protocol}://${config.imap_host}:${config.imap_port}`;
+    // Prefill login with user's email for easy access (user enters password in SnappyMail)
+    return `${fallbackUrl}/?login=${encodeURIComponent(config.email)}`;
   }
-  // Fallback to env or default
-  return (typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_SNAPPYMAIL_URL : '') || 'http://localhost:8888';
+  return fallbackUrl;
 };
