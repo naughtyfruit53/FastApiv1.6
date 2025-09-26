@@ -64,6 +64,10 @@ class UserEmailToken(Base):
     last_sync_status = Column(String(50), nullable=True)
     last_sync_error = Column(Text, nullable=True)
     
+    # Provider-specific sync tracking
+    last_history_id = Column(String, nullable=True)  # For Google history ID
+    last_delta_token = Column(String, nullable=True)  # For Microsoft delta token
+    
     # Security and audit
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -131,7 +135,7 @@ class OAuthState(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # State tracking
-    state = Column(String(255), unique=True, nullable=False, index=True)
+    state = Column(String(255), unique=True, nullable=False)
     provider = Column(Enum(OAuthProvider), nullable=False)
     
     # User context

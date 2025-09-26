@@ -232,8 +232,9 @@ class EmailAPIService:
         if not token:
             raise HTTPException(404, "Token not found")
         
+        success = False
         if token.provider == OAuthProvider.GOOGLE:
-            success = self._send_google_email(token, compose_request, attachments)
+            success = await self._send_google_email(token, compose_request, attachments)
         elif token.provider == OAuthProvider.MICROSOFT:
             success = await self._send_microsoft_email(token, compose_request, attachments)
         else:
@@ -263,7 +264,7 @@ class EmailAPIService:
         
         return sent_email.__dict__
 
-    def _send_google_email(self, token: UserEmailToken, compose_request: MailComposeRequest, attachments: List[UploadFile] = None) -> bool:
+    async def _send_google_email(self, token: UserEmailToken, compose_request: MailComposeRequest, attachments: List[UploadFile] = None) -> bool:
         """Send email via Gmail API with attachments"""
         try:
             creds = Credentials(
@@ -276,7 +277,6 @@ class EmailAPIService:
             
             if creds.expired and creds.refresh_token:
                 creds.refresh(Request())
-                # Update token in DB
                 token.access_token = creds.token
                 token.refresh_token = creds.refresh_token
                 token.expires_at = creds.expiry
@@ -429,7 +429,7 @@ class EmailAPIService:
             try:
                 new_emails = 0
                 if token.provider == OAuthProvider.GOOGLE:
-                    new_emails = self._sync_google_emails(token, force_sync)
+                    new_emails = await self._sync_google_emails(token, force_sync)
                 elif token.provider == OAuthProvider.MICROSOFT:
                     new_emails = await self._sync_microsoft_emails(token, force_sync)
                 
@@ -459,8 +459,8 @@ class EmailAPIService:
             errors=errors if errors else None
         )
 
-    def _sync_google_emails(self, token: UserEmailToken, force_sync: bool, history_id: Optional[str] = None) -> int:
-        """Sync emails from Gmail, with optional incremental sync using history_id"""
+    async def _sync_google_emails(self, token: UserEmailToken, force_sync: bool, history_id: Optional[str] = None) -> int:
+        """Sync emails from Gmail with optional incremental sync using history_id"""
         creds = Credentials(
             token=token.access_token,
             refresh_token=token.refresh_token,
@@ -494,7 +494,7 @@ class EmailAPIService:
                 for hist in history:
                     for msg_added in hist.get('messagesAdded', []):
                         msg = msg_added['message']
-                        new_emails += self._process_google_message(service, token, msg['id'])
+                        new_emails += await self._process_google_message(service, token, msg['id'])
                 
                 # Update last_history_id
                 token.last_history_id = history_id
@@ -503,17 +503,17 @@ class EmailAPIService:
             except HttpError as e:
                 if e.resp.status == 404:  # History ID too old, fallback to full sync
                     logger.warning("History ID too old, falling back to full sync")
-                    new_emails = self._full_sync_google_emails(service, token, force_sync)
+                    new_emails = await self._full_sync_google_emails(service, token, force_sync)
                 else:
                     raise
         else:
             # Full sync - limit to last 30 days for initial
-            new_emails = self._full_sync_google_emails(service, token, force_sync)
+            new_emails = await self._full_sync_google_emails(service, token, force_sync)
         
         logger.info(f"Imported {new_emails} new emails for {token.email_address}")
         return new_emails
 
-    def _full_sync_google_emails(self, service, token: UserEmailToken, force_sync: bool) -> int:
+    async def _full_sync_google_emails(self, service, token: UserEmailToken, force_sync: bool) -> int:
         """Perform full sync of Gmail emails - limited to last 30 days initially"""
         # Always limit initial sync to last 30 days to avoid stuck sync
         cutoff_date = datetime.utcnow() - timedelta(days=30)
@@ -549,7 +549,7 @@ class EmailAPIService:
             if self.db.query(Email).filter(Email.message_id == msg['id']).first():
                 continue
             
-            new_emails += self._process_google_message(service, token, msg['id'])
+            new_emails += await self._process_google_message(service, token, msg['id'])
             
             # Update latest history id
             try:
@@ -564,7 +564,7 @@ class EmailAPIService:
         
         return new_emails
 
-    def _process_google_message(self, service, token: UserEmailToken, message_id: str) -> int:
+    async def _process_google_message(self, service, token: UserEmailToken, message_id: str) -> int:
         """Process and store a single Google message with full body and attachments"""
         try:
             msg_detail = service.users().messages().get(userId='me', id=message_id, format='full').execute()
@@ -591,7 +591,7 @@ class EmailAPIService:
             is_important = 'IMPORTANT' in labels
             
             # Parse full body and attachments
-            body_html, body_text, attachments_data, size_bytes = self._parse_google_payload(msg_detail['payload'])
+            body_html, body_text, attachments_data, size_bytes = await self._parse_google_payload(service, msg_detail['payload'], message_id)
             
             email = Email(
                 message_id=message_id,
@@ -647,10 +647,10 @@ class EmailAPIService:
             logger.error(f"Error processing Google message {message_id}: {str(e)}")
             return 0
 
-    def _parse_google_payload(self, payload: Dict) -> tuple[str, str, list, int]:
+    async def _parse_google_payload(self, service, payload: Dict, message_id: str) -> tuple[str, str, list, int]:
         """Parse Gmail payload for full HTML/text, attachments, and size"""
-        body_html = None
-        body_text = None
+        body_html = ''
+        body_text = ''
         attachments = []
         size = 0
         
@@ -675,19 +675,25 @@ class EmailAPIService:
                         body_text = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
                 elif not part['mimeType'].startswith('multipart/'):
                     # Attachment
-                    att_data = base64.urlsafe_b64decode(part['body']['data']).decode('latin-1')  # Binary as string
+                    if 'data' in part['body']:
+                        att_data = base64.urlsafe_b64decode(part['body']['data'])
+                    else:
+                        # Large attachment - fetch using attachmentId
+                        att_id = part['body']['attachmentId']
+                        att_response = service.users().messages().attachments().get(userId='me', messageId=message_id, id=att_id).execute()
+                        att_data = base64.urlsafe_b64decode(att_response['data'])
                     attachments.append({
                         'filename': part['filename'],
                         'content_type': part['mimeType'],
-                        'size': len(att_data.encode()),
-                        'data': att_data.encode(),
+                        'size': len(att_data),
+                        'data': att_data,
                         'content_id': part.get('headers', {}).get('content-id', ''),
                         'is_inline': 'inline' in part.get('disposition', '').lower()
                     })
-                    size += len(att_data.encode())
+                    size += len(att_data)
                 else:
                     # Nested multipart
-                    nested_html, nested_text, nested_att, nested_size = self._parse_google_payload(part)
+                    nested_html, nested_text, nested_att, nested_size = await self._parse_google_payload(service, part, message_id)
                     if nested_html:
                         body_html = nested_html
                     if nested_text:
@@ -696,18 +702,24 @@ class EmailAPIService:
                     size += nested_size
         elif payload['filename'] and payload['body']['size'] > 0:
             # Attachment without body
-            att_data = base64.urlsafe_b64decode(payload['body']['data']).decode('latin-1')
+            if 'data' in payload['body']:
+                att_data = base64.urlsafe_b64decode(payload['body']['data'])
+            else:
+                # Large attachment
+                att_id = payload['body']['attachmentId']
+                att_response = service.users().messages().attachments().get(userId='me', messageId=message_id, id=att_id).execute()
+                att_data = base64.urlsafe_b64decode(att_response['data'])
             attachments.append({
                 'filename': payload['filename'],
                 'content_type': payload['mimeType'],
-                'size': payload['body']['size'],
-                'data': att_data.encode(),
+                'size': len(att_data),
+                'data': att_data,
                 'content_id': '',
                 'is_inline': False
             })
-            size = payload['body']['size']
+            size = len(att_data)
         
-        return body_html or '', body_text or '', attachments, size
+        return body_html, body_text, attachments, size
 
     def _extract_name_from_header(self, header: str) -> str:
         """Extract display name from 'From' header"""
@@ -788,7 +800,7 @@ class EmailAPIService:
         folders = ['inbox', 'sentitems', 'drafts', 'junkemail', 'deleteditems']
         new_emails = 0
         
-        # Use delta for incremental sync if possible
+        # Use delta for incremental sync
         delta_token = token.last_delta_token if not force_sync else None
         odata_filter = None
         if not force_sync and token.last_sync_at:
@@ -855,7 +867,7 @@ class EmailAPIService:
                         subject=full_msg.subject or '',
                         from_address=full_msg.from_.email_address.address if full_msg.from_ else '',
                         from_name=full_msg.from_.email_address.name if full_msg.from_ else '',
-                        to_addresses=[r.email_address.address for r in full_msg.to_recipients or []],
+                        to_addresses=[r.email_address.address for r in full_msg.to_recipient or []],
                         cc_addresses=[r.email_address.address for r in full_msg.cc_recipient or []],
                         bcc_addresses=[r.email_address.address for r in full_msg.bcc_recipient or []],
                         reply_to=full_msg.reply_to.email_address.address if full_msg.reply_to else None,
