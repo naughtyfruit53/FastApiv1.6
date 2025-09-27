@@ -550,11 +550,11 @@ export const menuItems = {
       }
     ]
   },
-  // Email menu - simplified to direct dashboard navigation
+  // Email menu - placeholder only, no path or sections
   email: {
     title: 'Email',
-    path: '/mail/dashboard', // Direct navigation to dashboard
-    sections: [] // Remove all submenu sections
+    icon: <Email />,
+    sections: []
   },
   settings: {
     title: 'Settings',
@@ -645,6 +645,7 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         { title: 'Projects', subSections: menuItems.projects.sections },
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
         { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
+        { title: 'Email', subSections: menuItems.email.sections }, // Placeholder section for Email
         { title: 'Settings', subSections: menuItems.settings.sections }
         // Vouchers & Transactions removed per request
         // Mobile Apps removed per request

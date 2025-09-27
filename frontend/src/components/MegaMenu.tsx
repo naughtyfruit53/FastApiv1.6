@@ -205,17 +205,12 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const canAccessService = (): boolean => {
-    const hasAccess = hasAnyServicePermission([
+    return hasAnyServicePermission([
       SERVICE_PERMISSIONS.SERVICE_READ,
       SERVICE_PERMISSIONS.APPOINTMENT_READ,
       SERVICE_PERMISSIONS.TECHNICIAN_READ,
       SERVICE_PERMISSIONS.WORK_ORDER_READ,
     ]);
-    console.log('Permission check - canAccessService:', hasAccess, {
-      userPermissions,
-      timestamp: new Date().toISOString(),
-    });
-    return hasAccess;
   };
 
   const canAccessServiceReports = (): boolean => {
@@ -665,15 +660,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 aria-controls="mega-menu-popover"
               >
                 Menu
-              </Button>
-              <Button
-                color="inherit"
-                onClick={(e) => handleMenuClick(e, 'email')}
-                className="modern-menu-button"
-                sx={modernButtonStyle}
-                aria-haspopup="true"
-              >
-                Email
               </Button>
               <Button
                 color="inherit"

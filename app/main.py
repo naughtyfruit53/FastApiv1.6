@@ -140,12 +140,7 @@ except Exception as import_error:
     logger.error(f"Failed to import calendar_router: {str(import_error)}")
     raise
 
-try:
-    from app.api.v1 import mail as v1_mail
-    logger.info("Successfully imported mail_router")
-except Exception as import_error:
-    logger.error(f"Failed to import mail_router: {str(import_error)}")
-    raise
+# Mail router removed
 
 # Add Migration and Integration Settings
 try:
@@ -459,8 +454,7 @@ logger.info("Task Management router included successfully at prefix: /api/v1/tas
 app.include_router(v1_calendar.router, prefix="/api/v1/calendar", tags=["calendar-scheduler"])
 logger.info("Calendar and Scheduler router included successfully at prefix: /api/v1/calendar")
 
-app.include_router(v1_mail.router, prefix="/api/v1/mail", tags=["mail-management"])
-logger.info("Mail Management router included successfully at prefix: /api/v1/mail")
+# Mail router removed
 
 # Include Migration and Integration Settings routers
 app.include_router(v1_migration.router, prefix="/api/v1/migration", tags=["migration-data-import"])
