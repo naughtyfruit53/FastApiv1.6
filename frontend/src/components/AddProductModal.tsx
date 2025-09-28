@@ -87,6 +87,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   // Watch form values
   const watchedProductName = watch("product_name");
   const watchedHsnCode = watch("hsn_code");
+  const watchedDescription = watch("description");
   // Fetch all products
   const { data: allProducts = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products"],
@@ -229,7 +230,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         const selected = results[0];
         setValue("hsn_code", selected.hsn_code);
         setValue("gst_rate", selected.gst_rate);
-        if (selected.description && !watch("description")) {
+        if (selected.description && !watchedDescription && !watchedProductName) {
           setValue("description", selected.description);
         }
         toast.success("HSN details auto-filled");
@@ -269,7 +270,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const handleApiHsnSelect = (selected: HsnResult) => {
     setValue("hsn_code", selected.hsn_code);
     setValue("gst_rate", selected.gst_rate);
-    if (selected.description && !watch("description")) {
+    if (selected.description && !watchedDescription && !watchedProductName) {
       setValue("description", selected.description);
     }
     setHsnPopupOpen(false);

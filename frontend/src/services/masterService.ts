@@ -1,5 +1,7 @@
 // src/services/masterService.ts
 import api from "../lib/api";
+import { loadGstData } from "../data/gstRates";
+import { fuzzyMatch } from "../utils/stringUtils";  // Assume a utility for fuzzy matching; implement if needed
 
 interface QueryFunctionContext {
   queryKey: any[];
@@ -197,17 +199,30 @@ export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Prom
   return response.data;
 };
 
-// HSN search for GST rate auto-population
-export const hsnSearch = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
+// HSN search for GST rate auto-population - now local from CSV
+export const hsnSearch = async ({ queryKey }: QueryFunctionContext): Promise<any> => {
   const [, query, limit] = queryKey;
-  const response = await api.get("/master-data/hsn-search", { // Updated path to include /master-data
-    params: {
-      query,
-      limit: limit || 10,
-    },
-    signal,
-  });
-  return response.data;
+  try {
+    const data = await loadGstData();
+    
+    // Fuzzy search on HSN code or description
+    const results = data
+      .filter((item: HsnResult) => 
+        fuzzyMatch(query, item.hsn_code) || fuzzyMatch(query, item.description)
+      )
+      .sort((a: HsnResult, b: HsnResult) => {
+        // Prioritize exact HSN matches
+        if (a.hsn_code.startsWith(query)) return -1;
+        if (b.hsn_code.startsWith(query)) return 1;
+        return 0;
+      })
+      .slice(0, limit || 10);
+    
+    return results;
+  } catch (error) {
+    console.error('HSN Search Error:', error);
+    return [];
+  }
 };
 
 // New function: Get next account code for a type
