@@ -159,12 +159,6 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         "mail:templates:read": [Permission.ACCESS_ORG_SETTINGS],
         "mail:templates:create": [Permission.MANAGE_USERS],
         
-        # Sticky notes permissions
-        "sticky_notes:read": [Permission.ACCESS_ORG_SETTINGS],
-        "sticky_notes:create": [Permission.ACCESS_ORG_SETTINGS],
-        "sticky_notes:update": [Permission.ACCESS_ORG_SETTINGS],
-        "sticky_notes:delete": [Permission.ACCESS_ORG_SETTINGS],
-        
         # Reports permissions
         "service_reports_read": [Permission.VIEW_AUDIT_LOGS],
         "service_reports_export": [Permission.VIEW_AUDIT_LOGS],

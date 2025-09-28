@@ -457,12 +457,6 @@ export const apiIntegrationService = {
     // Calendar
     getCalendarEvents: (params?: any) => api.get("/api/v1/calendar/events", { params }),
     createCalendarEvent: (data: any) => api.post("/api/v1/calendar/events", data),
-    
-    // Sticky notes
-    getStickyNotes: () => api.get("/api/v1/sticky-notes"),
-    createStickyNote: (data: any) => api.post("/api/v1/sticky-notes", data),
-    updateStickyNote: (noteId: number, data: any) => api.put(`/api/v1/sticky-notes/${noteId}`, data),
-    
     // Migration tools
     getMigrationStatus: () => api.get("/api/v1/migration/status"),
     startMigration: (data: any) => api.post("/api/v1/migration/start", data),
@@ -622,7 +616,6 @@ export const apiIntegrationService = {
       utilities: [
         'POST /api/v1/pdf-generation/{type}',
         'GET /api/v1/calendar/events',
-        'GET /api/v1/sticky-notes',
         'GET /api/v1/reports',
       ],
     };
