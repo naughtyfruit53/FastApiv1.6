@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import MegaMenu from "./MegaMenu";
 import CompanySetupGuard from "./CompanySetupGuard";
 import { Box } from "@mui/material";
-import StickyNotesPanel from "./StickyNotes/StickyNotesPanel";
+
 import { useMobileDetection } from "../hooks/useMobileDetection";
 import { DeviceConditional } from "../utils/mobile/DeviceConditional";
 import MobileNav from "./MobileNav";  // Changed from MobileNavigation to MobileNav
@@ -46,7 +46,6 @@ const Layout: React.FC<{
         <MobileNavContext.Provider value={{ onMenuToggle: handleMobileMenuToggle }}>
           <CompanySetupGuard>
             {children}
-            {!isMobile && <StickyNotesPanel />}
           </CompanySetupGuard>
         </MobileNavContext.Provider>
       </Box>

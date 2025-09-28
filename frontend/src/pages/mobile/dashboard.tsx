@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import adminService from "../../services/adminService";
 import activityService, { RecentActivity } from "../../services/activityService";
 import ModernLoading from "../../components/ModernLoading";
-import StickyNotesPanel from "../../components/StickyNotes/StickyNotesPanel";
+
 
 interface AppStatistics {
   total_licenses_issued: number;
@@ -393,7 +393,6 @@ const MobileDashboard: React.FC = () => {
       rightActions={rightActions}
       showBottomNav={true}
     >
-      {isSuperAdmin && <StickyNotesPanel />}
       <MobileSearchBar
         value={searchQuery}
         onChange={setSearchQuery}
