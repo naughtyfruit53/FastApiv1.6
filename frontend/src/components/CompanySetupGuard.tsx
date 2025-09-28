@@ -6,7 +6,7 @@ import { organizationService } from "../services/organizationService";
 import { useAuth } from "../context/AuthContext";
 import CompanyDetailsModal from "./CompanyDetailsModal";
 import { toast } from "react-toastify";
-import StickyNotesPanel from "./StickyNotes/StickyNotesPanel";
+
 
 interface CompanySetupGuardProps {
   children: React.ReactNode;
@@ -134,28 +134,17 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
 
   // Don't render guard for super admins or exempt routes
   if (authLoading || !user || user.is_super_admin || isExemptRoute) {
-    return (
-      <>
-        {children}
-        <StickyNotesPanel />
-      </>
-    );
+    return <>{children}</>;
   }
 
   // Show loading state while checking organization
   if (organizationLoading) {
-    return (
-      <>
-        {children}
-        <StickyNotesPanel />
-      </>
-    );
+    return <>{children}</>;
   }
 
   return (
     <>
       {children}
-      <StickyNotesPanel />
 
       {/* Organization setup modal - required if no organization exists */}
       <CompanyDetailsModal
