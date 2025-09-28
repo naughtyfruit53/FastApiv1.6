@@ -201,7 +201,8 @@ const ProformaInvoicePage: React.FC = () => {
       const response = await api.get(`/proforma-invoices/${voucher.id}`);
       let fullVoucherData = response.data;
       fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      setMode("edit");
+      // Use handleEdit to properly set URL and selectedId
+      handleEdit(voucher.id);
       reset({
         ...fullVoucherData,
         items: fullVoucherData.items.map((item: any) => ({
@@ -213,7 +214,7 @@ const ProformaInvoicePage: React.FC = () => {
       });
     } catch (err) {
       console.error("Error fetching voucher for edit:", err);
-      handleEdit(voucher);
+      handleEdit(voucher.id);
     }
   };
 
@@ -250,7 +251,8 @@ const ProformaInvoicePage: React.FC = () => {
       const response = await api.get(`/proforma-invoices/${voucher.id}`);
       let fullVoucherData = response.data;
       fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      setMode("view");
+      // Use handleView to properly set URL and selectedId
+      handleView(voucher.id);
       reset({
         ...fullVoucherData,
         items: fullVoucherData.items.map((item: any) => ({
@@ -262,7 +264,7 @@ const ProformaInvoicePage: React.FC = () => {
       });
     } catch (err) {
       console.error("Error fetching voucher for view:", err);
-      handleView(voucher);
+      handleView(voucher.id);
     }
   };
 
