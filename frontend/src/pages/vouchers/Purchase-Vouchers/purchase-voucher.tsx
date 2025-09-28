@@ -179,11 +179,12 @@ const PurchaseVoucherPage: React.FC = () => {
     try {
       const response = await api.get(`/purchase-vouchers/${voucher.id}`);
       const fullVoucherData = response.data;
-      setMode("view");
+      // Use handleView to properly set URL and selectedId
+      handleView(voucher.id);
       reset(fullVoucherData);
     } catch (err) {
       console.error("Error fetching voucher:", err);
-      setMode("view");
+      handleView(voucher.id);
       reset(voucher);
     }
   };
@@ -194,7 +195,8 @@ const PurchaseVoucherPage: React.FC = () => {
       const response = await api.get(`/purchase-vouchers/${voucher.id}`);
       let fullVoucherData = response.data;
       fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      setMode("edit");
+      // Use handleEdit to properly set URL and selectedId
+      handleEdit(voucher.id);
       reset({
         ...fullVoucherData,
         items: fullVoucherData.items.map((item: any) => ({
@@ -206,7 +208,7 @@ const PurchaseVoucherPage: React.FC = () => {
       });
     } catch (err) {
       console.error("Error fetching voucher for edit:", err);
-      handleEdit(voucher);
+      handleEdit(voucher.id);
     }
   };
 
@@ -216,7 +218,8 @@ const PurchaseVoucherPage: React.FC = () => {
       const response = await api.get(`/purchase-vouchers/${voucher.id}`);
       let fullVoucherData = response.data;
       fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      setMode("view");
+      // Use handleView to properly set URL and selectedId
+      handleView(voucher.id);
       reset({
         ...fullVoucherData,
         items: fullVoucherData.items.map((item: any) => ({
@@ -228,7 +231,7 @@ const PurchaseVoucherPage: React.FC = () => {
       });
     } catch (err) {
       console.error("Error fetching voucher for view:", err);
-      handleView(voucher);
+      handleView(voucher.id);
     }
   };
 
