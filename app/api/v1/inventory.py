@@ -2,15 +2,16 @@
 Inventory & Parts Management API endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, desc, asc, func
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin, validate_company_setup_for_operations
-from app.core.org_restrictions import require_current_organization_id
+from app.core.tenant import TenantQueryMixin
+from app.core.org_restrictions import require_current_organization_id, validate_company_setup
 from app.core.rbac_dependencies import check_service_permission
 from app.models import (
     User, Stock, Product, Organization, InventoryTransaction, 
@@ -35,35 +36,39 @@ class InventoryService:
     """Service class for inventory operations"""
     
     @staticmethod
-    def get_current_stock(db: Session, organization_id: int, product_id: int, location: Optional[str] = None) -> float:
+    async def get_current_stock(db: AsyncSession, organization_id: int, product_id: int, location: Optional[str] = None) -> float:
         """Get current stock level for a product"""
-        query = db.query(Stock).filter(
+        stmt = select(Stock).where(
             Stock.organization_id == organization_id,
             Stock.product_id == product_id
         )
         if location:
-            query = query.filter(Stock.location == location)
+            stmt = stmt.where(Stock.location == location)
         
-        stock_record = query.first()
+        result = await db.execute(stmt)
+        stock_record = result.scalar_one_or_none()
         return stock_record.quantity if stock_record else 0.0
     
     @staticmethod
-    def update_stock_level(db: Session, organization_id: int, product_id: int, 
+    async def update_stock_level(db: AsyncSession, organization_id: int, product_id: int, 
                           new_quantity: float, location: Optional[str] = None):
         """Update stock level for a product"""
-        query = db.query(Stock).filter(
+        stmt = select(Stock).where(
             Stock.organization_id == organization_id,
             Stock.product_id == product_id
         )
         if location:
-            query = query.filter(Stock.location == location)
+            stmt = stmt.where(Stock.location == location)
         
-        stock_record = query.first()
+        result = await db.execute(stmt)
+        stock_record = result.scalar_one_or_none()
         if stock_record:
             stock_record.quantity = new_quantity
         else:
             # Create new stock record if it doesn't exist
-            product = db.query(Product).filter(Product.id == product_id).first()
+            stmt_product = select(Product).where(Product.id == product_id)
+            result_product = await db.execute(stmt_product)
+            product = result_product.scalar_one_or_none()
             if product:
                 stock_record = Stock(
                     organization_id=organization_id,
@@ -74,14 +79,14 @@ class InventoryService:
                 )
                 db.add(stock_record)
         
-        db.commit()
+        await db.commit()
         return stock_record
     
     @staticmethod
-    def create_inventory_transaction(db: Session, organization_id: int, user_id: int,
+    async def create_inventory_transaction(db: AsyncSession, organization_id: int, user_id: int,
                                    transaction_data: InventoryTransactionCreate) -> InventoryTransaction:
         """Create an inventory transaction and update stock"""
-        current_stock = InventoryService.get_current_stock(
+        current_stock = await InventoryService.get_current_stock(
             db, organization_id, transaction_data.product_id, transaction_data.location
         )
         
@@ -118,29 +123,33 @@ class InventoryService:
         db.add(transaction)
         
         # Update stock level
-        InventoryService.update_stock_level(
+        await InventoryService.update_stock_level(
             db, organization_id, transaction_data.product_id, new_stock, transaction_data.location
         )
         
         # Check for low stock alerts
-        InventoryService.check_and_create_alerts(db, organization_id, transaction_data.product_id, new_stock)
+        await InventoryService.check_and_create_alerts(db, organization_id, transaction_data.product_id, new_stock)
         
-        db.commit()
+        await db.commit()
         return transaction
     
     @staticmethod
-    def check_and_create_alerts(db: Session, organization_id: int, product_id: int, current_stock: float):
+    async def check_and_create_alerts(db: AsyncSession, organization_id: int, product_id: int, current_stock: float):
         """Check stock levels and create alerts if necessary"""
-        product = db.query(Product).filter(Product.id == product_id).first()
+        stmt = select(Product).where(Product.id == product_id)
+        result = await db.execute(stmt)
+        product = result.scalar_one_or_none()
         if not product:
             return
         
         # Check if alert already exists
-        existing_alert = db.query(InventoryAlert).filter(
+        stmt = select(InventoryAlert).where(
             InventoryAlert.organization_id == organization_id,
             InventoryAlert.product_id == product_id,
             InventoryAlert.status == AlertStatus.ACTIVE
-        ).first()
+        )
+        result = await db.execute(stmt)
+        existing_alert = result.scalar_one_or_none()
         
         if current_stock <= 0 and not existing_alert:
             # Out of stock alert
@@ -183,7 +192,7 @@ async def get_inventory_transactions(
     transaction_type: Optional[TransactionType] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get inventory transactions with filtering options"""
@@ -197,7 +206,7 @@ async def get_inventory_transactions(
         db=db
     )
     
-    query = db.query(InventoryTransaction).filter(
+    stmt = select(InventoryTransaction).where(
         InventoryTransaction.organization_id == organization_id
     ).options(
         joinedload(InventoryTransaction.product),
@@ -206,18 +215,19 @@ async def get_inventory_transactions(
     
     # Apply filters
     if product_id:
-        query = query.filter(InventoryTransaction.product_id == product_id)
+        stmt = stmt.where(InventoryTransaction.product_id == product_id)
     if transaction_type:
-        query = query.filter(InventoryTransaction.transaction_type == transaction_type)
+        stmt = stmt.where(InventoryTransaction.transaction_type == transaction_type)
     if start_date:
-        query = query.filter(InventoryTransaction.transaction_date >= start_date)
+        stmt = stmt.where(InventoryTransaction.transaction_date >= start_date)
     if end_date:
-        query = query.filter(InventoryTransaction.transaction_date <= end_date)
+        stmt = stmt.where(InventoryTransaction.transaction_date <= end_date)
     
     # Order by transaction date descending
-    query = query.order_by(desc(InventoryTransaction.transaction_date))
+    stmt = stmt.order_by(desc(InventoryTransaction.transaction_date))
     
-    transactions = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    transactions = result.scalars().all()
     
     # Build response with related data
     response = []
@@ -235,7 +245,7 @@ async def get_inventory_transactions(
 @router.post("/transactions", response_model=InventoryTransactionResponse)
 async def create_inventory_transaction(
     transaction_data: InventoryTransactionCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new inventory transaction"""
@@ -250,16 +260,18 @@ async def create_inventory_transaction(
     )
     
     try:
-        transaction = InventoryService.create_inventory_transaction(
+        transaction = await InventoryService.create_inventory_transaction(
             db, organization_id, current_user.id, transaction_data
         )
         
         # Load related data for response
-        db.refresh(transaction)
-        transaction_with_product = db.query(InventoryTransaction).options(
+        await db.refresh(transaction)
+        stmt = select(InventoryTransaction).options(
             joinedload(InventoryTransaction.product),
             joinedload(InventoryTransaction.created_by)
-        ).filter(InventoryTransaction.id == transaction.id).first()
+        ).where(InventoryTransaction.id == transaction.id)
+        result = await db.execute(stmt)
+        transaction_with_product = result.scalar_one_or_none()
         
         return InventoryTransactionResponse(
             **transaction_with_product.__dict__,
@@ -282,7 +294,7 @@ async def get_job_parts(
     job_id: Optional[int] = None,
     product_id: Optional[int] = None,
     status: Optional[JobPartsStatus] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get job parts assignments with filtering options"""
@@ -296,7 +308,7 @@ async def get_job_parts(
         db=db
     )
     
-    query = db.query(JobParts).filter(
+    stmt = select(JobParts).where(
         JobParts.organization_id == organization_id
     ).options(
         joinedload(JobParts.product),
@@ -307,13 +319,14 @@ async def get_job_parts(
     
     # Apply filters
     if job_id:
-        query = query.filter(JobParts.job_id == job_id)
+        stmt = stmt.where(JobParts.job_id == job_id)
     if product_id:
-        query = query.filter(JobParts.product_id == product_id)
+        stmt = stmt.where(JobParts.product_id == product_id)
     if status:
-        query = query.filter(JobParts.status == status)
+        stmt = stmt.where(JobParts.status == status)
     
-    job_parts = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    job_parts = result.scalars().all()
     
     # Build response with related data
     response = []
@@ -333,7 +346,7 @@ async def get_job_parts(
 @router.post("/job-parts", response_model=JobPartsResponse)
 async def assign_parts_to_job(
     job_parts_data: JobPartsCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Assign parts to a job"""
@@ -348,28 +361,34 @@ async def assign_parts_to_job(
     )
     
     # Verify job exists and belongs to organization
-    job = db.query(InstallationJob).filter(
+    stmt = select(InstallationJob).where(
         InstallationJob.id == job_parts_data.job_id,
         InstallationJob.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    job = result.scalar_one_or_none()
     
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
     # Verify product exists and belongs to organization
-    product = db.query(Product).filter(
+    stmt = select(Product).where(
         Product.id == job_parts_data.product_id,
         Product.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
     # Check if assignment already exists
-    existing = db.query(JobParts).filter(
+    stmt = select(JobParts).where(
         JobParts.job_id == job_parts_data.job_id,
         JobParts.product_id == job_parts_data.product_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(status_code=400, detail="Product already assigned to this job")
@@ -387,15 +406,17 @@ async def assign_parts_to_job(
     )
     
     db.add(job_part)
-    db.commit()
-    db.refresh(job_part)
+    await db.commit()
+    await db.refresh(job_part)
     
     # Load related data for response
-    job_part_with_relations = db.query(JobParts).options(
+    stmt = select(JobParts).options(
         joinedload(JobParts.product),
         joinedload(JobParts.job),
         joinedload(JobParts.allocated_by)
-    ).filter(JobParts.id == job_part.id).first()
+    ).where(JobParts.id == job_part.id)
+    result = await db.execute(stmt)
+    job_part_with_relations = result.scalar_one_or_none()
     
     return JobPartsResponse(
         **job_part_with_relations.__dict__,
@@ -409,7 +430,7 @@ async def assign_parts_to_job(
 async def update_job_parts(
     job_part_id: int,
     job_parts_data: JobPartsUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update job parts assignment"""
@@ -423,10 +444,12 @@ async def update_job_parts(
         db=db
     )
     
-    job_part = db.query(JobParts).filter(
+    stmt = select(JobParts).where(
         JobParts.id == job_part_id,
         JobParts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    job_part = result.scalar_one_or_none()
     
     if not job_part:
         raise HTTPException(status_code=404, detail="Job parts assignment not found")
@@ -459,22 +482,24 @@ async def update_job_parts(
             )
             
             try:
-                InventoryService.create_inventory_transaction(
+                await InventoryService.create_inventory_transaction(
                     db, organization_id, current_user.id, transaction_data
                 )
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=f"Inventory error: {str(e)}")
     
-    db.commit()
-    db.refresh(job_part)
+    await db.commit()
+    await db.refresh(job_part)
     
     # Load related data for response
-    job_part_with_relations = db.query(JobParts).options(
+    stmt = select(JobParts).options(
         joinedload(JobParts.product),
         joinedload(JobParts.job),
         joinedload(JobParts.allocated_by),
         joinedload(JobParts.used_by)
-    ).filter(JobParts.id == job_part.id).first()
+    ).where(JobParts.id == job_part.id)
+    result = await db.execute(stmt)
+    job_part_with_relations = result.scalar_one_or_none()
     
     return JobPartsResponse(
         **job_part_with_relations.__dict__,
@@ -493,7 +518,7 @@ async def get_inventory_alerts(
     status: Optional[AlertStatus] = None,
     priority: Optional[AlertPriority] = None,
     alert_type: Optional[AlertType] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get inventory alerts with filtering options"""
@@ -507,7 +532,7 @@ async def get_inventory_alerts(
         db=db
     )
     
-    query = db.query(InventoryAlert).filter(
+    stmt = select(InventoryAlert).where(
         InventoryAlert.organization_id == organization_id
     ).options(
         joinedload(InventoryAlert.product),
@@ -516,19 +541,20 @@ async def get_inventory_alerts(
     
     # Apply filters
     if status:
-        query = query.filter(InventoryAlert.status == status)
+        stmt = stmt.where(InventoryAlert.status == status)
     if priority:
-        query = query.filter(InventoryAlert.priority == priority)
+        stmt = stmt.where(InventoryAlert.priority == priority)
     if alert_type:
-        query = query.filter(InventoryAlert.alert_type == alert_type)
+        stmt = stmt.where(InventoryAlert.alert_type == alert_type)
     
     # Order by priority and creation date
-    query = query.order_by(
+    stmt = stmt.order_by(
         InventoryAlert.priority.desc(),
         desc(InventoryAlert.created_at)
     )
     
-    alerts = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    alerts = result.scalars().all()
     
     # Build response with related data
     response = []
@@ -546,7 +572,7 @@ async def get_inventory_alerts(
 @router.put("/alerts/{alert_id}/acknowledge")
 async def acknowledge_alert(
     alert_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Acknowledge an inventory alert"""
@@ -560,10 +586,12 @@ async def acknowledge_alert(
         db=db
     )
     
-    alert = db.query(InventoryAlert).filter(
+    stmt = select(InventoryAlert).where(
         InventoryAlert.id == alert_id,
         InventoryAlert.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    alert = result.scalar_one_or_none()
     
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
@@ -572,7 +600,7 @@ async def acknowledge_alert(
     alert.acknowledged_by_id = current_user.id
     alert.acknowledged_at = datetime.utcnow()
     
-    db.commit()
+    await db.commit()
     
     return {"message": "Alert acknowledged successfully"}
 
@@ -583,7 +611,7 @@ async def get_inventory_usage_report(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     product_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Generate inventory usage report"""
@@ -604,7 +632,7 @@ async def get_inventory_usage_report(
         start_date = end_date - timedelta(days=30)
     
     # Query for inventory transactions in date range
-    transactions_query = db.query(
+    stmt_transactions = select(
         InventoryTransaction.product_id,
         func.sum(
             func.case(
@@ -620,56 +648,61 @@ async def get_inventory_usage_report(
                 else_=0
             )
         ).label('total_received')
-    ).filter(
+    ).where(
         InventoryTransaction.organization_id == organization_id,
         InventoryTransaction.transaction_date >= start_date,
         InventoryTransaction.transaction_date <= end_date
     )
     
     if product_id:
-        transactions_query = transactions_query.filter(InventoryTransaction.product_id == product_id)
+        stmt_transactions = stmt_transactions.where(InventoryTransaction.product_id == product_id)
     
-    transactions_data = transactions_query.group_by(InventoryTransaction.product_id).all()
+    stmt_transactions = stmt_transactions.group_by(InventoryTransaction.product_id)
+    result_transactions = await db.execute(stmt_transactions)
+    transactions_data = result_transactions.all()
     
     # Get current stock and product info
-    products_query = db.query(Product, Stock).outerjoin(
+    stmt_products = select(Product, Stock).outerjoin(
         Stock, and_(
             Stock.product_id == Product.id,
             Stock.organization_id == organization_id
         )
-    ).filter(Product.organization_id == organization_id)
+    ).where(Product.organization_id == organization_id)
     
     if product_id:
-        products_query = products_query.filter(Product.id == product_id)
+        stmt_products = stmt_products.where(Product.id == product_id)
     
-    products_data = products_query.all()
+    result_products = await db.execute(stmt_products)
+    products_data = result_products.all()
     
     # Get job usage count
-    job_usage_query = db.query(
+    stmt_job_usage = select(
         JobParts.product_id,
         func.count(func.distinct(JobParts.job_id)).label('total_jobs_used')
-    ).filter(
+    ).where(
         JobParts.organization_id == organization_id,
         JobParts.status == JobPartsStatus.USED
     )
     
     if start_date and end_date:
-        job_usage_query = job_usage_query.filter(
+        stmt_job_usage = stmt_job_usage.where(
             JobParts.used_at >= start_date,
             JobParts.used_at <= end_date
         )
     
     if product_id:
-        job_usage_query = job_usage_query.filter(JobParts.product_id == product_id)
+        stmt_job_usage = stmt_job_usage.where(JobParts.product_id == product_id)
     
-    job_usage_data = job_usage_query.group_by(JobParts.product_id).all()
+    stmt_job_usage = stmt_job_usage.group_by(JobParts.product_id)
+    result_job_usage = await db.execute(stmt_job_usage)
+    job_usage_data = result_job_usage.all()
     
     # Build report
     report = []
     
     # Create lookup dictionaries
-    transactions_dict = {t.product_id: t for t in transactions_data}
-    job_usage_dict = {j.product_id: j.total_jobs_used for j in job_usage_data}
+    transactions_dict = {t[0]: t for t in transactions_data}
+    job_usage_dict = {j[0]: j.total_jobs_used for j in job_usage_data}
     
     for product, stock in products_data:
         transaction = transactions_dict.get(product.id)
@@ -692,7 +725,7 @@ async def get_inventory_usage_report(
 
 @router.get("/reports/low-stock", response_model=List[LowStockReport])
 async def get_low_stock_report(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Generate low stock report"""
@@ -707,26 +740,29 @@ async def get_low_stock_report(
     )
     
     # Query for products with stock below reorder level
-    low_stock_query = db.query(Product, Stock).join(
+    stmt_low_stock = select(Product, Stock).join(
         Stock, and_(
             Stock.product_id == Product.id,
             Stock.organization_id == organization_id
         )
-    ).filter(
+    ).where(
         Product.organization_id == organization_id,
         Stock.quantity <= Product.reorder_level
     )
     
-    low_stock_items = low_stock_query.all()
+    result_low_stock = await db.execute(stmt_low_stock)
+    low_stock_items = result_low_stock.all()
     
     report = []
     for product, stock in low_stock_items:
         # Calculate days since last receipt
-        last_receipt = db.query(InventoryTransaction).filter(
+        stmt_last_receipt = select(InventoryTransaction).where(
             InventoryTransaction.organization_id == organization_id,
             InventoryTransaction.product_id == product.id,
             InventoryTransaction.transaction_type == TransactionType.RECEIPT
-        ).order_by(desc(InventoryTransaction.transaction_date)).first()
+        ).order_by(desc(InventoryTransaction.transaction_date))
+        result_last_receipt = await db.execute(stmt_last_receipt)
+        last_receipt = result_last_receipt.scalar_one_or_none()
         
         days_since_last_receipt = None
         if last_receipt:

@@ -4,8 +4,8 @@
 Voucher service for auto-population and business logic
 """
 
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc, delete
 from typing import Type, Union, Any
 from datetime import datetime
 from decimal import Decimal
@@ -17,8 +17,8 @@ class VoucherNumberService:
     """Service for generating voucher numbers"""
     
     @staticmethod
-    def generate_voucher_number(
-        db: Session, 
+    async def generate_voucher_number(
+        db: AsyncSession, 
         prefix: str, 
         organization_id: int, 
         model: Type[Any]
@@ -34,10 +34,12 @@ class VoucherNumberService:
         fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
         
         # Get the latest voucher number for this prefix, fiscal year, and organization
-        latest_voucher = db.query(model).filter(
+        stmt = select(model).where(
             model.organization_id == organization_id,
             model.voucher_number.like(f"{prefix}/{fiscal_year}/%")
-        ).order_by(model.voucher_number.desc()).first()
+        ).order_by(desc(model.voucher_number)).limit(1)
+        result = await db.execute(stmt)
+        latest_voucher = result.scalar_one_or_none()
         
         if latest_voucher:
             # Extract sequence number from the last voucher (handle revisions by ignoring Rev suffix)
@@ -54,7 +56,11 @@ class VoucherNumberService:
         voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:05d}"
         
         # Ensure uniqueness (in case of race conditions)
-        while db.query(model).filter(model.voucher_number == voucher_number).first():
+        while True:
+            stmt = select(model).where(model.voucher_number == voucher_number)
+            result = await db.execute(stmt)
+            if not result.scalar_one_or_none():
+                break
             next_sequence += 1
             voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:05d}"
         
@@ -118,18 +124,20 @@ class VoucherAutoPopulationService:
     """Service for auto-populating voucher data"""
     
     @staticmethod
-    def populate_grn_from_po(db: Session, purchase_order, current_user) -> dict:
+    async def populate_grn_from_po(db: AsyncSession, purchase_order, current_user) -> dict:
         """Auto-populate GRN data from Purchase Order"""
         from app.models.vouchers.purchase import GoodsReceiptNote
         
         # Get pending PO items
-        po_items = [item for item in purchase_order.items if item.pending_quantity > 0]
+        stmt = select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id == purchase_order.id, PurchaseOrderItem.pending_quantity > 0)
+        result = await db.execute(stmt)
+        po_items = result.scalars().all()
         
         if not po_items:
             raise ValueError("No pending items in Purchase Order")
         
         # Generate GRN voucher number
-        grn_voucher_number = VoucherNumberService.generate_voucher_number(
+        grn_voucher_number = await VoucherNumberService.generate_voucher_number(
             db, "GRN", purchase_order.organization_id, GoodsReceiptNote
         )
         
@@ -162,18 +170,20 @@ class VoucherAutoPopulationService:
         return grn_data
     
     @staticmethod
-    def populate_purchase_voucher_from_grn(db: Session, grn, current_user, gst_rate: float = 18.0) -> dict:
+    async def populate_purchase_voucher_from_grn(db: AsyncSession, grn, current_user, gst_rate: float = 18.0) -> dict:
         """Auto-populate Purchase Voucher data from GRN"""
         from app.models.vouchers.purchase import PurchaseVoucher
         
         # Get accepted GRN items
-        grn_items = [item for item in grn.items if item.accepted_quantity > 0]
+        stmt = select(GoodsReceiptNoteItem).where(GoodsReceiptNoteItem.grn_id == grn.id, GoodsReceiptNoteItem.accepted_quantity > 0)
+        result = await db.execute(stmt)
+        grn_items = result.scalars().all()
         
         if not grn_items:
             raise ValueError("No accepted items in GRN")
         
         # Generate voucher number
-        pv_voucher_number = VoucherNumberService.generate_voucher_number(
+        pv_voucher_number = await VoucherNumberService.generate_voucher_number(
             db, "PV", grn.organization_id, PurchaseVoucher
         )
         
@@ -240,67 +250,73 @@ class VoucherSearchService:
     """Service for voucher search and filtering"""
     
     @staticmethod
-    def search_vendors_for_dropdown(db: Session, search_term: str, organization_id: int, limit: int = 10):
+    async def search_vendors_for_dropdown(db: AsyncSession, search_term: str, organization_id: int, limit: int = 10):
         """Search vendors for dropdown with organization filtering"""
         from app.models.base import Vendor
         from app.core.tenant import TenantQueryFilter
         
-        query = TenantQueryFilter.apply_organization_filter(
-            db.query(Vendor), Vendor, organization_id
-        ).filter(
+        stmt = TenantQueryFilter.apply_organization_filter(
+            select(Vendor), Vendor, organization_id
+        ).where(
             Vendor.is_active == True,
             Vendor.name.contains(search_term)
         ).limit(limit)
         
-        return query.all()
+        result = await db.execute(stmt)
+        return result.scalars().all()
     
     @staticmethod
-    def search_products_for_dropdown(db: Session, search_term: str, organization_id: int, limit: int = 10):
+    async def search_products_for_dropdown(db: AsyncSession, search_term: str, organization_id: int, limit: int = 10):
         """Search products for dropdown with organization filtering"""
         from app.models.base import Product
         from app.core.tenant import TenantQueryFilter
         
-        query = TenantQueryFilter.apply_organization_filter(
-            db.query(Product), Product, organization_id
-        ).filter(
+        stmt = TenantQueryFilter.apply_organization_filter(
+            select(Product), Product, organization_id
+        ).where(
             Product.is_active == True,
             Product.name.contains(search_term)
         ).limit(limit)
         
-        return query.all()
+        result = await db.execute(stmt)
+        return result.scalars().all()
     
     @staticmethod
-    def get_pending_purchase_orders(db: Session, organization_id: int, vendor_id: int = None):
+    async def get_pending_purchase_orders(db: AsyncSession, organization_id: int, vendor_id: int = None):
         """Get purchase orders with pending items"""
         from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem
         from app.core.tenant import TenantQueryFilter
         
-        query = TenantQueryFilter.apply_organization_filter(
-            db.query(PurchaseOrder), PurchaseOrder, organization_id
-        ).join(PurchaseOrderItem).filter(
+        stmt = TenantQueryFilter.apply_organization_filter(
+            select(PurchaseOrder), PurchaseOrder, organization_id
+        ).join(PurchaseOrderItem).where(
             PurchaseOrder.status == "confirmed",
             PurchaseOrderItem.pending_quantity > 0
         )
         
         if vendor_id:
-            query = query.filter(PurchaseOrder.vendor_id == vendor_id)
+            stmt = stmt.where(PurchaseOrder.vendor_id == vendor_id)
         
-        return query.distinct().all()
+        stmt = stmt.distinct()
+        result = await db.execute(stmt)
+        return result.scalars().all()
     
     @staticmethod
-    def get_pending_grns_for_invoicing(db: Session, organization_id: int, vendor_id: int = None):
+    async def get_pending_grns_for_invoicing(db: AsyncSession, organization_id: int, vendor_id: int = None):
         """Get GRNs that haven't been fully invoiced"""
         from app.models.vouchers.purchase import GoodsReceiptNote, GoodsReceiptNoteItem
         from app.core.tenant import TenantQueryFilter
         
-        query = TenantQueryFilter.apply_organization_filter(
-            db.query(GoodsReceiptNote), GoodsReceiptNote, organization_id
-        ).join(GoodsReceiptNoteItem).filter(
+        stmt = TenantQueryFilter.apply_organization_filter(
+            select(GoodsReceiptNote), GoodsReceiptNote, organization_id
+        ).join(GoodsReceiptNoteItem).where(
             GoodsReceiptNote.status == "confirmed",
             GoodsReceiptNoteItem.accepted_quantity > 0
         )
         
         if vendor_id:
-            query = query.filter(GoodsReceiptNote.vendor_id == vendor_id)
+            stmt = stmt.where(GoodsReceiptNote.vendor_id == vendor_id)
         
-        return query.distinct().all()
+        stmt = stmt.distinct()
+        result = await db.execute(stmt)
+        return result.scalars().all()

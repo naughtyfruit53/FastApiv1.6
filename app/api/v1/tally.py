@@ -4,8 +4,9 @@ Tally Integration API endpoints - Real-time sync for ledgers, vouchers, and tran
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, desc, asc, func
+from sqlalchemy.orm import joinedload
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import asyncio
@@ -13,7 +14,7 @@ import json
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin, validate_company_setup_for_operations
+from app.core.tenant import TenantQueryMixin
 from app.core.org_restrictions import require_current_organization_id
 from app.core.rbac_dependencies import check_service_permission
 from app.models import (
@@ -138,8 +139,8 @@ class TallyIntegrationService:
         )
     
     @staticmethod
-    def create_sync_log(
-        db: Session,
+    async def create_sync_log(
+        db: AsyncSession,
         tally_config: TallyConfiguration,
         sync_type: str,
         sync_direction: str,
@@ -158,8 +159,8 @@ class TallyIntegrationService:
         )
         
         db.add(sync_log)
-        db.commit()
-        db.refresh(sync_log)
+        await db.commit()
+        await db.refresh(sync_log)
         
         return sync_log
 
@@ -167,14 +168,16 @@ class TallyIntegrationService:
 # Configuration Endpoints
 @router.get("/configuration", response_model=Optional[TallyConfigurationResponse])
 async def get_tally_configuration(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get Tally configuration for the organization"""
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     return config
 
@@ -182,15 +185,17 @@ async def get_tally_configuration(
 @router.post("/configuration", response_model=TallyConfigurationResponse)
 async def create_tally_configuration(
     config_data: TallyConfigurationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create or update Tally configuration"""
     # Check if configuration already exists
-    existing_config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing_config = result.scalar_one_or_none()
     
     if existing_config:
         raise HTTPException(
@@ -205,8 +210,8 @@ async def create_tally_configuration(
     )
     
     db.add(config)
-    db.commit()
-    db.refresh(config)
+    await db.commit()
+    await db.refresh(config)
     
     return config
 
@@ -214,14 +219,16 @@ async def create_tally_configuration(
 @router.put("/configuration", response_model=TallyConfigurationResponse)
 async def update_tally_configuration(
     config_data: TallyConfigurationUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update Tally configuration"""
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     if not config:
         raise HTTPException(
@@ -236,8 +243,8 @@ async def update_tally_configuration(
     
     config.updated_at = datetime.utcnow()
     
-    db.commit()
-    db.refresh(config)
+    await db.commit()
+    await db.refresh(config)
     
     return config
 
@@ -246,7 +253,7 @@ async def update_tally_configuration(
 @router.post("/test-connection", response_model=TallyConnectionTestResponse)
 async def test_tally_connection(
     connection_test: TallyConnectionTest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -254,15 +261,17 @@ async def test_tally_connection(
     result = await TallyIntegrationService.test_tally_connection(connection_test)
     
     # Update configuration if exists
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     if config:
         config.connection_status = TallyConnectionStatusEnum.CONNECTED if result.success else TallyConnectionStatusEnum.ERROR
         config.last_connection_test = datetime.utcnow()
         config.connection_error_message = result.error_details if not result.success else None
-        db.commit()
+        await db.commit()
     
     return result
 
@@ -272,16 +281,18 @@ async def test_tally_connection(
 async def trigger_sync(
     sync_request: TallySyncRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Trigger Tally sync operation"""
     # Get Tally configuration
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id,
         TallyConfiguration.is_active == True
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     if not config:
         raise HTTPException(
@@ -296,7 +307,7 @@ async def trigger_sync(
         )
     
     # Create sync log
-    sync_log = TallyIntegrationService.create_sync_log(
+    sync_log = await TallyIntegrationService.create_sync_log(
         db=db,
         tally_config=config,
         sync_type=sync_request.sync_type,
@@ -321,17 +332,19 @@ async def trigger_sync(
 
 async def perform_sync_background(sync_log_id: int, sync_request: Dict[str, Any]):
     """Background task to perform actual sync"""
-    from app.core.database import SessionLocal
+    from app.core.database import AsyncSessionLocal  # Use async session maker
     
-    db = SessionLocal()
+    db = AsyncSessionLocal()
     try:
-        sync_log = db.query(TallySyncLog).filter(TallySyncLog.id == sync_log_id).first()
+        stmt = select(TallySyncLog).where(TallySyncLog.id == sync_log_id)
+        result = await db.execute(stmt)
+        sync_log = result.scalar_one_or_none()
         if not sync_log:
             return
         
         # Update sync status
         sync_log.sync_status = SyncStatusEnum.IN_PROGRESS
-        db.commit()
+        await db.commit()
         
         # Simulate sync process
         await asyncio.sleep(5)  # Simulate work
@@ -349,17 +362,17 @@ async def perform_sync_background(sync_log_id: int, sync_request: Dict[str, Any]
             "errors": []
         }
         
-        db.commit()
+        await db.commit()
         
     except Exception as e:
         if sync_log:
             sync_log.sync_status = SyncStatusEnum.FAILED
             sync_log.error_message = str(e)
             sync_log.completed_at = datetime.utcnow()
-            db.commit()
+            await db.commit()
         logger.error(f"Sync failed: {e}")
     finally:
-        db.close()
+        await db.close()
 
 
 # Sync History
@@ -369,31 +382,34 @@ async def get_sync_logs(
     limit: int = 50,
     sync_type: Optional[str] = None,
     sync_status: Optional[SyncStatusEnum] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get sync operation history"""
     # Get configuration first
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     if not config:
         return []
     
-    query = db.query(TallySyncLog).filter(
+    stmt = select(TallySyncLog).where(
         TallySyncLog.tally_configuration_id == config.id
     ).options(joinedload(TallySyncLog.sync_items))
     
     if sync_type:
-        query = query.filter(TallySyncLog.sync_type == sync_type)
+        stmt = stmt.where(TallySyncLog.sync_type == sync_type)
     
     if sync_status:
-        query = query.filter(TallySyncLog.sync_status == sync_status)
+        stmt = stmt.where(TallySyncLog.sync_status == sync_status)
     
-    query = query.order_by(desc(TallySyncLog.started_at))
-    sync_logs = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(desc(TallySyncLog.started_at))
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    sync_logs = result.scalars().all()
     
     return sync_logs
 
@@ -401,21 +417,25 @@ async def get_sync_logs(
 # Ledger Mappings
 @router.get("/ledger-mappings", response_model=List[TallyLedgerMappingResponse])
 async def get_ledger_mappings(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get ledger mappings"""
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     if not config:
         return []
     
-    mappings = db.query(TallyLedgerMapping).filter(
+    stmt = select(TallyLedgerMapping).where(
         TallyLedgerMapping.tally_configuration_id == config.id
-    ).all()
+    )
+    result = await db.execute(stmt)
+    mappings = result.scalars().all()
     
     return mappings
 
@@ -423,14 +443,16 @@ async def get_ledger_mappings(
 @router.post("/ledger-mappings", response_model=TallyLedgerMappingResponse)
 async def create_ledger_mapping(
     mapping_data: TallyLedgerMappingCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create ledger mapping"""
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     if not config:
         raise HTTPException(
@@ -439,10 +461,12 @@ async def create_ledger_mapping(
         )
     
     # Verify chart of accounts exists
-    account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == mapping_data.chart_of_accounts_id,
         ChartOfAccounts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalar_one_or_none()
     
     if not account:
         raise HTTPException(
@@ -456,8 +480,8 @@ async def create_ledger_mapping(
     )
     
     db.add(mapping)
-    db.commit()
-    db.refresh(mapping)
+    await db.commit()
+    await db.refresh(mapping)
     
     return mapping
 
@@ -469,23 +493,24 @@ async def get_error_logs(
     limit: int = 50,
     error_type: Optional[str] = None,
     is_resolved: Optional[bool] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get Tally integration error logs"""
-    query = db.query(TallyErrorLog).filter(
+    stmt = select(TallyErrorLog).where(
         TallyErrorLog.organization_id == organization_id
     )
     
     if error_type:
-        query = query.filter(TallyErrorLog.error_type == error_type)
+        stmt = stmt.where(TallyErrorLog.error_type == error_type)
     
     if is_resolved is not None:
-        query = query.filter(TallyErrorLog.is_resolved == is_resolved)
+        stmt = stmt.where(TallyErrorLog.is_resolved == is_resolved)
     
-    query = query.order_by(desc(TallyErrorLog.occurred_at))
-    error_logs = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(desc(TallyErrorLog.occurred_at))
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    error_logs = result.scalars().all()
     
     return error_logs
 
@@ -493,14 +518,16 @@ async def get_error_logs(
 # Dashboard
 @router.get("/dashboard", response_model=TallyIntegrationDashboard)
 async def get_tally_dashboard(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get Tally integration dashboard"""
-    config = db.query(TallyConfiguration).filter(
+    stmt = select(TallyConfiguration).where(
         TallyConfiguration.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
     
     if not config:
         raise HTTPException(
@@ -509,28 +536,38 @@ async def get_tally_dashboard(
         )
     
     # Sync analytics
-    total_syncs = db.query(TallySyncLog).filter(
+    stmt_total = select(func.count(TallySyncLog.id)).where(
         TallySyncLog.tally_configuration_id == config.id
-    ).count()
+    )
+    result_total = await db.execute(stmt_total)
+    total_syncs = result_total.scalar()
     
-    successful_syncs = db.query(TallySyncLog).filter(
+    stmt_success = select(func.count(TallySyncLog.id)).where(
         TallySyncLog.tally_configuration_id == config.id,
         TallySyncLog.sync_status == SyncStatusEnum.COMPLETED
-    ).count()
+    )
+    result_success = await db.execute(stmt_success)
+    successful_syncs = result_success.scalar()
     
-    failed_syncs = db.query(TallySyncLog).filter(
+    stmt_failed = select(func.count(TallySyncLog.id)).where(
         TallySyncLog.tally_configuration_id == config.id,
         TallySyncLog.sync_status == SyncStatusEnum.FAILED
-    ).count()
+    )
+    result_failed = await db.execute(stmt_failed)
+    failed_syncs = result_failed.scalar()
     
-    last_sync = db.query(TallySyncLog).filter(
+    stmt_last = select(TallySyncLog).where(
         TallySyncLog.tally_configuration_id == config.id
-    ).order_by(desc(TallySyncLog.started_at)).first()
+    ).order_by(desc(TallySyncLog.started_at))
+    result_last = await db.execute(stmt_last)
+    last_sync = result_last.scalar_one_or_none()
     
-    avg_duration = db.query(func.avg(TallySyncLog.duration_seconds)).filter(
+    stmt_avg = select(func.avg(TallySyncLog.duration_seconds)).where(
         TallySyncLog.tally_configuration_id == config.id,
         TallySyncLog.sync_status == SyncStatusEnum.COMPLETED
-    ).scalar() or 0
+    )
+    result_avg = await db.execute(stmt_avg)
+    avg_duration = result_avg.scalar() or 0
     
     sync_analytics = TallySyncAnalytics(
         total_syncs=total_syncs,
@@ -541,16 +578,20 @@ async def get_tally_dashboard(
     )
     
     # Recent errors
-    recent_errors = db.query(TallyErrorLog).filter(
+    stmt_errors = select(TallyErrorLog).where(
         TallyErrorLog.organization_id == organization_id,
         TallyErrorLog.is_resolved == False
-    ).order_by(desc(TallyErrorLog.occurred_at)).limit(5).all()
+    ).order_by(desc(TallyErrorLog.occurred_at)).limit(5)
+    result_errors = await db.execute(stmt_errors)
+    recent_errors = result_errors.scalars().all()
     
     # Pending syncs
-    pending_syncs = db.query(TallySyncLog).filter(
+    stmt_pending = select(func.count(TallySyncLog.id)).where(
         TallySyncLog.tally_configuration_id == config.id,
         TallySyncLog.sync_status.in_([SyncStatusEnum.PENDING, SyncStatusEnum.IN_PROGRESS])
-    ).count()
+    )
+    result_pending = await db.execute(stmt_pending)
+    pending_syncs = result_pending.scalar()
     
     return TallyIntegrationDashboard(
         connection_status=config.connection_status,

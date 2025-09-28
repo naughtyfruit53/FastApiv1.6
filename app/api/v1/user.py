@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.core.config import settings
 from app.core.database import get_db
@@ -15,6 +15,7 @@ from app.schemas.user import TokenData  # Adjust if in schemas.base
 from app.core.security import get_password_hash, get_current_user as core_get_current_user
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
 import logging
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")  # Adjust tokenUrl to match your auth endpoint
 
 # Dependency functions
-async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+async def get_current_user(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -40,7 +41,8 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
     except JWTError as e:
         print("JWT decode error (user.py):", str(e))
         raise credentials_exception
-    user = db.query(User).filter(User.email == token_data.email).first()
+    result = await db.execute(select(User).filter_by(email=token_data.email))
+    user = result.scalars().first()
     if user is None:
         print("DEBUG: User not found in DB (user.py), raising credentials_exception")
         raise credentials_exception
@@ -90,7 +92,7 @@ async def get_users(
     limit: int = 100,
     active_only: bool = True,
     organization_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     request: Request = None
 ):
@@ -99,23 +101,24 @@ async def get_users(
     # Check permissions
     PermissionChecker.require_permission(Permission.VIEW_USERS, current_user, db, request)
     
-    query = db.query(User)
+    stmt = select(User)
     
     # Super admins can see all users across organizations
     if PermissionChecker.has_permission(current_user, Permission.SUPER_ADMIN):
         # If organization_id specified, filter by it
         if organization_id is not None:
-            query = query.filter(User.organization_id == organization_id)
+            stmt = stmt.filter_by(organization_id=organization_id)
         if active_only:
-            query = query.filter(User.is_active == True)
+            stmt = stmt.filter_by(is_active=True)
     else:
         # Regular admins only see users in their organization
         org_id = get_current_organization_id(current_user)
-        query = TenantQueryMixin.filter_by_tenant(query, User, org_id)
+        stmt = TenantQueryMixin.filter_by_tenant(stmt, User, org_id)
         if active_only:
-            query = query.filter(User.is_active == True)
+            stmt = stmt.filter_by(is_active=True)
     
-    users = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    users = result.scalars().all()
     return users
 
 @router.get("/me", response_model=UserInDB)
@@ -128,7 +131,7 @@ async def get_current_user_info(
 @router.get("/{user_id}", response_model=UserInDB)
 async def get_user(
     user_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     request: Request = None
 ):
@@ -140,7 +143,8 @@ async def get_user(
     # Check permissions for viewing other users
     PermissionChecker.require_permission(Permission.VIEW_USERS, current_user, db, request)
     
-    user = db.query(User).filter(User.id == user_id).first()
+    result = await db.execute(select(User).filter_by(id=user_id))
+    user = result.scalars().first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -160,7 +164,7 @@ async def get_user(
 @router.post("/", response_model=UserInDB)
 async def create_user(
     user: UserCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     request: Request = None
 ):
@@ -173,7 +177,8 @@ async def create_user(
     if PermissionChecker.has_permission(current_user, Permission.SUPER_ADMIN) and user.organization_id:
         org_id = user.organization_id
         # Verify organization exists
-        org = db.query(Organization).filter(Organization.id == org_id).first()
+        result = await db.execute(select(Organization).filter_by(id=org_id))
+        org = result.scalars().first()
         if not org:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -188,10 +193,8 @@ async def create_user(
             )
     
     # Check if email already exists in the organization
-    existing_user = db.query(User).filter(
-        User.email == user.email,
-        User.organization_id == org_id
-    ).first()
+    result = await db.execute(select(User).filter_by(email=user.email, organization_id=org_id))
+    existing_user = result.scalars().first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -199,10 +202,8 @@ async def create_user(
         )
     
     # Check if username already exists in the organization
-    existing_username = db.query(User).filter(
-        User.username == user.username,
-        User.organization_id == org_id
-    ).first()
+    result = await db.execute(select(User).filter_by(username=user.username, organization_id=org_id))
+    existing_username = result.scalars().first()
     if existing_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -211,11 +212,10 @@ async def create_user(
     
     # Check user limits for the organization
     if not current_user.is_super_admin:
-        org = db.query(Organization).filter(Organization.id == org_id).first()
-        user_count = db.query(User).filter(
-            User.organization_id == org_id,
-            User.is_active == True
-        ).count()
+        result = await db.execute(select(Organization).filter_by(id=org_id))
+        org = result.scalars().first()
+        result = await db.execute(select(User).filter_by(organization_id=org_id, is_active=True))
+        user_count = len(result.scalars().all())
         
         if user_count >= org.max_users:
             raise HTTPException(
@@ -278,8 +278,8 @@ async def create_user(
         )
         
         db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
+        await db.commit()
+        await db.refresh(db_user)
         
         logger.info(f"User {user.email} created in org {org_id} by {current_user.email}")
         return db_user
@@ -292,7 +292,7 @@ async def create_user(
         except Exception as cleanup_error:
             logger.error(f"Failed to cleanup Supabase user {supabase_uuid}: {cleanup_error}")
         
-        db.rollback()
+        await db.rollback()
         logger.error(f"Failed to create user {user.email} in local database: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -303,12 +303,13 @@ async def create_user(
 async def update_user(
     user_id: int,
     user_update: UserUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update user"""
     # Users can update their own info, admins can update users in their org
-    user = db.query(User).filter(User.id == user_id).first()
+    result = await db.execute(select(User).filter_by(id=user_id))
+    user = result.scalars().first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -350,10 +351,8 @@ async def update_user(
     
     # Check email uniqueness if being updated
     if user_update.email and user_update.email != user.email:
-        existing_email = db.query(User).filter(
-            User.email == user_update.email,
-            User.organization_id == user.organization_id
-        ).first()
+        result = await db.execute(select(User).filter_by(email=user_update.email, organization_id=user.organization_id))
+        existing_email = result.scalars().first()
         if existing_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -362,10 +361,8 @@ async def update_user(
     
     # Check username uniqueness if being updated
     if user_update.username and user_update.username != user.username:
-        existing_username = db.query(User).filter(
-            User.username == user_update.username,
-            User.organization_id == user.organization_id
-        ).first()
+        result = await db.execute(select(User).filter_by(username=user_update.username, organization_id=user.organization_id))
+        existing_username = result.scalars().first()
         if existing_username:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -376,8 +373,8 @@ async def update_user(
     for field, value in user_update.dict(exclude_unset=True).items():
         setattr(user, field, value)
     
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     
     logger.info(f"User {user.email} updated by {current_user.email}")
     return user
@@ -385,7 +382,7 @@ async def update_user(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Delete user (admin only)"""
@@ -395,7 +392,8 @@ async def delete_user(
             detail="Cannot delete your own account"
         )
     
-    user = db.query(User).filter(User.id == user_id).first()
+    result = await db.execute(select(User).filter_by(id=user_id))
+    user = result.scalars().first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -408,11 +406,8 @@ async def delete_user(
     
     # Prevent deleting the last admin in an organization
     if user.role == UserRole.ORG_ADMIN and not current_user.is_super_admin:
-        admin_count = db.query(User).filter(
-            User.organization_id == user.organization_id,
-            User.role == UserRole.ORG_ADMIN,
-            User.is_active == True
-        ).count()
+        result = await db.execute(select(User).filter_by(organization_id=user.organization_id, role=UserRole.ORG_ADMIN, is_active=True))
+        admin_count = len(result.scalars().all())
         
         if admin_count <= 1:
             raise HTTPException(
@@ -420,8 +415,8 @@ async def delete_user(
                 detail="Cannot delete the last organization administrator"
             )
     
-    db.delete(user)
-    db.commit()
+    await db.delete(user)
+    await db.commit()
     
     logger.info(f"User {user.email} deleted by {current_user.email}")
     return {"message": "User deleted successfully"}
@@ -432,15 +427,16 @@ async def get_organization_users(
     skip: int = 0,
     limit: int = 100,
     active_only: bool = True,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Get users in specific organization (super admin only)"""
     
-    query = db.query(User).filter(User.organization_id == organization_id)
+    stmt = select(User).filter_by(organization_id=organization_id)
     
     if active_only:
-        query = query.filter(User.is_active == True)
+        stmt = stmt.filter_by(is_active=True)
     
-    users = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    users = result.scalars().all()
     return users

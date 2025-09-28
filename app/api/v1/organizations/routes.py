@@ -1,9 +1,10 @@
 # app/api/v1/organizations/routes.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+from sqlalchemy import select, or_
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
@@ -41,18 +42,19 @@ router.include_router(license_router)
 async def list_organizations(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Any = Depends(require_platform_permission(Permission.VIEW_ORGANIZATIONS)),
     request: Request = None
 ):
     """List all organizations (super admin only)"""
   
-    organizations = db.query(Organization).offset(skip).limit(limit).all()
+    result = await db.execute(select(Organization).offset(skip).limit(limit))
+    organizations = result.scalars().all()
     return organizations
 
 @router.get("/current", response_model=OrganizationInDB)
 async def get_current_organization(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get current user's organization"""
@@ -62,9 +64,8 @@ async def get_current_organization(
             detail="User is not associated with any organization"
         )
   
-    organization = db.query(Organization).filter(
-        Organization.id == current_user.organization_id
-    ).first()
+    result = await db.execute(select(Organization).filter_by(id=current_user.organization_id))
+    organization = result.scalars().first()
   
     if not organization:
         raise HTTPException(
@@ -77,7 +78,7 @@ async def get_current_organization(
 @router.put("/current", response_model=OrganizationInDB)
 async def update_current_organization(
     org_update: OrganizationUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update current user's organization (org admin only)"""
@@ -93,9 +94,8 @@ async def update_current_organization(
             detail="Only super administrators or organization administrators can update organization details"
         )
   
-    organization = db.query(Organization).filter(
-        Organization.id == current_user.organization_id
-    ).first()
+    result = await db.execute(select(Organization).filter_by(id=current_user.organization_id))
+    organization = result.scalars().first()
   
     if not organization:
         raise HTTPException(
@@ -108,11 +108,11 @@ async def update_current_organization(
             setattr(organization, field, value)
   
     try:
-        db.commit()
-        db.refresh(organization)
+        await db.commit()
+        await db.refresh(organization)
         return organization
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update organization"
@@ -132,7 +132,7 @@ async def get_available_modules(
 
 @router.get("/app-statistics")
 async def get_app_level_statistics(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get app-level statistics for super admins"""
@@ -141,11 +141,11 @@ async def get_app_level_statistics(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only super administrators can access app-level statistics"
         )
-    return OrganizationService.get_app_statistics(db)
+    return await OrganizationService.get_app_statistics(db)
 
 @router.get("/org-statistics")
 async def get_org_level_statistics(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get organization-level statistics for org admins/users"""
@@ -154,11 +154,11 @@ async def get_org_level_statistics(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Organization context required for statistics"
         )
-    return OrganizationService.get_org_statistics(db, current_user.organization_id)
+    return await OrganizationService.get_org_statistics(db, current_user.organization_id)
 
 @router.post("/factory-default")
 async def factory_default_system(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Factory Default - App Super Admin only (complete system reset)"""
@@ -177,7 +177,7 @@ async def factory_default_system(
             "system_state": "restored_to_initial_configuration"
         }
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to perform factory default reset. Please try again."
@@ -186,16 +186,16 @@ async def factory_default_system(
 @router.post("/", response_model=OrganizationInDB)
 async def create_organization(
     org_data: OrganizationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Any = Depends(require_platform_permission(Permission.CREATE_ORGANIZATIONS))
 ):
     """Create new organization (Super admin only)"""
   
     try:
-        existing_org = db.query(Organization).filter(
-            (Organization.name == org_data.name) |
-            (Organization.subdomain == org_data.subdomain)
-        ).first()
+        result = await db.execute(select(Organization).where(
+            or_(Organization.name == org_data.name, Organization.subdomain == org_data.subdomain)
+        ))
+        existing_org = result.scalars().first()
         if existing_org:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -204,8 +204,8 @@ async def create_organization(
       
         new_org = Organization(**org_data.dict())
         db.add(new_org)
-        db.commit()
-        db.refresh(new_org)
+        await db.commit()
+        await db.refresh(new_org)
         
         # Seed standard chart of accounts for the new organization
         create_standard_chart_of_accounts(db, new_org.id)
@@ -214,7 +214,7 @@ async def create_organization(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create organization"
@@ -223,11 +223,12 @@ async def create_organization(
 @router.post("/{organization_id}/join")
 async def join_organization(
     organization_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Join an organization (must have permission)"""
-    org = db.query(Organization).filter(Organization.id == organization_id).first()
+    result = await db.execute(select(Organization).filter_by(id=organization_id))
+    org = result.scalars().first()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -248,11 +249,11 @@ async def join_organization(
   
     try:
         current_user.organization_id = organization_id
-        db.commit()
-        db.refresh(current_user)
+        await db.commit()
+        await db.refresh(current_user)
         return {"message": f"Successfully joined organization {org.name}"}
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to join organization"
@@ -263,7 +264,7 @@ async def get_organization_members(
     organization_id: int,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get organization members (org admin or super admin only)"""
@@ -279,17 +280,17 @@ async def get_organization_members(
             detail="Insufficient permissions to view organization members"
         )
   
-    members = db.query(User).filter(
-        User.organization_id == organization_id,
-        User.is_active == True
-    ).offset(skip).limit(limit).all()
+    result = await db.execute(
+        select(User).filter_by(organization_id=organization_id, is_active=True).offset(skip).limit(limit)
+    )
+    members = result.scalars().all()
   
     return members
 
 @router.post("/license/create", response_model=OrganizationLicenseResponse)
 async def create_organization_license(
     license_data: OrganizationLicenseCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new organization license (super admin only)"""
@@ -299,14 +300,14 @@ async def create_organization_license(
             detail="Only super administrators can create organization licenses"
         )
     
-    result = OrganizationService.create_license(db, license_data, current_user)
+    result = await OrganizationService.create_license(db, license_data, current_user)
 
     return result
 
 @router.post("/reset-data/request-otp")
 async def request_reset_otp(
     request: OTPRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Request OTP for organization data reset (org admin only)"""
@@ -335,7 +336,7 @@ async def request_reset_otp(
 @router.post("/reset-data/verify-otp")
 async def verify_reset_otp_and_reset(
     verify_data: OTPVerify,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Verify OTP and perform organization data reset (org admin only)"""
@@ -367,7 +368,7 @@ async def verify_reset_otp_and_reset(
             "organization_state": "business_data_cleared"
         }
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to reset organization data. Please try again."
@@ -375,7 +376,7 @@ async def verify_reset_otp_and_reset(
 
 @router.post("/reset-data")
 async def reset_organization_data(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Reset organization business data (org admin only)"""
@@ -400,7 +401,7 @@ async def reset_organization_data(
             "organization_state": "business_data_cleared"
         }
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to reset organization data. Please try again."

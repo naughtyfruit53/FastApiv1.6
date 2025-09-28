@@ -417,6 +417,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
       await refetchVoucherList(); // Explicit refetch after invalidation
       router.push({ query: { mode: "create" } }, undefined, { shallow: true });
+      setMode("create");
       reset(defaultValues);
       const { data: newNextNumber } = await refetchNextNumber();
       setValue("voucher_number", newNextNumber);
@@ -450,22 +451,30 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const handleCreate = () => {
     setReferenceDocument(null); // Clear reference
     router.push({ query: { mode: "create" } }, undefined, { shallow: true });
+    setMode("create");
+    setSelectedId(null);
     reset(defaultValues);
   };
   const handleEdit = (voucherId: number) => {
     router.push({ query: { id: voucherId, mode: "edit" } }, undefined, {
       shallow: true,
     });
+    setMode("edit");
+    setSelectedId(voucherId);
   };
   const handleRevise = (voucherId: number) => {
     router.push({ query: { id: voucherId, mode: "revise" } }, undefined, {
       shallow: true,
     });
+    setMode("revise");
+    setSelectedId(voucherId);
   };
   const handleView = (voucherId: number) => {
     router.push({ query: { id: voucherId, mode: "view" } }, undefined, {
       shallow: true,
     });
+    setMode("view");
+    setSelectedId(voucherId);
   };
   const handleSubmitForm = (data: any) => {
     // Enhanced data preparation with reference support
@@ -860,7 +869,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     console.log("Mode:", mode);
   }, [nextVoucherNumber, isNextNumberLoading, isOrgContextReady, mode]);
   // Loading state
-  const isLoading = isLoadingList || isFetching || !isOrgContextReady;
+  const isLoading = isLoadingList || isFetching || !isOrgContextReady || createMutation.isPending || updateMutation.isPending;
   // Refetch voucher list when org context becomes ready
   useEffect(() => {
     if (isOrgContextReady) {

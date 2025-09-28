@@ -4,8 +4,9 @@
 Organization services - Business logic for organization management
 """
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
+from sqlalchemy import select
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
@@ -60,42 +61,45 @@ class OrganizationService:
     """Business logic for organization management"""
     
     @staticmethod
-    def get_app_statistics(db: Session) -> Dict:
+    async def get_app_statistics(db: AsyncSession) -> Dict:
         """Get application-level statistics"""
-        total_licenses = db.query(Organization).count()
-        active_organizations = db.query(Organization).filter(
-            Organization.status == "active"
-        ).count()
-        trial_organizations = db.query(Organization).filter(
-            Organization.status == "trial"
-        ).count()
-        total_users = db.query(User).filter(
-            User.organization_id.isnot(None),
-            User.is_active == True
-        ).count()
-        super_admins = db.query(User).filter(
-            User.is_super_admin == True,
-            User.is_active == True
-        ).count()
+        result = await db.execute(select(func.count(Organization.id)))
+        total_licenses = result.scalar_one()
+        
+        result = await db.execute(select(func.count(Organization.id)).where(Organization.status == "active"))
+        active_organizations = result.scalar_one()
+        
+        result = await db.execute(select(func.count(Organization.id)).where(Organization.status == "trial"))
+        trial_organizations = result.scalar_one()
+        
+        result = await db.execute(select(func.count(User.id)).where(User.organization_id.isnot(None), User.is_active == True))
+        total_users = result.scalar_one()
+        
+        result = await db.execute(select(func.count(User.id)).where(User.is_super_admin == True, User.is_active == True))
+        super_admins = result.scalar_one()
+        
         plan_breakdown = {}
-        plan_types = db.query(Organization.plan_type).distinct().all()
-        for plan_type_row in plan_types:
-            plan_type = plan_type_row[0]
-            count = db.query(Organization).filter(
-                Organization.plan_type == plan_type
-            ).count()
+        result = await db.execute(select(Organization.plan_type).distinct())
+        plan_types = result.scalars().all()
+        for plan_type in plan_types:
+            result = await db.execute(select(func.count(Organization.id)).where(Organization.plan_type == plan_type))
+            count = result.scalar_one()
             plan_breakdown[plan_type] = count
+        
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        new_licenses_this_month = db.query(Organization).filter(
-            Organization.created_at >= thirty_days_ago
-        ).count()
+        result = await db.execute(select(func.count(Organization.id)).where(Organization.created_at >= thirty_days_ago))
+        new_licenses_this_month = result.scalar_one()
+        
         total_storage_used_gb = total_licenses * 0.5
         average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
-        failed_login_attempts = db.query(func.sum(User.failed_login_attempts)).scalar() or 0
+        
+        result = await db.execute(select(func.sum(User.failed_login_attempts)))
+        failed_login_attempts = result.scalar_one() or 0
+        
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
-        recent_new_orgs = db.query(Organization).filter(
-            Organization.created_at >= seven_days_ago
-        ).count()
+        result = await db.execute(select(func.count(Organization.id)).where(Organization.created_at >= seven_days_ago))
+        recent_new_orgs = result.scalar_one()
+        
         return {
             "total_licenses_issued": total_licenses,
             "active_organizations": active_organizations,
@@ -116,24 +120,34 @@ class OrganizationService:
         }
 
     @staticmethod
-    def get_org_statistics(db: Session, organization_id: int) -> Dict:
+    async def get_org_statistics(db: AsyncSession, organization_id: int) -> Dict:
         """Get organization-specific statistics"""
-        total_users = db.query(User).filter(
+        result = await db.execute(select(func.count(User.id)).where(
             User.organization_id == organization_id,
             User.is_active == True
-        ).count()
-        total_customers = db.query(Customer).filter(
+        ))
+        total_users = result.scalar_one()
+        
+        result = await db.execute(select(func.count(Customer.id)).where(
             Customer.organization_id == organization_id
-        ).count()
-        total_vendors = db.query(Vendor).filter(
+        ))
+        total_customers = result.scalar_one()
+        
+        result = await db.execute(select(func.count(Vendor.id)).where(
             Vendor.organization_id == organization_id
-        ).count()
-        total_products = db.query(Product).filter(
+        ))
+        total_vendors = result.scalar_one()
+        
+        result = await db.execute(select(func.count(Product.id)).where(
             Product.organization_id == organization_id
-        ).count()
-        total_stock_items = db.query(Stock).filter(
+        ))
+        total_products = result.scalar_one()
+        
+        result = await db.execute(select(func.count(Stock.id)).where(
             Stock.organization_id == organization_id
-        ).count()
+        ))
+        total_stock_items = result.scalar_one()
+        
         return {
             "organization_id": organization_id,
             "total_users": total_users,
@@ -145,16 +159,18 @@ class OrganizationService:
         }
 
     @staticmethod
-    def create_license(db: Session, license_data: OrganizationLicenseCreate, current_user: User) -> Dict:
+    async def create_license(db: AsyncSession, license_data: OrganizationLicenseCreate, current_user: User) -> Dict:
         """Create new organization license"""
         try:
             # Check if email already exists in our database
-            existing_user = db.query(User).filter(User.email == license_data.superadmin_email).first()
+            result = await db.execute(select(User).filter_by(email=license_data.superadmin_email))
+            existing_user = result.scalars().first()
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already registered in the system")
             
             subdomain = license_data.subdomain or generate_subdomain(license_data.organization_name)
-            if db.query(Organization).filter(Organization.subdomain == subdomain).first():
+            result = await db.execute(select(Organization).filter_by(subdomain=subdomain))
+            if result.scalars().first():
                 raise ValueError(f"Subdomain '{subdomain}' is already in use")
 
             organization = Organization(
@@ -177,7 +193,7 @@ class OrganizationService:
                 license_duration_months=1
             )
             db.add(organization)
-            db.flush()
+            await db.flush()
 
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
             
@@ -208,28 +224,29 @@ class OrganizationService:
                 supabase_uuid=supabase_user["supabase_uuid"]
             )
             db.add(super_admin_user)
-            db.flush()
+            await db.flush()
 
             rbac_service = RBACService(db)
             logger.info(f"Initializing RBAC for organization {organization.id}")
-            permissions = rbac_service.initialize_default_permissions()
+            permissions = await rbac_service.initialize_default_permissions()
             logger.info(f"Initialized {len(permissions)} default permissions")
             
-            roles = rbac_service.initialize_default_roles(organization.id)
+            roles = await rbac_service.initialize_default_roles(organization.id)
             logger.info(f"Initialized {len(roles)} roles for organization {organization.id}")
 
-            admin_role = db.query(ServiceRole).filter(
-                ServiceRole.organization_id == organization.id,
-                ServiceRole.name == 'admin'
-            ).first()
+            result = await db.execute(select(ServiceRole).filter_by(
+                organization_id=organization.id,
+                name='admin'
+            ))
+            admin_role = result.scalars().first()
             if admin_role:
-                rbac_service.assign_role_to_user(super_admin_user.id, admin_role.id)
+                await rbac_service.assign_role_to_user(super_admin_user.id, admin_role.id)
                 logger.info(f"Successfully assigned admin role to user {super_admin_user.email}")
             else:
                 logger.error(f"Admin role not found after initialization for org {organization.id}")
                 raise ValueError("Failed to initialize RBAC roles properly")
 
-            db.commit()
+            await db.commit()
 
             log_license_creation(organization.name, license_data.superadmin_email, current_user.email)
 
@@ -256,15 +273,15 @@ class OrganizationService:
                 "message": "Organization license created successfully. Admin must change password on first login."
             }
         except ValueError as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(status_code=400, detail=str(e))
         except SupabaseAuthError as e:
-            db.rollback()
+            await db.rollback()
             if "already been registered" in str(e):
                 raise HTTPException(status_code=400, detail="Email already registered in authentication system. Please use a different email or contact support.")
             raise HTTPException(status_code=500, detail=str(e))
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.exception(f"Failed to create organization license: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -322,9 +339,10 @@ class OrganizationService:
         }
 
     @staticmethod
-    def get_organization_modules(db: Session, organization_id: int) -> Dict:
+    async def get_organization_modules(db: AsyncSession, organization_id: int) -> Dict:
         """Get organization's enabled modules"""
-        org = db.query(Organization).filter(Organization.id == organization_id).first()
+        result = await db.execute(select(Organization).filter_by(id=organization_id))
+        org = result.scalars().first()
         if not org:
             return None
         
@@ -345,9 +363,10 @@ class OrganizationService:
         }
 
     @staticmethod
-    def update_organization_modules(db: Session, organization_id: int, enabled_modules: Dict) -> Dict:
+    async def update_organization_modules(db: AsyncSession, organization_id: int, enabled_modules: Dict) -> Dict:
         """Update organization's enabled modules"""
-        org = db.query(Organization).filter(Organization.id == organization_id).first()
+        result = await db.execute(select(Organization).filter_by(id=organization_id))
+        org = result.scalars().first()
         if not org:
             return None
         
@@ -355,8 +374,8 @@ class OrganizationService:
             raise ValueError("enabled_modules must be a dictionary")
         
         org.enabled_modules = enabled_modules
-        db.commit()
-        db.refresh(org)
+        await db.commit()
+        await db.refresh(org)
         
         return {
             "message": "Organization modules updated successfully",

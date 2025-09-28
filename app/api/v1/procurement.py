@@ -4,16 +4,17 @@ Procurement API endpoints - RFQ, Purchase Workflows, Vendor Management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, desc, asc, func
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin, validate_company_setup_for_operations
-from app.core.org_restrictions import require_current_organization_id
+from app.core.tenant import TenantQueryMixin
+from app.core.org_restrictions import require_current_organization_id, validate_company_setup
 from app.core.rbac_dependencies import check_service_permission
 from app.models import (
     User, Organization, Vendor,
@@ -41,16 +42,18 @@ class ProcurementService:
     """Service class for procurement operations"""
     
     @staticmethod
-    def generate_rfq_number(db: Session, organization_id: int) -> str:
+    async def generate_rfq_number(db: AsyncSession, organization_id: int) -> str:
         """Generate next RFQ number"""
         current_year = datetime.now().year
         prefix = f"RFQ-{current_year}-"
         
         # Get the highest existing RFQ number for this year
-        last_rfq = db.query(RequestForQuotation).filter(
+        stmt = select(RequestForQuotation).where(
             RequestForQuotation.organization_id == organization_id,
             RequestForQuotation.rfq_number.like(f"{prefix}%")
-        ).order_by(desc(RequestForQuotation.rfq_number)).first()
+        ).order_by(desc(RequestForQuotation.rfq_number))
+        result = await db.execute(stmt)
+        last_rfq = result.scalar_one_or_none()
         
         if last_rfq:
             try:
@@ -62,15 +65,17 @@ class ProcurementService:
         return f"{prefix}0001"
     
     @staticmethod
-    def generate_quotation_number(db: Session, organization_id: int) -> str:
+    async def generate_quotation_number(db: AsyncSession, organization_id: int) -> str:
         """Generate next quotation number"""
         current_year = datetime.now().year
         prefix = f"QT-{current_year}-"
         
-        last_quotation = db.query(VendorQuotation).filter(
+        stmt = select(VendorQuotation).where(
             VendorQuotation.organization_id == organization_id,
             VendorQuotation.quotation_number.like(f"{prefix}%")
-        ).order_by(desc(VendorQuotation.quotation_number)).first()
+        ).order_by(desc(VendorQuotation.quotation_number))
+        result = await db.execute(stmt)
+        last_quotation = result.scalar_one_or_none()
         
         if last_quotation:
             try:
@@ -89,39 +94,40 @@ async def get_rfqs(
     limit: int = 100,
     status: Optional[str] = None,
     search: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get RFQs with filtering options"""
-    query = db.query(RequestForQuotation).filter(
+    stmt = select(RequestForQuotation).where(
         RequestForQuotation.organization_id == organization_id
     ).options(joinedload(RequestForQuotation.rfq_items))
     
     if status:
-        query = query.filter(RequestForQuotation.status == status)
+        stmt = stmt.where(RequestForQuotation.status == status)
     
     if search:
-        query = query.filter(or_(
+        stmt = stmt.where(or_(
             RequestForQuotation.rfq_title.ilike(f"%{search}%"),
             RequestForQuotation.rfq_number.ilike(f"%{search}%")
         ))
     
-    query = query.order_by(desc(RequestForQuotation.created_at))
-    rfqs = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(desc(RequestForQuotation.created_at))
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    rfqs = result.scalars().all()
     return rfqs
 
 
 @router.post("/rfqs", response_model=RequestForQuotationResponse)
 async def create_rfq(
     rfq_data: RequestForQuotationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new RFQ"""
     # Generate RFQ number
-    rfq_number = ProcurementService.generate_rfq_number(db, organization_id)
+    rfq_number = await ProcurementService.generate_rfq_number(db, organization_id)
     
     # Create RFQ
     rfq = RequestForQuotation(
@@ -142,7 +148,7 @@ async def create_rfq(
     )
     
     db.add(rfq)
-    db.flush()  # To get the RFQ ID
+    await db.flush()  # To get the RFQ ID
     
     # Create RFQ items
     for item_data in rfq_data.rfq_items:
@@ -168,8 +174,8 @@ async def create_rfq(
         )
         db.add(vendor_rfq)
     
-    db.commit()
-    db.refresh(rfq)
+    await db.commit()
+    await db.refresh(rfq)
     
     return rfq
 
@@ -177,15 +183,17 @@ async def create_rfq(
 @router.get("/rfqs/{rfq_id}", response_model=RequestForQuotationResponse)
 async def get_rfq(
     rfq_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific RFQ"""
-    rfq = db.query(RequestForQuotation).filter(
+    stmt = select(RequestForQuotation).where(
         RequestForQuotation.id == rfq_id,
         RequestForQuotation.organization_id == organization_id
-    ).options(joinedload(RequestForQuotation.rfq_items)).first()
+    ).options(joinedload(RequestForQuotation.rfq_items))
+    result = await db.execute(stmt)
+    rfq = result.scalar_one_or_none()
     
     if not rfq:
         raise HTTPException(
@@ -200,15 +208,17 @@ async def get_rfq(
 async def update_rfq(
     rfq_id: int,
     rfq_data: RequestForQuotationUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update an RFQ"""
-    rfq = db.query(RequestForQuotation).filter(
+    stmt = select(RequestForQuotation).where(
         RequestForQuotation.id == rfq_id,
         RequestForQuotation.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    rfq = result.scalar_one_or_none()
     
     if not rfq:
         raise HTTPException(
@@ -231,8 +241,8 @@ async def update_rfq(
     rfq.updated_by = current_user.id
     rfq.updated_at = datetime.utcnow()
     
-    db.commit()
-    db.refresh(rfq)
+    await db.commit()
+    await db.refresh(rfq)
     
     return rfq
 
@@ -245,42 +255,45 @@ async def get_quotations(
     rfq_id: Optional[int] = None,
     vendor_id: Optional[int] = None,
     is_selected: Optional[bool] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get vendor quotations with filtering options"""
-    query = db.query(VendorQuotation).filter(
+    stmt = select(VendorQuotation).where(
         VendorQuotation.organization_id == organization_id
     ).options(joinedload(VendorQuotation.quotation_items))
     
     if rfq_id:
-        query = query.filter(VendorQuotation.rfq_id == rfq_id)
+        stmt = stmt.where(VendorQuotation.rfq_id == rfq_id)
     
     if vendor_id:
-        query = query.filter(VendorQuotation.vendor_id == vendor_id)
+        stmt = stmt.where(VendorQuotation.vendor_id == vendor_id)
     
     if is_selected is not None:
-        query = query.filter(VendorQuotation.is_selected == is_selected)
+        stmt = stmt.where(VendorQuotation.is_selected == is_selected)
     
-    query = query.order_by(desc(VendorQuotation.created_at))
-    quotations = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(desc(VendorQuotation.created_at))
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    quotations = result.scalars().all()
     return quotations
 
 
 @router.post("/quotations", response_model=VendorQuotationResponse)
 async def create_quotation(
     quotation_data: VendorQuotationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new vendor quotation"""
     # Verify RFQ exists and is open for responses
-    rfq = db.query(RequestForQuotation).filter(
+    stmt = select(RequestForQuotation).where(
         RequestForQuotation.id == quotation_data.rfq_id,
         RequestForQuotation.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    rfq = result.scalar_one_or_none()
     
     if not rfq:
         raise HTTPException(
@@ -295,7 +308,7 @@ async def create_quotation(
         )
     
     # Generate quotation number
-    quotation_number = ProcurementService.generate_quotation_number(db, organization_id)
+    quotation_number = await ProcurementService.generate_quotation_number(db, organization_id)
     
     # Create quotation
     quotation = VendorQuotation(
@@ -315,7 +328,7 @@ async def create_quotation(
     )
     
     db.add(quotation)
-    db.flush()
+    await db.flush()
     
     # Create quotation items
     for item_data in quotation_data.quotation_items:
@@ -337,10 +350,12 @@ async def create_quotation(
         db.add(quotation_item)
     
     # Update vendor RFQ response status
-    vendor_rfq = db.query(VendorRFQ).filter(
+    stmt = select(VendorRFQ).where(
         VendorRFQ.rfq_id == quotation_data.rfq_id,
         VendorRFQ.vendor_id == quotation_data.vendor_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    vendor_rfq = result.scalar_one_or_none()
     
     if vendor_rfq:
         vendor_rfq.has_responded = True
@@ -350,8 +365,8 @@ async def create_quotation(
     if rfq.status == 'SENT':
         rfq.status = 'RESPONDED'
     
-    db.commit()
-    db.refresh(quotation)
+    await db.commit()
+    await db.refresh(quotation)
     
     return quotation
 
@@ -363,30 +378,31 @@ async def get_vendor_evaluations(
     limit: int = 100,
     vendor_id: Optional[int] = None,
     evaluation_type: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get vendor evaluations with filtering options"""
-    query = db.query(VendorEvaluation).filter(
+    stmt = select(VendorEvaluation).where(
         VendorEvaluation.organization_id == organization_id
     )
     
     if vendor_id:
-        query = query.filter(VendorEvaluation.vendor_id == vendor_id)
+        stmt = stmt.where(VendorEvaluation.vendor_id == vendor_id)
     
     if evaluation_type:
-        query = query.filter(VendorEvaluation.evaluation_type == evaluation_type)
+        stmt = stmt.where(VendorEvaluation.evaluation_type == evaluation_type)
     
-    query = query.order_by(desc(VendorEvaluation.evaluation_date))
-    evaluations = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(desc(VendorEvaluation.evaluation_date))
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    evaluations = result.scalars().all()
     return evaluations
 
 
 @router.post("/vendor-evaluations", response_model=VendorEvaluationResponse)
 async def create_vendor_evaluation(
     evaluation_data: VendorEvaluationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -398,8 +414,8 @@ async def create_vendor_evaluation(
     )
     
     db.add(evaluation)
-    db.commit()
-    db.refresh(evaluation)
+    await db.commit()
+    await db.refresh(evaluation)
     
     return evaluation
 
@@ -411,53 +427,62 @@ async def get_purchase_requisitions(
     limit: int = 100,
     approval_status: Optional[str] = None,
     department: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get purchase requisitions with filtering options"""
-    query = db.query(PurchaseRequisition).filter(
+    stmt = select(PurchaseRequisition).where(
         PurchaseRequisition.organization_id == organization_id
     ).options(joinedload(PurchaseRequisition.requisition_items))
     
     if approval_status:
-        query = query.filter(PurchaseRequisition.approval_status == approval_status)
+        stmt = stmt.where(PurchaseRequisition.approval_status == approval_status)
     
     if department:
-        query = query.filter(PurchaseRequisition.department == department)
+        stmt = stmt.where(PurchaseRequisition.department == department)
     
-    query = query.order_by(desc(PurchaseRequisition.created_at))
-    requisitions = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(desc(PurchaseRequisition.created_at))
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    requisitions = result.scalars().all()
     return requisitions
 
 
 # Analytics Endpoints
 @router.get("/analytics/dashboard", response_model=ProcurementDashboard)
 async def get_procurement_dashboard(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get procurement dashboard analytics"""
     # RFQ Analytics
-    total_rfqs = db.query(RequestForQuotation).filter(
+    stmt_total = select(func.count(RequestForQuotation.id)).where(
         RequestForQuotation.organization_id == organization_id
-    ).count()
+    )
+    result_total = await db.execute(stmt_total)
+    total_rfqs = result_total.scalar()
     
-    active_rfqs = db.query(RequestForQuotation).filter(
+    stmt_active = select(func.count(RequestForQuotation.id)).where(
         RequestForQuotation.organization_id == organization_id,
         RequestForQuotation.status.in_(['SENT', 'RESPONDED'])
-    ).count()
+    )
+    result_active = await db.execute(stmt_active)
+    active_rfqs = result_active.scalar()
     
-    completed_rfqs = db.query(RequestForQuotation).filter(
+    stmt_completed = select(func.count(RequestForQuotation.id)).where(
         RequestForQuotation.organization_id == organization_id,
         RequestForQuotation.status == 'AWARDED'
-    ).count()
+    )
+    result_completed = await db.execute(stmt_completed)
+    completed_rfqs = result_completed.scalar()
     
-    cancelled_rfqs = db.query(RequestForQuotation).filter(
+    stmt_cancelled = select(func.count(RequestForQuotation.id)).where(
         RequestForQuotation.organization_id == organization_id,
         RequestForQuotation.status == 'CANCELLED'
-    ).count()
+    )
+    result_cancelled = await db.execute(stmt_cancelled)
+    cancelled_rfqs = result_cancelled.scalar()
     
     rfq_analytics = RFQAnalytics(
         total_rfqs=total_rfqs,
@@ -467,20 +492,24 @@ async def get_procurement_dashboard(
     )
     
     # Vendor Performance Metrics
-    vendor_performance = db.query(
+    stmt_performance = select(
         VendorEvaluation.vendor_id,
         func.count(VendorQuotation.id).label('total_quotations'),
         func.count(func.nullif(VendorQuotation.is_selected, False)).label('selected_quotations'),
         func.avg(VendorEvaluation.overall_rating).label('avg_rating')
     ).join(
         VendorQuotation, VendorEvaluation.vendor_id == VendorQuotation.vendor_id
-    ).filter(
+    ).where(
         VendorEvaluation.organization_id == organization_id
-    ).group_by(VendorEvaluation.vendor_id).limit(10).all()
+    ).group_by(VendorEvaluation.vendor_id).limit(10)
+    result_performance = await db.execute(stmt_performance)
+    vendor_performance = result_performance.all()
     
     top_vendors = []
     for perf in vendor_performance:
-        vendor = db.query(Vendor).filter(Vendor.id == perf.vendor_id).first()
+        stmt_vendor = select(Vendor).where(Vendor.id == perf.vendor_id)
+        result_vendor = await db.execute(stmt_vendor)
+        vendor = result_vendor.scalar_one_or_none()
         if vendor:
             selection_rate = (perf.selected_quotations / perf.total_quotations * 100) if perf.total_quotations > 0 else 0
             top_vendors.append(VendorPerformanceMetrics(
@@ -493,16 +522,20 @@ async def get_procurement_dashboard(
             ))
     
     # Pending approvals
-    pending_approvals = db.query(PurchaseRequisition).filter(
+    stmt_pending = select(func.count(PurchaseRequisition.id)).where(
         PurchaseRequisition.organization_id == organization_id,
         PurchaseRequisition.approval_status == 'pending'
-    ).count()
+    )
+    result_pending = await db.execute(stmt_pending)
+    pending_approvals = result_pending.scalar()
     
     # Total purchase value (simplified calculation)
-    total_purchase_value = db.query(func.sum(VendorQuotation.grand_total)).filter(
+    stmt_purchase = select(func.sum(VendorQuotation.grand_total)).where(
         VendorQuotation.organization_id == organization_id,
         VendorQuotation.is_selected == True
-    ).scalar() or Decimal(0)
+    )
+    result_purchase = await db.execute(stmt_purchase)
+    total_purchase_value = result_purchase.scalar() or Decimal(0)
     
     return ProcurementDashboard(
         rfq_analytics=rfq_analytics,

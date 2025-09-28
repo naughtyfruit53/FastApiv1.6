@@ -10,11 +10,10 @@ This module seeds the default platform super admin user.
 """
 
 import logging
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import text
-from app.core.database import SessionLocal, Base
-from app.db.session import SessionLocal
+from sqlalchemy import select, text
+from app.core.database import AsyncSessionLocal, Base
 from app.models import User
 from app.schemas.user import UserRole
 from app.core.security import get_password_hash
@@ -22,7 +21,7 @@ from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
 
 logger = logging.getLogger(__name__)
 
-def seed_super_admin(db: Session = None) -> None:
+async def seed_super_admin(db: AsyncSession = None) -> None:
     """
     Creates a default platform super admin (Supabase Auth integrated).
     Only runs if no super admin exists in the database.
@@ -35,7 +34,7 @@ def seed_super_admin(db: Session = None) -> None:
     """
     db_session = db
     if db_session is None:
-        db_session = SessionLocal()
+        db_session = AsyncSessionLocal()
 
     super_admin_email = "naughtyfruit53@gmail.com"
     super_admin_password = "123456"  # This should be changed after first login
@@ -43,17 +42,20 @@ def seed_super_admin(db: Session = None) -> None:
     try:
         # Check for existing super admin
         try:
-            existing_super_admin = db_session.query(User).filter(
-                User.is_super_admin == True,
-                User.organization_id.is_(None)
-            ).first()
+            result = await db_session.execute(
+                select(User).filter_by(
+                    is_super_admin=True,
+                    organization_id=None
+                )
+            )
+            existing_super_admin = result.scalars().first()
             if existing_super_admin:
                 # Fix role if needed
                 if existing_super_admin.role != UserRole.SUPER_ADMIN.value:
                     logger.warning(f"Super admin role mismatch detected: current role '{existing_super_admin.role}', fixing to 'super_admin'")
                     existing_super_admin.role = UserRole.SUPER_ADMIN.value
-                    db_session.commit()
-                    db_session.refresh(existing_super_admin)
+                    await db_session.commit()
+                    await db_session.refresh(existing_super_admin)
                     logger.info("Super admin role fixed successfully.")
                 else:
                     logger.info("Platform super admin already exists with correct role. Skipping seeding.")
@@ -105,8 +107,8 @@ def seed_super_admin(db: Session = None) -> None:
                 supabase_uuid=supabase_uuid
             )
             db_session.add(super_admin)
-            db_session.commit()
-            db_session.refresh(super_admin)
+            await db_session.commit()
+            await db_session.refresh(super_admin)
             logger.info(f"Successfully created platform super admin in local DB (email: {super_admin_email})")
             logger.warning("SECURITY: Default super admin created with password '123456'. Please change this password immediately after first login!")
 
@@ -118,28 +120,31 @@ def seed_super_admin(db: Session = None) -> None:
             except Exception as cleanup_error:
                 logger.error(f"Failed to cleanup Supabase user {supabase_uuid}: {cleanup_error}")
 
-            db_session.rollback()
+            await db_session.rollback()
             logger.error(f"Failed to create super admin in local DB: {e}")
             raise
 
     finally:
         if db is None:
-            db_session.close()
+            await db_session.close()
 
-def check_super_admin_exists(db: Session = None) -> bool:
+async def check_super_admin_exists(db: AsyncSession = None) -> bool:
     """
     Check if a platform super admin exists.
     Returns: bool
     """
     db_session = db
     if db_session is None:
-        db_session = SessionLocal()
+        db_session = AsyncSessionLocal()
     try:
         try:
-            super_admin = db_session.query(User).filter(
-                User.is_super_admin == True,
-                User.organization_id.is_(None)
-            ).first()
+            result = await db_session.execute(
+                select(User).filter_by(
+                    is_super_admin=True,
+                    organization_id=None
+                )
+            )
+            super_admin = result.scalars().first()
             return super_admin is not None
 
         except OperationalError as e:
@@ -154,18 +159,18 @@ def check_super_admin_exists(db: Session = None) -> bool:
         return False
     finally:
         if db is None:
-            db_session.close()
+            await db_session.close()
 
-def check_database_schema_updated(db: Session = None) -> bool:
+async def check_database_schema_updated(db: AsyncSession = None) -> bool:
     """
     Check if the database schema has been updated with organization support.
     Returns: bool
     """
     db_session = db
     if db_session is None:
-        db_session = SessionLocal()
+        db_session = AsyncSessionLocal()
     try:
-        db_session.execute(text("SELECT organization_id, is_super_admin FROM users LIMIT 1"))
+        await db_session.execute(text("SELECT organization_id, is_super_admin FROM users LIMIT 1"))
         return True
     except OperationalError:
         return False
@@ -173,7 +178,8 @@ def check_database_schema_updated(db: Session = None) -> bool:
         return False
     finally:
         if db is None:
-            db_session.close()
+            await db_session.close()
 
 if __name__ == "__main__":
-    seed_super_admin()
+    import asyncio
+    asyncio.run(seed_super_admin())

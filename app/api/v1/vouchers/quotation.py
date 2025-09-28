@@ -1,7 +1,9 @@
 # app/api/v1/vouchers/quotation.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, asc, desc, func
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -11,7 +13,6 @@ from app.schemas.vouchers import QuotationCreate, QuotationInDB, QuotationUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
-from sqlalchemy import func  # Added import for func
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["quotations"])
@@ -24,38 +25,39 @@ async def get_quotations(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all quotations"""
-    query = db.query(Quotation).options(joinedload(Quotation.customer)).filter(
+    stmt = select(Quotation).options(joinedload(Quotation.customer)).where(
         Quotation.organization_id == current_user.organization_id
     )
     
     if status:
-        query = query.filter(Quotation.status == status)
+        stmt = stmt.where(Quotation.status == status)
     
     # Enhanced sorting - latest first by default
     if hasattr(Quotation, sortBy):
         sort_attr = getattr(Quotation, sortBy)
         if sort.lower() == "asc":
-            query = query.order_by(sort_attr.asc())
+            stmt = stmt.order_by(asc(sort_attr))
         else:
-            query = query.order_by(sort_attr.desc())
+            stmt = stmt.order_by(desc(sort_attr))
     else:
         # Default to created_at desc if invalid sortBy field
-        query = query.order_by(Quotation.created_at.desc())
+        stmt = stmt.order_by(desc(Quotation.created_at))
     
-    invoices = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    invoices = result.unique().scalars().all()
     return invoices
 
 @router.get("/next-number", response_model=str)
 async def get_next_quotation_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available quotation number"""
-    return VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number(
         db, "QT", current_user.organization_id, Quotation
     )
 
@@ -66,7 +68,7 @@ async def create_quotation(
     quotation: QuotationCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new quotation"""
@@ -77,15 +79,19 @@ async def create_quotation(
         
         # Handle revisions: If parent_id provided, generate revised number
         if quotation.parent_id:
-            parent = db.query(Quotation).filter(Quotation.id == quotation.parent_id).first()
+            stmt = select(Quotation).where(Quotation.id == quotation.parent_id)
+            result = await db.execute(stmt)
+            parent = result.scalar_one_or_none()
             if not parent:
                 raise HTTPException(status_code=404, detail="Parent quotation not found")
             
             # Get latest revision number
-            latest_revision = db.query(func.max(Quotation.revision_number)).filter(
+            stmt = select(func.max(Quotation.revision_number)).where(
                 Quotation.organization_id == current_user.organization_id,
                 Quotation.voucher_number.like(f"{parent.voucher_number}%")
-            ).scalar() or 0
+            )
+            result = await db.execute(stmt)
+            latest_revision = result.scalar() or 0
             
             quotation_data['revision_number'] = latest_revision + 1
             quotation_data['voucher_number'] = f"{parent.voucher_number} Rev {quotation_data['revision_number']}"
@@ -93,22 +99,24 @@ async def create_quotation(
         else:
             # Generate unique voucher number if not provided or blank
             if not quotation_data.get('voucher_number') or quotation_data['voucher_number'] == '':
-                quotation_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
                     db, "QT", current_user.organization_id, Quotation
                 )
             else:
-                existing = db.query(Quotation).filter(
+                stmt = select(Quotation).where(
                     Quotation.organization_id == current_user.organization_id,
                     Quotation.voucher_number == quotation_data['voucher_number']
-                ).first()
+                )
+                result = await db.execute(stmt)
+                existing = result.scalar_one_or_none()
                 if existing:
-                    quotation_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                    quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
                         db, "QT", current_user.organization_id, Quotation
                     )
         
         db_quotation = Quotation(**quotation_data)
         db.add(db_quotation)
-        db.flush()
+        await db.flush()
         
         for item_data in quotation.items:
             item = QuotationItem(
@@ -117,8 +125,8 @@ async def create_quotation(
             )
             db.add(item)
         
-        db.commit()
-        db.refresh(db_quotation)
+        await db.commit()
+        await db.refresh(db_quotation)
         
         if send_email and db_quotation.customer and db_quotation.customer.email:
             background_tasks.add_task(
@@ -133,7 +141,7 @@ async def create_quotation(
         return db_quotation
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating quotation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -143,16 +151,18 @@ async def create_quotation(
 @router.get("/{quotation_id}", response_model=QuotationInDB)
 async def get_quotation(
     quotation_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    quotation = db.query(Quotation).options(
+    stmt = select(Quotation).options(
         joinedload(Quotation.customer),
         joinedload(Quotation.items).joinedload(QuotationItem.product)
-    ).filter(
+    ).where(
         Quotation.id == quotation_id,
         Quotation.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    quotation = result.unique().scalar_one_or_none()
     if not quotation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -164,14 +174,17 @@ async def get_quotation(
 async def update_quotation(
     quotation_id: int,
     quotation_update: QuotationUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        quotation = db.query(Quotation).filter(
+        logger.debug(f"Starting update for quotation {quotation_id} by {current_user.email}")
+        stmt = select(Quotation).where(
             Quotation.id == quotation_id,
             Quotation.organization_id == current_user.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        quotation = result.scalar_one_or_none()
         if not quotation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -183,23 +196,29 @@ async def update_quotation(
             setattr(quotation, field, value)
         
         if quotation_update.items is not None:
-            db.query(QuotationItem).filter(QuotationItem.quotation_id == quotation_id).delete()
+            from sqlalchemy import delete
+            stmt_delete = delete(QuotationItem).where(QuotationItem.quotation_id == quotation_id)
+            await db.execute(stmt_delete)
+            await db.flush()  # Flush deletes before adding new items to avoid potential locks
             for item_data in quotation_update.items:
                 item = QuotationItem(
                     quotation_id=quotation_id,
                     **item_data.dict()
                 )
                 db.add(item)
+            await db.flush()  # Flush adds before commit
         
-        db.commit()
-        db.refresh(quotation)
+        logger.debug(f"Before commit for quotation {quotation_id}")
+        await db.commit()
+        logger.debug(f"After commit for quotation {quotation_id}")
+        await db.refresh(quotation)
         
         logger.info(f"Quotation {quotation.voucher_number} updated by {current_user.email}")
         return quotation
         
     except Exception as e:
-        db.rollback()
-        logger.error(f"Error updating quotation: {e}")
+        await db.rollback()
+        logger.error(f"Error updating quotation {quotation_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update quotation"
@@ -208,30 +227,34 @@ async def update_quotation(
 @router.delete("/{quotation_id}")
 async def delete_quotation(
     quotation_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        quotation = db.query(Quotation).filter(
+        stmt = select(Quotation).where(
             Quotation.id == quotation_id,
             Quotation.organization_id == current_user.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        quotation = result.scalar_one_or_none()
         if not quotation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Quotation not found"
             )
         
-        db.query(QuotationItem).filter(QuotationItem.quotation_id == quotation_id).delete()
+        from sqlalchemy import delete
+        stmt_delete_items = delete(QuotationItem).where(QuotationItem.quotation_id == quotation_id)
+        await db.execute(stmt_delete_items)
         
-        db.delete(quotation)
-        db.commit()
+        await db.delete(quotation)
+        await db.commit()
         
         logger.info(f"Quotation {quotation.voucher_number} deleted by {current_user.email}")
         return {"message": "Quotation deleted successfully"}
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting quotation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

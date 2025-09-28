@@ -2,11 +2,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_
+from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user
-from app.core.tenant import TenantQueryMixin, require_current_organization_id, validate_company_setup_for_operations
+from app.core.tenant import TenantQueryMixin, require_current_organization_id
+from app.core.org_restrictions import validate_company_setup
 from app.core.org_restrictions import require_organization_access, ensure_organization_context
 from app.models import User, Product, Stock, ProductFile, Organization, Company
 from app.schemas.base import ProductCreate, ProductUpdate, ProductInDB, ProductResponse, BulkImportResponse, ProductFileResponse
@@ -25,7 +28,7 @@ async def get_products(
     limit: int = 100,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get products in current organization"""
@@ -33,38 +36,40 @@ async def get_products(
     # Check if user is app super admin
     org_id = ensure_organization_context(current_user)
     
-    query = db.query(Product)
-    query = TenantQueryMixin.filter_by_tenant(query, Product, org_id)
+    stmt = select(Product)
+    stmt = TenantQueryMixin.filter_by_tenant(stmt, Product, org_id)
     
     if active_only:
-        query = query.filter(Product.is_active == True)
+        stmt = stmt.where(Product.is_active == True)
     
     if search:
-        search_filter = (
-            Product.product_name.contains(search) |
-            Product.hsn_code.contains(search) |
+        search_filter = or_(
+            Product.product_name.contains(search),
+            Product.hsn_code.contains(search),
             Product.part_number.contains(search)
         )
-        query = query.filter(search_filter)
+        stmt = stmt.where(search_filter)
     
     # Add explicit ordering for stable results
-    query = query.order_by(Product.product_name.asc())
+    stmt = stmt.order_by(Product.product_name.asc())
     
     # Include files relationship
-    from sqlalchemy.orm import selectinload
-    query = query.options(selectinload(Product.files))
+    stmt = stmt.options(selectinload(Product.files))
     
-    products = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    products = result.scalars().all()
     return [ProductResponse.from_product(product) for product in products]
 
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get product by ID"""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).options(selectinload(Product.files)).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -80,7 +85,7 @@ async def get_product(
 @router.post("", response_model=ProductResponse)
 async def create_product(
     product: ProductCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new product"""
@@ -93,10 +98,12 @@ async def create_product(
         )
     
     # Check if product name already exists in organization
-    existing_product = db.query(Product).filter(
+    stmt = select(Product).where(
         Product.product_name == product.product_name,
         Product.organization_id == org_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing_product = result.scalar_one_or_none()
     if existing_product:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,8 +116,8 @@ async def create_product(
         **product.dict()
     )
     db.add(db_product)
-    db.commit()
-    db.refresh(db_product)
+    await db.commit()
+    await db.refresh(db_product)
     
     logger.info(f"Product {product.product_name} created in org {org_id} by {current_user.email}")
     return ProductResponse.from_product(db_product)
@@ -119,12 +126,14 @@ async def create_product(
 async def update_product(
     product_id: int,
     product_update: ProductUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update product"""
     
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -137,10 +146,12 @@ async def update_product(
     
     # Check name uniqueness if being updated
     if product_update.product_name and product_update.product_name != product.product_name:
-        existing_product = db.query(Product).filter(
+        stmt = select(Product).where(
             Product.product_name == product_update.product_name,
             Product.organization_id == product.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        existing_product = result.scalar_one_or_none()
         if existing_product:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -154,8 +165,12 @@ async def update_product(
             value = None
         setattr(product, field, value)
     
-    db.commit()
-    db.refresh(product)
+    await db.commit()
+    
+    # Re-query with eager load
+    stmt = select(Product).options(selectinload(Product.files)).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one()
     
     logger.info(f"Product {product.product_name} updated by {current_user.email}")
     return ProductResponse.from_product(product)
@@ -163,12 +178,14 @@ async def update_product(
 @router.delete("/{product_id}")
 async def delete_product(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Delete product (admin only)"""
     
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -182,8 +199,8 @@ async def delete_product(
     # TODO: Check if product has any associated transactions/vouchers
     # before allowing deletion
     
-    db.delete(product)
-    db.commit()
+    await db.delete(product)
+    await db.commit()
     
     logger.info(f"Product {product.product_name} deleted by {current_user.email}")
     return {"message": "Product deleted successfully"}
@@ -204,13 +221,13 @@ async def export_products_excel(
     limit: int = 1000,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export products to Excel"""
     
     # Get products using the same logic as the list endpoint
-    query = db.query(Product)
+    stmt = select(Product)
     
     # Apply tenant filtering for non-super-admin users
     if not bool(current_user.is_super_admin):
@@ -220,20 +237,21 @@ async def export_products_excel(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No current Organization specified"
             )
-        query = TenantQueryMixin.filter_by_tenant(query, Product, org_id)
+        stmt = TenantQueryMixin.filter_by_tenant(stmt, Product, org_id)
     
     if active_only:
-        query = query.filter(Product.is_active == True)
+        stmt = stmt.where(Product.is_active == True)
     
     if search:
-        search_filter = (
-            Product.product_name.contains(search) |
-            Product.hsn_code.contains(search) |
+        search_filter = or_(
+            Product.product_name.contains(search),
+            Product.hsn_code.contains(search),
             Product.part_number.contains(search)
         )
-        query = query.filter(search_filter)
+        stmt = stmt.where(search_filter)
     
-    products = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    products = result.scalars().all()
     
     # Convert to dict format for Excel export
     products_data = []
@@ -257,7 +275,7 @@ async def export_products_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_products_excel(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Import products from Excel file"""
@@ -270,7 +288,7 @@ async def import_products_excel(
         )
     
     # Validate company setup is completed before allowing product imports
-    validate_company_setup_for_operations(db, org_id)
+    await validate_company_setup(db, org_id)
     
     # Validate file type
     if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
@@ -321,10 +339,12 @@ async def import_products_excel(
                     continue
                 
                 # Check if product already exists
-                existing_product = db.query(Product).filter(
+                stmt = select(Product).where(
                     Product.product_name == product_data["product_name"],
                     Product.organization_id == org_id
-                ).first()
+                )
+                result = await db.execute(stmt)
+                existing_product = result.scalar_one_or_none()
                 
                 product = None
                 if existing_product:
@@ -341,7 +361,7 @@ async def import_products_excel(
                         **product_data
                     )
                     db.add(new_product)
-                    db.flush()  # Get the new product ID
+                    await db.flush()  # Get the new product ID
                     created_count += 1
                     product = new_product
                     logger.info(f"Created product: {product_data['product_name']}")
@@ -357,10 +377,12 @@ async def import_products_excel(
                     quantity = float(initial_quantity) if initial_quantity is not None else 0.0
                     
                     # Check if stock entry exists for this product
-                    existing_stock = db.query(Stock).filter(
+                    stmt = select(Stock).where(
                         Stock.product_id == product.id,
                         Stock.organization_id == org_id
-                    ).first()
+                    )
+                    result = await db.execute(stmt)
+                    existing_stock = result.scalar_one_or_none()
                     
                     if existing_stock:
                         # Update existing stock only if initial_quantity was provided
@@ -392,7 +414,7 @@ async def import_products_excel(
                 continue
         
         # Commit all changes
-        db.commit()
+        await db.commit()
         
         logger.info(f"Products import completed completed by {current_user.email}: "
                    f"{created_count} created, {updated_count} updated, "
@@ -436,7 +458,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def upload_product_file(
     product_id: int,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Upload a file for a product (max 5 files per product)"""
@@ -449,10 +471,12 @@ async def upload_product_file(
         )
     
     # Verify product exists and belongs to current organization
-    product = db.query(Product).filter(
+    stmt = select(Product).where(
         Product.id == product_id,
         Product.organization_id == org_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     
     if not product:
         raise HTTPException(
@@ -461,10 +485,13 @@ async def upload_product_file(
         )
     
     # Check file count limit (max 5 files per product)
-    existing_files_count = db.query(ProductFile).filter(
+    stmt = select(ProductFile).where(
         ProductFile.product_id == product_id,
         ProductFile.organization_id == org_id
-    ).count()
+    )
+    result = await db.execute(stmt)
+    existing_files = result.scalars().all()
+    existing_files_count = len(existing_files)
     
     if existing_files_count >= 5:
         raise HTTPException(
@@ -501,8 +528,8 @@ async def upload_product_file(
         )
         
         db.add(db_file)
-        db.commit()
-        db.refresh(db_file)
+        await db.commit()
+        await db.refresh(db_file)
         
         return ProductFileResponse(
             id=db_file.id,
@@ -527,7 +554,7 @@ async def upload_product_file(
 @router.get("/{product_id}/files", response_model=List[ProductFileResponse])
 async def get_product_files(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all files for a product"""
@@ -540,10 +567,12 @@ async def get_product_files(
         )
     
     # Verify product exists and belongs to current organization
-    product = db.query(Product).filter(
+    stmt = select(Product).where(
         Product.id == product_id,
         Product.organization_id == org_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     
     if not product:
         raise HTTPException(
@@ -551,10 +580,12 @@ async def get_product_files(
             detail="Product not found"
         )
     
-    files = db.query(ProductFile).filter(
+    stmt = select(ProductFile).where(
         ProductFile.product_id == product_id,
         ProductFile.organization_id == org_id
-    ).all()
+    )
+    result = await db.execute(stmt)
+    files = result.scalars().all()
     
     return [
         ProductFileResponse(
@@ -572,7 +603,7 @@ async def get_product_files(
 async def download_product_file(
     product_id: int,
     file_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Download a product file"""
@@ -585,11 +616,13 @@ async def download_product_file(
         )
     
     # Get file record
-    file_record = db.query(ProductFile).filter(
+    stmt = select(ProductFile).where(
         ProductFile.id == file_id,
         ProductFile.product_id == product_id,
         ProductFile.organization_id == org_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    file_record = result.scalar_one_or_none()
     
     if not file_record:
         raise HTTPException(
@@ -614,7 +647,7 @@ async def download_product_file(
 async def delete_product_file(
     product_id: int,
     file_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete a product file"""
@@ -627,11 +660,13 @@ async def delete_product_file(
         )
     
     # Get file record
-    file_record = db.query(ProductFile).filter(
+    stmt = select(ProductFile).where(
         ProductFile.id == file_id,
         ProductFile.product_id == product_id,
         ProductFile.organization_id == org_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    file_record = result.scalar_one_or_none()
     
     if not file_record:
         raise HTTPException(
@@ -645,8 +680,8 @@ async def delete_product_file(
             os.remove(file_record.file_path)
         
         # Remove database record
-        db.delete(file_record)
-        db.commit()
+        await db.delete(file_record)
+        await db.commit()
         
         return {"message": "File deleted successfully"}
         
@@ -661,7 +696,7 @@ async def delete_product_file(
 @router.post("/check-consistency")
 async def check_products_stock_consistency(
     fix_issues: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """
@@ -678,8 +713,13 @@ async def check_products_stock_consistency(
         )
     
     # Count products and stock entries
-    products_count = db.query(Product).filter(Product.organization_id == org_id).count()
-    stock_count = db.query(Stock).filter(Stock.organization_id == org_id).count()
+    stmt = select(Product).where(Product.organization_id == org_id)
+    result = await db.execute(stmt)
+    products_count = len(result.scalars().all())
+    
+    stmt = select(Stock).where(Stock.organization_id == org_id)
+    result = await db.execute(stmt)
+    stock_count = len(result.scalars().all())
     
     result = {
         "organization_id": org_id,
@@ -689,13 +729,15 @@ async def check_products_stock_consistency(
     }
     
     # Find products without stock entries
-    products_without_stock = db.query(Product).outerjoin(
+    stmt = select(Product).outerjoin(
         Stock, Product.id == Stock.product_id
-    ).filter(
+    ).where(
         Product.organization_id == org_id,
         Product.is_active == True,
         Stock.id.is_(None)
-    ).all()
+    )
+    result = await db.execute(stmt)
+    products_without_stock = result.scalars().all()
     
     if products_without_stock:
         result["consistency_issues"].append({
@@ -719,12 +761,14 @@ async def check_products_stock_consistency(
             result["fixed_missing_stock"] = len(products_without_stock)
     
     # Find orphaned stock entries
-    orphaned_stock = db.query(Stock).outerjoin(
+    stmt = select(Stock).outerjoin(
         Product, Stock.product_id == Product.id
-    ).filter(
+    ).where(
         Stock.organization_id == org_id,
         Product.id.is_(None)
-    ).all()
+    )
+    result = await db.execute(stmt)
+    orphaned_stock = result.scalars().all()
     
     if orphaned_stock:
         result["consistency_issues"].append({
@@ -736,18 +780,20 @@ async def check_products_stock_consistency(
         if fix_issues:
             # Remove orphaned stock entries
             for stock in orphaned_stock:
-                db.delete(stock)
+                await db.delete(stock)
             
             result["removed_orphaned_stock"] = len(orphaned_stock)
     
     # Check for inactive products with stock
-    inactive_products_with_stock = db.query(Product, Stock).join(
+    stmt = select(Product, Stock).join(
         Stock, Product.id == Stock.product_id
-    ).filter(
+    ).where(
         Product.organization_id == org_id,
         Product.is_active == False,
         Stock.quantity > 0
-    ).all()
+    )
+    result = await db.execute(stmt)
+    inactive_products_with_stock = result.all()
     
     if inactive_products_with_stock:
         result["consistency_issues"].append({
@@ -766,7 +812,7 @@ async def check_products_stock_consistency(
     
     # Commit all fixes at once for atomicity if any fixes were applied
     if fix_issues and ("fixed_missing_stock" in result or "removed_orphaned_stock" in result):
-        db.commit()
+        await db.commit()
     
     return result
 

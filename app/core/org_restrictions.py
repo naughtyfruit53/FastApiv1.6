@@ -9,8 +9,9 @@ from typing import Union
 from app.schemas.user import CurrentUser
 from app.core.tenant import TenantContext
 from app.core.database import get_db
-from app.core.tenant import validate_company_setup_for_operations
-from sqlalchemy.orm import Session
+from app.core.tenant import validate_company_setup
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 import logging
 from app.api.v1.auth import get_current_active_user
 
@@ -113,8 +114,31 @@ def can_access_organization_data(user: CurrentUser = Depends(get_current_active_
     organization_id = getattr(user, 'organization_id', None)
     return organization_id is not None
 
-def validate_company_setup(db: Session = Depends(get_db), organization_id: int = Depends(require_current_organization_id)) -> None:
+async def validate_company_setup(db: AsyncSession = Depends(get_db), organization_id: int = Depends(require_current_organization_id)) -> None:
     """
     Dependency to validate company setup.
     """
-    validate_company_setup_for_operations(db, organization_id)
+    # Validate that organization exists
+    result = await db.execute(select(Organization).filter_by(id=organization_id))
+    org = result.scalars().first()
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found. Please contact system administrator."
+        )
+    
+    # Check if company details are marked as completed
+    if not org.company_details_completed:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail="Company details must be completed before performing this operation. Please set up your company information first."
+        )
+    
+    # Verify company record actually exists
+    result = await db.execute(select(Company).filter_by(organization_id=organization_id))
+    company = result.scalars().first()
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail="Company record not found. Please complete company setup before performing this operation."
+        )

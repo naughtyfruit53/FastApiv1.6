@@ -4,8 +4,10 @@ import logging
 from typing import Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
 from app.core.security import (
@@ -33,20 +35,23 @@ class EmailLogin(BaseModel):
 @router.post("/login", response_model=LoginResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     request: Request = None
 ):
     # Handle both username and email login (assuming username can be email)
     email = form_data.username  # OAuth2 uses 'username', but treat as email
     password = form_data.password
 
-    user: Union[User, PlatformUser, None] = db.query(User).filter(User.email == email).first()
+    # Preload organization relationship to avoid sync IO
+    result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
+    user: Union[User, PlatformUser, None] = result.scalars().first()
     if not user:
-        user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
+        result = await db.execute(select(PlatformUser).filter_by(email=email))
+        user = result.scalars().first()
 
     if not user or not verify_password(password, user.hashed_password):
         logger.info(f"[LOGIN:FAILED] Email: {email}")
-        create_audit_log(
+        await create_audit_log(
             db=db,
             table_name="security_events",
             record_id=user.id if user else None,
@@ -84,7 +89,8 @@ async def login(
         organization_name = user.organization.name if user.organization else None
 
     user.last_login = datetime.utcnow()
-    db.commit()
+    await db.commit()
+    await db.refresh(user)
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -104,7 +110,7 @@ async def login(
         expires_delta=refresh_token_expires
     )
 
-    create_audit_log(
+    await create_audit_log(
         db=db,
         table_name="security_events",
         record_id=user.id,
@@ -145,16 +151,18 @@ async def login(
 @router.post("/refresh-token", response_model=Token)
 async def refresh_token(
     refresh_token: str = Body(...),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     email, organization_id, user_role, user_type = verify_token(refresh_token, expected_type="refresh")
     if not email:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     if user_type == "platform":
-        user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
+        result = await db.execute(select(PlatformUser).filter_by(email=email))
+        user = result.scalars().first()
     else:
-        user = db.query(User).filter(User.email == email).first()
+        result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
+        user = result.scalars().first()
 
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
@@ -182,13 +190,14 @@ async def refresh_token(
 @router.get("/logout")
 async def logout(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     request: Request = None
 ):
     email, organization_id, user_role, user_type = verify_token(token)
-    user = db.query(User).filter(User.email == email).first()
+    result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
+    user = result.scalars().first()
     if user:
-        create_audit_log(
+        await create_audit_log(
             db=db,
             table_name="security_events",
             record_id=user.id,
@@ -207,34 +216,34 @@ async def logout(
         )
     return {"message": "Successfully logged out"}
 
-def get_current_active_user(current_user: UserInDB = Depends(core_get_current_user)):
+async def get_current_active_user(current_user: UserInDB = Depends(core_get_current_user)):
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def get_current_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
+async def get_current_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
     if current_user.role not in ["admin", "org_admin", "company_admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user
 
-def get_current_org_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
+async def get_current_org_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
     """Check if user is organization admin (excludes company admins)"""
     if current_user.role not in ["org_admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Organization admin access required")
     return current_user
 
-def get_current_company_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
+async def get_current_company_admin_user(current_user: UserInDB = Depends(get_current_active_user)):
     """Check if user is company admin or higher"""
     if current_user.role not in ["company_admin", "org_admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Company admin access required")
     return current_user
 
-def get_current_super_admin(current_user: UserInDB = Depends(get_current_active_user)):
+async def get_current_super_admin(current_user: UserInDB = Depends(get_current_active_user)):
     if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Not super admin")
     return current_user
 
-def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
+async def get_current_user_optional(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> Optional[User]:
     if not token:
         return None
     credentials_exception = HTTPException(
@@ -248,7 +257,8 @@ def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Session =
     email: str = payload.get("sub")
     if email is None:
         raise credentials_exception
-    user = db.query(User).filter(User.email == email).first()
+    result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
+    user = result.scalars().first()
     if user is None:
         raise credentials_exception
     return user

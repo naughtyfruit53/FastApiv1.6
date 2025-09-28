@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings as config_settings
-from app.core.database import create_tables, SessionLocal
+from app.core.database import create_tables, AsyncSessionLocal
 from app.core.tenant import TenantMiddleware
 from app.core.seed_super_admin import seed_super_admin
 from app.api import companies, vendors, customers, products, reports, platform, settings, pincode, customer_analytics, notifications
@@ -505,18 +505,18 @@ async def startup_event():
     """Initialize application: log CORS config, setup database, and seed super admin"""
     logger.info("Starting up TritIQ Business Suite API...")
     try:
-        create_tables()
+        await create_tables()
         logger.info("Database tables created successfully")
         from app.core.seed_super_admin import check_database_schema_updated
-        db = SessionLocal()
+        db = AsyncSessionLocal()
         try:
-            if check_database_schema_updated(db):
-                seed_super_admin(db)
+            if await check_database_schema_updated(db):
+                await seed_super_admin(db)
                 logger.info("Super admin seeding completed")
             else:
                 logger.warning("Database schema is not updated. Run 'alembic upgrade head' to enable super admin seeding.")
         finally:
-            db.close()
+            await db.close()
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         raise

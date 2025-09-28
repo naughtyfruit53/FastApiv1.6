@@ -2,12 +2,13 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, outerjoin, or_
 from typing import List, Optional, Dict, Any
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin, validate_company_setup_for_operations
-from app.core.org_restrictions import require_current_organization_id
+from app.core.tenant import TenantQueryMixin
+from app.core.org_restrictions import require_current_organization_id, validate_company_setup
 from app.models import User, Stock, Product, Organization, Company, InventoryTransaction, PurchaseVoucher, Vendor
 from app.schemas.stock import (
     StockCreate, StockUpdate, StockInDB, StockWithProduct,
@@ -18,8 +19,8 @@ from app.utils.excel_import import StockExcelImporter
 from app.services.excel_service import StockExcelService, ExcelService
 from app.schemas.inventory import InventoryTransactionResponse
 from datetime import datetime, timedelta
-from sqlalchemy import outerjoin, or_
 import logging
+import pytz
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -32,7 +33,7 @@ async def get_stock(
     low_stock_only: bool = False,
     search: str = Query("", description="Search term for stock items"),
     show_zero: bool = Query(False, description="Show items with zero quantity"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -61,7 +62,7 @@ async def get_stock(
         
         if getattr(current_user, 'is_super_admin', False):
             logger.info("Super admin access - querying all stocks")
-            query = db.query(Stock, Product).join(Product)
+            stmt = select(Stock, Product).join(Product)
         else:
             # For non-super-admin users, use their organization_id directly
             org_id = current_user.organization_id
@@ -72,32 +73,33 @@ async def get_stock(
                     detail="User is not associated with any organization"
                 )
             logger.info(f"Organization-specific access for org_id: {org_id}")
-            query = db.query(Stock, Product).join(Product)
-            query = TenantQueryMixin.filter_by_tenant(query, Stock, org_id)
+            stmt = select(Stock, Product).join(Product)
+            stmt = TenantQueryMixin.filter_by_tenant(stmt, Stock, org_id)
     
         if product_id is not None:
             logger.info(f"Filtering by product_id: {product_id}")
-            query = query.filter(Stock.product_id == product_id)
+            stmt = stmt.where(Stock.product_id == product_id)
         
         if low_stock_only:
             logger.info("Filtering for low stock items only")
             # Filter for products where stock quantity <= reorder level
-            query = query.filter(Stock.quantity <= Product.reorder_level)
+            stmt = stmt.where(Stock.quantity <= Product.reorder_level)
         
         if search:
             logger.info(f"Searching for products with term: {search}")
-            query = query.filter(Product.product_name.ilike(f"%{search}%"))
+            stmt = stmt.where(Product.product_name.ilike(f"%{search}%"))
         
         if not show_zero:
             logger.info("Excluding zero quantity items")
-            query = query.filter(Stock.quantity > 0)
+            stmt = stmt.where(Stock.quantity > 0)
         
         logger.info(f"Executing stock query with skip={skip}, limit={limit}")
-        stock_product_pairs = query.offset(skip).limit(limit).all()
+        result = await db.execute(stmt.offset(skip).limit(limit))
+        stock_product_pairs = result.all()
         logger.info(f"Found {len(stock_product_pairs)} stock items")
         
         # Transform the results to include product information
-        result = []
+        result_list = []
         for stock, product in stock_product_pairs:
             try:
                 unit_price = product.unit_price or 0.0
@@ -119,7 +121,7 @@ async def get_stock(
                     is_active=product.is_active,
                     total_value=total_value
                 )
-                result.append(stock_with_product)
+                result_list.append(stock_with_product)
             except Exception as e:
                 logger.error(f"Error creating StockWithProduct for stock ID {stock.id}: {e}")
                 logger.error(f"Stock data: {stock.__dict__ if hasattr(stock, '__dict__') else 'No dict'}")
@@ -127,8 +129,8 @@ async def get_stock(
                 # Continue processing other items instead of failing completely
                 continue
         
-        logger.info(f"Successfully transformed {len(result)} stock items")
-        return result
+        logger.info(f"Successfully transformed {len(result_list)} stock items")
+        return result_list
         
     except Exception as e:
         logger.error(f"Unexpected error in get_stock endpoint: {e}")
@@ -142,7 +144,7 @@ async def get_stock(
 
 @router.get("/low-stock", response_model=List[StockWithProduct])
 async def get_low_stock(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get products with low stock (below reorder level) with product details, including products without stock entries"""
@@ -158,7 +160,7 @@ async def get_low_stock(
     
     if getattr(current_user, 'is_super_admin', False):
         logger.info("Super admin access - querying all low stock items")
-        query = db.query(Stock, Product).outerjoin(Stock, Stock.product_id == Product.id).filter(
+        stmt = select(Stock, Product).outerjoin(Stock, Stock.product_id == Product.id).where(
             or_(
                 Stock.quantity <= Product.reorder_level,
                 Stock.id == None  # Products without stock entries
@@ -175,7 +177,7 @@ async def get_low_stock(
                 detail="User is not associated with any organization"
             )
         logger.info(f"Organization-specific low stock access for org_id: {org_id}")
-        query = db.query(Stock, Product).outerjoin(Stock, Stock.product_id == Product.id).filter(
+        stmt = select(Stock, Product).outerjoin(Stock, Stock.product_id == Product.id).where(
             or_(
                 Stock.quantity <= Product.reorder_level,
                 Stock.id == None  # Products without stock entries
@@ -184,10 +186,11 @@ async def get_low_stock(
             Product.organization_id == org_id
         )
     
-    stock_product_pairs = query.all()
+    result = await db.execute(stmt)
+    stock_product_pairs = result.all()
     
     # Transform the results to include product information, handling missing stock
-    result = []
+    result_list = []
     for stock, product in stock_product_pairs:
         try:
             effective_quantity = stock.quantity if stock else 0.0
@@ -213,19 +216,19 @@ async def get_low_stock(
                 is_active=product.is_active,
                 total_value=total_value
             )
-            result.append(stock_with_product)
+            result_list.append(stock_with_product)
         except Exception as e:
             logger.error(f"Error creating StockWithProduct for low stock product ID {product.id}: {e}")
             continue
     
-    return result
+    return result_list
 
 @router.get("/movements", response_model=List[InventoryTransactionResponse])
 async def get_stock_movements(
     search: Optional[str] = Query(None, description="Search term for movements"),
     recent: bool = Query(True, description="Show only recent movements (last 30 days)"),
     product_id: Optional[int] = Query(None, description="Filter by specific product ID"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get stock movement history (inventory transactions)"""
@@ -239,23 +242,23 @@ async def get_stock_movements(
             detail="Access denied. You do not have permission to view stock movements."
         )
     
-    query = db.query(InventoryTransaction)
+    stmt = select(InventoryTransaction)
     
     if not current_user.is_super_admin:
         org_id = current_user.organization_id
         if org_id is None:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail="User is not associated with any organization"
             )
-        query = TenantQueryMixin.filter_by_tenant(query, InventoryTransaction, org_id)
+        stmt = TenantQueryMixin.filter_by_tenant(stmt, InventoryTransaction, org_id)
     
     if recent:
-        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-        query = query.filter(InventoryTransaction.created_at >= thirty_days_ago)
+        thirty_days_ago = datetime.now(pytz.utc) - timedelta(days=30)
+        stmt = stmt.where(InventoryTransaction.created_at >= thirty_days_ago)
     
     if search:
-        query = query.filter(
+        stmt = stmt.where(
             or_(
                 InventoryTransaction.transaction_type.ilike(f"%{search}%"),
                 InventoryTransaction.reference_number.ilike(f"%{search}%"),
@@ -264,27 +267,30 @@ async def get_stock_movements(
         )
     
     if product_id:
-        query = query.filter(InventoryTransaction.product_id == product_id)
+        stmt = stmt.where(InventoryTransaction.product_id == product_id)
     
-    query = query.order_by(InventoryTransaction.created_at.desc())
+    stmt = stmt.order_by(InventoryTransaction.created_at.desc())
     
-    movements = query.all()
+    result = await db.execute(stmt)
+    movements = result.scalars().all()
     
     # Transform to response schema with product name
-    result = []
+    result_list = []
     for movement in movements:
-        product = db.query(Product).filter(Product.id == movement.product_id).first()
-        result.append(InventoryTransactionResponse(
+        stmt_product = select(Product).where(Product.id == movement.product_id)
+        result_product = await db.execute(stmt_product)
+        product = result_product.scalar_one_or_none()
+        result_list.append(InventoryTransactionResponse(
             **movement.__dict__,
             product_name=product.product_name if product else "Unknown Product"
         ))
     
-    return result
+    return result_list
 
 @router.get("/product/{product_id}/last-vendor", response_model=Dict[str, Any])
 async def get_last_vendor_for_product(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the last vendor who supplied this product"""
@@ -299,9 +305,12 @@ async def get_last_vendor_for_product(
         )
     
     # Find the most recent purchase voucher containing this product
-    last_purchase = db.query(PurchaseVoucher).join(PurchaseVoucher.items).filter(
+    from app.models.vouchers.purchase import PurchaseVoucherItem  # Assuming this is the model
+    stmt = select(PurchaseVoucher).join(PurchaseVoucherItem).where(
         PurchaseVoucherItem.product_id == product_id
-    ).order_by(PurchaseVoucher.date.desc()).first()
+    ).order_by(PurchaseVoucher.date.desc())
+    result = await db.execute(stmt)
+    last_purchase = result.scalar_one_or_none()
     
     if not last_purchase:
         return None
@@ -310,7 +319,9 @@ async def get_last_vendor_for_product(
     if not current_user.is_super_admin:
         TenantQueryMixin.ensure_tenant_access(last_purchase, current_user.organization_id)
     
-    vendor = db.query(Vendor).filter(Vendor.id == last_purchase.vendor_id).first()
+    stmt_vendor = select(Vendor).where(Vendor.id == last_purchase.vendor_id)
+    result_vendor = await db.execute(stmt_vendor)
+    vendor = result_vendor.scalar_one_or_none()
     
     if not vendor:
         return None
@@ -324,7 +335,7 @@ async def get_last_vendor_for_product(
 @router.get("/product/{product_id}", response_model=StockInDB)
 async def get_product_stock(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get stock for specific product"""
@@ -338,11 +349,15 @@ async def get_product_stock(
             detail="Access denied. You do not have permission to view stock information."
         )
     
-    stock = db.query(Stock).filter(Stock.product_id == product_id).first()
+    stmt = select(Stock).where(Stock.product_id == product_id)
+    result = await db.execute(stmt)
+    stock = result.scalar_one_or_none()
     
     if not stock:
         # Return zero stock if no record exists
-        product = db.query(Product).filter(Product.id == product_id).first()
+        stmt_product = select(Product).where(Product.id == product_id)
+        result_product = await db.execute(stmt_product)
+        product = result_product.scalar_one_or_none()
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -372,7 +387,7 @@ async def get_product_stock(
 @router.post("", response_model=StockInDB)
 async def create_stock_entry(
     stock: StockCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new stock entry"""
@@ -389,7 +404,9 @@ async def create_stock_entry(
     org_id = require_current_organization_id(current_user)
     
     # Check if product exists
-    product = db.query(Product).filter(Product.id == stock.product_id).first()
+    stmt = select(Product).where(Product.id == stock.product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -401,10 +418,12 @@ async def create_stock_entry(
         TenantQueryMixin.ensure_tenant_access(product, current_user.organization_id)
     
     # Check if stock entry already exists
-    existing_stock = db.query(Stock).filter(
+    stmt = select(Stock).where(
         Stock.product_id == stock.product_id,
         Stock.organization_id == org_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing_stock = result.scalar_one_or_none()
     if existing_stock:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -417,8 +436,8 @@ async def create_stock_entry(
         **stock.dict()
     )
     db.add(db_stock)
-    db.commit()
-    db.refresh(db_stock)
+    await db.commit()
+    await db.refresh(db_stock)
     
     logger.info(f"Stock entry created for product {product.product_name} by {current_user.email}")
     return db_stock
@@ -427,7 +446,7 @@ async def create_stock_entry(
 async def update_stock(
     product_id: int,
     stock_update: StockUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update stock for a product"""
@@ -441,11 +460,15 @@ async def update_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    stock = db.query(Stock).filter(Stock.product_id == product_id).first()
+    stmt = select(Stock).where(Stock.product_id == product_id)
+    result = await db.execute(stmt)
+    stock = result.scalar_one_or_none()
     
     if not stock:
         # Create new stock entry if doesn't exist
-        product = db.query(Product).filter(Product.id == product_id).first()
+        stmt_product = select(Product).where(Product.id == product_id)
+        result_product = await db.execute(stmt_product)
+        product = result_product.scalar_one_or_none()
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -464,8 +487,8 @@ async def update_stock(
         for field, value in stock_update.dict(exclude_unset=True).items():
             setattr(stock, field, value)
     
-    db.commit()
-    db.refresh(stock)
+    await db.commit()
+    await db.refresh(stock)
     
     logger.info(f"Stock updated for product ID {product_id} by {current_user.email}")
     return stock
@@ -474,7 +497,7 @@ async def update_stock(
 async def adjust_stock(
     product_id: int,
     adjustment: StockAdjustment,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Enhanced stock quantity adjustment with detailed response"""
@@ -488,10 +511,14 @@ async def adjust_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    stock = db.query(Stock).filter(Stock.product_id == product_id).first()
+    stmt = select(Stock).where(Stock.product_id == product_id)
+    result = await db.execute(stmt)
+    stock = result.scalar_one_or_none()
     
     if not stock:
-        product = db.query(Product).filter(Product.id == product_id).first()
+        stmt_product = select(Product).where(Product.id == product_id)
+        result_product = await db.execute(stmt_product)
+        product = result_product.scalar_one_or_none()
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -521,8 +548,8 @@ async def adjust_stock(
         stock.quantity = new_quantity
     
     try:
-        db.commit()
-        db.refresh(stock)
+        await db.commit()
+        await db.refresh(stock)
         
         logger.info(f"Stock adjusted for product ID {product_id}: {adjustment.quantity_change:+.2f} - {adjustment.reason} by {current_user.email}")
         
@@ -534,7 +561,7 @@ async def adjust_stock(
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error adjusting stock: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -546,7 +573,7 @@ async def bulk_import_stock(
     file: UploadFile = File(...),
     mode: str = "replace",  # New parameter: 'add' or 'replace'
     organization_id: Optional[int] = Query(None, description="Organization ID (only for super admins)"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Enhanced bulk import stock entries from Excel file with comprehensive validation and mode selection"""
@@ -567,7 +594,9 @@ async def bulk_import_stock(
         org_id = organization_id
         logger.info(f"[bulk_import_stock] Super admin importing for org_id: {org_id}")
         # Validate organization exists
-        org = db.query(Organization).filter(Organization.id == org_id).first()
+        stmt = select(Organization).where(Organization.id == org_id)
+        result = await db.execute(stmt)
+        org = result.scalar_one_or_none()
         if not org:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -582,9 +611,9 @@ async def bulk_import_stock(
         logger.info(f"[bulk_import_stock] Regular user importing for their org_id: {org_id}")
 
     # Validate company setup is completed before allowing inventory operations
-    validate_company_setup_for_operations(db, org_id)
+    await validate_company_setup(db, org_id)
 
-    start_time = datetime.utcnow()
+    start_time = datetime.now(pytz.utc)
     
     # Validate mode
     if mode not in ['add', 'replace']:
@@ -679,10 +708,12 @@ async def bulk_import_stock(
                 logger.debug(f"Processing row {i}: product_name={product_name}, unit={unit}, quantity={quantity}")
                 
                 # Check if product exists by name
-                product = db.query(Product).filter(
+                stmt = select(Product).where(
                     Product.product_name == product_name,
                     Product.organization_id == org_id
-                ).first()
+                )
+                result = await db.execute(stmt)
+                product = result.scalar_one_or_none()
                 
                 if not product:
                     # Create new product if not exists with enhanced validation
@@ -743,7 +774,7 @@ async def bulk_import_stock(
                             **product_data
                         )
                         db.add(new_product)
-                        db.flush()  # Get the new product ID
+                        await db.flush()  # Get the new product ID
                         product = new_product
                         created_products += 1
                         logger.info(f"Created new product: {product_name}")
@@ -762,10 +793,12 @@ async def bulk_import_stock(
                         continue
                 
                 # Handle stock with enhanced validation
-                stock = db.query(Stock).filter(
+                stmt = select(Stock).where(
                     Stock.product_id == product.id,
                     Stock.organization_id == org_id
-                ).first()
+                )
+                result = await db.execute(stmt)
+                stock = result.scalar_one_or_none()
                 
                 location = str(record.get("location", "")).strip() or ""
                 
@@ -811,9 +844,9 @@ async def bulk_import_stock(
                 continue
         
         # Commit all changes
-        db.commit()
+        await db.commit()
         
-        end_time = datetime.utcnow()
+        end_time = datetime.now(pytz.utc)
         processing_time = (end_time - start_time).total_seconds()
         
         logger.info(f"Stock import completed by {current_user.email}: "
@@ -859,7 +892,7 @@ async def bulk_import_stock(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_stock_excel(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Import stock entries from Excel file - alias for bulk import"""
@@ -885,7 +918,7 @@ async def export_stock_excel(
     limit: int = 1000,
     product_id: int = None,
     low_stock_only: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export stock to Excel"""
@@ -893,18 +926,19 @@ async def export_stock_excel(
     org_id = require_current_organization_id(current_user)
     
     # Get stock using the same logic as the list endpoint
-    query = db.query(Stock).join(Product)
+    stmt = select(Stock).join(Product)
     
     # Apply tenant filtering
-    query = TenantQueryMixin.filter_by_tenant(query, Stock, org_id)
+    stmt = TenantQueryMixin.filter_by_tenant(stmt, Stock, org_id)
     
     if product_id:
-        query = query.filter(Stock.product_id == product_id)
+        stmt = stmt.where(Stock.product_id == product_id)
     
     if low_stock_only:
-        query = query.filter(Stock.quantity <= Product.reorder_level)
+        stmt = stmt.where(Stock.quantity <= Product.reorder_level)
     
-    stock_items = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    stock_items = result.scalars().all()
     
     # Convert to dict format for Excel export
     stock_data = []

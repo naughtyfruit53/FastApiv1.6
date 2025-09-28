@@ -3,7 +3,7 @@ Audit logging system for security-sensitive operations
 """
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import logging
 
@@ -12,8 +12,8 @@ from app.models import AuditLog
 logger = logging.getLogger(__name__)
 
 
-def create_audit_log(
-    db: Session,
+async def create_audit_log(
+    db: AsyncSession,
     table_name: str,
     record_id: Any,
     action: str,
@@ -35,13 +35,13 @@ def create_audit_log(
             user_agent=user_agent
         )
         db.add(audit_log)
-        db.commit()
-        db.refresh(audit_log)
+        await db.commit()
+        await db.refresh(audit_log)
         logger.info(f"Audit log created for {table_name}:{action}")
         return audit_log
     except Exception as e:
         logger.error(f"Failed to create audit log: {e}")
-        db.rollback()
+        await db.rollback()
         return None
 
 
@@ -49,8 +49,8 @@ class AuditLogger:
     """Service for logging audit events"""
     
     @staticmethod
-    def log_login_attempt(
-        db: Session,
+    async def log_login_attempt(
+        db: AsyncSession,
         email: str,
         success: bool,
         organization_id: Optional[int] = None,
@@ -62,7 +62,7 @@ class AuditLogger:
         details: Optional[Dict[str, Any]] = None
     ) -> Optional[object]:
         """Log login attempt"""
-        return AuditLogger._create_security_audit_log(
+        return await AuditLogger._create_security_audit_log(
             db=db,
             event_type="LOGIN",
             action="LOGIN_ATTEMPT",
@@ -78,8 +78,8 @@ class AuditLogger:
         )
     
     @staticmethod
-    def log_master_password_usage(
-        db: Session,
+    async def log_master_password_usage(
+        db: AsyncSession,
         email: str,
         organization_id: Optional[int] = None,
         user_id: Optional[int] = None,
@@ -88,7 +88,7 @@ class AuditLogger:
         details: Optional[Dict[str, Any]] = None
     ) -> Optional[object]:
         """Log temporary master password usage"""
-        return AuditLogger._create_security_audit_log(
+        return await AuditLogger._create_security_audit_log(
             db=db,
             event_type="SECURITY",
             action="MASTER_PASSWORD_USED",
@@ -103,8 +103,8 @@ class AuditLogger:
         )
     
     @staticmethod
-    def log_password_reset(
-        db: Session,
+    async def log_password_reset(
+        db: AsyncSession,
         admin_email: str,
         target_email: str,
         admin_user_id: Optional[int] = None,
@@ -123,7 +123,7 @@ class AuditLogger:
             "reset_type": reset_type
         }
         
-        return AuditLogger._create_security_audit_log(
+        return await AuditLogger._create_security_audit_log(
             db=db,
             event_type="PASSWORD_RESET",
             action="ADMIN_PASSWORD_RESET",
@@ -138,8 +138,8 @@ class AuditLogger:
         )
     
     @staticmethod
-    def log_data_reset(
-        db: Session,
+    async def log_data_reset(
+        db: AsyncSession,
         admin_email: str,
         admin_user_id: Optional[int] = None,
         organization_id: Optional[int] = None,
@@ -158,7 +158,7 @@ class AuditLogger:
             **(details or {})
         }
         
-        return AuditLogger._create_security_audit_log(
+        return await AuditLogger._create_security_audit_log(
             db=db,
             event_type="DATA_RESET",
             action="ADMIN_DATA_RESET",
@@ -173,8 +173,8 @@ class AuditLogger:
         )
     
     @staticmethod
-    def log_permission_denied(
-        db: Session,
+    async def log_permission_denied(
+        db: AsyncSession,
         user_email: str,
         attempted_action: str,
         user_id: Optional[int] = None,
@@ -190,7 +190,7 @@ class AuditLogger:
             **(details or {})
         }
         
-        return AuditLogger._create_security_audit_log(
+        return await AuditLogger._create_security_audit_log(
             db=db,
             event_type="SECURITY",
             action="PERMISSION_DENIED",
@@ -206,8 +206,8 @@ class AuditLogger:
         )
     
     @staticmethod
-    def _create_security_audit_log(
-        db: Session,
+    async def _create_security_audit_log(
+        db: AsyncSession,
         event_type: str,
         action: str,
         user_email: str,
@@ -232,7 +232,7 @@ class AuditLogger:
             "ip_address": ip_address,
             "user_agent": user_agent
         }
-        return create_audit_log(
+        return await create_audit_log(
             db=db,
             table_name="security_events",
             record_id=user_id or 0,

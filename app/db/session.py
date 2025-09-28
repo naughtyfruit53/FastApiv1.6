@@ -2,74 +2,75 @@
 Enhanced database session management with automatic rollback and retry logic.
 """
 
-from contextlib import contextmanager
-from typing import Generator, Callable, Any, Optional, Type
-from sqlalchemy.orm import Session
+from contextlib import contextmanager, asynccontextmanager
+from typing import Generator, Callable, Any, Optional, Type, AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
-from app.core.database import SessionLocal
+from app.core.database import AsyncSessionLocal
 from app.core.logging import get_logger, log_database_operation
 import time
 import logging
+import asyncio
 
 logger = get_logger("session")
 
 class SessionManager:
     """Enhanced session manager with automatic error handling and rollback"""
     
-    def __init__(self, session_factory: Callable = SessionLocal):
+    def __init__(self, session_factory: Callable = AsyncSessionLocal):
         self.session_factory = session_factory
     
-    @contextmanager
-    def get_session(self) -> Generator[Session, None, None]:
+    @asynccontextmanager
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """
-        Get a database session with automatic rollback on error.
+        Get an asynchronous database session with automatic rollback on error.
         
         Usage:
-            with session_manager.get_session() as db:
+            async with session_manager.get_session() as db:
                 # perform database operations
-                db.add(model_instance)
-                db.commit()  # Explicit commit required
+                await db.add(model_instance)
+                await db.commit()  # Explicit commit required
         """
         session = self.session_factory()
         try:
             yield session
         except Exception as e:
             logger.error(f"Session error occurred: {e}")
-            session.rollback()
+            await session.rollback()
             raise
         finally:
-            session.close()
+            await session.close()
     
-    @contextmanager
-    def get_transaction(self, auto_commit: bool = True) -> Generator[Session, None, None]:
+    @asynccontextmanager
+    async def get_transaction(self, auto_commit: bool = True) -> AsyncGenerator[AsyncSession, None]:
         """
-        Get a database session with transaction management.
+        Get an asynchronous database session with transaction management.
         
         Args:
             auto_commit: If True, automatically commits on success
         
         Usage:
-            with session_manager.get_transaction() as db:
+            async with session_manager.get_transaction() as db:
                 # perform database operations
-                db.add(model_instance)
+                await db.add(model_instance)
                 # automatic commit on success, rollback on error
         """
         session = self.session_factory()
         try:
             yield session
             if auto_commit:
-                session.commit()
+                await session.commit()
                 logger.debug("Transaction committed successfully")
         except Exception as e:
             logger.error(f"Transaction failed: {e}")
-            session.rollback()
+            await session.rollback()
             logger.debug("Transaction rolled back")
             raise
         finally:
-            session.close()
+            await session.close()
     
-    def execute_with_retry(self, 
-                          operation: Callable[[Session], Any], 
+    async def execute_with_retry(self, 
+                          operation: Callable[[AsyncSession], Any], 
                           max_retries: int = 3,
                           retry_delay: float = 1.0,
                           exponential_backoff: bool = True) -> Any:
@@ -92,8 +93,8 @@ class SessionManager:
         
         for attempt in range(max_retries + 1):
             try:
-                with self.get_transaction() as session:
-                    result = operation(session)
+                async with self.get_transaction() as session:
+                    result = await operation(session)
                     logger.debug(f"Operation succeeded on attempt {attempt + 1}")
                     return result
                     
@@ -102,7 +103,7 @@ class SessionManager:
                 if attempt < max_retries:
                     delay = retry_delay * (2 ** attempt) if exponential_backoff else retry_delay
                     logger.warning(f"Operation failed (attempt {attempt + 1}/{max_retries + 1}): {e}. Retrying in {delay}s...")
-                    time.sleep(delay)
+                    await asyncio.sleep(delay)
                 else:
                     logger.error(f"Operation failed after {max_retries + 1} attempts: {e}")
             except Exception as e:
@@ -112,7 +113,7 @@ class SessionManager:
         
         raise last_exception
     
-    def safe_execute(self, operation: Callable[[Session], Any]) -> tuple[bool, Any, Optional[str]]:
+    async def safe_execute(self, operation: Callable[[AsyncSession], Any]) -> tuple[bool, Any, Optional[str]]:
         """
         Safely execute a database operation without raising exceptions.
         
@@ -123,8 +124,8 @@ class SessionManager:
             Tuple of (success: bool, result: Any, error_message: Optional[str])
         """
         try:
-            with self.get_transaction() as session:
-                result = operation(session)
+            async with self.get_transaction() as session:
+                result = await operation(session)
                 return True, result, None
         except Exception as e:
             error_msg = str(e)
@@ -135,19 +136,19 @@ class SessionManager:
 session_manager = SessionManager()
 
 # Convenience functions for common patterns
-@contextmanager
-def get_db_session() -> Generator[Session, None, None]:
+@asynccontextmanager
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """Get a database session (alias for session_manager.get_session)"""
-    with session_manager.get_session() as session:
+    async with session_manager.get_session() as session:
         yield session
 
-@contextmanager
-def get_db_transaction(auto_commit: bool = True) -> Generator[Session, None, None]:
+@asynccontextmanager
+async def get_db_transaction(auto_commit: bool = True) -> AsyncGenerator[AsyncSession, None]:
     """Get a database transaction (alias for session_manager.get_transaction)"""
-    with session_manager.get_transaction(auto_commit=auto_commit) as session:
+    async with session_manager.get_transaction(auto_commit=auto_commit) as session:
         yield session
 
-def execute_db_operation(operation: Callable[[Session], Any], 
+async def execute_db_operation(operation: Callable[[AsyncSession], Any], 
                         with_retry: bool = False,
                         max_retries: int = 3) -> Any:
     """
@@ -162,19 +163,19 @@ def execute_db_operation(operation: Callable[[Session], Any],
         Result of the operation
     """
     if with_retry:
-        return session_manager.execute_with_retry(operation, max_retries=max_retries)
+        return await session_manager.execute_with_retry(operation, max_retries=max_retries)
     else:
-        with get_db_transaction() as session:
-            return operation(session)
+        async with get_db_transaction() as session:
+            return await operation(session)
 
-def safe_db_operation(operation: Callable[[Session], Any]) -> tuple[bool, Any, Optional[str]]:
+async def safe_db_operation(operation: Callable[[AsyncSession], Any]) -> tuple[bool, Any, Optional[str]]:
     """
     Safely execute a database operation without raising exceptions.
     
     Returns:
         Tuple of (success, result, error_message)
     """
-    return session_manager.safe_execute(operation)
+    return await session_manager.safe_execute(operation)
 
 # Decorators for automatic session management
 def with_db_session(auto_commit: bool = True):
@@ -186,14 +187,14 @@ def with_db_session(auto_commit: bool = True):
     
     Usage:
         @with_db_session()
-        def my_function(db: Session, other_param: str):
+        async def my_function(db: AsyncSession, other_param: str):
             # db session is automatically provided
             pass
     """
     def decorator(func: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
-            with get_db_transaction(auto_commit=auto_commit) as session:
-                return func(session, *args, **kwargs)
+        async def wrapper(*args, **kwargs):
+            async with get_db_transaction(auto_commit=auto_commit) as session:
+                return await func(session, *args, **kwargs)
         return wrapper
     return decorator
 
@@ -206,15 +207,15 @@ def with_db_retry(max_retries: int = 3):
     
     Usage:
         @with_db_retry(max_retries=3)
-        def my_db_function(db: Session):
+        async def my_db_function(db: AsyncSession):
             # This function will be retried on transient failures
             pass
     """
     def decorator(func: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
-            def operation(session: Session):
-                return func(session, *args, **kwargs)
-            return session_manager.execute_with_retry(operation, max_retries=max_retries)
+        async def wrapper(*args, **kwargs):
+            async def operation(session: AsyncSession):
+                return await func(session, *args, **kwargs)
+            return await session_manager.execute_with_retry(operation, max_retries=max_retries)
         return wrapper
     return decorator
 
@@ -230,14 +231,14 @@ def log_db_operation(operation_type: str, table_name: str, record_id: Optional[i
     
     Usage:
         @log_db_operation("CREATE", "users")
-        def create_user(db: Session, user_data: dict):
+        async def create_user(db: AsyncSession, user_data: dict):
             # Operation will be logged
             pass
     """
     def decorator(func: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             try:
-                result = func(*args, **kwargs)
+                result = await func(*args, **kwargs)
                 log_database_operation(operation_type, table_name, record_id)
                 return result
             except Exception as e:
@@ -247,7 +248,7 @@ def log_db_operation(operation_type: str, table_name: str, record_id: Optional[i
     return decorator
 
 # Session health check
-def check_session_health() -> dict:
+async def check_session_health() -> dict:
     """
     Check the health of database sessions and connections.
     
@@ -255,9 +256,9 @@ def check_session_health() -> dict:
         Dictionary with health status information
     """
     try:
-        with get_db_session() as session:
+        async with get_db_session() as session:
             # Simple query to test connection
-            result = session.execute("SELECT 1")
+            result = await session.execute("SELECT 1")
             result.fetchone()
             
             return {
@@ -273,7 +274,7 @@ def check_session_health() -> dict:
         }
 
 # Connection pool monitoring
-def get_pool_status() -> dict:
+async def get_pool_status() -> dict:
     """
     Get the status of the database connection pool.
     
@@ -298,10 +299,10 @@ def get_pool_status() -> dict:
         }
 
 # FastAPI dependency for DB session
-def get_db() -> Generator[Session, None, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     FastAPI dependency that provides a database session.
     Yields the session and ensures it's closed after use.
     """
-    with session_manager.get_session() as session:
+    async with session_manager.get_session() as session:
         yield session

@@ -108,6 +108,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 15000,  // Global timeout: 15 seconds to prevent hangs
 });
 
 api.interceptors.request.use(
@@ -160,6 +161,13 @@ api.interceptors.response.use(
       error: error.response?.data,
       timestamp: new Date().toISOString(),
     });
+    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+      console.error("[API] Request timed out");
+      toast.error("Request timed out. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
     if (status === 401 && !originalRequest._retry) {
       if (originalRequest.headers?.Authorization) {
         console.log(`[API] ${status} Auth error - attempting token refresh`);

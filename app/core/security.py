@@ -4,7 +4,8 @@ from jose import jwt, exceptions
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 import logging  # Added for logging
 
 from app.core.config import settings
@@ -111,7 +112,7 @@ def is_super_admin_email(email: str) -> bool:
     return email.lower() in [e.lower() for e in super_admin_emails]
 
 # Dependency for FastAPI routes
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> Union[UserInDB, PlatformUserInDB]:
+async def get_current_user(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)) -> Union[UserInDB, PlatformUserInDB]:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -124,7 +125,8 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         raise credentials_exception
 
     if user_type == "platform":
-        user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
+        result = await db.execute(select(PlatformUser).filter_by(email=email))
+        user = result.scalars().first()
         if not user:
             logger.debug("Platform user not found in DB, raising credentials_exception")  # Replaced print with logger
             raise credentials_exception
@@ -133,7 +135,8 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         # Convert SQLAlchemy model to Pydantic schema
         return PlatformUserInDB.model_validate(user)
     else:
-        user = db.query(User).filter(User.email == email).first()
+        result = await db.execute(select(User).filter_by(email=email))
+        user = result.scalars().first()
         if not user:
             logger.debug("User not found in DB, raising credentials_exception")  # Replaced print with logger
             raise credentials_exception

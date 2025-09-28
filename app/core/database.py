@@ -1,5 +1,8 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
+# app/core/database.py
+
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 import logging
 from fastapi import HTTPException
@@ -13,8 +16,9 @@ database_url = settings.DATABASE_URL
 if not database_url:
     raise ValueError("DATABASE_URL is required in .env file for database connection. Please configure it to connect to Supabase.")
 
-# Log warning instead of raise for non-postgres (for development flexibility)
-if not (database_url.startswith("postgresql://") or database_url.startswith("postgres://")):
+# Improved check: Allow for +driver in URL (e.g., postgresql+asyncpg://) which is valid for SQLAlchemy async
+if not (database_url.startswith("postgresql://") or database_url.startswith("postgres://") or
+        database_url.startswith("postgresql+") or database_url.startswith("postgres+")):
     logger.warning("DATABASE_URL is not a PostgreSQL/Supabase URL - this may cause issues in production. For development, continuing...")
 
 logger.info(f"Using database: {database_url.split('@')[1] if '@' in database_url else 'URL parsed'}")  # Mask credentials
@@ -26,68 +30,82 @@ engine_kwargs = {
     "echo": settings.DEBUG,
     "pool_size": 10,
     "max_overflow": 20,
-    "pool_timeout": 30,
+    "pool_timeout": 60,  # Increased for timeout issues
 }
 
+# For session mode (port 5432), we can use default caching as it supports prepared statements
+connect_args = {
+    "timeout": 60,  # Connection timeout
+    "command_timeout": 60,  # Query timeout
+    "server_settings": {"statement_timeout": "60s"}  # DB-level statement timeout
+}
+
+logger.debug(f"Creating async engine with connect_args: {connect_args} and kwargs: {engine_kwargs}")
+
 # Database engine
-engine = create_engine(database_url, **engine_kwargs)
+try:
+    engine = create_async_engine(database_url, connect_args=connect_args, **engine_kwargs)
+    logger.info("Async engine created successfully")
+except Exception as e:
+    logger.error(f"Failed to create async engine: {str(e)}")
+    raise
 
 # Session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models
 Base = declarative_base()
 
 # Dependency to get database session with enhanced error handling
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    except HTTPException as e:
-        raise  # Re-raise HTTP exceptions without rollback/log as DB error
-    except Exception as e:
-        logger.error(f"Database session error: {e}")
-        db.rollback()
-        raise
-    finally:
-        db.close()
+async def get_db():
+    async with AsyncSessionLocal() as db:
+        try:
+            yield db
+        except HTTPException as e:
+            raise  # Re-raise HTTP exceptions without rollback/log as DB error
+        except Exception as e:
+            logger.error(f"Database session error: {e}")
+            await db.rollback()
+            raise
+        finally:
+            await db.close()
 
 # Enhanced context manager for database transactions
 class DatabaseTransaction:
     """Context manager for database transactions with automatic rollback on error"""
     
-    def __init__(self, db_session: Session = None):
-        self.db = db_session or SessionLocal()
+    def __init__(self, db_session: AsyncSession = None):
+        self.db = db_session or AsyncSessionLocal()
         self.should_close = db_session is None
         
-    def __enter__(self):
+    async def __aenter__(self):
         return self.db
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             if exc_type is not None:
                 if not issubclass(exc_type, HTTPException):
                     logger.error(f"Transaction failed: {exc_val}")
-                    self.db.rollback()
+                    await self.db.rollback()
             else:
-                self.db.commit()
+                await self.db.commit()
         except Exception as e:
             logger.error(f"Error during transaction cleanup: {e}")
-            self.db.rollback()
+            await self.db.rollback()
         finally:
             if self.should_close:
-                self.db.close()
+                await self.db.close()
         
         # Don't suppress exceptions
         return False
 
-def get_db_transaction():
+async def get_db_transaction():
     """Get database session with transaction management"""
-    with DatabaseTransaction() as db:
+    async with DatabaseTransaction() as db:
         yield db
 
 # Utility functions for session management
-def safe_database_operation(operation_func, *args, **kwargs):
+async def safe_database_operation(operation_func, *args, **kwargs):
     """
     Safely execute a database operation with automatic rollback on error.
     
@@ -100,13 +118,13 @@ def safe_database_operation(operation_func, *args, **kwargs):
         Result of the operation function or None if error occurred
     """
     try:
-        with DatabaseTransaction() as db:
-            return operation_func(db, *args, **kwargs)
+        async with DatabaseTransaction() as db:
+            return await operation_func(db, *args, **kwargs)
     except Exception as e:
         logger.error(f"Database operation failed: {e}")
         return None
 
-def execute_with_retry(operation_func, max_retries: int = 3, *args, **kwargs):
+async def execute_with_retry(operation_func, max_retries: int = 3, *args, **kwargs):
     """
     Execute database operation with retry logic for transient failures.
     
@@ -123,22 +141,23 @@ def execute_with_retry(operation_func, max_retries: int = 3, *args, **kwargs):
     
     for attempt in range(max_retries + 1):
         try:
-            return safe_database_operation(operation_func, *args, **kwargs)
+            return await safe_database_operation(operation_func, *args, **kwargs)
         except Exception as e:
             last_exception = e
             if attempt < max_retries:
                 logger.warning(f"Database operation failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
                 import time
-                time.sleep(2 ** attempt)  # Exponential backoff
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
             else:
                 logger.error(f"Database operation failed after {max_retries + 1} attempts: {e}")
     
     raise last_exception
 
 # Create all tables with error handling for duplicates
-def create_tables():
+async def create_tables():
     try:
-        Base.metadata.create_all(bind=engine)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created successfully")
     except ProgrammingError as e:
         if isinstance(e.orig, (pg_errors.DuplicateTable, pg_errors.DuplicateObject)):

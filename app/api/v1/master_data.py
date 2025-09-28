@@ -6,8 +6,8 @@ These endpoints provide complete CRUD operations for master data management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func, desc, asc, text
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, func, desc, asc, text
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from decimal import Decimal
@@ -15,7 +15,7 @@ import logging
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import validate_company_setup_for_operations
+from app.core.tenant import validate_company_setup
 from app.core.org_restrictions import require_current_organization_id
 from app.services.rbac import require_permission, RBACService
 from app.models.user_models import User
@@ -58,20 +58,21 @@ class MasterDataService:
         return root_categories
     
     @staticmethod
-    def calculate_category_path(category: Category, db: Session) -> str:
+    async def calculate_category_path(category: Category, db: AsyncSession) -> str:
         """Calculate materialized path for category hierarchy"""
         if category.parent_category_id is None:
             return f"/{category.id}/"
         
-        parent = db.query(Category).filter(Category.id == category.parent_category_id).first()
+        result = await db.execute(select(Category).filter_by(id=category.parent_category_id))
+        parent = result.scalars().first()
         if parent:
-            parent_path = parent.path or MasterDataService.calculate_category_path(parent, db)
+            parent_path = parent.path or await MasterDataService.calculate_category_path(parent, db)
             return f"{parent_path}{category.id}/"
         
         return f"/{category.id}/"
     
     @staticmethod
-    def convert_units(value: Decimal, from_unit: Unit, to_unit: Unit, db: Session) -> Decimal:
+    async def convert_units(value: Decimal, from_unit: Unit, to_unit: Unit, db: AsyncSession) -> Decimal:
         """Convert value between units with proper conversion factors"""
         if from_unit.id == to_unit.id:
             return value
@@ -121,34 +122,50 @@ class MasterDataService:
 async def get_master_data_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get master data dashboard statistics"""
     try:
         # Base queries with organization filter
-        category_query = db.query(Category).filter(Category.organization_id == organization_id)
-        unit_query = db.query(Unit).filter(Unit.organization_id == organization_id)
-        tax_code_query = db.query(TaxCode).filter(TaxCode.organization_id == organization_id)
-        payment_terms_query = db.query(PaymentTermsExtended).filter(PaymentTermsExtended.organization_id == organization_id)
+        category_stmt = select(Category).filter_by(organization_id=organization_id)
+        unit_stmt = select(Unit).filter_by(organization_id=organization_id)
+        tax_code_stmt = select(TaxCode).filter_by(organization_id=organization_id)
+        payment_terms_stmt = select(PaymentTermsExtended).filter_by(organization_id=organization_id)
         
         # Apply company filter if specified
         if company_id:
-            category_query = category_query.filter(or_(Category.company_id == company_id, Category.company_id.is_(None)))
-            unit_query = unit_query.filter(or_(Unit.company_id == company_id, Unit.company_id.is_(None)))
-            tax_code_query = tax_code_query.filter(or_(TaxCode.company_id == company_id, TaxCode.company_id.is_(None)))
-            payment_terms_query = payment_terms_query.filter(or_(PaymentTermsExtended.company_id == company_id, PaymentTermsExtended.company_id.is_(None)))
+            category_stmt = category_stmt.where(or_(Category.company_id == company_id, Category.company_id.is_(None)))
+            unit_stmt = unit_stmt.where(or_(Unit.company_id == company_id, Unit.company_id.is_(None)))
+            tax_code_stmt = tax_code_stmt.where(or_(TaxCode.company_id == company_id, TaxCode.company_id.is_(None)))
+            payment_terms_stmt = payment_terms_stmt.where(or_(PaymentTermsExtended.company_id == company_id, PaymentTermsExtended.company_id.is_(None)))
         
         # Calculate statistics
+        category_result = await db.execute(category_stmt)
+        categories = category_result.scalars().all()
+        active_categories = len([c for c in categories if c.is_active])
+        
+        unit_result = await db.execute(unit_stmt)
+        units = unit_result.scalars().all()
+        active_units = len([u for u in units if u.is_active])
+        
+        tax_code_result = await db.execute(tax_code_stmt)
+        tax_codes = tax_code_result.scalars().all()
+        active_tax_codes = len([t for t in tax_codes if t.is_active])
+        
+        payment_terms_result = await db.execute(payment_terms_stmt)
+        payment_terms = payment_terms_result.scalars().all()
+        active_payment_terms = len([p for p in payment_terms if p.is_active])
+        
         stats = MasterDataStats(
-            total_categories=category_query.count(),
-            active_categories=category_query.filter(Category.is_active == True).count(),
-            total_units=unit_query.count(),
-            active_units=unit_query.filter(Unit.is_active == True).count(),
-            total_tax_codes=tax_code_query.count(),
-            active_tax_codes=tax_code_query.filter(TaxCode.is_active == True).count(),
-            total_payment_terms=payment_terms_query.count(),
-            active_payment_terms=payment_terms_query.filter(PaymentTermsExtended.is_active == True).count()
+            total_categories=len(categories),
+            active_categories=active_categories,
+            total_units=len(units),
+            active_units=active_units,
+            total_tax_codes=len(tax_codes),
+            active_tax_codes=active_tax_codes,
+            total_payment_terms=len(payment_terms),
+            active_payment_terms=active_payment_terms
         )
         
         return stats
@@ -168,26 +185,26 @@ async def get_categories(
     per_page: int = Query(100, ge=1, le=1000),
     category_filter: CategoryFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get categories with filtering and pagination"""
     try:
-        query = db.query(Category).filter(Category.organization_id == organization_id)
+        stmt = select(Category).filter_by(organization_id=organization_id)
         
         # Apply filters
         if category_filter.category_type:
-            query = query.filter(Category.category_type == category_filter.category_type)
+            stmt = stmt.where(Category.category_type == category_filter.category_type)
         
         if category_filter.parent_category_id is not None:
-            query = query.filter(Category.parent_category_id == category_filter.parent_category_id)
+            stmt = stmt.where(Category.parent_category_id == category_filter.parent_category_id)
         
         if category_filter.is_active is not None:
-            query = query.filter(Category.is_active == category_filter.is_active)
+            stmt = stmt.where(Category.is_active == category_filter.is_active)
         
         if category_filter.search:
             search_term = f"%{category_filter.search}%"
-            query = query.filter(
+            stmt = stmt.where(
                 or_(
                     Category.name.ilike(search_term),
                     Category.code.ilike(search_term),
@@ -196,10 +213,13 @@ async def get_categories(
             )
         
         # Get total count
-        total = query.count()
+        count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+        total = count_result.scalar_one()
         
         # Apply pagination and ordering
-        categories = query.order_by(Category.sort_order, Category.name).offset((page-1)*per_page).limit(per_page).all()
+        stmt = stmt.order_by(Category.sort_order, Category.name).offset((page-1)*per_page).limit(per_page)
+        result = await db.execute(stmt)
+        categories = result.scalars().all()
         
         return CategoryList(
             items=categories,
@@ -218,17 +238,18 @@ async def get_categories(
 async def create_category(
     category_data: CategoryCreate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new category"""
     try:
         # Check for duplicate name
-        existing = db.query(Category).filter(
-            Category.organization_id == organization_id,
-            Category.name == category_data.name,
-            Category.category_type == category_data.category_type
-        ).first()
+        existing_result = await db.execute(select(Category).filter_by(
+            organization_id=organization_id,
+            name=category_data.name,
+            category_type=category_data.category_type
+        ))
+        existing = existing_result.scalars().first()
         
         if existing:
             raise HTTPException(
@@ -239,10 +260,11 @@ async def create_category(
         # Validate parent category if specified
         level = 0
         if category_data.parent_category_id:
-            parent = db.query(Category).filter(
-                Category.id == category_data.parent_category_id,
-                Category.organization_id == organization_id
-            ).first()
+            parent_result = await db.execute(select(Category).filter_by(
+                id=category_data.parent_category_id,
+                organization_id=organization_id
+            ))
+            parent = parent_result.scalars().first()
             
             if not parent:
                 raise HTTPException(status_code=404, detail="Parent category not found")
@@ -268,13 +290,13 @@ async def create_category(
         )
         
         db.add(category)
-        db.commit()
-        db.refresh(category)
+        await db.commit()
+        await db.refresh(category)
         
         # Calculate and update path
-        category.path = MasterDataService.calculate_category_path(category, db)
-        db.commit()
-        db.refresh(category)
+        category.path = await MasterDataService.calculate_category_path(category, db)
+        await db.commit()
+        await db.refresh(category)
         
         logger.info(f"Category created: {category.name} (ID: {category.id})")
         return category
@@ -282,7 +304,7 @@ async def create_category(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating category: {e}")
         raise HTTPException(status_code=500, detail="Failed to create category")
 
@@ -291,14 +313,15 @@ async def create_category(
 async def get_category(
     category_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific category"""
-    category = db.query(Category).filter(
-        Category.id == category_id,
-        Category.organization_id == organization_id
-    ).first()
+    result = await db.execute(select(Category).filter_by(
+        id=category_id,
+        organization_id=organization_id
+    ))
+    category = result.scalars().first()
     
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -311,27 +334,28 @@ async def update_category(
     category_id: int,
     category_data: CategoryUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update a category"""
     try:
-        category = db.query(Category).filter(
-            Category.id == category_id,
-            Category.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(Category).filter_by(
+            id=category_id,
+            organization_id=organization_id
+        ))
+        category = result.scalars().first()
         
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
         
         # Check for duplicate name if being updated
         if category_data.name and category_data.name != category.name:
-            existing = db.query(Category).filter(
-                Category.organization_id == organization_id,
-                Category.name == category_data.name,
-                Category.category_type == category_data.category_type or category.category_type,
-                Category.id != category_id
-            ).first()
+            existing_result = await db.execute(select(Category).filter_by(
+                organization_id=organization_id,
+                name=category_data.name,
+                category_type=category_data.category_type or category.category_type,
+            ).filter(Category.id != category_id))
+            existing = existing_result.scalars().first()
             
             if existing:
                 raise HTTPException(
@@ -346,8 +370,8 @@ async def update_category(
         
         category.updated_by = current_user.id
         
-        db.commit()
-        db.refresh(category)
+        await db.commit()
+        await db.refresh(category)
         
         logger.info(f"Category updated: {category.name} (ID: {category.id})")
         return category
@@ -355,7 +379,7 @@ async def update_category(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating category: {e}")
         raise HTTPException(status_code=500, detail="Failed to update category")
 
@@ -364,29 +388,31 @@ async def update_category(
 async def delete_category(
     category_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a category"""
     try:
-        category = db.query(Category).filter(
-            Category.id == category_id,
-            Category.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(Category).filter_by(
+            id=category_id,
+            organization_id=organization_id
+        ))
+        category = result.scalars().first()
         
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
         
         # Check for subcategories
-        subcategories = db.query(Category).filter(Category.parent_category_id == category_id).count()
+        sub_result = await db.execute(select(func.count(Category.id)).filter_by(parent_category_id=category_id))
+        subcategories = sub_result.scalar_one()
         if subcategories > 0:
             raise HTTPException(
                 status_code=400,
                 detail="Cannot delete category with subcategories"
             )
         
-        db.delete(category)
-        db.commit()
+        await db.delete(category)
+        await db.commit()
         
         logger.info(f"Category deleted: {category.name} (ID: {category.id})")
         return {"message": "Category deleted successfully"}
@@ -394,7 +420,7 @@ async def delete_category(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting category: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete category")
 
@@ -409,26 +435,26 @@ async def get_units(
     per_page: int = Query(100, ge=1, le=1000),
     unit_filter: UnitFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get units with filtering and pagination"""
     try:
-        query = db.query(Unit).filter(Unit.organization_id == organization_id)
+        stmt = select(Unit).filter_by(organization_id=organization_id)
         
         # Apply filters
         if unit_filter.unit_type:
-            query = query.filter(Unit.unit_type == unit_filter.unit_type)
+            stmt = stmt.where(Unit.unit_type == unit_filter.unit_type)
         
         if unit_filter.is_base_unit is not None:
-            query = query.filter(Unit.is_base_unit == unit_filter.is_base_unit)
+            stmt = stmt.where(Unit.is_base_unit == unit_filter.is_base_unit)
         
         if unit_filter.is_active is not None:
-            query = query.filter(Unit.is_active == unit_filter.is_active)
+            stmt = stmt.where(Unit.is_active == unit_filter.is_active)
         
         if unit_filter.search:
             search_term = f"%{unit_filter.search}%"
-            query = query.filter(
+            stmt = stmt.where(
                 or_(
                     Unit.name.ilike(search_term),
                     Unit.symbol.ilike(search_term),
@@ -437,10 +463,13 @@ async def get_units(
             )
         
         # Get total count
-        total = query.count()
+        count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+        total = count_result.scalar_one()
         
         # Apply pagination and ordering
-        units = query.order_by(Unit.unit_type, Unit.name).offset((page-1)*per_page).limit(per_page).all()
+        stmt = stmt.order_by(Unit.unit_type, Unit.name).offset((page-1)*per_page).limit(per_page)
+        result = await db.execute(stmt)
+        units = result.scalars().all()
         
         return UnitList(
             items=units,
@@ -459,19 +488,16 @@ async def get_units(
 async def create_unit(
     unit_data: UnitCreate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new unit"""
     try:
         # Check for duplicate name or symbol
-        existing = db.query(Unit).filter(
-            Unit.organization_id == organization_id,
-            or_(
-                Unit.name == unit_data.name,
-                Unit.symbol == unit_data.symbol
-            )
-        ).first()
+        existing_result = await db.execute(select(Unit).filter_by(organization_id=organization_id).where(
+            or_(Unit.name == unit_data.name, Unit.symbol == unit_data.symbol)
+        ))
+        existing = existing_result.scalars().first()
         
         if existing:
             raise HTTPException(
@@ -481,10 +507,11 @@ async def create_unit(
         
         # Validate base unit if specified
         if unit_data.base_unit_id:
-            base_unit = db.query(Unit).filter(
-                Unit.id == unit_data.base_unit_id,
-                Unit.organization_id == organization_id
-            ).first()
+            base_result = await db.execute(select(Unit).filter_by(
+                id=unit_data.base_unit_id,
+                organization_id=organization_id
+            ))
+            base_unit = base_result.scalars().first()
             
             if not base_unit:
                 raise HTTPException(status_code=404, detail="Base unit not found")
@@ -512,8 +539,8 @@ async def create_unit(
         )
         
         db.add(unit)
-        db.commit()
-        db.refresh(unit)
+        await db.commit()
+        await db.refresh(unit)
         
         logger.info(f"Unit created: {unit.name} (ID: {unit.id})")
         return unit
@@ -521,7 +548,7 @@ async def create_unit(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating unit: {e}")
         raise HTTPException(status_code=500, detail="Failed to create unit")
 
@@ -530,14 +557,15 @@ async def create_unit(
 async def get_unit(
     unit_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific unit"""
-    unit = db.query(Unit).filter(
-        Unit.id == unit_id,
-        Unit.organization_id == organization_id
-    ).first()
+    result = await db.execute(select(Unit).filter_by(
+        id=unit_id,
+        organization_id=organization_id
+    ))
+    unit = result.scalars().first()
     
     if not unit:
         raise HTTPException(status_code=404, detail="Unit not found")
@@ -550,41 +578,43 @@ async def update_unit(
     unit_id: int,
     unit_data: UnitUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update an existing unit"""
     try:
-        unit = db.query(Unit).filter(
-            Unit.id == unit_id,
-            Unit.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(Unit).filter_by(
+            id=unit_id,
+            organization_id=organization_id
+        ))
+        unit = result.scalars().first()
         
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
         
         # Check for duplicate name (excluding current unit)
-        existing = db.query(Unit).filter(
-            Unit.organization_id == organization_id,
-            Unit.name == unit_data.name,
-            Unit.id != unit_id
-        ).first()
-        
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unit with name '{unit_data.name}' already exists"
-            )
+        if unit_data.name and unit_data.name != unit.name:
+            existing_result = await db.execute(select(Unit).filter_by(
+                organization_id=organization_id,
+                name=unit_data.name
+            ).filter(Unit.id != unit_id))
+            existing = existing_result.scalars().first()
+            
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unit with name '{unit_data.name}' already exists"
+                )
         
         # Update unit fields
         update_data = unit_data.dict(exclude_unset=True)
-        update_data['updated_by'] = current_user.id
-        
         for field, value in update_data.items():
             setattr(unit, field, value)
         
-        db.commit()
-        db.refresh(unit)
+        unit.updated_by = current_user.id
+        
+        await db.commit()
+        await db.refresh(unit)
         
         logger.info(f"Unit updated: {unit.name} (ID: {unit.id})")
         return unit
@@ -592,7 +622,7 @@ async def update_unit(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating unit: {e}")
         raise HTTPException(status_code=500, detail="Failed to update unit")
 
@@ -601,15 +631,16 @@ async def update_unit(
 async def delete_unit(
     unit_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a unit"""
     try:
-        unit = db.query(Unit).filter(
-            Unit.id == unit_id,
-            Unit.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(Unit).filter_by(
+            id=unit_id,
+            organization_id=organization_id
+        ))
+        unit = result.scalars().first()
         
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
@@ -617,8 +648,8 @@ async def delete_unit(
         # Check if unit is being used (implement business logic as needed)
         # For now, we'll allow deletion
         
-        db.delete(unit)
-        db.commit()
+        await db.delete(unit)
+        await db.commit()
         
         logger.info(f"Unit deleted: {unit.name} (ID: {unit.id})")
         return {"message": "Unit deleted successfully"}
@@ -626,7 +657,7 @@ async def delete_unit(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting unit: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete unit")
 
@@ -635,25 +666,27 @@ async def delete_unit(
 async def convert_units(
     conversion_data: UnitConversion,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Convert value between units"""
     try:
-        from_unit = db.query(Unit).filter(
-            Unit.id == conversion_data.from_unit_id,
-            Unit.organization_id == organization_id
-        ).first()
+        from_result = await db.execute(select(Unit).filter_by(
+            id=conversion_data.from_unit_id,
+            organization_id=organization_id
+        ))
+        from_unit = from_result.scalars().first()
         
-        to_unit = db.query(Unit).filter(
-            Unit.id == conversion_data.to_unit_id,
-            Unit.organization_id == organization_id
-        ).first()
+        to_result = await db.execute(select(Unit).filter_by(
+            id=conversion_data.to_unit_id,
+            organization_id=organization_id
+        ))
+        to_unit = to_result.scalars().first()
         
         if not from_unit or not to_unit:
             raise HTTPException(status_code=404, detail="Unit not found")
         
-        converted_value = MasterDataService.convert_units(
+        converted_value = await MasterDataService.convert_units(
             conversion_data.value, from_unit, to_unit, db
         )
         
@@ -677,26 +710,26 @@ async def get_tax_codes(
     per_page: int = Query(100, ge=1, le=1000),
     tax_filter: TaxCodeFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get tax codes with filtering and pagination"""
     try:
-        query = db.query(TaxCode).filter(TaxCode.organization_id == organization_id)
+        stmt = select(TaxCode).filter_by(organization_id=organization_id)
         
         # Apply filters
         if tax_filter.tax_type:
-            query = query.filter(TaxCode.tax_type == tax_filter.tax_type)
+            stmt = stmt.where(TaxCode.tax_type == tax_filter.tax_type)
         
         if tax_filter.is_active is not None:
-            query = query.filter(TaxCode.is_active == tax_filter.is_active)
+            stmt = stmt.where(TaxCode.is_active == tax_filter.is_active)
         
         if tax_filter.hsn_sac_code:
-            query = query.filter(TaxCode.hsn_sac_codes.contains([tax_filter.hsn_sac_code]))
+            stmt = stmt.where(TaxCode.hsn_sac_codes.contains([tax_filter.hsn_sac_code]))
         
         if tax_filter.search:
             search_term = f"%{tax_filter.search}%"
-            query = query.filter(
+            stmt = stmt.where(
                 or_(
                     TaxCode.name.ilike(search_term),
                     TaxCode.code.ilike(search_term),
@@ -705,10 +738,13 @@ async def get_tax_codes(
             )
         
         # Get total count
-        total = query.count()
+        count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+        total = count_result.scalar_one()
         
         # Apply pagination and ordering
-        tax_codes = query.order_by(TaxCode.tax_type, TaxCode.tax_rate).offset((page-1)*per_page).limit(per_page).all()
+        stmt = stmt.order_by(TaxCode.tax_type, TaxCode.tax_rate).offset((page-1)*per_page).limit(per_page)
+        result = await db.execute(stmt)
+        tax_codes = result.scalars().all()
         
         return TaxCodeList(
             items=tax_codes,
@@ -727,16 +763,17 @@ async def get_tax_codes(
 async def create_tax_code(
     tax_code_data: TaxCodeCreate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new tax code"""
     try:
         # Check for duplicate code
-        existing = db.query(TaxCode).filter(
-            TaxCode.organization_id == organization_id,
-            TaxCode.code == tax_code_data.code
-        ).first()
+        existing_result = await db.execute(select(TaxCode).filter_by(
+            organization_id=organization_id,
+            code=tax_code_data.code
+        ))
+        existing = existing_result.scalars().first()
         
         if existing:
             raise HTTPException(
@@ -763,8 +800,8 @@ async def create_tax_code(
         )
         
         db.add(tax_code)
-        db.commit()
-        db.refresh(tax_code)
+        await db.commit()
+        await db.refresh(tax_code)
         
         logger.info(f"Tax code created: {tax_code.name} (ID: {tax_code.id})")
         return tax_code
@@ -772,7 +809,7 @@ async def create_tax_code(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating tax code: {e}")
         raise HTTPException(status_code=500, detail="Failed to create tax code")
 
@@ -781,14 +818,15 @@ async def create_tax_code(
 async def get_tax_code(
     tax_code_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific tax code"""
-    tax_code = db.query(TaxCode).filter(
-        TaxCode.id == tax_code_id,
-        TaxCode.organization_id == organization_id
-    ).first()
+    result = await db.execute(select(TaxCode).filter_by(
+        id=tax_code_id,
+        organization_id=organization_id
+    ))
+    tax_code = result.scalars().first()
     
     if not tax_code:
         raise HTTPException(status_code=404, detail="Tax code not found")
@@ -801,41 +839,43 @@ async def update_tax_code(
     tax_code_id: int,
     tax_code_data: TaxCodeUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update an existing tax code"""
     try:
-        tax_code = db.query(TaxCode).filter(
-            TaxCode.id == tax_code_id,
-            TaxCode.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(TaxCode).filter_by(
+            id=tax_code_id,
+            organization_id=organization_id
+        ))
+        tax_code = result.scalars().first()
         
         if not tax_code:
             raise HTTPException(status_code=404, detail="Tax code not found")
         
         # Check for duplicate name (excluding current tax code)
-        existing = db.query(TaxCode).filter(
-            TaxCode.organization_id == organization_id,
-            TaxCode.name == tax_code_data.name,
-            TaxCode.id != tax_code_id
-        ).first()
-        
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Tax code with name '{tax_code_data.name}' already exists"
-            )
+        if tax_code_data.name and tax_code_data.name != tax_code.name:
+            existing_result = await db.execute(select(TaxCode).filter_by(
+                organization_id=organization_id,
+                name=tax_code_data.name
+            ).filter(TaxCode.id != tax_code_id))
+            existing = existing_result.scalars().first()
+            
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Tax code with name '{tax_code_data.name}' already exists"
+                )
         
         # Update tax code fields
         update_data = tax_code_data.dict(exclude_unset=True)
-        update_data['updated_by'] = current_user.id
-        
         for field, value in update_data.items():
             setattr(tax_code, field, value)
         
-        db.commit()
-        db.refresh(tax_code)
+        tax_code.updated_by = current_user.id
+        
+        await db.commit()
+        await db.refresh(tax_code)
         
         logger.info(f"Tax code updated: {tax_code.name} (ID: {tax_code.id})")
         return tax_code
@@ -843,7 +883,7 @@ async def update_tax_code(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating tax code: {e}")
         raise HTTPException(status_code=500, detail="Failed to update tax code")
 
@@ -852,15 +892,16 @@ async def update_tax_code(
 async def delete_tax_code(
     tax_code_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a tax code"""
     try:
-        tax_code = db.query(TaxCode).filter(
-            TaxCode.id == tax_code_id,
-            TaxCode.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(TaxCode).filter_by(
+            id=tax_code_id,
+            organization_id=organization_id
+        ))
+        tax_code = result.scalars().first()
         
         if not tax_code:
             raise HTTPException(status_code=404, detail="Tax code not found")
@@ -868,8 +909,8 @@ async def delete_tax_code(
         # Check if tax code is being used (implement business logic as needed)
         # For now, we'll allow deletion
         
-        db.delete(tax_code)
-        db.commit()
+        await db.delete(tax_code)
+        await db.commit()
         
         logger.info(f"Tax code deleted: {tax_code.name} (ID: {tax_code.id})")
         return {"message": "Tax code deleted successfully"}
@@ -877,7 +918,7 @@ async def delete_tax_code(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting tax code: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete tax code")
 
@@ -886,15 +927,16 @@ async def delete_tax_code(
 async def calculate_tax(
     tax_calculation: TaxCalculation,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Calculate tax for a given amount"""
     try:
-        tax_code = db.query(TaxCode).filter(
-            TaxCode.id == tax_calculation.tax_code_id,
-            TaxCode.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(TaxCode).filter_by(
+            id=tax_calculation.tax_code_id,
+            organization_id=organization_id
+        ))
+        tax_code = result.scalars().first()
         
         if not tax_code:
             raise HTTPException(status_code=404, detail="Tax code not found")
@@ -925,23 +967,23 @@ async def get_payment_terms(
     per_page: int = Query(100, ge=1, le=1000),
     payment_terms_filter: PaymentTermsExtendedFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get payment terms with filtering and pagination"""
     try:
-        query = db.query(PaymentTermsExtended).filter(PaymentTermsExtended.organization_id == organization_id)
+        stmt = select(PaymentTermsExtended).filter_by(organization_id=organization_id)
         
         # Apply filters
         if payment_terms_filter.is_default is not None:
-            query = query.filter(PaymentTermsExtended.is_default == payment_terms_filter.is_default)
+            stmt = stmt.where(PaymentTermsExtended.is_default == payment_terms_filter.is_default)
         
         if payment_terms_filter.is_active is not None:
-            query = query.filter(PaymentTermsExtended.is_active == payment_terms_filter.is_active)
+            stmt = stmt.where(PaymentTermsExtended.is_active == payment_terms_filter.is_active)
         
         if payment_terms_filter.search:
             search_term = f"%{payment_terms_filter.search}%"
-            query = query.filter(
+            stmt = stmt.where(
                 or_(
                     PaymentTermsExtended.name.ilike(search_term),
                     PaymentTermsExtended.code.ilike(search_term),
@@ -950,10 +992,13 @@ async def get_payment_terms(
             )
         
         # Get total count
-        total = query.count()
+        count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+        total = count_result.scalar_one()
         
         # Apply pagination and ordering
-        payment_terms = query.order_by(PaymentTermsExtended.payment_days, PaymentTermsExtended.name).offset((page-1)*per_page).limit(per_page).all()
+        stmt = stmt.order_by(PaymentTermsExtended.payment_days, PaymentTermsExtended.name).offset((page-1)*per_page).limit(per_page)
+        result = await db.execute(stmt)
+        payment_terms = result.scalars().all()
         
         return PaymentTermsExtendedList(
             items=payment_terms,
@@ -972,16 +1017,17 @@ async def get_payment_terms(
 async def create_payment_terms(
     payment_terms_data: PaymentTermsExtendedCreate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create new payment terms"""
     try:
         # Check for duplicate name
-        existing = db.query(PaymentTermsExtended).filter(
-            PaymentTermsExtended.organization_id == organization_id,
-            PaymentTermsExtended.name == payment_terms_data.name
-        ).first()
+        existing_result = await db.execute(select(PaymentTermsExtended).filter_by(
+            organization_id=organization_id,
+            name=payment_terms_data.name
+        ))
+        existing = existing_result.scalars().first()
         
         if existing:
             raise HTTPException(
@@ -991,10 +1037,14 @@ async def create_payment_terms(
         
         # If this is set as default, unset other defaults
         if payment_terms_data.is_default:
-            db.query(PaymentTermsExtended).filter(
-                PaymentTermsExtended.organization_id == organization_id,
-                PaymentTermsExtended.is_default == True
-            ).update({"is_default": False})
+            await db.execute(
+                PaymentTermsExtended.__table__.update()
+                .where(
+                    PaymentTermsExtended.organization_id == organization_id,
+                    PaymentTermsExtended.is_default == True
+                )
+                .values(is_default=False)
+            )
         
         # Create payment terms
         payment_terms = PaymentTermsExtended(
@@ -1019,8 +1069,8 @@ async def create_payment_terms(
         )
         
         db.add(payment_terms)
-        db.commit()
-        db.refresh(payment_terms)
+        await db.commit()
+        await db.refresh(payment_terms)
         
         logger.info(f"Payment terms created: {payment_terms.name} (ID: {payment_terms.id})")
         return payment_terms
@@ -1028,7 +1078,7 @@ async def create_payment_terms(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating payment terms: {e}")
         raise HTTPException(status_code=500, detail="Failed to create payment terms")
 
@@ -1037,14 +1087,15 @@ async def create_payment_terms(
 async def get_payment_terms_by_id(
     payment_terms_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific payment terms"""
-    payment_terms = db.query(PaymentTermsExtended).filter(
-        PaymentTermsExtended.id == payment_terms_id,
-        PaymentTermsExtended.organization_id == organization_id
-    ).first()
+    result = await db.execute(select(PaymentTermsExtended).filter_by(
+        id=payment_terms_id,
+        organization_id=organization_id
+    ))
+    payment_terms = result.scalars().first()
     
     if not payment_terms:
         raise HTTPException(status_code=404, detail="Payment terms not found")
@@ -1057,41 +1108,43 @@ async def update_payment_terms(
     payment_terms_id: int,
     payment_terms_data: PaymentTermsExtendedUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update an existing payment terms"""
     try:
-        payment_terms = db.query(PaymentTermsExtended).filter(
-            PaymentTermsExtended.id == payment_terms_id,
-            PaymentTermsExtended.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(PaymentTermsExtended).filter_by(
+            id=payment_terms_id,
+            organization_id=organization_id
+        ))
+        payment_terms = result.scalars().first()
         
         if not payment_terms:
             raise HTTPException(status_code=404, detail="Payment terms not found")
         
         # Check for duplicate name (excluding current payment terms)
-        existing = db.query(PaymentTermsExtended).filter(
-            PaymentTermsExtended.organization_id == organization_id,
-            PaymentTermsExtended.name == payment_terms_data.name,
-            PaymentTermsExtended.id != payment_terms_id
-        ).first()
-        
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Payment terms with name '{payment_terms_data.name}' already exists"
-            )
+        if payment_terms_data.name and payment_terms_data.name != payment_terms.name:
+            existing_result = await db.execute(select(PaymentTermsExtended).filter_by(
+                organization_id=organization_id,
+                name=payment_terms_data.name
+            ).filter(PaymentTermsExtended.id != payment_terms_id))
+            existing = existing_result.scalars().first()
+            
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Payment terms with name '{payment_terms_data.name}' already exists"
+                )
         
         # Update payment terms fields
         update_data = payment_terms_data.dict(exclude_unset=True)
-        update_data['updated_by'] = current_user.id
-        
         for field, value in update_data.items():
             setattr(payment_terms, field, value)
         
-        db.commit()
-        db.refresh(payment_terms)
+        payment_terms.updated_by = current_user.id
+        
+        await db.commit()
+        await db.refresh(payment_terms)
         
         logger.info(f"Payment terms updated: {payment_terms.name} (ID: {payment_terms.id})")
         return payment_terms
@@ -1099,7 +1152,7 @@ async def update_payment_terms(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating payment terms: {e}")
         raise HTTPException(status_code=500, detail="Failed to update payment terms")
 
@@ -1108,15 +1161,16 @@ async def update_payment_terms(
 async def delete_payment_terms(
     payment_terms_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a payment terms"""
     try:
-        payment_terms = db.query(PaymentTermsExtended).filter(
-            PaymentTermsExtended.id == payment_terms_id,
-            PaymentTermsExtended.organization_id == organization_id
-        ).first()
+        result = await db.execute(select(PaymentTermsExtended).filter_by(
+            id=payment_terms_id,
+            organization_id=organization_id
+        ))
+        payment_terms = result.scalars().first()
         
         if not payment_terms:
             raise HTTPException(status_code=404, detail="Payment terms not found")
@@ -1124,8 +1178,8 @@ async def delete_payment_terms(
         # Check if payment terms is being used (implement business logic as needed)
         # For now, we'll allow deletion
         
-        db.delete(payment_terms)
-        db.commit()
+        await db.delete(payment_terms)
+        await db.commit()
         
         logger.info(f"Payment terms deleted: {payment_terms.name} (ID: {payment_terms.id})")
         return {"message": "Payment terms deleted successfully"}
@@ -1133,7 +1187,7 @@ async def delete_payment_terms(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting payment terms: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete payment terms")
 
@@ -1146,7 +1200,7 @@ async def delete_payment_terms(
 async def bulk_update_categories(
     bulk_update: BulkCategoryUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Bulk update categories"""
@@ -1156,20 +1210,24 @@ async def bulk_update_categories(
             raise HTTPException(status_code=400, detail="No update fields provided")
         
         # Update categories
-        result = db.query(Category).filter(
-            Category.id.in_(bulk_update.category_ids),
-            Category.organization_id == organization_id
-        ).update(update_fields, synchronize_session=False)
+        await db.execute(
+            Category.__table__.update()
+            .where(
+                Category.id.in_(bulk_update.category_ids),
+                Category.organization_id == organization_id
+            )
+            .values(update_fields)
+        )
         
-        db.commit()
+        await db.commit()
         
-        logger.info(f"Bulk updated {result} categories")
-        return {"message": f"Updated {result} categories", "updated_count": result}
+        logger.info(f"Bulk updated categories")
+        return {"message": "Updated categories", "updated_count": len(bulk_update.category_ids)}
         
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error in bulk category update: {e}")
         raise HTTPException(status_code=500, detail="Failed to bulk update categories")
 
@@ -1182,7 +1240,7 @@ async def hsn_search(
     query: str = Query(..., min_length=2, description="HSN code or description to search (min 2 chars)"),
     limit: int = Query(10, ge=1, le=50, description="Max results to return"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Search HSN codes with dynamic GST rates from external API"""

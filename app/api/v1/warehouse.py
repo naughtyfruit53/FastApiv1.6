@@ -4,16 +4,17 @@ Enhanced Warehouse Management API endpoints - Batch/Serial tracking, Location ma
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, desc, asc, func
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin, validate_company_setup_for_operations
-from app.core.org_restrictions import require_current_organization_id
+from app.core.tenant import TenantQueryMixin
+from app.core.org_restrictions import require_current_organization_id, validate_company_setup
 from app.core.rbac_dependencies import check_service_permission
 from app.models import (
     User, Organization, Product,
@@ -44,15 +45,17 @@ class WarehouseService:
     """Service class for warehouse operations"""
     
     @staticmethod
-    def generate_warehouse_code(db: Session, organization_id: int) -> str:
+    async def generate_warehouse_code(db: AsyncSession, organization_id: int) -> str:
         """Generate next warehouse code"""
         prefix = "WH"
         
         # Get the highest existing warehouse code
-        last_warehouse = db.query(Warehouse).filter(
+        stmt = select(Warehouse).where(
             Warehouse.organization_id == organization_id,
             Warehouse.warehouse_code.like(f"{prefix}%")
-        ).order_by(desc(Warehouse.warehouse_code)).first()
+        ).order_by(desc(Warehouse.warehouse_code))
+        result = await db.execute(stmt)
+        last_warehouse = result.scalar_one_or_none()
         
         if last_warehouse:
             try:
@@ -64,9 +67,11 @@ class WarehouseService:
         return f"{prefix}001"
     
     @staticmethod
-    def calculate_warehouse_utilization(db: Session, warehouse_id: int) -> WarehouseUtilization:
+    async def calculate_warehouse_utilization(db: AsyncSession, warehouse_id: int) -> WarehouseUtilization:
         """Calculate warehouse utilization metrics"""
-        warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+        stmt = select(Warehouse).where(Warehouse.id == warehouse_id)
+        result = await db.execute(stmt)
+        warehouse = result.scalar_one_or_none()
         if not warehouse:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -74,11 +79,13 @@ class WarehouseService:
             )
         
         # Get total stock value and product count
-        stock_data = db.query(
+        stmt = select(
             func.sum(WarehouseStock.total_value).label('total_value'),
             func.count(WarehouseStock.product_id).label('total_products'),
             func.sum(WarehouseStock.available_quantity).label('total_quantity')
-        ).filter(WarehouseStock.warehouse_id == warehouse_id).first()
+        ).where(WarehouseStock.warehouse_id == warehouse_id)
+        result = await db.execute(stmt)
+        stock_data = result.first()
         
         total_value = stock_data.total_value or Decimal(0)
         total_products = stock_data.total_products or 0
@@ -107,36 +114,37 @@ async def get_warehouses(
     warehouse_type: Optional[str] = None,
     is_active: Optional[bool] = None,
     search: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get warehouses with filtering options"""
-    query = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.organization_id == organization_id
     )
     
     if warehouse_type:
-        query = query.filter(Warehouse.warehouse_type == warehouse_type)
+        stmt = stmt.where(Warehouse.warehouse_type == warehouse_type)
     
     if is_active is not None:
-        query = query.filter(Warehouse.is_active == is_active)
+        stmt = stmt.where(Warehouse.is_active == is_active)
     
     if search:
-        query = query.filter(or_(
+        stmt = stmt.where(or_(
             Warehouse.warehouse_name.ilike(f"%{search}%"),
             Warehouse.warehouse_code.ilike(f"%{search}%")
         ))
     
-    query = query.order_by(Warehouse.warehouse_code)
-    warehouses = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(Warehouse.warehouse_code)
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    warehouses = result.scalars().all()
     return warehouses
 
 
 @router.post("/warehouses", response_model=WarehouseResponse)
 async def create_warehouse(
     warehouse_data: WarehouseCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -144,13 +152,15 @@ async def create_warehouse(
     # Auto-generate warehouse code if not provided
     warehouse_code = warehouse_data.warehouse_code
     if not warehouse_code:
-        warehouse_code = WarehouseService.generate_warehouse_code(db, organization_id)
+        warehouse_code = await WarehouseService.generate_warehouse_code(db, organization_id)
     
     # Check if warehouse code already exists
-    existing = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.organization_id == organization_id,
         Warehouse.warehouse_code == warehouse_code
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(
@@ -181,8 +191,8 @@ async def create_warehouse(
     )
     
     db.add(warehouse)
-    db.commit()
-    db.refresh(warehouse)
+    await db.commit()
+    await db.refresh(warehouse)
     
     return warehouse
 
@@ -190,15 +200,17 @@ async def create_warehouse(
 @router.get("/warehouses/{warehouse_id}", response_model=WarehouseResponse)
 async def get_warehouse(
     warehouse_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific warehouse"""
-    warehouse = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
         Warehouse.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalar_one_or_none()
     
     if not warehouse:
         raise HTTPException(
@@ -213,15 +225,17 @@ async def get_warehouse(
 async def update_warehouse(
     warehouse_id: int,
     warehouse_data: WarehouseUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update a warehouse"""
-    warehouse = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
         Warehouse.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalar_one_or_none()
     
     if not warehouse:
         raise HTTPException(
@@ -236,8 +250,8 @@ async def update_warehouse(
     
     warehouse.updated_at = datetime.utcnow()
     
-    db.commit()
-    db.refresh(warehouse)
+    await db.commit()
+    await db.refresh(warehouse)
     
     return warehouse
 
@@ -249,16 +263,18 @@ async def get_stock_locations(
     skip: int = 0,
     limit: int = 100,
     is_active: Optional[bool] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get stock locations for a warehouse"""
     # Verify warehouse exists and belongs to organization
-    warehouse = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
         Warehouse.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalar_one_or_none()
     
     if not warehouse:
         raise HTTPException(
@@ -266,15 +282,16 @@ async def get_stock_locations(
             detail="Warehouse not found"
         )
     
-    query = db.query(StockLocation).filter(
+    stmt = select(StockLocation).where(
         StockLocation.warehouse_id == warehouse_id
     )
     
     if is_active is not None:
-        query = query.filter(StockLocation.is_active == is_active)
+        stmt = stmt.where(StockLocation.is_active == is_active)
     
-    query = query.order_by(StockLocation.location_code)
-    locations = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(StockLocation.location_code)
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    locations = result.scalars().all()
     return locations
 
 
@@ -282,16 +299,18 @@ async def get_stock_locations(
 async def create_stock_location(
     warehouse_id: int,
     location_data: StockLocationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new stock location"""
     # Verify warehouse exists and belongs to organization
-    warehouse = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
         Warehouse.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalar_one_or_none()
     
     if not warehouse:
         raise HTTPException(
@@ -300,10 +319,12 @@ async def create_stock_location(
         )
     
     # Check if location code already exists in this warehouse
-    existing = db.query(StockLocation).filter(
+    stmt = select(StockLocation).where(
         StockLocation.warehouse_id == warehouse_id,
         StockLocation.location_code == location_data.location_code
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(
@@ -328,8 +349,8 @@ async def create_stock_location(
     )
     
     db.add(location)
-    db.commit()
-    db.refresh(location)
+    await db.commit()
+    await db.refresh(location)
     
     return location
 
@@ -338,16 +359,18 @@ async def create_stock_location(
 @router.get("/products/{product_id}/tracking", response_model=Optional[ProductTrackingResponse])
 async def get_product_tracking(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get product tracking configuration"""
     # Verify product exists and belongs to organization
-    product = db.query(Product).filter(
+    stmt = select(Product).where(
         Product.id == product_id,
         Product.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     
     if not product:
         raise HTTPException(
@@ -355,9 +378,11 @@ async def get_product_tracking(
             detail="Product not found"
         )
     
-    tracking = db.query(ProductTracking).filter(
+    stmt = select(ProductTracking).where(
         ProductTracking.product_id == product_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    tracking = result.scalar_one_or_none()
     
     return tracking
 
@@ -366,16 +391,18 @@ async def get_product_tracking(
 async def create_product_tracking(
     product_id: int,
     tracking_data: ProductTrackingCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create product tracking configuration"""
     # Verify product exists and belongs to organization
-    product = db.query(Product).filter(
+    stmt = select(Product).where(
         Product.id == product_id,
         Product.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     
     if not product:
         raise HTTPException(
@@ -384,9 +411,11 @@ async def create_product_tracking(
         )
     
     # Check if tracking already exists
-    existing = db.query(ProductTracking).filter(
+    stmt = select(ProductTracking).where(
         ProductTracking.product_id == product_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(
@@ -411,8 +440,8 @@ async def create_product_tracking(
     )
     
     db.add(tracking)
-    db.commit()
-    db.refresh(tracking)
+    await db.commit()
+    await db.refresh(tracking)
     
     return tracking
 
@@ -425,16 +454,18 @@ async def get_warehouse_stock(
     limit: int = 100,
     product_id: Optional[int] = None,
     low_stock_only: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get warehouse stock levels"""
     # Verify warehouse exists and belongs to organization
-    warehouse = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
         Warehouse.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalar_one_or_none()
     
     if not warehouse:
         raise HTTPException(
@@ -442,83 +473,98 @@ async def get_warehouse_stock(
             detail="Warehouse not found"
         )
     
-    query = db.query(WarehouseStock).filter(
+    stmt = select(WarehouseStock).where(
         WarehouseStock.warehouse_id == warehouse_id,
         WarehouseStock.organization_id == organization_id
     )
     
     if product_id:
-        query = query.filter(WarehouseStock.product_id == product_id)
+        stmt = stmt.where(WarehouseStock.product_id == product_id)
     
     if low_stock_only:
         # Join with product tracking to get reorder levels
-        query = query.join(ProductTracking, WarehouseStock.product_id == ProductTracking.product_id).filter(
+        stmt = stmt.join(ProductTracking, WarehouseStock.product_id == ProductTracking.product_id).where(
             WarehouseStock.available_quantity <= ProductTracking.reorder_level
         )
     
-    query = query.order_by(WarehouseStock.product_id)
-    stock_levels = query.offset(skip).limit(limit).all()
+    stmt = stmt.order_by(WarehouseStock.product_id)
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    stock_levels = result.scalars().all()
     return stock_levels
 
 
 # Analytics Endpoints
 @router.get("/analytics/dashboard", response_model=InventoryDashboard)
 async def get_inventory_dashboard(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get inventory dashboard analytics"""
     # Total products
-    total_products = db.query(Product).filter(
+    stmt = select(func.count(Product.id)).where(
         Product.organization_id == organization_id,
         Product.is_active == True
-    ).count()
+    )
+    result = await db.execute(stmt)
+    total_products = result.scalar()
     
     # Total warehouses
-    total_warehouses = db.query(Warehouse).filter(
+    stmt = select(func.count(Warehouse.id)).where(
         Warehouse.organization_id == organization_id,
         Warehouse.is_active == True
-    ).count()
+    )
+    result = await db.execute(stmt)
+    total_warehouses = result.scalar()
     
     # Total stock value
-    total_stock_value = db.query(func.sum(WarehouseStock.total_value)).filter(
+    stmt = select(func.sum(WarehouseStock.total_value)).where(
         WarehouseStock.organization_id == organization_id
-    ).scalar() or Decimal(0)
+    )
+    result = await db.execute(stmt)
+    total_stock_value = result.scalar() or Decimal(0)
     
     # Low stock alerts
-    low_stock_alerts = db.query(WarehouseStock).join(
+    stmt = select(WarehouseStock).join(
         ProductTracking, WarehouseStock.product_id == ProductTracking.product_id
-    ).filter(
+    ).where(
         WarehouseStock.organization_id == organization_id,
         WarehouseStock.available_quantity <= ProductTracking.reorder_level,
         ProductTracking.enable_reorder_alert == True
-    ).count()
+    )
+    result = await db.execute(stmt)
+    low_stock_alerts = len(result.scalars().all())
     
     # Expiry alerts (products expiring in 30 days)
     expiry_date_threshold = datetime.now().date() + timedelta(days=30)
-    expiry_alerts = db.query(ProductBatch).filter(
+    stmt = select(ProductBatch).where(
         ProductBatch.organization_id == organization_id,
         ProductBatch.expiry_date <= expiry_date_threshold,
         ProductBatch.expiry_date >= datetime.now().date(),
         ProductBatch.is_active == True
-    ).count()
+    )
+    result = await db.execute(stmt)
+    expiry_alerts = len(result.scalars().all())
     
     # Recent movements (last 7 days)
-    recent_movements = db.query(StockMovement).filter(
+    stmt = select(StockMovement).where(
         StockMovement.organization_id == organization_id,
         StockMovement.movement_date >= datetime.now() - timedelta(days=7)
-    ).count()
+    )
+    result = await db.execute(stmt)
+    recent_movements = len(result.scalars().all())
     
     # Warehouse utilization
     warehouse_utilization = []
-    warehouses = db.query(Warehouse).filter(
+    stmt_warehouses = select(Warehouse).where(
         Warehouse.organization_id == organization_id,
         Warehouse.is_active == True
-    ).all()
+    )
+    result_warehouses = await db.execute(stmt_warehouses)
+    warehouses = result_warehouses.scalars().all()
     
     for warehouse in warehouses:
-        utilization = WarehouseService.calculate_warehouse_utilization(db, warehouse.id)
+        utilization = await WarehouseService.calculate_warehouse_utilization(db, warehouse.id)
         warehouse_utilization.append(utilization)
     
     return InventoryDashboard(
@@ -539,16 +585,18 @@ async def get_inventory_dashboard(
 @router.post("/bulk-import", response_model=BulkImportResponse)
 async def bulk_stock_import(
     import_data: BulkStockImport,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Bulk import stock data"""
     # Verify warehouse exists and belongs to organization
-    warehouse = db.query(Warehouse).filter(
+    stmt = select(Warehouse).where(
         Warehouse.id == import_data.warehouse_id,
         Warehouse.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalar_one_or_none()
     
     if not warehouse:
         raise HTTPException(

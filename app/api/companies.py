@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from typing import List, Optional
 from datetime import datetime
 from app.core.database import get_db
@@ -28,7 +29,7 @@ os.makedirs(LOGO_UPLOAD_DIR, exist_ok=True)
 
 @router.get("/", response_model=List[CompanyInDB])
 async def get_companies(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get companies in current organization"""
@@ -36,14 +37,17 @@ async def get_companies(
     # Restrict app super admins from accessing organization data
     org_id = ensure_organization_context(current_user)
     
-    query = db.query(Company)
-    companies = TenantQueryMixin.filter_by_tenant(query, Company, org_id).all()
+    stmt = select(Company)
+    stmt = TenantQueryMixin.filter_by_tenant(stmt, Company, org_id)
+    
+    result = await db.execute(stmt)
+    companies = result.scalars().all()
     
     return companies
 
 @router.get("/current", response_model=CompanyInDB)
 async def get_current_company(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get current organization's company details"""
@@ -65,7 +69,9 @@ async def get_current_company(
         org_id = ensure_organization_context(current_user)
         logger.info(f"[/companies/current] Organization context established: org_id={org_id}")
         
-        company = db.query(Company).filter(Company.organization_id == org_id).first()
+        stmt = select(Company).where(Company.organization_id == org_id)
+        result = await db.execute(stmt)
+        company = result.scalar_one_or_none()
         
         if not company:
             logger.warning(f"[/companies/current] Company not found for org_id={org_id}, user={current_user.id}")
@@ -90,12 +96,14 @@ async def get_current_company(
 @router.get("/{company_id}", response_model=CompanyInDB)
 async def get_company(
     company_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get company by ID"""
     
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -110,7 +118,7 @@ async def get_company(
 @router.post("/", response_model=CompanyResponse)
 async def create_company(
     company: CompanyCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Create company details for current organization with enhanced validation"""
@@ -120,7 +128,9 @@ async def create_company(
         data = TenantQueryFilter.validate_organization_data(company.model_dump(), current_user)
         
         # Get organization to check limits
-        org = db.query(Organization).filter(Organization.id == data['organization_id']).first()
+        stmt = select(Organization).where(Organization.id == data['organization_id'])
+        result = await db.execute(stmt)
+        org = result.scalar_one_or_none()
         if not org:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -128,7 +138,9 @@ async def create_company(
             )
         
         # Check company count against max_companies limit
-        existing_companies_count = db.query(Company).filter(Company.organization_id == data['organization_id']).count()
+        stmt = select(func.count(Company.id)).where(Company.organization_id == data['organization_id'])
+        result = await db.execute(stmt)
+        existing_companies_count = result.scalar_one()
         if existing_companies_count >= org.max_companies:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -136,10 +148,12 @@ async def create_company(
             )
         
         # Check if company name already exists for this organization
-        existing_company = db.query(Company).filter(
+        stmt = select(Company).where(
             Company.organization_id == data['organization_id'],
             Company.name == data['name']
-        ).first()
+        )
+        result = await db.execute(stmt)
+        existing_company = result.scalar_one_or_none()
         if existing_company:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -153,14 +167,14 @@ async def create_company(
         if existing_companies_count == 0:
             org.company_details_completed = True
         
-        db.commit()
-        db.refresh(db_company)
+        await db.commit()
+        await db.refresh(db_company)
         
         logger.info(f"Company {company.name} created for org {data['organization_id']} by {current_user.email}")
         return db_company
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating company: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -171,12 +185,14 @@ async def create_company(
 async def update_company(
     company_id: int,
     company_update: CompanyUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Update company details with enhanced validation"""
     
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -190,14 +206,14 @@ async def update_company(
         for field, value in company_update.model_dump(exclude_unset=True).items():
             setattr(company, field, value)
         
-        db.commit()
-        db.refresh(company)
+        await db.commit()
+        await db.refresh(company)
         
         logger.info(f"Company {company.name} updated by {current_user.email}")
         return company
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating company: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -207,12 +223,14 @@ async def update_company(
 @router.delete("/{company_id}")
 async def delete_company(
     company_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Delete company (admin only)"""
     
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -222,8 +240,8 @@ async def delete_company(
     if not current_user.is_super_admin:
         TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
-    db.delete(company)
-    db.commit()
+    await db.delete(company)
+    await db.commit()
     
     logger.info(f"Company {company.name} deleted by {current_user.email}")
     return {"message": "Company deleted successfully"}
@@ -250,7 +268,7 @@ async def download_companies_template(
 async def export_companies_excel(
     skip: int = 0,
     limit: int = 1000,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export companies to Excel"""
@@ -260,8 +278,11 @@ async def export_companies_excel(
     
     # Get companies using the same logic as the list endpoint
     org_id = ensure_organization_context(current_user)
-    query = db.query(Company)
-    companies = TenantQueryMixin.filter_by_tenant(query, Company, org_id).offset(skip).limit(limit).all()
+    stmt = select(Company).offset(skip).limit(limit)
+    stmt = TenantQueryMixin.filter_by_tenant(stmt, Company, org_id)
+    
+    result = await db.execute(stmt)
+    companies = result.scalars().all()
     
     # Convert to dict format for Excel export
     companies_data = []
@@ -290,12 +311,12 @@ async def export_companies_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_companies_excel(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Import companies from Excel file"""
     
-    org_id = require_current_organization_id()
+    org_id = require_current_organization_id(current_user)
     
     # Validate file type
     if not file.filename.endswith(('.xlsx', '.xls')):
@@ -350,10 +371,12 @@ async def import_companies_excel(
                     continue
                 
                 # Check if company already exists for this organization
-                existing_company = db.query(Company).filter(
+                stmt = select(Company).where(
                     Company.name == company_data["name"],
                     Company.organization_id == org_id
-                ).first()
+                )
+                result = await db.execute(stmt)
+                existing_company = result.scalar_one_or_none()
                 
                 if existing_company:
                     # Update existing company
@@ -373,7 +396,9 @@ async def import_companies_excel(
                     
                     # Mark organization as having completed company details if this is the first company
                     if created_count == 1:
-                        org = db.query(Organization).filter(Organization.id == org_id).first()
+                        stmt = select(Organization).where(Organization.id == org_id)
+                        result = await db.execute(stmt)
+                        org = result.scalar_one_or_none()
                         if org:
                             org.company_details_completed = True
                     
@@ -382,7 +407,7 @@ async def import_companies_excel(
                 continue
         
         # Commit all changes
-        db.commit()
+        await db.commit()
         
         logger.info(f"Companies import completed by {current_user.email}: "
                    f"{created_count} created, {updated_count} updated, {len(errors)} errors")
@@ -408,12 +433,14 @@ async def import_companies_excel(
 async def upload_company_logo(
     company_id: int,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Upload company logo (admin only)"""
     
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -437,54 +464,46 @@ async def upload_company_logo(
             detail="Logo file size must be less than 5MB"
         )
     
-    try:
-        # Remove old logo if exists
-        if company.logo_path and os.path.exists(company.logo_path):
-            try:
-                os.remove(company.logo_path)
-            except OSError:
-                logger.warning(f"Failed to remove old logo file: {company.logo_path}")
-        
-        # Generate unique filename
-        file_extension = os.path.splitext(file.filename or "")[1]
-        if not file_extension:
-            file_extension = ".png"  # Default extension
-        unique_filename = f"logo_{company.id}_{uuid.uuid4()}{file_extension}"
-        file_path = os.path.join(LOGO_UPLOAD_DIR, unique_filename)
-        
-        # Save file to disk
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        # Update company logo path
-        company.logo_path = file_path
-        db.commit()
-        db.refresh(company)
-        
-        logger.info(f"Logo uploaded for company {company.name} by {current_user.email}")
-        return {
-            "message": "Logo uploaded successfully",
-            "logo_path": file_path,
-            "filename": unique_filename
-        }
-        
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error uploading logo: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to upload logo. Please try again."
-        )
+    # Remove old logo if exists
+    if company.logo_path and os.path.exists(company.logo_path):
+        try:
+            os.remove(company.logo_path)
+        except OSError:
+            logger.warning(f"Failed to remove old logo file: {company.logo_path}")
+    
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename or "")[1]
+    if not file_extension:
+        file_extension = ".png"  # Default extension
+    unique_filename = f"logo_{company.id}_{uuid.uuid4()}{file_extension}"
+    file_path = os.path.join(LOGO_UPLOAD_DIR, unique_filename)
+    
+    # Save file to disk
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Update company logo path
+    company.logo_path = file_path
+    await db.commit()
+    await db.refresh(company)
+    logger.info(f"Logo uploaded for company {company.name} by {current_user.email}")
+    return {
+        "message": "Logo uploaded successfully",
+        "logo_path": file_path,
+        "filename": unique_filename
+    }
 
 @router.delete("/{company_id}/logo")
 async def delete_company_logo(
     company_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Delete company logo (admin only)"""
     
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -494,39 +513,32 @@ async def delete_company_logo(
     if not current_user.is_super_admin:
         TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
-    try:
-        # Remove logo file if exists
-        if company.logo_path and os.path.exists(company.logo_path):
-            try:
-                os.remove(company.logo_path)
-            except OSError:
-                logger.warning(f"Failed to remove logo file: {company.logo_path}")
-        
-        # Clear logo path in database
-        company.logo_path = None
-        db.commit()
-        db.refresh(company)
-        
-        logger.info(f"Logo deleted for company {company.name} by {current_user.email}")
-        return {"message": "Logo deleted successfully"}
-        
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error deleting logo: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete logo. Please try again."
-        )
+    # Remove logo file if exists
+    if company.logo_path and os.path.exists(company.logo_path):
+        try:
+            os.remove(company.logo_path)
+        except OSError:
+            logger.warning(f"Failed to remove logo file: {company.logo_path}")
+    
+    # Clear logo path in database
+    company.logo_path = None
+    await db.commit()
+    await db.refresh(company)
+    
+    logger.info(f"Logo deleted for company {company.name} by {current_user.email}")
+    return {"message": "Logo deleted successfully"}
 
 @router.get("/{company_id}/logo")
 async def get_company_logo(
     company_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get company logo file"""
     
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -555,13 +567,15 @@ async def get_company_logo(
 @router.get("/{company_id}/users", response_model=List[UserCompanyAssignmentInDB])
 async def get_company_users(
     company_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Get users assigned to a specific company"""
     
     # Check company exists and user has access
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -569,15 +583,19 @@ async def get_company_users(
         TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     # Get user assignments for this company
-    assignments = db.query(UserCompany).filter(
+    stmt = select(UserCompany).where(
         UserCompany.company_id == company_id,
         UserCompany.is_active == True
-    ).all()
+    )
+    result = await db.execute(stmt)
+    assignments = result.scalars().all()
     
     # Enrich with user and company data
-    result = []
+    result_list = []
     for assignment in assignments:
-        user = db.query(User).filter(User.id == assignment.user_id).first()
+        stmt_user = select(User).where(User.id == assignment.user_id)
+        result_user = await db.execute(stmt_user)
+        user = result_user.scalar_one_or_none()
         assignment_dict = {
             "id": assignment.id,
             "user_id": assignment.user_id,
@@ -593,21 +611,23 @@ async def get_company_users(
             "user_full_name": user.full_name if user else None,
             "company_name": company.name
         }
-        result.append(assignment_dict)
+        result_list.append(assignment_dict)
     
-    return result
+    return result_list
 
 @router.post("/{company_id}/users", response_model=UserCompanyAssignmentInDB)
 async def assign_user_to_company(
     company_id: int,
     assignment: UserCompanyAssignmentCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_org_admin_user)
 ):
     """Assign a user to a company (org admin only)"""
     
     # Check company exists and belongs to current user's org
-    company = db.query(Company).filter(Company.id == company_id).first()
+    stmt = select(Company).where(Company.id == company_id)
+    result = await db.execute(stmt)
+    company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -615,7 +635,9 @@ async def assign_user_to_company(
         TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     # Check user exists and belongs to same organization
-    user = db.query(User).filter(User.id == assignment.user_id).first()
+    stmt = select(User).where(User.id == assignment.user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -623,10 +645,12 @@ async def assign_user_to_company(
         raise HTTPException(status_code=400, detail="User and company must be in the same organization")
     
     # Check if assignment already exists
-    existing = db.query(UserCompany).filter(
+    stmt = select(UserCompany).where(
         UserCompany.user_id == assignment.user_id,
         UserCompany.company_id == company_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         if existing.is_active:
@@ -637,8 +661,8 @@ async def assign_user_to_company(
             existing.is_company_admin = assignment.is_company_admin
             existing.assigned_by_id = current_user.id
             existing.assigned_at = datetime.utcnow()
-            db.commit()
-            db.refresh(existing)
+            await db.commit()
+            await db.refresh(existing)
             return existing
     
     # Create new assignment
@@ -652,8 +676,8 @@ async def assign_user_to_company(
     )
     
     db.add(new_assignment)
-    db.commit()
-    db.refresh(new_assignment)
+    await db.commit()
+    await db.refresh(new_assignment)
     
     logger.info(f"User {user.email} assigned to company {company.name} by {current_user.email}")
     return new_assignment
@@ -663,15 +687,17 @@ async def update_user_company_assignment(
     company_id: int,
     user_id: int,
     update_data: UserCompanyAssignmentUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_org_admin_user)
 ):
     """Update user-company assignment (org admin only)"""
     
-    assignment = db.query(UserCompany).filter(
+    stmt = select(UserCompany).where(
         UserCompany.company_id == company_id,
         UserCompany.user_id == user_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    assignment = result.scalar_one_or_none()
     
     if not assignment:
         raise HTTPException(status_code=404, detail="User-company assignment not found")
@@ -687,8 +713,8 @@ async def update_user_company_assignment(
     if update_data.is_company_admin is not None:
         assignment.is_company_admin = update_data.is_company_admin
     
-    db.commit()
-    db.refresh(assignment)
+    await db.commit()
+    await db.refresh(assignment)
     
     return assignment
 
@@ -696,15 +722,17 @@ async def update_user_company_assignment(
 async def remove_user_from_company(
     company_id: int,
     user_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_org_admin_user)
 ):
     """Remove user from company (org admin only)"""
     
-    assignment = db.query(UserCompany).filter(
+    stmt = select(UserCompany).where(
         UserCompany.company_id == company_id,
         UserCompany.user_id == user_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    assignment = result.scalar_one_or_none()
     
     if not assignment:
         raise HTTPException(status_code=404, detail="User-company assignment not found")
@@ -716,7 +744,7 @@ async def remove_user_from_company(
     
     # Soft delete - deactivate assignment
     assignment.is_active = False
-    db.commit()
+    await db.commit()
     
     return {"message": "User removed from company successfully"}
 

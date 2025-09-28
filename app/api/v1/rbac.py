@@ -6,7 +6,7 @@ Service CRM RBAC API endpoints for role and permission management
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models import User
@@ -39,7 +39,7 @@ async def get_service_permissions(
 ):
     """Get all service permissions with optional filtering"""
     logger.info(f"User {current_user.id} requesting service permissions")
-    permissions = rbac_service.get_permissions(module=module, action=action)
+    permissions = await rbac_service.get_permissions(module=module, action=action)
     return permissions
 
 @router.post("/permissions/initialize")
@@ -56,7 +56,7 @@ async def initialize_default_permissions(
             detail="Only super admins can initialize permissions"
         )
     
-    permissions = rbac_service.initialize_default_permissions()
+    permissions = await rbac_service.initialize_default_permissions()
     return {
         "message": f"Initialized {len(permissions)} default permissions",
         "permissions": permissions
@@ -73,7 +73,7 @@ async def get_organization_roles(
 ):
     """Get all service roles for an organization"""
     logger.info(f"User {current_user.id} requesting roles for organization {organization_id}")
-    roles = rbac_service.get_roles(organization_id, is_active=is_active)
+    roles = await rbac_service.get_roles(organization_id, is_active=is_active)
     return roles
 
 @router.post("/organizations/{organization_id}/roles", response_model=ServiceRoleInDB)
@@ -89,7 +89,7 @@ async def create_service_role(
     
     role.organization_id = organization_id
     
-    db_role = rbac_service.create_role(role, created_by_user_id=current_user.id)
+    db_role = await rbac_service.create_role(role, created_by_user_id=current_user.id)
     return db_role
 
 @router.get("/roles/{role_id}", response_model=ServiceRoleWithPermissions)
@@ -103,7 +103,7 @@ async def get_service_role(
     
     organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
     
-    role = rbac_service.get_role_with_permissions(role_id)
+    role = await rbac_service.get_role_with_permissions(role_id)
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
     
@@ -130,7 +130,7 @@ async def update_service_role(
     
     organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
     
-    db_role = rbac_service.update_role(role_id, updates, organization_id=organization_id)
+    db_role = await rbac_service.update_role(role_id, updates, organization_id=organization_id)
     return db_role
 
 @router.delete("/roles/{role_id}")
@@ -144,7 +144,7 @@ async def delete_service_role(
     
     organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
     
-    success = rbac_service.delete_role(role_id, organization_id=organization_id)
+    success = await rbac_service.delete_role(role_id, organization_id=organization_id)
     if not success:
         raise HTTPException(status_code=404, detail="Role not found")
     
@@ -160,7 +160,7 @@ async def initialize_default_roles(
     """Initialize default service roles for an organization"""
     logger.info(f"User {current_user.id} initializing default roles for organization {organization_id}")
     
-    roles = rbac_service.initialize_default_roles(organization_id)
+    roles = await rbac_service.initialize_default_roles(organization_id)
     return {
         "message": f"Initialized {len(roles)} default roles",
         "roles": roles
@@ -180,7 +180,7 @@ async def assign_roles_to_user(
     assignment.user_id = user_id
     
     try:
-        assignments = rbac_service.assign_multiple_roles_to_user(
+        assignments = await rbac_service.assign_multiple_roles_to_user(
             user_id, assignment.role_ids, assigned_by_id=current_user.id
         )
         
@@ -206,7 +206,7 @@ async def remove_role_from_user(
     """Remove a specific role from a user"""
     logger.info(f"User {current_user.id} removing role {role_id} from user {user_id}")
     
-    success = rbac_service.remove_role_from_user(user_id, role_id)
+    success = await rbac_service.remove_role_from_user(user_id, role_id)
     if not success:
         raise HTTPException(status_code=404, detail="Role assignment not found")
     
@@ -221,7 +221,7 @@ async def remove_all_roles_from_user(
     """Remove all service roles from a user"""
     logger.info(f"User {current_user.id} removing all roles from user {user_id}")
     
-    count = rbac_service.remove_all_service_roles_from_user(user_id)
+    count = await rbac_service.remove_all_service_roles_from_user(user_id)
     return {"message": f"Removed {count} role assignments"}
 
 @router.get("/users/{user_id}/roles", response_model=List[ServiceRoleInDB])
@@ -240,7 +240,7 @@ async def get_user_service_roles(
             detail="Not enough permissions to view other users' roles"
         )
     
-    roles = rbac_service.get_user_service_roles(user_id)
+    roles = await rbac_service.get_user_service_roles(user_id)
     return roles
 
 @router.get("/roles/{role_id}/users", response_model=List[UserWithServiceRoles])
@@ -252,11 +252,11 @@ async def get_users_with_role(
     """Get all users assigned to a specific role"""
     logger.info(f"User {current_user.id} requesting users with role {role_id}")
     
-    users = rbac_service.get_users_with_role(role_id)
+    users = await rbac_service.get_users_with_role(role_id)
     
     result = []
     for user in users:
-        user_roles = rbac_service.get_user_service_roles(user.id)
+        user_roles = await rbac_service.get_user_service_roles(user.id)
         result.append(UserWithServiceRoles(
             id=user.id,
             email=user.email,
@@ -285,11 +285,11 @@ async def check_user_permission(
             detail="Not enough permissions to check other users' permissions"
         )
     
-    has_permission = rbac_service.user_has_service_permission(request.user_id, request.permission)
+    has_permission = await rbac_service.user_has_service_permission(request.user_id, request.permission)
     
     source = "none"
     if has_permission:
-        user_roles = rbac_service.get_user_service_roles(request.user_id)
+        user_roles = await rbac_service.get_user_service_roles(request.user_id)
         source = "service_role" if user_roles else "none"
     
     return PermissionCheckResponse(
@@ -315,8 +315,8 @@ async def get_user_permissions(
             detail="Not enough permissions to view other users' permissions"
         )
     
-    permissions = rbac_service.get_user_service_permissions(user_id)
-    roles = rbac_service.get_user_service_roles(user_id)
+    permissions = await rbac_service.get_user_service_permissions(user_id)
+    roles = await rbac_service.get_user_service_roles(user_id)
     
     return {
         "user_id": user_id,
@@ -342,9 +342,9 @@ async def bulk_assign_roles(
     for user_id in request.user_ids:
         try:
             if request.replace_existing:
-                rbac_service.remove_all_service_roles_from_user(user_id)
+                await rbac_service.remove_all_service_roles_from_user(user_id)
             
-            assignments = rbac_service.assign_multiple_roles_to_user(
+            assignments = await rbac_service.assign_multiple_roles_to_user(
                 user_id, request.role_ids, assigned_by_id=current_user.id
             )
             successful += len(assignments)

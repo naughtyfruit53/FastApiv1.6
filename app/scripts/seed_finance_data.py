@@ -1,4 +1,5 @@
-# seed_finance_data.py
+# app/scripts/seed_finance_data.py
+
 """
 Script to seed a standard Chart of Accounts structure (no balances or sample transactions).
 This creates a pre-loaded template hierarchy for actual data entry.
@@ -6,17 +7,18 @@ This creates a pre-loaded template hierarchy for actual data entry.
 
 import sys
 import os
-
-# Add app directory to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from app.core.database import SessionLocal
+import asyncio
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import AsyncSessionLocal
 from app.models.user_models import Organization
 from app.models.erp_models import ChartOfAccounts
 from app.models.erp_models import AccountType
 from decimal import Decimal
 
-def create_standard_chart_of_accounts(db, organization_id):
+# Add app directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+async def create_standard_chart_of_accounts(db: AsyncSession, organization_id: int):
     """Create a standard chart of accounts structure without balances"""
     accounts = [
         # ASSETS (1000-1999)
@@ -75,7 +77,7 @@ def create_standard_chart_of_accounts(db, organization_id):
             is_reconcilable=acc_data.get("reconcilable", False)
         )
         db.add(account)
-        db.flush()  # Get the ID
+        await db.flush()  # Get the ID
         created_accounts[acc_data["code"]] = account
     
     # Second pass: Set parent relationships
@@ -83,16 +85,17 @@ def create_standard_chart_of_accounts(db, organization_id):
         if acc_data["parent"]:
             created_accounts[acc_data["code"]].parent_account_id = created_accounts[acc_data["parent"]].id
     
-    db.commit()
+    await db.commit()
     return created_accounts
 
-def main():
+async def main():
     """Main function to seed standard chart of accounts for all organizations"""
-    db = SessionLocal()
+    db = AsyncSessionLocal()
     
     try:
         # Get all organizations
-        organizations = db.query(Organization).all()
+        result = await db.execute(db.query(Organization))
+        organizations = result.scalars().all()
         if not organizations:
             print("No organizations found. Please create at least one organization first.")
             return
@@ -100,7 +103,8 @@ def main():
         total_created = 0
         for org in organizations:
             # Check if already seeded to avoid duplicates
-            existing_count = db.query(ChartOfAccounts).filter(ChartOfAccounts.organization_id == org.id).count()
+            result = await db.execute(db.query(ChartOfAccounts).filter(ChartOfAccounts.organization_id == org.id))
+            existing_count = len(result.scalars().all())
             if existing_count > 0:
                 print(f"Skipping organization '{org.name}' (ID: {org.id}) - already has {existing_count} accounts.")
                 continue
@@ -108,7 +112,7 @@ def main():
             print(f"Seeding standard chart of accounts for organization: {org.name} (ID: {org.id})")
             
             # Create standard chart of accounts
-            chart_accounts = create_standard_chart_of_accounts(db, org.id)
+            chart_accounts = await create_standard_chart_of_accounts(db, org.id)
             total_created += len(chart_accounts)
             print(f"Created {len(chart_accounts)} chart of accounts for {org.name}")
         
@@ -118,10 +122,10 @@ def main():
         
     except Exception as e:
         print(f"Error seeding chart of accounts: {str(e)}")
-        db.rollback()
+        await db.rollback()
         raise
     finally:
-        db.close()
+        await db.close()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -6,8 +6,9 @@ RBAC service layer for Service CRM role-based access control
 
 from typing import List, Optional, Dict, Set
 from typing import TYPE_CHECKING
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status, Depends
 
 from app.models import (
@@ -30,50 +31,51 @@ logger = logging.getLogger(__name__)
 class RBACService:
     """Service class for Role-Based Access Control operations"""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
     
     # Permission Management
-    def create_permission(self, permission: ServicePermissionCreate) -> ServicePermission:
+    async def create_permission(self, permission: ServicePermissionCreate) -> ServicePermission:
         """Create a new service permission"""
         db_permission = ServicePermission(**permission.model_dump())
         self.db.add(db_permission)
-        self.db.commit()
-        self.db.refresh(db_permission)
+        await self.db.commit()
+        await self.db.refresh(db_permission)
         logger.info(f"Created service permission: {db_permission.name}")
         return db_permission
     
-    def get_permissions(self, 
+    async def get_permissions(self, 
                        module: Optional[str] = None,
                        action: Optional[str] = None,
                        is_active: bool = True) -> List[ServicePermission]:
         """Get service permissions with optional filtering"""
-        query = self.db.query(ServicePermission)
+        stmt = select(ServicePermission)
         
         if is_active is not None:
-            query = query.filter(ServicePermission.is_active == is_active)
+            stmt = stmt.where(ServicePermission.is_active == is_active)
         if module:
-            query = query.filter(ServicePermission.module == module)
+            stmt = stmt.where(ServicePermission.module == module)
         if action:
-            query = query.filter(ServicePermission.action == action)
+            stmt = stmt.where(ServicePermission.action == action)
             
-        return query.order_by(ServicePermission.module, ServicePermission.action).all()
+        result = await self.db.execute(stmt.order_by(ServicePermission.module, ServicePermission.action))
+        return result.scalars().all()
     
-    def get_permission_by_name(self, name: str) -> Optional[ServicePermission]:
+    async def get_permission_by_name(self, name: str) -> Optional[ServicePermission]:
         """Get permission by name"""
-        return self.db.query(ServicePermission).filter(
-            ServicePermission.name == name,
-            ServicePermission.is_active == True
-        ).first()
+        result = await self.db.execute(
+            select(ServicePermission).filter_by(name=name, is_active=True)
+        )
+        return result.scalars().first()
     
     # Role Management
-    def create_role(self, role: ServiceRoleCreate, created_by_user_id: Optional[int] = None) -> ServiceRole:
+    async def create_role(self, role: ServiceRoleCreate, created_by_user_id: Optional[int] = None) -> ServiceRole:
         """Create a new service role with permissions"""
         # Check if role already exists in organization
-        existing = self.db.query(ServiceRole).filter(
-            ServiceRole.organization_id == role.organization_id,
-            ServiceRole.name == role.name
-        ).first()
+        result = await self.db.execute(
+            select(ServiceRole).filter_by(organization_id=role.organization_id, name=role.name)
+        )
+        existing = result.scalars().first()
         
         if existing:
             raise HTTPException(
@@ -85,15 +87,15 @@ class RBACService:
         role_data = role.model_dump(exclude={'permission_ids'})
         db_role = ServiceRole(**role_data)
         self.db.add(db_role)
-        self.db.flush()  # Get the ID without committing
+        await self.db.flush()  # Get the ID without committing
         
         # Assign permissions
         if role.permission_ids:
             for permission_id in role.permission_ids:
-                permission = self.db.query(ServicePermission).filter(
-                    ServicePermission.id == permission_id,
-                    ServicePermission.is_active == True
-                ).first()
+                result = await self.db.execute(
+                    select(ServicePermission).filter_by(id=permission_id, is_active=True)
+                )
+                permission = result.scalars().first()
                 
                 if permission:
                     role_permission = ServiceRolePermission(
@@ -103,44 +105,48 @@ class RBACService:
                     )
                     self.db.add(role_permission)
         
-        self.db.commit()
-        self.db.refresh(db_role)
+        await self.db.commit()
+        await self.db.refresh(db_role)
         logger.info(f"Created service role: {db_role.name} for organization {db_role.organization_id}")
         return db_role
     
-    def get_roles(self, organization_id: int, is_active: bool = True) -> List[ServiceRole]:
+    async def get_roles(self, organization_id: int, is_active: bool = True) -> List[ServiceRole]:
         """Get service roles for an organization"""
-        query = self.db.query(ServiceRole).filter(
-            ServiceRole.organization_id == organization_id
-        )
+        stmt = select(ServiceRole).filter_by(organization_id=organization_id)
         
         if is_active is not None:
-            query = query.filter(ServiceRole.is_active == is_active)
+            stmt = stmt.where(ServiceRole.is_active == is_active)
             
-        return query.order_by(ServiceRole.name).all()
+        result = await self.db.execute(stmt.order_by(ServiceRole.name))
+        return result.scalars().all()
     
-    def get_role_by_id(self, role_id: int, organization_id: Optional[int] = None) -> Optional[ServiceRole]:
+    async def get_role_by_id(self, role_id: int, organization_id: Optional[int] = None) -> Optional[ServiceRole]:
         """Get role by ID with optional organization filtering"""
-        query = self.db.query(ServiceRole).filter(ServiceRole.id == role_id)
+        stmt = select(ServiceRole).filter_by(id=role_id)
         
         if organization_id:
-            query = query.filter(ServiceRole.organization_id == organization_id)
+            stmt = stmt.where(ServiceRole.organization_id == organization_id)
             
-        return query.first()
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
     
-    def get_role_with_permissions(self, role_id: int) -> Optional[ServiceRole]:
+    async def get_role_with_permissions(self, role_id: int) -> Optional[ServiceRole]:
         """Get role with its permissions loaded"""
-        return self.db.query(ServiceRole).options(
-            joinedload(ServiceRole.role_permissions).joinedload(ServiceRolePermission.permission)
-        ).filter(ServiceRole.id == role_id).first()
+        result = await self.db.execute(
+            select(ServiceRole).options(
+                joinedload(ServiceRole.role_permissions).joinedload(ServiceRolePermission.permission)
+            ).filter_by(id=role_id)
+        )
+        return result.scalars().first()
     
-    def update_role(self, role_id: int, updates: ServiceRoleUpdate, organization_id: Optional[int] = None) -> ServiceRole:
+    async def update_role(self, role_id: int, updates: ServiceRoleUpdate, organization_id: Optional[int] = None) -> ServiceRole:
         """Update a service role"""
-        query = self.db.query(ServiceRole).filter(ServiceRole.id == role_id)
+        stmt = select(ServiceRole).filter_by(id=role_id)
         if organization_id:
-            query = query.filter(ServiceRole.organization_id == organization_id)
+            stmt = stmt.where(ServiceRole.organization_id == organization_id)
             
-        db_role = query.first()
+        result = await self.db.execute(stmt)
+        db_role = result.scalars().first()
         if not db_role:
             raise HTTPException(status_code=404, detail="Role not found")
         
@@ -152,16 +158,18 @@ class RBACService:
         # Update permissions if provided
         if updates.permission_ids is not None:
             # Remove existing permissions
-            self.db.query(ServiceRolePermission).filter(
-                ServiceRolePermission.role_id == role_id
-            ).delete()
+            await self.db.execute(
+                ServiceRolePermission.__table__.delete().where(
+                    ServiceRolePermission.role_id == role_id
+                )
+            )
             
             # Add new permissions
             for permission_id in updates.permission_ids:
-                permission = self.db.query(ServicePermission).filter(
-                    ServicePermission.id == permission_id,
-                    ServicePermission.is_active == True
-                ).first()
+                perm_result = await self.db.execute(
+                    select(ServicePermission).filter_by(id=permission_id, is_active=True)
+                )
+                permission = perm_result.scalars().first()
                 
                 if permission:
                     role_permission = ServiceRolePermission(
@@ -171,26 +179,27 @@ class RBACService:
                     )
                     self.db.add(role_permission)
         
-        self.db.commit()
-        self.db.refresh(db_role)
+        await self.db.commit()
+        await self.db.refresh(db_role)
         logger.info(f"Updated service role: {db_role.name}")
         return db_role
     
-    def delete_role(self, role_id: int, organization_id: Optional[int] = None) -> bool:
+    async def delete_role(self, role_id: int, organization_id: Optional[int] = None) -> bool:
         """Delete a service role (soft delete by setting is_active=False)"""
-        query = self.db.query(ServiceRole).filter(ServiceRole.id == role_id)
+        stmt = select(ServiceRole).filter_by(id=role_id)
         if organization_id:
-            query = query.filter(ServiceRole.organization_id == organization_id)
+            stmt = stmt.where(ServiceRole.organization_id == organization_id)
             
-        db_role = query.first()
+        result = await self.db.execute(stmt)
+        db_role = result.scalars().first()
         if not db_role:
             return False
         
         # Check if role is assigned to any users
-        active_assignments = self.db.query(UserServiceRole).filter(
-            UserServiceRole.role_id == role_id,
-            UserServiceRole.is_active == True
-        ).count()
+        count_result = await self.db.execute(
+            select(UserServiceRole).filter_by(role_id=role_id, is_active=True).count()
+        )
+        active_assignments = count_result.scalars().first()
         
         if active_assignments > 0:
             raise HTTPException(
@@ -199,23 +208,24 @@ class RBACService:
             )
         
         db_role.is_active = False
-        self.db.commit()
+        await self.db.commit()
         logger.info(f"Deleted service role: {db_role.name}")
         return True
     
     # User Role Assignment
-    def assign_role_to_user(self, user_id: int, role_id: int, assigned_by_id: Optional[int] = None) -> UserServiceRole:
+    async def assign_role_to_user(self, user_id: int, role_id: int, assigned_by_id: Optional[int] = None) -> UserServiceRole:
         """Assign a service role to a user"""
         # Check if user exists
-        user = self.db.query(User).filter(User.id == user_id).first()
+        user_result = await self.db.execute(select(User).filter_by(id=user_id))
+        user = user_result.scalars().first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         # Check if role exists and is active
-        role = self.db.query(ServiceRole).filter(
-            ServiceRole.id == role_id,
-            ServiceRole.is_active == True
-        ).first()
+        role_result = await self.db.execute(
+            select(ServiceRole).filter_by(id=role_id, is_active=True)
+        )
+        role = role_result.scalars().first()
         if not role:
             raise HTTPException(status_code=404, detail="Role not found or inactive")
         
@@ -227,10 +237,10 @@ class RBACService:
             )
         
         # Check if assignment already exists
-        existing = self.db.query(UserServiceRole).filter(
-            UserServiceRole.user_id == user_id,
-            UserServiceRole.role_id == role_id
-        ).first()
+        existing_result = await self.db.execute(
+            select(UserServiceRole).filter_by(user_id=user_id, role_id=role_id)
+        )
+        existing = existing_result.scalars().first()
         
         if existing:
             if existing.is_active:
@@ -242,8 +252,8 @@ class RBACService:
                 # Reactivate existing assignment
                 existing.is_active = True
                 existing.assigned_by_id = assigned_by_id
-                self.db.commit()
-                self.db.refresh(existing)
+                await self.db.commit()
+                await self.db.refresh(existing)
                 logger.info(f"Reactivated role assignment: user {user_id} -> role {role_id}")
                 return existing
         
@@ -255,106 +265,126 @@ class RBACService:
             assigned_by_id=assigned_by_id
         )
         self.db.add(assignment)
-        self.db.commit()
-        self.db.refresh(assignment)
+        await self.db.commit()
+        await self.db.refresh(assignment)
         logger.info(f"Assigned role: user {user_id} -> role {role_id}")
         return assignment
     
-    def remove_role_from_user(self, user_id: int, role_id: int) -> bool:
+    async def remove_role_from_user(self, user_id: int, role_id: int) -> bool:
         """Remove a service role from a user"""
-        assignment = self.db.query(UserServiceRole).filter(
-            UserServiceRole.user_id == user_id,
-            UserServiceRole.role_id == role_id,
-            UserServiceRole.is_active == True
-        ).first()
+        result = await self.db.execute(
+            select(UserServiceRole).filter_by(
+                user_id=user_id,
+                role_id=role_id,
+                is_active=True
+            )
+        )
+        assignment = result.scalars().first()
         
         if not assignment:
             return False
         
         assignment.is_active = False
-        self.db.commit()
+        await self.db.commit()
         logger.info(f"Removed role assignment: user {user_id} -> role {role_id}")
         return True
     
-    def get_user_service_roles(self, user_id: int) -> List[ServiceRole]:
+    async def get_user_service_roles(self, user_id: int) -> List[ServiceRole]:
         """Get all active service roles for a user"""
-        return self.db.query(ServiceRole).join(UserServiceRole).filter(
-            UserServiceRole.user_id == user_id,
-            UserServiceRole.is_active == True,
-            ServiceRole.is_active == True
-        ).all()
+        result = await self.db.execute(
+            select(ServiceRole)
+            .join(UserServiceRole)
+            .where(
+                UserServiceRole.user_id == user_id,
+                UserServiceRole.is_active == True,
+                ServiceRole.is_active == True
+            )
+        )
+        return result.scalars().all()
     
-    def get_users_with_role(self, role_id: int) -> List[User]:
+    async def get_users_with_role(self, role_id: int) -> List[User]:
         """Get all users assigned to a specific role"""
-        return self.db.query(User).join(UserServiceRole).filter(
-            UserServiceRole.role_id == role_id,
-            UserServiceRole.is_active == True,
-            User.is_active == True
-        ).all()
+        result = await self.db.execute(
+            select(User)
+            .join(UserServiceRole)
+            .where(
+                UserServiceRole.role_id == role_id,
+                UserServiceRole.is_active == True,
+                User.is_active == True
+            )
+        )
+        return result.scalars().all()
     
     # Permission Checking
-    def user_has_service_permission(self, user_id: int, permission_name: str) -> bool:
+    async def user_has_service_permission(self, user_id: int, permission_name: str) -> bool:
         """Check if user has a specific service permission through their roles"""
         # Get user's active service roles
-        user_roles = self.get_user_service_roles(user_id)
+        user_roles = await self.get_user_service_roles(user_id)
         
         # Check if any role has the required permission
         for role in user_roles:
-            role_permissions = self.db.query(ServicePermission).join(ServiceRolePermission).filter(
-                ServiceRolePermission.role_id == role.id,
-                ServicePermission.name == permission_name,
-                ServicePermission.is_active == True
-            ).first()
+            result = await self.db.execute(
+                select(ServicePermission)
+                .join(ServiceRolePermission)
+                .where(
+                    ServiceRolePermission.role_id == role.id,
+                    ServicePermission.name == permission_name,
+                    ServicePermission.is_active == True
+                )
+            )
+            role_permissions = result.scalars().first()
             
             if role_permissions:
                 return True
         
         return False
     
-    def get_user_service_permissions(self, user_id: int) -> Set[str]:
+    async def get_user_service_permissions(self, user_id: int) -> Set[str]:
         """Get all service permissions for a user"""
-        query = self.db.query(ServicePermission.name) \
-            .select_from(UserServiceRole) \
-            .join(UserServiceRole.role) \
-            .join(ServiceRole.role_permissions) \
-            .join(ServiceRolePermission.permission) \
-            .filter(
+        result = await self.db.execute(
+            select(ServicePermission.name)
+            .select_from(UserServiceRole)
+            .join(UserServiceRole.role)
+            .join(ServiceRole.role_permissions)
+            .join(ServiceRolePermission.permission)
+            .where(
                 UserServiceRole.user_id == user_id,
                 UserServiceRole.is_active == True,
                 ServicePermission.is_active == True
             )
-        return set(row[0] for row in query.all())
+        )
+        return {row[0] for row in result.all()}
     
     # Bulk Operations
-    def assign_multiple_roles_to_user(self, user_id: int, role_ids: List[int], assigned_by_id: Optional[int] = None) -> List[UserServiceRole]:
+    async def assign_multiple_roles_to_user(self, user_id: int, role_ids: List[int], assigned_by_id: Optional[int] = None) -> List[UserServiceRole]:
         """Assign multiple roles to a user"""
         assignments = []
         for role_id in role_ids:
             try:
-                assignment = self.assign_role_to_user(user_id, role_id, assigned_by_id)
+                assignment = await self.assign_role_to_user(user_id, role_id, assigned_by_id)
                 assignments.append(assignment)
             except HTTPException as e:
                 logger.warning(f"Failed to assign role {role_id} to user {user_id}: {e.detail}")
         
         return assignments
     
-    def remove_all_service_roles_from_user(self, user_id: int) -> int:
+    async def remove_all_service_roles_from_user(self, user_id: int) -> int:
         """Remove all service roles from a user"""
-        assignments = self.db.query(UserServiceRole).filter(
-            UserServiceRole.user_id == user_id,
-            UserServiceRole.is_active == True
-        ).all()
+        result = await self.db.execute(
+            select(UserServiceRole).filter_by(user_id=user_id, is_active=True)
+        )
+        assignments = result.scalars().all()
         
         count = len(assignments)
         for assignment in assignments:
             assignment.is_active = False
         
-        self.db.commit()
+        await self.db.commit()
         logger.info(f"Removed {count} role assignments from user {user_id}")
         return count
     
     # Initialization
-    def initialize_default_permissions(self) -> List[ServicePermission]:
+    async def initialize_default_permissions(self) -> List[ServicePermission]:
         """Initialize default service permissions"""
         default_permissions = [
             # Service Management
@@ -411,7 +441,7 @@ class RBACService:
         
         created_permissions = []
         for name, display_name, description, module, action in default_permissions:
-            existing = self.get_permission_by_name(name)
+            existing = await self.get_permission_by_name(name)
             if not existing:
                 permission = ServicePermissionCreate(
                     name=name,
@@ -420,17 +450,17 @@ class RBACService:
                     module=module,
                     action=action
                 )
-                created_permissions.append(self.create_permission(permission))
+                created_permissions.append(await self.create_permission(permission))
         
         return created_permissions
     
-    def initialize_default_roles(self, organization_id: int) -> List[ServiceRole]:
+    async def initialize_default_roles(self, organization_id: int) -> List[ServiceRole]:
         """Initialize default service roles for an organization"""
         # Ensure permissions exist
-        self.initialize_default_permissions()
+        await self.initialize_default_permissions()
         
         # Get all permissions
-        all_permissions = self.get_permissions()
+        all_permissions = await self.get_permissions()
         permission_map = {p.name: p.id for p in all_permissions}
         
         # Define default roles with their permissions
@@ -487,10 +517,10 @@ class RBACService:
         
         created_roles = []
         for role_data in default_roles:
-            existing = self.db.query(ServiceRole).filter(
-                ServiceRole.organization_id == organization_id,
-                ServiceRole.name == role_data["name"]
-            ).first()
+            existing_result = await self.db.execute(
+                select(ServiceRole).filter_by(organization_id=organization_id, name=role_data["name"])
+            )
+            existing = existing_result.scalars().first()
             
             if not existing:
                 permission_ids = [permission_map[p] for p in role_data["permissions"] if p in permission_map]
@@ -502,70 +532,75 @@ class RBACService:
                     organization_id=organization_id,
                     permission_ids=permission_ids
                 )
-                created_roles.append(self.create_role(role_create))
+                created_roles.append(await self.create_role(role_create))
         
         return created_roles
     
     # Company-scoped permission methods for multi-company support
     
-    def user_has_company_access(self, user_id: int, company_id: int) -> bool:
+    async def user_has_company_access(self, user_id: int, company_id: int) -> bool:
         """Check if user has access to a specific company"""
         from app.models.user_models import UserCompany
         
-        # Check if user is assigned to the company
-        assignment = self.db.query(UserCompany).filter(
-            UserCompany.user_id == user_id,
-            UserCompany.company_id == company_id,
-            UserCompany.is_active == True
-        ).first()
+        result = await self.db.execute(
+            select(UserCompany).filter_by(user_id=user_id, company_id=company_id, is_active=True)
+        )
+        assignment = result.scalars().first()
         
         return assignment is not None
     
-    def user_is_company_admin(self, user_id: int, company_id: int) -> bool:
+    async def user_is_company_admin(self, user_id: int, company_id: int) -> bool:
         """Check if user is admin of a specific company"""
         from app.models.user_models import UserCompany
         
-        assignment = self.db.query(UserCompany).filter(
-            UserCompany.user_id == user_id,
-            UserCompany.company_id == company_id,
-            UserCompany.is_active == True,
-            UserCompany.is_company_admin == True
-        ).first()
+        result = await self.db.execute(
+            select(UserCompany).filter_by(
+                user_id=user_id,
+                company_id=company_id,
+                is_active=True,
+                is_company_admin=True
+            )
+        )
+        assignment = result.scalars().first()
         
         return assignment is not None
     
-    def get_user_companies(self, user_id: int) -> List[int]:
+    async def get_user_companies(self, user_id: int) -> List[int]:
         """Get list of company IDs that user has access to"""
         from app.models.user_models import UserCompany
         
-        assignments = self.db.query(UserCompany).filter(
-            UserCompany.user_id == user_id,
-            UserCompany.is_active == True
-        ).all()
+        result = await self.db.execute(
+            select(UserCompany).filter_by(user_id=user_id, is_active=True)
+        )
+        assignments = result.scalars().all()
         
         return [assignment.company_id for assignment in assignments]
     
-    def get_user_admin_companies(self, user_id: int) -> List[int]:
+    async def get_user_admin_companies(self, user_id: int) -> List[int]:
         """Get list of company IDs where user is admin"""
         from app.models.user_models import UserCompany
         
-        assignments = self.db.query(UserCompany).filter(
-            UserCompany.user_id == user_id,
-            UserCompany.is_active == True,
-            UserCompany.is_company_admin == True
-        ).all()
+        result = await self.db.execute(
+            select(UserCompany).filter_by(
+                user_id=user_id,
+                is_active=True,
+                is_company_admin=True
+            )
+        )
+        assignments = result.scalars().all()
         
         return [assignment.company_id for assignment in assignments]
     
-    def user_has_company_permission(self, user_id: int, company_id: int, permission_name: str) -> bool:
+    async def user_has_company_permission(self, user_id: int, company_id: int, permission_name: str) -> bool:
         """Check if user has a specific permission within a company scope"""
         
         # First check if user has access to the company
-        if not self.user_has_company_access(user_id, company_id):
+        if not await self.user_has_company_access(user_id, company_id):
             return False
         
         # Check user's role - org admin or super admin have all permissions
-        user = self.db.query(User).filter(User.id == user_id).first()
+        user_result = await self.db.execute(select(User).filter_by(id=user_id))
+        user = user_result.scalars().first()
         if not user:
             return False
         
@@ -573,35 +608,35 @@ class RBACService:
             return True
         
         # Check if user is company admin for this company
-        if self.user_is_company_admin(user_id, company_id):
+        if await self.user_is_company_admin(user_id, company_id):
             # Company admins have most permissions except organization-level ones
             org_only_permissions = ["create_organization", "delete_organization", "manage_organization_settings"]
             if permission_name not in org_only_permissions:
                 return True
         
         # Check service role permissions
-        return self.user_has_service_permission(user_id, permission_name)
+        return await self.user_has_service_permission(user_id, permission_name)
     
-    def enforce_company_access(self, user_id: int, company_id: int, permission_name: Optional[str] = None):
+    async def enforce_company_access(self, user_id: int, company_id: int, permission_name: Optional[str] = None):
         """Enforce company access and optionally permission - raises HTTPException if denied"""
         
-        if not self.user_has_company_access(user_id, company_id):
+        if not await self.user_has_company_access(user_id, company_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: User does not have access to this company"
             )
         
-        if permission_name and not self.user_has_company_permission(user_id, company_id, permission_name):
+        if permission_name and not await self.user_has_company_permission(user_id, company_id, permission_name):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied: Missing permission '{permission_name}' for this company"
             )
 
-def require_permission(permission: str):
+async def require_permission(permission: str):
     """Dependency to check if current user has a specific permission"""
-    def dependency(current_user: User = Depends(get_current_active_user)):
+    async def dependency(current_user: User = Depends(get_current_active_user)):
         rbac = RBACService(dependency.db)  # Assuming db is available in dependency
-        if not rbac.user_has_service_permission(current_user.id, permission):
+        if not await rbac.user_has_service_permission(current_user.id, permission):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Insufficient permissions: {permission} required"

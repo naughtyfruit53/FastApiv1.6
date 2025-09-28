@@ -1,15 +1,16 @@
 # app/api/v1/erp.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, desc, asc, func
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin, validate_company_setup_for_operations
+from app.core.tenant import TenantQueryMixin
 from app.core.org_restrictions import require_current_organization_id, validate_company_setup
 from app.core.rbac_dependencies import check_service_permission
 from app.schemas.user import UserInDB
@@ -45,7 +46,7 @@ class ERPService:
     """Service class for ERP operations"""
     
     @staticmethod
-    def generate_account_code(db: Session, organization_id: int, account_type: str) -> str:
+    async def generate_account_code(db: AsyncSession, organization_id: int, account_type: str) -> str:
         """Generate next account code based on account type"""
         type_prefixes = {
             "asset": "1",
@@ -60,10 +61,12 @@ class ERPService:
         prefix = type_prefixes.get(account_type.lower(), "9")
         
         # Get the highest existing code for this type
-        last_account = db.query(ChartOfAccounts).filter(
+        stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.organization_id == organization_id,
             ChartOfAccounts.account_code.like(f"{prefix}%")
-        ).order_by(desc(ChartOfAccounts.account_code)).first()
+        ).order_by(desc(ChartOfAccounts.account_code))
+        result = await db.execute(stmt)
+        last_account = result.scalar_one_or_none()
         
         if last_account:
             try:
@@ -83,39 +86,40 @@ async def get_chart_of_accounts(
     account_type: Optional[AccountTypeEnum] = Query(None),
     is_active: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get chart of accounts with filtering options"""
-    query = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id
     )
     
     if account_type:
-        query = query.filter(ChartOfAccounts.account_type == account_type)
+        stmt = stmt.where(ChartOfAccounts.account_type == account_type)
     
     if is_active is not None:
-        query = query.filter(ChartOfAccounts.is_active == is_active)
+        stmt = stmt.where(ChartOfAccounts.is_active == is_active)
     
     if search:
-        query = query.filter(or_(
+        stmt = stmt.where(or_(
             ChartOfAccounts.account_name.ilike(f"%{search}%"),
             ChartOfAccounts.account_code.ilike(f"%{search}%")
         ))
     
     # Order by account code
-    query = query.order_by(ChartOfAccounts.account_code)
+    stmt = stmt.order_by(ChartOfAccounts.account_code)
     
-    accounts = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    accounts = result.scalars().all()
     return accounts
 
 
 @router.post("/chart-of-accounts", response_model=ChartOfAccountsResponse)
 async def create_chart_of_account(
     account_data: ChartOfAccountsCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
@@ -124,15 +128,17 @@ async def create_chart_of_account(
     # Auto-generate account code if not provided
     account_code = account_data.account_code
     if not account_code:
-        account_code = ERPService.generate_account_code(
+        account_code = await ERPService.generate_account_code(
             db, organization_id, account_data.account_type.value
         )
     
     # Check if account code already exists
-    existing = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.account_code == account_code
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(
@@ -143,10 +149,12 @@ async def create_chart_of_account(
     # Calculate level based on parent account
     level = 0
     if account_data.parent_account_id:
-        parent = db.query(ChartOfAccounts).filter(
+        stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.id == account_data.parent_account_id,
             ChartOfAccounts.organization_id == organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        parent = result.scalar_one_or_none()
         if not parent:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -172,8 +180,8 @@ async def create_chart_of_account(
     )
     
     db.add(account)
-    db.commit()
-    db.refresh(account)
+    await db.commit()
+    await db.refresh(account)
     
     return account
 
@@ -181,16 +189,18 @@ async def create_chart_of_account(
 @router.get("/chart-of-accounts/{account_id}", response_model=ChartOfAccountsResponse)
 async def get_chart_of_account(
     account_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get a specific chart of account"""
-    account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalar_one_or_none()
     
     if not account:
         raise HTTPException(
@@ -205,16 +215,18 @@ async def get_chart_of_account(
 async def update_chart_of_account(
     account_id: int,
     account_data: ChartOfAccountsUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Update a chart of account"""
-    account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalar_one_or_none()
     
     if not account:
         raise HTTPException(
@@ -227,10 +239,12 @@ async def update_chart_of_account(
     # Recalculate level if parent changes
     if 'parent_account_id' in update_data:
         if update_data['parent_account_id']:
-            parent = db.query(ChartOfAccounts).filter(
+            stmt = select(ChartOfAccounts).where(
                 ChartOfAccounts.id == update_data['parent_account_id'],
                 ChartOfAccounts.organization_id == organization_id
-            ).first()
+            )
+            result = await db.execute(stmt)
+            parent = result.scalar_one_or_none()
             if not parent:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -246,8 +260,8 @@ async def update_chart_of_account(
     account.updated_by = current_user.id
     account.updated_at = datetime.utcnow()
     
-    db.commit()
-    db.refresh(account)
+    await db.commit()
+    await db.refresh(account)
     
     return account
 
@@ -255,16 +269,18 @@ async def update_chart_of_account(
 @router.delete("/chart-of-accounts/{account_id}")
 async def delete_chart_of_account(
     account_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Delete a chart of account"""
-    account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalar_one_or_none()
     
     if not account:
         raise HTTPException(
@@ -273,31 +289,35 @@ async def delete_chart_of_account(
         )
     
     # Check if account has sub-accounts
-    sub_accounts = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.parent_account_id == account_id,
         ChartOfAccounts.organization_id == organization_id
-    ).count()
+    )
+    result = await db.execute(stmt)
+    sub_accounts = result.scalars().all()
     
-    if sub_accounts > 0:
+    if len(sub_accounts) > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete account with sub-accounts"
         )
     
     # Check if account has journal entries
-    journal_entries = db.query(JournalEntry).filter(
+    stmt = select(JournalEntry).where(
         JournalEntry.account_id == account_id,
         JournalEntry.organization_id == organization_id
-    ).count()
+    )
+    result = await db.execute(stmt)
+    journal_entries = result.scalars().all()
     
-    if journal_entries > 0:
+    if len(journal_entries) > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete account with journal entries"
         )
     
-    db.delete(account)
-    db.commit()
+    await db.delete(account)
+    await db.commit()
     
     return {"message": "Account deleted successfully"}
 
@@ -305,15 +325,17 @@ async def delete_chart_of_account(
 # GST Configuration Endpoints
 @router.get("/gst-configuration", response_model=List[GSTConfigurationResponse])
 async def get_gst_configurations(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get GST configurations"""
-    configurations = db.query(GSTConfiguration).filter(
+    stmt = select(GSTConfiguration).where(
         GSTConfiguration.organization_id == organization_id
-    ).all()
+    )
+    result = await db.execute(stmt)
+    configurations = result.scalars().all()
     
     return configurations
 
@@ -321,16 +343,18 @@ async def get_gst_configurations(
 @router.post("/gst-configuration", response_model=GSTConfigurationResponse)
 async def create_gst_configuration(
     config_data: GSTConfigurationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Create GST configuration"""
     # Check if GSTIN already exists
-    existing = db.query(GSTConfiguration).filter(
+    stmt = select(GSTConfiguration).where(
         GSTConfiguration.gstin == config_data.gstin
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(
@@ -344,8 +368,8 @@ async def create_gst_configuration(
     )
     
     db.add(configuration)
-    db.commit()
-    db.refresh(configuration)
+    await db.commit()
+    await db.refresh(configuration)
     
     return configuration
 
@@ -357,40 +381,43 @@ async def get_tax_codes(
     limit: int = Query(100),
     tax_type: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get tax codes with filtering options"""
-    query = db.query(ERPTaxCode).filter(
+    stmt = select(ERPTaxCode).where(
         ERPTaxCode.organization_id == organization_id
     )
     
     if tax_type:
-        query = query.filter(ERPTaxCode.tax_type == tax_type)
+        stmt = stmt.where(ERPTaxCode.tax_type == tax_type)
     
     if is_active is not None:
-        query = query.filter(ERPTaxCode.is_active == is_active)
+        stmt = stmt.where(ERPTaxCode.is_active == is_active)
     
-    tax_codes = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    tax_codes = result.scalars().all()
     return tax_codes
 
 
 @router.post("/tax-codes", response_model=TaxCodeResponse)
 async def create_tax_code(
     tax_data: TaxCodeCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new tax code"""
     # Check if tax code already exists
-    existing = db.query(ERPTaxCode).filter(
+    stmt = select(ERPTaxCode).where(
         ERPTaxCode.organization_id == organization_id,
         ERPTaxCode.tax_code == tax_data.tax_code
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(
@@ -404,8 +431,8 @@ async def create_tax_code(
     )
     
     db.add(tax_code)
-    db.commit()
-    db.refresh(tax_code)
+    await db.commit()
+    await db.refresh(tax_code)
     
     return tax_code
 
@@ -414,18 +441,20 @@ async def create_tax_code(
 @router.get("/reports/trial-balance", response_model=TrialBalanceResponse)
 async def get_trial_balance(
     as_of_date: date = Query(..., description="As of date for trial balance"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Generate trial balance report"""
     # Get all accounts with their balances
-    accounts = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.is_active == True,
         ChartOfAccounts.can_post == True
-    ).all()
+    )
+    result = await db.execute(stmt)
+    accounts = result.scalars().all()
     
     trial_balance = []
     total_debits = Decimal(0)
@@ -480,57 +509,62 @@ async def get_general_ledger(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     reference_type: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get general ledger entries with filtering options"""
-    query = db.query(GeneralLedger).filter(
+    stmt = select(GeneralLedger).where(
         GeneralLedger.organization_id == organization_id
     )
     
     if account_id:
-        query = query.filter(GeneralLedger.account_id == account_id)
+        stmt = stmt.where(GeneralLedger.account_id == account_id)
     
     if start_date:
-        query = query.filter(GeneralLedger.transaction_date >= start_date)
+        stmt = stmt.where(GeneralLedger.transaction_date >= start_date)
     
     if end_date:
-        query = query.filter(GeneralLedger.transaction_date <= end_date)
+        stmt = stmt.where(GeneralLedger.transaction_date <= end_date)
     
     if reference_type:
-        query = query.filter(GeneralLedger.reference_type == reference_type)
+        stmt = stmt.where(GeneralLedger.reference_type == reference_type)
     
-    query = query.order_by(desc(GeneralLedger.transaction_date), desc(GeneralLedger.id))
+    stmt = stmt.order_by(desc(GeneralLedger.transaction_date), desc(GeneralLedger.id))
     
-    entries = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    entries = result.scalars().all()
     return entries
 
 
 @router.post("/general-ledger", response_model=GeneralLedgerResponse)
 async def create_general_ledger_entry(
     entry: GeneralLedgerCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new general ledger entry"""
     # Validate account exists
-    account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == entry.account_id,
         ChartOfAccounts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalar_one_or_none()
     
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     
     # Calculate running balance
-    last_entry = db.query(GeneralLedger).filter(
+    stmt = select(GeneralLedger).where(
         GeneralLedger.account_id == entry.account_id,
         GeneralLedger.organization_id == organization_id
-    ).order_by(desc(GeneralLedger.transaction_date), desc(GeneralLedger.id)).first()
+    ).order_by(desc(GeneralLedger.transaction_date), desc(GeneralLedger.id))
+    result = await db.execute(stmt)
+    last_entry = result.scalar_one_or_none()
     
     previous_balance = last_entry.running_balance if last_entry else account.opening_balance
     
@@ -547,8 +581,8 @@ async def create_general_ledger_entry(
     )
     
     db.add(db_entry)
-    db.commit()
-    db.refresh(db_entry)
+    await db.commit()
+    await db.refresh(db_entry)
     
     return db_entry
 
@@ -560,40 +594,43 @@ async def get_cost_centers(
     limit: int = Query(100),
     is_active: Optional[bool] = Query(None),
     parent_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get cost centers with filtering options"""
-    query = db.query(CostCenter).filter(
+    stmt = select(CostCenter).where(
         CostCenter.organization_id == organization_id
     )
     
     if is_active is not None:
-        query = query.filter(CostCenter.is_active == is_active)
+        stmt = stmt.where(CostCenter.is_active == is_active)
     
     if parent_id is not None:
-        query = query.filter(CostCenter.parent_cost_center_id == parent_id)
+        stmt = stmt.where(CostCenter.parent_cost_center_id == parent_id)
     
-    cost_centers = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    cost_centers = result.scalars().all()
     return cost_centers
 
 
 @router.post("/cost-centers", response_model=CostCenterResponse)
 async def create_cost_center(
     cost_center: CostCenterCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new cost center"""
     # Check if cost center code exists
-    existing = db.query(CostCenter).filter(
+    stmt = select(CostCenter).where(
         CostCenter.organization_id == organization_id,
         CostCenter.cost_center_code == cost_center.cost_center_code
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(status_code=400, detail="Cost center code already exists")
@@ -601,10 +638,12 @@ async def create_cost_center(
     # Calculate level
     level = 0
     if cost_center.parent_cost_center_id:
-        parent = db.query(CostCenter).filter(
+        stmt = select(CostCenter).where(
             CostCenter.id == cost_center.parent_cost_center_id,
             CostCenter.organization_id == organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        parent = result.scalar_one_or_none()
         if parent:
             level = parent.level + 1
     
@@ -616,8 +655,8 @@ async def create_cost_center(
     )
     
     db.add(db_cost_center)
-    db.commit()
-    db.refresh(db_cost_center)
+    await db.commit()
+    await db.refresh(db_cost_center)
     
     return db_cost_center
 
@@ -628,44 +667,49 @@ async def get_bank_accounts(
     skip: int = Query(0),
     limit: int = Query(100),
     is_active: Optional[bool] = Query(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get bank accounts with filtering options"""
-    query = db.query(BankAccount).filter(
+    stmt = select(BankAccount).where(
         BankAccount.organization_id == organization_id
     )
     
     if is_active is not None:
-        query = query.filter(BankAccount.is_active == is_active)
+        stmt = stmt.where(BankAccount.is_active == is_active)
     
-    bank_accounts = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    bank_accounts = result.scalars().all()
     return bank_accounts
 
 
 @router.post("/bank-accounts", response_model=BankAccountResponse)
 async def create_bank_account(
     bank_account: BankAccountCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new bank account"""
     # Check if account number exists
-    existing = db.query(BankAccount).filter(
+    stmt = select(BankAccount).where(
         BankAccount.organization_id == organization_id,
         BankAccount.account_number == bank_account.account_number
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     
     if existing:
         raise HTTPException(status_code=400, detail="Account number already exists")
     
     # Validate chart account exists
-    chart_account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == bank_account.chart_account_id,
         ChartOfAccounts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    chart_account = result.scalar_one_or_none()
     
     if not chart_account:
         raise HTTPException(status_code=404, detail="Chart account not found")
@@ -677,8 +721,8 @@ async def create_bank_account(
     )
     
     db.add(db_bank_account)
-    db.commit()
-    db.refresh(db_bank_account)
+    await db.commit()
+    await db.refresh(db_bank_account)
     
     return db_bank_account
 
@@ -691,33 +735,35 @@ async def get_financial_kpis(
     kpi_category: Optional[str] = Query(None),
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get financial KPIs with filtering options"""
-    query = db.query(FinancialKPI).filter(
+    stmt = select(FinancialKPI).where(
         FinancialKPI.organization_id == organization_id
     )
     
     if kpi_category:
-        query = query.filter(FinancialKPI.kpi_category == kpi_category)
+        stmt = stmt.where(FinancialKPI.kpi_category == kpi_category)
     
     if period_start:
-        query = query.filter(FinancialKPI.period_start >= period_start)
+        stmt = stmt.where(FinancialKPI.period_start >= period_start)
     
     if period_end:
-        query = query.filter(FinancialKPI.period_end <= period_end)
+        stmt = stmt.where(FinancialKPI.period_end <= period_end)
     
-    kpis = query.order_by(desc(FinancialKPI.period_end)).offset(skip).limit(limit).all()
+    stmt = stmt.order_by(desc(FinancialKPI.period_end))
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    kpis = result.scalars().all()
     return kpis
 
 
 @router.post("/financial-kpis", response_model=FinancialKPIResponse)
 async def create_financial_kpi(
     kpi: FinancialKPICreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
@@ -736,8 +782,8 @@ async def create_financial_kpi(
     )
     
     db.add(db_kpi)
-    db.commit()
-    db.refresh(db_kpi)
+    await db.commit()
+    await db.refresh(db_kpi)
     
     return db_kpi
 
@@ -745,44 +791,56 @@ async def create_financial_kpi(
 # Financial Dashboard Endpoint
 @router.get("/dashboard")
 async def get_financial_dashboard(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserInDB = Depends(get_current_active_user),
     organization_id: int = Depends(require_current_organization_id),
     _ : None = Depends(validate_company_setup)
 ):
     """Get financial dashboard data"""
     # Get key financial metrics
-    total_assets = db.query(func.sum(ChartOfAccounts.current_balance)).filter(
+    stmt_assets = select(func.sum(ChartOfAccounts.current_balance)).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.account_type == 'asset'
-    ).scalar() or 0
+    )
+    result_assets = await db.execute(stmt_assets)
+    total_assets = result_assets.scalar() or 0
     
-    total_liabilities = db.query(func.sum(ChartOfAccounts.current_balance)).filter(
+    stmt_liabilities = select(func.sum(ChartOfAccounts.current_balance)).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.account_type == 'liability'
-    ).scalar() or 0
+    )
+    result_liabilities = await db.execute(stmt_liabilities)
+    total_liabilities = result_liabilities.scalar() or 0
     
-    total_equity = db.query(func.sum(ChartOfAccounts.current_balance)).filter(
+    stmt_equity = select(func.sum(ChartOfAccounts.current_balance)).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.account_type == 'equity'
-    ).scalar() or 0
+    )
+    result_equity = await db.execute(stmt_equity)
+    total_equity = result_equity.scalar() or 0
     
     # Get pending AP and AR
-    pending_ap = db.query(func.sum(AccountsPayable.outstanding_amount)).filter(
+    stmt_ap = select(func.sum(AccountsPayable.outstanding_amount)).where(
         AccountsPayable.organization_id == organization_id,
         AccountsPayable.payment_status == 'pending'
-    ).scalar() or 0
+    )
+    result_ap = await db.execute(stmt_ap)
+    pending_ap = result_ap.scalar() or 0
     
-    pending_ar = db.query(func.sum(AccountsReceivable.outstanding_amount)).filter(
+    stmt_ar = select(func.sum(AccountsReceivable.outstanding_amount)).where(
         AccountsReceivable.organization_id == organization_id,
         AccountsReceivable.payment_status == 'pending'
-    ).scalar() or 0
+    )
+    result_ar = await db.execute(stmt_ar)
+    pending_ar = result_ar.scalar() or 0
     
     # Get total bank balance
-    total_bank_balance = db.query(func.sum(BankAccount.current_balance)).filter(
+    stmt_bank = select(func.sum(BankAccount.current_balance)).where(
         BankAccount.organization_id == organization_id,
         BankAccount.is_active == True
-    ).scalar() or 0
+    )
+    result_bank = await db.execute(stmt_bank)
+    total_bank_balance = result_bank.scalar() or 0
     
     return {
         "total_assets": float(total_assets),
