@@ -28,7 +28,6 @@ class ServiceModule(str, Enum):
     CUSTOMER_FEEDBACK = "customer_feedback"
     SERVICE_CLOSURE = "service_closure"
     MAIL = "mail"  # Added for mail permissions
-    STICKY_NOTES = "sticky_notes"  # Added for sticky notes permissions
 
 
 class ServiceAction(str, Enum):

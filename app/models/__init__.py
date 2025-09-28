@@ -128,10 +128,6 @@ from .calendar_management import (
 from .oauth_models import (
     UserEmailToken, OAuthState, OAuthProvider, TokenStatus
 )
-# Import sticky notes models
-from .sticky_notes import (
-    StickyNote
-)
 # Import AI analytics models
 from .ai_analytics_models import (
     AIModel, PredictionResult, AnomalyDetection, AIInsight, 
@@ -256,9 +252,6 @@ __all__ = [
     
     # OAuth2 models
     "UserEmailToken", "OAuthState", "OAuthProvider", "TokenStatus",
-    
-    # Sticky notes models
-    "StickyNote",
     
     # AI analytics models
     "AIModel", "PredictionResult", "AnomalyDetection", "AIInsight", 

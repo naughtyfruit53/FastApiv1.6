@@ -17,7 +17,6 @@ import {
   isOrgSuperAdmin,
   canManageUsers,
 } from "../../types/user.types";
-import UserPreferences from "./UserPreferences";
 import AddUserDialog from "../../components/AddUserDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizationService } from "../../services/organizationService";
@@ -73,14 +72,6 @@ const Settings: React.FC = () => {
       </Paper>
       <Grid container spacing={3}>
         {/* User Preferences - Available to all users */}
-        <Grid
-          size={{
-            xs: 12,
-            md: isOrgAdmin && canManage ? 4 : isOrgAdmin ? 6 : 12,
-          }}
-        >
-          <UserPreferences />
-        </Grid>
         {/* User Management - Only for Organization Super Admins */}
         {isOrgAdmin && canManage && (
           <Grid size={{ xs: 12, md: 6 }}>

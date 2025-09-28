@@ -63,9 +63,6 @@ from app.api.v1 import forecasting as v1_forecasting
 # Add import for RBAC
 from app.api.v1 import rbac as v1_rbac
 
-# Add import for sticky notes
-from app.api.v1 import sticky_notes as v1_sticky_notes
-
 # Add import for service analytics
 from app.api.v1 import service_analytics as v1_service_analytics
 
@@ -492,10 +489,6 @@ logger.info("Ledger router included successfully at prefix: /api/v1")
 # Chart of Accounts API
 app.include_router(v1_chart_of_accounts.router, prefix="/api/v1", tags=["chart-of-accounts"])
 logger.info("Chart of Accounts router included successfully at prefix: /api/v1")
-
-# Sticky Notes API (fixed prefix to match frontend calls)
-app.include_router(v1_sticky_notes.router, prefix="/api/v1/sticky_notes", tags=["sticky-notes"])
-logger.info("Sticky Notes router included successfully at prefix: /api/v1/sticky_notes")
 
 @app.get("/routes")
 def get_routes():

@@ -407,12 +407,6 @@ class RBACService:
             ("mail:emails:sync", "Sync Emails", "Synchronize email accounts", "mail", "update"),
             ("mail:templates:read", "Read Templates", "View email templates", "mail", "read"),
             ("mail:templates:create", "Create Templates", "Add new email templates", "mail", "create"),
-            
-            # Sticky Notes Permissions (to fix the 401 in logs)
-            ("sticky_notes:read", "Read Sticky Notes", "View sticky notes", "sticky_notes", "read"),
-            ("sticky_notes:create", "Create Sticky Notes", "Add new sticky notes", "sticky_notes", "create"),
-            ("sticky_notes:update", "Update Sticky Notes", "Modify sticky notes", "sticky_notes", "update"),
-            ("sticky_notes:delete", "Delete Sticky Notes", "Remove sticky notes", "sticky_notes", "delete"),
         ]
         
         created_permissions = []
@@ -458,8 +452,7 @@ class RBACService:
                     "customer_service_read", "customer_service_update",
                     "work_order_read", "work_order_update", "work_order_create",
                     "service_reports_read", "service_reports_export",
-                    "mail:dashboard:read", "mail:accounts:read", "mail:accounts:update", "mail:emails:read", "mail:emails:compose", "mail:emails:update", "mail:emails:sync",
-                    "sticky_notes:read", "sticky_notes:update"
+                    "mail:dashboard:read", "mail:accounts:read", "mail:accounts:update", "mail:emails:read", "mail:emails:compose", "mail:emails:update", "mail:emails:sync"
                 ]
             },
             {
@@ -473,8 +466,7 @@ class RBACService:
                     "customer_service_read", "customer_service_update", "customer_service_create",
                     "work_order_read", "work_order_update",
                     "service_reports_read",
-                    "mail:dashboard:read", "mail:emails:read", "mail:emails:compose",
-                    "sticky_notes:read"
+                    "mail:dashboard:read", "mail:emails:read", "mail:emails:compose"
                 ]
             },
             {
@@ -488,8 +480,7 @@ class RBACService:
                     "customer_service_read",
                     "work_order_read",
                     "service_reports_read",
-                    "mail:dashboard:read", "mail:emails:read",
-                    "sticky_notes:read"
+                    "mail:dashboard:read", "mail:emails:read"
                 ]
             }
         ]

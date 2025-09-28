@@ -14,8 +14,6 @@ import adminService from "../../services/adminService";
 import MetricCard from "../../components/MetricCard";
 import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
-import StickyNotesPanel from "../../components/StickyNotes/StickyNotesPanel";
-import { useStickyNotes } from "../../hooks/useStickyNotes";
 interface AppStatistics {
   total_licenses_issued: number;
   active_organizations: number;
@@ -38,7 +36,7 @@ const AppSuperAdminDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<AppStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { _stickyNotes } = useStickyNotes();
+
   useEffect(() => {
     fetchAppStatistics();
   }, []);
@@ -210,7 +208,6 @@ const AppSuperAdminDashboard: React.FC = () => {
       title="Super Admin Dashboard"
       subtitle="Monitor platform-wide metrics and system health"
     >
-      <StickyNotesPanel />
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
         {statsCards.map((stat, index) => (
           <MetricCard

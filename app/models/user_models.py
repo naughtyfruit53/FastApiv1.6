@@ -454,9 +454,7 @@ class User(Base):
     sso_id: Mapped[Optional[str]] = mapped_column(String, nullable=True) # SSO provider user ID
     
     # User preferences and settings
-    user_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
-        "sticky_notes_enabled": True
-    }) # User-specific settings including sticky notes preference
+    user_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {}) # User-specific settings
 
     # Relationships with forward refs (class names only)
     organization: Mapped[Optional["Organization"]] = relationship(
@@ -547,13 +545,6 @@ class User(Base):
         "app.models.oauth_models.UserEmailToken",
         back_populates="user"
     )
-    
-    # Sticky Notes relationship
-    sticky_notes: Mapped[List["app.models.sticky_notes.StickyNote"]] = relationship(
-        "app.models.sticky_notes.StickyNote",
-        back_populates="user"
-    )
-    
     # Company assignments for multi-company support
     company_assignments: Mapped[List["UserCompany"]] = relationship(
         "UserCompany",
