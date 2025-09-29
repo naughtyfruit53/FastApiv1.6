@@ -914,6 +914,222 @@ TRITIQ ERP Team
 # Global instance
 email_service = EmailService()
 
+# Import email sync capabilities
+from .email_sync_service import EmailSyncService
+
+class EmailManagementService:
+    """
+    Comprehensive email management service combining sending and syncing
+    """
+    
+    def __init__(self):
+        self.email_service = email_service
+        self.sync_service = EmailSyncService()
+    
+    def sync_all_accounts(self, organization_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Sync all active email accounts for an organization
+        """
+        from app.models.email import MailAccount, EmailSyncStatus
+        
+        db = SessionLocal()
+        try:
+            # Get all active accounts
+            query = db.query(MailAccount).filter(
+                MailAccount.sync_enabled == True,
+                MailAccount.sync_status == EmailSyncStatus.ACTIVE
+            )
+            
+            if organization_id:
+                query = query.filter(MailAccount.organization_id == organization_id)
+            
+            accounts = query.all()
+            
+            results = {
+                'total_accounts': len(accounts),
+                'successful_syncs': 0,
+                'failed_syncs': 0,
+                'errors': []
+            }
+            
+            for account in accounts:
+                try:
+                    success = self.sync_service.sync_account(account.id)
+                    if success:
+                        results['successful_syncs'] += 1
+                    else:
+                        results['failed_syncs'] += 1
+                except Exception as e:
+                    results['failed_syncs'] += 1
+                    results['errors'].append(f"Account {account.id}: {str(e)}")
+            
+            return results
+            
+        finally:
+            db.close()
+    
+    def get_account_status(self, account_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get detailed status of an email account
+        """
+        from app.models.email import MailAccount, EmailSyncLog
+        
+        db = SessionLocal()
+        try:
+            account = db.query(MailAccount).filter(MailAccount.id == account_id).first()
+            if not account:
+                return None
+            
+            # Get latest sync log
+            latest_sync = db.query(EmailSyncLog).filter(
+                EmailSyncLog.account_id == account_id
+            ).order_by(EmailSyncLog.started_at.desc()).first()
+            
+            return {
+                'account_id': account.id,
+                'email_address': account.email_address,
+                'sync_enabled': account.sync_enabled,
+                'sync_status': account.sync_status.value,
+                'last_sync_at': account.last_sync_at,
+                'last_sync_error': account.last_sync_error,
+                'total_messages_synced': account.total_messages_synced,
+                'full_sync_completed': account.full_sync_completed,
+                'latest_sync': {
+                    'status': latest_sync.status if latest_sync else None,
+                    'messages_new': latest_sync.messages_new if latest_sync else 0,
+                    'messages_updated': latest_sync.messages_updated if latest_sync else 0,
+                    'duration_seconds': latest_sync.duration_seconds if latest_sync else None,
+                    'started_at': latest_sync.started_at if latest_sync else None,
+                    'error_message': latest_sync.error_message if latest_sync else None
+                }
+            }
+            
+        finally:
+            db.close()
+    
+    def fetch_emails(self, account_id: int, folder: str = 'INBOX', limit: int = 50, offset: int = 0) -> Dict[str, Any]:
+        """
+        Fetch emails from database for a specific account
+        """
+        from app.models.email import Email, EmailThread
+        
+        db = SessionLocal()
+        try:
+            # Get emails
+            emails_query = db.query(Email).filter(
+                Email.account_id == account_id,
+                Email.folder == folder
+            ).order_by(Email.received_at.desc())
+            
+            total_count = emails_query.count()
+            emails = emails_query.offset(offset).limit(limit).all()
+            
+            # Convert to dict format
+            email_list = []
+            for email in emails:
+                email_dict = {
+                    'id': email.id,
+                    'message_id': email.message_id,
+                    'subject': email.subject,
+                    'from_address': email.from_address,
+                    'from_name': email.from_name,
+                    'to_addresses': email.to_addresses,
+                    'body_text': email.body_text[:500] + '...' if email.body_text and len(email.body_text) > 500 else email.body_text,
+                    'status': email.status.value,
+                    'priority': email.priority.value,
+                    'has_attachments': email.has_attachments,
+                    'sent_at': email.sent_at,
+                    'received_at': email.received_at,
+                    'folder': email.folder,
+                    'customer_id': email.customer_id,
+                    'vendor_id': email.vendor_id,
+                    'thread_id': email.thread_id
+                }
+                email_list.append(email_dict)
+            
+            return {
+                'emails': email_list,
+                'total_count': total_count,
+                'offset': offset,
+                'limit': limit,
+                'has_more': offset + limit < total_count
+            }
+            
+        finally:
+            db.close()
+    
+    def get_email_detail(self, email_id: int, include_attachments: bool = True) -> Optional[Dict[str, Any]]:
+        """
+        Get detailed email information including full body and attachments
+        """
+        from app.models.email import Email, EmailAttachment
+        
+        db = SessionLocal()
+        try:
+            email = db.query(Email).filter(Email.id == email_id).first()
+            if not email:
+                return None
+            
+            email_dict = {
+                'id': email.id,
+                'message_id': email.message_id,
+                'subject': email.subject,
+                'from_address': email.from_address,
+                'from_name': email.from_name,
+                'reply_to': email.reply_to,
+                'to_addresses': email.to_addresses,
+                'cc_addresses': email.cc_addresses,
+                'bcc_addresses': email.bcc_addresses,
+                'body_text': email.body_text,
+                'body_html': email.body_html,
+                'status': email.status.value,
+                'priority': email.priority.value,
+                'is_flagged': email.is_flagged,
+                'is_important': email.is_important,
+                'has_attachments': email.has_attachments,
+                'sent_at': email.sent_at,
+                'received_at': email.received_at,
+                'folder': email.folder,
+                'labels': email.labels,
+                'size_bytes': email.size_bytes,
+                'customer_id': email.customer_id,
+                'vendor_id': email.vendor_id,
+                'thread_id': email.thread_id,
+                'created_at': email.created_at,
+                'updated_at': email.updated_at
+            }
+            
+            # Add attachments if requested
+            if include_attachments and email.has_attachments:
+                attachments = db.query(EmailAttachment).filter(
+                    EmailAttachment.email_id == email_id
+                ).all()
+                
+                attachment_list = []
+                for attachment in attachments:
+                    attachment_dict = {
+                        'id': attachment.id,
+                        'filename': attachment.filename,
+                        'original_filename': attachment.original_filename,
+                        'content_type': attachment.content_type,
+                        'size_bytes': attachment.size_bytes,
+                        'is_inline': attachment.is_inline,
+                        'is_safe': attachment.is_safe,
+                        'download_count': attachment.download_count,
+                        'created_at': attachment.created_at
+                    }
+                    attachment_list.append(attachment_dict)
+                
+                email_dict['attachments'] = attachment_list
+            
+            return email_dict
+            
+        finally:
+            db.close()
+
+# Global email management instance
+email_management_service = EmailManagementService()
+
 def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email: str, recipient_name: str,
                       organization_id: Optional[int] = None, user_id: Optional[int] = None) -> tuple[bool, Optional[str]]:
     """
