@@ -1,7 +1,9 @@
 import React, { ReactNode } from 'react';
 import { Box, Typography, Container } from '@mui/material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
+import { useMobileRouting } from '../../hooks/mobile/useMobileRouting';
 import MobileLayout from './MobileLayout';
+import NavigationBreadcrumbs from './NavigationBreadcrumbs';
 import { useMobileNav } from '../../context/MobileNavContext';
 
 export interface MobileDashboardLayoutProps {
@@ -9,10 +11,12 @@ export interface MobileDashboardLayoutProps {
   subtitle?: string;
   children: ReactNode;
   actions?: ReactNode;
+  rightActions?: ReactNode; // For header actions
   onBack?: () => void;
-  onMenuToggle?: () => void;
   showBackButton?: boolean;
   showBottomNav?: boolean;
+  showBreadcrumbs?: boolean;
+  showHomeButton?: boolean;
   className?: string;
 }
 
@@ -20,14 +24,17 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({
   title,
   subtitle,
   children,
-  actions,
+  actions, // Legacy support
+  rightActions, // New header actions
   onBack,
-  onMenuToggle,
   showBackButton = false,
   showBottomNav = true,
+  showBreadcrumbs = true,
+  showHomeButton = false,
   className = '',
 }) => {
   const { isMobile } = useMobileDetection();
+  const { getBreadcrumbs, canGoBack, goBack } = useMobileRouting();
 
   // On desktop, use regular layout
   if (!isMobile) {
@@ -112,19 +119,31 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({
 
   // Mobile layout
   const { onMenuToggle: contextToggle } = useMobileNav();
-  const effectiveToggle = onMenuToggle || contextToggle;
+  const breadcrumbs = getBreadcrumbs();
+  
+  const handleBackAction = onBack || (canGoBack() ? goBack : undefined);
 
   return (
     <MobileLayout
       title={title}
       subtitle={subtitle}
-      onBack={onBack}
-      onMenuToggle={effectiveToggle}
-      rightActions={actions}
-      showBackButton={showBackButton}
+      onBack={handleBackAction}
+      rightActions={rightActions || actions} // Support both prop names
+      showBackButton={showBackButton || (canGoBack() && !showHomeButton)}
+      showHomeButton={showHomeButton}
       showBottomNav={showBottomNav}
       className={className}
     >
+      {/* Breadcrumbs for navigation context */}
+      {showBreadcrumbs && breadcrumbs.length > 1 && (
+        <NavigationBreadcrumbs
+          items={breadcrumbs}
+          showBackButton={false} // Header already has back button
+          showHomeButton={false} // Header already has home button
+          maxItems={2} // Keep it simple on mobile
+        />
+      )}
+      
       <Box
         sx={{
           display: 'flex',

@@ -8,7 +8,9 @@ import {
   MobileTable,
   MobileSearchBar,
   MobilePullToRefresh,
-  MobileBottomSheet 
+  MobileBottomSheet,
+  MobileContextualActions,
+  createStandardActions 
 } from '../../components/mobile';
 import useSharedSales from '../../hooks/useSharedSales';
 import ModernLoading from "../../components/ModernLoading";
@@ -80,6 +82,19 @@ const MobileSales: React.FC = () => {
     setLocalSearchQuery(query);
     searchLeads(query);
   };
+
+  // Contextual actions for sales
+  const contextualActions = createStandardActions.sales({
+    onAddLead: () => setQuickActionsOpen(true),
+    onFollowUp: () => console.log('Schedule follow-up'),
+    onConvert: () => console.log('Convert lead'),
+    onQuote: () => console.log('Create quote'),
+  }).concat(
+    createStandardActions.dataManagement({
+      onRefresh: refresh,
+      onFilter: () => console.log('Open filter'),
+    })
+  );
 
   const rightActions = (
     <MobileButton
@@ -437,6 +452,17 @@ const MobileSales: React.FC = () => {
           </ListItem>
         </List>
       </MobileBottomSheet>
+
+      {/* Contextual Actions */}
+      <MobileContextualActions
+        actions={contextualActions}
+        primaryAction={{
+          icon: <Add />,
+          name: 'Add Lead',
+          onClick: () => setQuickActionsOpen(true),
+          color: 'primary'
+        }}
+      />
     </MobileDashboardLayout>
   );
 };

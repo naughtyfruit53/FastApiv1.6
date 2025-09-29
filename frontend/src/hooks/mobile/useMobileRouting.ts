@@ -27,6 +27,9 @@ export const useMobileRouting = () => {
       '/finance': '/mobile/finance',
       '/hr': '/mobile/hr',
       '/service': '/mobile/service',
+      '/admin': '/mobile/admin',
+      '/projects': '/mobile/projects',
+      '/marketing': '/mobile/marketing',
       '/admin': '/settings', // Admin routes go to settings on mobile
       '/projects': '/mobile/dashboard', // Projects to dashboard for now
       '/calendar': '/mobile/dashboard', // Calendar to dashboard for now
@@ -90,6 +93,8 @@ export const useMobileRouting = () => {
       '/mobile/reports': { title: 'Reports', subtitle: 'Analytics and reports', category: 'Core' },
       '/mobile/settings': { title: 'Settings', subtitle: 'Preferences and config', category: 'Core' },
       '/mobile/marketing': { title: 'Marketing', subtitle: 'Campaigns and analytics', category: 'Core' },
+      '/mobile/projects': { title: 'Projects', subtitle: 'Project management', category: 'Core' },
+      '/mobile/admin': { title: 'Administration', subtitle: 'System management', category: 'Admin' },
     };
 
     return pageInfoMap[path] || { title: 'Page', category: 'Other' };
@@ -127,6 +132,8 @@ export const useMobileRouting = () => {
     { name: 'Service', path: '/mobile/service', icon: 'service' },
     { name: 'Reports', path: '/mobile/reports', icon: 'reports' },
     { name: 'Marketing', path: '/mobile/marketing', icon: 'marketing' },
+    { name: 'Projects', path: '/mobile/projects', icon: 'projects' },
+    { name: 'Admin', path: '/mobile/admin', icon: 'admin' },
     { name: 'Settings', path: '/mobile/settings', icon: 'settings' },
   ], []);
 
