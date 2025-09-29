@@ -1,6 +1,6 @@
 // frontend/src/pages/vouchers/Pre-Sales-Voucher/sales-order.tsx
 // Sales Order Page - Refactored using shared DRY logic
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Box,
   TextField,
@@ -8,22 +8,19 @@ import {
   Grid,
   CircularProgress,
   Container,
+  Autocomplete,
+  Alert,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Button,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Autocomplete,
-  Alert,
-  Checkbox,
-  FormControlLabel,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Button,
-  Input,
 } from "@mui/material";
 import AddCustomerModal from "../../../components/AddCustomerModal";
 import AddProductModal from "../../../components/AddProductModal";
@@ -44,16 +41,21 @@ import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
 import { useCompany } from "../../../context/CompanyContext";
-import { toast } from "react-toastify";
 import { useGstValidation } from "../../../hooks/useGstValidation";
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
 import voucherFormStyles from "../../../styles/voucherFormStyles";
+import { useRouter } from "next/router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 
 const SalesOrderPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
+  const router = useRouter();
   const config = getVoucherConfig("sales-order");
   const voucherStyles = getVoucherStyles();
+  const queryClient = useQueryClient();
+  const processedRef = useRef<Set<number>>(new Set());
 
   const {
     mode,
@@ -74,8 +76,13 @@ const SalesOrderPage: React.FC = () => {
     addingItemIndex,
     setAddingItemIndex,
     contextMenu,
-    useDifferentShipping,
-    setUseDifferentShipping,
+    searchTerm,
+    setSearchTerm,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
+    filteredVouchers,
     currentPage,
     pageSize,
     paginationData,
@@ -94,16 +101,19 @@ const SalesOrderPage: React.FC = () => {
     voucherList,
     customerList,
     productList,
+    voucherData,
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-    voucherData,
     computedItems,
     totalAmount,
     totalSubtotal,
     totalCgst,
     totalSgst,
     totalIgst,
+    totalDiscount,
+    totalTaxable,
+    gstBreakdown,
     isIntrastate,
     createMutation,
     updateMutation,
@@ -112,21 +122,25 @@ const SalesOrderPage: React.FC = () => {
     handleView,
     handleContextMenu,
     handleCloseContextMenu,
+    handleSearch,
+    handleModalOpen,
+    handleModalClose,
     handleGeneratePDF,
     handleDelete,
     refreshMasterData,
     getAmountInWords,
+    isViewMode,
     totalRoundOff,
+    handleRevise,
   } = useVoucherPage(config);
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
   const [submitData, setSubmitData] = useState<any>(null);
   const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
-  const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
-  const selectedCustomerId = watch('customer_id');
-  const [poFile, setPoFile] = useState<File | null>(null);
-  const [poUploading, setPoUploading] = useState(false);
+  const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
+  const selectedCustomerId = watch("customer_id");
 
+  // Use new hooks
   const { gstError } = useGstValidation(selectedCustomerId, customerList);
   const {
     lineDiscountEnabled,
@@ -149,156 +163,122 @@ const SalesOrderPage: React.FC = () => {
     }
   };
 
-  const handlePOFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setPoFile(event.target.files[0]);
-      handlePOUpload(event.target.files[0]);
-    }
-  };
-
-  const handlePOUpload = async (file: File) => {
-    setPoUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('voucher_type', 'sales-order');
-      const response = await api.post('/api/v1/pdf-extraction/extract/sales-order', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const extractedData = response.data;
-      // Populate form with extracted data
-      if (extractedData.customer_id) {
-        setValue('customer_id', extractedData.customer_id);
-      }
-      if (extractedData.payment_terms) {
-        setValue('payment_terms', extractedData.payment_terms);
-      }
-      if (extractedData.items && extractedData.items.length > 0) {
-        remove();
-        extractedData.items.forEach((item: any) => {
-          append({
-            product_id: item.product_id || null,
-            product_name: item.product_name || "",
-            quantity: item.quantity || 1,
-            unit_price: item.unit_price || 0,
-            original_unit_price: item.unit_price || 0,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            gst_rate: item.gst_rate ?? 18,
-            cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
-            amount: item.total_amount || 0,
-            unit: item.unit || "",
-            current_stock: item.current_stock || 0,
-            reorder_level: item.reorder_level || 0,
-            description: item.description || '',
-          });
-        });
-      }
-      toast.success("PO data extracted and populated successfully!");
-    } catch (err) {
-      console.error("Error extracting PO data:", err);
-      toast.error("Failed to extract data from PO. Please try again.");
-    } finally {
-      setPoUploading(false);
-    }
-  };
-
   const selectedProducts = useMemo(() => {
     return fields.map((_, index) => {
       const productId = watch(`items.${index}.product_id`);
       return productList?.find((p: any) => p.id === productId) || null;
     });
-  }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
+  }, [fields, productList, watch]); // Removed fields.length and spread map as deps - use fields ref
 
+  const productIds = useWatch({
+    control,
+    name: fields.map((_, i) => `items.${i}.product_id`),
+  });
+
+  // Reset processed when fields length changes
   useEffect(() => {
-    fields.forEach((_, index) => {
-      const productId = watch(`items.${index}.product_id`);
-      if (productId) {
-        setStockLoading(prev => ({ ...prev, [index]: true }));
-        getStock({ queryKey: ['', { product_id: productId }] })
-          .then(res => {
-            const stockData = res[0] || { quantity: 0 };
-            setValue(`items.${index}.current_stock`, stockData.quantity);
-            setStockLoading(prev => ({ ...prev, [index]: false }));
-          })
-          .catch(err => {
-            console.error('Failed to fetch stock:', err);
-            setStockLoading(prev => ({ ...prev, [index]: false }));
-          });
-      } else {
-        setValue(`items.${index}.current_stock`, 0);
-        setStockLoading(prev => ({ ...prev, [index]: false }));
+    processedRef.current = new Set();
+  }, [fields.length]);
+
+  // Fetch stock when productIds change or on load
+  useEffect(() => {
+    productIds.forEach((productId: number, index: number) => {
+      if (productId && !processedRef.current.has(index) && !stockLoading[index]) {
+        const currentStock = watch(`items.${index}.current_stock`);
+        if (currentStock === 0 || currentStock === undefined) {
+          setStockLoading(prev => ({ ...prev, [index]: true }));
+          getStock({ queryKey: ["", { product_id: productId }] })
+            .then(res => {
+              const stockData = res[0] || { quantity: 0 };
+              setValue(`items.${index}.current_stock`, stockData.quantity);
+            })
+            .catch(err => console.error("Failed to fetch stock:", err))
+            .finally(() => {
+              setStockLoading(prev => ({ ...prev, [index]: false }));
+              processedRef.current.add(index);
+            });
+        } else {
+          processedRef.current.add(index);
+        }
       }
     });
-  }, [fields.map(f => watch(`items.${fields.indexOf(f)}.product_id`)).join(','), setValue, fields.length]);
+  }, [productIds, fields, stockLoading, setValue, watch]);
 
   useEffect(() => {
-    if (mode === 'create' && !nextVoucherNumber && !isLoading) {
+    if (mode === "create" && !nextVoucherNumber && !isLoading) {
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
-        .then(number => setValue('voucher_number', number))
-        .catch(err => console.error('Failed to fetch voucher number:', err));
+        .then((number) => setValue("voucher_number", number))
+        .catch((err) => console.error("Failed to fetch voucher number:", err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
-  const handleVoucherClick = async (voucher: any) => {
-    try {
-      const response = await api.get(`/sales-orders/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode("view");
-      reset(fullVoucherData);
-    } catch (err) {
-      console.error("Error fetching voucher:", err);
-      setMode("view");
-      reset(voucher);
-    }
+  const handleVoucherClick = (voucher: any) => {
+    // Use the voucher from list (assumes full data from backend joins)
+    setMode("view");
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
   };
 
-  const handleEditWithData = async (voucher: any) => {
+  const handleEditWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
-    try {
-      const response = await api.get(`/sales-orders/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      // Use handleEdit to properly set URL and selectedId
-      handleEdit(voucher.id);
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for edit:", err);
-      handleEdit(voucher.id);
-    }
+    handleEdit(voucher.id);
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['sales-order', voucher.id], voucher);
   };
 
-  const handleViewWithData = async (voucher: any) => {
+  const handleReviseWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
-    try {
-      const response = await api.get(`/sales-orders/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      // Use handleView to properly set URL and selectedId
-      handleView(voucher.id);
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for view:", err);
-      handleView(voucher.id);
-    }
+    handleRevise(voucher.id);
+    reset({
+      ...voucher,
+      date: new Date().toISOString().split('T')[0],
+      voucher_number: `${voucher.voucher_number} Rev ${voucher.revision_number + 1 || 1}`,
+      parent_id: voucher.id,
+      revision_number: voucher.revision_number + 1 || 1,
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['sales-order', voucher.id], voucher);
+  };
+
+  const handleViewWithData = (voucher: any) => {
+    if (!voucher || !voucher.id) return;
+    handleView(voucher.id);
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['sales-order', voucher.id], voucher);
   };
 
   useEffect(() => {
@@ -400,6 +380,7 @@ const SalesOrderPage: React.FC = () => {
                     onDelete={handleDelete}
                     onPrint={handleGeneratePDF}
                     onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")}
+                    onRevise={handleReviseWithData}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -415,40 +396,17 @@ const SalesOrderPage: React.FC = () => {
   const formHeader = (
     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <Typography variant="h5" sx={{ fontSize: 20, fontWeight: "bold" }}>
-        {config.voucherTitle} - {mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View"}
+        {config.voucherTitle} - {mode === "create" ? "Create" : mode === "edit" ? "Edit" : mode === "revise" ? "Revise" : "View"}
       </Typography>
-      <Box sx={{ display: "flex", gap: 1 }}>
-        {mode === "create" && (
-          <>
-            <label htmlFor="po-upload">
-              <Button
-                variant="contained"
-                component="span"
-                disabled={poUploading}
-                sx={{ mr: 1 }}
-              >
-                {poUploading ? <CircularProgress size={20} /> : "Upload PO"}
-              </Button>
-            </label>
-            <Input
-              id="po-upload"
-              type="file"
-              inputProps={{ accept: "application/pdf" }}
-              onChange={handlePOFileChange}
-              style={{ display: "none" }}
-            />
-          </>
-        )}
-        <VoucherHeaderActions
-          mode={mode}
-          voucherType={config.voucherTitle}
-          voucherRoute="/vouchers/Pre-Sales-Voucher/sales-order"
-          currentId={mode !== "create" ? voucherData?.id : null}
-          onEdit={() => voucherData && voucherData.id && handleEditWithData(voucherData)}
-          onCreate={handleCreate}
-          onCancel={handleCancel}
-        />
-      </Box>
+      <VoucherHeaderActions
+        mode={mode}
+        voucherType={config.voucherTitle}
+        voucherRoute="/vouchers/Pre-Sales-Voucher/sales-order"
+        currentId={mode !== "create" ? voucherData?.id : null}
+        onEdit={() => voucherData && voucherData.id && handleEditWithData(voucherData)}
+        onCreate={handleCreate}
+        onCancel={handleCancel}
+      />
     </Box>
   );
 
@@ -540,20 +498,6 @@ const SalesOrderPage: React.FC = () => {
           </Grid>
           <Grid size={12} sx={voucherFormStyles.itemsHeader}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <FormControlLabel
-                control={<Checkbox checked={lineDiscountEnabled} onChange={(e) => handleToggleLineDiscount(e.target.checked)} disabled={mode === "view"} />}
-                label="Add Line Discount"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={totalDiscountEnabled} onChange={(e) => handleToggleTotalDiscount(e.target.checked)} disabled={mode === "view"} />}
-                label="Add Total Discount"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={descriptionEnabled} onChange={(e) => handleToggleDescription(e.target.checked)} disabled={mode === "view"} />}
-                label="Add Description"
-              />
-            </Box>
           </Grid>
           <Grid size={12}>
             <VoucherItemTable
@@ -576,6 +520,9 @@ const SalesOrderPage: React.FC = () => {
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
+              showLineDiscountCheckbox={mode !== "view"}
+              showTotalDiscountCheckbox={mode !== "view"}
+              showDescriptionCheckbox={mode !== "view"}
             />
           </Grid>
           <Grid size={12}>
@@ -669,7 +616,7 @@ const SalesOrderPage: React.FC = () => {
       <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Order" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")} />
+      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Order" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")} onRevise={handleReviseWithData} />
     </>
   );
 };

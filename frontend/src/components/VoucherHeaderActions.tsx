@@ -126,23 +126,6 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
           >
             Save
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<CloseIcon />}
-            onClick={onCancel}
-            sx={{ fontSize: 12, textTransform: "uppercase" }}
-          >
-            Cancel
-          </Button>
-          {showPDFButton && currentId && (
-            <VoucherPDFButton
-              voucherType={pdfVoucherType as any}
-              voucherId={currentId}
-              voucherNumber={voucherNumber}
-              variant="button"
-              size="medium"
-            />
-          )}
         </>
       )}
       {mode === "create" && (
@@ -175,14 +158,6 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
             sx={{ fontSize: 12, textTransform: "uppercase" }}
           >
             Save Revision
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<CloseIcon />}
-            onClick={onCancel}
-            sx={{ fontSize: 12, textTransform: "uppercase" }}
-          >
-            Cancel
           </Button>
         </>
       )}

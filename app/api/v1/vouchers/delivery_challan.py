@@ -1,12 +1,14 @@
 # app/api/v1/vouchers/delivery_challan.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers.sales import DeliveryChallan
+from app.models.vouchers.sales import DeliveryChallan, DeliveryChallanItem
 from app.schemas.vouchers import DeliveryChallanCreate, DeliveryChallanInDB, DeliveryChallanUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -23,38 +25,42 @@ async def get_delivery_challans(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get all delivery challans with enhanced sorting and pagination"""
-    query = db.query(DeliveryChallan).options(joinedload(DeliveryChallan.customer)).filter(
+    """Get all delivery challans"""
+    stmt = select(DeliveryChallan).options(
+        joinedload(DeliveryChallan.customer),
+        joinedload(DeliveryChallan.items).joinedload(DeliveryChallanItem.product)
+    ).where(
         DeliveryChallan.organization_id == current_user.organization_id
     )
     
     if status:
-        query = query.filter(DeliveryChallan.status == status)
+        stmt = stmt.where(DeliveryChallan.status == status)
     
     # Enhanced sorting - latest first by default
     if hasattr(DeliveryChallan, sortBy):
         sort_attr = getattr(DeliveryChallan, sortBy)
         if sort.lower() == "asc":
-            query = query.order_by(sort_attr.asc())
+            stmt = stmt.order_by(sort_attr.asc())
         else:
-            query = query.order_by(sort_attr.desc())
+            stmt = stmt.order_by(sort_attr.desc())
     else:
         # Default to created_at desc if invalid sortBy field
-        query = query.order_by(DeliveryChallan.created_at.desc())
+        stmt = stmt.order_by(DeliveryChallan.created_at.desc())
     
-    invoices = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    invoices = result.unique().scalars().all()
     return invoices
 
 @router.get("/next-number", response_model=str)
 async def get_next_delivery_challan_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available delivery challan number"""
-    return VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number(
         db, "DC", current_user.organization_id, DeliveryChallan
     )
 
@@ -65,7 +71,7 @@ async def create_delivery_challan(
     invoice: DeliveryChallanCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new delivery challan"""
@@ -76,34 +82,34 @@ async def create_delivery_challan(
         
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
                 db, "DC", current_user.organization_id, DeliveryChallan
             )
         else:
-            existing = db.query(DeliveryChallan).filter(
+            stmt = select(DeliveryChallan).where(
                 DeliveryChallan.organization_id == current_user.organization_id,
                 DeliveryChallan.voucher_number == invoice_data['voucher_number']
-            ).first()
+            )
+            result = await db.execute(stmt)
+            existing = result.scalar_one_or_none()
             if existing:
-                invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
                     db, "DC", current_user.organization_id, DeliveryChallan
                 )
         
         db_invoice = DeliveryChallan(**invoice_data)
         db.add(db_invoice)
-        db.flush()
+        await db.flush()
         
         for item_data in invoice.items:
-            from app.models.vouchers import DeliveryChallanItem
-            item_dict = item_data.dict(exclude={'discount_percentage', 'discount_amount', 'taxable_amount', 'gst_rate', 'cgst_amount', 'sgst_amount', 'igst_amount', 'total_amount', 'unit_price'})
             item = DeliveryChallanItem(
                 delivery_challan_id=db_invoice.id,
-                **item_dict
+                **item_data.dict()
             )
             db.add(item)
         
-        db.commit()
-        db.refresh(db_invoice)
+        await db.commit()
+        await db.refresh(db_invoice)
         
         if send_email and db_invoice.customer and db_invoice.customer.email:
             background_tasks.add_task(
@@ -118,7 +124,7 @@ async def create_delivery_challan(
         return db_invoice
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating delivery challan: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -128,13 +134,18 @@ async def create_delivery_challan(
 @router.get("/{invoice_id}", response_model=DeliveryChallanInDB)
 async def get_delivery_challan(
     invoice_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    invoice = db.query(DeliveryChallan).options(joinedload(DeliveryChallan.customer)).filter(
+    stmt = select(DeliveryChallan).options(
+        joinedload(DeliveryChallan.customer),
+        joinedload(DeliveryChallan.items).joinedload(DeliveryChallanItem.product)
+    ).where(
         DeliveryChallan.id == invoice_id,
         DeliveryChallan.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    invoice = result.unique().scalar_one_or_none()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -146,14 +157,16 @@ async def get_delivery_challan(
 async def update_delivery_challan(
     invoice_id: int,
     invoice_update: DeliveryChallanUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        invoice = db.query(DeliveryChallan).filter(
+        stmt = select(DeliveryChallan).where(
             DeliveryChallan.id == invoice_id,
             DeliveryChallan.organization_id == current_user.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        invoice = result.scalar_one_or_none()
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -165,25 +178,29 @@ async def update_delivery_challan(
             setattr(invoice, field, value)
         
         if invoice_update.items is not None:
-            from app.models.vouchers import DeliveryChallanItem
-            db.query(DeliveryChallanItem).filter(DeliveryChallanItem.delivery_challan_id == invoice_id).delete()
+            from sqlalchemy import delete
+            stmt_delete = delete(DeliveryChallanItem).where(DeliveryChallanItem.delivery_challan_id == invoice_id)
+            await db.execute(stmt_delete)
+            await db.flush()  # Flush deletes before adding new items to avoid potential locks
             for item_data in invoice_update.items:
-                item_dict = item_data.dict(exclude={'discount_percentage', 'discount_amount', 'taxable_amount', 'gst_rate', 'cgst_amount', 'sgst_amount', 'igst_amount', 'total_amount', 'unit_price'})
                 item = DeliveryChallanItem(
                     delivery_challan_id=invoice_id,
-                    **item_dict
+                    **item_data.dict()
                 )
                 db.add(item)
+            await db.flush()  # Flush adds before commit
         
-        db.commit()
-        db.refresh(invoice)
+        logger.debug(f"Before commit for delivery challan {invoice_id}")
+        await db.commit()
+        logger.debug(f"After commit for delivery challan {invoice_id}")
+        await db.refresh(invoice)
         
         logger.info(f"Delivery challan {invoice.voucher_number} updated by {current_user.email}")
         return invoice
         
     except Exception as e:
-        db.rollback()
-        logger.error(f"Error updating delivery challan: {e}")
+        await db.rollback()
+        logger.error(f"Error updating delivery challan {invoice_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update delivery challan"
@@ -192,31 +209,34 @@ async def update_delivery_challan(
 @router.delete("/{invoice_id}")
 async def delete_delivery_challan(
     invoice_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        invoice = db.query(DeliveryChallan).filter(
+        stmt = select(DeliveryChallan).where(
             DeliveryChallan.id == invoice_id,
             DeliveryChallan.organization_id == current_user.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        invoice = result.scalar_one_or_none()
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Delivery challan not found"
             )
         
-        from app.models.vouchers import DeliveryChallanItem
-        db.query(DeliveryChallanItem).filter(DeliveryChallanItem.delivery_challan_id == invoice_id).delete()
+        from sqlalchemy import delete
+        stmt_delete_items = delete(DeliveryChallanItem).where(DeliveryChallanItem.delivery_challan_id == invoice_id)
+        await db.execute(stmt_delete_items)
         
-        db.delete(invoice)
-        db.commit()
+        await db.delete(invoice)
+        await db.commit()
         
         logger.info(f"Delivery challan {invoice.voucher_number} deleted by {current_user.email}")
         return {"message": "Delivery challan deleted successfully"}
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting delivery challan: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

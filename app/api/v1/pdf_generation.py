@@ -16,7 +16,7 @@ from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.services.pdf_generation_service import pdf_generator
 from app.services.rbac import RBACService
-from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem, GoodsReceiptNote, GoodsReceiptNoteItem
 from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn, DeliveryChallanItem
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice, QuotationItem, SalesOrderItem, ProformaInvoiceItem
 from app.models.vouchers.financial import PaymentVoucher, ReceiptVoucher
@@ -46,7 +46,8 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: AsyncSes
         'proforma_invoice': 'presales_read',
         'proforma-invoices': 'presales_read',
         'payment-vouchers': 'voucher_read',
-        'receipt-vouchers': 'voucher_read'
+        'receipt-vouchers': 'voucher_read',
+        'goods-receipt-notes': 'voucher_read'
     }
     
     required_permission = permission_map.get(voucher_type)
@@ -71,7 +72,7 @@ async def generate_voucher_pdf(
     Generate PDF for a specific voucher
     
     Supported voucher types:
-    - - payment-vouchers: Payment Voucher
+    - payment-vouchers: Payment Voucher
     - purchase: Purchase Voucher
     - purchase-vouchers: Purchase Voucher
     - purchase-orders: Purchase Order
@@ -87,6 +88,7 @@ async def generate_voucher_pdf(
     - sales-orders: Sales Order
     - proforma_invoice: Proforma Invoice
     - proforma-invoices: Proforma Invoice
+    - goods-receipt-notes: Goods Receipt Note
     """
     
     # Normalize voucher_type for consistency
@@ -102,6 +104,8 @@ async def generate_voucher_pdf(
         voucher_type = 'sales'
     elif voucher_type == 'sales-returns':
         voucher_type = 'sales-return'
+    elif voucher_type == 'goods-receipt-notes':
+        voucher_type = 'grn'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -171,6 +175,8 @@ async def download_voucher_pdf(
         voucher_type = 'sales'
     elif voucher_type == 'sales-returns':
         voucher_type = 'sales-return'
+    elif voucher_type == 'goods-receipt-notes':
+        voucher_type = 'grn'
     
     # Check permissions
     check_voucher_permission(voucher_type, current_user, db)
@@ -257,6 +263,11 @@ async def get_available_templates(
             "type": "delivery-challan",
             "name": "Delivery Challan",
             "description": "Delivery challan without prices or taxes"
+        },
+        {
+            "type": "goods-receipt-notes",
+            "name": "Goods Receipt Note",
+            "description": "Goods receipt note with vendor details"
         }
     ]
     
@@ -289,7 +300,8 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'proforma_invoice': ProformaInvoice,
         'proforma-invoices': ProformaInvoice,
         'payment-vouchers': PaymentVoucher,
-        'receipt-vouchers': ReceiptVoucher
+        'receipt-vouchers': ReceiptVoucher,
+        'grn': GoodsReceiptNote
     }
     
     model_class = model_map.get(voucher_type)
@@ -324,7 +336,8 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
                 'proforma_invoice': ProformaInvoiceItem,
                 'proforma-invoices': ProformaInvoiceItem,
                 'delivery-challan': DeliveryChallanItem,
-                'delivery-challans': DeliveryChallanItem
+                'delivery-challans': DeliveryChallanItem,
+                'grn': GoodsReceiptNoteItem
             }
             item_class = item_class_map.get(voucher_type)
             if item_class:

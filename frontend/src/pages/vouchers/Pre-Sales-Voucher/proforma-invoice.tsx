@@ -1,6 +1,6 @@
 // frontend/src/pages/vouchers/Pre-Sales-Voucher/proforma-invoice.tsx
 // Proforma Invoice Page - Refactored using shared DRY logic
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Box,
   TextField,
@@ -45,11 +45,17 @@ import { useGstValidation } from "../../../hooks/useGstValidation";
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
 import voucherFormStyles from "../../../styles/voucherFormStyles";
+import { useRouter } from "next/router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 
 const ProformaInvoicePage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
+  const router = useRouter();
   const config = getVoucherConfig("proforma-invoice");
   const voucherStyles = getVoucherStyles();
+  const queryClient = useQueryClient();
+  const processedRef = useRef<Set<number>>(new Set());
 
   const {
     mode,
@@ -70,6 +76,13 @@ const ProformaInvoicePage: React.FC = () => {
     addingItemIndex,
     setAddingItemIndex,
     contextMenu,
+    searchTerm,
+    setSearchTerm,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
+    filteredVouchers,
     currentPage,
     pageSize,
     paginationData,
@@ -88,16 +101,19 @@ const ProformaInvoicePage: React.FC = () => {
     voucherList,
     customerList,
     productList,
+    voucherData,
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-    voucherData,
     computedItems,
     totalAmount,
     totalSubtotal,
     totalCgst,
     totalSgst,
     totalIgst,
+    totalDiscount,
+    totalTaxable,
+    gstBreakdown,
     isIntrastate,
     createMutation,
     updateMutation,
@@ -106,10 +122,14 @@ const ProformaInvoicePage: React.FC = () => {
     handleView,
     handleContextMenu,
     handleCloseContextMenu,
+    handleSearch,
+    handleModalOpen,
+    handleModalClose,
     handleGeneratePDF,
     handleDelete,
     refreshMasterData,
     getAmountInWords,
+    isViewMode,
     totalRoundOff,
     handleRevise,
   } = useVoucherPage(config);
@@ -118,8 +138,9 @@ const ProformaInvoicePage: React.FC = () => {
   const [submitData, setSubmitData] = useState<any>(null);
   const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
-  const selectedCustomerId = watch('customer_id');
+  const selectedCustomerId = watch("customer_id");
 
+  // Use new hooks
   const { gstError } = useGstValidation(selectedCustomerId, customerList);
   const {
     lineDiscountEnabled,
@@ -147,125 +168,117 @@ const ProformaInvoicePage: React.FC = () => {
       const productId = watch(`items.${index}.product_id`);
       return productList?.find((p: any) => p.id === productId) || null;
     });
-  }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
+  }, [fields, productList, watch]); // Removed fields.length and spread map as deps - use fields ref
 
+  const productIds = useWatch({
+    control,
+    name: fields.map((_, i) => `items.${i}.product_id`),
+  });
+
+  // Reset processed when fields length changes
   useEffect(() => {
-    fields.forEach((_, index) => {
-      const productId = watch(`items.${index}.product_id`);
-      if (productId) {
-        setStockLoading(prev => ({ ...prev, [index]: true }));
-        getStock({ queryKey: ['', { product_id: productId }] })
-          .then(res => {
-            const stockData = res[0] || { quantity: 0 };
-            setValue(`items.${index}.current_stock`, stockData.quantity);
-            setStockLoading(prev => ({ ...prev, [index]: false }));
-          })
-          .catch(err => {
-            console.error('Failed to fetch stock:', err);
-            setStockLoading(prev => ({ ...prev, [index]: false }));
-          });
-      } else {
-        setValue(`items.${index}.current_stock`, 0);
-        setStockLoading(prev => ({ ...prev, [index]: false }));
+    processedRef.current = new Set();
+  }, [fields.length]);
+
+  // Fetch stock when productIds change or on load
+  useEffect(() => {
+    productIds.forEach((productId: number, index: number) => {
+      if (productId && !processedRef.current.has(index) && !stockLoading[index]) {
+        const currentStock = watch(`items.${index}.current_stock`);
+        if (currentStock === 0 || currentStock === undefined) {
+          setStockLoading(prev => ({ ...prev, [index]: true }));
+          getStock({ queryKey: ["", { product_id: productId }] })
+            .then(res => {
+              const stockData = res[0] || { quantity: 0 };
+              setValue(`items.${index}.current_stock`, stockData.quantity);
+            })
+            .catch(err => console.error("Failed to fetch stock:", err))
+            .finally(() => {
+              setStockLoading(prev => ({ ...prev, [index]: false }));
+              processedRef.current.add(index);
+            });
+        } else {
+          processedRef.current.add(index);
+        }
       }
     });
-  }, [fields.map(f => watch(`items.${fields.indexOf(f)}.product_id`)).join(','), setValue, fields.length]);
+  }, [productIds, fields, stockLoading, setValue, watch]);
 
   useEffect(() => {
-    if (mode === 'create' && !nextVoucherNumber && !isLoading) {
+    if (mode === "create" && !nextVoucherNumber && !isLoading) {
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
-        .then(number => setValue('voucher_number', number))
-        .catch(err => console.error('Failed to fetch voucher number:', err));
-    } else if (mode === 'revise' && voucherData) {
-      setValue('voucher_number', `${voucherData.voucher_number} Rev ${voucherData.revision_number + 1 || 1}`);
-      setValue('parent_id', voucherData.id);
+        .then((number) => setValue("voucher_number", number))
+        .catch((err) => console.error("Failed to fetch voucher number:", err));
     }
-  }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint, voucherData]);
+  }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
-  const handleVoucherClick = async (voucher: any) => {
-    try {
-      const response = await api.get(`/proforma-invoices/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode("view");
-      reset(fullVoucherData);
-    } catch (err) {
-      console.error("Error fetching voucher:", err);
-      setMode("view");
-      reset(voucher);
-    }
+  const handleVoucherClick = (voucher: any) => {
+    // Use the voucher from list (assumes full data from backend joins)
+    setMode("view");
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
   };
 
-  const handleEditWithData = async (voucher: any) => {
+  const handleEditWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
-    try {
-      const response = await api.get(`/proforma-invoices/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      // Use handleEdit to properly set URL and selectedId
-      handleEdit(voucher.id);
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for edit:", err);
-      handleEdit(voucher.id);
-    }
+    handleEdit(voucher.id);
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['proforma-invoice', voucher.id], voucher);
   };
 
-  const handleReviseWithData = async (voucher: any) => {
+  const handleReviseWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
-    try {
-      const response = await api.get(`/proforma-invoices/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = new Date().toISOString().split('T')[0];  // Set to current date for revision
-      setMode("revise");
-      reset({
-        ...fullVoucherData,
-        id: undefined,  // Clear ID for new creation
-        voucher_number: `${fullVoucherData.voucher_number} Rev ${fullVoucherData.revision_number + 1 || 1}`,
-        parent_id: fullVoucherData.id,
-        revision_number: fullVoucherData.revision_number + 1 || 1,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          id: undefined,  // Clear item IDs for new creation
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for revise:", err);
-      handleRevise(voucher);
-    }
+    handleRevise(voucher.id);
+    reset({
+      ...voucher,
+      date: new Date().toISOString().split('T')[0],
+      voucher_number: `${voucher.voucher_number} Rev ${voucher.revision_number + 1 || 1}`,
+      parent_id: voucher.id,
+      revision_number: voucher.revision_number + 1 || 1,
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['proforma-invoice', voucher.id], voucher);
   };
 
-  const handleViewWithData = async (voucher: any) => {
+  const handleViewWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
-    try {
-      const response = await api.get(`/proforma-invoices/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      // Use handleView to properly set URL and selectedId
-      handleView(voucher.id);
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for view:", err);
-      handleView(voucher.id);
-    }
+    handleView(voucher.id);
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['proforma-invoice', voucher.id], voucher);
   };
 
   useEffect(() => {
@@ -507,9 +520,9 @@ const ProformaInvoicePage: React.FC = () => {
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
-              showLineDiscountCheckbox={true}
-              showTotalDiscountCheckbox={true}
-              showDescriptionCheckbox={true}
+              showLineDiscountCheckbox={mode !== "view"}
+              showTotalDiscountCheckbox={mode !== "view"}
+              showDescriptionCheckbox={mode !== "view"}
             />
           </Grid>
           <Grid size={12}>

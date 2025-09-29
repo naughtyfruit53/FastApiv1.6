@@ -29,7 +29,10 @@ async def get_quotations(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all quotations"""
-    stmt = select(Quotation).options(joinedload(Quotation.customer)).where(
+    stmt = select(Quotation).options(
+        joinedload(Quotation.customer),
+        joinedload(Quotation.items).joinedload(QuotationItem.product)
+    ).where(
         Quotation.organization_id == current_user.organization_id
     )
     
@@ -118,15 +121,78 @@ async def create_quotation(
         db.add(db_quotation)
         await db.flush()
         
+        # Initialize sums for header
+        total_amount = 0.0
+        total_cgst = 0.0
+        total_sgst = 0.0
+        total_igst = 0.0
+        total_discount = 0.0
+        
         for item_data in quotation.items:
+            item_dict = item_data.dict()
+            
+            # Set defaults for missing optional fields to prevent None values
+            item_dict.setdefault('discount_percentage', 0.0)
+            item_dict.setdefault('discount_amount', 0.0)
+            item_dict.setdefault('taxable_amount', 0.0)
+            item_dict.setdefault('gst_rate', 18.0)
+            item_dict.setdefault('cgst_amount', 0.0)
+            item_dict.setdefault('sgst_amount', 0.0)
+            item_dict.setdefault('igst_amount', 0.0)
+            item_dict.setdefault('description', None)
+            
+            # Recalculate taxable_amount if it's 0 or inconsistent
+            if item_dict['taxable_amount'] == 0:
+                gross_amount = item_dict['quantity'] * item_dict['unit_price']
+                discount_amount = gross_amount * (item_dict['discount_percentage'] / 100) if item_dict['discount_percentage'] else item_dict['discount_amount']
+                item_dict['discount_amount'] = discount_amount
+                item_dict['taxable_amount'] = gross_amount - discount_amount
+            
+            # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
+            taxable = item_dict['taxable_amount']
+            if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
+                half_rate = item_dict['gst_rate'] / 2 / 100
+                item_dict['cgst_amount'] = taxable * half_rate
+                item_dict['sgst_amount'] = taxable * half_rate
+                item_dict['igst_amount'] = 0.0
+            
+            # Always calculate total_amount to ensure it's not None or incorrect
+            item_dict['total_amount'] = (
+                item_dict['taxable_amount'] +
+                item_dict['cgst_amount'] +
+                item_dict['sgst_amount'] +
+                item_dict['igst_amount']
+            )
+            
             item = QuotationItem(
                 quotation_id=db_quotation.id,
-                **item_data.dict()
+                **item_dict
             )
             db.add(item)
+            
+            # Accumulate sums for header
+            total_amount += item_dict['total_amount']
+            total_cgst += item_dict['cgst_amount']
+            total_sgst += item_dict['sgst_amount']
+            total_igst += item_dict['igst_amount']
+            total_discount += item_dict['discount_amount']
+        
+        # Override header totals with calculated sums for consistency
+        db_quotation.total_amount = total_amount
+        db_quotation.cgst_amount = total_cgst
+        db_quotation.sgst_amount = total_sgst
+        db_quotation.igst_amount = total_igst
+        db_quotation.discount_amount = total_discount
         
         await db.commit()
-        await db.refresh(db_quotation)
+        
+        # Re-query with joins to load relationships
+        stmt = select(Quotation).options(
+            joinedload(Quotation.customer),
+            joinedload(Quotation.items).joinedload(QuotationItem.product)
+        ).where(Quotation.id == db_quotation.id)
+        result = await db.execute(stmt)
+        db_quotation = result.unique().scalar_one_or_none()
         
         if send_email and db_quotation.customer and db_quotation.customer.email:
             background_tasks.add_task(
@@ -195,23 +261,95 @@ async def update_quotation(
         for field, value in update_data.items():
             setattr(quotation, field, value)
         
+        # Initialize sums for header if items are updated
+        total_amount = 0.0
+        total_cgst = 0.0
+        total_sgst = 0.0
+        total_igst = 0.0
+        total_discount = 0.0
+        
         if quotation_update.items is not None:
             from sqlalchemy import delete
             stmt_delete = delete(QuotationItem).where(QuotationItem.quotation_id == quotation_id)
             await db.execute(stmt_delete)
             await db.flush()  # Flush deletes before adding new items to avoid potential locks
             for item_data in quotation_update.items:
+                item_dict = item_data.dict()
+                
+                # Set defaults for missing optional fields to prevent None values
+                item_dict.setdefault('discount_percentage', 0.0)
+                item_dict.setdefault('discount_amount', 0.0)
+                item_dict.setdefault('taxable_amount', 0.0)
+                item_dict.setdefault('gst_rate', 18.0)
+                item_dict.setdefault('cgst_amount', 0.0)
+                item_dict.setdefault('sgst_amount', 0.0)
+                item_dict.setdefault('igst_amount', 0.0)
+                item_dict.setdefault('description', None)
+                
+                # Recalculate taxable_amount if it's 0 or inconsistent
+                if item_dict['taxable_amount'] == 0:
+                    gross_amount = item_dict['quantity'] * item_dict['unit_price']
+                    discount_amount = gross_amount * (item_dict['discount_percentage'] / 100) if item_dict['discount_percentage'] else item_dict['discount_amount']
+                    item_dict['discount_amount'] = discount_amount
+                    item_dict['taxable_amount'] = gross_amount - discount_amount
+                
+                # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
+                taxable = item_dict['taxable_amount']
+                if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
+                    half_rate = item_dict['gst_rate'] / 2 / 100
+                    item_dict['cgst_amount'] = taxable * half_rate
+                    item_dict['sgst_amount'] = taxable * half_rate
+                    item_dict['igst_amount'] = 0.0
+                
+                # Always calculate total_amount to ensure it's not None or incorrect
+                item_dict['total_amount'] = (
+                    item_dict['taxable_amount'] +
+                    item_dict['cgst_amount'] +
+                    item_dict['sgst_amount'] +
+                    item_dict['igst_amount']
+                )
+                
                 item = QuotationItem(
                     quotation_id=quotation_id,
-                    **item_data.dict()
+                    **item_dict
                 )
                 db.add(item)
+                
+                # Accumulate sums for header
+                total_amount += item_dict['total_amount']
+                total_cgst += item_dict['cgst_amount']
+                total_sgst += item_dict['sgst_amount']
+                total_igst += item_dict['igst_amount']
+                total_discount += item_dict['discount_amount']
+            
             await db.flush()  # Flush adds before commit
+            
+            # Override header totals with calculated sums for consistency
+            quotation.total_amount = total_amount
+            quotation.cgst_amount = total_cgst
+            quotation.sgst_amount = total_sgst
+            quotation.igst_amount = total_igst
+            quotation.discount_amount = total_discount
         
         logger.debug(f"Before commit for quotation {quotation_id}")
         await db.commit()
         logger.debug(f"After commit for quotation {quotation_id}")
-        await db.refresh(quotation)
+        
+        # Re-query with joins to load relationships
+        stmt = select(Quotation).options(
+            joinedload(Quotation.customer),
+            joinedload(Quotation.items).joinedload(QuotationItem.product)
+        ).where(
+            Quotation.id == quotation_id,
+            Quotation.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        quotation = result.unique().scalar_one_or_none()
+        if not quotation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Quotation not found"
+            )
         
         logger.info(f"Quotation {quotation.voucher_number} updated by {current_user.email}")
         return quotation
