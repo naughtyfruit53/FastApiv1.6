@@ -54,6 +54,7 @@ class Task(Base):
     actual_hours = Column(Integer, nullable=True)     # Actual time spent
     tags = Column(JSON, nullable=True)               # Array of tags
     custom_fields = Column(JSON, nullable=True)      # Custom task data
+    external_id = Column(String(255), nullable=True, index=True)  # For calendar sync integration
     
     # Relationships
     organization = relationship("Organization", back_populates="tasks")

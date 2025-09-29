@@ -340,3 +340,185 @@ class BusinessCardOCRService:
 
 # Global service instance
 ocr_service = BusinessCardOCRService()
+
+
+class EmailAttachmentOCRService:
+    """Extended OCR service for processing email attachments"""
+    
+    def __init__(self):
+        self.business_card_service = ocr_service
+        self.supported_formats = ['.jpg', '.jpeg', '.png', '.tiff', '.tif', '.bmp', '.pdf']
+    
+    async def process_email_attachment(self, attachment_id: int) -> Dict[str, Any]:
+        """
+        Process email attachment for OCR text extraction
+        
+        Args:
+            attachment_id: Email attachment ID
+            
+        Returns:
+            Dict containing extracted text and metadata
+        """
+        from app.models.email import EmailAttachment
+        from app.core.database import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            # Get attachment from database
+            attachment = db.query(EmailAttachment).filter(
+                EmailAttachment.id == attachment_id
+            ).first()
+            
+            if not attachment:
+                return {
+                    "success": False,
+                    "error": "Attachment not found"
+                }
+            
+            # Check if file format is supported
+            file_ext = os.path.splitext(attachment.original_filename.lower())[1]
+            if file_ext not in self.supported_formats:
+                return {
+                    "success": False,
+                    "error": f"Unsupported file format: {file_ext}"
+                }
+            
+            # Create temporary file
+            temp_dir = "/tmp/email_ocr"
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_file_path = os.path.join(temp_dir, f"attachment_{attachment_id}{file_ext}")
+            
+            try:
+                # Write attachment data to temporary file
+                with open(temp_file_path, 'wb') as f:
+                    f.write(attachment.file_data)
+                
+                # Process based on file type
+                if file_ext == '.pdf':
+                    extracted_text = await self._extract_text_from_pdf(temp_file_path)
+                else:
+                    extracted_text = await self._extract_text_from_image(temp_file_path)
+                
+                # Update attachment record with extracted text
+                if hasattr(attachment, 'extracted_text'):
+                    attachment.extracted_text = extracted_text
+                    attachment.ocr_processed = True
+                    attachment.ocr_processed_at = datetime.now()
+                    db.commit()
+                
+                return {
+                    "success": True,
+                    "extracted_text": extracted_text,
+                    "attachment_id": attachment_id,
+                    "filename": attachment.original_filename,
+                    "text_length": len(extracted_text) if extracted_text else 0
+                }
+                
+            finally:
+                # Clean up temporary file
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                    
+        except Exception as e:
+            logger.error(f"Error processing attachment {attachment_id}: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+        finally:
+            db.close()
+    
+    async def _extract_text_from_pdf(self, file_path: str) -> str:
+        """Extract text from PDF file using multiple methods"""
+        try:
+            import fitz  # PyMuPDF
+            
+            extracted_text = ""
+            pdf_document = fitz.open(file_path)
+            
+            for page_num in range(pdf_document.page_count):
+                page = pdf_document[page_num]
+                
+                # First try to extract text directly
+                page_text = page.get_text()
+                if page_text.strip():
+                    extracted_text += f"\n--- Page {page_num + 1} ---\n{page_text}"
+                else:
+                    # If no text found, try OCR on page image
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x zoom for better OCR
+                    img_data = pix.tobytes("png")
+                    
+                    # Save as temporary image for OCR
+                    temp_img_path = f"{file_path}_page_{page_num}.png"
+                    with open(temp_img_path, 'wb') as img_file:
+                        img_file.write(img_data)
+                    
+                    try:
+                        page_text = await self.business_card_service._extract_text_from_image(temp_img_path)
+                        if page_text.strip():
+                            extracted_text += f"\n--- Page {page_num + 1} (OCR) ---\n{page_text}"
+                    finally:
+                        if os.path.exists(temp_img_path):
+                            os.unlink(temp_img_path)
+            
+            pdf_document.close()
+            return extracted_text.strip()
+            
+        except ImportError:
+            logger.warning("PyMuPDF not available, falling back to image conversion")
+            # Fallback: convert PDF to image and use OCR
+            return await self._extract_text_from_image(file_path)
+        except Exception as e:
+            logger.error(f"Error extracting text from PDF: {str(e)}")
+            return ""
+    
+    async def _extract_text_from_image(self, file_path: str) -> str:
+        """Extract text from image file using OCR"""
+        return await self.business_card_service._extract_text_from_image(file_path)
+    
+    async def batch_process_attachments(self, attachment_ids: List[int]) -> Dict[str, Any]:
+        """
+        Process multiple email attachments for OCR in batch
+        
+        Args:
+            attachment_ids: List of attachment IDs to process
+            
+        Returns:
+            Dict containing batch processing results
+        """
+        results = {
+            "success": True,
+            "processed": [],
+            "failed": [],
+            "total_attachments": len(attachment_ids)
+        }
+        
+        for attachment_id in attachment_ids:
+            try:
+                result = await self.process_email_attachment(attachment_id)
+                if result["success"]:
+                    results["processed"].append({
+                        "attachment_id": attachment_id,
+                        "text_length": result.get("text_length", 0)
+                    })
+                else:
+                    results["failed"].append({
+                        "attachment_id": attachment_id,
+                        "error": result.get("error", "Unknown error")
+                    })
+            except Exception as e:
+                results["failed"].append({
+                    "attachment_id": attachment_id,
+                    "error": str(e)
+                })
+        
+        results["success"] = len(results["failed"]) == 0
+        return results
+    
+    def is_supported_format(self, filename: str) -> bool:
+        """Check if file format is supported for OCR"""
+        file_ext = os.path.splitext(filename.lower())[1]
+        return file_ext in self.supported_formats
+
+# Global email attachment OCR service instance
+email_attachment_ocr_service = EmailAttachmentOCRService()

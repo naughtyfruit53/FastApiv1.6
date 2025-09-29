@@ -1195,3 +1195,119 @@ TRITIQ ERP Team
         return False, error_msg
     finally:
         db.close()
+
+
+def link_email_to_customer_vendor(email_id: int, customer_id: Optional[int] = None, 
+                                vendor_id: Optional[int] = None, user_id: Optional[int] = None) -> tuple[bool, Optional[str]]:
+    """
+    Link an email to a customer or vendor for ERP integration
+    
+    Args:
+        email_id: ID of the email to link
+        customer_id: Optional customer ID to link to
+        vendor_id: Optional vendor ID to link to  
+        user_id: ID of user performing the action
+        
+    Returns:
+        Tuple of (success: bool, error_message: Optional[str])
+    """
+    db = SessionLocal()
+    try:
+        email = db.query(Email).filter(Email.id == email_id).first()
+        if not email:
+            return False, f"Email not found: {email_id}"
+        
+        # Update email with customer/vendor link
+        if customer_id:
+            email.customer_id = customer_id
+        if vendor_id:
+            email.vendor_id = vendor_id
+            
+        email.updated_at = datetime.utcnow()
+        db.commit()
+        
+        logger.info(f"Email {email_id} linked to customer_id={customer_id}, vendor_id={vendor_id} by user {user_id}")
+        return True, None
+        
+    except Exception as e:
+        db.rollback()
+        error_msg = f"Failed to link email {email_id} to customer/vendor: {str(e)}"
+        logger.error(error_msg)
+        return False, error_msg
+    finally:
+        db.close()
+
+
+def auto_link_emails_by_sender(organization_id: int, limit: int = 100) -> Dict[str, Any]:
+    """
+    Automatically link emails to customers/vendors based on sender email addresses
+    
+    Args:
+        organization_id: Organization ID for multi-tenant filtering
+        limit: Maximum number of emails to process in one batch
+        
+    Returns:
+        Dict containing processing results
+    """
+    db = SessionLocal()
+    try:
+        from app.models.base import Customer, Vendor
+        
+        # Get unlinked emails
+        unlinked_emails = db.query(Email).filter(
+            Email.organization_id == organization_id,
+            Email.customer_id.is_(None),
+            Email.vendor_id.is_(None)
+        ).limit(limit).all()
+        
+        linked_count = 0
+        processed_count = 0
+        
+        for email in unlinked_emails:
+            processed_count += 1
+            sender_email = email.sender_email
+            
+            if not sender_email:
+                continue
+                
+            # Try to match with customer
+            customer = db.query(Customer).filter(
+                Customer.organization_id == organization_id,
+                Customer.email == sender_email
+            ).first()
+            
+            if customer:
+                email.customer_id = customer.id
+                linked_count += 1
+                continue
+            
+            # Try to match with vendor
+            vendor = db.query(Vendor).filter(
+                Vendor.organization_id == organization_id,
+                Vendor.email == sender_email
+            ).first()
+            
+            if vendor:
+                email.vendor_id = vendor.id
+                linked_count += 1
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "processed_emails": processed_count,
+            "linked_emails": linked_count,
+            "organization_id": organization_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error auto-linking emails: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "processed_emails": 0,
+            "linked_emails": 0
+        }
+    finally:
+        db.close()
