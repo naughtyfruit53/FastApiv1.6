@@ -171,6 +171,10 @@ from .email import (
     MailAccount, Email, EmailThread, EmailAttachment, EmailSyncLog,
     EmailAccountType, EmailSyncStatus, EmailStatus as EmailMessageStatus, EmailPriority
 )
+# Import organization settings models
+from .organization_settings import (
+    OrganizationSettings
+)
 
 # No imports from .base as all models have been moved
 
@@ -195,6 +199,9 @@ __all__ = [
     # Email module models
     "MailAccount", "Email", "EmailThread", "EmailAttachment", "EmailSyncLog",
     "EmailAccountType", "EmailSyncStatus", "EmailMessageStatus", "EmailPriority",
+    
+    # Organization settings models
+    "OrganizationSettings",
     
     # Analytics models
     "ServiceAnalyticsEvent", "ReportConfiguration", "AnalyticsSummary",

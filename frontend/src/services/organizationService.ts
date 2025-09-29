@@ -225,4 +225,23 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to reset user password");
     }
   },
+
+  // Organization settings management
+  getOrganizationSettings: async (): Promise<any> => {
+    try {
+      const response = await api.get("/organizations/settings/");
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization settings");
+    }
+  },
+
+  updateOrganizationSettings: async (settings: any): Promise<any> => {
+    try {
+      const response = await api.put("/organizations/settings/", settings);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update organization settings");
+    }
+  },
 };

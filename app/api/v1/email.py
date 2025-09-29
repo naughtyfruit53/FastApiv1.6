@@ -997,3 +997,55 @@ async def auto_link_emails(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error auto-linking emails: {str(e)}"
         )
+
+@router.post("/compose", response_model=Dict[str, Any])
+async def compose_email(
+    to_email: str,
+    subject: str,
+    body: str,
+    html_body: Optional[str] = None,
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
+    db: Session = Depends(get_db)
+):
+    """
+    Compose and send email with automatic role-based BCC functionality.
+    
+    This endpoint demonstrates the Mail 1 Level Up feature:
+    - Executive emails will BCC their assigned Manager
+    - Manager emails will BCC Management users  
+    - Management emails will not BCC anyone (top level)
+    """
+    from app.services.email_service import email_service
+    from app.models import EmailType
+    
+    try:
+        # Use the enhanced email service with BCC functionality
+        success, error_msg = email_service.send_email_with_role_bcc(
+            db=db,
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            html_body=html_body,
+            sender_user=current_user,
+            email_type=EmailType.TRANSACTIONAL
+        )
+        
+        if success:
+            return {
+                "message": "Email sent successfully",
+                "to_email": to_email,
+                "subject": subject,
+                "sender_role": current_user.role,
+                "mail_1_level_up_applied": True
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to send email: {error_msg}"
+            )
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error composing email: {str(e)}"
+        )

@@ -18,6 +18,7 @@ import {
   canManageUsers,
 } from "../../types/user.types";
 import AddUserDialog from "../../components/AddUserDialog";
+import OrganizationSettings from "../../components/OrganizationSettings";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizationService } from "../../services/organizationService";
 const Settings: React.FC = () => {
@@ -147,6 +148,14 @@ const Settings: React.FC = () => {
             </Paper>
           </Grid>
         )}
+        
+        {/* Organization Settings - For Org Super Admins */}
+        {isOrgAdmin && (
+          <Grid size={{ xs: 12 }}>
+            <OrganizationSettings />
+          </Grid>
+        )}
+        
         {/* Advanced Settings - For authorized users */}
         {isAuthorized && (
           <Grid size={{ xs: 12, md: isOrgAdmin ? (canManage ? 4 : 6) : 12 }}>

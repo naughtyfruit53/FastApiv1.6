@@ -19,6 +19,7 @@ from app.core.security import get_password_hash, verify_password
 from app.core.logging import log_email_operation
 from app.models import User, OTPVerification, EmailSend, EmailProvider, EmailStatus, EmailType
 from app.models.vouchers import PurchaseVoucher, SalesVoucher, PurchaseOrder, SalesOrder
+from app.services.role_hierarchy_service import RoleHierarchyService
 import logging
 
 # Brevo (Sendinblue) import
@@ -71,6 +72,9 @@ class EmailService:
         
         if not all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
             logger.warning("SMTP configuration incomplete - email sending may be disabled")
+        
+        # Initialize role hierarchy service for BCC functionality
+        self.role_hierarchy_service = RoleHierarchyService()
     
     def _create_email_audit_record(self, 
                                  db: Session, 
@@ -158,9 +162,10 @@ class EmailService:
                         subject: str, 
                         body: str, 
                         html_body: Optional[str] = None, 
+                        bcc_emails: Optional[list] = None,
                         email_send: Optional[EmailSend] = None) -> tuple[bool, Optional[str], Optional[str]]:
-        """Send email via Brevo with enhanced error handling"""
-        logger.debug(f"Attempting to send email via Brevo to {to_email}")
+        """Send email via Brevo with enhanced error handling and BCC support"""
+        logger.debug(f"Attempting to send email via Brevo to {to_email} with BCC: {bcc_emails}")
         try:
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
                 to=[{"email": to_email}],
@@ -170,6 +175,11 @@ class EmailService:
             )
             if html_body:
                 send_smtp_email.html_content = html_body
+            
+            # Add BCC recipients if provided
+            if bcc_emails:
+                send_smtp_email.bcc = [{"email": bcc_email} for bcc_email in bcc_emails if bcc_email]
+                logger.info(f"Adding BCC recipients: {bcc_emails}")
             
             response = self.api_instance.send_transac_email(send_smtp_email)
             
@@ -908,6 +918,147 @@ TRITIQ ERP Team
             
         except Exception as e:
             error_msg = f"Failed to verify OTP for {email}: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+    
+    def send_email_with_role_bcc(self,
+                                db: Session,
+                                to_email: str,
+                                subject: str,
+                                body: str,
+                                html_body: Optional[str] = None,
+                                sender_user: Optional[User] = None,
+                                email_type: EmailType = EmailType.TRANSACTIONAL,
+                                organization_id: Optional[int] = None,
+                                user_id: Optional[int] = None) -> tuple[bool, Optional[str]]:
+        """
+        Enhanced email sending with automatic role-based BCC functionality.
+        
+        Args:
+            db: Database session
+            to_email: Primary recipient email
+            subject: Email subject
+            body: Plain text body
+            html_body: HTML body (optional)
+            sender_user: User sending the email (for BCC logic)
+            email_type: Type of email being sent
+            organization_id: Organization ID for audit
+            user_id: User ID for audit
+            
+        Returns:
+            Tuple of (success: bool, error_message: Optional[str])
+        """
+        try:
+            # Get BCC recipients based on sender's role and organization settings
+            bcc_emails = []
+            if sender_user:
+                bcc_emails = self.role_hierarchy_service.get_bcc_recipients_for_user(db, sender_user)
+                organization_id = organization_id or sender_user.organization_id
+                user_id = user_id or sender_user.id
+            
+            # Create audit record
+            email_send = self._create_email_audit_record(
+                db=db,
+                to_email=to_email,
+                subject=subject,
+                email_type=email_type,
+                organization_id=organization_id,
+                user_id=user_id
+            )
+            
+            # Try Brevo first
+            if self.api_instance and self.enable_brevo:
+                success, error_msg, message_id = self._send_email_brevo(
+                    to_email=to_email,
+                    subject=subject,
+                    body=body,
+                    html_body=html_body,
+                    bcc_emails=bcc_emails,
+                    email_send=email_send
+                )
+                
+                if success:
+                    self._update_email_audit_record(
+                        db=db,
+                        email_send=email_send,
+                        status=EmailStatus.SENT,
+                        provider_used=EmailProvider.BREVO,
+                        provider_message_id=message_id
+                    )
+                    db.commit()
+                    
+                    log_msg = f"Email sent successfully to {to_email}"
+                    if bcc_emails:
+                        log_msg += f" with BCC: {bcc_emails}"
+                    logger.info(log_msg)
+                    
+                    return True, None
+                else:
+                    # Log the failure and try fallback if enabled
+                    self._update_email_audit_record(
+                        db=db,
+                        email_send=email_send,
+                        status=EmailStatus.FAILED,
+                        provider_used=EmailProvider.BREVO,
+                        error_message=error_msg
+                    )
+                    
+                    if self.fallback_enabled:
+                        logger.warning(f"Brevo failed for {to_email}, trying SMTP fallback")
+                        # Note: SMTP fallback doesn't support BCC in current implementation
+                        # This could be enhanced if needed
+                        fallback_success, fallback_error = self._send_email_smtp(to_email, subject, body, html_body)
+                        if fallback_success:
+                            self._update_email_audit_record(
+                                db=db,
+                                email_send=email_send,
+                                status=EmailStatus.SENT,
+                                provider_used=EmailProvider.SMTP
+                            )
+                            db.commit()
+                            logger.warning(f"Email sent via SMTP fallback to {to_email} (BCC not supported in fallback)")
+                            return True, None
+                        else:
+                            self._update_email_audit_record(
+                                db=db,
+                                email_send=email_send,
+                                status=EmailStatus.FAILED,
+                                provider_used=EmailProvider.SMTP,
+                                error_message=fallback_error
+                            )
+                    
+                    db.commit()
+                    return False, error_msg
+            else:
+                # No Brevo, try SMTP fallback
+                if self.fallback_enabled:
+                    logger.info(f"Using SMTP for {to_email} (BCC not supported)")
+                    success, error_msg = self._send_email_smtp(to_email, subject, body, html_body)
+                    
+                    status = EmailStatus.SENT if success else EmailStatus.FAILED
+                    self._update_email_audit_record(
+                        db=db,
+                        email_send=email_send,
+                        status=status,
+                        provider_used=EmailProvider.SMTP,
+                        error_message=error_msg if not success else None
+                    )
+                    db.commit()
+                    
+                    return success, error_msg
+                else:
+                    error_msg = "No email service configured"
+                    self._update_email_audit_record(
+                        db=db,
+                        email_send=email_send,
+                        status=EmailStatus.FAILED,
+                        error_message=error_msg
+                    )
+                    db.commit()
+                    return False, error_msg
+                    
+        except Exception as e:
+            error_msg = f"Failed to send email with role BCC: {str(e)}"
             logger.error(error_msg)
             return False, error_msg
 

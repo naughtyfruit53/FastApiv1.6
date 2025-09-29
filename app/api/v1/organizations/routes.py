@@ -25,6 +25,7 @@ from .user_routes import user_router
 from .invitation_routes import invitation_router
 from .module_routes import module_router
 from .license_routes import license_router
+from .settings_routes import router as settings_router
 from app.services.otp_service import OTPService
 from app.schemas.reset import OTPRequest, OTPVerify
 
@@ -37,6 +38,7 @@ router.include_router(user_router)
 router.include_router(invitation_router)
 router.include_router(module_router)
 router.include_router(license_router)
+router.include_router(settings_router)
 
 @router.get("/", response_model=List[OrganizationInDB])
 async def list_organizations(

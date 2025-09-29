@@ -2,7 +2,35 @@
 
 ## Overview
 
-The Email Module provides comprehensive email management functionality including IMAP/SMTP synchronization, OAuth2 authentication, background processing, and secure email storage. This module integrates with popular email providers like Gmail and Outlook while maintaining strong security and performance standards.
+The Email Module provides comprehensive email management functionality including IMAP/SMTP synchronization, OAuth2 authentication, background processing, secure email storage, and **role-based automatic BCC** for organizational email hierarchy. This module integrates with popular email providers like Gmail and Outlook while maintaining strong security and performance standards.
+
+## New Feature: Mail 1 Level Up
+
+The "Mail 1 Level Up" feature provides automatic role-based BCC functionality to ensure organizational transparency and communication flow. When enabled by an organization super admin:
+
+- **Executive emails** → Automatically BCC their assigned Manager
+- **Manager emails** → Automatically BCC all Management users  
+- **Management emails** → No BCC (top level)
+
+### Configuration
+- Toggle available in Organization Settings (super admin only)
+- Database field: `organization_settings.mail_1_level_up_enabled`
+- Respects user reporting relationships and role hierarchy
+- Works with all email sending methods (Brevo API, SMTP fallback)
+
+### API Integration
+```python
+from app.services.email_service import email_service
+
+# Send email with automatic role-based BCC
+success, error = email_service.send_email_with_role_bcc(
+    db=db,
+    to_email="customer@example.com",
+    subject="Important Update",
+    body="Email content here",
+    sender_user=current_user  # BCC recipients determined by user's role
+)
+```
 
 ## Architecture
 
@@ -31,6 +59,17 @@ The Email Module provides comprehensive email management functionality including
    - Account management
    - Email retrieval and status updates
    - Sync control and monitoring
+   - Email compose with automatic BCC
+
+5. **Organization Settings** (`app/models/organization_settings.py`)
+   - Mail 1 Level Up configuration
+   - Organization-wide email preferences
+   - Admin-controlled feature toggles
+
+6. **Role Hierarchy Service** (`app/services/role_hierarchy_service.py`)
+   - Role-based BCC recipient determination
+   - User hierarchy validation
+   - Organizational reporting structure support
 
 ## Setup and Configuration
 
@@ -234,6 +273,12 @@ email_detail = email_management_service.get_email_detail(
 - `PUT /api/v1/email/emails/{id}/status` - Update status
 - `GET /api/v1/email/threads` - List threads
 - `GET /api/v1/email/threads/{id}` - Get thread
+- **NEW**: `POST /api/v1/email/compose` - Compose email with automatic BCC
+
+### Organization Settings
+
+- `GET /api/v1/organizations/settings/` - Get organization settings
+- `PUT /api/v1/organizations/settings/` - Update organization settings (including Mail 1 Level Up toggle)
 
 ### Sync Management
 
