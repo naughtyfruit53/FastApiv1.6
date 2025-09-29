@@ -36,6 +36,14 @@ from .organization import (
     OrganizationLicenseResponse
 )
 
+from .organization_settings import (
+    OrganizationSettingsBase,
+    OrganizationSettingsCreate,
+    OrganizationSettingsUpdate,
+    OrganizationSettingsInDB,
+    OrganizationSettingsResponse
+)
+
 from .company import (
     CompanyBase,
     CompanyCreate,

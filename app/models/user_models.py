@@ -378,6 +378,11 @@ class Organization(Base):
         "VoucherApproval",
         back_populates="organization"
     )
+    settings: Mapped[Optional["app.models.organization_settings.OrganizationSettings"]] = relationship(
+        "app.models.organization_settings.OrganizationSettings",
+        back_populates="organization",
+        uselist=False
+    )
 
     __table_args__ = (
         Index('idx_org_status_subdomain', 'status', 'subdomain'),
