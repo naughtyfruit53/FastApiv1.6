@@ -283,9 +283,70 @@ class PasswordResetRequest(BaseModel):
         return True, "Password is strong"
 
 
+class PasswordResetTokenRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    email: EmailStr
+    token: str
+    new_password: str
+    
+    @field_validator('new_password')
+    def validate_password(cls, v):
+        is_strong, msg = cls.check_password_strength(v)
+        if not is_strong:
+            raise ValueError(msg)
+        return v
+    
+    @staticmethod
+    def check_password_strength(password: str) -> tuple[bool, str]:
+        """Check password strength and return validation result"""
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters long"
+
+        if not any(c.isupper() for c in password):
+            return False, "Password must contain at least one uppercase letter"
+
+        if not any(c.islower() for c in password):
+            return False, "Password must contain at least one lowercase letter"
+
+        if not any(c.isdigit() for c in password):
+            return False, "Password must contain at least one digit"
+
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(c in special_chars for c in password):
+            return False, "Password must contain at least one special character"
+
+        return True, "Password is strong"
+
+
+class PasswordResetResponse(BaseModel):
+    message: str
+    access_token: str
+    token_type: str = "bearer"
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmailSendResponse(BaseModel):
+    id: int
+    to_email: str
+    subject: str
+    email_type: str
+    provider_used: str
+    status: str
+    created_at: datetime
+    sent_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PasswordChangeResponse(BaseModel):
     message: str
     access_token: Optional[str] = None  # New JWT token after password change
+    refresh_token: Optional[str] = None  # New refresh token
     token_type: str = "bearer"
     
     model_config = ConfigDict(from_attributes = True)

@@ -1,11 +1,12 @@
 # app/models/system_models.py
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 from typing import List, Optional
 from datetime import datetime, date
+import enum
 
 class Company(Base):
     __tablename__ = "companies"
@@ -390,5 +391,92 @@ class SnappyMailConfig(Base):
     __table_args__ = (
         UniqueConstraint('user_id', name='uq_snappymail_config_user'),
         Index('idx_snappymail_config_email', 'email'),
+        {'extend_existing': True}
+    )
+
+
+class EmailProvider(enum.Enum):
+    """Email provider types for audit tracking"""
+    BREVO = "brevo"
+    SMTP = "smtp"
+    GMAIL_API = "gmail_api"
+    OUTLOOK_API = "outlook_api"
+
+
+class EmailStatus(enum.Enum):
+    """Email send status for audit tracking"""
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+    RETRY = "retry"
+    DELIVERED = "delivered"
+    BOUNCED = "bounced"
+
+
+class EmailType(enum.Enum):
+    """Email type for categorization"""
+    USER_INVITE = "user_invite"
+    PASSWORD_RESET = "password_reset"
+    USER_CREATION = "user_creation"
+    OTP = "otp"
+    NOTIFICATION = "notification"
+    MARKETING = "marketing"
+    TRANSACTIONAL = "transactional"
+
+
+class EmailSend(Base):
+    """Audit table for tracking email sends across all providers"""
+    __tablename__ = "email_sends"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    
+    # Email details
+    to_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    from_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject: Mapped[str] = mapped_column(String(500), nullable=False)
+    email_type: Mapped[EmailType] = mapped_column(SQLEnum(EmailType), nullable=False, index=True)
+    
+    # Provider and status
+    provider_used: Mapped[EmailProvider] = mapped_column(SQLEnum(EmailProvider), nullable=False, index=True)
+    status: Mapped[EmailStatus] = mapped_column(SQLEnum(EmailStatus), nullable=False, default=EmailStatus.PENDING, index=True)
+    
+    # Tracking and organization
+    organization_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    # Provider response (redacted sensitive info)
+    provider_response: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    provider_message_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    
+    # Error tracking
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_retries: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Feature flags
+    is_brevo_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    
+    # Relationships
+    organization: Mapped[Optional["app.models.user_models.Organization"]] = relationship(
+        "app.models.user_models.Organization", 
+        foreign_keys=[organization_id]
+    )
+    user: Mapped[Optional["app.models.user_models.User"]] = relationship(
+        "app.models.user_models.User",
+        foreign_keys=[user_id]
+    )
+
+    __table_args__ = (
+        Index('idx_email_sends_org_type', 'organization_id', 'email_type'),
+        Index('idx_email_sends_status_created', 'status', 'created_at'),
+        Index('idx_email_sends_provider_status', 'provider_used', 'status'),
+        Index('idx_email_sends_user_created', 'user_id', 'created_at'),
         {'extend_existing': True}
     )

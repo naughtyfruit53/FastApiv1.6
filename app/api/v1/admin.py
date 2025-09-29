@@ -703,3 +703,156 @@ async def activate_license(
     
     logger.info(f"License activated for org {new_org.name} with admin {org_admin.email} by {current_user.email}")
     return new_org
+
+
+@router.get("/email-logs")
+async def get_email_logs(
+    organization_id: Optional[int] = None,
+    email_type: Optional[str] = None,
+    status: Optional[str] = None,
+    provider: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """
+    Get email send audit logs (RBAC-protected)
+    Requires admin permissions to view email logs
+    """
+    try:
+        from app.models import EmailSend, EmailStatus, EmailProvider, EmailType
+        
+        # Check permissions - only admins can view email logs
+        if organization_id:
+            # Check if user can access specific organization
+            if not PermissionChecker.can_access_organization(current_user, organization_id):
+                PermissionChecker.require_organization_access(current_user, organization_id, db, request)
+        else:
+            # Viewing all email logs requires super admin
+            PermissionChecker.require_permission(
+                Permission.VIEW_ALL_AUDIT_LOGS,
+                current_user,
+                db,
+                request
+            )
+        
+        # Build query
+        query = db.query(EmailSend)
+        
+        # Apply filters
+        if organization_id:
+            query = query.filter(EmailSend.organization_id == organization_id)
+        
+        if email_type:
+            try:
+                email_type_enum = EmailType(email_type)
+                query = query.filter(EmailSend.email_type == email_type_enum)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid email_type: {email_type}"
+                )
+        
+        if status:
+            try:
+                status_enum = EmailStatus(status)
+                query = query.filter(EmailSend.status == status_enum)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid status: {status}"
+                )
+        
+        if provider:
+            try:
+                provider_enum = EmailProvider(provider)
+                query = query.filter(EmailSend.provider_used == provider_enum)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid provider: {provider}"
+                )
+        
+        # Order by created_at descending (most recent first)
+        query = query.order_by(EmailSend.created_at.desc())
+        
+        # Get total count for pagination
+        total_count = query.count()
+        
+        # Apply pagination
+        email_logs = query.offset(offset).limit(limit).all()
+        
+        # Convert to response format
+        logs_response = []
+        for log in email_logs:
+            logs_response.append({
+                "id": log.id,
+                "to_email": log.to_email,
+                "from_email": log.from_email,
+                "subject": log.subject,
+                "email_type": log.email_type.value,
+                "provider_used": log.provider_used.value,
+                "status": log.status.value,
+                "organization_id": log.organization_id,
+                "user_id": log.user_id,
+                "provider_message_id": log.provider_message_id,
+                "error_message": log.error_message,
+                "retry_count": log.retry_count,
+                "max_retries": log.max_retries,
+                "created_at": log.created_at.isoformat(),
+                "sent_at": log.sent_at.isoformat() if log.sent_at else None,
+                "delivered_at": log.delivered_at.isoformat() if log.delivered_at else None,
+                "failed_at": log.failed_at.isoformat() if log.failed_at else None,
+                "updated_at": log.updated_at.isoformat() if log.updated_at else None,
+                "is_brevo_enabled": log.is_brevo_enabled
+            })
+        
+        # Log access to email logs
+        AuditLogger.log_data_reset(
+            db=db,
+            admin_email=current_user.email,
+            admin_user_id=current_user.id,
+            organization_id=organization_id,
+            success=True,
+            ip_address=get_client_ip(request),
+            user_agent=get_user_agent(request),
+            reset_scope="EMAIL_LOG_ACCESS",
+            details={
+                "action": "view_email_logs",
+                "filters": {
+                    "organization_id": organization_id,
+                    "email_type": email_type,
+                    "status": status,
+                    "provider": provider
+                },
+                "result_count": len(logs_response),
+                "total_count": total_count
+            }
+        )
+        
+        logger.info(f"Email logs accessed by {current_user.email}: {len(logs_response)} records returned")
+        
+        return {
+            "email_logs": logs_response,
+            "total_count": total_count,
+            "returned_count": len(logs_response),
+            "offset": offset,
+            "limit": limit,
+            "filters": {
+                "organization_id": organization_id,
+                "email_type": email_type,
+                "status": status,
+                "provider": provider
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Email logs access error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve email logs"
+        )
