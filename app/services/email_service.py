@@ -1,13 +1,14 @@
 # app/services/email_service.py
 
 """
-Email service using Brevo API with SMTP fallback
+Enhanced Email service using Brevo API with SMTP fallback, audit logging and retry logic
 """
 
 import secrets
 import string
+import time
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
@@ -16,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.core.logging import log_email_operation
-from app.models import User, OTPVerification
+from app.models import User, OTPVerification, EmailSend, EmailProvider, EmailStatus, EmailType
 from app.models.vouchers import PurchaseVoucher, SalesVoucher, PurchaseOrder, SalesOrder
 import logging
 
@@ -40,9 +41,15 @@ class EmailService:
         # Brevo config
         self.brevo_api_key = getattr(settings, 'BREVO_API_KEY', None)
         self.from_email = getattr(settings, 'BREVO_FROM_EMAIL', None) or getattr(settings, 'EMAILS_FROM_EMAIL', 'naughtyfruit53@gmail.com')
-        self.from_name = getattr(settings, 'BREVO_FROM_NAME', 'TritIQ Business Suite')
+        self.from_name = getattr(settings, 'BREVO_FROM_NAME', None) or getattr(settings, 'EMAILS_FROM_NAME', 'TritIQ Business Suite')
         
-        if self.brevo_api_key:
+        # Feature flags
+        self.enable_brevo = getattr(settings, 'ENABLE_BREVO_EMAIL', True)
+        self.fallback_enabled = getattr(settings, 'EMAIL_FALLBACK_ENABLED', True)
+        self.max_retry_attempts = getattr(settings, 'EMAIL_RETRY_ATTEMPTS', 3)
+        self.retry_delay = getattr(settings, 'EMAIL_RETRY_DELAY_SECONDS', 5)
+        
+        if self.brevo_api_key and self.enable_brevo:
             try:
                 configuration = sib_api_v3_sdk.Configuration()
                 configuration.api_key['api-key'] = self.brevo_api_key
@@ -52,7 +59,7 @@ class EmailService:
                 logger.error(f"Failed to initialize Brevo API client: {e}")
                 self.api_instance = None
         else:
-            logger.warning("Brevo API key not configured - falling back to SMTP")
+            logger.warning("Brevo API key not configured or disabled - falling back to SMTP")
             self.api_instance = None
         
         # SMTP fallback config
@@ -65,16 +72,94 @@ class EmailService:
         if not all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
             logger.warning("SMTP configuration incomplete - email sending may be disabled")
     
+    def _create_email_audit_record(self, 
+                                 db: Session, 
+                                 to_email: str, 
+                                 subject: str, 
+                                 email_type: EmailType,
+                                 organization_id: Optional[int] = None,
+                                 user_id: Optional[int] = None) -> EmailSend:
+        """Create initial audit record for email send"""
+        email_send = EmailSend(
+            to_email=to_email,
+            from_email=self.from_email,
+            subject=subject,
+            email_type=email_type,
+            provider_used=EmailProvider.BREVO,  # Will be updated if fallback is used
+            status=EmailStatus.PENDING,
+            organization_id=organization_id,
+            user_id=user_id,
+            is_brevo_enabled=self.enable_brevo,
+            retry_count=0,
+            max_retries=self.max_retry_attempts
+        )
+        db.add(email_send)
+        db.flush()  # Get the ID without committing
+        return email_send
+    
+    def _update_email_audit_record(self, 
+                                 db: Session, 
+                                 email_send: EmailSend,
+                                 status: EmailStatus,
+                                 provider_used: Optional[EmailProvider] = None,
+                                 provider_response: Optional[dict] = None,
+                                 provider_message_id: Optional[str] = None,
+                                 error_message: Optional[str] = None,
+                                 increment_retry: bool = False) -> None:
+        """Update email audit record with results"""
+        email_send.status = status
+        if provider_used:
+            email_send.provider_used = provider_used
+        if provider_response:
+            # Redact sensitive information from response
+            redacted_response = self._redact_sensitive_data(provider_response)
+            email_send.provider_response = redacted_response
+        if provider_message_id:
+            email_send.provider_message_id = provider_message_id
+        if error_message:
+            email_send.error_message = error_message
+        if increment_retry:
+            email_send.retry_count += 1
+            
+        # Set status timestamps
+        now = datetime.utcnow()
+        if status == EmailStatus.SENT:
+            email_send.sent_at = now
+        elif status == EmailStatus.DELIVERED:
+            email_send.delivered_at = now
+        elif status == EmailStatus.FAILED:
+            email_send.failed_at = now
+            
+        email_send.updated_at = now
+    
+    def _redact_sensitive_data(self, data: dict) -> dict:
+        """Redact sensitive information from provider response for audit log"""
+        if not isinstance(data, dict):
+            return data
+            
+        redacted = data.copy()
+        sensitive_keys = ['api_key', 'password', 'token', 'secret', 'authorization', 'auth']
+        
+        for key in redacted:
+            if any(sensitive in key.lower() for sensitive in sensitive_keys):
+                redacted[key] = "[REDACTED]"
+        return redacted
+    
     def _validate_email_config(self) -> tuple[bool, str]:
         """Validate email configuration"""
-        if self.brevo_api_key:
+        if self.brevo_api_key and self.enable_brevo:
             return True, "Brevo configuration is valid"
-        elif all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
-            return True, "SMTP configuration is valid"
+        elif self.fallback_enabled and all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
+            return True, "SMTP fallback configuration is valid"
         return False, "No valid email configuration found"
     
-    def _send_email_brevo(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
-        """Send email via Brevo"""
+    def _send_email_brevo(self, 
+                        to_email: str, 
+                        subject: str, 
+                        body: str, 
+                        html_body: Optional[str] = None, 
+                        email_send: Optional[EmailSend] = None) -> tuple[bool, Optional[str], Optional[str]]:
+        """Send email via Brevo with enhanced error handling"""
         logger.debug(f"Attempting to send email via Brevo to {to_email}")
         try:
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
@@ -87,30 +172,48 @@ class EmailService:
                 send_smtp_email.html_content = html_body
             
             response = self.api_instance.send_transac_email(send_smtp_email)
+            
+            # Extract message ID from response
+            message_id = None
+            if hasattr(response, 'message_id'):
+                message_id = response.message_id
+            elif isinstance(response, dict) and 'messageId' in response:
+                message_id = response['messageId']
+            
             logger.info(f"Email sent successfully via Brevo to {to_email}. Response: {response}")
             log_email_operation("send", to_email, True)
-            return True, None
+            
+            return True, None, message_id
             
         except ApiException as e:
             error_msg = f"Brevo API error: {str(e)} - Body: {e.body if hasattr(e, 'body') else 'No body'}"
             logger.error(error_msg)
             log_email_operation("send", to_email, False, error_msg)
-            return False, error_msg
+            return False, error_msg, None
             
         except Exception as e:
             error_msg = f"Failed to send email via Brevo: {str(e)}"
             logger.error(error_msg)
             log_email_operation("send", to_email, False, error_msg)
-            return False, error_msg
+            return False, error_msg, None
     
-    def _send_email_smtp(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
-        """Send email via SMTP fallback"""
+    def _send_email_smtp(self, 
+                       to_email: str, 
+                       subject: str, 
+                       body: str, 
+                       html_body: Optional[str] = None,
+                       email_send: Optional[EmailSend] = None) -> tuple[bool, Optional[str], Optional[str]]:
+        """Send email via SMTP fallback with enhanced error handling"""
         logger.debug(f"Attempting to send email via SMTP to {to_email}")
         try:
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
             msg['From'] = self.emails_from_email
             msg['To'] = to_email
+            
+            # Generate a simple message ID for tracking
+            message_id = f"{int(time.time())}.{secrets.token_hex(8)}@{self.smtp_host}"
+            msg['Message-ID'] = message_id
             
             # Plain text part
             text_part = MIMEText(body, 'plain')
@@ -133,43 +236,132 @@ class EmailService:
             
             logger.info(f"Email sent successfully via SMTP to {to_email}")
             log_email_operation("send", to_email, True)
-            return True, None
+            return True, None, message_id
             
         except smtplib.SMTPException as e:
             error_msg = f"SMTP error: {str(e)}"
             logger.error(error_msg)
             log_email_operation("send", to_email, False, error_msg)
-            return False, error_msg
+            return False, error_msg, None
             
         except Exception as e:
             error_msg = f"Failed to send email via SMTP: {str(e)}"
             logger.error(error_msg)
             log_email_operation("send", to_email, False, error_msg)
-            return False, error_msg
+            return False, error_msg, None
     
-    def _send_email(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> tuple[bool, Optional[str]]:
+    def _send_email(self, 
+                  to_email: str, 
+                  subject: str, 
+                  body: str, 
+                  html_body: Optional[str] = None,
+                  email_type: EmailType = EmailType.TRANSACTIONAL,
+                  organization_id: Optional[int] = None,
+                  user_id: Optional[int] = None,
+                  db: Optional[Session] = None) -> tuple[bool, Optional[str]]:
         """
-        Internal method to send an email, trying Brevo first then SMTP fallback.
+        Enhanced internal method to send an email with retry, fallback, and audit logging.
         Returns tuple of (success: bool, error_message: Optional[str])
         """
-        logger.debug(f"Starting email send process to {to_email} with subject: {subject}")
-        is_valid, error_msg = self._validate_email_config()
-        if not is_valid:
-            logger.warning(f"Email configuration invalid: {error_msg}")
-            log_email_operation("send", to_email, False, error_msg)
+        logger.debug(f"Starting enhanced email send process to {to_email} with subject: {subject}")
+        
+        # Use provided session or create new one
+        close_db = False
+        if db is None:
+            db = SessionLocal()
+            close_db = True
+            
+        try:
+            # Validate configuration
+            is_valid, error_msg = self._validate_email_config()
+            if not is_valid:
+                logger.warning(f"Email configuration invalid: {error_msg}")
+                return False, error_msg
+            
+            # Create audit record
+            email_send = self._create_email_audit_record(
+                db, to_email, subject, email_type, organization_id, user_id
+            )
+            
+            # Try sending with retry logic
+            last_error = None
+            attempt = 0
+            
+            while attempt <= self.max_retry_attempts:
+                attempt += 1
+                logger.debug(f"Email send attempt {attempt}/{self.max_retry_attempts + 1} to {to_email}")
+                
+                # Try Brevo first if available and enabled
+                if self.api_instance and self.enable_brevo:
+                    logger.debug("Trying Brevo")
+                    success, error, message_id = self._send_email_brevo(to_email, subject, body, html_body, email_send)
+                    
+                    if success:
+                        self._update_email_audit_record(
+                            db, email_send, EmailStatus.SENT, EmailProvider.BREVO, 
+                            provider_message_id=message_id
+                        )
+                        db.commit()
+                        logger.info(f"✅ Email sent successfully via Brevo to {to_email} (attempt {attempt})")
+                        return True, None
+                    else:
+                        last_error = error
+                        self._update_email_audit_record(
+                            db, email_send, EmailStatus.RETRY, EmailProvider.BREVO,
+                            error_message=error, increment_retry=True
+                        )
+                        logger.warning(f"❌ Brevo failed on attempt {attempt}: {error}")
+                
+                # Try SMTP fallback if enabled and Brevo failed
+                if self.fallback_enabled and all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
+                    logger.debug("Trying SMTP fallback")
+                    success, error, message_id = self._send_email_smtp(to_email, subject, body, html_body, email_send)
+                    
+                    if success:
+                        self._update_email_audit_record(
+                            db, email_send, EmailStatus.SENT, EmailProvider.SMTP,
+                            provider_message_id=message_id
+                        )
+                        db.commit()
+                        logger.info(f"✅ Email sent successfully via SMTP to {to_email} (attempt {attempt})")
+                        return True, None
+                    else:
+                        last_error = error
+                        self._update_email_audit_record(
+                            db, email_send, EmailStatus.RETRY, EmailProvider.SMTP,
+                            error_message=error, increment_retry=True
+                        )
+                        logger.warning(f"❌ SMTP failed on attempt {attempt}: {error}")
+                
+                # Wait before retry (except on last attempt)
+                if attempt <= self.max_retry_attempts:
+                    retry_delay = self.retry_delay * (2 ** (attempt - 1))  # Exponential backoff
+                    logger.debug(f"Waiting {retry_delay} seconds before retry...")
+                    time.sleep(retry_delay)
+            
+            # All attempts failed
+            self._update_email_audit_record(
+                db, email_send, EmailStatus.FAILED,
+                error_message=f"All attempts failed. Last error: {last_error}"
+            )
+            db.commit()
+            
+            final_error = f"Failed to send email after {self.max_retry_attempts + 1} attempts. Last error: {last_error}"
+            logger.error(f"💀 {final_error}")
+            return False, final_error
+            
+        except Exception as e:
+            error_msg = f"Unexpected error in email send process: {str(e)}"
+            logger.error(error_msg)
+            if 'email_send' in locals():
+                self._update_email_audit_record(
+                    db, email_send, EmailStatus.FAILED, error_message=error_msg
+                )
+                db.commit()
             return False, error_msg
-        
-        # Try Brevo first if available
-        if self.api_instance:
-            logger.debug("Trying Brevo")
-            success, error = self._send_email_brevo(to_email, subject, body, html_body)
-            if success:
-                return True, None
-            logger.warning(f"Brevo failed, falling back to SMTP: {error}")
-        
-        # Fallback to SMTP
-        logger.debug("Trying SMTP fallback")
-        return self._send_email_smtp(to_email, subject, body, html_body)
+        finally:
+            if close_db:
+                db.close()
     
     def load_email_template(self, template_name: str, **kwargs) -> tuple[str, str]:
         """
@@ -323,7 +515,14 @@ This account was created by: {created_by}
 Creation Date: {admin_template_vars['creation_date']} at {admin_template_vars['creation_time']}
 """
             
-            admin_success, admin_error = self._send_email(org_admin_email, admin_subject, admin_body)
+            admin_success, admin_error = self._send_email(
+                to_email=org_admin_email,
+                subject=admin_subject,
+                body=admin_body,
+                email_type=EmailType.USER_INVITE,
+                organization_id=None,  # This is org creation, so no org_id yet
+                user_id=None  # New user not yet created
+            )
             if admin_success:
                 success_count += 1
                 logger.info(f"✅ License creation email sent successfully to org admin: {org_admin_email}")
@@ -360,7 +559,14 @@ Best regards,
 TRITIQ ERP System
 """
                 
-                creator_success, creator_error = self._send_email(created_by, creator_subject, creator_body)
+                creator_success, creator_error = self._send_email(
+                    to_email=created_by,
+                    subject=creator_subject,
+                    body=creator_body,
+                    email_type=EmailType.NOTIFICATION,
+                    organization_id=None,  # This is org creation notification
+                    user_id=None
+                )
                 if creator_success:
                     success_count += 1
                     logger.info(f"✅ License creation notification sent successfully to creator: {created_by}")
@@ -379,13 +585,111 @@ TRITIQ ERP System
             logger.error(error_msg)
             return False, error_msg
 
+    def send_password_reset_token_email(self,
+                                      user_email: str,
+                                      user_name: str,
+                                      reset_url: str,
+                                      organization_name: Optional[str] = None,
+                                      organization_id: Optional[int] = None,
+                                      user_id: Optional[int] = None,
+                                      db: Optional[Session] = None) -> tuple[bool, Optional[str]]:
+        """Send password reset email with secure token URL"""
+        try:
+            logger.debug(f"Preparing password reset token email for {user_email}")
+            
+            subject = "TRITIQ ERP - Password Reset Request"
+            
+            # Create email content
+            plain_text = f"""
+Dear {user_name},
+
+A password reset has been requested for your TRITIQ ERP account.
+
+To reset your password, please click the link below:
+{reset_url}
+
+This link will expire in 1 hour for security reasons.
+
+If you did not request this password reset, please ignore this email or contact your system administrator.
+
+Organization: {organization_name or 'Your Organization'}
+Request Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Best regards,
+TRITIQ ERP Team
+"""
+            
+            html_content = f"""
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #007bff; text-align: center;">TRITIQ ERP - Password Reset</h2>
+        
+        <p>Dear {user_name},</p>
+        
+        <p>A password reset has been requested for your TRITIQ ERP account.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{reset_url}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+                Reset Your Password
+            </a>
+        </div>
+        
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <strong>⚠️ Security Notice:</strong> This link will expire in 1 hour for security reasons.
+        </div>
+        
+        <p><strong>Organization:</strong> {organization_name or 'Your Organization'}<br>
+           <strong>Request Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        
+        <p style="color: #d73527;">
+            <strong>If you did not request this password reset, please ignore this email or contact your system administrator.</strong>
+        </p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        
+        <p style="font-size: 12px; color: #666; text-align: center;">
+            This is an automated message from TRITIQ ERP. Please do not reply to this email.
+        </p>
+    </div>
+</body>
+</html>
+"""
+            
+            success, error = self._send_email(
+                to_email=user_email,
+                subject=subject,
+                body=plain_text,
+                html_body=html_content,
+                email_type=EmailType.PASSWORD_RESET,
+                organization_id=organization_id,
+                user_id=user_id,
+                db=db
+            )
+            
+            if success:
+                logger.info(f"Password reset token email sent successfully to {user_email}")
+            else:
+                logger.error(f"Failed to send password reset token email to {user_email}: {error}")
+            return success, error
+            
+        except Exception as e:
+            error_msg = f"Error preparing password reset token email for {user_email}: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+
     def send_password_reset_email(self, 
                                   user_email: str, 
                                   user_name: str, 
                                   new_password: str, 
                                   reset_by: str,
-                                  organization_name: Optional[str] = None) -> tuple[bool, Optional[str]]:
-        """Send password reset email with template"""
+                                  organization_name: Optional[str] = None,
+                                  organization_id: Optional[int] = None,
+                                  user_id: Optional[int] = None,
+                                  db: Optional[Session] = None) -> tuple[bool, Optional[str]]:
+        """Send password reset email with enhanced audit logging"""
         try:
             logger.debug(f"Preparing password reset email for {user_email}")
             template_vars = {
@@ -405,7 +709,16 @@ TRITIQ ERP System
             
             subject = "TRITIQ ERP - Password Reset Notification"
             
-            success, error = self._send_email(user_email, subject, plain_text, html_content)
+            success, error = self._send_email(
+                to_email=user_email,
+                subject=subject, 
+                body=plain_text, 
+                html_body=html_content,
+                email_type=EmailType.PASSWORD_RESET,
+                organization_id=organization_id,
+                user_id=user_id,
+                db=db
+            )
             if success:
                 logger.info(f"Password reset email sent successfully to {user_email}")
             else:
@@ -422,8 +735,11 @@ TRITIQ ERP System
                                  user_name: str,
                                  temp_password: str,
                                  organization_name: str,
-                                 login_url: str = "https://fast-apiv1-6.vercel.app/") -> tuple[bool, Optional[str]]:
-        """Send user creation welcome email with login link"""
+                                 login_url: str = "https://fast-apiv1-6.vercel.app/",
+                                 organization_id: Optional[int] = None,
+                                 user_id: Optional[int] = None,
+                                 db: Optional[Session] = None) -> tuple[bool, Optional[str]]:
+        """Send user creation welcome email with enhanced audit logging"""
         try:
             logger.debug(f"Preparing user creation email for {user_email}")
             template_vars = {
@@ -440,7 +756,16 @@ TRITIQ ERP System
             
             subject = "Welcome to TRITIQ ERP - Your Account Has Been Created"
             
-            success, error = self._send_email(user_email, subject, plain_text, html_content)
+            success, error = self._send_email(
+                to_email=user_email,
+                subject=subject, 
+                body=plain_text, 
+                html_body=html_content,
+                email_type=EmailType.USER_CREATION,
+                organization_id=organization_id,
+                user_id=user_id,
+                db=db
+            )
             if success:
                 logger.info(f"User creation email sent successfully to {user_email}")
             else:
@@ -456,8 +781,15 @@ TRITIQ ERP System
         """Generate a secure random OTP"""
         return ''.join(secrets.choice(string.digits) for i in range(length))
     
-    def send_otp_email(self, to_email: str, otp: str, purpose: str = "login", template: Optional[str] = None) -> tuple[bool, Optional[str]]:
-        """Send OTP via email with error handling"""
+    def send_otp_email(self, 
+                     to_email: str, 
+                     otp: str, 
+                     purpose: str = "login", 
+                     template: Optional[str] = None,
+                     organization_id: Optional[int] = None,
+                     user_id: Optional[int] = None,
+                     db: Optional[Session] = None) -> tuple[bool, Optional[str]]:
+        """Send OTP via email with enhanced audit logging"""
         try:
             subject = f"TRITIQ ERP - OTP for {purpose.title()}"
             body = f"""
@@ -473,7 +805,15 @@ Best regards,
 TRITIQ ERP Team
 """
             
-            success, error = self._send_email(to_email, subject, body)
+            success, error = self._send_email(
+                to_email=to_email,
+                subject=subject,
+                body=body,
+                email_type=EmailType.OTP,
+                organization_id=organization_id,
+                user_id=user_id,
+                db=db
+            )
             return success, error
             
         except Exception as e:
@@ -481,9 +821,10 @@ TRITIQ ERP Team
             logger.error(error_msg)
             return False, error_msg
     
-    def create_otp_verification(self, db: Session, email: str, purpose: str = "login") -> tuple[Optional[str], Optional[str]]:
+    def create_otp_verification(self, db: Session, email: str, purpose: str = "login", 
+                              organization_id: Optional[int] = None, user_id: Optional[int] = None) -> tuple[Optional[str], Optional[str]]:
         """
-        Create OTP verification entry with enhanced error handling.
+        Create OTP verification entry with enhanced error handling and audit logging.
         Returns tuple of (otp: Optional[str], error_message: Optional[str])
         """
         try:
@@ -508,8 +849,15 @@ TRITIQ ERP Team
             db.add(otp_verification)
             db.commit()
             
-            # Send OTP email
-            success, error = self.send_otp_email(email, otp, purpose)
+            # Send OTP email with audit logging
+            success, error = self.send_otp_email(
+                to_email=email, 
+                otp=otp, 
+                purpose=purpose,
+                organization_id=organization_id,
+                user_id=user_id,
+                db=db
+            )
             if success:
                 return otp, None
             else:
@@ -566,9 +914,10 @@ TRITIQ ERP Team
 # Global instance
 email_service = EmailService()
 
-def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email: str, recipient_name: str) -> tuple[bool, Optional[str]]:
+def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email: str, recipient_name: str,
+                      organization_id: Optional[int] = None, user_id: Optional[int] = None) -> tuple[bool, Optional[str]]:
     """
-    Send email for a voucher, fetching details from the database.
+    Send email for a voucher with enhanced audit logging.
     Returns tuple of (success: bool, error_message: Optional[str])
     """
     db = SessionLocal()
@@ -613,7 +962,15 @@ Best regards,
 TRITIQ ERP Team
 """
         
-        success, error = email_service._send_email(recipient_email, subject, body)
+        success, error = email_service._send_email(
+            to_email=recipient_email,
+            subject=subject,
+            body=body,
+            email_type=EmailType.NOTIFICATION,
+            organization_id=organization_id,
+            user_id=user_id,
+            db=db
+        )
         return success, error
         
     except Exception as e:

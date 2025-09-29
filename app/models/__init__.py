@@ -15,7 +15,8 @@ from .product_models import (
 )
 from .system_models import (
     Company, AuditLog, EmailNotification, NotificationTemplate, NotificationLog, 
-    NotificationPreference, PaymentTerm, OTPVerification
+    NotificationPreference, PaymentTerm, OTPVerification, EmailSend, EmailProvider, 
+    EmailStatus, EmailType
 )
 from .analytics_models import (
     ServiceAnalyticsEvent, ReportConfiguration, AnalyticsSummary
@@ -183,7 +184,8 @@ __all__ = [
     
     # System and notification models
     "Company", "AuditLog", "EmailNotification", "NotificationTemplate", "NotificationLog",
-    "NotificationPreference", "PaymentTerm", "OTPVerification",
+    "NotificationPreference", "PaymentTerm", "OTPVerification", "EmailSend", "EmailProvider",
+    "EmailStatus", "EmailType",
     
     # Analytics models
     "ServiceAnalyticsEvent", "ReportConfiguration", "AnalyticsSummary",
