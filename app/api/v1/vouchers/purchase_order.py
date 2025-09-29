@@ -167,7 +167,14 @@ async def create_purchase_order(
         db_invoice.discount_amount = total_discount
         
         await db.commit()
-        await db.refresh(db_invoice)
+        
+        # Re-query with joins to load relationships
+        stmt = select(PurchaseOrder).options(
+            joinedload(PurchaseOrder.vendor),
+            joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
+        ).where(PurchaseOrder.id == db_invoice.id)
+        result = await db.execute(stmt)
+        db_invoice = result.unique().scalar_one_or_none()
         
         if send_email and db_invoice.vendor and db_invoice.vendor.email:
             background_tasks.add_task(
@@ -305,7 +312,22 @@ async def update_purchase_order(
             invoice.discount_amount = total_discount
         
         await db.commit()
-        await db.refresh(invoice)
+        
+        # Re-query with joins to load relationships
+        stmt = select(PurchaseOrder).options(
+            joinedload(PurchaseOrder.vendor),
+            joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
+        ).where(
+            PurchaseOrder.id == invoice_id,
+            PurchaseOrder.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        invoice = result.unique().scalar_one_or_none()
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Purchase order not found"
+            )
         
         logger.info(f"Purchase order {invoice.voucher_number} updated by {current_user.email}")
         return invoice

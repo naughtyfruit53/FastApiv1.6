@@ -7,7 +7,9 @@ FastAPI endpoints for voucher PDF generation
 import os
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession  # Changed to AsyncSession
+from sqlalchemy import select  # Added for select
+from sqlalchemy.orm import joinedload
 from typing import Dict, Any
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -25,7 +27,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["pdf-generation"])
 
-def check_voucher_permission(voucher_type: str, current_user: User, db: Session) -> None:
+def check_voucher_permission(voucher_type: str, current_user: User, db: AsyncSession) -> None:  # Changed to AsyncSession
     """Check if user has permission for voucher type"""
     permission_map = {
         'purchase': 'voucher_read',
@@ -62,7 +64,7 @@ def check_voucher_permission(voucher_type: str, current_user: User, db: Session)
 async def generate_voucher_pdf(
     voucher_type: str,
     voucher_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # Changed to AsyncSession
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -106,7 +108,7 @@ async def generate_voucher_pdf(
     
     try:
         # Get voucher data based on type
-        voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)
+        voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)  # Await since now async
         
         if not voucher_data:
             raise HTTPException(
@@ -115,7 +117,7 @@ async def generate_voucher_pdf(
             )
         
         # Generate PDF
-        pdf_path = pdf_generator.generate_voucher_pdf(
+        pdf_path = await pdf_generator.generate_voucher_pdf(  # Await since now async
             voucher_type=voucher_type,
             voucher_data=voucher_data,
             db=db,
@@ -149,7 +151,7 @@ async def generate_voucher_pdf(
 async def download_voucher_pdf(
     voucher_type: str,
     voucher_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # Changed to AsyncSession
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -175,7 +177,7 @@ async def download_voucher_pdf(
     
     try:
         # Get voucher data
-        voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)
+        voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)  # Await
         
         if not voucher_data:
             raise HTTPException(
@@ -184,7 +186,7 @@ async def download_voucher_pdf(
             )
         
         # Generate PDF
-        pdf_path = pdf_generator.generate_voucher_pdf(
+        pdf_path = await pdf_generator.generate_voucher_pdf(  # Await
             voucher_type=voucher_type,
             voucher_data=voucher_data,
             db=db,
@@ -264,7 +266,7 @@ async def get_available_templates(
     }
 
 async def _get_voucher_data(voucher_type: str, voucher_id: int, 
-                          db: Session, current_user: User) -> Dict[str, Any]:
+                          db: AsyncSession, current_user: User) -> Dict[str, Any]:  # Changed to async def and AsyncSession
     """
     Get voucher data based on type and ID
     """
@@ -299,16 +301,16 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
     
     try:
         # Query voucher with organization filtering and eager loading
-        query = db.query(model_class).filter(
+        stmt = select(model_class).filter(
             model_class.id == voucher_id,
             model_class.organization_id == current_user.organization_id
         )
         
         # Add eager loading for common relations
         if hasattr(model_class, 'vendor'):
-            query = query.options(joinedload(model_class.vendor))
+            stmt = stmt.options(joinedload(model_class.vendor))
         if hasattr(model_class, 'customer'):
-            query = query.options(joinedload(model_class.customer))
+            stmt = stmt.options(joinedload(model_class.customer))
         if hasattr(model_class, 'items'):
             item_class_map = {
                 'purchase': PurchaseVoucherItem,
@@ -326,17 +328,18 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             }
             item_class = item_class_map.get(voucher_type)
             if item_class:
-                query = query.options(joinedload(model_class.items).joinedload(item_class.product))
+                stmt = stmt.options(joinedload(model_class.items).joinedload(item_class.product))
             else:
-                query = query.options(joinedload(model_class.items))
+                stmt = stmt.options(joinedload(model_class.items))
         
-        voucher = query.first()
+        result = await db.execute(stmt)  # Await execute
+        voucher = result.scalars().first()  # Use scalars().first()
         
         if not voucher:
             return None
         
         # Convert to dictionary
-        voucher_data = _voucher_to_dict(voucher, db)
+        voucher_data = await _voucher_to_dict(voucher, db)  # Await since now async
         voucher_data['voucher_type'] = voucher_type
         
         return voucher_data
@@ -348,7 +351,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             detail=f"Failed to retrieve voucher data"
         )
 
-def _voucher_to_dict(voucher, db: Session) -> Dict[str, Any]:
+async def _voucher_to_dict(voucher, db: AsyncSession) -> Dict[str, Any]:  # Changed to async def and AsyncSession
     """
     Convert voucher ORM object to dictionary for template rendering
     """
@@ -410,15 +413,21 @@ def _voucher_to_dict(voucher, db: Session) -> Dict[str, Any]:
         voucher_data['entity_id'] = voucher.entity_id
         # Load entity based on type
         if voucher.entity_type.lower() == 'vendor':
-            vendor = db.query(Vendor).filter(Vendor.id == voucher.entity_id).first()
+            stmt = select(Vendor).filter(Vendor.id == voucher.entity_id)
+            result = await db.execute(stmt)
+            vendor = result.scalars().first()
             if vendor:
                 voucher_data['vendor'] = _entity_to_dict(vendor)
         elif voucher.entity_type.lower() == 'customer':
-            customer = db.query(Customer).filter(Customer.id == voucher.entity_id).first()
+            stmt = select(Customer).filter(Customer.id == voucher.entity_id)
+            result = await db.execute(stmt)
+            customer = result.scalars().first()
             if customer:
                 voucher_data['customer'] = _entity_to_dict(customer)
         elif voucher.entity_type.lower() == 'employee':
-            employee = db.query(EmployeeProfile).filter(EmployeeProfile.id == voucher.entity_id).first()
+            stmt = select(EmployeeProfile).filter(EmployeeProfile.id == voucher.entity_id)
+            result = await db.execute(stmt)
+            employee = result.scalars().first()
             if employee:
                 voucher_data['employee'] = {
                     'id': employee.id,

@@ -1,5 +1,5 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Box,
   TextField,
@@ -42,6 +42,7 @@ import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers"; // New utils
 import voucherFormStyles from "../../../styles/voucherFormStyles"; // New common styles import
 import { useQueryClient } from "@tanstack/react-query"; // Added for setQueryData
+import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 
 const PurchaseOrderPage: React.FC = () => {
   console.count('Render: PurchaseOrderPage');
@@ -51,6 +52,7 @@ const PurchaseOrderPage: React.FC = () => {
   const config = getVoucherConfig("purchase-order");
   const voucherStyles = getVoucherStyles();
   const queryClient = useQueryClient(); // Added for cache setting
+  const processedRef = useRef<Set<number>>(new Set());
 
   const {
     mode,
@@ -164,27 +166,39 @@ const PurchaseOrderPage: React.FC = () => {
     });
   }, [fields, productList, watch]); // Removed fields.length and spread map as deps - use fields ref
 
+  const productIds = useWatch({
+    control,
+    name: fields.map((_, i) => `items.${i}.product_id`),
+  });
+
+  // Reset processed when fields length changes
   useEffect(() => {
-    fields.forEach((_, index) => {
-      const productId = watch(`items.${index}.product_id`);
-      if (productId) {
-        setStockLoading((prev) => ({ ...prev, [index]: true }));
-        getStock({ queryKey: ["", { product_id: productId }] })
-          .then((res) => {
-            const stockData = res[0] || { quantity: 0 };
-            setValue(`items.${index}.current_stock`, stockData.quantity);
-            setStockLoading((prev) => ({ ...prev, [index]: false }));
-          })
-          .catch((err) => {
-            console.error("Failed to fetch stock:", err);
-            setStockLoading((prev) => ({ ...prev, [index]: false }));
-          });
-      } else {
-        setValue(`items.${index}.current_stock`, 0);
-        setStockLoading((prev) => ({ ...prev, [index]: false }));
+    processedRef.current = new Set();
+  }, [fields.length]);
+
+  // Fetch stock when productIds change or on load
+  useEffect(() => {
+    productIds.forEach((productId: number, index: number) => {
+      if (productId && !processedRef.current.has(index) && !stockLoading[index]) {
+        const currentStock = watch(`items.${index}.current_stock`);
+        if (currentStock === 0 || currentStock === undefined) {
+          setStockLoading(prev => ({ ...prev, [index]: true }));
+          getStock({ queryKey: ["", { product_id: productId }] })
+            .then(res => {
+              const stockData = res[0] || { quantity: 0 };
+              setValue(`items.${index}.current_stock`, stockData.quantity);
+            })
+            .catch(err => console.error("Failed to fetch stock:", err))
+            .finally(() => {
+              setStockLoading(prev => ({ ...prev, [index]: false }));
+              processedRef.current.add(index);
+            });
+        } else {
+          processedRef.current.add(index);
+        }
       }
     });
-  }, [fields, watch, setValue]); // Simplified deps - fields as array ref, watch for changes
+  }, [productIds, fields, stockLoading, setValue, watch]);
 
   useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {

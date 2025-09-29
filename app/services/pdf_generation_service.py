@@ -12,7 +12,8 @@ from jinja2 import Environment, FileSystemLoader, Template
 import pdfkit  # Replaced xhtml2pdf with pdfkit
 from io import BytesIO
 from num2words import num2words
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession  # Changed to AsyncSession
+from sqlalchemy import select  # Added for select
 from app.models import Company, User, Vendor  # Added Vendor import
 from app.models.erp_models import BankAccount  # Added for bank details in PDFs
 import logging
@@ -111,7 +112,7 @@ class IndianNumberFormatter:
             return f"₹ {amount:.2f}"
 
 class TaxCalculator:
-    """GST and tax calculation utilities"""
+    """GST GST calculation utilities"""
     
     @staticmethod
     def calculate_gst(taxable_amount: float, gst_rate: float, 
@@ -197,12 +198,14 @@ class VoucherPDFGenerator:
         """Format percentage value"""
         return f"{value:.2f}"
     
-    def _get_company_branding(self, db: Session, organization_id: int) -> Dict[str, Any]:
+    async def _get_company_branding(self, db: AsyncSession, organization_id: int) -> Dict[str, Any]:  # Changed to async and AsyncSession
         """Get company branding information"""
         try:
-            company = db.query(Company).filter(
+            stmt = select(Company).filter(  # Changed to select
                 Company.organization_id == organization_id
-            ).first()
+            )
+            result = await db.execute(stmt)  # Await execute
+            company = result.scalars().first()  # scalars().first()
             
             if company:
                 logo_url = None
@@ -220,19 +223,23 @@ class VoucherPDFGenerator:
                 
                 # Get bank account details (default bank account or first active one)
                 bank_details = None
-                bank_account = db.query(BankAccount).filter(
+                stmt_bank = select(BankAccount).filter(  # Changed to select
                     BankAccount.organization_id == organization_id,
                     BankAccount.is_active == True
                 ).filter(
                     (BankAccount.is_default == True)  # Prefer default account
-                ).first()
+                )
+                result_bank = await db.execute(stmt_bank)  # Await
+                bank_account = result_bank.scalars().first()
                 
                 # If no default, get any active bank account
                 if not bank_account:
-                    bank_account = db.query(BankAccount).filter(
+                    stmt_any = select(BankAccount).filter(
                         BankAccount.organization_id == organization_id,
                         BankAccount.is_active == True
-                    ).first()
+                    )
+                    result_any = await db.execute(stmt_any)  # Await
+                    bank_account = result_any.scalars().first()
                 
                 if bank_account:
                     bank_details = {
@@ -289,12 +296,12 @@ class VoucherPDFGenerator:
                 'bank_details': None
             }
     
-    def _prepare_voucher_data(self, voucher_type: str, voucher_data: Dict[str, Any], 
-                            db: Session, organization_id: int) -> Dict[str, Any]:
+    async def _prepare_voucher_data(self, voucher_type: str, voucher_data: Dict[str, Any], 
+                                  db: AsyncSession, organization_id: int) -> Dict[str, Any]:  # Changed db to AsyncSession
         """Prepare voucher data for template rendering"""
         
-        # Get company branding
-        company = self._get_company_branding(db, organization_id)
+        # Get company branding - await since now async
+        company = await self._get_company_branding(db, organization_id)
         
         # Get vendor/party details and determine interstate
         is_interstate = False
@@ -464,9 +471,9 @@ class VoucherPDFGenerator:
         
         return template_data
     
-    def generate_voucher_pdf(self, voucher_type: str, voucher_data: Dict[str, Any],
-                           db: Session, organization_id: int, 
-                           current_user: User) -> str:
+    async def generate_voucher_pdf(self, voucher_type: str, voucher_data: Dict[str, Any],
+                                 db: AsyncSession, organization_id: int, 
+                                 current_user: User) -> str:  # Changed to async and AsyncSession
         """
         Generate PDF for any voucher type
         
@@ -482,7 +489,7 @@ class VoucherPDFGenerator:
         """
         try:
             # Prepare data for template
-            template_data = self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)
+            template_data = await self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)  # Await since now async
             
             # Get template for voucher type
             if voucher_type in ['purchase', 'purchase-vouchers']:
@@ -539,23 +546,23 @@ class VoucherPDFGenerator:
             logger.error(f"Error generating PDF for {voucher_type}: {e}")
             raise Exception(f"PDF generation failed: {str(e)}")
     
-    def generate_purchase_voucher_pdf(self, voucher_data: Dict[str, Any],
-                                    db: Session, organization_id: int,
-                                    current_user: User) -> str:
+    async def generate_purchase_voucher_pdf(self, voucher_data: Dict[str, Any],
+                                          db: AsyncSession, organization_id: int,
+                                          current_user: User) -> str:  # Changed to async
         """Generate Purchase Voucher PDF"""
-        return self.generate_voucher_pdf('purchase', voucher_data, db, organization_id, current_user)
+        return await self.generate_voucher_pdf('purchase', voucher_data, db, organization_id, current_user)  # Await
     
-    def generate_sales_voucher_pdf(self, voucher_data: Dict[str, Any],
-                                 db: Session, organization_id: int,
-                                 current_user: User) -> str:
+    async def generate_sales_voucher_pdf(self, voucher_data: Dict[str, Any],
+                                       db: AsyncSession, organization_id: int,
+                                       current_user: User) -> str:  # Changed to async
         """Generate Sales Voucher PDF"""
-        return self.generate_voucher_pdf('sales', voucher_data, db, organization_id, current_user)
+        return await self.generate_voucher_pdf('sales', voucher_data, db, organization_id, current_user)  # Await
     
-    def generate_presales_voucher_pdf(self, voucher_data: Dict[str, Any],
-                                    db: Session, organization_id: int,
-                                    current_user: User) -> str:
+    async def generate_presales_voucher_pdf(self, voucher_data: Dict[str, Any],
+                                          db: AsyncSession, organization_id: int,
+                                          current_user: User) -> str:  # Changed to async
         """Generate Pre-Sales Voucher PDF"""
-        return self.generate_voucher_pdf('presales', voucher_data, db, organization_id, current_user)
+        return await self.generate_voucher_pdf('presales', voucher_data, db, organization_id, current_user)  # Await
 
 # Create singleton instance
 pdf_generator = VoucherPDFGenerator()

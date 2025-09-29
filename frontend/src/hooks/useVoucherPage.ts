@@ -211,7 +211,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     defaultValues,
   });
   // Always create field array and watch, but use conditionally
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "items",
   });
@@ -824,26 +824,25 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         voucherData.items &&
         Array.isArray(voucherData.items)
       ) {
-        // Clear existing items first
-        while (fields.length > 0) {
-          remove(0);
-        }
-        // Add items from voucher data
-        voucherData.items.forEach((item: any) => {
-          append({
-            ...item,
-            // Ensure proper field mapping for UI
-            original_unit_price: item.unit_price || 0,
-            product_id: item.product_id,
-            product_name: item.product_name || item.product?.product_name || "",
-            unit: item.unit || item.product?.unit || "",
-            current_stock: item.current_stock || 0,
-            reorder_level: item.reorder_level || 0,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            gst_rate: item.gst_rate ?? 18,
-          });
-        });
+        // Use replace instead of remove/append loop for efficiency
+        const newItems = voucherData.items.map((item: any) => ({
+          ...item,
+          product_id: item.product_id,
+          product_name: item.product_name || item.product?.product_name || "",
+          unit_price: item.unit_price,
+          original_unit_price: item.product?.unit_price || item.unit_price || 0,
+          discount_percentage: item.discount_percentage || 0,
+          discount_amount: item.discount_amount || 0,
+          gst_rate: item.gst_rate ?? 18,
+          cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
+          unit: item.unit || item.product?.unit || "",
+          current_stock: item.current_stock || 0,
+          reorder_level: item.reorder_level || 0,
+          description: item.description || '',
+        }));
+        replace(newItems);
         console.log("[useVoucherPage] Loaded items:", voucherData.items.length);
       }
     } else if (mode === "create") {
@@ -857,9 +856,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     setValue,
     defaultValues,
     config.hasItems,
-    fields.length,
     remove,
     append,
+    replace,
+    isIntrastate,
   ]);
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {

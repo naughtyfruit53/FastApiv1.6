@@ -23,6 +23,7 @@ import {
 import { Add, Remove } from '@mui/icons-material';
 import ProductAutocomplete from './ProductAutocomplete'; // Assuming this exists; adjust if needed
 import { GST_SLABS } from '../utils/voucherUtils'; // Adjust path if needed
+import { getStock } from '../services/masterService';
 
 interface VoucherItemTableProps {
   fields: any[];
@@ -94,6 +95,34 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
     });
   };
 
+  const handleProductChange = async (index: number, product: any) => {
+    setValue(`items.${index}.product_id`, product?.id || null);
+    setValue(`items.${index}.product_name`, product?.product_name || "");
+    setValue(`items.${index}.unit_price`, product?.unit_price || 0);
+    setValue(`items.${index}.original_unit_price`, product?.unit_price || 0);
+    setValue(`items.${index}.gst_rate`, product?.gst_rate ?? 18);
+    setValue(`items.${index}.cgst_rate`, isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0);
+    setValue(`items.${index}.sgst_rate`, isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0);
+    setValue(`items.${index}.igst_rate`, isIntrastate ? 0 : product?.gst_rate ?? 18);
+    setValue(`items.${index}.unit`, product?.unit || "");
+    setValue(`items.${index}.reorder_level`, product?.reorder_level || 0);
+
+    if (product?.id) {
+      stockLoading[index] = true;
+      try {
+        const res = await getStock({ queryKey: ["", { product_id: product.id }] });
+        const stockData = res[0] || { quantity: 0 };
+        setValue(`items.${index}.current_stock`, stockData.quantity);
+      } catch (err) {
+        console.error("Failed to fetch stock:", err);
+      } finally {
+        stockLoading[index] = false;
+      }
+    } else {
+      setValue(`items.${index}.current_stock`, 0);
+    }
+  };
+
   return (
     <>
       {mode !== "view" && (showLineDiscountCheckbox || showTotalDiscountCheckbox || showDescriptionCheckbox) && (
@@ -158,18 +187,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                   <TableCell sx={{ p: 1 }}>
                     <ProductAutocomplete
                       value={selectedProducts[index]}
-                      onChange={(product) => {
-                        setValue(`items.${index}.product_id`, product?.id || null);
-                        setValue(`items.${index}.product_name`, product?.product_name || "");
-                        setValue(`items.${index}.unit_price`, product?.unit_price || 0);
-                        setValue(`items.${index}.original_unit_price`, product?.unit_price || 0);
-                        setValue(`items.${index}.gst_rate`, product?.gst_rate ?? 18);
-                        setValue(`items.${index}.cgst_rate`, isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0);
-                        setValue(`items.${index}.sgst_rate`, isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0);
-                        setValue(`items.${index}.igst_rate`, isIntrastate ? 0 : product?.gst_rate ?? 18);
-                        setValue(`items.${index}.unit`, product?.unit || "");
-                        setValue(`items.${index}.reorder_level`, product?.reorder_level || 0);
-                      }}
+                      onChange={(product) => handleProductChange(index, product)}
                       disabled={mode === "view"}
                       size="small"
                     />
