@@ -657,6 +657,421 @@ Standardized error responses across all APIs:
 
 ---
 
+## Mobile API Specifications
+
+### Mobile-Optimized API Patterns
+
+#### 1. Mobile Authentication
+
+##### Touch ID / Face ID Integration
+```http
+POST /api/v1/auth/biometric-login
+Content-Type: application/json
+
+{
+  "biometric_token": "eyJhbGciOiJSUzI1NiIs...",
+  "device_id": "iPhone-12-ABC123",
+  "platform": "ios"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJSUzI1NiIs...",
+  "expires_in": 3600,
+  "mobile_session": {
+    "session_id": "mob_sess_123",
+    "device_registered": true,
+    "push_enabled": true
+  }
+}
+```
+
+##### Mobile Session Management
+```http
+POST /api/v1/auth/mobile-refresh
+Content-Type: application/json
+Authorization: Bearer {refresh_token}
+
+{
+  "device_id": "iPhone-12-ABC123",
+  "app_version": "1.6.0",
+  "background_refresh": true
+}
+```
+
+#### 2. Mobile Data Synchronization
+
+##### Batch Data Sync
+```http
+POST /api/v1/mobile/sync
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "last_sync": "2024-01-01T12:00:00Z",
+  "modules": ["dashboard", "sales", "crm", "inventory"],
+  "device_capabilities": {
+    "offline_storage": true,
+    "push_notifications": true,
+    "camera": true,
+    "location": true
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "sync_timestamp": "2024-01-01T13:00:00Z",
+  "data_changes": {
+    "dashboard": {
+      "kpis": [...],
+      "activities": [...],
+      "notifications": [...]
+    },
+    "sales": {
+      "invoices": [...],
+      "orders": [...],
+      "customers": [...]
+    }
+  },
+  "sync_status": "complete",
+  "next_sync_recommended": "2024-01-01T14:00:00Z"
+}
+```
+
+##### Offline Sync Queue
+```http
+POST /api/v1/mobile/offline-sync
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "queued_actions": [
+    {
+      "id": "action_123",
+      "type": "create_invoice",
+      "data": {...},
+      "timestamp": "2024-01-01T12:30:00Z"
+    },
+    {
+      "id": "action_124", 
+      "type": "update_customer",
+      "data": {...},
+      "timestamp": "2024-01-01T12:35:00Z"
+    }
+  ]
+}
+```
+
+#### 3. Mobile-Specific Endpoints
+
+##### Image Upload with Compression
+```http
+POST /api/v1/mobile/upload/image
+Content-Type: multipart/form-data
+Authorization: Bearer {access_token}
+
+{
+  "file": <image_file>,
+  "compression_quality": 0.8,
+  "max_width": 1920,
+  "max_height": 1080,
+  "context": "invoice_receipt",
+  "metadata": {
+    "device_model": "iPhone 12",
+    "location": {
+      "lat": 37.7749,
+      "lng": -122.4194
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "upload_id": "upload_123",
+  "file_url": "/api/files/compressed/image_123.webp",
+  "original_size": 2048576,
+  "compressed_size": 512144,
+  "compression_ratio": 0.25,
+  "processing_time_ms": 150
+}
+```
+
+##### Location-Based Services
+```http
+GET /api/v1/mobile/nearby/customers?lat=37.7749&lng=-122.4194&radius=10
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "customers": [
+    {
+      "id": 123,
+      "name": "ABC Company",
+      "distance_km": 2.5,
+      "address": "123 Main St, San Francisco",
+      "phone": "+1-555-0123",
+      "last_visit": "2024-01-01T10:00:00Z"
+    }
+  ],
+  "total_count": 1,
+  "search_radius_km": 10
+}
+```
+
+#### 4. Push Notifications API
+
+##### Register for Push Notifications
+```http
+POST /api/v1/mobile/push/register
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "device_token": "APNs_or_FCM_token_here",
+  "platform": "ios", // or "android"
+  "app_version": "1.6.0",
+  "notification_preferences": {
+    "invoices": true,
+    "orders": true,
+    "alerts": true,
+    "marketing": false
+  }
+}
+```
+
+##### Send Push Notification
+```http
+POST /api/v1/mobile/push/send
+Content-Type: application/json
+Authorization: Bearer {admin_token}
+
+{
+  "target_users": [123, 456],
+  "message": {
+    "title": "New Invoice Created",
+    "body": "Invoice #INV-001 has been generated",
+    "action_url": "/invoices/123",
+    "icon": "invoice",
+    "category": "business_action"
+  },
+  "scheduling": {
+    "send_at": "2024-01-01T15:00:00Z",
+    "timezone": "America/New_York"
+  }
+}
+```
+
+#### 5. Mobile Performance Optimization
+
+##### Paginated Mobile API
+```http
+GET /api/v1/mobile/invoices?page=1&per_page=20&include_minimal=true
+Authorization: Bearer {access_token}
+```
+
+**Response with Mobile-Optimized Data:**
+```json
+{
+  "invoices": [
+    {
+      "id": 123,
+      "number": "INV-001",
+      "customer_name": "ABC Company",
+      "amount": 1500.00,
+      "status": "pending",
+      "date": "2024-01-01",
+      // Minimal fields for mobile list view
+      "mobile_summary": {
+        "display_text": "INV-001 - ABC Company",
+        "status_color": "orange",
+        "amount_formatted": "$1,500.00"
+      }
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_pages": 5,
+    "total_count": 100,
+    "has_next": true,
+    "next_page_url": "/api/v1/mobile/invoices?page=2&per_page=20"
+  },
+  "cache_info": {
+    "cache_key": "mobile_invoices_user123_page1",
+    "expires_at": "2024-01-01T13:30:00Z"
+  }
+}
+```
+
+##### Mobile Search with Auto-Complete
+```http
+GET /api/v1/mobile/search?q=abc&type=customers&suggest=true
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "id": 123,
+      "type": "customer",
+      "title": "ABC Company",
+      "subtitle": "Last order: $1,500.00",
+      "image_url": "/api/files/logos/abc_company.webp",
+      "action_url": "/customers/123"
+    }
+  ],
+  "suggestions": [
+    "ABC Company",
+    "ABC Manufacturing", 
+    "ABC Services"
+  ],
+  "search_time_ms": 45,
+  "total_results": 1
+}
+```
+
+#### 6. Mobile Security Considerations
+
+##### Device Fingerprinting
+```http
+POST /api/v1/mobile/device/register
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "device_info": {
+    "model": "iPhone 12",
+    "os_version": "iOS 17.2",
+    "app_version": "1.6.0",
+    "screen_resolution": "390x844",
+    "timezone": "America/New_York",
+    "carrier": "Verizon"
+  },
+  "security_features": {
+    "biometric_available": true,
+    "passcode_set": true,
+    "jailbroken": false,
+    "app_integrity": true
+  }
+}
+```
+
+##### Mobile Rate Limiting
+- **Authenticated Users**: 2000 requests/hour (higher limit for mobile)
+- **Image Uploads**: 50 uploads/hour per user
+- **Sync Operations**: 120 sync requests/hour
+- **Push Notifications**: 100 notifications/day per user
+
+#### 7. Mobile Error Handling
+
+##### Mobile-Specific Error Codes
+```json
+{
+  "error": {
+    "code": "MOBILE_OFFLINE_SYNC_CONFLICT",
+    "message": "Data conflict detected during offline sync",
+    "mobile_context": {
+      "conflict_resolution_required": true,
+      "conflicting_fields": ["amount", "status"],
+      "server_version": "1.2",
+      "client_version": "1.1",
+      "resolution_options": [
+        "accept_server_version",
+        "keep_client_version", 
+        "merge_changes"
+      ]
+    }
+  }
+}
+```
+
+##### Network Error Handling
+```json
+{
+  "error": {
+    "code": "NETWORK_UNAVAILABLE",
+    "message": "Network connection not available",
+    "mobile_guidance": {
+      "retry_after_seconds": 30,
+      "offline_mode_available": true,
+      "cached_data_available": true,
+      "essential_operations_only": true
+    }
+  }
+}
+```
+
+#### 8. Mobile Analytics API
+
+##### Mobile Usage Analytics
+```http
+POST /api/v1/mobile/analytics/usage
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "session_id": "mob_sess_123",
+  "events": [
+    {
+      "type": "screen_view",
+      "screen": "dashboard",
+      "timestamp": "2024-01-01T12:00:00Z",
+      "duration_ms": 5000
+    },
+    {
+      "type": "tap",
+      "element": "create_invoice_button",
+      "timestamp": "2024-01-01T12:00:05Z",
+      "coordinates": [195, 400]
+    }
+  ],
+  "performance_metrics": {
+    "app_launch_time_ms": 1200,
+    "memory_usage_mb": 45,
+    "battery_level": 0.75
+  }
+}
+```
+
+### Mobile API Best Practices
+
+#### 1. Request Optimization
+- **Batch Operations**: Combine multiple requests when possible
+- **Minimal Payloads**: Return only essential data for mobile views
+- **Compression**: Use gzip compression for all responses
+- **Caching**: Implement aggressive caching for static data
+
+#### 2. Error Recovery
+- **Retry Logic**: Automatic retry with exponential backoff
+- **Graceful Degradation**: Fallback to cached data when offline
+- **User Feedback**: Clear error messages with actionable guidance
+- **Offline Queue**: Queue operations for later synchronization
+
+#### 3. Security
+- **Certificate Pinning**: Prevent man-in-the-middle attacks
+- **Biometric Authentication**: Support Touch ID/Face ID where available
+- **Device Attestation**: Verify app integrity and device security
+- **Token Refresh**: Automatic token refresh in background
+
+#### 4. Performance
+- **Connection Pooling**: Reuse connections for multiple requests
+- **Request Prioritization**: Critical requests get higher priority
+- **Background Sync**: Sync data during app idle time
+- **Progressive Loading**: Load essential content first
+
+---
+
 ## Support and Documentation
 
 ### API Documentation
