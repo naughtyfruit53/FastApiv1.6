@@ -7,7 +7,6 @@ import {
   Business,
   Assessment,
   Settings,
-  AccountCircle,
   ShoppingCart,
   LocalShipping,
   AccountBalance,
@@ -550,11 +549,28 @@ export const menuItems = {
       }
     ]
   },
-  // Email menu - placeholder only, no path or sections
+  // Email module - full email functionality
   email: {
     title: 'Email',
     icon: <Email />,
-    sections: []
+    sections: [
+      {
+        title: 'Email Management',
+        items: [
+          { name: 'Inbox', path: '/email', icon: <Email /> },
+          { name: 'Compose', path: '/email?compose=true', icon: <NoteAdd /> },
+          { name: 'Account Settings', path: '/email/accounts', icon: <Settings /> }
+        ]
+      },
+      {
+        title: 'Integration',
+        items: [
+          { name: 'OAuth Connections', path: '/email/oauth', icon: <Security /> },
+          { name: 'Sync Status', path: '/email/sync', icon: <CloudUpload /> },
+          { name: 'Templates', path: '/email/templates', icon: <Assignment /> }
+        ]
+      }
+    ]
   },
   settings: {
     title: 'Settings',
