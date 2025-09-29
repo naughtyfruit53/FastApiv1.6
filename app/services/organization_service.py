@@ -91,7 +91,10 @@ class OrganizationService:
             user_name=super_admin.full_name,
             temp_password=temp_password,
             organization_name=org.name,
-            login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com"
+            login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
+            organization_id=org.id,
+            user_id=super_admin.id,
+            db=db
         )
         
         if not success:

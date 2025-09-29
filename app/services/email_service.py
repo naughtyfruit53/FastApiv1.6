@@ -515,7 +515,14 @@ This account was created by: {created_by}
 Creation Date: {admin_template_vars['creation_date']} at {admin_template_vars['creation_time']}
 """
             
-            admin_success, admin_error = self._send_email(org_admin_email, admin_subject, admin_body)
+            admin_success, admin_error = self._send_email(
+                to_email=org_admin_email,
+                subject=admin_subject,
+                body=admin_body,
+                email_type=EmailType.USER_INVITE,
+                organization_id=None,  # This is org creation, so no org_id yet
+                user_id=None  # New user not yet created
+            )
             if admin_success:
                 success_count += 1
                 logger.info(f"✅ License creation email sent successfully to org admin: {org_admin_email}")
@@ -552,7 +559,14 @@ Best regards,
 TRITIQ ERP System
 """
                 
-                creator_success, creator_error = self._send_email(created_by, creator_subject, creator_body)
+                creator_success, creator_error = self._send_email(
+                    to_email=created_by,
+                    subject=creator_subject,
+                    body=creator_body,
+                    email_type=EmailType.NOTIFICATION,
+                    organization_id=None,  # This is org creation notification
+                    user_id=None
+                )
                 if creator_success:
                     success_count += 1
                     logger.info(f"✅ License creation notification sent successfully to creator: {created_by}")
@@ -807,9 +821,10 @@ TRITIQ ERP Team
             logger.error(error_msg)
             return False, error_msg
     
-    def create_otp_verification(self, db: Session, email: str, purpose: str = "login") -> tuple[Optional[str], Optional[str]]:
+    def create_otp_verification(self, db: Session, email: str, purpose: str = "login", 
+                              organization_id: Optional[int] = None, user_id: Optional[int] = None) -> tuple[Optional[str], Optional[str]]:
         """
-        Create OTP verification entry with enhanced error handling.
+        Create OTP verification entry with enhanced error handling and audit logging.
         Returns tuple of (otp: Optional[str], error_message: Optional[str])
         """
         try:
@@ -834,8 +849,15 @@ TRITIQ ERP Team
             db.add(otp_verification)
             db.commit()
             
-            # Send OTP email
-            success, error = self.send_otp_email(email, otp, purpose)
+            # Send OTP email with audit logging
+            success, error = self.send_otp_email(
+                to_email=email, 
+                otp=otp, 
+                purpose=purpose,
+                organization_id=organization_id,
+                user_id=user_id,
+                db=db
+            )
             if success:
                 return otp, None
             else:

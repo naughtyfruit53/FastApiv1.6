@@ -257,7 +257,10 @@ async def create_user_in_organization(
             user_name=new_user.full_name,
             temp_password=user_data.password,
             organization_name=org.name,
-            login_url="https://fast-apiv1-6.vercel.app/"
+            login_url="https://fast-apiv1-6.vercel.app/",
+            organization_id=new_user.organization_id,
+            user_id=new_user.id,
+            db=db
         )
         
         if not success:

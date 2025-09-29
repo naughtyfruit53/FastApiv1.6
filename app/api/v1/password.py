@@ -363,7 +363,11 @@ async def admin_reset_password(
             user_email=reset_data.user_email,
             user_name=user.full_name or user.username,
             new_password=new_password,
-            reset_by=current_user.email
+            reset_by=current_user.email,
+            organization_name=user.organization.name if user.organization else None,
+            organization_id=user.organization_id,
+            user_id=user.id,
+            db=db
         )
         
         # Log successful password reset with enhanced details
