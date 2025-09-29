@@ -11,9 +11,13 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.services.rbac import check_permissions, RoleChecker
-from app.services.email_service import email_management_service
+from app.services.email_service import email_management_service, link_email_to_customer_vendor, auto_link_emails_by_sender
 from app.services.email_sync_worker import email_sync_worker
 from app.services.oauth_service import OAuthService
+from app.services.calendar_sync_service import calendar_sync_service
+from app.services.email_search_service import email_search_service
+from app.services.email_ai_service import email_ai_service
+from app.services.ocr_service import email_attachment_ocr_service
 from app.models.email import (
     MailAccount, Email, EmailThread, EmailAttachment, EmailSyncLog,
     EmailAccountType, EmailSyncStatus, EmailStatus
@@ -558,3 +562,438 @@ async def list_oauth_tokens(
             token_info.append(info)
     
     return {"tokens": token_info}
+
+
+# ERP Integration Endpoints
+
+@router.post("/attachments/{attachment_id}/parse-calendar")
+async def parse_calendar_attachment(
+    attachment_id: int = Path(..., description="Email attachment ID"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
+    db: Session = Depends(get_db)
+):
+    """
+    Parse .ics calendar file from email attachment and extract events/tasks
+    """
+    try:
+        result = calendar_sync_service.parse_ics_attachment(
+            attachment_id, current_user.organization_id
+        )
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"]
+            )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error parsing calendar attachment: {str(e)}"
+        )
+
+
+@router.post("/calendar/sync-events")
+async def sync_calendar_events(
+    events: List[Dict[str, Any]],
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Sync parsed calendar events to database
+    """
+    try:
+        result = calendar_sync_service.sync_events_to_database(events, current_user.id)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"]
+            )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error syncing calendar events: {str(e)}"
+        )
+
+
+@router.post("/calendar/sync-tasks")
+async def sync_calendar_tasks(
+    tasks: List[Dict[str, Any]],
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Sync parsed calendar tasks to database
+    """
+    try:
+        result = calendar_sync_service.sync_tasks_to_database(tasks, current_user.id)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"]
+            )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error syncing calendar tasks: {str(e)}"
+        )
+
+
+# Advanced Search Endpoints
+
+@router.get("/search")
+async def search_emails(
+    query: str = Query(..., description="Search query"),
+    account_ids: Optional[List[int]] = Query(None, description="Email account IDs to search"),
+    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    vendor_id: Optional[int] = Query(None, description="Filter by vendor ID"),
+    date_from: Optional[str] = Query(None, description="Start date filter (ISO format)"),
+    date_to: Optional[str] = Query(None, description="End date filter (ISO format)"),
+    has_attachments: Optional[bool] = Query(None, description="Filter by attachment presence"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Full-text search across emails using PostgreSQL tsvector
+    """
+    try:
+        result = email_search_service.full_text_search(
+            query=query,
+            organization_id=current_user.organization_id,
+            account_ids=account_ids,
+            customer_id=customer_id,
+            vendor_id=vendor_id,
+            date_from=date_from,
+            date_to=date_to,
+            has_attachments=has_attachments,
+            limit=limit,
+            offset=offset
+        )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search error: {str(e)}"
+        )
+
+
+@router.get("/search/attachments")
+async def search_attachments(
+    query: str = Query(..., description="Search query"),
+    file_types: Optional[List[str]] = Query(None, description="File extensions to filter by"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Search email attachments by filename and extracted content
+    """
+    try:
+        result = email_search_service.search_attachments(
+            query=query,
+            organization_id=current_user.organization_id,
+            file_types=file_types,
+            limit=limit,
+            offset=offset
+        )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Attachment search error: {str(e)}"
+        )
+
+
+@router.get("/search/by-customer-vendor")
+async def search_by_customer_vendor(
+    customer_id: Optional[int] = Query(None, description="Customer ID"),
+    vendor_id: Optional[int] = Query(None, description="Vendor ID"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Search emails linked to specific customers or vendors
+    """
+    try:
+        result = email_search_service.search_by_customer_vendor(
+            organization_id=current_user.organization_id,
+            customer_id=customer_id,
+            vendor_id=vendor_id,
+            limit=limit,
+            offset=offset
+        )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Customer/vendor search error: {str(e)}"
+        )
+
+
+# OCR Processing Endpoints
+
+@router.post("/attachments/{attachment_id}/ocr")
+async def process_attachment_ocr(
+    attachment_id: int = Path(..., description="Email attachment ID"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Process email attachment with OCR to extract text content
+    """
+    try:
+        result = await email_attachment_ocr_service.process_email_attachment(attachment_id)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"]
+            )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"OCR processing error: {str(e)}"
+        )
+
+
+@router.post("/attachments/batch-ocr")
+async def batch_process_attachments_ocr(
+    attachment_ids: List[int],
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Process multiple email attachments with OCR in batch
+    """
+    try:
+        result = await email_attachment_ocr_service.batch_process_attachments(attachment_ids)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Batch OCR processing error: {str(e)}"
+        )
+
+
+# AI-Powered Features
+
+@router.get("/ai/summary/{email_id}")
+async def get_email_summary(
+    email_id: int = Path(..., description="Email ID"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Generate AI-powered summary of an email
+    """
+    try:
+        result = email_ai_service.generate_email_summary(email_id)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result["error"]
+            )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI summary error: {str(e)}"
+        )
+
+
+@router.get("/ai/reply-suggestions/{email_id}")
+async def get_reply_suggestions(
+    email_id: int = Path(..., description="Email ID"),
+    context: Optional[str] = Query(None, description="Additional context for reply"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Generate AI-powered reply suggestions for an email
+    """
+    try:
+        result = email_ai_service.generate_reply_suggestions(email_id, context)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result["error"]
+            )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI reply suggestions error: {str(e)}"
+        )
+
+
+@router.post("/ai/categorize-batch")
+async def categorize_emails_batch(
+    email_ids: List[int],
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Categorize multiple emails using AI
+    """
+    try:
+        result = email_ai_service.categorize_email_batch(email_ids)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI categorization error: {str(e)}"
+        )
+
+
+@router.get("/ai/action-items/{email_id}")
+async def extract_action_items(
+    email_id: int = Path(..., description="Email ID"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Extract action items and tasks from email content using AI
+    """
+    try:
+        result = email_ai_service.extract_action_items(email_id)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result["error"]
+            )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Action item extraction error: {str(e)}"
+        )
+
+
+# Shared Inbox and RBAC Endpoints
+
+@router.get("/shared-inboxes")
+async def list_shared_inboxes(
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
+    db: Session = Depends(get_db)
+):
+    """
+    List shared inboxes accessible to current user based on RBAC
+    """
+    try:
+        # Get mail accounts that are shared or owned by user
+        shared_accounts = db.query(MailAccount).filter(
+            MailAccount.organization_id == current_user.organization_id,
+            or_(
+                MailAccount.user_id == current_user.id,
+                MailAccount.is_shared == True
+            )
+        ).all()
+        
+        account_list = []
+        for account in shared_accounts:
+            account_dict = {
+                'id': account.id,
+                'email_address': account.email_address,
+                'display_name': account.display_name,
+                'is_shared': account.is_shared,
+                'sync_status': account.sync_status.value,
+                'last_sync_at': account.last_sync_at,
+                'owner_id': account.user_id,
+                'unread_count': db.query(Email).filter(
+                    Email.account_id == account.id,
+                    Email.status == EmailStatus.UNREAD
+                ).count()
+            }
+            account_list.append(account_dict)
+        
+        return {"shared_inboxes": account_list}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving shared inboxes: {str(e)}"
+        )
+
+
+# ERP Linking Endpoints
+
+@router.post("/emails/{email_id}/link")
+async def link_email_to_entity(
+    email_id: int = Path(..., description="Email ID"),
+    customer_id: Optional[int] = Query(None, description="Customer ID to link to"),
+    vendor_id: Optional[int] = Query(None, description="Vendor ID to link to"),
+    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+):
+    """
+    Link an email to a customer or vendor for ERP integration
+    """
+    try:
+        if not customer_id and not vendor_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Must provide either customer_id or vendor_id"
+            )
+        
+        success, error = link_email_to_customer_vendor(
+            email_id=email_id,
+            customer_id=customer_id,
+            vendor_id=vendor_id,
+            user_id=current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error
+            )
+        
+        return {
+            "success": True,
+            "message": "Email linked successfully",
+            "email_id": email_id,
+            "customer_id": customer_id,
+            "vendor_id": vendor_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error linking email: {str(e)}"
+        )
+
+
+@router.post("/auto-link")
+async def auto_link_emails(
+    limit: int = Query(100, ge=1, le=500, description="Maximum emails to process"),
+    current_user: User = Depends(RoleChecker(MANAGER_PERMISSIONS))
+):
+    """
+    Automatically link emails to customers/vendors based on sender addresses
+    """
+    try:
+        result = auto_link_emails_by_sender(
+            organization_id=current_user.organization_id,
+            limit=limit
+        )
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error auto-linking emails: {str(e)}"
+        )

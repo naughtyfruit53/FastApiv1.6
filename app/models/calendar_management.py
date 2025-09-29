@@ -82,6 +82,7 @@ class CalendarEvent(Base):
     google_event_id = Column(String(255), nullable=True, index=True)
     google_calendar_id = Column(String(255), nullable=True)
     last_google_sync = Column(DateTime, nullable=True)
+    external_id = Column(String(255), nullable=True, index=True)  # For external calendar sync (UID from .ics)
     
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

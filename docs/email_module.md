@@ -596,6 +596,399 @@ import ThreadView from '../pages/email/ThreadView';
 
 #### 3. Composer Component (`frontend/src/pages/email/Composer.tsx`)
 
+## ERP Integrations & Advanced Features
+
+### Voucher Email Integration
+
+The email module integrates seamlessly with ERP voucher workflows:
+
+```python
+from app.services.email_service import send_voucher_email
+
+# Send voucher email
+success, error = send_voucher_email(
+    voucher_type="purchase_voucher",
+    voucher_id=123,
+    recipient_email="vendor@example.com",
+    recipient_name="Vendor Name",
+    organization_id=1,
+    user_id=1
+)
+```
+
+**Supported Voucher Types:**
+- Purchase Vouchers
+- Sales Vouchers  
+- Purchase Orders
+- Sales Orders
+- Quotations
+- Delivery Challans
+- And more...
+
+### Calendar and Task Sync (.ics Integration)
+
+Parse and sync calendar events and tasks from .ics files:
+
+```python
+from app.services.calendar_sync_service import calendar_sync_service
+
+# Parse .ics attachment
+result = calendar_sync_service.parse_ics_attachment(attachment_id, organization_id)
+
+if result["success"]:
+    events = result["events"]
+    tasks = result["tasks"]
+    
+    # Sync to database
+    calendar_sync_service.sync_events_to_database(events, user_id)
+    calendar_sync_service.sync_tasks_to_database(tasks, user_id)
+```
+
+**API Endpoints:**
+- `POST /api/v1/email/attachments/{attachment_id}/parse-calendar` - Parse .ics file
+- `POST /api/v1/email/calendar/sync-events` - Sync events to calendar
+- `POST /api/v1/email/calendar/sync-tasks` - Sync tasks to task management
+
+### Customer/Vendor Email Linking
+
+Automatically link emails to customers and vendors:
+
+```python
+from app.services.email_service import link_email_to_customer_vendor, auto_link_emails_by_sender
+
+# Manual linking
+success, error = link_email_to_customer_vendor(
+    email_id=123,
+    customer_id=456,
+    user_id=1
+)
+
+# Auto-linking by sender email
+result = auto_link_emails_by_sender(organization_id, limit=100)
+```
+
+**API Endpoints:**
+- `POST /api/v1/email/emails/{email_id}/link` - Link email to customer/vendor
+- `POST /api/v1/email/auto-link` - Auto-link emails by sender addresses
+
+### Advanced Full-Text Search
+
+PostgreSQL tsvector-powered search across email content:
+
+```python
+from app.services.email_search_service import email_search_service
+
+# Full-text search
+result = email_search_service.full_text_search(
+    query="invoice payment terms",
+    organization_id=1,
+    customer_id=123,  # Optional filter
+    date_from="2024-01-01",  # Optional filter
+    has_attachments=True,  # Optional filter
+    limit=50
+)
+```
+
+**Search Features:**
+- Full-text search across subject, body, sender information
+- Customer/vendor filtering
+- Date range filtering
+- Attachment presence filtering
+- Search ranking and snippets
+- Search term suggestions
+
+**API Endpoints:**
+- `GET /api/v1/email/search` - Full-text email search
+- `GET /api/v1/email/search/attachments` - Search attachments
+- `GET /api/v1/email/search/by-customer-vendor` - Search by linked entities
+
+### OCR Processing for Attachments
+
+Extract text from email attachments using OCR:
+
+```python
+from app.services.ocr_service import email_attachment_ocr_service
+
+# Process single attachment
+result = await email_attachment_ocr_service.process_email_attachment(attachment_id)
+
+# Batch processing
+result = await email_attachment_ocr_service.batch_process_attachments([id1, id2, id3])
+```
+
+**Supported Formats:**
+- Images: JPG, PNG, TIFF, BMP
+- Documents: PDF (with fallback OCR for scanned content)
+
+**API Endpoints:**
+- `POST /api/v1/email/attachments/{attachment_id}/ocr` - Process single attachment
+- `POST /api/v1/email/attachments/batch-ocr` - Batch OCR processing
+
+### AI-Powered Features
+
+Intelligent email analysis and assistance:
+
+```python
+from app.services.email_ai_service import email_ai_service
+
+# Generate email summary
+summary = email_ai_service.generate_email_summary(email_id)
+
+# Get reply suggestions
+suggestions = email_ai_service.generate_reply_suggestions(email_id, context="urgent")
+
+# Extract action items
+actions = email_ai_service.extract_action_items(email_id)
+
+# Batch categorization
+categories = email_ai_service.categorize_email_batch([email1, email2, email3])
+```
+
+**AI Capabilities:**
+- Email summarization with key points extraction
+- Sentiment analysis (positive/negative/neutral)
+- Automatic categorization (finance, procurement, support, etc.)
+- Reply suggestions based on email type and context
+- Action item and deadline extraction
+- Urgency level assessment
+- Task creation suggestions
+
+**API Endpoints:**
+- `GET /api/v1/email/ai/summary/{email_id}` - Get AI-powered email summary
+- `GET /api/v1/email/ai/reply-suggestions/{email_id}` - Get reply suggestions
+- `POST /api/v1/email/ai/categorize-batch` - Batch email categorization
+- `GET /api/v1/email/ai/action-items/{email_id}` - Extract action items
+
+### Shared Inboxes & Role-Based Access
+
+Implement shared inbox functionality with RBAC:
+
+```python
+# RBAC Permissions
+ADMIN_PERMISSIONS = ["email:admin"]           # Full access
+MANAGER_PERMISSIONS = ["email:manage"]        # Manage accounts and emails  
+USER_PERMISSIONS = ["email:read"]             # Read-only access
+
+# Shared inbox configuration
+mail_account.is_shared = True  # Make account accessible to team
+```
+
+**Access Control:**
+- Organization-level multi-tenancy
+- Role-based permissions (admin, manager, user)
+- Shared inbox support
+- User assignment for shared accounts
+
+**API Endpoints:**
+- `GET /api/v1/email/shared-inboxes` - List accessible shared inboxes
+
+## Advanced Configuration
+
+### PostgreSQL Full-Text Search Setup
+
+For optimal search performance, create tsvector indexes:
+
+```sql
+-- Create tsvector index for email search
+CREATE INDEX idx_email_search_vector ON emails 
+USING gin(to_tsvector('english', coalesce(subject, '') || ' ' || coalesce(body_text, '')));
+
+-- Create index for attachment search (if OCR text is stored)
+CREATE INDEX idx_attachment_search_vector ON email_attachments 
+USING gin(to_tsvector('english', coalesce(extracted_text, '')));
+```
+
+### Calendar Integration Setup
+
+1. Install required dependencies:
+```bash
+pip install icalendar==6.0.1 python-dateutil==2.8.2
+```
+
+2. Configure external_id fields for sync tracking:
+```python
+# Add external_id fields to models for calendar sync
+task.external_id = "calendar-task-uuid"
+event.external_id = "calendar-event-uuid"
+```
+
+### OCR Setup
+
+1. Install Tesseract OCR engine:
+```bash
+# Ubuntu/Debian
+sudo apt-get install tesseract-ocr
+
+# macOS
+brew install tesseract
+```
+
+2. Install Python dependencies:
+```bash
+pip install pytesseract==0.3.13 pymupdf==1.26.4
+```
+
+### AI Integration
+
+The current implementation uses rule-based approaches with hooks for AI integration:
+
+- **Sentiment Analysis:** Keyword-based positive/negative detection
+- **Categorization:** Pattern matching for ERP categories
+- **Reply Suggestions:** Template-based responses by email type
+- **Action Items:** Regex pattern extraction
+
+For production AI integration, consider:
+- OpenAI GPT API for advanced text analysis
+- Local LLM models for privacy-sensitive deployments
+- Custom trained models for domain-specific categorization
+
+## API Integration Examples
+
+### Frontend Integration
+
+```typescript
+// Email search with advanced filters
+const searchEmails = async (query: string, filters: SearchFilters) => {
+  const response = await api.get('/api/v1/email/search', {
+    params: { query, ...filters }
+  });
+  return response.data;
+};
+
+// Parse calendar attachment
+const parseCalendar = async (attachmentId: number) => {
+  const response = await api.post(`/api/v1/email/attachments/${attachmentId}/parse-calendar`);
+  return response.data;
+};
+
+// Get AI summary
+const getEmailSummary = async (emailId: number) => {
+  const response = await api.get(`/api/v1/email/ai/summary/${emailId}`);
+  return response.data;
+};
+```
+
+### Workflow Integration
+
+```python
+# Example: Auto-process new purchase order emails
+async def process_purchase_order_email(email_id: int):
+    # 1. Categorize email
+    category = email_ai_service.categorize_email_batch([email_id])
+    
+    if category == "procurement":
+        # 2. Extract action items
+        actions = email_ai_service.extract_action_items(email_id)
+        
+        # 3. Process attachments with OCR
+        if email.has_attachments:
+            attachments = get_email_attachments(email_id)
+            for attachment in attachments:
+                if attachment.filename.endswith('.pdf'):
+                    ocr_result = await email_attachment_ocr_service.process_email_attachment(attachment.id)
+        
+        # 4. Auto-link to vendor
+        auto_link_result = auto_link_emails_by_sender(email.organization_id, limit=1)
+        
+        # 5. Create follow-up tasks
+        for action in actions["suggested_tasks"]:
+            create_task(action)
+```
+
+## Performance Considerations
+
+### Database Optimization
+
+1. **Indexes:** Ensure proper indexing for search and filtering
+2. **Partitioning:** Consider partitioning large email tables by date
+3. **Archival:** Implement email archival strategy for old messages
+
+### Search Performance
+
+1. **tsvector Indexes:** Use GIN indexes for full-text search
+2. **Search Caching:** Cache frequent search queries
+3. **Pagination:** Implement proper pagination for large result sets
+
+### OCR Processing
+
+1. **Async Processing:** Process OCR in background tasks
+2. **File Size Limits:** Implement reasonable file size limits
+3. **Format Validation:** Validate file formats before processing
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Errors:**
+   - Ensure DATABASE_URL is properly configured
+   - For development with SQLite, use: `sqlite+aiosqlite:///./test.db`
+   - For production with PostgreSQL, use: `postgresql+asyncpg://user:pass@host/db`
+
+2. **OCR Processing Failures:**
+   - Verify Tesseract is installed: `tesseract --version`
+   - Check file permissions for temporary directory
+   - Ensure supported file formats
+
+3. **Search Not Working:**
+   - Verify PostgreSQL full-text search extensions
+   - Check tsvector indexes are created
+   - For SQLite, search functionality is limited
+
+4. **Calendar Sync Issues:**
+   - Validate .ics file format
+   - Check timezone handling
+   - Verify external_id uniqueness
+
+### Monitoring and Logging
+
+Enable detailed logging for troubleshooting:
+
+```python
+import logging
+logging.getLogger('app.services.email_search_service').setLevel(logging.DEBUG)
+logging.getLogger('app.services.calendar_sync_service').setLevel(logging.DEBUG)
+logging.getLogger('app.services.email_ai_service').setLevel(logging.DEBUG)
+```
+
+## Future Enhancements
+
+### Planned Features
+
+1. **Advanced AI Integration:**
+   - Integration with OpenAI GPT models
+   - Custom email classification models
+   - Automatic email routing
+
+2. **Enhanced Search:**
+   - Elasticsearch integration
+   - Advanced search filters
+   - Search analytics
+
+3. **Calendar Improvements:**
+   - Two-way calendar sync
+   - Meeting room booking integration
+   - Calendar conflict detection
+
+4. **Mobile Support:**
+   - Mobile-optimized email interface
+   - Push notifications
+   - Offline email access
+
+5. **Integration Enhancements:**
+   - Microsoft Graph API integration
+   - Google Workspace integration
+   - Webhook support for real-time updates
+
+### Contributing
+
+To contribute to the email module:
+
+1. Follow the existing code patterns
+2. Add comprehensive tests for new features
+3. Update documentation for any API changes
+4. Ensure RBAC compliance for new endpoints
+5. Consider performance implications for large datasets
+
 Email composition interface with:
 - Rich text editor with formatting
 - Attachment upload and management
