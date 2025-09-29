@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Box, Grid, Typography, Chip } from '@mui/material';
-import { Add, FilterList, TrendingUp, Person, Business } from '@mui/icons-material';
+import { Box, Grid, Typography, Chip, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Add, FilterList, TrendingUp, Person, Business, AddCircle, Assessment, Follow, Groups, Phone, Email, Event } from '@mui/icons-material';
 import { 
   MobileDashboardLayout, 
   MobileCard, 
   MobileButton, 
   MobileTable,
   MobileSearchBar,
-  MobilePullToRefresh 
+  MobilePullToRefresh,
+  MobileBottomSheet 
 } from '../../components/mobile';
 import useSharedSales from '../../hooks/useSharedSales';
 import ModernLoading from "../../components/ModernLoading";
@@ -58,6 +59,9 @@ const leadsColumns = [
 ];
 
 const MobileSales: React.FC = () => {
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  
   // Use shared sales business logic
   const {
     metrics,
@@ -71,8 +75,6 @@ const MobileSales: React.FC = () => {
     refresh,
   } = useSharedSales();
 
-  const [localSearchQuery, setLocalSearchQuery] = useState('');
-
   // Handle search with local state and shared logic
   const handleSearch = (query: string) => {
     setLocalSearchQuery(query);
@@ -84,8 +86,9 @@ const MobileSales: React.FC = () => {
       variant="contained"
       startIcon={<Add />}
       size="small"
+      onClick={() => setQuickActionsOpen(true)}
     >
-      New Lead
+      Actions
     </MobileButton>
   );
 
@@ -272,24 +275,14 @@ const MobileSales: React.FC = () => {
         {/* Quick Actions */}
         <MobileCard title="Quick Actions">
           <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <MobileButton variant="outlined" fullWidth>
-                Add Lead
-              </MobileButton>
-            </Grid>
-            <Grid item xs={6}>
-              <MobileButton variant="outlined" fullWidth>
-                Sales Report
-              </MobileButton>
-            </Grid>
-            <Grid item xs={6}>
-              <MobileButton variant="outlined" fullWidth>
-                Follow Up
-              </MobileButton>
-            </Grid>
-            <Grid item xs={6}>
-              <MobileButton variant="outlined" fullWidth>
-                Customer List
+            <Grid item xs={12}>
+              <MobileButton 
+                variant="outlined" 
+                fullWidth
+                onClick={() => setQuickActionsOpen(true)}
+                startIcon={<Add />}
+              >
+                Open Quick Actions Menu
               </MobileButton>
             </Grid>
           </Grid>
@@ -307,6 +300,143 @@ const MobileSales: React.FC = () => {
         {/* TODO: Add pull-to-refresh for live data updates - now implemented */}
         {/* TODO: Implement offline data caching for mobile access */}
       </MobilePullToRefresh>
+      
+      {/* Quick Actions Bottom Sheet */}
+      <MobileBottomSheet
+        open={quickActionsOpen}
+        onClose={() => setQuickActionsOpen(false)}
+        title="Quick Actions"
+        height="auto"
+        showHandle={true}
+        dismissible={true}
+      >
+        <List sx={{ py: 0 }}>
+          <ListItem 
+            button 
+            onClick={() => {
+              setQuickActionsOpen(false);
+              console.log('Create new lead');
+            }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 1,
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <ListItemIcon>
+              <AddCircle color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Add New Lead"
+              secondary="Create a new sales lead"
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            onClick={() => {
+              setQuickActionsOpen(false);
+              console.log('Generate sales report');
+            }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 1,
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <ListItemIcon>
+              <Assessment color="secondary" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Sales Report"
+              secondary="Generate performance report"
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            onClick={() => {
+              setQuickActionsOpen(false);
+              console.log('Schedule follow-up');
+            }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 1,
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <ListItemIcon>
+              <Event color="warning" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Schedule Follow-up"
+              secondary="Set reminder for lead follow-up"
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            onClick={() => {
+              setQuickActionsOpen(false);
+              console.log('View customers');
+            }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 1,
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <ListItemIcon>
+              <Groups color="info" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Customer List"
+              secondary="Browse all customers"
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            onClick={() => {
+              setQuickActionsOpen(false);
+              console.log('Make call');
+            }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 1,
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <ListItemIcon>
+              <Phone color="success" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Quick Call"
+              secondary="Call top priority lead"
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            onClick={() => {
+              setQuickActionsOpen(false);
+              console.log('Send email');
+            }}
+            sx={{ 
+              borderRadius: 2,
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <ListItemIcon>
+              <Email color="error" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Send Email"
+              secondary="Email campaign to leads"
+            />
+          </ListItem>
+        </List>
+      </MobileBottomSheet>
     </MobileDashboardLayout>
   );
 };
