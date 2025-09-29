@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Goods Receipt Note</title>
+    <style>
+        /* Basic styling for GRN without tax columns */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .footer { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if company.logo_url %}
+            <img src="{{ company.logo_url }}" alt="Company Logo" style="max-height: 100px;">
+        {% endif %}
+        <h1>GOODS RECEIPT NOTE</h1>
+        <p>{{ company.name }}<br>
+        {{ company.address1 }}, {{ company.address2 }}<br>
+        {{ company.city }}, {{ company.state }} - {{ company.pin_code }}<br>
+        GSTIN: {{ company.gst_number }} | PAN: {{ company.pan_number }}</p>
+    </div>
+
+    <div class="voucher-details">
+        <p><strong>GRN No:</strong> {{ voucher.voucher_number }}</p>
+        <p><strong>Date:</strong> {{ voucher.date | format_date }}</p>
+        <p><strong>Vendor:</strong> {{ voucher.vendor.name }}<br>
+        {{ voucher.vendor.address }}<br>
+        {{ voucher.vendor.city }}, {{ voucher.vendor.state }} - {{ voucher.vendor.pin_code }}<br>
+        GSTIN: {{ voucher.vendor.gst_number }}</p>
+        {% if voucher.purchase_order %}
+            <p><strong>Purchase Order:</strong> {{ voucher.purchase_order.voucher_number }}</p>
+        {% endif %}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Sl No</th>
+                <th>Product</th>
+                <th>Description</th>
+                <th>HSN Code</th>
+                <th>Quantity</th>
+                <th>Received Qty</th>
+                <th>Accepted Qty</th>
+                <th>Rejected Qty</th>
+                <th>Unit</th>
+                <th>Unit Price</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item.product_name }}</td>
+                <td>{{ item.description }}</td>
+                <td>{{ item.hsn_code }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.received_quantity | default(item.quantity) }}</td>
+                <td>{{ item.accepted_quantity | default(item.quantity) }}</td>
+                <td>{{ item.rejected_quantity | default(0) }}</td>
+                <td>{{ item.unit }}</td>
+                <td>{{ item.unit_price | format_currency(show_symbol=False) }}</td>
+                <td>{{ item.total_amount | format_currency }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="10"><strong>Total</strong></td>
+                <td>{{ grand_total | format_currency }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p><strong>Notes:</strong> {{ voucher.notes }}</p>
+        <p><strong>Terms & Conditions:</strong> {{ voucher.terms_conditions }}</p>
+        <p>Generated on: {{ generated_at | format_date }}</p>
+    </div>
+</body>
+</html>

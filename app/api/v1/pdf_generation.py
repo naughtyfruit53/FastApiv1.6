@@ -323,6 +323,12 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             stmt = stmt.options(joinedload(model_class.vendor))
         if hasattr(model_class, 'customer'):
             stmt = stmt.options(joinedload(model_class.customer))
+        if hasattr(model_class, 'purchase_order'):
+            stmt = stmt.options(joinedload(model_class.purchase_order))
+        if hasattr(model_class, 'sales_order'):
+            stmt = stmt.options(joinedload(model_class.sales_order))
+        if hasattr(model_class, 'grn'):
+            stmt = stmt.options(joinedload(model_class.grn))
         if hasattr(model_class, 'items'):
             item_class_map = {
                 'purchase': PurchaseVoucherItem,
@@ -490,19 +496,35 @@ def _item_to_dict(item) -> Dict[str, Any]:
     item_data = {
         'id': item.id,
         'product_id': getattr(item, 'product_id', None),
-        'quantity': float(item.quantity or 0),
         'unit': getattr(item, 'unit', 'Nos'),
         'unit_price': float(item.unit_price or 0),
         'description': getattr(item, 'description', ''),
         'hsn_code': getattr(item, 'hsn_code', ''),
-        'gst_rate': float(getattr(item, 'gst_rate', 0) or 0),
-        'discount_percentage': float(getattr(item, 'discount_percentage', 0) or 0),
-        'discount_amount': float(getattr(item, 'discount_amount', 0) or 0),
-        'cgst_amount': float(getattr(item, 'cgst_amount', 0) or 0),
-        'sgst_amount': float(getattr(item, 'sgst_amount', 0) or 0),
-        'igst_amount': float(getattr(item, 'igst_amount', 0) or 0),
-        'total_amount': float(getattr(item, 'total_amount', 0) or 0),
     }
+    
+    if hasattr(item, 'received_quantity'):
+        # Handle GRN items
+        item_data['quantity'] = float(item.received_quantity or 0)
+        item_data['ordered_quantity'] = float(item.ordered_quantity or 0)
+        item_data['accepted_quantity'] = float(item.accepted_quantity or 0)
+        item_data['rejected_quantity'] = float(item.rejected_quantity or 0)
+        item_data['gst_rate'] = 0.0
+        item_data['discount_percentage'] = 0.0
+        item_data['discount_amount'] = 0.0
+        item_data['cgst_amount'] = 0.0
+        item_data['sgst_amount'] = 0.0
+        item_data['igst_amount'] = 0.0
+        item_data['total_amount'] = float(item.total_cost or 0)
+    else:
+        # Handle standard voucher items
+        item_data['quantity'] = float(item.quantity or 0)
+        item_data['gst_rate'] = float(getattr(item, 'gst_rate', 0) or 0)
+        item_data['discount_percentage'] = float(getattr(item, 'discount_percentage', 0) or 0)
+        item_data['discount_amount'] = float(getattr(item, 'discount_amount', 0) or 0)
+        item_data['cgst_amount'] = float(getattr(item, 'cgst_amount', 0) or 0)
+        item_data['sgst_amount'] = float(getattr(item, 'sgst_amount', 0) or 0)
+        item_data['igst_amount'] = float(getattr(item, 'igst_amount', 0) or 0)
+        item_data['total_amount'] = float(getattr(item, 'total_amount', 0) or 0)
     
     # Add product name if available
     if hasattr(item, 'product') and item.product:

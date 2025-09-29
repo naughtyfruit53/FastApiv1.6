@@ -337,7 +337,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                       onView={() => handleView(voucher.id)}
                       onEdit={() => handleEdit(voucher.id)}
                       onDelete={() => handleDelete(voucher)}
-                      onPrint={() => handleGeneratePDF()}
+                      onPrint={handleGeneratePDF}
                       showKebab={true}
                       onClose={() => {}}
                     />
