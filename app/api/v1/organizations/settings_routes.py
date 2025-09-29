@@ -19,7 +19,7 @@ router = APIRouter(prefix="/settings", tags=["organization-settings"])
 @router.get("/", response_model=OrganizationSettingsResponse)
 async def get_organization_settings(
     db: Session = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_SETTINGS))
+    current_user = Depends(require_organization_permission(Permission.ACCESS_ORG_SETTINGS))
 ):
     """Get organization settings for the current user's organization"""
     
@@ -45,9 +45,9 @@ async def get_organization_settings(
 async def update_organization_settings(
     settings_update: OrganizationSettingsUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_SETTINGS))
+    current_user = Depends(require_organization_permission(Permission.ACCESS_ORG_SETTINGS))
 ):
-    """Update organization settings (requires super admin role)"""
+    """Update organization settings (requires org admin or super admin role)"""
     
     # Get existing settings
     settings = db.query(OrganizationSettings).filter(
@@ -75,9 +75,9 @@ async def update_organization_settings(
 async def create_organization_settings(
     settings_create: OrganizationSettingsCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_SETTINGS))
+    current_user = Depends(require_organization_permission(Permission.ACCESS_ORG_SETTINGS))
 ):
-    """Create organization settings (super admin only)"""
+    """Create organization settings (org admin or super admin only)"""
     
     # Check if settings already exist
     existing_settings = db.query(OrganizationSettings).filter(
