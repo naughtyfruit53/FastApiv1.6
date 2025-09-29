@@ -40,6 +40,11 @@ cryptography==45.0.7  # Already specified above but ensuring version
 azure-identity==1.17.1  # For Microsoft Graph authentication
 msgraph-sdk==1.4.0  # Microsoft Graph SDK
 
+# Email Module Dependencies
+bleach==6.0.0  # HTML sanitization
+beautifulsoup4==4.12.2  # HTML parsing
+apscheduler==3.10.4  # Background task scheduling
+
 # ML and Financial Modeling Dependencies
 scikit-learn==1.5.2
 numpy==1.26.4
