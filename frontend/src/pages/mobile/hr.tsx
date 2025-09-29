@@ -9,7 +9,23 @@ import {
   MobileSearchBar 
 } from '../../components/mobile';
 
-// Sample HR data
+// TODO: CRITICAL - Replace hardcoded data with real HR API integration
+// TODO: Integrate with HR services (employee management, payroll, attendance)
+// TODO: Implement mobile employee directory with advanced search and filters
+// TODO: Add mobile timesheet entry with clock in/out functionality and geolocation
+// TODO: Create leave request forms optimized for mobile with approval workflow
+// TODO: Implement performance review interface with mobile forms and rating systems
+// TODO: Add HR dashboard with real employee metrics and KPIs
+// TODO: Create employee self-service portal for mobile access
+// TODO: Add mobile attendance tracking with GPS-based check-in/check-out
+// TODO: Implement HR analytics dashboard with mobile-friendly charts
+// TODO: Add employee document upload and viewing capabilities
+// TODO: Create payroll management interface for mobile
+// TODO: Implement recruitment workflow with candidate management
+// TODO: Add employee onboarding process for mobile
+// TODO: Create time and attendance reporting with mobile charts
+
+// Sample HR data - REPLACE WITH REAL API INTEGRATION
 const employeesData = [
   {
     id: 'EMP-001',

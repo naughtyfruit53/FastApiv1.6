@@ -8,7 +8,23 @@ import {
   MobileSearchBar 
 } from '../../components/mobile';
 
-// Sample report data
+// TODO: CRITICAL - Replace hardcoded data with real reporting API integration
+// TODO: Integrate with reporting services and analytics APIs across all modules
+// TODO: Implement mobile-optimized report viewing interface with zoom and scroll
+// TODO: Add interactive chart components optimized for touch interactions
+// TODO: Create mobile export functionality (PDF, Excel) with native sharing
+// TODO: Implement report scheduling with mobile notifications and delivery
+// TODO: Add dashboard customization with drag-drop widgets for mobile
+// TODO: Create drill-down analytics with touch navigation and data exploration
+// TODO: Implement offline report caching for mobile access without connectivity
+// TODO: Add mobile-specific KPI widgets and summary dashboards
+// TODO: Create report sharing functionality via mobile apps and social platforms
+// TODO: Implement real-time data refresh and live reporting updates
+// TODO: Add advanced filtering and search capabilities for report data
+// TODO: Create mobile report templates and customization tools
+// TODO: Implement cross-module reporting with unified data views
+
+// Sample report data - REPLACE WITH REAL API INTEGRATION
 const reportCategories = [
   {
     title: 'Sales Reports',

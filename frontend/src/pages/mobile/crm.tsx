@@ -9,7 +9,20 @@ import {
   MobileSearchBar 
 } from '../../components/mobile';
 
-// Sample CRM data
+// TODO: CRITICAL - Replace hardcoded data with crmService integration
+// TODO: Integrate with crmService.getCustomers(), getLeads(), getOpportunities()
+// TODO: Add customer detail view with interaction history
+// TODO: Implement lead conversion workflow with mobile forms
+// TODO: Add mobile-optimized pipeline with swipeable stages
+// TODO: Implement activity timeline with touch interactions
+// TODO: Add communication tracking (calls, emails, meetings)
+// TODO: Implement deal forecasting with mobile-friendly charts
+// TODO: Add contact import/export functionality
+// TODO: Implement customer segmentation and tagging
+// TODO: Add customer interaction history timeline
+// TODO: Create mobile-optimized lead scoring interface
+
+// Sample CRM data - REPLACE WITH REAL API INTEGRATION  
 const customersData = [
   {
     id: 1,

@@ -18,7 +18,23 @@ import {
 } from '../../components/mobile';
 import { useAuth } from '../../context/AuthContext';
 
-// Settings categories
+// TODO: CRITICAL - Integrate with real user management and settings APIs
+// TODO: Connect with user profile services for real user data and preferences
+// TODO: Implement mobile user management interface with role assignment
+// TODO: Create organized settings navigation with search and categorization
+// TODO: Add permission management interface for mobile admin users
+// TODO: Implement granular notification preferences with push notification settings
+// TODO: Create mobile-optimized admin tools and system dashboards
+// TODO: Add system monitoring dashboard with mobile-friendly metrics
+// TODO: Implement mobile backup/restore functionality with progress tracking
+// TODO: Create comprehensive user profile management with photo upload
+// TODO: Add mobile-specific security settings (biometric auth, device management)
+// TODO: Implement theme customization and dark mode support
+// TODO: Create language and localization settings for mobile
+// TODO: Add data management tools (export, import, cleanup)
+// TODO: Implement help and support integration with chat/ticket system
+
+// Settings categories - INTEGRATE WITH REAL USER PREFERENCES API
 const settingsCategories = [
   {
     title: 'Account',
