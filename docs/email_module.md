@@ -545,7 +545,346 @@ For issues with the email module:
 4. Verify provider settings
 5. Check network connectivity
 
-### Contributing
+### Frontend Implementation
+
+### Email Module Components
+
+The frontend email module consists of three main components:
+
+#### 1. Inbox Component (`frontend/src/pages/email/Inbox.tsx`)
+
+The main email list interface with:
+- Email list with pagination and filtering
+- Folder navigation (Inbox, Sent, Archived, Trash)
+- Real-time sync functionality
+- OAuth account integration
+- Search and status filtering
+
+**Usage:**
+```tsx
+import Inbox from '../pages/email/Inbox';
+
+<Inbox
+  selectedAccount={selectedAccount}
+  onEmailSelect={(email) => handleEmailClick(email)}
+  onThreadSelect={(threadId) => handleThreadView(threadId)}
+  onCompose={() => handleCompose()}
+/>
+```
+
+#### 2. ThreadView Component (`frontend/src/pages/email/ThreadView.tsx`)
+
+Email conversation interface with:
+- Expandable email messages in conversation
+- Attachment preview and download
+- Reply/Reply All/Forward actions
+- Email status management
+- HTML content sanitization
+
+**Usage:**
+```tsx
+import ThreadView from '../pages/email/ThreadView';
+
+<ThreadView
+  threadId={threadId}
+  onBack={() => setView('inbox')}
+  onReply={(email) => handleReply(email)}
+  onReplyAll={(email) => handleReplyAll(email)}
+  onForward={(email) => handleForward(email)}
+/>
+```
+
+#### 3. Composer Component (`frontend/src/pages/email/Composer.tsx`)
+
+Email composition interface with:
+- Rich text editor with formatting
+- Attachment upload and management
+- Template integration for vouchers
+- Priority settings and delivery options
+- Reply/Forward prefilling
+
+**Usage:**
+```tsx
+import Composer from '../pages/email/Composer';
+
+<Composer
+  mode="new" // or "reply", "replyAll", "forward"
+  originalEmail={originalEmail} // for replies/forwards
+  selectedAccount={selectedAccount}
+  onClose={() => setView('inbox')}
+  onSent={(emailId) => handleEmailSent(emailId)}
+/>
+```
+
+### Email Service Integration
+
+The enhanced email service (`frontend/src/services/emailService.ts`) provides:
+
+#### Core Operations
+```tsx
+import { emailService } from '../services/emailService';
+
+// Fetch mail accounts
+const accounts = await emailService.getMailAccounts();
+
+// Get emails for account
+const emailsResponse = await emailService.getEmails(
+  accountId,
+  'INBOX', // folder
+  50,      // limit
+  0,       // offset
+  'unread' // status filter
+);
+
+// Send composed email
+const result = await emailService.composeEmail(emailData, accountId);
+
+// Update email status
+await emailService.updateEmailStatus(emailId, 'read');
+
+// Trigger manual sync
+await emailService.triggerSync(accountId);
+```
+
+#### Template Integration
+```tsx
+// Get available templates
+const templates = await emailService.getEmailTemplates();
+
+// Apply template with data
+const rendered = await emailService.applyTemplate(templateId, {
+  customer_name: 'John Doe',
+  invoice_number: 'INV-001',
+  amount: 1000
+});
+```
+
+### OAuth Integration Setup
+
+#### Frontend OAuth Flow
+
+1. **Initialize OAuth Flow**
+```tsx
+import { useOAuth } from '../hooks/useOAuth';
+
+const { initiateOAuthFlow, getProviders } = useOAuth();
+
+// Get available providers
+const providers = await getProviders();
+
+// Start OAuth flow
+await initiateOAuthFlow('google');
+// This redirects to provider, then back to callback
+```
+
+2. **OAuth Callback Handling**
+```tsx
+// In your OAuth callback page
+const { handleOAuthCallback } = useOAuth();
+
+const handleCallback = async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const state = urlParams.get('state');
+  const provider = localStorage.getItem(`oauth_provider_${state}`);
+
+  if (code && state && provider) {
+    try {
+      await handleOAuthCallback(provider, code, state);
+      // Redirect to email module
+      router.push('/email');
+    } catch (error) {
+      console.error('OAuth callback failed:', error);
+    }
+  }
+};
+```
+
+3. **OAuth Login Button**
+```tsx
+import OAuthLoginButton from '../components/OAuthLoginButton';
+
+<OAuthLoginButton
+  variant="button" // or "list"
+  onError={(error) => setError(error)}
+/>
+```
+
+### Navigation Integration
+
+The email module is integrated into the main navigation:
+
+```tsx
+// In menuConfig.tsx
+email: {
+  title: 'Email',
+  icon: <Email />,
+  sections: [
+    {
+      title: 'Email Management',
+      items: [
+        { name: 'Inbox', path: '/email', icon: <Email /> },
+        { name: 'Compose', path: '/email?compose=true', icon: <NoteAdd /> },
+        { name: 'Account Settings', path: '/email/accounts', icon: <Settings /> }
+      ]
+    }
+  ]
+}
+```
+
+### Testing
+
+#### Unit Tests
+
+```bash
+# Run email module tests
+npm test -- --testPathPattern=email
+
+# Run specific test files
+npm test emailService.test.ts
+npm test Inbox.test.tsx
+```
+
+#### E2E Test Structure
+
+```tsx
+// Example E2E test for email workflow
+describe('Email Module E2E', () => {
+  it('should complete email workflow', async () => {
+    // 1. OAuth login
+    await page.goto('/email');
+    await page.click('[data-testid="oauth-login-button"]');
+    
+    // 2. Select provider and authenticate
+    await page.click('text=Connect Google');
+    // Handle OAuth flow...
+    
+    // 3. Verify inbox loads
+    await page.waitForSelector('[data-testid="email-list"]');
+    
+    // 4. Compose and send email
+    await page.click('text=Compose');
+    await page.fill('[placeholder="Enter email addresses"]', 'test@example.com');
+    await page.fill('[placeholder="Subject"]', 'Test Email');
+    await page.fill('.ql-editor', 'Test email content');
+    await page.click('text=Send');
+    
+    // 5. Verify email sent
+    await page.waitForSelector('text=Email sent successfully');
+  });
+});
+```
+
+### Attachment Handling
+
+#### Upload Attachments
+```tsx
+const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const files = event.target.files;
+  if (files) {
+    const newAttachments = Array.from(files).map(file => 
+      Object.assign(file, { id: generateId() })
+    );
+    setAttachments([...attachments, ...newAttachments]);
+  }
+};
+```
+
+#### Download Attachments
+```tsx
+const handleDownload = async (attachmentId: number) => {
+  try {
+    const response = await emailService.downloadAttachment(attachmentId);
+    // Handle download response
+    console.log('Download started:', response.filename);
+  } catch (error) {
+    console.error('Download failed:', error);
+  }
+};
+```
+
+### Inline Images and Rich Content
+
+The composer uses ReactQuill for rich text editing:
+
+```tsx
+const quillModules = {
+  toolbar: [
+    [{ 'header': '1'}, {'header': '2'}],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{'list': 'ordered'}, {'list': 'bullet'}],
+    ['link', 'image'],
+    ['clean']
+  ]
+};
+
+<ReactQuill
+  value={body}
+  onChange={setBody}
+  modules={quillModules}
+  style={{ height: '200px' }}
+/>
+```
+
+### Mobile Responsiveness
+
+The email components are built with mobile-first responsive design:
+
+```tsx
+// Mobile-responsive inbox layout
+<Box sx={{ 
+  display: 'flex', 
+  flexDirection: { xs: 'column', md: 'row' },
+  height: '100%' 
+}}>
+  <Box sx={{ 
+    width: { xs: '100%', md: 240 },
+    borderRight: { md: 1 },
+    borderColor: 'divider'
+  }}>
+    {/* Sidebar */}
+  </Box>
+  <Box sx={{ flex: 1 }}>
+    {/* Main content */}
+  </Box>
+</Box>
+```
+
+### Error Handling
+
+Comprehensive error handling throughout the email module:
+
+```tsx
+// Service-level error handling
+try {
+  const result = await emailService.getEmails(accountId);
+  return result;
+} catch (error) {
+  if (error.response?.status === 401) {
+    // Handle authentication error
+    redirectToLogin();
+  } else if (error.response?.status === 403) {
+    // Handle permission error
+    showPermissionError();
+  } else {
+    // Handle general error
+    showErrorMessage(error.message);
+  }
+  throw error;
+}
+
+// Component-level error boundaries
+const { data, error, isLoading } = useQuery({
+  queryKey: ['emails'],
+  queryFn: () => emailService.getEmails(accountId),
+  onError: (error) => {
+    console.error('Failed to load emails:', error);
+    setErrorMessage('Failed to load emails. Please try again.');
+  }
+});
+```
+
+## Contributing
 
 To contribute improvements:
 
