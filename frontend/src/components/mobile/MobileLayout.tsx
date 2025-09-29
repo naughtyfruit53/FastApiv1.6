@@ -1,18 +1,21 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { Box } from '@mui/material';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
+import { useAuth } from '../../context/AuthContext';
 import MobileHeader from './MobileHeader';
 import MobileBottomNav from './MobileBottomNav';
+import MobileDrawerNavigation from './MobileDrawerNavigation';
 
 interface MobileLayoutProps {
   children: ReactNode;
   title?: string;
   subtitle?: string;
   onBack?: () => void;
-  onMenuToggle?: () => void;
   rightActions?: ReactNode;
   showBackButton?: boolean;
   showMenuButton?: boolean;
+  showSearchButton?: boolean;
+  showHomeButton?: boolean;
   showBottomNav?: boolean;
   headerElevation?: number;
   className?: string;
@@ -23,19 +26,30 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
   title = 'FastAPI v1.6',
   subtitle,
   onBack,
-  onMenuToggle,
   rightActions,
   showBackButton = false,
   showMenuButton = true,
+  showSearchButton = true,
+  showHomeButton = false,
   showBottomNav = true,
   headerElevation = 1,
   className = '',
 }) => {
   const { isMobile } = useMobileDetection();
+  const { user, logout } = useAuth();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (!isMobile) {
     return <>{children}</>;
   }
+
+  const handleMenuToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  const handleDrawerClose = () => {
+    setDrawerOpen(false);
+  };
 
   return (
     <Box
@@ -52,11 +66,14 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         title={title}
         subtitle={subtitle}
         onBack={onBack}
-        onMenuToggle={onMenuToggle}
+        onMenuToggle={handleMenuToggle}
         rightActions={rightActions}
         showBackButton={showBackButton}
         showMenuButton={showMenuButton}
+        showSearchButton={showSearchButton}
+        showHomeButton={showHomeButton}
         elevation={headerElevation}
+        user={user}
       />
 
       <Box
@@ -73,6 +90,14 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
       </Box>
 
       {showBottomNav && <MobileBottomNav />}
+
+      {/* Enhanced Mobile Drawer Navigation */}
+      <MobileDrawerNavigation
+        open={drawerOpen}
+        onClose={handleDrawerClose}
+        user={user}
+        onLogout={logout}
+      />
     </Box>
   );
 };

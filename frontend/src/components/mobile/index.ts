@@ -19,3 +19,9 @@ export { default as SwipeableCard } from './SwipeableCard';
 export { default as MobileBottomSheet } from './MobileBottomSheet';
 export { default as MobileContextualMenu } from './MobileContextualMenu';
 export { default as KeyboardNavigation, SkipLink, useFocusManager } from './KeyboardNavigation';
+
+// Enhanced navigation components
+export { default as MobileDrawerNavigation } from './MobileDrawerNavigation';
+export { default as NavigationBreadcrumbs } from './NavigationBreadcrumbs';
+export { default as MobileGlobalSearch } from './MobileGlobalSearch';
+export { default as MobileContextualActions, createStandardActions } from './MobileContextualActions';
