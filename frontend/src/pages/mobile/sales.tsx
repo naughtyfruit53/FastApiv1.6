@@ -6,7 +6,8 @@ import {
   MobileCard, 
   MobileButton, 
   MobileTable,
-  MobileSearchBar 
+  MobileSearchBar,
+  MobilePullToRefresh 
 } from '../../components/mobile';
 import useSharedSales from '../../hooks/useSharedSales';
 import ModernLoading from "../../components/ModernLoading";
@@ -138,168 +139,174 @@ const MobileSales: React.FC = () => {
       rightActions={rightActions}
       showBottomNav={true}
     >
-      {/* Search and Filter */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <MobileSearchBar
-            value={localSearchQuery}
-            onChange={handleSearch}
-            placeholder="Search leads or companies..."
-          />
-        </Box>
-        <MobileButton
-          variant="outlined"
-          startIcon={<FilterList />}
-          sx={{ minWidth: 'auto', px: 2 }}
-        >
-          Filter
-        </MobileButton>
-      </Box>
-
-      {/* Sales Metrics - Using shared business logic */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={4}>
-          <MobileCard>
-            <Box sx={{ textAlign: 'center' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-                <TrendingUp sx={{ fontSize: '1.5rem', color: 'success.main' }} />
-              </Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
-                {metrics?.formatted_sales_this_month || '₹0'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Sales This Month
-              </Typography>
-              {metrics?.sales_trend && (
-                <Typography variant="caption" sx={{ display: 'block', color: 'success.main' }}>
-                  +{metrics.sales_trend}%
-                </Typography>
-              )}
-            </Box>
-          </MobileCard>
-        </Grid>
-        <Grid item xs={4}>
-          <MobileCard>
-            <Box sx={{ textAlign: 'center' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-                <Person sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
-              </Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                {metrics?.total_leads || 0}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Total Leads
-              </Typography>
-              <Typography variant="caption" sx={{ display: 'block', color: 'primary.main' }}>
-                +{metrics?.leads_this_month || 0} this month
-              </Typography>
-            </Box>
-          </MobileCard>
-        </Grid>
-        <Grid item xs={4}>
-          <MobileCard>
-            <Box sx={{ textAlign: 'center' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-                <Business sx={{ fontSize: '1.5rem', color: 'warning.main' }} />
-              </Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'warning.main' }}>
-                {metrics?.win_rate || 0}%
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Win Rate
-              </Typography>
-              <Typography variant="caption" sx={{ display: 'block' }}>
-                {metrics?.total_opportunities || 0} opportunities
-              </Typography>
-            </Box>
-          </MobileCard>
-        </Grid>
-      </Grid>
-
-      {/* Sales Target Progress */}
-      {metrics && (
-        <MobileCard title="Monthly Target">
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Progress</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {metrics.target_achievement}%
-              </Typography>
-            </Box>
-            <Box sx={{ 
-              width: '100%', 
-              height: 8, 
-              bgcolor: 'grey.200', 
-              borderRadius: 1,
-              overflow: 'hidden'
-            }}>
-              <Box sx={{ 
-                width: `${Math.min(metrics.target_achievement, 100)}%`, 
-                height: '100%',
-                bgcolor: metrics.target_achievement >= 100 ? 'success.main' : 'primary.main',
-                transition: 'width 0.3s ease-in-out'
-              }} />
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                Achieved: {metrics.formatted_sales_this_month}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Target: {metrics.formatted_sales_target}
-              </Typography>
-            </Box>
+      <MobilePullToRefresh
+        onRefresh={refresh}
+        isRefreshing={refreshing}
+        enabled={true}
+      >
+        {/* Search and Filter */}
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <MobileSearchBar
+              value={localSearchQuery}
+              onChange={handleSearch}
+              placeholder="Search leads or companies..."
+            />
           </Box>
-        </MobileCard>
-      )}
+          <MobileButton
+            variant="outlined"
+            startIcon={<FilterList />}
+            sx={{ minWidth: 'auto', px: 2 }}
+          >
+            Filter
+          </MobileButton>
+        </Box>
 
-      {/* Recent Leads - Using shared data */}
-      <MobileCard title="Recent Leads">
-        <MobileTable
-          columns={leadsColumns}
-          data={filteredLeads}
-          onRowClick={(row) => console.log('Lead clicked:', row)}
-          showChevron={true}
-          emptyMessage="No leads found"
-        />
-      </MobileCard>
-
-      {/* Quick Actions */}
-      <MobileCard title="Quick Actions">
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <MobileButton variant="outlined" fullWidth>
-              Add Lead
-            </MobileButton>
+        {/* Sales Metrics - Using shared business logic */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={4}>
+            <MobileCard>
+              <Box sx={{ textAlign: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+                  <TrendingUp sx={{ fontSize: '1.5rem', color: 'success.main' }} />
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
+                  {metrics?.formatted_sales_this_month || '₹0'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Sales This Month
+                </Typography>
+                {metrics?.sales_trend && (
+                  <Typography variant="caption" sx={{ display: 'block', color: 'success.main' }}>
+                    +{metrics.sales_trend}%
+                  </Typography>
+                )}
+              </Box>
+            </MobileCard>
           </Grid>
-          <Grid item xs={6}>
-            <MobileButton variant="outlined" fullWidth>
-              Sales Report
-            </MobileButton>
+          <Grid item xs={4}>
+            <MobileCard>
+              <Box sx={{ textAlign: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+                  <Person sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  {metrics?.total_leads || 0}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Total Leads
+                </Typography>
+                <Typography variant="caption" sx={{ display: 'block', color: 'primary.main' }}>
+                  +{metrics?.leads_this_month || 0} this month
+                </Typography>
+              </Box>
+            </MobileCard>
           </Grid>
-          <Grid item xs={6}>
-            <MobileButton variant="outlined" fullWidth>
-              Follow Up
-            </MobileButton>
-          </Grid>
-          <Grid item xs={6}>
-            <MobileButton variant="outlined" fullWidth>
-              Customer List
-            </MobileButton>
+          <Grid item xs={4}>
+            <MobileCard>
+              <Box sx={{ textAlign: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+                  <Business sx={{ fontSize: '1.5rem', color: 'warning.main' }} />
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'warning.main' }}>
+                  {metrics?.win_rate || 0}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Win Rate
+                </Typography>
+                <Typography variant="caption" sx={{ display: 'block' }}>
+                  {metrics?.total_opportunities || 0} opportunities
+                </Typography>
+              </Box>
+            </MobileCard>
           </Grid>
         </Grid>
-      </MobileCard>
 
-      {/* TODO: Future implementations using shared business logic */}
-      {/* TODO: Integrate with crmService.getSalesData() - now implemented via useSharedSales */}
-      {/* TODO: Add lead management interface with swipeable cards */}
-      {/* TODO: Implement mobile-optimized opportunity pipeline */}
-      {/* TODO: Add customer analytics with touch-friendly charts */}
-      {/* TODO: Implement commission tracking dashboard */}
-      {/* TODO: Add advanced filtering and search capabilities - partially implemented */}
-      {/* TODO: Implement export functionality for mobile (PDF, Excel sharing) */}
-      {/* TODO: Add touch-optimized forms for lead/opportunity creation */}
-      {/* TODO: Add pull-to-refresh for live data updates */}
-      {/* TODO: Implement offline data caching for mobile access */}
+        {/* Sales Target Progress */}
+        {metrics && (
+          <MobileCard title="Monthly Target">
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2">Progress</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {metrics.target_achievement}%
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                width: '100%', 
+                height: 8, 
+                bgcolor: 'grey.200', 
+                borderRadius: 1,
+                overflow: 'hidden'
+              }}>
+                <Box sx={{ 
+                  width: `${Math.min(metrics.target_achievement, 100)}%`, 
+                  height: '100%',
+                  bgcolor: metrics.target_achievement >= 100 ? 'success.main' : 'primary.main',
+                  transition: 'width 0.3s ease-in-out'
+                }} />
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Achieved: {metrics.formatted_sales_this_month}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Target: {metrics.formatted_sales_target}
+                </Typography>
+              </Box>
+            </Box>
+          </MobileCard>
+        )}
+
+        {/* Recent Leads - Using shared data */}
+        <MobileCard title="Recent Leads">
+          <MobileTable
+            columns={leadsColumns}
+            data={filteredLeads}
+            onRowClick={(row) => console.log('Lead clicked:', row)}
+            showChevron={true}
+            emptyMessage="No leads found"
+          />
+        </MobileCard>
+
+        {/* Quick Actions */}
+        <MobileCard title="Quick Actions">
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <MobileButton variant="outlined" fullWidth>
+                Add Lead
+              </MobileButton>
+            </Grid>
+            <Grid item xs={6}>
+              <MobileButton variant="outlined" fullWidth>
+                Sales Report
+              </MobileButton>
+            </Grid>
+            <Grid item xs={6}>
+              <MobileButton variant="outlined" fullWidth>
+                Follow Up
+              </MobileButton>
+            </Grid>
+            <Grid item xs={6}>
+              <MobileButton variant="outlined" fullWidth>
+                Customer List
+              </MobileButton>
+            </Grid>
+          </Grid>
+        </MobileCard>
+
+        {/* TODO: Future implementations using shared business logic */}
+        {/* TODO: Integrate with crmService.getSalesData() - now implemented via useSharedSales */}
+        {/* TODO: Add lead management interface with swipeable cards */}
+        {/* TODO: Implement mobile-optimized opportunity pipeline */}
+        {/* TODO: Add customer analytics with touch-friendly charts */}
+        {/* TODO: Implement commission tracking dashboard */}
+        {/* TODO: Add advanced filtering and search capabilities - partially implemented */}
+        {/* TODO: Implement export functionality for mobile (PDF, Excel sharing) */}
+        {/* TODO: Add touch-optimized forms for lead/opportunity creation */}
+        {/* TODO: Add pull-to-refresh for live data updates - now implemented */}
+        {/* TODO: Implement offline data caching for mobile access */}
+      </MobilePullToRefresh>
     </MobileDashboardLayout>
   );
 };
