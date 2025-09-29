@@ -409,3 +409,91 @@ class OAuth2Service:
         self.db.commit()
         
         return user_token if user_token.is_active() else None
+    
+    def get_email_credentials(self, token_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get email credentials for IMAP/SMTP access
+        Returns credentials dict with access_token for OAuth2 XOAUTH2 authentication
+        """
+        user_token = self.get_valid_token(token_id)
+        if not user_token:
+            return None
+        
+        try:
+            # Decrypt access token
+            access_token = decrypt_field(
+                user_token.access_token_encrypted,
+                EncryptionKeys.PII_KEY
+            )
+            
+            credentials = {
+                "provider": user_token.provider.value,
+                "email": user_token.email_address,
+                "access_token": access_token,
+                "auth_method": "oauth2",
+                "token_type": "Bearer"
+            }
+            
+            # Add provider-specific settings
+            if user_token.provider == OAuthProvider.GOOGLE:
+                credentials.update({
+                    "imap_host": "imap.gmail.com",
+                    "imap_port": 993,
+                    "smtp_host": "smtp.gmail.com",
+                    "smtp_port": 587,
+                    "use_ssl": True
+                })
+            elif user_token.provider == OAuthProvider.MICROSOFT:
+                credentials.update({
+                    "imap_host": "outlook.office365.com",
+                    "imap_port": 993,
+                    "smtp_host": "smtp-mail.outlook.com",
+                    "smtp_port": 587,
+                    "use_ssl": True
+                })
+            
+            return credentials
+            
+        except Exception as e:
+            logger.error(f"Error getting email credentials: {str(e)}")
+            return None
+    
+    def list_user_tokens(self, user_id: int, organization_id: Optional[int] = None) -> List[UserEmailToken]:
+        """
+        List all active OAuth tokens for a user
+        """
+        query = self.db.query(UserEmailToken).filter(
+            UserEmailToken.user_id == user_id,
+            UserEmailToken.status == TokenStatus.ACTIVE
+        )
+        
+        if organization_id:
+            query = query.filter(UserEmailToken.organization_id == organization_id)
+        
+        return query.order_by(UserEmailToken.created_at.desc()).all()
+    
+    def get_token_info(self, token_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get token information (without sensitive data)
+        """
+        user_token = self.db.query(UserEmailToken).filter(
+            UserEmailToken.id == token_id
+        ).first()
+        
+        if not user_token:
+            return None
+        
+        return {
+            "id": user_token.id,
+            "provider": user_token.provider.value,
+            "email_address": user_token.email_address,
+            "display_name": user_token.display_name,
+            "status": user_token.status.value,
+            "scopes": user_token.scopes,
+            "is_expired": user_token.is_expired(),
+            "is_active": user_token.is_active(),
+            "created_at": user_token.created_at,
+            "expires_at": user_token.expires_at,
+            "last_used_at": user_token.last_used_at,
+            "refresh_count": user_token.refresh_count
+        }

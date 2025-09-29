@@ -166,6 +166,11 @@ from .master_data_models import (
     Category, Unit, TaxCode, PaymentTermsExtended,
     CategoryType, UnitType, TaxType
 )
+# Import email models
+from .email import (
+    MailAccount, Email, EmailThread, EmailAttachment, EmailSyncLog,
+    EmailAccountType, EmailSyncStatus, EmailStatus as EmailMessageStatus, EmailPriority
+)
 
 # No imports from .base as all models have been moved
 
@@ -186,6 +191,10 @@ __all__ = [
     "Company", "AuditLog", "EmailNotification", "NotificationTemplate", "NotificationLog",
     "NotificationPreference", "PaymentTerm", "OTPVerification", "EmailSend", "EmailProvider",
     "EmailStatus", "EmailType",
+    
+    # Email module models
+    "MailAccount", "Email", "EmailThread", "EmailAttachment", "EmailSyncLog",
+    "EmailAccountType", "EmailSyncStatus", "EmailMessageStatus", "EmailPriority",
     
     # Analytics models
     "ServiceAnalyticsEvent", "ReportConfiguration", "AnalyticsSummary",
