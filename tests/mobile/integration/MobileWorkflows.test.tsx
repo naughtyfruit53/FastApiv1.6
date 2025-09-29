@@ -1,12 +1,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Import mobile components for integration testing
-import { MobileDashboardLayout } from '../../../frontend/src/components/mobile';
+import MobileDashboardLayout from '../../../frontend/src/components/mobile/MobileDashboardLayout';
 import MobileBottomSheet from '../../../frontend/src/components/mobile/MobileBottomSheet';
 import SwipeableCard from '../../../frontend/src/components/mobile/SwipeableCard';
 import MobileContextualMenu from '../../../frontend/src/components/mobile/MobileContextualMenu';
