@@ -5,6 +5,7 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useRef,
 } from "react";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
@@ -30,9 +31,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const hasFetched = useRef(false); // Prevent multiple fetches
+  const isFetching = useRef(false); // Prevent concurrent fetches
 
   // Fetch the current user from API using the token in localStorage
   const fetchUser = async (retryCount = 0) => {
+    if (isFetching.current) return; // Prevent concurrent
+    isFetching.current = true;
     const maxRetries = 2;
     console.log(
       `[AuthProvider] fetchUser started - attempt ${retryCount + 1}/${maxRetries + 1}`,
@@ -145,6 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       } else {
         console.log("[AuthProvider] Already on login - no redirect needed");
       }
+    } finally {
+      isFetching.current = false;
+      setLoading(false); // Ensure loading is set to false in finally
     }
   };
 
@@ -158,14 +166,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       pathname: router.pathname,
       timestamp: new Date().toISOString(),
     });
-    if (token) {
+    if (token && !hasFetched.current) {
+      hasFetched.current = true; // Mark as fetched to prevent multiple calls
       console.log("[AuthProvider] Token found - starting user fetch");
-      fetchUser().finally(() => {
-        console.log(
-          "[AuthProvider] User fetch completed - setting loading to false",
-        );
-        setLoading(false);
-      });
+      fetchUser();
     } else {
       console.log(
         "[AuthProvider] No token found - marking auth ready and stopping loading",
@@ -173,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       markAuthReady();
       setLoading(false);
     }
-  }, [router.pathname]);
+  }, []); // Removed router.pathname dependency to prevent re-runs on path change
 
   // Handle post-login redirect with state preservation
   const handlePostLoginRedirect = () => {
@@ -251,7 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   const login = async (loginResponse: any) => {
     console.log("[AuthProvider] Login process started:", {
       hasToken: !!loginResponse.access_token,
-      hasRefreshToken: !!loginResponse.refresh_token,
+      hasRefresh: !!loginResponse.refresh_token,
       userRole: loginResponse.user_role,
       isSuperAdmin: loginResponse.user?.is_super_admin,
       hasOrgId: !!loginResponse.organization_id,
@@ -261,21 +265,21 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     localStorage.setItem("token", loginResponse.access_token);
     if (loginResponse.refresh_token) {
       localStorage.setItem("refresh_token", loginResponse.refresh_token);
-      console.log("[AuthProvider] Refresh token stored:", loginResponse.refresh_token);
+      console.log("[AuthProvider] Stored refresh token");
     } else {
       console.warn("[AuthProvider] No refresh token in login response");
     }
     console.log("[AuthProvider] Token stored in localStorage");
     if (loginResponse.user_role) {
       localStorage.setItem("user_role", loginResponse.user_role);
-      console.log("[AuthProvider] User role stored:", loginResponse.user_role);
+      console.log("[AuthProvider] Stored user_role:", loginResponse.user_role);
     }
     localStorage.setItem(
       "is_super_admin",
       loginResponse.user?.is_super_admin ? "true" : "false",
     );
     console.log(
-      "[AuthProvider] Super admin flag stored:",
+      "[AuthProvider] Stored is_super_admin:",
       loginResponse.user?.is_super_admin,
     );
     // Defensive: never store org_id in localStorage
@@ -354,6 +358,17 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     willRenderChildren: !loading,
     timestamp: new Date().toISOString(),
   });
+
+  // Timeout for loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        toast.error('Loading timeout. Please refresh the page or check your connection.');
+      }
+    }, 10000); // 10 seconds timeout
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   // Show loading spinner while auth state is being determined
   if (loading) {

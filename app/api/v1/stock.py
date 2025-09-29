@@ -460,6 +460,8 @@ async def update_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
+    org_id = require_current_organization_id(current_user)
+        
     stmt = select(Stock).where(Stock.product_id == product_id)
     result = await db.execute(stmt)
     stock = result.scalar_one_or_none()
@@ -476,6 +478,7 @@ async def update_stock(
             )
         
         stock = Stock(
+            organization_id=org_id,
             product_id=product_id,
             quantity=stock_update.quantity or 0.0,
             unit=stock_update.unit or product.unit,
@@ -511,6 +514,8 @@ async def adjust_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
+    org_id = require_current_organization_id(current_user)
+        
     stmt = select(Stock).where(Stock.product_id == product_id)
     result = await db.execute(stmt)
     stock = result.scalar_one_or_none()
@@ -529,6 +534,7 @@ async def adjust_stock(
         new_quantity = max(0, adjustment.quantity_change)
         
         stock = Stock(
+            organization_id=org_id,
             product_id=product_id,
             quantity=new_quantity,
             unit=product.unit,

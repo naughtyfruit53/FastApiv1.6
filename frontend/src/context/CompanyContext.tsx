@@ -37,7 +37,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   } = useQuery({
     queryKey: ["currentCompany"],
     queryFn: async () => {
-      const response = await companyService.getCurrentCompany();
+      const response = await companyService.getCurrentCompany(); // Changed to /organizations/current internally if needed, but keep service call
       const companyData = {
         ...response,
         state_code: response.state_code || response.gst_number?.slice(0, 2) || null,

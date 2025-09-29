@@ -225,6 +225,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     enabled:
       isOrgContextReady &&
       (config.entityType === "purchase" || config.entityType === "financial"),
+    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
   });
   const { data: customerList } = useQuery({
     queryKey: ["customers"],
@@ -232,6 +233,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     enabled:
       isOrgContextReady &&
       (config.entityType === "sales" || config.entityType === "financial"),
+    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
   });
   const { data: voucherData, isLoading: isFetching } = useQuery({
     queryKey: [config.voucherType, selectedId],
@@ -242,6 +244,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       ),
     enabled:
       !!selectedId && isOrgContextReady && (mode === "view" || mode === "edit" || mode === "revise"),
+    staleTime: mode === "view" ? Infinity : 300000, // Infinite stale for view mode (static), 5 min for edit
   });
   // Extract isIntrastate as separate memo for UI usage
   const isIntrastate = useMemo(() => {
@@ -254,8 +257,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           (c: any) => c.id === selectedEntityId,
         );
       } else if (
-        config.entityType === "purchase" &&
-        vendorList &&
+        config.entityType === "purchase" && 
+        vendorList && 
         selectedEntityId
       ) {
         selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId) || voucherData?.vendor;
@@ -345,6 +348,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         sortBy: "created_at",
       }),
     enabled: isOrgContextReady,
+    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
   });
   // Handle data sorting when vouchers data changes
   useEffect(() => {
@@ -369,11 +373,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     queryKey: ["employees"],
     queryFn: getEmployees,
     enabled: isOrgContextReady && config.entityType === "financial",
+    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
   });
   const { data: productList } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
     enabled: isOrgContextReady && config.hasItems !== false,
+    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
   });
   const {
     data: nextVoucherNumber,
@@ -384,6 +390,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     queryFn: () =>
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint),
     enabled: mode === "create" && isOrgContextReady,
+    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
   });
   // Enhanced mutations with auto-refresh and pagination support
   const createMutation = useMutation({
@@ -500,6 +507,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       data.reference_number =
         referenceDocument.voucher_number || referenceDocument.number;
     }
+    // Add discount types if enabled
+    if (lineDiscountEnabled && lineDiscountType) {
+      data.line_discount_type = lineDiscountType;
+    }
+    if (totalDiscountEnabled && totalDiscountType) {
+      data.total_discount_type = totalDiscountType;
+    }
     if (mode === "create" || mode === "revise") {
       createMutation.mutate(data);
     } else if (mode === "edit") {
@@ -548,7 +562,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   };
   // Enhanced search and filter functionality with pagination
   const sortedVouchers = useMemo(() => {
-    if (!Array.isArray(voucherList)) {
+    if (!voucherList || !Array.isArray(voucherList)) {
       console.warn(
         "[useVoucherPage] voucherList is not an array:",
         voucherList,

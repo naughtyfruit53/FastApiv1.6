@@ -41,13 +41,16 @@ import { useGstValidation } from "../../../hooks/useGstValidation"; // New GST h
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New discounts hook
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers"; // New utils
 import voucherFormStyles from "../../../styles/voucherFormStyles"; // New common styles import
+import { useQueryClient } from "@tanstack/react-query"; // Added for setQueryData
 
 const PurchaseOrderPage: React.FC = () => {
+  console.count('Render: PurchaseOrderPage');
   const { company, isLoading: companyLoading, error: companyError } = useCompany();
   const router = useRouter();
   const { productId, vendorId } = router.query;
   const config = getVoucherConfig("purchase-order");
   const voucherStyles = getVoucherStyles();
+  const queryClient = useQueryClient(); // Added for cache setting
 
   const {
     mode,
@@ -159,7 +162,7 @@ const PurchaseOrderPage: React.FC = () => {
       const productId = watch(`items.${index}.product_id`);
       return productList?.find((p: any) => p.id === productId) || null;
     });
-  }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
+  }, [fields, productList, watch]); // Removed fields.length and spread map as deps - use fields ref
 
   useEffect(() => {
     fields.forEach((_, index) => {
@@ -181,7 +184,7 @@ const PurchaseOrderPage: React.FC = () => {
         setStockLoading((prev) => ({ ...prev, [index]: false }));
       }
     });
-  }, [fields.map((f) => watch(`items.${fields.indexOf(f)}.product_id`)).join(","), setValue, fields.length]);
+  }, [fields, watch, setValue]); // Simplified deps - fields as array ref, watch for changes
 
   useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {
@@ -226,63 +229,53 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [mode, vendorId, vendorList, setValue]);
 
-  const handleVoucherClick = async (voucher: any) => {
-    try {
-      const response = await api.get(`/purchase-orders/${voucher.id}`);
-      const fullVoucherData = response.data;
-      setMode("view");
-      reset(fullVoucherData);
-    } catch (err) {
-      console.error("Error fetching voucher:", err);
-      setMode("view");
-      reset(voucher);
-    }
+  const handleVoucherClick = (voucher: any) => {
+    // Use the voucher from list (assumes full data from backend joins)
+    setMode("view");
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
   };
 
-  const handleEditWithData = async (voucher: any) => {
+  const handleEditWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
-    try {
-      const response = await api.get(`/purchase-orders/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      // Use handleEdit to properly set URL and selectedId
-      handleEdit(voucher.id);
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for edit:", err);
-      handleEdit(voucher.id);
-    }
+    handleEdit(voucher.id);
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['purchase-order', voucher.id], voucher);
   };
 
-  const handleViewWithData = async (voucher: any) => {
+  const handleViewWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
-    try {
-      const response = await api.get(`/purchase-orders/${voucher.id}`);
-      let fullVoucherData = response.data;
-      fullVoucherData.date = fullVoucherData.date ? new Date(fullVoucherData.date).toISOString().split('T')[0] : '';
-      // Use handleView to properly set URL and selectedId
-      handleView(voucher.id);
-      reset({
-        ...fullVoucherData,
-        items: fullVoucherData.items.map((item: any) => ({
-          ...item,
-          cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate,
-        })),
-      });
-    } catch (err) {
-      console.error("Error fetching voucher for view:", err);
-      handleView(voucher.id);
-    }
+    handleView(voucher.id);
+    reset({
+      ...voucher,
+      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      items: voucher.items.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      })),
+    });
+    // Prefill cache to avoid duplicate fetch
+    queryClient.setQueryData(['purchase-order', voucher.id], voucher);
   };
 
   useEffect(() => {
@@ -300,7 +293,6 @@ const PurchaseOrderPage: React.FC = () => {
             ...item,
             product_id: item.product_id,
             product_name: item.product?.product_name || item.product_name || "",
-            quantity: item.quantity,
             unit_price: item.unit_price,
             original_unit_price: item.product?.unit_price || item.unit_price || 0,
             discount_percentage: item.discount_percentage || 0,
@@ -309,7 +301,6 @@ const PurchaseOrderPage: React.FC = () => {
             cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
             sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
             igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
-            amount: item.total_amount,
             unit: item.unit,
             current_stock: item.current_stock || 0,
             reorder_level: item.reorder_level || 0,
@@ -473,7 +464,10 @@ const PurchaseOrderPage: React.FC = () => {
             <Autocomplete 
               size="small" 
               options={enhancedVendorOptions} 
-              getOptionLabel={(option: any) => option?.name || ""} 
+              getOptionLabel={(option: any) => {
+                if (typeof option === 'number') return '';
+                return option?.name || "";
+              }} 
               value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null} 
               onChange={(_, newValue) => { 
                 if (newValue?.id === null) setShowAddVendorModal(true); 
@@ -602,6 +596,16 @@ const PurchaseOrderPage: React.FC = () => {
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
+      </Container>
+    );
+  }
+
+  if (companyError) {
+    return (
+      <Container>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Error loading company details: {companyError.message}. Please try refreshing or contact support.
+        </Alert>
       </Container>
     );
   }

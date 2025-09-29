@@ -103,7 +103,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setValue("state", pincodeData.state);
       setValue("state_code", pincodeData.state_code);
     }
-  }, [pincodeData, setValue]);
+  }, [pincodeData]); // Dependency on pincodeData only
   // Handle pincode change with debouncing
   useEffect(() => {
     if (watchedPincode && /^\d{6}$/.test(watchedPincode)) {

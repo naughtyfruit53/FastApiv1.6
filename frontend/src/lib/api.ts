@@ -33,6 +33,7 @@ const handleTokenExpiry = () => {
     console.log("[API] Stored return URL:", returnUrl);
   }
   localStorage.removeItem("token");
+  localStorage.removeItem("refresh_token");
   localStorage.removeItem("user_role");
   localStorage.removeItem("is_super_admin");
   resetAuthReady();
@@ -70,7 +71,17 @@ export const resetAuthReady = (): any => {
 };
 
 const waitForAuthIfNeeded = async (config: any) => {
-  const publicEndpoints = ["/auth/login", "/auth/otp/", "/auth/admin/setup"];
+  const publicEndpoints = [
+    "/auth/login",
+    "/auth/otp/",
+    "/auth/admin/setup",
+    "/users/me",  // Critical for initial user fetch
+    "/organizations/current",  // Organization info
+    "/rbac/users/permissions",  // Permissions
+    "/companies/current",  // Company info
+    "/organizations/org-statistics",  // Stats
+    "/organizations/recent-activities",  // Recent activities
+  ];
   const isPublicEndpoint = publicEndpoints.some((endpoint) =>
     config.url?.includes(endpoint),
   );

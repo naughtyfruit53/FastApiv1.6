@@ -8,6 +8,8 @@ import AppSuperAdminDashboard from "./AppSuperAdminDashboard";
 import OrgDashboard from "./OrgDashboard";
 
 const Dashboard: React.FC = () => {
+  console.count('Render: Dashboard');
+  const { productId, vendorId } = useRouter().query;  // Added to prevent unused warning if needed
   const { user, loading } = useAuth();
   const { isMobile } = useMobileDetection();  // Added for mobile check
   const router = useRouter();
