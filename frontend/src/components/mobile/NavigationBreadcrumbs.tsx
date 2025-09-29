@@ -40,7 +40,10 @@ const NavigationBreadcrumbs: React.FC<NavigationBreadcrumbsProps> = ({
   const router = useRouter();
   const { isMobile } = useMobileDetection();
 
-  if (!isMobile) return null;
+  // Early return after all hooks
+  if (!isMobile) {
+    return null;
+  }
 
   const handleBack = () => {
     if (onBack) {

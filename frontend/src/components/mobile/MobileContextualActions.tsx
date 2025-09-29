@@ -66,7 +66,10 @@ const MobileContextualActions: React.FC<MobileContextualActionsProps> = ({
   const [open, setOpen] = useState(false);
   const { isMobile } = useMobileDetection();
 
-  if (!isMobile || hidden || actions.length === 0) return null;
+  // Early return after all hooks
+  if (!isMobile || hidden || actions.length === 0) {
+    return null;
+  }
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);

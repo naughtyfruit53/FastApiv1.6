@@ -72,7 +72,10 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
   const { isMobile } = useMobileDetection();
   const isSuperAdmin = user?.role === 'APP_SUPER_ADMIN';
 
-  if (!isMobile) return null;
+  // Early return after all hooks
+  if (!isMobile) {
+    return null;
+  }
 
   const handleSectionToggle = (sectionTitle: string) => {
     setExpandedSections(prev => 

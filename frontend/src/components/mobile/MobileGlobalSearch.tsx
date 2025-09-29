@@ -70,7 +70,10 @@ const MobileGlobalSearch: React.FC<MobileGlobalSearchProps> = ({
   const { isMobile } = useMobileDetection();
   const isSuperAdmin = user?.role === 'APP_SUPER_ADMIN';
 
-  if (!isMobile) return null;
+  // Early return after all hooks
+  if (!isMobile) {
+    return null;
+  }
 
   // Build comprehensive search index
   const searchIndex = useMemo(() => {
