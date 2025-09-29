@@ -9,7 +9,23 @@ import {
   MobileSearchBar 
 } from '../../components/mobile';
 
-// Sample service data
+// TODO: CRITICAL - Replace hardcoded data with real service API integration
+// TODO: Integrate with service management APIs (tickets, work orders, technicians)
+// TODO: Create mobile service dashboard with real-time metrics and KPIs
+// TODO: Implement technician mobile interface with GPS tracking and route optimization
+// TODO: Add work order mobile management with creation, assignment, and completion workflows
+// TODO: Create customer feedback collection interface with rating systems
+// TODO: Implement SLA monitoring interface with real-time alerts and compliance tracking
+// TODO: Add mobile appointment scheduling with calendar integration
+// TODO: Create service analytics dashboard with mobile-friendly charts and drill-down
+// TODO: Implement GPS-enabled dispatch tracking with live technician locations
+// TODO: Add customer communication tools (SMS, email, call integration)
+// TODO: Create mobile work order forms with photo capture and signature
+// TODO: Implement push notifications for service updates and alerts
+// TODO: Add offline service management capabilities with data synchronization
+// TODO: Create service reporting and export functionality for mobile
+
+// Sample service data - REPLACE WITH REAL API INTEGRATION
 const serviceTickets = [
   {
     id: 'SRV-2024-001',

@@ -9,7 +9,23 @@ import {
   MobileSearchBar 
 } from '../../components/mobile';
 
-// Sample inventory data
+// TODO: CRITICAL - Replace hardcoded data with real inventory API integration
+// TODO: Integrate with inventory services (stock management, movements, valuation)
+// TODO: Implement real-time stock monitoring with live updates and auto-refresh
+// TODO: Add mobile barcode scanning for stock management and transactions
+// TODO: Create quick stock adjustment forms optimized for mobile input
+// TODO: Implement low stock alert system with push notifications
+// TODO: Add mobile-optimized stock movement tracking with history
+// TODO: Create location-based inventory management for multi-warehouse
+// TODO: Implement mobile cycle count interface with barcode integration
+// TODO: Add inventory analytics dashboard with mobile-friendly charts
+// TODO: Create mobile bulk import functionality for stock data
+// TODO: Implement GPS-based stock tracking for field inventory
+// TODO: Add photo capture for stock verification and documentation
+// TODO: Create mobile inventory reporting with export capabilities
+// TODO: Implement offline inventory management with sync capabilities
+
+// Sample inventory data - REPLACE WITH REAL API INTEGRATION
 const inventoryData = [
   {
     id: 'PRD-001',

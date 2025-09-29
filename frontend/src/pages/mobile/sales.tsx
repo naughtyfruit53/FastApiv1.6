@@ -9,7 +9,19 @@ import {
   MobileSearchBar 
 } from '../../components/mobile';
 
-// Sample sales data
+// TODO: CRITICAL - Replace hardcoded data with real sales API integration
+// TODO: Integrate with crmService.getSalesData() or similar service
+// TODO: Add lead management interface with swipeable cards
+// TODO: Implement mobile-optimized opportunity pipeline
+// TODO: Add customer analytics with touch-friendly charts
+// TODO: Implement commission tracking dashboard
+// TODO: Add advanced filtering and search capabilities
+// TODO: Implement export functionality for mobile (PDF, Excel sharing)
+// TODO: Add touch-optimized forms for lead/opportunity creation
+// TODO: Add pull-to-refresh for live data updates
+// TODO: Implement offline data caching for mobile access
+
+// Sample sales data - REPLACE WITH REAL API INTEGRATION
 const salesData = [
   {
     id: 'INV-2024-001',

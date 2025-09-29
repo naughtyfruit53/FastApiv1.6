@@ -9,7 +9,22 @@ import {
   MobileSearchBar 
 } from '../../components/mobile';
 
-// Sample finance data
+// TODO: CRITICAL - Replace hardcoded data with real financial API integration
+// TODO: Integrate with financial services (accounts payable, receivable, ledger)
+// TODO: Add real-time financial dashboard with live metrics
+// TODO: Implement mobile-optimized accounts payable interface
+// TODO: Add accounts receivable with customer payment tracking
+// TODO: Create touch-friendly financial report viewers (P&L, Balance Sheet, Cash Flow)
+// TODO: Implement mobile expense entry and tracking
+// TODO: Add quick payment recording interface with barcode scanning
+// TODO: Create mobile-optimized charts for financial KPIs
+// TODO: Add bank reconciliation mobile workflow
+// TODO: Implement budget tracking with mobile alerts and notifications
+// TODO: Add financial analytics with drill-down capabilities
+// TODO: Implement offline financial data caching
+// TODO: Add export functionality (PDF, Excel) for mobile sharing
+
+// Sample finance data - REPLACE WITH REAL API INTEGRATION
 const financeData = [
   {
     id: 'TXN-2024-001',
