@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Enhanced Brevo Email Sender provides robust transactional email capabilities with fallback providers, retry logic, audit logging, and comprehensive monitoring for the TRITIQ ERP system.
+The Enhanced Brevo Email Sender provides robust transactional email capabilities with fallback providers, retry logic, audit logging, comprehensive monitoring, and **role-based automatic BCC functionality** for the TRITIQ ERP system.
 
 ## Features
 
@@ -11,6 +11,15 @@ The Enhanced Brevo Email Sender provides robust transactional email capabilities
 - Configurable via `BREVO_API_KEY` and `BREVO_FROM_EMAIL`
 - Support for both HTML and plain text emails
 - Provider response tracking and message ID capture
+- **NEW**: Automatic BCC support for organizational email hierarchy
+
+### Mail 1 Level Up Feature
+- Organization-wide toggle for role-based automatic BCC
+- Executive emails → BCC their assigned Manager
+- Manager emails → BCC Management users  
+- Management emails → No BCC (top level)
+- Configurable via Organization Settings API
+- Supports both Brevo and SMTP fallback providers
 
 ### Fallback Providers
 - **SMTP**: Traditional SMTP fallback with TLS support
@@ -143,6 +152,31 @@ GET /api/v1/admin/email-logs?organization_id=1&status=sent&limit=50
 Authorization: Bearer {admin-jwt-token}
 ```
 
+### Email Compose with BCC
+```http
+POST /api/v1/email/compose
+Authorization: Bearer {user-jwt-token}
+Content-Type: application/json
+
+{
+  "to_email": "customer@example.com",
+  "subject": "Important Update",
+  "body": "Plain text content",
+  "html_body": "<p>HTML content</p>"
+}
+```
+
+Response:
+```json
+{
+  "message": "Email sent successfully",
+  "to_email": "customer@example.com",
+  "subject": "Important Update",
+  "sender_role": "executive",
+  "mail_1_level_up_applied": true
+}
+```
+
 Query Parameters:
 - `organization_id`: Filter by organization (optional)
 - `email_type`: Filter by email type (optional)
@@ -266,3 +300,68 @@ logging.getLogger('app.services.email_service').setLevel(logging.DEBUG)
 ```
 
 This will provide detailed logs of the email sending process including provider attempts, retries, and error details.
+
+## Mail 1 Level Up Configuration
+
+### Organization Settings API
+
+Enable/disable the Mail 1 Level Up feature via organization settings:
+
+```http
+# Get current settings
+GET /api/v1/organizations/settings/
+Authorization: Bearer {org-admin-jwt-token}
+
+# Update settings
+PUT /api/v1/organizations/settings/
+Authorization: Bearer {org-admin-jwt-token}
+Content-Type: application/json
+
+{
+  "mail_1_level_up_enabled": true
+}
+```
+
+### Role Hierarchy
+
+The system recognizes the following role hierarchy:
+- **Executive** → Reports to Manager
+- **Manager** → Reports to Management  
+- **Management** → Top level (no BCC)
+
+### BCC Logic Implementation
+
+```python
+from app.services.email_service import email_service
+
+# Automatic BCC based on sender role
+success, error = email_service.send_email_with_role_bcc(
+    db=db,
+    to_email="customer@example.com",
+    subject="Project Update",
+    body="Content here",
+    sender_user=current_user,  # User's role determines BCC recipients
+    email_type=EmailType.TRANSACTIONAL
+)
+```
+
+### Frontend Integration
+
+Organization super admins can toggle the feature via the Settings page:
+
+```tsx
+import OrganizationSettings from '../components/OrganizationSettings';
+
+// Renders toggle switch for Mail 1 Level Up
+<OrganizationSettings />
+```
+
+### Database Migration
+
+Run the migration to add organization settings support:
+
+```bash
+alembic upgrade mail_1_level_up_001
+```
+
+This creates the `organization_settings` table with the `mail_1_level_up_enabled` boolean field.
