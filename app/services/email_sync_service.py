@@ -21,16 +21,17 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import decode_header
 from email.utils import parsedate_tz, mktime_tz, parseaddr
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, or_, desc, select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
-from app.core.database import SessionLocal
+from app.core.database import AsyncSessionLocal
 from app.models.email import (
     MailAccount, Email, EmailThread, EmailAttachment, EmailSyncLog,
     EmailAccountType, EmailSyncStatus, EmailStatus, EmailPriority
 )
-from app.services.oauth_service import OAuthService
+from app.services.oauth_service import OAuth2Service
 from app.utils.text_processing import extract_plain_text, sanitize_html
 
 logger = logging.getLogger(__name__)
@@ -41,9 +42,9 @@ class EmailSyncService:
     Service for syncing emails via IMAP and sending via SMTP with OAuth2 support
     """
     
-    def __init__(self, db: Optional[Session] = None):
-        self.db = db or SessionLocal()
-        self.oauth_service = OAuthService(self.db)
+    def __init__(self, db: Optional[AsyncSession] = None):
+        self.db = db
+        self.oauth_service = OAuth2Service(self.db)
         
         # HTML sanitization settings
         self.allowed_tags = [
@@ -107,11 +108,18 @@ class EmailSyncService:
         auth_string = f'user={email}\x01auth=Bearer {access_token}\x01\x01'
         return base64.b64encode(auth_string.encode()).decode()
     
-    def sync_account(self, account_id: int, full_sync: bool = False) -> bool:
+    async def sync_account(self, account_id: int, full_sync: bool = False) -> bool:
         """
         Sync emails for a specific account
         """
-        account = self.db.query(MailAccount).filter(MailAccount.id == account_id).first()
+        if self.db:
+            return await self._perform_sync(self.db, account_id, full_sync)
+        else:
+            async with AsyncSessionLocal() as temp_db:
+                return await self._perform_sync(temp_db, account_id, full_sync)
+    
+    async def _perform_sync(self, db: AsyncSession, account_id: int, full_sync: bool) -> bool:
+        account = (await db.execute(select(MailAccount).where(MailAccount.id == account_id))).scalars().first()
         if not account:
             logger.error(f"Account {account_id} not found")
             return False
@@ -127,8 +135,8 @@ class EmailSyncService:
             status='running',
             started_at=datetime.utcnow()
         )
-        self.db.add(sync_log)
-        self.db.commit()
+        await db.add(sync_log)
+        await db.commit()
         
         try:
             # Connect to IMAP
@@ -143,7 +151,7 @@ class EmailSyncService:
             
             for folder in folders_to_sync:
                 try:
-                    new_count, updated_count = self._sync_folder(imap, account, folder, full_sync)
+                    new_count, updated_count = await self._sync_folder(imap, account, folder, db, full_sync)
                     total_new += new_count
                     total_updated += updated_count
                 except Exception as e:
@@ -165,7 +173,7 @@ class EmailSyncService:
             sync_log.messages_updated = total_updated
             sync_log.duration_seconds = (sync_log.completed_at - sync_log.started_at).total_seconds()
             
-            self.db.commit()
+            await db.commit()
             
             # Close IMAP connection
             imap.close()
@@ -184,10 +192,10 @@ class EmailSyncService:
             sync_log.error_message = error_msg
             sync_log.completed_at = datetime.utcnow()
             
-            self.db.commit()
+            await db.commit()
             return False
     
-    def _sync_folder(self, imap: imaplib.IMAP4_SSL, account: MailAccount, folder: str, full_sync: bool = False) -> Tuple[int, int]:
+    async def _sync_folder(self, imap: imaplib.IMAP4_SSL, account: MailAccount, folder: str, db: AsyncSession, full_sync: bool = False) -> Tuple[int, int]:
         """
         Sync a specific folder
         Returns tuple of (new_messages_count, updated_messages_count)
@@ -248,20 +256,20 @@ class EmailSyncService:
                         
                         # Check if message already exists
                         message_id = msg.get('Message-ID', '').strip('<>')
-                        existing = self.db.query(Email).filter(
+                        existing = (await db.execute(select(Email).where(
                             and_(
                                 Email.message_id == message_id,
                                 Email.account_id == account.id
                             )
-                        ).first()
+                        ))).scalars().first()
                         
                         if existing:
                             # Update existing message if needed
-                            if self._update_email_if_changed(existing, msg, folder):
+                            if await self._update_email_if_changed(existing, msg, folder, db):
                                 updated_count += 1
                         else:
                             # Create new message
-                            if self._create_email_from_message(msg, uid, account, folder):
+                            if await self._create_email_from_message(msg, uid, account, folder, db):
                                 new_count += 1
                         
                         # Update last sync UID
@@ -272,7 +280,7 @@ class EmailSyncService:
                         continue
                 
                 # Commit batch
-                self.db.commit()
+                await db.commit()
             
             return new_count, updated_count
             
@@ -280,7 +288,7 @@ class EmailSyncService:
             logger.error(f"Error syncing folder {folder}: {str(e)}")
             return 0, 0
     
-    def _create_email_from_message(self, msg: email.message.Message, uid: str, account: MailAccount, folder: str) -> bool:
+    async def _create_email_from_message(self, msg: email.message.Message, uid: str, account: MailAccount, folder: str, db: AsyncSession) -> bool:
         """
         Create Email record from email message
         """
@@ -338,18 +346,18 @@ class EmailSyncService:
                 is_processed=False
             )
             
-            self.db.add(email_record)
-            self.db.flush()  # Get ID
+            await db.add(email_record)
+            await db.flush()  # Get ID
             
             # Process attachments
-            has_attachments = self._process_attachments(msg, email_record)
+            has_attachments = await self._process_attachments(msg, email_record, db)
             email_record.has_attachments = has_attachments
             
             # Auto-link to customers/vendors
-            self._auto_link_email(email_record)
+            await self._auto_link_email(email_record, db)
             
             # Find or create thread
-            thread = self._find_or_create_thread(email_record, account)
+            thread = await self._find_or_create_thread(email_record, account, db)
             if thread:
                 email_record.thread_id = thread.id
             
@@ -489,7 +497,7 @@ class EmailSyncService:
         else:
             return EmailPriority.NORMAL
     
-    def _process_attachments(self, msg: email.message.Message, email_record: Email) -> bool:
+    async def _process_attachments(self, msg: email.message.Message, email_record: Email, db: AsyncSession) -> bool:
         """
         Process email attachments
         Returns True if attachments were found
@@ -523,7 +531,7 @@ class EmailSyncService:
                         if payload:
                             attachment.file_hash = hashlib.sha256(payload).hexdigest()
                         
-                        self.db.add(attachment)
+                        await db.add(attachment)
                         has_attachments = True
                         
                 except Exception as e:
@@ -546,7 +554,7 @@ class EmailSyncService:
         
         return filename or 'attachment'
     
-    def _auto_link_email(self, email_record: Email):
+    async def _auto_link_email(self, email_record: Email, db: AsyncSession):
         """
         Automatically link email to customers/vendors based on email addresses
         """
@@ -572,24 +580,24 @@ class EmailSyncService:
             
             # Check for customer matches
             if not email_record.customer_id:
-                customer = self.db.query(Customer).filter(
+                customer = (await db.execute(select(Customer).where(
                     and_(
                         Customer.organization_id == email_record.organization_id,
                         Customer.email.in_(list(all_emails))
                     )
-                ).first()
+                ))).scalars().first()
                 
                 if customer:
                     email_record.customer_id = customer.id
             
             # Check for vendor matches
             if not email_record.vendor_id:
-                vendor = self.db.query(Vendor).filter(
+                vendor = (await db.execute(select(Vendor).where(
                     and_(
                         Vendor.organization_id == email_record.organization_id,
                         Vendor.email.in_(list(all_emails))
                     )
-                ).first()
+                ))).scalars().first()
                 
                 if vendor:
                     email_record.vendor_id = vendor.id
@@ -597,7 +605,7 @@ class EmailSyncService:
         except Exception as e:
             logger.error(f"Error auto-linking email: {str(e)}")
     
-    def _find_or_create_thread(self, email_record: Email, account: MailAccount) -> Optional[EmailThread]:
+    async def _find_or_create_thread(self, email_record: Email, account: MailAccount, db: AsyncSession) -> Optional[EmailThread]:
         """
         Find existing thread or create new one for the email
         """
@@ -622,27 +630,27 @@ class EmailSyncService:
                 
                 if ref_ids:
                     # Find emails with matching message IDs
-                    related_email = self.db.query(Email).filter(
+                    related_email = (await db.execute(select(Email).where(
                         and_(
                             Email.message_id.in_(ref_ids),
                             Email.account_id == account.id
                         )
-                    ).first()
+                    ))).scalars().first()
                     
                     if related_email and related_email.thread_id:
-                        thread = self.db.query(EmailThread).filter(
+                        thread = (await db.execute(select(EmailThread).where(
                             EmailThread.id == related_email.thread_id
-                        ).first()
+                        ))).scalars().first()
             
             # If no thread found, try subject matching
             if not thread and clean_subject:
-                thread = self.db.query(EmailThread).filter(
+                thread = (await db.execute(select(EmailThread).where(
                     and_(
                         EmailThread.original_subject == clean_subject,
                         EmailThread.account_id == account.id,
                         EmailThread.last_activity_at >= datetime.utcnow() - timedelta(days=7)  # Only recent threads
                     )
-                ).order_by(desc(EmailThread.last_activity_at)).first()
+                ).order_by(desc(EmailThread.last_activity_at)))).scalars().first()
             
             # Create new thread if none found
             if not thread:
@@ -678,8 +686,8 @@ class EmailSyncService:
                     folder=email_record.folder
                 )
                 
-                self.db.add(thread)
-                self.db.flush()
+                await db.add(thread)
+                await db.flush()
             else:
                 # Update existing thread
                 thread.message_count += 1
@@ -705,7 +713,7 @@ class EmailSyncService:
             logger.error(f"Error finding/creating thread: {str(e)}")
             return None
     
-    def _update_email_if_changed(self, existing: Email, msg: email.message.Message, folder: str) -> bool:
+    async def _update_email_if_changed(self, existing: Email, msg: email.message.Message, folder: str, db: AsyncSession) -> bool:
         """
         Update existing email if status or folder changed
         Returns True if updated

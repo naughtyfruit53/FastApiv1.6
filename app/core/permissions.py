@@ -408,19 +408,43 @@ class PermissionChecker:
         return False
 
 
-def require_permission(permission: str):
-    """Decorator factory for requiring specific permissions"""
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            # This is a placeholder - actual implementation would depend on FastAPI dependency injection
-            # The real implementation should be used as a FastAPI dependency
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+# FastAPI dependencies for permission checking
+def require_organization_permission(permission: str):
+    """FastAPI dependency to require organization-level permissions"""
+    def dependency(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+        request: Request = None
+    ) -> User:
+        if not PermissionChecker.has_permission(current_user, permission):
+            # Log permission denied event
+            if db and request:
+                AuditLogger.log_permission_denied(
+                    db=db,
+                    user_email=current_user.email,
+                    attempted_action=permission,
+                    user_id=current_user.id,
+                    user_role=current_user.role,
+                    organization_id=current_user.organization_id,
+                    ip_address=get_client_ip(request),
+                    user_agent=get_user_agent(request),
+                    details={"required_permission": permission}
+                )
+            
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions. Required: {permission}"
+            )
+        return current_user
+    return dependency
 
 def require_platform_permission(permission: str):
-    """Decorator factory for requiring platform permissions"""
-    def dependency(current_user: Any = Depends(get_current_user), db: Session = Depends(get_db), request: Request = None) -> Any:
+    """FastAPI dependency to require platform-level permissions"""
+    def dependency(
+        current_user: Union[User, PlatformUser] = Depends(get_current_user),
+        db: Session = Depends(get_db),
+        request: Request = None
+    ) -> Union[User, PlatformUser]:
         if not PermissionChecker.has_platform_permission(current_user, permission):
             # Log permission denied event
             if db and request:
@@ -443,7 +467,6 @@ def require_platform_permission(permission: str):
         return current_user
     return dependency
 
-# FastAPI dependencies for permission checking
 def require_super_admin(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

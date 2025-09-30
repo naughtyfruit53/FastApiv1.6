@@ -5,7 +5,8 @@ Email Module Core Models
 Contains all email-related models for IMAP/SMTP sync, threads, attachments, and mail accounts
 """
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Enum as SQLEnum, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, JSON, Index, UniqueConstraint, Date, Enum as SQLEnum, LargeBinary
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -64,7 +65,10 @@ class MailAccount(Base):
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
     # Account type and provider
-    account_type: Mapped[EmailAccountType] = mapped_column(SQLEnum(EmailAccountType), nullable=False)
+    account_type: Mapped[EmailAccountType] = mapped_column(
+        SQLEnum(EmailAccountType, values_callable=lambda enum: [e.value for e in enum]),
+        nullable=False
+    )
     provider: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # gmail, outlook, etc.
     
     # Server configuration for IMAP/SMTP
@@ -88,7 +92,7 @@ class MailAccount(Base):
     # Sync configuration
     sync_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sync_frequency_minutes: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
-    sync_folders: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # List of folders to sync
+    sync_folders: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)  # List of folders to sync
     full_sync_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_sync_uid: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Last synced message UID
     
@@ -103,7 +107,11 @@ class MailAccount(Base):
     
     # Status tracking
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    sync_status: Mapped[EmailSyncStatus] = mapped_column(SQLEnum(EmailSyncStatus), default=EmailSyncStatus.ACTIVE, nullable=False)
+    sync_status: Mapped[EmailSyncStatus] = mapped_column(
+        SQLEnum(EmailSyncStatus, values_callable=lambda enum: [e.value for e in enum]),
+        default=EmailSyncStatus.ACTIVE, 
+        nullable=False
+    )
     last_sync_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_sync_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     total_messages_synced: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -153,8 +161,8 @@ class EmailThread(Base):
     original_subject: Mapped[str] = mapped_column(String(500), nullable=False)  # Without Re:, Fwd: prefixes
     
     # Thread participants
-    participants: Mapped[dict] = mapped_column(JSON, nullable=False)  # All email addresses involved
-    primary_participants: Mapped[list] = mapped_column(JSON, nullable=False)  # Main participants (from/to)
+    participants: Mapped[dict] = mapped_column(JSONB, nullable=False)  # All email addresses involved
+    primary_participants: Mapped[list] = mapped_column(JSONB, nullable=False)  # Main participants (from/to)
     
     # Thread metadata
     message_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -162,8 +170,16 @@ class EmailThread(Base):
     has_attachments: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Thread status
-    status: Mapped[EmailStatus] = mapped_column(SQLEnum(EmailStatus), default=EmailStatus.UNREAD, nullable=False)
-    priority: Mapped[EmailPriority] = mapped_column(SQLEnum(EmailPriority), default=EmailPriority.NORMAL, nullable=False)
+    status: Mapped[EmailStatus] = mapped_column(
+        SQLEnum(EmailStatus, values_callable=lambda enum: [e.value for e in enum]),
+        default=EmailStatus.UNREAD, 
+        nullable=False
+    )
+    priority: Mapped[EmailPriority] = mapped_column(
+        SQLEnum(EmailPriority, values_callable=lambda enum: [e.value for e in enum]),
+        default=EmailPriority.NORMAL, 
+        nullable=False
+    )
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_important: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
@@ -181,7 +197,7 @@ class EmailThread(Base):
     vendor_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
     
     # Labels and categorization
-    labels: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    labels: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     folder: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
     # Timestamps
@@ -211,7 +227,7 @@ class EmailThread(Base):
         Index('idx_email_thread_org_account', 'organization_id', 'account_id'),
         Index('idx_email_thread_last_activity', 'last_activity_at'),
         Index('idx_email_thread_status', 'status'),
-        Index('idx_email_thread_participants', 'participants'),  # GIN index for JSON
+        Index('idx_email_thread_participants', 'participants', postgresql_using='gin'),
         {'extend_existing': True}
     )
 
@@ -237,9 +253,9 @@ class Email(Base):
     reply_to: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
     # Recipients
-    to_addresses: Mapped[list] = mapped_column(JSON, nullable=False)  # [{"email": "...", "name": "..."}]
-    cc_addresses: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
-    bcc_addresses: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    to_addresses: Mapped[list] = mapped_column(JSONB, nullable=False)  # [{"email": "...", "name": "..."}]
+    cc_addresses: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    bcc_addresses: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     
     # Message content (sanitized)
     body_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -247,8 +263,17 @@ class Email(Base):
     body_html_raw: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Original HTML (internal use)
     
     # Message metadata
-    status: Mapped[EmailStatus] = mapped_column(SQLEnum(EmailStatus), default=EmailStatus.UNREAD, nullable=False, index=True)
-    priority: Mapped[EmailPriority] = mapped_column(SQLEnum(EmailPriority), default=EmailPriority.NORMAL, nullable=False)
+    status: Mapped[EmailStatus] = mapped_column(
+        SQLEnum(EmailStatus, values_callable=lambda enum: [e.value for e in enum]),
+        default=EmailStatus.UNREAD, 
+        nullable=False, 
+        index=True
+    )
+    priority: Mapped[EmailPriority] = mapped_column(
+        SQLEnum(EmailPriority, values_callable=lambda enum: [e.value for e in enum]),
+        default=EmailPriority.NORMAL, 
+        nullable=False
+    )
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_important: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     has_attachments: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -267,11 +292,11 @@ class Email(Base):
     
     # Folder and labels
     folder: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    labels: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    labels: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     
     # Message properties
     size_bytes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    headers_raw: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # Raw email headers
+    headers_raw: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)  # Raw email headers
     
     # Processing status
     is_processed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -385,7 +410,7 @@ class EmailSyncLog(Base):
     
     # Error details
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    error_details: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    error_details: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     
     # Timing
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

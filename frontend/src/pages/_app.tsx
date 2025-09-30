@@ -13,6 +13,7 @@ import Layout from "../components/layout";
 import { useRouter } from "next/router";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CompanyProvider } from "../context/CompanyContext"; // Add CompanyProvider import
+import { EmailProvider } from "../context/EmailContext"; // Added import for EmailProvider
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
 
@@ -191,21 +192,23 @@ function MyApp({ Component, pageProps }: AppProps): any {
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <CompanyProvider> {/* Add CompanyProvider here */}
-            <ThemeProvider theme={theme}>
-              <CssBaseline />
-              <LayoutWrapper />
-              <ToastContainer
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-              />
-            </ThemeProvider>
+            <EmailProvider> {/* Added EmailProvider wrapper here */}
+              <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <LayoutWrapper />
+                <ToastContainer
+                  position="top-right"
+                  autoClose={5000}
+                  hideProgressBar={false}
+                  newestOnTop={false}
+                  closeOnClick
+                  rtl={false}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                />
+              </ThemeProvider>
+            </EmailProvider>
           </CompanyProvider>
         </QueryClientProvider>
       </AuthProvider>

@@ -6,7 +6,8 @@ import secrets
 import hashlib
 import base64
 import logging
-from typing import Optional, Dict, Any, Tuple
+import traceback
+from typing import Optional, Dict, Any, Tuple, List
 from urllib.parse import urlencode, parse_qs, urlparse
 from datetime import datetime, timedelta
 
@@ -16,7 +17,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from msal import ConfidentialClientApplication
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
 
 from app.core.config import settings
 from app.models.oauth_models import UserEmailToken, OAuthState, OAuthProvider, TokenStatus
@@ -62,7 +64,7 @@ class OAuthConfig:
 class OAuth2Service:
     """Service for handling OAuth2 flows with Google and Microsoft"""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
         
     def generate_state(self) -> str:
@@ -78,7 +80,7 @@ class OAuth2Service:
         digest = hashlib.sha256(verifier.encode('utf-8')).digest()
         return base64.urlsafe_b64encode(digest).decode('utf-8').rstrip('=')
     
-    def create_authorization_url(
+    async def create_authorization_url(
         self, 
         provider: OAuthProvider, 
         user_id: int, 
@@ -110,9 +112,9 @@ class OAuth2Service:
         )
         self.db.add(oauth_state)
         try:
-            self.db.commit()
+            await self.db.commit()
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             logger.error(f"Failed to commit OAuthState: {str(e)}\n{traceback.format_exc()}")
             raise
         
@@ -138,7 +140,7 @@ class OAuth2Service:
         auth_url = f"{config['authorization_endpoint']}?{urlencode(params)}"
         return auth_url, state
     
-    def exchange_code_for_tokens(
+    async def exchange_code_for_tokens(
         self, 
         provider: OAuthProvider, 
         code: str, 
@@ -149,11 +151,13 @@ class OAuth2Service:
         Exchange authorization code for access tokens
         """
         # Verify state
-        oauth_state = self.db.query(OAuthState).filter(
+        stmt = select(OAuthState).where(
             OAuthState.state == state,
             OAuthState.provider == provider,
             OAuthState.expires_at > datetime.utcnow()
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        oauth_state = result.scalars().first()
         
         if not oauth_state:
             raise ValueError("Invalid or expired state parameter")
@@ -200,8 +204,8 @@ class OAuth2Service:
         organization_id = oauth_state.organization_id
         
         # Clean up state
-        self.db.delete(oauth_state)
-        self.db.commit()
+        await self.db.delete(oauth_state)
+        await self.db.commit()
         
         return token_response, user_info, user_id, organization_id
     
@@ -226,7 +230,7 @@ class OAuth2Service:
             logger.error(f"Invalid JSON in user info response: {response.text}")
             raise ValueError("Invalid response format from user info endpoint")
     
-    def store_user_tokens(
+    async def store_user_tokens(
         self,
         user_id: int,
         organization_id: Optional[int],
@@ -254,12 +258,14 @@ class OAuth2Service:
         ).strip()
         
         # Check if token already exists for this user/provider/email
-        existing_token = self.db.query(UserEmailToken).filter(
+        stmt = select(UserEmailToken).where(
             UserEmailToken.user_id == user_id,
             UserEmailToken.organization_id == organization_id,
             UserEmailToken.provider == provider,
             UserEmailToken.email_address == email
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        existing_token = result.scalars().first()
         
         if existing_token:
             # Update existing token
@@ -272,7 +278,7 @@ class OAuth2Service:
             existing_token.updated_at = datetime.utcnow()
             existing_token.provider_metadata = user_info
             
-            self.db.commit()
+            await self.db.commit()
             return existing_token
         else:
             # Create new token record
@@ -292,16 +298,16 @@ class OAuth2Service:
             )
             
             self.db.add(user_token)
-            self.db.commit()
+            await self.db.commit()
             return user_token
     
-    def refresh_token(self, token_id: int) -> bool:
+    async def refresh_token(self, token_id: int) -> bool:
         """
         Refresh an expired access token
         """
-        user_token = self.db.query(UserEmailToken).filter(
-            UserEmailToken.id == token_id
-        ).first()
+        stmt = select(UserEmailToken).where(UserEmailToken.id == token_id)
+        result = await self.db.execute(stmt)
+        user_token = result.scalars().first()
         
         if not user_token or not user_token.refresh_token:
             return False
@@ -326,7 +332,7 @@ class OAuth2Service:
             if not response.ok:
                 logger.error("Token refresh failed: %s - %s", response.status_code, response.text)
                 user_token.status = TokenStatus.REFRESH_FAILED
-                self.db.commit()
+                await self.db.commit()
                 return False
             
             try:
@@ -334,7 +340,7 @@ class OAuth2Service:
             except json.JSONDecodeError:
                 logger.error("Invalid JSON in refresh token response: %s", response.text)
                 user_token.status = TokenStatus.REFRESH_FAILED
-                self.db.commit()
+                await self.db.commit()
                 return False
             
             # Update token
@@ -351,27 +357,27 @@ class OAuth2Service:
             user_token.refresh_count += 1
             user_token.updated_at = datetime.utcnow()
             
-            self.db.commit()
+            await self.db.commit()
             return True
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Network error in token refresh: {str(e)}")
             user_token.status = TokenStatus.REFRESH_FAILED
-            self.db.commit()
+            await self.db.commit()
             return False
         except Exception as e:
             logger.error(f"Token refresh error: {str(e)}")
             user_token.status = TokenStatus.REFRESH_FAILED
-            self.db.commit()
+            await self.db.commit()
             return False
     
-    def revoke_token(self, token_id: int) -> bool:
+    async def revoke_token(self, token_id: int) -> bool:
         """
         Revoke an OAuth token
         """
-        user_token = self.db.query(UserEmailToken).filter(
-            UserEmailToken.id == token_id
-        ).first()
+        stmt = select(UserEmailToken).where(UserEmailToken.id == token_id)
+        result = await self.db.execute(stmt)
+        user_token = result.scalars().first()
         
         if not user_token:
             return False
@@ -379,43 +385,45 @@ class OAuth2Service:
         # Mark as revoked in database
         user_token.status = TokenStatus.REVOKED
         user_token.updated_at = datetime.utcnow()
-        self.db.commit()
+        await self.db.commit()
         
         # TODO: Also revoke with provider if they support it
         return True
     
-    def get_valid_token(self, token_id: int) -> Optional[UserEmailToken]:
+    async def get_valid_token(self, token_id: int) -> Optional[UserEmailToken]:
         """
         Get a valid token, refreshing if necessary
         """
-        user_token = self.db.query(UserEmailToken).filter(
+        stmt = select(UserEmailToken).where(
             UserEmailToken.id == token_id,
             UserEmailToken.status == TokenStatus.ACTIVE
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        user_token = result.scalars().first()
         
         if not user_token:
             return None
         
         # Check if token is expired and refresh if possible
         if user_token.is_expired() and user_token.refresh_token:
-            if self.refresh_token(token_id):
+            if await self.refresh_token(token_id):
                 # Refresh the object from database
-                self.db.refresh(user_token)
+                await self.db.refresh(user_token)
             else:
                 return None
         
         # Update last used timestamp
         user_token.last_used_at = datetime.utcnow()
-        self.db.commit()
+        await self.db.commit()
         
         return user_token if user_token.is_active() else None
     
-    def get_email_credentials(self, token_id: int) -> Optional[Dict[str, Any]]:
+    async def get_email_credentials(self, token_id: int) -> Optional[Dict[str, Any]]:
         """
         Get email credentials for IMAP/SMTP access
         Returns credentials dict with access_token for OAuth2 XOAUTH2 authentication
         """
-        user_token = self.get_valid_token(token_id)
+        user_token = await self.get_valid_token(token_id)
         if not user_token:
             return None
         
@@ -458,27 +466,28 @@ class OAuth2Service:
             logger.error(f"Error getting email credentials: {str(e)}")
             return None
     
-    def list_user_tokens(self, user_id: int, organization_id: Optional[int] = None) -> List[UserEmailToken]:
+    async def list_user_tokens(self, user_id: int, organization_id: Optional[int] = None) -> List[UserEmailToken]:
         """
         List all active OAuth tokens for a user
         """
-        query = self.db.query(UserEmailToken).filter(
+        stmt = select(UserEmailToken).where(
             UserEmailToken.user_id == user_id,
             UserEmailToken.status == TokenStatus.ACTIVE
         )
         
         if organization_id:
-            query = query.filter(UserEmailToken.organization_id == organization_id)
+            stmt = stmt.where(UserEmailToken.organization_id == organization_id)
         
-        return query.order_by(UserEmailToken.created_at.desc()).all()
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
     
-    def get_token_info(self, token_id: int) -> Optional[Dict[str, Any]]:
+    async def get_token_info(self, token_id: int) -> Optional[Dict[str, Any]]:
         """
         Get token information (without sensitive data)
         """
-        user_token = self.db.query(UserEmailToken).filter(
-            UserEmailToken.id == token_id
-        ).first()
+        stmt = select(UserEmailToken).where(UserEmailToken.id == token_id)
+        result = await self.db.execute(stmt)
+        user_token = result.scalars().first()
         
         if not user_token:
             return None

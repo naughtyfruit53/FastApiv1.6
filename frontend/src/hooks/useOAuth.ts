@@ -99,9 +99,13 @@ export const useOAuth = () => {
       const response = await apiClient.post(`/api/v1/oauth/login/${provider}`);
       const { authorization_url, state } = response.data;
       console.log(`Storing provider for state: ${state} - ${provider}`);
-      localStorage.setItem(`oauth_provider_${state}`, provider);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`oauth_provider_${state}`, provider);
+      }
       console.log(`Redirecting to OAuth provider: ${authorization_url}`);
-      window.location.href = authorization_url;
+      if (typeof window !== 'undefined') {
+        window.location.href = authorization_url;
+      }
       // Return the response for completeness, though redirect happens immediately
       return response.data;
     } catch (err: any) {

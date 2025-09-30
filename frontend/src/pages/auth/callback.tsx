@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * OAuth Callback Page
  * Handles OAuth2 callback from providers and completes the authentication flow
@@ -5,19 +7,16 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  Alert,
-  Paper,
-  Button
-} from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Paper, Button } from '@mui/material';
 import { CheckCircle, Error } from '@mui/icons-material';
 import { useOAuth } from '../../hooks/useOAuth';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEmail } from '../../context/EmailContext';
 
 const OAuthCallback: React.FC = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { setSelectedToken } = useEmail();
   const { handleOAuthCallback } = useOAuth();
   
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -27,18 +26,14 @@ const OAuthCallback: React.FC = () => {
 
   useEffect(() => {
     const processCallback = async () => {
-      if (processedRef.current) return;
+      if (processedRef.current || typeof window === 'undefined') return;
       processedRef.current = true;
 
       const { code, state, error, error_description, provider } = router.query;
 
-      if (!code && !error) {
-        // Still loading or missing parameters
-        return;
-      }
+      if (!code && !error) return;
 
       const storedProvider = localStorage.getItem(`oauth_provider_${state as string}`);
-      console.log(`Stored provider for state ${state}: ${storedProvider}`);
       if (!storedProvider) {
         setStatus('error');
         setMessage('Invalid authentication state. Please try again.');
@@ -62,32 +57,39 @@ const OAuthCallback: React.FC = () => {
         setStatus('success');
         setMessage(`Successfully connected ${storedProvider} email account`);
 
-        // Clean up storage
+        // Set the new token as selected
+        if (result.token_id) {
+          setSelectedToken(result.token_id);
+          localStorage.setItem('selectedEmailToken', result.token_id.toString());
+        }
+
+        // Invalidate queries to refresh accounts
+        queryClient.invalidateQueries({ queryKey: ['oauth-tokens'] });
+        queryClient.invalidateQueries({ queryKey: ['mail-accounts'] });
+
         localStorage.removeItem(`oauth_provider_${state as string}`);
 
-        // Redirect to mail dashboard after a short delay
         setTimeout(() => {
-          router.push('/mail/dashboard');
+          router.push('/email');
         }, 3000);
 
       } catch (err: any) {
         console.error('OAuth callback error:', err);
         setStatus('error');
         setMessage(err.message || 'Failed to complete OAuth authentication');
-        // Clean up on error as well
         localStorage.removeItem(`oauth_provider_${state as string}`);
       }
     };
 
     if (router.isReady) processCallback();
-  }, [router.isReady, router.query, handleOAuthCallback, router]);
+  }, [router.isReady, router.query, handleOAuthCallback, router, queryClient, setSelectedToken]);
 
   const handleRetry = () => {
-    router.push('/mail/dashboard');
+    router.push('/email');
   };
 
   const handleGoBack = () => {
-    router.push('/mail/dashboard');
+    router.push('/email');
   };
 
   return (

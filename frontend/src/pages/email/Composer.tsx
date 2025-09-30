@@ -37,9 +37,11 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import ReactQuill from 'react-quill';
+import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 import { emailService, ComposeEmail, Email, MailAccount, EmailAddress } from '../../services/emailService';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 interface ComposerProps {
   mode: 'new' | 'reply' | 'replyAll' | 'forward';
