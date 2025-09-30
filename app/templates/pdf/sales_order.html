@@ -15,19 +15,15 @@
         <span class="info-value">{{ voucher.date|format_date }}</span>
     </div>
     <div class="info-row">
-        <span class="info-label">Delivery Date:</span>
-        <span class="info-value">{{ voucher.delivery_date|format_date|default('To be confirmed') }}</span>
+        <span class="info-label">Expected Delivery:</span>
+        <span class="info-value">{{ voucher.expected_delivery|format_date|default('To be confirmed') }}</span>
     </div>
     {% if voucher.reference_number %}
     <div class="info-row">
-        <span class="info-label">Your Reference:</span>
+        <span class="info-label">Reference:</span>
         <span class="info-value">{{ voucher.reference_number }}</span>
     </div>
     {% endif %}
-    <div class="info-row">
-        <span class="info-label">Delivery Terms:</span>
-        <span class="info-value">{{ voucher.delivery_terms|default('Ex-Works') }}</span>
-    </div>
     <div class="info-row">
         <span class="info-label">Status:</span>
         <span class="info-value">
@@ -46,9 +42,9 @@
             <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
             {% endfor %}
             {% else %}
-            <tr><td>1. PRE-SALES TERMS - ORDER CONFIRMATION SUBJECT TO AVAILABILITY.</td></tr>
-            <tr><td>2. Prices valid for 30 days.</td></tr>
-            <tr><td>3. Advance payment required.</td></tr>
+            <tr><td>1. Order confirmation subject to stock.</td></tr>
+            <tr><td>2. Delivery within 7-10 days.</td></tr>
+            <tr><td>3. Full payment on delivery.</td></tr>
             <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
             {% endif %}
         </tbody>
@@ -91,14 +87,14 @@
 
 <div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
     <strong>Important Notes:</strong><br>
-    • This order is subject to our standard terms and conditions.<br>
-    • Prices are subject to confirmation at the time of delivery.<br>
-    • All prices are exclusive of taxes unless mentioned otherwise.<br>
-    • Delivery timeline is approximate and subject to confirmation.
+    • Order subject to terms and conditions.<br>
+    • Prices inclusive of standard packing.<br>
+    • Taxes extra as applicable.<br>
+    • Delivery approximate.
 </div>
 
 <div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
-    Thank you for your order. We appreciate your business.
+    Thank you for your order.
 </div>
 
 {% if voucher.status == 'fulfilled' %}

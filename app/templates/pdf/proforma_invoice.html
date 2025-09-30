@@ -1,13 +1,13 @@
 {% extends "base_voucher.html" %}
 
-{% set voucher_type_title = "Sales Order" %}
-{% set voucher_subtitle = "Order Confirmation" %}
+{% set voucher_type_title = "Proforma Invoice" %}
+{% set voucher_subtitle = "Proforma" %}
 
 {% block voucher_specific_info %}
 <div class="voucher-info">
-    <div class="section-title">Sales Order Details</div>
+    <div class="section-title">Proforma Details</div>
     <div class="info-row">
-        <span class="info-label">Order No:</span>
+        <span class="info-label">Proforma No:</span>
         <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
     </div>
     <div class="info-row">
@@ -15,19 +15,15 @@
         <span class="info-value">{{ voucher.date|format_date }}</span>
     </div>
     <div class="info-row">
-        <span class="info-label">Delivery Date:</span>
-        <span class="info-value">{{ voucher.delivery_date|format_date|default('To be confirmed') }}</span>
+        <span class="info-label">Valid Until:</span>
+        <span class="info-value">{{ voucher.valid_until|format_date|default('N/A') }}</span>
     </div>
     {% if voucher.reference_number %}
     <div class="info-row">
-        <span class="info-label">Your Reference:</span>
+        <span class="info-label">Reference:</span>
         <span class="info-value">{{ voucher.reference_number }}</span>
     </div>
     {% endif %}
-    <div class="info-row">
-        <span class="info-label">Delivery Terms:</span>
-        <span class="info-value">{{ voucher.delivery_terms|default('Ex-Works') }}</span>
-    </div>
     <div class="info-row">
         <span class="info-label">Status:</span>
         <span class="info-value">
@@ -46,9 +42,9 @@
             <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
             {% endfor %}
             {% else %}
-            <tr><td>1. PRE-SALES TERMS - ORDER CONFIRMATION SUBJECT TO AVAILABILITY.</td></tr>
-            <tr><td>2. Prices valid for 30 days.</td></tr>
-            <tr><td>3. Advance payment required.</td></tr>
+            <tr><td>1. This is a proforma invoice and not a tax invoice.</td></tr>
+            <tr><td>2. Prices are subject to change without notice.</td></tr>
+            <tr><td>3. Payment required in advance.</td></tr>
             <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
             {% endif %}
         </tbody>
@@ -91,19 +87,13 @@
 
 <div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
     <strong>Important Notes:</strong><br>
-    • This order is subject to our standard terms and conditions.<br>
-    • Prices are subject to confirmation at the time of delivery.<br>
-    • All prices are exclusive of taxes unless mentioned otherwise.<br>
-    • Delivery timeline is approximate and subject to confirmation.
+    • This proforma is valid for 30 days unless specified otherwise.<br>
+    • All prices are exclusive of taxes unless mentioned.<br>
+    • Delivery charges extra as applicable.<br>
+    • Subject to availability.
 </div>
 
 <div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
-    Thank you for your order. We appreciate your business.
+    Thank you for considering us. We look forward to your order.
 </div>
-
-{% if voucher.status == 'fulfilled' %}
-<div style="margin-top: 10px; text-align: center; font-weight: bold; color: #27ae60; border: 2px solid #27ae60; padding: 5px; background-color: #d5f4e6;">
-    ORDER FULFILLED
-</div>
-{% endif %}
 {% endblock %}

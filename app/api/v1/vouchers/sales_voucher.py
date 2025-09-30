@@ -1,10 +1,12 @@
 # app/api/v1/vouchers/sales_voucher.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
+from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
@@ -12,6 +14,7 @@ from app.models.vouchers.sales import SalesVoucher, SalesVoucherItem
 from app.schemas.vouchers import SalesVoucherCreate, SalesVoucherInDB, SalesVoucherUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
+from app.services.pdf_generation_service import pdf_generator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -215,6 +218,43 @@ async def get_sales_voucher(
             detail="Sales voucher not found"
         )
     return invoice
+
+@router.get("/{invoice_id}/pdf")
+async def generate_sales_voucher_pdf(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        stmt = select(SalesVoucher).options(
+            joinedload(SalesVoucher.customer),
+            joinedload(SalesVoucher.items).joinedload(SalesVoucherItem.product)
+        ).where(
+            SalesVoucher.id == invoice_id,
+            SalesVoucher.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        voucher = result.unique().scalar_one_or_none()
+        if not voucher:
+            raise HTTPException(status_code=404, detail="Sales voucher not found")
+        
+        pdf_content = await pdf_generator.generate_voucher_pdf(
+            voucher_type="sales",
+            voucher_data=voucher.__dict__,
+            db=db,
+            organization_id=current_user.organization_id,
+            current_user=current_user
+        )
+        
+        headers = {
+            'Content-Disposition': f'attachment; filename="sales_voucher_{voucher.voucher_number}.pdf"'
+        }
+        
+        return StreamingResponse(pdf_content, media_type='application/pdf', headers=headers)
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF for sales voucher {invoice_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
 
 @router.put("/{invoice_id}", response_model=SalesVoucherInDB)
 async def update_sales_voucher(

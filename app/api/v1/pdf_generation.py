@@ -121,7 +121,7 @@ async def generate_voucher_pdf(
             )
         
         # Generate PDF
-        pdf_path = await pdf_generator.generate_voucher_pdf(  # Await since now async
+        pdf_io = await pdf_generator.generate_voucher_pdf(  # Await since now async
             voucher_type=voucher_type,
             voucher_data=voucher_data,
             db=db,
@@ -129,12 +129,11 @@ async def generate_voucher_pdf(
             current_user=current_user
         )
         
-        # Return PDF file
+        # Return PDF response
         filename = f"{voucher_type}_{voucher_data.get('voucher_number', 'voucher')}.pdf"
         
-        return FileResponse(
-            path=pdf_path,
-            filename=filename,
+        return Response(
+            content=pdf_io.getvalue(),
             media_type='application/pdf',
             headers={
                 "Content-Disposition": f"inline; filename={filename}",
@@ -192,7 +191,7 @@ async def download_voucher_pdf(
             )
         
         # Generate PDF
-        pdf_path = await pdf_generator.generate_voucher_pdf(  # Await
+        pdf_io = await pdf_generator.generate_voucher_pdf(  # Await
             voucher_type=voucher_type,
             voucher_data=voucher_data,
             db=db,
@@ -200,12 +199,11 @@ async def download_voucher_pdf(
             current_user=current_user
         )
         
-        # Return PDF file for download
+        # Return PDF response for download
         filename = f"{voucher_type}_{voucher_data.get('voucher_number', 'voucher')}.pdf"
         
-        return FileResponse(
-            path=pdf_path,
-            filename=filename,
+        return Response(
+            content=pdf_io.getvalue(),
             media_type='application/pdf',
             headers={
                 "Content-Disposition": f"attachment; filename={filename}",

@@ -1,10 +1,12 @@
 # app/api/v1/vouchers/proforma_invoice.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, asc, desc, func
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
+from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
@@ -12,6 +14,7 @@ from app.models.vouchers.presales import ProformaInvoice, ProformaInvoiceItem
 from app.schemas.vouchers import ProformaInvoiceCreate, ProformaInvoiceInDB, ProformaInvoiceUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
+from app.services.pdf_generation_service import pdf_generator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -43,12 +46,12 @@ async def get_proforma_invoices(
     if hasattr(ProformaInvoice, sortBy):
         sort_attr = getattr(ProformaInvoice, sortBy)
         if sort.lower() == "asc":
-            stmt = stmt.order_by(asc(sort_attr))
+            stmt = stmt.order_by(sort_attr.asc())
         else:
-            stmt = stmt.order_by(desc(sort_attr))
+            stmt = stmt.order_by(sort_attr.desc())
     else:
         # Default to created_at desc if invalid sortBy field
-        stmt = stmt.order_by(desc(ProformaInvoice.created_at))
+        stmt = stmt.order_by(ProformaInvoice.created_at.desc())
     
     result = await db.execute(stmt.offset(skip).limit(limit))
     invoices = result.unique().scalars().all()
@@ -235,6 +238,43 @@ async def get_proforma_invoice(
             detail="Proforma invoice not found"
         )
     return invoice
+
+@router.get("/{invoice_id}/pdf")
+async def generate_proforma_invoice_pdf(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        stmt = select(ProformaInvoice).options(
+            joinedload(ProformaInvoice.customer),
+            joinedload(ProformaInvoice.items).joinedload(ProformaInvoiceItem.product)
+        ).where(
+            ProformaInvoice.id == invoice_id,
+            ProformaInvoice.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        voucher = result.unique().scalar_one_or_none()
+        if not voucher:
+            raise HTTPException(status_code=404, detail="Proforma invoice not found")
+        
+        pdf_content = await pdf_generator.generate_voucher_pdf(
+            voucher_type="proforma_invoice",
+            voucher_data=voucher.__dict__,
+            db=db,
+            organization_id=current_user.organization_id,
+            current_user=current_user
+        )
+        
+        headers = {
+            'Content-Disposition': f'attachment; filename="proforma_invoice_{voucher.voucher_number}.pdf"'
+        }
+        
+        return StreamingResponse(pdf_content, media_type='application/pdf', headers=headers)
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF for proforma invoice {invoice_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
 
 @router.put("/{invoice_id}", response_model=ProformaInvoiceInDB)
 async def update_proforma_invoice(

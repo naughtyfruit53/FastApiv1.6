@@ -169,7 +169,7 @@ class VoucherPDFGenerator:
         # Add custom filters
         self._add_custom_filters()
         
-        # pdfkit config using dynamic path from settings (works for Windows local and Linux deploy)
+        # pdfkit config using dynamic wkhtmltopdf path from settings (works for Windows local and Linux deploy)
         wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
         if not os.path.exists(wkhtmltopdf_path):
             raise FileNotFoundError(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Please install it and set WKHTMLTOPDF_PATH in .env.")
@@ -301,7 +301,7 @@ class VoucherPDFGenerator:
         """Prepare voucher data for template rendering"""
         
         # Get company branding - await since now async
-        company = await self._get_company_branding(db, organization_id)
+        company = await self._get_company_branding(db, organization_id)  # Await since now async
         
         # Get vendor/party details and determine interstate
         is_interstate = False
@@ -473,7 +473,7 @@ class VoucherPDFGenerator:
     
     async def generate_voucher_pdf(self, voucher_type: str, voucher_data: Dict[str, Any],
                                  db: AsyncSession, organization_id: int, 
-                                 current_user: User) -> str:  # Changed to async and AsyncSession
+                                 current_user: User) -> BytesIO:  # Changed return to BytesIO for in-memory PDF
         """
         Generate PDF for any voucher type
         
@@ -485,7 +485,7 @@ class VoucherPDFGenerator:
             current_user: Current user for audit logging
             
         Returns:
-            File path of generated PDF
+            BytesIO of generated PDF content
         """
         try:
             # Prepare data for template
@@ -500,8 +500,12 @@ class VoucherPDFGenerator:
                 template_name = 'sales_voucher.html'
             elif voucher_type == 'delivery-challan':
                 template_name = 'delivery_challan.html'
-            elif voucher_type in ['quotation', 'sales_order', 'sales-orders', 'proforma_invoice']:
-                template_name = 'presales_voucher.html'
+            elif voucher_type == 'quotation':
+                template_name = 'quotation.html'
+            elif voucher_type == 'sales_order':
+                template_name = 'sales_order.html'
+            elif voucher_type == 'proforma_invoice':
+                template_name = 'proforma_invoice.html'
             elif voucher_type == 'payment-vouchers':
                 template_name = 'payment_voucher.html'
             elif voucher_type == 'receipt-vouchers':
@@ -521,12 +525,6 @@ class VoucherPDFGenerator:
             # Render HTML
             html_content = template.render(**template_data)
             
-            # Generate unique filename
-            voucher_number = voucher_data.get('voucher_number', 'unknown')
-            voucher_number = re.sub(r'[^\w\-]', '_', voucher_number)  # Sanitize voucher_number
-            filename = f"{voucher_type}_{voucher_number}_{uuid.uuid4().hex[:8]}.pdf"
-            filepath = os.path.join(self.output_dir, filename)
-            
             # Convert to PDF using pdfkit (replaced pisa)
             pdf_options = {
                 'page-size': 'A4',
@@ -539,10 +537,12 @@ class VoucherPDFGenerator:
                 'zoom': '1.0',
                 'dpi': '96'
             }
-            pdfkit.from_string(html_content, filepath, configuration=self.pdfkit_config, options=pdf_options)
+            pdf_bytes = pdfkit.from_string(html_content, False, configuration=self.pdfkit_config, options=pdf_options)
             
-            logger.info(f"PDF generated successfully: {filepath}")
-            return filepath
+            logger.info(f"PDF generated successfully for {voucher_type}")
+            pdf_io = BytesIO(pdf_bytes)
+            pdf_io.seek(0)
+            return pdf_io
             
         except Exception as e:
             logger.error(f"Error generating PDF for {voucher_type}: {e}")
@@ -550,19 +550,19 @@ class VoucherPDFGenerator:
     
     async def generate_purchase_voucher_pdf(self, voucher_data: Dict[str, Any],
                                           db: AsyncSession, organization_id: int,
-                                          current_user: User) -> str:  # Changed to async
+                                          current_user: User) -> BytesIO:  # Changed to BytesIO
         """Generate Purchase Voucher PDF"""
         return await self.generate_voucher_pdf('purchase', voucher_data, db, organization_id, current_user)  # Await
     
     async def generate_sales_voucher_pdf(self, voucher_data: Dict[str, Any],
                                        db: AsyncSession, organization_id: int,
-                                       current_user: User) -> str:  # Changed to async
+                                       current_user: User) -> BytesIO:  # Changed to BytesIO
         """Generate Sales Voucher PDF"""
         return await self.generate_voucher_pdf('sales', voucher_data, db, organization_id, current_user)  # Await
     
     async def generate_presales_voucher_pdf(self, voucher_data: Dict[str, Any],
                                           db: AsyncSession, organization_id: int,
-                                          current_user: User) -> str:  # Changed to async
+                                          current_user: User) -> BytesIO:  # Changed to BytesIO
         """Generate Pre-Sales Voucher PDF"""
         return await self.generate_voucher_pdf('presales', voucher_data, db, organization_id, current_user)  # Await
 

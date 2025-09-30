@@ -1,6 +1,7 @@
 # app/api/v1/vouchers/quotation.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, asc, desc, func
 from sqlalchemy.orm import joinedload
@@ -12,6 +13,7 @@ from app.models.vouchers.presales import Quotation, QuotationItem
 from app.schemas.vouchers import QuotationCreate, QuotationInDB, QuotationUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
+from app.services.pdf_generation_service import pdf_generator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -235,6 +237,43 @@ async def get_quotation(
             detail="Quotation not found"
         )
     return quotation
+
+@router.get("/{quotation_id}/pdf")
+async def generate_quotation_pdf(
+    quotation_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        stmt = select(Quotation).options(
+            joinedload(Quotation.customer),
+            joinedload(Quotation.items).joinedload(QuotationItem.product)
+        ).where(
+            Quotation.id == quotation_id,
+            Quotation.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        voucher = result.unique().scalar_one_or_none()
+        if not voucher:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+        
+        pdf_content = await pdf_generator.generate_voucher_pdf(
+            voucher_type="quotation",
+            voucher_data=voucher.__dict__,
+            db=db,
+            organization_id=current_user.organization_id,
+            current_user=current_user
+        )
+        
+        headers = {
+            'Content-Disposition': f'attachment; filename="quotation_{voucher.voucher_number}.pdf"'
+        }
+        
+        return StreamingResponse(pdf_content, media_type='application/pdf', headers=headers)
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF for quotation {quotation_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
 
 @router.put("/{quotation_id}", response_model=QuotationInDB)
 async def update_quotation(
