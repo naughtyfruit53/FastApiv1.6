@@ -62,13 +62,13 @@ const ChartOfAccountsPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const accountTypes = [
-    { value: "asset", label: "Asset", color: "success" },
-    { value: "liability", label: "Liability", color: "error" },
-    { value: "equity", label: "Equity", color: "primary" },
-    { value: "income", label: "Income", color: "info" },
-    { value: "expense", label: "Expense", color: "warning" },
-    { value: "bank", label: "Bank", color: "secondary" },
-    { value: "cash", label: "Cash", color: "default" },
+    { value: "ASSET", label: "Asset", color: "success" },
+    { value: "LIABILITY", label: "Liability", color: "error" },
+    { value: "EQUITY", label: "Equity", color: "primary" },
+    { value: "INCOME", label: "Income", color: "info" },
+    { value: "EXPENSE", label: "Expense", color: "warning" },
+    { value: "BANK", label: "Bank", color: "secondary" },
+    { value: "CASH", label: "Cash", color: "default" },
   ];
 
   const fetchAccounts = async () => {
@@ -92,7 +92,7 @@ const ChartOfAccountsPage: React.FC = () => {
     setFormData({
       account_code: "",
       account_name: "",
-      account_type: "asset",
+      account_type: "ASSET",
       parent_account_id: "",
       is_group: false,
       opening_balance: 0,
@@ -114,7 +114,7 @@ const ChartOfAccountsPage: React.FC = () => {
     setFormData({
       account_code: account.account_code || "",
       account_name: account.account_name || "",
-      account_type: account.account_type || "asset",
+      account_type: account.account_type || "ASSET",
       parent_account_id: account.parent_account_id || "",
       is_group: account.is_group,
       opening_balance: parseFloat(account.opening_balance) || 0,
@@ -137,18 +137,20 @@ const ChartOfAccountsPage: React.FC = () => {
       setError(null);
       setSuccessMessage(null);
       let response;
+      const payload = { ...formData };
+      payload.account_type = payload.account_type.toUpperCase();
       if (selectedAccount) {
         // Update existing account
         response = await api.put(
           `/chart-of-accounts/${selectedAccount.id}`,
-          formData,
+          payload,
         );
         setSuccessMessage("Account updated successfully");
       } else {
         // Create new account
         response = await api.post(
           "/chart-of-accounts",
-          formData,
+          payload,
         );
         setSuccessMessage("Account created successfully");
       }
@@ -157,7 +159,20 @@ const ChartOfAccountsPage: React.FC = () => {
       setAddDialog(false);
       setEditDialog(false);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to save account");
+      let errorMessage = "Failed to save account";
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === "string") {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          // Handle Pydantic validation errors (list of dicts)
+          errorMessage = detail.map((e: any) => `${e.loc.join(".")}: ${e.msg}`).join("\n");
+        } else if (typeof detail === "object") {
+          // Handle other object errors
+          errorMessage = JSON.stringify(detail);
+        }
+      }
+      setError(errorMessage);
     }
   };
 

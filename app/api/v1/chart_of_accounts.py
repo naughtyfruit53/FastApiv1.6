@@ -1,12 +1,13 @@
 # app/api/v1/chart_of_accounts.py
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_, func
 from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 import logging
+from fastapi import HTTPException
 
 from app.db.session import get_db
 from app.api.v1.auth import get_current_active_user
@@ -29,29 +30,29 @@ async def get_chart_of_accounts(
     per_page: int = Query(100, ge=1, le=1000),
     coa_filter: ChartOfAccountsFilter = Depends(),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get chart of accounts with filtering and pagination"""
     try:
-        query = db.query(ChartOfAccounts).filter(ChartOfAccounts.organization_id == organization_id)
+        stmt = select(ChartOfAccounts).where(ChartOfAccounts.organization_id == organization_id)
         
         # Apply filters
         if coa_filter.account_type:
-            query = query.filter(ChartOfAccounts.account_type == coa_filter.account_type.upper())
+            stmt = stmt.where(ChartOfAccounts.account_type == coa_filter.account_type.value.upper())
         
         if coa_filter.parent_account_id is not None:
-            query = query.filter(ChartOfAccounts.parent_account_id == coa_filter.parent_account_id)
+            stmt = stmt.where(ChartOfAccounts.parent_account_id == coa_filter.parent_account_id)
         
         if coa_filter.is_group is not None:
-            query = query.filter(ChartOfAccounts.is_group == coa_filter.is_group)
+            stmt = stmt.where(ChartOfAccounts.is_group == coa_filter.is_group)
         
         if coa_filter.is_active is not None:
-            query = query.filter(ChartOfAccounts.is_active == coa_filter.is_active)
+            stmt = stmt.where(ChartOfAccounts.is_active == coa_filter.is_active)
         
         if coa_filter.search:
             search_term = f"%{coa_filter.search}%"
-            query = query.filter(
+            stmt = stmt.where(
                 or_(
                     ChartOfAccounts.account_name.ilike(search_term),
                     ChartOfAccounts.account_code.ilike(search_term),
@@ -60,10 +61,14 @@ async def get_chart_of_accounts(
             )
         
         # Get total count
-        total = query.count()
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total_result = await db.execute(count_stmt)
+        total = total_result.scalar_one()
         
         # Apply pagination and ordering
-        accounts = query.order_by(ChartOfAccounts.account_code).offset((page-1)*per_page).limit(per_page).all()
+        paginated_stmt = stmt.order_by(ChartOfAccounts.account_code).offset((page-1)*per_page).limit(per_page)
+        result = await db.execute(paginated_stmt)
+        accounts = result.scalars().all()
         
         return ChartOfAccountsList(
             items=accounts,
@@ -82,7 +87,7 @@ async def get_chart_of_accounts(
 async def create_chart_of_account(
     coa_data: ChartOfAccountsCreate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new chart of account"""
@@ -94,10 +99,12 @@ async def create_chart_of_account(
             account_code = LedgerService.generate_account_code(db, organization_id, coa_data.account_type.upper())
         
         # Check for duplicate code
-        existing = db.query(ChartOfAccounts).filter(
+        existing_stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.organization_id == organization_id,
             ChartOfAccounts.account_code == account_code
-        ).first()
+        )
+        existing_result = await db.execute(existing_stmt)
+        existing = existing_result.scalars().first()
         
         if existing:
             raise HTTPException(
@@ -108,10 +115,12 @@ async def create_chart_of_account(
         # Validate parent account if specified
         level = 0
         if coa_data.parent_account_id:
-            parent = db.query(ChartOfAccounts).filter(
+            parent_stmt = select(ChartOfAccounts).where(
                 ChartOfAccounts.id == coa_data.parent_account_id,
                 ChartOfAccounts.organization_id == organization_id
-            ).first()
+            )
+            parent_result = await db.execute(parent_stmt)
+            parent = parent_result.scalars().first()
             
             if not parent:
                 raise HTTPException(status_code=404, detail="Parent account not found")
@@ -136,8 +145,8 @@ async def create_chart_of_account(
         )
         
         db.add(account)
-        db.commit()
-        db.refresh(account)
+        await db.commit()
+        await db.refresh(account)
         
         logger.info(f"Account created: {account.account_name} (ID: {account.id})")
         return account
@@ -148,7 +157,7 @@ async def create_chart_of_account(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating account: {e}")
         raise HTTPException(status_code=500, detail="Failed to create account")
 
@@ -157,7 +166,7 @@ async def create_chart_of_account(
 async def get_next_account_code(
     account_type: str = Query(..., alias="type", description="Account type for code generation"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get next suggested account code for a type"""
@@ -173,14 +182,16 @@ async def get_next_account_code(
 async def get_chart_of_account(
     account_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific chart of account"""
-    account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalars().first()
     
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -193,26 +204,30 @@ async def update_chart_of_account(
     account_id: int,
     coa_data: ChartOfAccountsUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Update a chart of account"""
     try:
-        account = db.query(ChartOfAccounts).filter(
+        stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.id == account_id,
             ChartOfAccounts.organization_id == organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        account = result.scalars().first()
         
         if not account:
             raise HTTPException(status_code=404, detail="Account not found")
         
         # Check for duplicate code if being updated
         if coa_data.account_code and coa_data.account_code != account.account_code:
-            existing = db.query(ChartOfAccounts).filter(
+            existing_stmt = select(ChartOfAccounts).where(
                 ChartOfAccounts.organization_id == organization_id,
                 ChartOfAccounts.account_code == coa_data.account_code,
                 ChartOfAccounts.id != account_id
-            ).first()
+            )
+            existing_result = await db.execute(existing_stmt)
+            existing = existing_result.scalars().first()
             
             if existing:
                 raise HTTPException(
@@ -223,14 +238,14 @@ async def update_chart_of_account(
         # Update fields
         update_fields = coa_data.dict(exclude_unset=True)
         if "account_type" in update_fields:
-            update_fields["account_type"] = update_fields["account_type"].upper()
+            update_fields["account_type"] = update_fields["account_type"].value.upper()
         for field, value in update_fields.items():
             setattr(account, field, value)
         
         account.updated_by = current_user.id
         
-        db.commit()
-        db.refresh(account)
+        await db.commit()
+        await db.refresh(account)
         
         logger.info(f"Account updated: {account.account_name} (ID: {account.id})")
         return account
@@ -241,7 +256,7 @@ async def update_chart_of_account(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating account: {e}")
         raise HTTPException(status_code=500, detail="Failed to update account")
 
@@ -250,29 +265,33 @@ async def update_chart_of_account(
 async def delete_chart_of_account(
     account_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a chart of account"""
     try:
-        account = db.query(ChartOfAccounts).filter(
+        stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.id == account_id,
             ChartOfAccounts.organization_id == organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        account = result.scalars().first()
         
         if not account:
             raise HTTPException(status_code=404, detail="Account not found")
         
         # Check for sub-accounts
-        sub_accounts = db.query(ChartOfAccounts).filter(ChartOfAccounts.parent_account_id == account_id).count()
+        sub_stmt = select(func.count()).select_from(select(ChartOfAccounts).where(ChartOfAccounts.parent_account_id == account_id).subquery())
+        sub_result = await db.execute(sub_stmt)
+        sub_accounts = sub_result.scalar_one()
         if sub_accounts > 0:
             raise HTTPException(
                 status_code=400,
                 detail="Cannot delete account with sub-accounts"
             )
         
-        db.delete(account)
-        db.commit()
+        await db.delete(account)
+        await db.commit()
         
         logger.info(f"Account deleted: {account.account_name} (ID: {account.id})")
         return {"message": "Account deleted successfully"}
@@ -280,7 +299,7 @@ async def delete_chart_of_account(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting account: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete account")
 
@@ -293,7 +312,7 @@ async def get_payroll_eligible_accounts(
     component_type: Optional[str] = Query(None, description="Filter by component type"),
     is_active: bool = Query(True, description="Filter active accounts"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Get chart of accounts eligible for payroll component mapping"""
@@ -310,7 +329,7 @@ async def get_payroll_eligible_accounts(
                 detail=f"Invalid account types. Valid types for payroll: {', '.join(valid_payroll_types)}"
             )
         
-        query = db.query(ChartOfAccounts).filter(
+        stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.organization_id == organization_id,
             ChartOfAccounts.account_type.in_(filtered_types),
             ChartOfAccounts.is_active == is_active,
@@ -321,28 +340,32 @@ async def get_payroll_eligible_accounts(
         if component_type:
             if component_type in ["earning", "deduction"]:
                 # For earnings and deductions, prefer expense accounts
-                query = query.filter(ChartOfAccounts.account_type == "EXPENSE")
+                stmt = stmt.where(ChartOfAccounts.account_type == "EXPENSE")
             elif component_type == "employer_contribution":
                 # For employer contributions, prefer liability accounts (for payables)
-                query = query.filter(ChartOfAccounts.account_type == "LIABILITY")
+                stmt = stmt.where(ChartOfAccounts.account_type == "LIABILITY")
         
         # Get total count
-        total = query.count()
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar_one()
         
         # Apply pagination and ordering
-        accounts = query.order_by(
+        paginated_stmt = stmt.order_by(
             ChartOfAccounts.account_type,
             ChartOfAccounts.account_code
-        ).offset((page - 1) * per_page).limit(per_page).all()
+        ).offset((page - 1) * per_page).limit(per_page)
+        result = await db.execute(paginated_stmt)
+        accounts = result.scalars().all()
         
         logger.info(f"Retrieved {len(accounts)} payroll-eligible accounts for organization {organization_id}")
         
         return ChartOfAccountsList(
-            accounts=accounts,
+            items=accounts,
             total=total,
             page=page,
-            per_page=per_page,
-            total_pages=(total + per_page - 1) // per_page
+            size=per_page,
+            pages=(total + per_page - 1) // per_page
         )
         
     except HTTPException:
@@ -361,12 +384,12 @@ async def chart_accounts_lookup(
     account_types: Optional[List[str]] = Query(None, description="Filter by account types"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of results"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
     """Lookup chart of accounts for dropdown/autocomplete components"""
     try:
-        query = db.query(ChartOfAccounts).filter(
+        stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.organization_id == organization_id,
             ChartOfAccounts.is_active == True
         )
@@ -374,7 +397,7 @@ async def chart_accounts_lookup(
         # Apply search filter
         if search:
             search_term = f"%{search}%"
-            query = query.filter(
+            stmt = stmt.where(
                 or_(
                     ChartOfAccounts.account_name.ilike(search_term),
                     ChartOfAccounts.account_code.ilike(search_term)
@@ -384,10 +407,12 @@ async def chart_accounts_lookup(
         # Apply account type filter
         if account_types:
             account_types = [t.upper() for t in account_types]
-            query = query.filter(ChartOfAccounts.account_type.in_(account_types))
+            stmt = stmt.where(ChartOfAccounts.account_type.in_(account_types))
         
         # Get results with limit
-        accounts = query.order_by(ChartOfAccounts.account_code).limit(limit).all()
+        limited_stmt = stmt.order_by(ChartOfAccounts.account_code).limit(limit)
+        result = await db.execute(limited_stmt)
+        accounts = result.scalars().all()
         
         # Return simplified format for lookups
         results = [

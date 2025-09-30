@@ -140,7 +140,7 @@ const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
                 onChange={handleTypeChange}
               >
                 {accountTypes.map((type) => (
-                  <MenuItem key={type.value} value={type.value.toUpperCase()}>
+                  <MenuItem key={type.value} value={type.value}>
                     {type.label}
                   </MenuItem>
                 ))}
