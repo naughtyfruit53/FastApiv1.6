@@ -328,9 +328,9 @@
                             <div style="font-weight:700;">Company’s Bank Details</div>
                             {% if company.bank_details %}
                             <div>A/c Holder’s Name : {{ company.bank_details.holder_name|default(company.name) }}</div>
-                            <div>Bank Name : {{ company.bank_details.bank_name }}</div>
                             <div>A/c No. : {{ company.bank_details.account_number }}</div>
-                            <div>Branch & IFS Code : {{ company.bank_details.branch }} & {{ company.bank_details.ifsc }}</div>
+                            <div>IFS Code : {{ company.bank_details.ifsc }}</div>
+                            <div>Bank Name & Branch : {{ company.bank_details.bank_name }} & {{ company.bank_details.branch }}</div>
                             {% endif %}
                             {% if company.pan_number %}<div style="font-size:11px; color:#555; margin-top:4px;">Company’s PAN : {{ company.pan_number }}</div>{% endif %}
                         </td>
