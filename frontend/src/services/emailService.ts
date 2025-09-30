@@ -115,6 +115,7 @@ export interface MailAccount {
   display_name?: string;
   account_type: 'imap' | 'gmail_api' | 'outlook_api';
   provider?: string;
+  oauth_token_id?: number;
   sync_enabled: boolean;
   sync_frequency_minutes: number;
   sync_folders?: string[];
