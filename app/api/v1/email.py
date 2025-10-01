@@ -6,14 +6,15 @@ Email API endpoints with RBAC, sync management, and CRUD operations
 
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_, func
 from datetime import datetime
 
 from app.core.database import get_db
-from app.services.rbac import check_permissions, RoleChecker
+from app.services.rbac import PermissionChecker
 from app.services.email_service import email_management_service, link_email_to_customer_vendor, auto_link_emails_by_sender
 from app.services.email_sync_worker import email_sync_worker
-from app.services.oauth_service import OAuthService
+from app.services.oauth_service import OAuth2Service
 from app.services.calendar_sync_service import calendar_sync_service
 from app.services.email_search_service import email_search_service
 from app.services.email_ai_service import email_ai_service
@@ -31,17 +32,17 @@ from app.schemas.email_schemas import (
 
 router = APIRouter(prefix="/email", tags=["Email"])
 
-# RBAC permissions
-ADMIN_PERMISSIONS = ["email:admin"]
-MANAGER_PERMISSIONS = ["email:manage", "email:admin"] 
-USER_PERMISSIONS = ["email:read", "email:manage", "email:admin"]
+# RBAC permissions - updated to match default permissions naming
+ADMIN_PERMISSIONS = ["crm_admin"]
+MANAGER_PERMISSIONS = ["mail:accounts:update", "crm_admin"] 
+USER_PERMISSIONS = ["mail:accounts:read", "mail:accounts:update", "crm_admin"]
 
 
 @router.post("/accounts", response_model=MailAccountResponse)
 async def create_mail_account(
     account_data: MailAccountCreate,
-    current_user: User = Depends(RoleChecker(MANAGER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Create new email account for IMAP/SMTP sync
@@ -49,10 +50,12 @@ async def create_mail_account(
     """
     try:
         # Check if account already exists
-        existing = db.query(MailAccount).filter(
+        stmt = select(MailAccount).filter(
             MailAccount.email_address == account_data.email_address,
             MailAccount.user_id == current_user.id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        existing = result.scalars().first()
         
         if existing:
             raise HTTPException(
@@ -93,13 +96,13 @@ async def create_mail_account(
             account.password_encrypted = encrypt_field(account_data.password, EncryptionKeys.PII_KEY)
         
         db.add(account)
-        db.commit()
-        db.refresh(account)
+        await db.commit()
+        await db.refresh(account)
         
         return account
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create email account: {str(e)}"
@@ -108,8 +111,8 @@ async def create_mail_account(
 
 @router.get("/accounts", response_model=List[MailAccountResponse])
 async def list_mail_accounts(
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500)
 ):
@@ -117,9 +120,11 @@ async def list_mail_accounts(
     List email accounts for current user
     Requires email:read permissions
     """
-    accounts = db.query(MailAccount).filter(
+    stmt = select(MailAccount).filter(
         MailAccount.user_id == current_user.id
-    ).offset(skip).limit(limit).all()
+    ).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    accounts = result.scalars().all()
     
     return accounts
 
@@ -127,16 +132,18 @@ async def list_mail_accounts(
 @router.get("/accounts/{account_id}", response_model=MailAccountResponse)
 async def get_mail_account(
     account_id: int = Path(..., gt=0),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get specific email account details
     """
-    account = db.query(MailAccount).filter(
+    stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalars().first()
     
     if not account:
         raise HTTPException(
@@ -151,16 +158,18 @@ async def get_mail_account(
 async def update_mail_account(
     account_id: int,
     update_data: MailAccountUpdate,
-    current_user: User = Depends(RoleChecker(MANAGER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Update email account settings
     """
-    account = db.query(MailAccount).filter(
+    stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalars().first()
     
     if not account:
         raise HTTPException(
@@ -181,8 +190,8 @@ async def update_mail_account(
         setattr(account, field, value)
     
     account.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(account)
+    await db.commit()
+    await db.refresh(account)
     
     return account
 
@@ -190,16 +199,18 @@ async def update_mail_account(
 @router.delete("/accounts/{account_id}")
 async def delete_mail_account(
     account_id: int,
-    current_user: User = Depends(RoleChecker(MANAGER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Delete email account and all associated data
     """
-    account = db.query(MailAccount).filter(
+    stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalars().first()
     
     if not account:
         raise HTTPException(
@@ -214,12 +225,12 @@ async def delete_mail_account(
         account.sync_status = EmailSyncStatus.DISABLED
         account.updated_at = datetime.utcnow()
         
-        db.commit()
+        await db.commit()
         
         return {"message": "Email account deleted successfully"}
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete email account: {str(e)}"
@@ -231,16 +242,18 @@ async def trigger_manual_sync(
     account_id: int,
     sync_request: ManualSyncRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Trigger manual sync for specific account
     """
-    account = db.query(MailAccount).filter(
+    stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalars().first()
     
     if not account:
         raise HTTPException(
@@ -269,16 +282,18 @@ async def trigger_manual_sync(
 @router.get("/accounts/{account_id}/status", response_model=SyncStatusResponse)
 async def get_account_sync_status(
     account_id: int,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed sync status for email account
     """
-    account = db.query(MailAccount).filter(
+    stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalars().first()
     
     if not account:
         raise HTTPException(
@@ -300,20 +315,22 @@ async def get_account_sync_status(
 @router.get("/accounts/{account_id}/emails", response_model=Dict[str, Any])
 async def get_account_emails(
     account_id: int,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
     folder: str = Query("INBOX", description="Email folder to fetch from"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     status_filter: Optional[EmailStatus] = Query(None, description="Filter by email status"),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get emails from specific account and folder
     """
-    account = db.query(MailAccount).filter(
+    stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    account = result.scalars().first()
     
     if not account:
         raise HTTPException(
@@ -322,17 +339,25 @@ async def get_account_emails(
         )
     
     # Build query
-    query = db.query(Email).filter(
+    stmt = select(Email).filter(
         Email.account_id == account_id,
         Email.folder == folder
     )
     
     if status_filter:
-        query = query.filter(Email.status == status_filter)
+        stmt = stmt.filter(Email.status == status_filter)
     
-    # Get total count and emails
-    total_count = query.count()
-    emails = query.order_by(Email.received_at.desc()).offset(offset).limit(limit).all()
+    result = await db.execute(stmt.order_by(Email.received_at.desc()).offset(offset).limit(limit))
+    emails = result.scalars().all()
+    
+    total_stmt = select(func.count()).select_from(Email).filter(
+        Email.account_id == account_id,
+        Email.folder == folder
+    )
+    if status_filter:
+        total_stmt = total_stmt.filter(Email.status == status_filter)
+    total_result = await db.execute(total_stmt)
+    total_count = total_result.scalar()
     
     return {
         "emails": emails,
@@ -347,17 +372,19 @@ async def get_account_emails(
 @router.get("/emails/{email_id}", response_model=EmailResponse)
 async def get_email_detail(
     email_id: int,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
     include_attachments: bool = Query(True),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed email information
     """
-    email = db.query(Email).join(MailAccount).filter(
+    stmt = select(Email).join(MailAccount).filter(
         Email.id == email_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    email = result.scalars().first()
     
     if not email:
         raise HTTPException(
@@ -374,16 +401,18 @@ async def get_email_detail(
 async def update_email_status(
     email_id: int,
     new_status: EmailStatus,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Update email status (read, unread, archived, etc.)
     """
-    email = db.query(Email).join(MailAccount).filter(
+    stmt = select(Email).join(MailAccount).filter(
         Email.id == email_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    email = result.scalars().first()
     
     if not email:
         raise HTTPException(
@@ -396,42 +425,45 @@ async def update_email_status(
     
     # Update thread unread count if marking as read/unread
     if email.thread_id:
-        thread = db.query(EmailThread).filter(EmailThread.id == email.thread_id).first()
+        thread_stmt = select(EmailThread).filter(EmailThread.id == email.thread_id)
+        thread_result = await db.execute(thread_stmt)
+        thread = thread_result.scalars().first()
         if thread:
             if new_status == EmailStatus.UNREAD:
                 thread.unread_count += 1
             elif email.status == EmailStatus.UNREAD and new_status != EmailStatus.UNREAD:
                 thread.unread_count = max(0, thread.unread_count - 1)
     
-    db.commit()
+    await db.commit()
     
     return {"message": "Email status updated", "new_status": new_status.value}
 
 
 @router.get("/threads", response_model=List[EmailThreadResponse])
 async def list_email_threads(
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
     account_id: Optional[int] = Query(None, description="Filter by account"),
     status_filter: Optional[EmailStatus] = Query(None, description="Filter by status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     List email threads with filtering
     """
     # Build query
-    query = db.query(EmailThread).join(MailAccount).filter(
+    stmt = select(EmailThread).join(MailAccount).filter(
         MailAccount.user_id == current_user.id
     )
     
     if account_id:
-        query = query.filter(EmailThread.account_id == account_id)
+        stmt = stmt.filter(EmailThread.account_id == account_id)
     
     if status_filter:
-        query = query.filter(EmailThread.status == status_filter)
+        stmt = stmt.filter(EmailThread.status == status_filter)
     
-    threads = query.order_by(EmailThread.last_activity_at.desc()).offset(offset).limit(limit).all()
+    result = await db.execute(stmt.order_by(EmailThread.last_activity_at.desc()).offset(offset).limit(limit))
+    threads = result.scalars().all()
     
     return threads
 
@@ -439,16 +471,18 @@ async def list_email_threads(
 @router.get("/threads/{thread_id}", response_model=EmailThreadResponse)
 async def get_email_thread(
     thread_id: int,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get email thread with all messages
     """
-    thread = db.query(EmailThread).join(MailAccount).filter(
+    stmt = select(EmailThread).join(MailAccount).filter(
         EmailThread.id == thread_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    thread = result.scalars().first()
     
     if not thread:
         raise HTTPException(
@@ -462,16 +496,18 @@ async def get_email_thread(
 @router.get("/attachments/{attachment_id}/download")
 async def download_attachment(
     attachment_id: int,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Download email attachment
     """
-    attachment = db.query(EmailAttachment).join(Email).join(MailAccount).filter(
+    stmt = select(EmailAttachment).join(Email).join(MailAccount).filter(
         EmailAttachment.id == attachment_id,
         MailAccount.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    attachment = result.scalars().first()
     
     if not attachment:
         raise HTTPException(
@@ -489,7 +525,7 @@ async def download_attachment(
     # Update download tracking
     attachment.download_count += 1
     attachment.last_downloaded_at = datetime.utcnow()
-    db.commit()
+    await db.commit()
     
     # Return file content (implementation depends on file storage method)
     # This is a placeholder - actual implementation would handle file serving
@@ -498,7 +534,7 @@ async def download_attachment(
 
 @router.get("/sync/status")
 async def get_sync_worker_status(
-    current_user: User = Depends(RoleChecker(ADMIN_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(ADMIN_PERMISSIONS))
 ):
     """
     Get email sync worker status
@@ -509,7 +545,7 @@ async def get_sync_worker_status(
 
 @router.post("/sync/start")
 async def start_sync_worker(
-    current_user: User = Depends(RoleChecker(ADMIN_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(ADMIN_PERMISSIONS))
 ):
     """
     Start email sync worker
@@ -527,7 +563,7 @@ async def start_sync_worker(
 
 @router.post("/sync/stop")
 async def stop_sync_worker(
-    current_user: User = Depends(RoleChecker(ADMIN_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(ADMIN_PERMISSIONS))
 ):
     """
     Stop email sync worker
@@ -545,19 +581,19 @@ async def stop_sync_worker(
 
 @router.get("/oauth/tokens")
 async def list_oauth_tokens(
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     List OAuth tokens for current user
     """
-    oauth_service = OAuthService(db)
-    tokens = oauth_service.list_user_tokens(current_user.id, current_user.organization_id)
+    oauth_service = OAuth2Service(db)
+    tokens = await oauth_service.list_user_tokens(current_user.id, current_user.organization_id)
     
     # Return safe token information
     token_info = []
     for token in tokens:
-        info = oauth_service.get_token_info(token.id)
+        info = await oauth_service.get_token_info(token.id)
         if info:
             token_info.append(info)
     
@@ -569,14 +605,14 @@ async def list_oauth_tokens(
 @router.post("/attachments/{attachment_id}/parse-calendar")
 async def parse_calendar_attachment(
     attachment_id: int = Path(..., description="Email attachment ID"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Parse .ics calendar file from email attachment and extract events/tasks
     """
     try:
-        result = calendar_sync_service.parse_ics_attachment(
+        result = await calendar_sync_service.parse_ics_attachment(
             attachment_id, current_user.organization_id
         )
         
@@ -597,13 +633,13 @@ async def parse_calendar_attachment(
 @router.post("/calendar/sync-events")
 async def sync_calendar_events(
     events: List[Dict[str, Any]],
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Sync parsed calendar events to database
     """
     try:
-        result = calendar_sync_service.sync_events_to_database(events, current_user.id)
+        result = await calendar_sync_service.sync_events_to_database(events, current_user.id)
         
         if not result["success"]:
             raise HTTPException(
@@ -622,13 +658,13 @@ async def sync_calendar_events(
 @router.post("/calendar/sync-tasks")
 async def sync_calendar_tasks(
     tasks: List[Dict[str, Any]],
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Sync parsed calendar tasks to database
     """
     try:
-        result = calendar_sync_service.sync_tasks_to_database(tasks, current_user.id)
+        result = await calendar_sync_service.sync_tasks_to_database(tasks, current_user.id)
         
         if not result["success"]:
             raise HTTPException(
@@ -657,13 +693,13 @@ async def search_emails(
     has_attachments: Optional[bool] = Query(None, description="Filter by attachment presence"),
     limit: int = Query(50, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Full-text search across emails using PostgreSQL tsvector
     """
     try:
-        result = email_search_service.full_text_search(
+        result = await email_search_service.full_text_search(
             query=query,
             organization_id=current_user.organization_id,
             account_ids=account_ids,
@@ -690,13 +726,13 @@ async def search_attachments(
     file_types: Optional[List[str]] = Query(None, description="File extensions to filter by"),
     limit: int = Query(50, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Search email attachments by filename and extracted content
     """
     try:
-        result = email_search_service.search_attachments(
+        result = await email_search_service.search_attachments(
             query=query,
             organization_id=current_user.organization_id,
             file_types=file_types,
@@ -718,13 +754,13 @@ async def search_by_customer_vendor(
     vendor_id: Optional[int] = Query(None, description="Vendor ID"),
     limit: int = Query(50, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Search emails linked to specific customers or vendors
     """
     try:
-        result = email_search_service.search_by_customer_vendor(
+        result = await email_search_service.search_by_customer_vendor(
             organization_id=current_user.organization_id,
             customer_id=customer_id,
             vendor_id=vendor_id,
@@ -745,7 +781,7 @@ async def search_by_customer_vendor(
 @router.post("/attachments/{attachment_id}/ocr")
 async def process_attachment_ocr(
     attachment_id: int = Path(..., description="Email attachment ID"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Process email attachment with OCR to extract text content
@@ -770,7 +806,7 @@ async def process_attachment_ocr(
 @router.post("/attachments/batch-ocr")
 async def batch_process_attachments_ocr(
     attachment_ids: List[int],
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Process multiple email attachments with OCR in batch
@@ -790,13 +826,13 @@ async def batch_process_attachments_ocr(
 @router.get("/ai/summary/{email_id}")
 async def get_email_summary(
     email_id: int = Path(..., description="Email ID"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Generate AI-powered summary of an email
     """
     try:
-        result = email_ai_service.generate_email_summary(email_id)
+        result = await email_ai_service.generate_email_summary(email_id)
         
         if not result["success"]:
             raise HTTPException(
@@ -816,13 +852,13 @@ async def get_email_summary(
 async def get_reply_suggestions(
     email_id: int = Path(..., description="Email ID"),
     context: Optional[str] = Query(None, description="Additional context for reply"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Generate AI-powered reply suggestions for an email
     """
     try:
-        result = email_ai_service.generate_reply_suggestions(email_id, context)
+        result = await email_ai_service.generate_reply_suggestions(email_id, context)
         
         if not result["success"]:
             raise HTTPException(
@@ -841,13 +877,13 @@ async def get_reply_suggestions(
 @router.post("/ai/categorize-batch")
 async def categorize_emails_batch(
     email_ids: List[int],
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Categorize multiple emails using AI
     """
     try:
-        result = email_ai_service.categorize_email_batch(email_ids)
+        result = await email_ai_service.categorize_email_batch(email_ids)
         return result
     except Exception as e:
         raise HTTPException(
@@ -859,13 +895,13 @@ async def categorize_emails_batch(
 @router.get("/ai/action-items/{email_id}")
 async def extract_action_items(
     email_id: int = Path(..., description="Email ID"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Extract action items and tasks from email content using AI
     """
     try:
-        result = email_ai_service.extract_action_items(email_id)
+        result = await email_ai_service.extract_action_items(email_id)
         
         if not result["success"]:
             raise HTTPException(
@@ -885,24 +921,33 @@ async def extract_action_items(
 
 @router.get("/shared-inboxes")
 async def list_shared_inboxes(
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     List shared inboxes accessible to current user based on RBAC
     """
     try:
         # Get mail accounts that are shared or owned by user
-        shared_accounts = db.query(MailAccount).filter(
+        stmt = select(MailAccount).filter(
             MailAccount.organization_id == current_user.organization_id,
             or_(
                 MailAccount.user_id == current_user.id,
                 MailAccount.is_shared == True
             )
-        ).all()
+        )
+        result = await db.execute(stmt)
+        shared_accounts = result.scalars().all()
         
         account_list = []
         for account in shared_accounts:
+            unread_stmt = select(func.count(Email.id)).filter(
+                Email.account_id == account.id,
+                Email.status == EmailStatus.UNREAD
+            )
+            unread_result = await db.execute(unread_stmt)
+            unread_count = unread_result.scalar()
+            
             account_dict = {
                 'id': account.id,
                 'email_address': account.email_address,
@@ -911,10 +956,7 @@ async def list_shared_inboxes(
                 'sync_status': account.sync_status.value,
                 'last_sync_at': account.last_sync_at,
                 'owner_id': account.user_id,
-                'unread_count': db.query(Email).filter(
-                    Email.account_id == account.id,
-                    Email.status == EmailStatus.UNREAD
-                ).count()
+                'unread_count': unread_count
             }
             account_list.append(account_dict)
         
@@ -934,7 +976,7 @@ async def link_email_to_entity(
     email_id: int = Path(..., description="Email ID"),
     customer_id: Optional[int] = Query(None, description="Customer ID to link to"),
     vendor_id: Optional[int] = Query(None, description="Vendor ID to link to"),
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
 ):
     """
     Link an email to a customer or vendor for ERP integration
@@ -979,7 +1021,7 @@ async def link_email_to_entity(
 @router.post("/auto-link")
 async def auto_link_emails(
     limit: int = Query(100, ge=1, le=500, description="Maximum emails to process"),
-    current_user: User = Depends(RoleChecker(MANAGER_PERMISSIONS))
+    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS))
 ):
     """
     Automatically link emails to customers/vendors based on sender addresses
@@ -1004,8 +1046,8 @@ async def compose_email(
     subject: str,
     body: str,
     html_body: Optional[str] = None,
-    current_user: User = Depends(RoleChecker(USER_PERMISSIONS)),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Compose and send email with automatic role-based BCC functionality.
@@ -1020,7 +1062,7 @@ async def compose_email(
     
     try:
         # Use the enhanced email service with BCC functionality
-        success, error_msg = email_service.send_email_with_role_bcc(
+        success, error_msg = await email_service.send_email_with_role_bcc(
             db=db,
             to_email=to_email,
             subject=subject,

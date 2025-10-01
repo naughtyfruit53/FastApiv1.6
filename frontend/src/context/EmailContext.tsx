@@ -5,28 +5,28 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
 interface EmailContextType {
-  selectedToken: number | null;
-  setSelectedToken: (token: number | null) => void;
+  selectedAccountId: number | null;
+  setSelectedAccountId: (account: number | null) => void;
 }
 
 const EmailContext = createContext<EmailContextType | undefined>(undefined);
 
 export const EmailProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [selectedToken, setSelectedToken] = useState<number | null>(() => {
-    const stored = localStorage.getItem('selectedEmailToken');
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(() => {
+    const stored = localStorage.getItem('selectedEmailAccount');
     return stored ? parseInt(stored, 10) : null;
   });
 
   useEffect(() => {
-    if (selectedToken) {
-      localStorage.setItem('selectedEmailToken', selectedToken.toString());
+    if (selectedAccountId) {
+      localStorage.setItem('selectedEmailAccount', selectedAccountId.toString());
     } else {
-      localStorage.removeItem('selectedEmailToken');
+      localStorage.removeItem('selectedEmailAccount');
     }
-  }, [selectedToken]);
+  }, [selectedAccountId]);
 
   return (
-    <EmailContext.Provider value={{ selectedToken, setSelectedToken }}>
+    <EmailContext.Provider value={{ selectedAccountId, setSelectedAccountId }}>
       {children}
     </EmailContext.Provider>
   );

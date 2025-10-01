@@ -47,7 +47,7 @@ import {
   Search as SearchIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { emailService, Email, MailAccount, EmailListResponse } from '../../services/emailService';
+import { getMailAccounts, getEmails, updateEmailStatus, triggerSync, Email, MailAccount, EmailListResponse } from '../../services/emailService';
 import OAuthLoginButton from '../../components/OAuthLoginButton';
 
 interface InboxProps {
@@ -78,7 +78,7 @@ const Inbox: React.FC<InboxProps> = ({
   // Fetch mail accounts
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['mail-accounts'],
-    queryFn: emailService.getMailAccounts
+    queryFn: getMailAccounts
   });
 
   // Fetch emails for selected account
@@ -89,7 +89,7 @@ const Inbox: React.FC<InboxProps> = ({
   } = useQuery({
     queryKey: ['emails', selectedAccount?.id, currentFolder, page, statusFilter],
     queryFn: () => selectedAccount 
-      ? emailService.getEmails(
+      ? getEmails(
           selectedAccount.id,
           currentFolder,
           pageSize,
@@ -110,7 +110,7 @@ const Inbox: React.FC<InboxProps> = ({
   // Update email status mutation
   const updateStatusMutation = useMutation({
     mutationFn: ({ emailId, status }: { emailId: number; status: Email['status'] }) =>
-      emailService.updateEmailStatus(emailId, status),
+      updateEmailStatus(emailId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
     }
@@ -118,7 +118,7 @@ const Inbox: React.FC<InboxProps> = ({
 
   // Trigger sync mutation
   const syncMutation = useMutation({
-    mutationFn: (accountId: number) => emailService.triggerSync(accountId),
+    mutationFn: (accountId: number) => triggerSync(accountId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
     }

@@ -17,10 +17,11 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 from sqlalchemy.orm import Session
+from sqlalchemy import delete
 
 from app.core.config import settings
-from app.core.database import SessionLocal, engine
-from app.models.email import MailAccount, EmailSyncStatus
+from app.core.database import SessionLocal, sync_engine
+from app.models.email import MailAccount, EmailSyncStatus, EmailSyncLog
 from app.services.email_service import email_management_service
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ class EmailSyncWorker:
         self.batch_size = getattr(settings, 'EMAIL_SYNC_BATCH_SIZE', 5)
         
         # Job store configuration
-        self.jobstore_url = getattr(settings, 'DATABASE_URL', 'sqlite:///./email_sync_jobs.db')
+        self.jobstore_url = getattr(settings, 'DATABASE_URL', 'sqlite:///./email_sync_jobs.db').replace("postgresql+asyncpg", "postgresql+psycopg2").replace("postgres+asyncpg", "postgres+psycopg2")
         
         # Initialize scheduler if enabled
         if self.sync_enabled:
@@ -260,14 +261,14 @@ class EmailSyncWorker:
         
         db = SessionLocal()
         try:
-            from app.models.email import EmailSyncLog
-            
             # Delete sync logs older than 30 days
             cutoff_date = datetime.utcnow() - timedelta(days=30)
             
-            deleted_count = db.query(EmailSyncLog).filter(
+            stmt = delete(EmailSyncLog).where(
                 EmailSyncLog.started_at < cutoff_date
-            ).delete()
+            )
+            result = db.execute(stmt)
+            deleted_count = result.rowcount
             
             db.commit()
             
@@ -286,8 +287,6 @@ class EmailSyncWorker:
         
         db = SessionLocal()
         try:
-            from app.models.email import EmailSyncLog
-            
             # Get accounts with recent sync errors
             cutoff_date = datetime.utcnow() - timedelta(days=7)
             

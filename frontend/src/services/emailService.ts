@@ -1,5 +1,5 @@
 // frontend/src/services/emailService.ts
-import { api } from '../lib/api';
+import api from "../lib/api";
 
 export interface SnappyMailConfig {
   imap_host: string;
@@ -156,44 +156,67 @@ export interface EmailListResponse {
   folder: string;
 }
 
-// Email Service API
-class EmailService {
-  private baseUrl = '/api/v1/email';
-
-  // Account Management
-  async getMailAccounts(): Promise<MailAccount[]> {
-    const response = await api.get(`${this.baseUrl}/accounts`);
+// Email Service API functions
+export const getMailAccounts = async (): Promise<MailAccount[]> => {
+  try {
+    console.log('[EmailService] Fetching mail accounts');
+    const response = await api.get('/email/accounts');
+    console.log('[EmailService] Mail accounts response:', response.data);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch mail accounts:', error);
+    throw error;
   }
+};
 
-  async getMailAccount(accountId: number): Promise<MailAccount> {
-    const response = await api.get(`${this.baseUrl}/accounts/${accountId}`);
+export const getMailAccount = async (accountId: number): Promise<MailAccount> => {
+  try {
+    const response = await api.get(`/email/accounts/${accountId}`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch mail account:', error);
+    throw error;
   }
+};
 
-  async createMailAccount(accountData: Partial<MailAccount>): Promise<MailAccount> {
-    const response = await api.post(`${this.baseUrl}/accounts`, accountData);
+export const createMailAccount = async (accountData: Partial<MailAccount>): Promise<MailAccount> => {
+  try {
+    const response = await api.post('/email/accounts', accountData);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to create mail account:', error);
+    throw error;
   }
+};
 
-  async updateMailAccount(accountId: number, updates: Partial<MailAccount>): Promise<MailAccount> {
-    const response = await api.put(`${this.baseUrl}/accounts/${accountId}`, updates);
+export const updateMailAccount = async (accountId: number, updates: Partial<MailAccount>): Promise<MailAccount> => {
+  try {
+    const response = await api.put(`/email/accounts/${accountId}`, updates);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to update mail account:', error);
+    throw error;
   }
+};
 
-  async deleteMailAccount(accountId: number): Promise<{ message: string }> {
-    const response = await api.delete(`${this.baseUrl}/accounts/${accountId}`);
+export const deleteMailAccount = async (accountId: number): Promise<{ message: string }> => {
+  try {
+    const response = await api.delete(`/email/accounts/${accountId}`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to delete mail account:', error);
+    throw error;
   }
+};
 
-  // Email Operations
-  async getEmails(
-    accountId: number,
-    folder: string = 'INBOX',
-    limit: number = 50,
-    offset: number = 0,
-    statusFilter?: string
-  ): Promise<EmailListResponse> {
+export const getEmails = async (
+  accountId: number,
+  folder: string = 'INBOX',
+  limit: number = 50,
+  offset: number = 0,
+  statusFilter?: string
+): Promise<EmailListResponse> => {
+  try {
     const params = new URLSearchParams({
       folder,
       limit: limit.toString(),
@@ -203,31 +226,45 @@ class EmailService {
       params.append('status_filter', statusFilter);
     }
     
-    const response = await api.get(`${this.baseUrl}/accounts/${accountId}/emails?${params}`);
+    const response = await api.get(`/email/accounts/${accountId}/emails?${params}`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch emails:', error);
+    throw error;
   }
+};
 
-  async getEmail(emailId: number, includeAttachments: boolean = true): Promise<Email> {
+export const getEmail = async (emailId: number, includeAttachments: boolean = true): Promise<Email> => {
+  try {
     const params = new URLSearchParams({
       include_attachments: includeAttachments.toString(),
     });
     
-    const response = await api.get(`${this.baseUrl}/emails/${emailId}?${params}`);
+    const response = await api.get(`/email/emails/${emailId}?${params}`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch email:', error);
+    throw error;
   }
+};
 
-  async updateEmailStatus(emailId: number, status: Email['status']): Promise<{ message: string; new_status: string }> {
-    const response = await api.put(`${this.baseUrl}/emails/${emailId}/status`, { new_status: status });
+export const updateEmailStatus = async (emailId: number, status: Email['status']): Promise<{ message: string; new_status: string }> => {
+  try {
+    const response = await api.put(`/email/emails/${emailId}/status`, { new_status: status });
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to update email status:', error);
+    throw error;
   }
+};
 
-  // Thread Operations
-  async getEmailThreads(
-    accountId?: number,
-    statusFilter?: string,
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<EmailThread[]> {
+export const getEmailThreads = async (
+  accountId?: number,
+  statusFilter?: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<EmailThread[]> => {
+  try {
     const params = new URLSearchParams({
       limit: limit.toString(),
       offset: offset.toString(),
@@ -239,17 +276,26 @@ class EmailService {
       params.append('status_filter', statusFilter);
     }
     
-    const response = await api.get(`${this.baseUrl}/threads?${params}`);
+    const response = await api.get(`/email/threads?${params}`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch email threads:', error);
+    throw error;
   }
+};
 
-  async getEmailThread(threadId: number): Promise<EmailThread> {
-    const response = await api.get(`${this.baseUrl}/threads/${threadId}`);
+export const getEmailThread = async (threadId: number): Promise<EmailThread> => {
+  try {
+    const response = await api.get(`/email/threads/${threadId}`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch email thread:', error);
+    throw error;
   }
+};
 
-  // Compose & Send
-  async composeEmail(email: ComposeEmail, accountId: number): Promise<{ message: string; email_id: number }> {
+export const composeEmail = async (email: ComposeEmail, accountId: number): Promise<{ message: string; email_id: number }> => {
+  try {
     const formData = new FormData();
     
     // Add basic email data
@@ -272,44 +318,67 @@ class EmailService {
       });
     }
 
-    const response = await api.post(`${this.baseUrl}/accounts/${accountId}/send`, formData, {
+    const response = await api.post(`/email/accounts/${accountId}/send`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to compose email:', error);
+    throw error;
   }
+};
 
-  // Attachments
-  async downloadAttachment(attachmentId: number): Promise<{ message: string; filename: string }> {
-    const response = await api.get(`${this.baseUrl}/attachments/${attachmentId}/download`);
+export const downloadAttachment = async (attachmentId: number): Promise<{ message: string; filename: string }> => {
+  try {
+    const response = await api.get(`/email/attachments/${attachmentId}/download`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to download attachment:', error);
+    throw error;
   }
+};
 
-  // Sync Operations
-  async triggerSync(accountId: number, fullSync: boolean = false, folder?: string): Promise<{ message: string; account_id: number }> {
-    const response = await api.post(`${this.baseUrl}/accounts/${accountId}/sync`, {
+export const triggerSync = async (accountId: number, fullSync: boolean = false, folder?: string): Promise<{ message: string; account_id: number }> => {
+  try {
+    const response = await api.post(`/email/accounts/${accountId}/sync`, {
       full_sync: fullSync,
       folder,
     });
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to trigger sync:', error);
+    throw error;
   }
+};
 
-  async getSyncStatus(accountId: number): Promise<any> {
-    const response = await api.get(`${this.baseUrl}/accounts/${accountId}/status`);
+export const getSyncStatus = async (accountId: number): Promise<any> => {
+  try {
+    const response = await api.get(`/email/accounts/${accountId}/status`);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to get sync status:', error);
+    throw error;
   }
+};
 
-  // Template Operations (for voucher integration)
-  async getEmailTemplates(): Promise<any[]> {
-    const response = await api.get('/api/v1/templates/email');
+export const getEmailTemplates = async (): Promise<any[]> => {
+  try {
+    const response = await api.get('/templates/email');
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch email templates:', error);
+    throw error;
   }
+};
 
-  async applyTemplate(templateId: number, data: Record<string, any>): Promise<{ subject: string; body_html: string }> {
-    const response = await api.post(`/api/v1/templates/email/${templateId}/render`, data);
+export const applyTemplate = async (templateId: number, data: Record<string, any>): Promise<{ subject: string; body_html: string }> => {
+  try {
+    const response = await api.post(`/templates/email/${templateId}/render`, data);
     return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to apply template:', error);
+    throw error;
   }
-}
-
-export const emailService = new EmailService();
+};

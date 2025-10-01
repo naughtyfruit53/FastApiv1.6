@@ -77,7 +77,7 @@ const waitForAuthIfNeeded = async (config: any) => {
     "/auth/admin/setup",
     "/users/me",  // Critical for initial user fetch
     "/organizations/current",  // Organization info
-    "/rbac/users/permissions",  // Permissions
+    "/rbac/users/users/permissions",  // Permissions
     "/companies/current",  // Company info
     "/organizations/org-statistics",  // Stats
     "/organizations/recent-activities",  // Recent activities
@@ -113,6 +113,14 @@ const waitForAuthIfNeeded = async (config: any) => {
     }
   }
 };
+
+const refreshAxios = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: 15000,
+});
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
@@ -184,19 +192,20 @@ api.interceptors.response.use(
         console.log(`[API] ${status} Auth error - attempting token refresh`);
         originalRequest._retry = true;
         try {
-          const { authService } = await import("../services/authService");
-          const refreshData = await authService.refreshToken();
-          if (!refreshData) {
-            console.error("[API] Refresh token attempt returned null");
-            handleTokenExpiry();
-            return Promise.reject(error);
+          const refreshToken = localStorage.getItem("refresh_token");
+          if (!refreshToken) {
+            throw new Error("No refresh token available");
+          }
+          const response = await refreshAxios.post('/auth/refresh', {
+            refresh_token: refreshToken
+          });
+          const refreshData = response.data;
+          localStorage.setItem("token", refreshData.access_token);
+          if (refreshData.refresh_token) {
+            localStorage.setItem("refresh_token", refreshData.refresh_token);
           }
           console.log("[API] Token refreshed successfully");
           originalRequest.headers.Authorization = `Bearer ${refreshData.access_token}`;
-          if (refreshData.refresh_token) {
-            localStorage.setItem("refresh_token", refreshData.refresh_token);
-            console.log("[API] Updated refresh token in localStorage");
-          }
           return api(originalRequest);
         } catch (refreshError) {
           console.error("[API] Token refresh failed:", refreshError);

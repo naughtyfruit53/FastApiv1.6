@@ -8,8 +8,8 @@
 import React, { useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, Alert, CircularProgress, Button } from '@mui/material';
 import { Menu as MenuIcon, Settings as SettingsIcon, Add as AddIcon } from '@mui/icons-material';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { emailService, Email, MailAccount } from '../../services/emailService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getMailAccounts, Email, MailAccount } from '../../services/emailService';
 import { useOAuth } from '../../hooks/useOAuth';
 import { useEmail } from '../../context/EmailContext';
 import Inbox from './Inbox';
@@ -23,7 +23,7 @@ type View = 'inbox' | 'thread' | 'compose' | 'select-account' | 'settings' | 'se
 const EmailModule: React.FC = () => {
   const queryClient = useQueryClient();
   const { getUserTokens } = useOAuth();
-  const { selectedToken, setSelectedToken } = useEmail();
+  const { selectedAccountId, setSelectedAccountId } = useEmail();
 
   const [currentView, setCurrentView] = useState<View>('inbox');
   const [selectedEmail, setSelectedEmail] = useState<Email | undefined>();
@@ -38,24 +38,38 @@ const EmailModule: React.FC = () => {
   });
 
   // Fetch mail accounts
-  const { data: accounts = [], isLoading: accountsLoading } = useQuery({
+  const { data: accounts = [], isLoading: accountsLoading, error: accountsError } = useQuery({
     queryKey: ['mail-accounts'],
-    queryFn: emailService.getMailAccounts,
+    queryFn: getMailAccounts,
     onSuccess: (data) => {
+      console.log('[EmailModule] Mail accounts loaded:', data);
       // Auto-select if none selected and accounts available
-      if (data.length > 0 && !selectedToken) {
-        const defaultToken = tokens.find(t => t.email_address === data[0].email_address);
-        if (defaultToken) {
-          setSelectedToken(defaultToken.id);
-        } else if (tokens.length > 0) {
-          setSelectedToken(tokens[0].id);
-        }
+      if (data.length > 0 && !selectedAccountId) {
+        setSelectedAccountId(data[0].id);
       }
+    },
+    onError: (error) => {
+      console.error('[EmailModule] Error loading mail accounts:', error);
     }
   });
 
-  // Find selected account based on token
-  const selectedAccount = accounts.find(acc => acc.oauth_token_id === selectedToken);
+  // Find selected account based on account ID
+  const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+
+  // Sync mutation
+  const syncMutation = useMutation({
+    mutationFn: (accountId: number) => emailService.triggerSync(accountId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    }
+  });
+
+  // Auto-sync if account selected and no previous sync
+  React.useEffect(() => {
+    if (selectedAccount && !selectedAccount.last_sync_at && !syncMutation.isPending) {
+      syncMutation.mutate(selectedAccount.id);
+    }
+  }, [selectedAccount, syncMutation]);
 
   const handleEmailSelect = (email: Email) => {
     setSelectedEmail(email);
@@ -84,18 +98,10 @@ const EmailModule: React.FC = () => {
     setSelectedThreadId(undefined);
   };
 
-  const handleSelectToken = (tokenId: number) => {
-    setSelectedToken(tokenId);
+  const handleSelectAccount = (accountId: number) => {
+    setSelectedAccountId(accountId);
     setCurrentView('inbox');
     queryClient.invalidateQueries({ queryKey: ['emails'] });
-  };
-
-  const handleAccountSelect = (accountId: number) => {
-    // Find the token associated with this account
-    const account = accounts.find(acc => acc.id === accountId);
-    if (account && account.oauth_token_id) {
-      handleSelectToken(account.oauth_token_id);
-    }
   };
 
   const renderCurrentView = () => {
@@ -107,7 +113,7 @@ const EmailModule: React.FC = () => {
             onEmailSelect={handleEmailSelect}
             onThreadSelect={handleThreadSelect}
             onCompose={() => handleCompose('new')}
-            onAccountSelect={handleAccountSelect}
+            onAccountSelect={handleSelectAccount}
           />
         );
       case 'thread':
@@ -183,6 +189,10 @@ const EmailModule: React.FC = () => {
     return <Alert severity="error">Failed to load email accounts: {(tokensError as Error).message}</Alert>;
   }
 
+  if (accountsError) {
+    return <Alert severity="error">Failed to load mail accounts: {(accountsError as Error).message}</Alert>;
+  }
+
   if (tokens.length === 0) {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -197,15 +207,15 @@ const EmailModule: React.FC = () => {
     );
   }
 
-  if (!selectedToken || !selectedAccount) {
+  if (!selectedAccountId || !selectedAccount) {
     return (
       <Box sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
           Select Email Account
         </Typography>
         <EmailSelector 
-          tokens={tokens} 
-          onSelect={handleSelectToken}
+          accounts={accounts} 
+          onSelect={handleSelectAccount}
         />
       </Box>
     );
@@ -240,9 +250,9 @@ const EmailModule: React.FC = () => {
             Accounts
           </Typography>
           <EmailSelector 
-            tokens={tokens} 
+            accounts={accounts} 
             onSelect={(id) => {
-              handleSelectToken(id);
+              handleSelectAccount(id);
               setDrawerOpen(false);
             }} 
           />

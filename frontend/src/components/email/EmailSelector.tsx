@@ -8,31 +8,24 @@ import { List, ListItem, ListItemButton, ListItemText, ListItemAvatar, Avatar, T
 import { Email as EmailIcon } from '@mui/icons-material';
 
 interface EmailSelectorProps {
-  tokens: UserEmailToken[];
-  onSelect: (tokenId: number) => void;
+  accounts: MailAccount[];
+  onSelect: (accountId: number) => void;
 }
 
-const EmailSelector: React.FC<EmailSelectorProps> = ({ tokens, onSelect }) => {
+const EmailSelector: React.FC<EmailSelectorProps> = ({ accounts, onSelect }) => {
   return (
     <List>
-      {tokens.map(token => (
-        <ListItem key={token.id} disablePadding>
-          <ListItemButton onClick={() => onSelect(token.id)}>
+      {accounts.map(account => (
+        <ListItem key={account.id} disablePadding>
+          <ListItemButton onClick={() => onSelect(account.id)}>
             <ListItemAvatar>
               <Avatar>
                 <EmailIcon />
               </Avatar>
             </ListItemAvatar>
             <ListItemText 
-              primary={token.email_address}
-              secondary={
-                <>
-                  <Typography component="span" variant="body2">
-                    {token.provider.toUpperCase()}
-                  </Typography>
-                  {token.display_name && ` - ${token.display_name}`}
-                </>
-              }
+              primary={account.email_address}
+              secondary={`${account.provider?.toUpperCase() || 'CUSTOM'} - ${account.display_name || 'No name'}`}
             />
           </ListItemButton>
         </ListItem>

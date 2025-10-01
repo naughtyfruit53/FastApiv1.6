@@ -76,6 +76,9 @@ from app.api.v1 import ledger as v1_ledger
 # Import chart of accounts router
 from app.api.v1 import chart_of_accounts as v1_chart_of_accounts
 
+# Import email router
+from app.api.v1 import email as v1_email
+
 logger = logging.getLogger(__name__)
 
 # Log imports with try/except for error handling
@@ -355,7 +358,8 @@ app.include_router(products.router, prefix="/api/v1/products", tags=["products"]
 logger.info("Products router included successfully at prefix: /api/v1/products")
 
 # Company branding and PDF audit endpoints (static)
-app.include_router(v1_company_branding.router, prefix="/api/v1/company", tags=["company-branding"])
+app.include_router(
+    v1_company_branding.router, prefix="/api/v1/company", tags=["company-branding"])
 logger.info("Company branding router included successfully at prefix: /api/v1/company")
 app.include_router(v1_company_branding.router, prefix="/api/v1/audit", tags=["audit"])
 logger.info("Audit router included successfully at prefix: /api/v1/audit")
@@ -489,6 +493,10 @@ logger.info("Ledger router included successfully at prefix: /api/v1")
 # Chart of Accounts API
 app.include_router(v1_chart_of_accounts.router, prefix="/api/v1", tags=["chart-of-accounts"])
 logger.info("Chart of Accounts router included successfully at prefix: /api/v1")
+
+# Include email router
+app.include_router(v1_email.router, prefix="/api/v1", tags=["email"])
+logger.info("Email router included successfully at prefix: /api/v1")
 
 @app.get("/routes")
 def get_routes():

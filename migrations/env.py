@@ -1,7 +1,9 @@
 # migrations/env.py
 
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
 from alembic import context
 import os
 import sys
@@ -26,7 +28,7 @@ if APP_DIR not in sys.path:
     sys.path.insert(0, APP_DIR)
 
 from app.core.config import settings
-from app.core.database import Base
+from app.core.database import Base, sync_database_url
 
 # Dynamically import all models
 models_dir = os.path.join(APP_DIR, "models")
@@ -38,47 +40,56 @@ from app.models import user_models
 
 config = context.config
 
-database_url = getattr(settings, "SESSION_DATABASE_URL", None) or getattr(settings, "DATABASE_URL", None) or "sqlite:///./tritiq_erp.db"
-if not database_url:
-    raise RuntimeError("DATABASE_URL or SESSION_DATABASE_URL must be set in app.core.config.settings or as an environment variable.")
-config.set_main_option('sqlalchemy.url', database_url)
+if not sync_database_url:
+    raise RuntimeError("DATABASE_URL must be set in app.core.config.settings or as an environment variable.")
+config.set_main_option('sqlalchemy.url', sync_database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
-def is_sqlite(url):
-    return url.lower().startswith("sqlite")
+def run_migrations_offline() -> None:
+    """Run migrations in 'offline' mode.
 
-def run_migrations_offline():
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
+    """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True,
-        compare_server_default=True,
-        render_as_batch=is_sqlite(url),
     )
+
     with context.begin_transaction():
         context.run_migrations()
 
 def run_migrations_online():
+    """Run migrations in 'online' mode.
+
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
     with connectable.connect() as connection:
         context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            compare_server_default=True,
-            render_as_batch=is_sqlite(database_url),
+            connection=connection, target_metadata=target_metadata
         )
+
         with context.begin_transaction():
             context.run_migrations()
 

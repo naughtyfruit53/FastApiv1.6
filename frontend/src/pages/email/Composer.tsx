@@ -36,7 +36,7 @@ import {
   Save as SaveIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 import { emailService, ComposeEmail, Email, MailAccount, EmailAddress } from '../../services/emailService';
@@ -74,7 +74,6 @@ const Composer: React.FC<ComposerProps> = ({
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
 
   // Fetch available email templates
   const { data: templates = [] } = useQuery({
@@ -91,7 +90,6 @@ const Composer: React.FC<ComposerProps> = ({
       return emailService.composeEmail(emailData, selectedAccount.id);
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['emails'] });
       onSent?.(result.email_id);
       onClose?.();
     }

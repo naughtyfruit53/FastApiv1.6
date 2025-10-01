@@ -2,12 +2,14 @@
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 import logging
 from fastapi import HTTPException
 from sqlalchemy.exc import ProgrammingError
 import psycopg2.errors as pg_errors
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +44,23 @@ connect_args = {
 
 logger.debug(f"Creating async engine with connect_args: {connect_args} and kwargs: {engine_kwargs}")
 
-# Database engine
+# Async Database engine
 try:
-    engine = create_async_engine(database_url, connect_args=connect_args, **engine_kwargs)
+    async_engine = create_async_engine(database_url, connect_args=connect_args, **engine_kwargs)
     logger.info("Async engine created successfully")
 except Exception as e:
     logger.error(f"Failed to create async engine: {str(e)}")
     raise
 
-# Session factory
-AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False, autoflush=False, bind=engine)
+# Async Session factory
+AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False, autoflush=False, bind=async_engine)
+
+# Sync engine for background workers
+sync_database_url = database_url.replace("postgresql+asyncpg", "postgresql+psycopg2").replace("postgres+asyncpg", "postgres+psycopg2")
+sync_engine = create_engine(sync_database_url, **engine_kwargs)
+
+# Sync Session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 # Base class for models
 Base = declarative_base()
@@ -156,7 +165,7 @@ async def execute_with_retry(operation_func, max_retries: int = 3, *args, **kwar
 # Create all tables with error handling for duplicates
 async def create_tables():
     try:
-        async with engine.begin() as conn:
+        async with async_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created successfully")
     except ProgrammingError as e:

@@ -5,9 +5,8 @@ RBAC service layer for Service CRM role-based access control
 """
 
 from typing import List, Optional, Dict, Set
-from typing import TYPE_CHECKING
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import Session
+from sqlalchemy import select, and_, or_, func
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status, Depends
 
@@ -20,10 +19,9 @@ from app.schemas.rbac import (
     UserServiceRoleCreate, ServiceRoleType, ServiceModule, ServiceAction
 )
 from app.core.permissions import Permission
+from app.api.v1.auth import get_current_active_user  # Moved import outside TYPE_CHECKING
+from app.core.database import get_db
 import logging
-
-if TYPE_CHECKING:
-    from app.api.v1.auth import get_current_active_user  # Type-only import to break circular import
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,7 @@ logger = logging.getLogger(__name__)
 class RBACService:
     """Service class for Role-Based Access Control operations"""
     
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: Session):
         self.db = db
     
     # Permission Management
@@ -196,10 +194,11 @@ class RBACService:
             return False
         
         # Check if role is assigned to any users
-        count_result = await self.db.execute(
-            select(UserServiceRole).filter_by(role_id=role_id, is_active=True).count()
+        count_stmt = select(func.count('*')).select_from(UserServiceRole).where(
+            UserServiceRole.role_id == role_id, UserServiceRole.is_active == True
         )
-        active_assignments = count_result.scalars().first()
+        count_result = await self.db.execute(count_stmt)
+        active_assignments = count_result.scalar()
         
         if active_assignments > 0:
             raise HTTPException(
@@ -315,9 +314,18 @@ class RBACService:
         )
         return result.scalars().all()
     
-    # Permission Checking
     async def user_has_service_permission(self, user_id: int, permission_name: str) -> bool:
         """Check if user has a specific service permission through their roles"""
+        # Fallback for org_admin users to have crm_admin and mail permissions
+        user_result = await self.db.execute(select(User).filter_by(id=user_id))
+        user = user_result.scalars().first()
+        if user:
+            if user.is_super_admin or user.role == 'super_admin':
+                return True
+            if user.role == 'org_admin':
+                if permission_name == 'crm_admin' or permission_name.startswith('mail:'):
+                    return True
+        
         # Get user's active service roles
         user_roles = await self.get_user_service_roles(user_id)
         
@@ -332,9 +340,7 @@ class RBACService:
                     ServicePermission.is_active == True
                 )
             )
-            role_permissions = result.scalars().first()
-            
-            if role_permissions:
+            if result.scalars().first():
                 return True
         
         return False
@@ -353,7 +359,7 @@ class RBACService:
                 ServicePermission.is_active == True
             )
         )
-        return {row[0] for row in result.all()}
+        return {row[0] for row in result.fetchall()}
     
     # Bulk Operations
     async def assign_multiple_roles_to_user(self, user_id: int, role_ids: List[int], assigned_by_id: Optional[int] = None) -> List[UserServiceRole]:
@@ -632,10 +638,11 @@ class RBACService:
                 detail=f"Access denied: Missing permission '{permission_name}' for this company"
             )
 
-async def require_permission(permission: str):
+
+def require_permission(permission: str):
     """Dependency to check if current user has a specific permission"""
-    async def dependency(current_user: User = Depends(get_current_active_user)):
-        rbac = RBACService(dependency.db)  # Assuming db is available in dependency
+    async def dependency(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+        rbac = RBACService(db)
         if not await rbac.user_has_service_permission(current_user.id, permission):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -643,3 +650,21 @@ async def require_permission(permission: str):
             )
         return current_user
     return dependency
+
+def check_permissions(user: User, required_permissions: List[str]) -> bool:
+    """
+    Check if user has all required permissions
+    """
+    user_permissions = user.permissions or []
+    return all(perm in user_permissions for perm in required_permissions)
+
+class PermissionChecker:
+    def __init__(self, allowed_permissions: List[str]):
+        self.allowed_permissions = allowed_permissions
+
+    async def __call__(self, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+        rbac = RBACService(db)
+        for perm in self.allowed_permissions:
+            if await rbac.user_has_service_permission(current_user.id, perm):
+                return current_user
+        raise HTTPException(status_code=403, detail="Insufficient permissions")

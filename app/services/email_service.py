@@ -11,9 +11,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.core.logging import log_email_operation
@@ -32,8 +30,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Assuming engine is defined in database.py; adjust if needed
-from app.core.database import engine
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from app.core.database import sync_engine, SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -952,7 +949,7 @@ TRITIQ ERP Team
             # Get BCC recipients based on sender's role and organization settings
             bcc_emails = []
             if sender_user:
-                bcc_emails = self.role_hierarchy_service.get_bcc_recipients_for_user(db, sender_user)
+                bcc_emails = self.role_hierarchy_service.get_bcc_recipient_for_user(db, sender_user)
                 organization_id = organization_id or sender_user.organization_id
                 user_id = user_id or sender_user.id
             

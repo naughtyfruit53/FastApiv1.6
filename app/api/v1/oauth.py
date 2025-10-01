@@ -21,6 +21,7 @@ from app.schemas.oauth_schemas import (
     EmailSyncRequest, EmailSyncResponse
 )
 from app.services.oauth_service import OAuth2Service
+from app.services.email_sync_worker import email_sync_worker
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -172,6 +173,7 @@ async def oauth_callback(
                 existing_account.is_active = True
                 existing_account.sync_status = EmailSyncStatus.ACTIVE
                 existing_account.updated_at = datetime.utcnow()
+                mail_account = existing_account
             else:
                 # Create new account
                 mail_account = MailAccount(
@@ -189,8 +191,13 @@ async def oauth_callback(
                     created_at=datetime.utcnow(),
                 )
                 db.add(mail_account)
+                mail_account = mail_account
 
             await db.commit()
+
+            # Trigger initial sync after successful authentication
+            email_sync_worker.sync_account_now(mail_account.id)
+
         except Exception as e:
             logger.error(f"Error storing tokens: {str(e)}\n{traceback.format_exc()}")
             raise HTTPException(
