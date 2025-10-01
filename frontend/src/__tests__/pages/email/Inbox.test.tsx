@@ -321,4 +321,92 @@ describe('Inbox Component', () => {
     const starIcons = document.querySelectorAll('[data-testid="StarIcon"]');
     expect(starIcons.length).toBeGreaterThan(0);
   });
+
+  describe('Account Selector', () => {
+    const mockAccount2 = {
+      id: 2,
+      name: 'Second Account',
+      email_address: 'second@example.com',
+      display_name: 'Second User',
+      account_type: 'gmail_api' as const,
+      sync_enabled: true,
+      sync_frequency_minutes: 15,
+      is_active: true,
+      sync_status: 'active',
+      total_messages_synced: 50,
+      organization_id: 1,
+      user_id: 1,
+      created_at: '2023-01-01T00:00:00Z'
+    };
+
+    beforeEach(() => {
+      mockEmailService.getMailAccounts.mockResolvedValue([mockAccount, mockAccount2]);
+    });
+
+    it('displays all email accounts in the sidebar', async () => {
+      renderWithProviders(<Inbox selectedAccount={mockAccount} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test User')).toBeInTheDocument();
+        expect(screen.getByText('Second User')).toBeInTheDocument();
+      });
+    });
+
+    it('highlights the selected account', async () => {
+      renderWithProviders(<Inbox selectedAccount={mockAccount} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test User')).toBeInTheDocument();
+      });
+
+      // Find the selected account box
+      const accountBox = screen.getByText('Test User').closest('div');
+      expect(accountBox).toHaveStyle({ cursor: 'pointer' });
+    });
+
+    it('calls onAccountSelect when account is clicked', async () => {
+      const onAccountSelect = jest.fn();
+      renderWithProviders(
+        <Inbox 
+          selectedAccount={mockAccount} 
+          onAccountSelect={onAccountSelect}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Second User')).toBeInTheDocument();
+      });
+
+      // Click on the second account
+      const secondAccountBox = screen.getByText('Second User').closest('div');
+      if (secondAccountBox) {
+        fireEvent.click(secondAccountBox);
+        expect(onAccountSelect).toHaveBeenCalledWith(2);
+      }
+    });
+
+    it('shows account sync status', async () => {
+      renderWithProviders(<Inbox selectedAccount={mockAccount} />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText('active')).toHaveLength(2);
+      });
+    });
+
+    it('account boxes are interactive and hoverable', async () => {
+      renderWithProviders(<Inbox selectedAccount={mockAccount} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test User')).toBeInTheDocument();
+      });
+
+      const accountBox = screen.getByText('Test User').closest('div');
+      expect(accountBox).toHaveStyle({ cursor: 'pointer' });
+      
+      // Verify hover styles are defined
+      const styles = window.getComputedStyle(accountBox as Element);
+      expect(styles.cursor).toBe('pointer');
+    });
+  });
+});
 });

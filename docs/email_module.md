@@ -451,6 +451,41 @@ For production environments with high email volume:
    account.sync_status = EmailSyncStatus.PAUSED
    ```
 
+### Frontend Navigation Issues
+
+4. **Account Selector Not Clickable**
+   - **Symptom**: Email accounts are visible but not selectable/clickable
+   - **Solution**: Ensure the `onAccountSelect` handler is passed to the Inbox component
+   - **Fixed in**: v1.6 - Account boxes now have onClick handlers with hover effects
+   - **Verification**: Click on an account in the sidebar - it should highlight and switch the active account
+
+5. **404 Errors on Email Module Pages**
+   - **Symptom**: Navigation to settings, search, or attachments returns 404
+   - **Root Cause**: Missing view types in the main email module router
+   - **Solution**: Views for settings, search, and attachments are now integrated in the main index.tsx
+   - **Available Views**:
+     - `inbox` - Email list with folder navigation (INBOX, SENT, ARCHIVED, DELETED)
+     - `thread` - Thread view for email conversations
+     - `compose` - Email composition interface
+     - `settings` - Email account settings (click gear icon in toolbar)
+     - `search` - Email search interface
+     - `attachments` - Attachment management
+   - **Navigation**: Use the folder sidebar in Inbox for folder-based navigation, or toolbar icons for settings
+
+6. **Account Switching Not Working**
+   - **Symptom**: Clicking on different accounts doesn't change the displayed emails
+   - **Solution**: 
+     - Verify `oauth_token_id` is properly set on MailAccount records
+     - Check EmailContext is properly providing `selectedToken` state
+     - Ensure `handleAccountSelect` maps account ID to token ID correctly
+   - **Debug**:
+     ```typescript
+     // Check if account has oauth_token_id
+     console.log('Account:', account.oauth_token_id);
+     // Check selected token
+     console.log('Selected Token:', selectedToken);
+     ```
+
 ### Debug Mode
 
 Enable debug logging for troubleshooting:

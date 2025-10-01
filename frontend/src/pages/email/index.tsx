@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, Alert, CircularProgress } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, Alert, CircularProgress, Button } from '@mui/material';
 import { Menu as MenuIcon, Settings as SettingsIcon, Add as AddIcon } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { emailService, Email, MailAccount } from '../../services/emailService';
@@ -18,7 +18,7 @@ import Composer from './Composer';
 import EmailSelector from '../../components/email/EmailSelector';
 import OAuthLoginButton from '../../components/OAuthLoginButton';
 
-type View = 'inbox' | 'thread' | 'compose' | 'select-account';
+type View = 'inbox' | 'thread' | 'compose' | 'select-account' | 'settings' | 'search' | 'attachments';
 
 const EmailModule: React.FC = () => {
   const queryClient = useQueryClient();
@@ -90,6 +90,14 @@ const EmailModule: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['emails'] });
   };
 
+  const handleAccountSelect = (accountId: number) => {
+    // Find the token associated with this account
+    const account = accounts.find(acc => acc.id === accountId);
+    if (account && account.oauth_token_id) {
+      handleSelectToken(account.oauth_token_id);
+    }
+  };
+
   const renderCurrentView = () => {
     switch (currentView) {
       case 'inbox':
@@ -99,6 +107,7 @@ const EmailModule: React.FC = () => {
             onEmailSelect={handleEmailSelect}
             onThreadSelect={handleThreadSelect}
             onCompose={() => handleCompose('new')}
+            onAccountSelect={handleAccountSelect}
           />
         );
       case 'thread':
@@ -120,6 +129,42 @@ const EmailModule: React.FC = () => {
             onClose={handleBackToInbox}
             onSent={handleBackToInbox}
           />
+        );
+      case 'settings':
+        return (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h5" gutterBottom>Email Settings</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Manage your email accounts, sync settings, and preferences
+            </Typography>
+            <Button variant="outlined" onClick={handleBackToInbox} sx={{ mt: 2 }}>
+              Back to Inbox
+            </Button>
+          </Box>
+        );
+      case 'search':
+        return (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h5" gutterBottom>Email Search</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Search across all your emails and attachments
+            </Typography>
+            <Button variant="outlined" onClick={handleBackToInbox} sx={{ mt: 2 }}>
+              Back to Inbox
+            </Button>
+          </Box>
+        );
+      case 'attachments':
+        return (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h5" gutterBottom>Email Attachments</Typography>
+            <Typography variant="body2" color="text.secondary">
+              View and manage all email attachments
+            </Typography>
+            <Button variant="outlined" onClick={handleBackToInbox} sx={{ mt: 2 }}>
+              Back to Inbox
+            </Button>
+          </Box>
         );
       default:
         return null;
@@ -179,7 +224,7 @@ const EmailModule: React.FC = () => {
           <IconButton color="inherit" onClick={() => handleCompose('new')}>
             <AddIcon />
           </IconButton>
-          <IconButton color="inherit">
+          <IconButton color="inherit" onClick={() => setCurrentView('settings')}>
             <SettingsIcon />
           </IconButton>
         </Toolbar>

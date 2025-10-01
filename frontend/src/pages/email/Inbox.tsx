@@ -55,13 +55,15 @@ interface InboxProps {
   onEmailSelect?: (email: Email) => void;
   onThreadSelect?: (threadId: number) => void;
   onCompose?: () => void;
+  onAccountSelect?: (accountId: number) => void;
 }
 
 const Inbox: React.FC<InboxProps> = ({
   selectedAccount,
   onEmailSelect,
   onThreadSelect,
-  onCompose
+  onCompose,
+  onAccountSelect
 }) => {
   const [currentFolder, setCurrentFolder] = useState('INBOX');
   const [searchTerm, setSearchTerm] = useState('');
@@ -260,12 +262,16 @@ const Inbox: React.FC<InboxProps> = ({
             accounts.map((account) => (
               <Box
                 key={account.id}
+                onClick={() => onAccountSelect && onAccountSelect(account.id)}
                 sx={{
                   p: 1,
                   borderRadius: 1,
                   bgcolor: selectedAccount?.id === account.id ? 'primary.light' : 'transparent',
                   cursor: 'pointer',
-                  mb: 1
+                  mb: 1,
+                  '&:hover': {
+                    bgcolor: selectedAccount?.id === account.id ? 'primary.main' : 'action.hover'
+                  }
                 }}
               >
                 <Typography variant="body2" noWrap>
