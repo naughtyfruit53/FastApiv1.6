@@ -30,6 +30,7 @@ from app.models.email import (
     MailAccount, Email, EmailThread, EmailAttachment, EmailSyncStatus, EmailStatus, EmailPriority, EmailSyncLog
 )
 from app.utils.text_processing import extract_plain_text, sanitize_html
+from app.services.oauth_service import OAuth2Service
 
 logger = logging.getLogger(__name__)
 
@@ -55,23 +56,27 @@ class EmailSyncService:
             '*': ['style', 'class']
         }
     
-    def get_imap_connection(self, account: MailAccount) -> Optional[imaplib.IMAP4_SSL]:
+    def get_imap_connection(self, account: MailAccount, db: Session) -> Optional[imaplib.IMAP4_SSL]:
         """
         Establish IMAP connection with OAuth2 or password authentication
         """
         try:
+            port = account.incoming_port or (993 if account.incoming_ssl else 143)
+            logger.info(f"Attempting IMAP connection to {account.incoming_server}:{port} with SSL={account.incoming_ssl}")
+            logger.info(f"Auth method: {account.incoming_auth_method}, Username: {account.username}, OAuth ID: {account.oauth_token_id}, Password set: {bool(account.password_encrypted)}")
+            
             # Create IMAP connection
             if account.incoming_ssl:
-                imap = imaplib.IMAP4_SSL(account.incoming_server, account.incoming_port or 993)
+                imap = imaplib.IMAP4_SSL(account.incoming_server, port)
             else:
-                imap = imaplib.IMAP4(account.incoming_server, account.incoming_port or 143)
-                if account.incoming_ssl:
-                    imap.starttls()
+                imap = imaplib.IMAP4(account.incoming_server, port)
+                imap.starttls()
             
             # Authenticate
-            if account.oauth_token_id and account.incoming_auth_method == 'oauth2':
+            if account.incoming_auth_method == 'oauth2' and account.oauth_token_id:
                 # OAuth2 authentication
-                credentials = self.oauth_service.get_email_credentials(account.oauth_token_id)
+                oauth_service = OAuth2Service(db)
+                credentials = oauth_service.get_email_credentials(account.oauth_token_id)
                 if not credentials:
                     logger.error(f"Failed to get OAuth2 credentials for account {account.id}")
                     return None
@@ -82,10 +87,11 @@ class EmailSyncService:
                 )
                 imap.authenticate('XOAUTH2', lambda x: auth_string)
                 
-            elif account.username and account.password_encrypted:
+            elif account.incoming_auth_method == 'password' and account.username and account.password_encrypted:
                 # Password authentication
                 from app.utils.encryption import decrypt_field, EncryptionKeys
                 password = decrypt_field(account.password_encrypted, EncryptionKeys.PII_KEY)
+                logger.info(f"Using password auth for {account.username}, password length: {len(password) if password else 0}")
                 imap.login(account.username, password)
             else:
                 logger.error(f"No valid authentication method for account {account.id}")
@@ -139,7 +145,7 @@ class EmailSyncService:
         
         try:
             # Connect to IMAP
-            imap = self.get_imap_connection(account)
+            imap = self.get_imap_connection(account, db)
             if not imap:
                 raise Exception("Failed to connect to IMAP server")
             

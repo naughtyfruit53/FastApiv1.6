@@ -63,6 +63,26 @@ async def create_mail_account(
                 detail="Email account already exists for this user"
             )
         
+        # Set defaults based on provider
+        if account_data.provider == 'google':
+            account_data.incoming_server = 'imap.gmail.com'
+            account_data.incoming_port = 993
+            account_data.incoming_ssl = True
+            account_data.outgoing_server = 'smtp.gmail.com'
+            account_data.outgoing_port = 587
+            account_data.outgoing_ssl = True
+            if account_data.oauth_token_id:
+                account_data.incoming_auth_method = 'oauth2'
+                account_data.outgoing_auth_method = 'oauth2'
+            elif account_data.username and account_data.password:
+                account_data.incoming_auth_method = 'password'
+                account_data.outgoing_auth_method = 'password'
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="For Google provider, provide either OAuth token or username/password"
+                )
+
         # Create account
         account = MailAccount(
             name=account_data.name,
