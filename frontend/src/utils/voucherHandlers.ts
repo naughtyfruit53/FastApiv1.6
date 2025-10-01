@@ -19,7 +19,8 @@ export const handleFinalSubmit = async (
   mode: string,
   handleGeneratePDF: (response: any) => void,
   refreshMasterData: () => void,
-  config: any
+  config: any,
+  additionalCharges?: any
 ) => {
   const entityIdField = config.entityType === 'purchase' ? 'vendor_id' : 'customer_id';
   const entityName = config.entityType === 'purchase' ? 'vendor' : 'customer';
@@ -50,6 +51,9 @@ export const handleFinalSubmit = async (
     data.total_amount = totalAmount;
     data.is_intrastate = isIntrastate;
     data.round_off = totalRoundOff;
+    if (additionalCharges) {
+      data.additional_charges = additionalCharges;
+    }
   }
 
   const itemsToUpdate = data.items.filter(

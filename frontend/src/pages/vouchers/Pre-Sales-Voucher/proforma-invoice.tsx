@@ -32,10 +32,12 @@ import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherReferenceDropdown from "../../../components/VoucherReferenceDropdown";
 import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
+import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import {
   getVoucherConfig,
   getVoucherStyles,
+  calculateVoucherTotals,
 } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
@@ -155,6 +157,15 @@ const ProformaInvoicePage: React.FC = () => {
     handleDiscountDialogClose,
   } = useVoucherDiscounts();
   const [descriptionEnabled, setDescriptionEnabled] = useState(false);
+  const [additionalCharges, setAdditionalCharges] = useState<AdditionalChargesData>({
+    freight: 0,
+    installation: 0,
+    packing: 0,
+    insurance: 0,
+    loading: 0,
+    unloading: 0,
+    miscellaneous: 0,
+  });
 
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
@@ -174,6 +185,22 @@ const ProformaInvoicePage: React.FC = () => {
     control,
     name: fields.map((_, i) => `items.${i}.product_id`),
   });
+
+  // Override totals with additional charges
+  const totalsWithAdditionalCharges = useMemo(() => {
+    const items = watch("items") || [];
+    return calculateVoucherTotals(
+      items,
+      isIntrastate,
+      lineDiscountEnabled ? lineDiscountType : null,
+      totalDiscountEnabled ? totalDiscountType : null,
+      watch("total_discount") || 0,
+      additionalCharges
+    );
+  }, [watch("items"), isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, watch("total_discount"), additionalCharges, watch]);
+
+  const finalTotalAmount = totalsWithAdditionalCharges.totalAmount;
+  const finalTotalAdditionalCharges = totalsWithAdditionalCharges.totalAdditionalCharges;
 
   // Reset processed when fields length changes
   useEffect(() => {
@@ -225,6 +252,12 @@ const ProformaInvoicePage: React.FC = () => {
         igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
+    // Load additional charges
+    if (voucher.additional_charges) {
+      setAdditionalCharges(voucher.additional_charges);
+    } else {
+      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+    }
   };
 
   const handleEditWithData = (voucher: any) => {
@@ -240,6 +273,12 @@ const ProformaInvoicePage: React.FC = () => {
         igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
+    // Load additional charges
+    if (voucher.additional_charges) {
+      setAdditionalCharges(voucher.additional_charges);
+    } else {
+      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+    }
     // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['proforma-invoice', voucher.id], voucher);
   };
@@ -260,6 +299,12 @@ const ProformaInvoicePage: React.FC = () => {
         igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
+    // Load additional charges
+    if (voucher.additional_charges) {
+      setAdditionalCharges(voucher.additional_charges);
+    } else {
+      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+    }
     // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['proforma-invoice', voucher.id], voucher);
   };
@@ -277,6 +322,12 @@ const ProformaInvoicePage: React.FC = () => {
         igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
+    // Load additional charges
+    if (voucher.additional_charges) {
+      setAdditionalCharges(voucher.additional_charges);
+    } else {
+      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+    }
     // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['proforma-invoice', voucher.id], voucher);
   };
@@ -289,6 +340,12 @@ const ProformaInvoicePage: React.FC = () => {
         date: formattedDate,
       };
       reset(formattedData);
+      // Load additional charges
+      if (voucherData.additional_charges) {
+        setAdditionalCharges(voucherData.additional_charges);
+      } else {
+        setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+      }
       if (voucherData.items && voucherData.items.length > 0) {
         remove();
         voucherData.items.forEach((item: any) => {
@@ -327,7 +384,7 @@ const ProformaInvoicePage: React.FC = () => {
       watch,
       computedItems,
       isIntrastate,
-      totalAmount,
+      finalTotalAmount,
       totalRoundOff,
       lineDiscountEnabled,
       lineDiscountType,
@@ -338,7 +395,8 @@ const ProformaInvoicePage: React.FC = () => {
       mode,
       handleGeneratePDF,
       refreshMasterData,
-      config
+      config,
+      additionalCharges
     );
   };
 
@@ -526,13 +584,21 @@ const ProformaInvoicePage: React.FC = () => {
             />
           </Grid>
           <Grid size={12}>
+            <AdditionalCharges
+              charges={additionalCharges}
+              onChange={setAdditionalCharges}
+              mode={mode}
+            />
+          </Grid>
+          <Grid size={12}>
             <VoucherFormTotals
-              totalSubtotal={totalSubtotal}
-              totalCgst={totalCgst}
-              totalSgst={totalSgst}
-              totalIgst={totalIgst}
-              totalAmount={totalAmount}
-              totalRoundOff={totalRoundOff}
+              totalSubtotal={totalsWithAdditionalCharges.totalSubtotal}
+              totalCgst={totalsWithAdditionalCharges.totalCgst}
+              totalSgst={totalsWithAdditionalCharges.totalSgst}
+              totalIgst={totalsWithAdditionalCharges.totalIgst}
+              totalAmount={totalsWithAdditionalCharges.totalAmount}
+              totalRoundOff={totalsWithAdditionalCharges.totalRoundOff}
+              totalAdditionalCharges={totalsWithAdditionalCharges.totalAdditionalCharges}
               isIntrastate={isIntrastate}
               totalDiscountEnabled={totalDiscountEnabled}
               totalDiscountType={totalDiscountType}
@@ -548,7 +614,7 @@ const ProformaInvoicePage: React.FC = () => {
             <TextField
               fullWidth
               label="Amount in Words"
-              value={getAmountInWords(totalAmount)}
+              value={getAmountInWords(finalTotalAmount)}
               disabled
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
               inputProps={{ style: { fontSize: 14 } }}
@@ -572,7 +638,7 @@ const ProformaInvoicePage: React.FC = () => {
         <DialogContent><Typography>Round off amount is {totalRoundOff.toFixed(2)}. Proceed with save?</Typography></DialogContent>
         <DialogActions>
           <Button onClick={() => setRoundOffConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, computedItems, isIntrastate, totalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config); }} variant="contained">Confirm</Button>
+          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, computedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config, additionalCharges); }} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
     </Box>
