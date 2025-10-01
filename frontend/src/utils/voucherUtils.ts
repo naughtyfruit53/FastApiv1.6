@@ -235,6 +235,7 @@ export const calculateVoucherTotals = (
   lineDiscountType?: 'percentage' | 'amount' | null,
   totalDiscountType?: 'percentage' | 'amount' | null,
   totalDiscountValue: number = 0,
+  additionalCharges: any = {},
 ): any => {
   // First, calculate per item after line discount
   const itemsWithLineDisc = items.map(item => {
@@ -259,6 +260,14 @@ export const calculateVoucherTotals = (
   }
 
   const afterTotalDisc = sumAfterLine - totalDiscAmount;
+  
+  // Calculate total additional charges
+  const totalAdditionalCharges = Object.keys(additionalCharges || {}).reduce((sum, key) => {
+    return sum + (parseFloat(additionalCharges[key]) || 0);
+  }, 0);
+
+  // Add additional charges to taxable amount before GST
+  const taxableBeforeGst = afterTotalDisc + totalAdditionalCharges;
   const apportionFactor = sumAfterLine > 0 ? afterTotalDisc / sumAfterLine : 0;
 
   const computedItems = itemsWithLineDisc.map(item => {
@@ -285,10 +294,28 @@ export const calculateVoucherTotals = (
   });
 
   const totalSubtotal = itemsWithLineDisc.reduce((sum, item) => sum + item.subtotal, 0);
-  let totalAmount = computedItems.reduce((sum, item) => sum + item.amount, 0);
-  const totalCgst = computedItems.reduce((sum, item) => sum + item.cgst_amount, 0);
-  const totalSgst = computedItems.reduce((sum, item) => sum + item.sgst_amount, 0);
-  const totalIgst = computedItems.reduce((sum, item) => sum + item.igst_amount, 0);
+  
+  // Calculate GST on the taxable amount including additional charges
+  const totalTaxableFromItems = computedItems.reduce((sum, item) => sum + item.taxable_amount, 0);
+  
+  // Calculate GST on additional charges (apply weighted average GST rate)
+  const totalGstRate = computedItems.length > 0 
+    ? computedItems.reduce((sum, item) => sum + (item.gst_rate || 0) * item.taxable_amount, 0) / totalTaxableFromItems
+    : 0;
+  
+  const additionalChargesGst = totalAdditionalCharges * (totalGstRate / 100);
+  let additionalChargesCgst = 0, additionalChargesSgst = 0, additionalChargesIgst = 0;
+  if (isIntrastate) {
+    additionalChargesCgst = additionalChargesGst / 2;
+    additionalChargesSgst = additionalChargesGst / 2;
+  } else {
+    additionalChargesIgst = additionalChargesGst;
+  }
+
+  let totalAmount = computedItems.reduce((sum, item) => sum + item.amount, 0) + totalAdditionalCharges + additionalChargesGst;
+  const totalCgst = computedItems.reduce((sum, item) => sum + item.cgst_amount, 0) + additionalChargesCgst;
+  const totalSgst = computedItems.reduce((sum, item) => sum + item.sgst_amount, 0) + additionalChargesSgst;
+  const totalIgst = computedItems.reduce((sum, item) => sum + item.igst_amount, 0) + additionalChargesIgst;
   const totalGst = totalCgst + totalSgst + totalIgst;
 
   // Aggregated GST breakdown
@@ -320,6 +347,7 @@ export const calculateVoucherTotals = (
     totalSubtotal: parseFloat(totalSubtotal.toFixed(2)),
     totalDiscount: parseFloat(totalDiscAmount.toFixed(2)),
     totalTaxable: parseFloat(afterTotalDisc.toFixed(2)),
+    totalAdditionalCharges: parseFloat(totalAdditionalCharges.toFixed(2)),
     totalGst: parseFloat(totalGst.toFixed(2)),
     totalCgst: parseFloat(totalCgst.toFixed(2)),
     totalSgst: parseFloat(totalSgst.toFixed(2)),

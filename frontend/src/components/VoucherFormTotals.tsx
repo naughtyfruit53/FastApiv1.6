@@ -20,6 +20,7 @@ interface VoucherFormTotalsProps {
   setValue: any;
   handleToggleTotalDiscount: (checked: boolean) => void;
   getAmountInWords: (amount: number) => string;
+  totalAdditionalCharges?: number;
 }
 
 const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
@@ -38,6 +39,7 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
   setValue,
   handleToggleTotalDiscount,
   getAmountInWords,
+  totalAdditionalCharges = 0,
 }) => {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
@@ -78,6 +80,13 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
                   }}
                 />
               )}
+            </Box>
+          )}
+
+          {totalAdditionalCharges > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
+              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>Additional Charges:</Typography>
+              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{totalAdditionalCharges.toLocaleString()}</Typography>
             </Box>
           )}
 

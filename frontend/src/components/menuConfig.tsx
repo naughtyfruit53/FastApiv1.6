@@ -659,9 +659,8 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         { title: 'Service', subSections: menuItems.service.sections },
         { title: 'Projects', subSections: menuItems.projects.sections },
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
-        { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections },
-        { title: 'Email', subSections: menuItems.email.sections }, // Placeholder section for Email
-        { title: 'Settings', subSections: menuItems.settings.sections }
+        { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections }
+        // Email and Settings moved to top-level menu
         // Vouchers & Transactions removed per request
         // Mobile Apps removed per request
       ];
