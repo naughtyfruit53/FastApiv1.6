@@ -8,7 +8,7 @@ from app.core.config import settings
 import logging
 from fastapi import HTTPException
 from sqlalchemy.exc import ProgrammingError
-import psycopg2.errors as pg_errors
+import psycopg.errors as pg_errors
 import asyncio
 import urllib.parse
 from sqlalchemy.engine.url import make_url
