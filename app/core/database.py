@@ -11,6 +11,7 @@ from sqlalchemy.exc import ProgrammingError
 import psycopg2.errors as pg_errors
 import asyncio
 import urllib.parse
+from sqlalchemy.engine.url import make_url
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +20,16 @@ database_url = settings.DATABASE_URL
 if not database_url:
     raise ValueError("DATABASE_URL is required in .env file for database connection. Please configure it to connect to Supabase.")
 
-# Improved check: Allow for +driver in URL (e.g., postgresql+asyncpg://) which is valid for SQLAlchemy async
+# Improved check: Allow for +driver in URL (e.g., postgresql+psycopg://) which is valid for SQLAlchemy async
 if not (database_url.startswith("postgresql://") or database_url.startswith("postgres://") or
         database_url.startswith("postgresql+") or database_url.startswith("postgres+")):
     logger.warning("DATABASE_URL is not a PostgreSQL/Supabase URL - this may cause issues in production. For development, continuing...")
 
 logger.info(f"Using database: {database_url.split('@')[1] if '@' in database_url else 'URL parsed'}")  # Mask credentials
 
-# Parse URL to detect port for Supabase mode
+# Parse URL to get driver and detect port for Supabase mode
+url_obj = make_url(database_url)
+driver = url_obj.drivername
 parsed_url = urllib.parse.urlparse(database_url)
 port = int(parsed_url.port) if parsed_url.port else 5432
 
@@ -56,23 +59,30 @@ else:
     }
     logger.info("Using Supabase transaction mode - pool_size=10, max_overflow=20")
 
-# Common connect_args
+# Common connect_args for async (asyncpg)
 connect_args = {
     "timeout": 120,  # Connection timeout
     "command_timeout": 60,  # Query timeout
     "server_settings": {"statement_timeout": "60s", "tcp_keepalives_idle": "60"}  # DB-level statement timeout and keepalive
 }
 
-# Disable prepared statements for transaction mode (port 6543)
+# Execution options
+exec_options = {}
 if not is_session_mode:
-    connect_args["statement_cache_size"] = 0
-    logger.info("Disabled prepared statements for transaction mode")
+    exec_options["compiled_cache"] = None
+    logger.info("Disabled compiled cache for transaction mode")
+
+# Disable prepared statements or equivalent for transaction mode
+if not is_session_mode:
+    if 'asyncpg' in driver:
+        connect_args["statement_cache_size"] = 0
+        logger.info("Set statement_cache_size=0 for asyncpg in transaction mode")
 
 logger.debug(f"Creating async engine with connect_args: {connect_args} and kwargs: {engine_kwargs}")
 
 # Async Database engine
 try:
-    async_engine = create_async_engine(database_url, connect_args=connect_args, **engine_kwargs)
+    async_engine = create_async_engine(database_url, connect_args=connect_args, execution_options=exec_options, **engine_kwargs)
     logger.info("Async engine created successfully")
 except Exception as e:
     logger.error(f"Failed to create async engine: {str(e)}")
@@ -82,15 +92,24 @@ except Exception as e:
 AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False, autoflush=False, bind=async_engine)
 
 # Sync engine for background workers
-sync_database_url = database_url.replace("postgresql+asyncpg", "postgresql+psycopg2").replace("postgres+asyncpg", "postgres+psycopg2")
+# Adjust driver for sync if asyncpg
+sync_driver = driver.replace('asyncpg', 'psycopg')
+sync_database_url = url_obj.set(drivername=sync_driver).render_as_string(hide_password=False)
+
 sync_connect_args = {
-    "keepalives": 1,
+    "connect_timeout": 120,
     "keepalives_idle": 60,
+    "options": "-c statement_timeout=60s"
 }
 if not is_session_mode:
     sync_connect_args["prepare_threshold"] = None
     logger.info("Disabled prepared statements for sync engine in transaction mode")
-sync_engine = create_engine(sync_database_url, connect_args=sync_connect_args, **engine_kwargs)
+
+sync_exec_options = {}
+if not is_session_mode:
+    sync_exec_options["compiled_cache"] = None
+
+sync_engine = create_engine(sync_database_url, connect_args=sync_connect_args, execution_options=sync_exec_options, **engine_kwargs)
 
 # Sync Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)

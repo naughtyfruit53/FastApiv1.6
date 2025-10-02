@@ -7,7 +7,7 @@ Email API endpoints with RBAC, sync management, and CRUD operations
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, func, delete
 from datetime import datetime
 
 from app.core.database import get_db
@@ -239,15 +239,29 @@ async def delete_mail_account(
         )
     
     try:
-        # Soft delete by setting inactive and disabled
-        account.is_active = False
-        account.sync_enabled = False
-        account.sync_status = EmailSyncStatus.DISABLED
-        account.updated_at = datetime.utcnow()
+        # Delete related attachments (through emails)
+        await db.execute(
+            delete(EmailAttachment)
+            .where(EmailAttachment.email_id.in_(
+                select(Email.id).where(Email.account_id == account_id)
+            ))
+        )
+
+        # Delete related emails
+        await db.execute(delete(Email).where(Email.account_id == account_id))
+        
+        # Delete related threads
+        await db.execute(delete(EmailThread).where(EmailThread.account_id == account_id))
+        
+        # Delete related sync logs
+        await db.execute(delete(EmailSyncLog).where(EmailSyncLog.account_id == account_id))
+        
+        # Delete the account
+        await db.delete(account)
         
         await db.commit()
         
-        return {"message": "Email account deleted successfully"}
+        return {"message": "Email account and associated data deleted successfully"}
         
     except Exception as e:
         await db.rollback()
