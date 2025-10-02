@@ -237,14 +237,15 @@ export const calculateVoucherTotals = (
   totalDiscountValue: number = 0,
   additionalCharges: any = {},
 ): any => {
+  const safeNumber = (value: number) => isNaN(value) ? 0 : value;
   // First, calculate per item after line discount
   const itemsWithLineDisc = items.map(item => {
-    const subtotal = (item.quantity || 0) * (item.unit_price || 0);
+    const subtotal = safeNumber(item.quantity || 0) * safeNumber(item.unit_price || 0);
     let lineDiscAmount = 0;
     if (lineDiscountType === 'percentage') {
-      lineDiscAmount = subtotal * ((item.discount_percentage || 0) / 100);
+      lineDiscAmount = subtotal * safeNumber((item.discount_percentage || 0) / 100);
     } else if (lineDiscountType === 'amount') {
-      lineDiscAmount = item.discount_amount || 0;
+      lineDiscAmount = safeNumber(item.discount_amount || 0);
     }
     const afterLineDisc = subtotal - lineDiscAmount;
     return { ...item, subtotal, lineDiscAmount, afterLineDisc };
@@ -263,7 +264,7 @@ export const calculateVoucherTotals = (
   
   // Calculate total additional charges
   const totalAdditionalCharges = Object.keys(additionalCharges || {}).reduce((sum, key) => {
-    return sum + (parseFloat(additionalCharges[key]) || 0);
+    return sum + safeNumber(parseFloat(additionalCharges[key]) || 0);
   }, 0);
 
   // Add additional charges to taxable amount before GST
@@ -272,7 +273,7 @@ export const calculateVoucherTotals = (
 
   const computedItems = itemsWithLineDisc.map(item => {
     const taxableAmount = item.afterLineDisc * apportionFactor;
-    const gstRate = item.gst_rate || 0;
+    const gstRate = safeNumber(item.gst_rate || 0);
     const gstAmount = taxableAmount * (gstRate / 100);
     let cgst = 0, sgst = 0, igst = 0;
     if (isIntrastate) {
@@ -299,8 +300,8 @@ export const calculateVoucherTotals = (
   const totalTaxableFromItems = computedItems.reduce((sum, item) => sum + item.taxable_amount, 0);
   
   // Calculate GST on additional charges (apply weighted average GST rate)
-  const totalGstRate = computedItems.length > 0 
-    ? computedItems.reduce((sum, item) => sum + (item.gst_rate || 0) * item.taxable_amount, 0) / totalTaxableFromItems
+  const totalGstRate = (computedItems.length > 0 && totalTaxableFromItems > 0)
+    ? computedItems.reduce((sum, item) => sum + safeNumber((item.gst_rate || 0) * item.taxable_amount), 0) / totalTaxableFromItems
     : 0;
   
   const additionalChargesGst = totalAdditionalCharges * (totalGstRate / 100);
@@ -321,7 +322,7 @@ export const calculateVoucherTotals = (
   // Aggregated GST breakdown
   const gstBreakdown: { [rate: number]: { cgst: number, sgst: number, igst: number, taxable: number } } = {};
   computedItems.forEach(item => {
-    const rate = item.gst_rate || 0;
+    const rate = safeNumber(item.gst_rate || 0);
     if (!gstBreakdown[rate]) {
       gstBreakdown[rate] = { cgst: 0, sgst: 0, igst: 0, taxable: 0 };
     }
@@ -343,17 +344,17 @@ export const calculateVoucherTotals = (
 
   return {
     computedItems,
-    totalAmount: parseFloat(totalAmount.toFixed(2)),
-    totalSubtotal: parseFloat(totalSubtotal.toFixed(2)),
-    totalDiscount: parseFloat(totalDiscAmount.toFixed(2)),
-    totalTaxable: parseFloat(afterTotalDisc.toFixed(2)),
-    totalAdditionalCharges: parseFloat(totalAdditionalCharges.toFixed(2)),
-    totalGst: parseFloat(totalGst.toFixed(2)),
-    totalCgst: parseFloat(totalCgst.toFixed(2)),
-    totalSgst: parseFloat(totalSgst.toFixed(2)),
-    totalIgst: parseFloat(totalIgst.toFixed(2)),
+    totalAmount: safeNumber(parseFloat(totalAmount.toFixed(2))),
+    totalSubtotal: safeNumber(parseFloat(totalSubtotal.toFixed(2))),
+    totalDiscount: safeNumber(parseFloat(totalDiscAmount.toFixed(2))),
+    totalTaxable: safeNumber(parseFloat(afterTotalDisc.toFixed(2))),
+    totalAdditionalCharges: safeNumber(parseFloat(totalAdditionalCharges.toFixed(2))),
+    totalGst: safeNumber(parseFloat(totalGst.toFixed(2))),
+    totalCgst: safeNumber(parseFloat(totalCgst.toFixed(2))),
+    totalSgst: safeNumber(parseFloat(totalSgst.toFixed(2))),
+    totalIgst: safeNumber(parseFloat(totalIgst.toFixed(2))),
     gstBreakdown,
-    totalRoundOff: parseFloat(totalRoundOff.toFixed(2)),
+    totalRoundOff: safeNumber(parseFloat(totalRoundOff.toFixed(2))),
   };
 };
 /**

@@ -1,6 +1,7 @@
 # app/models/vouchers/purchase.py
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean, UniqueConstraint, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func  # Added import for func
 from app.core.database import Base
@@ -19,6 +20,7 @@ class PurchaseOrder(BaseVoucher):
     total_discount_type = Column(String)  # 'percentage' or 'amount'
     total_discount = Column(Float, default=0.0)
     round_off = Column(Float, default=0.0)  # Added to match schema and PDF calculations
+    additional_charges = Column(JSONB, default=dict)
     
     vendor = relationship("Vendor")
     items = relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan")
@@ -64,6 +66,7 @@ class GoodsReceiptNote(BaseVoucher):
     vehicle_number = Column(String)
     lr_rr_number = Column(String)
     inspection_status = Column(String, default="pending")  # pending, completed, rejected
+    additional_charges = Column(JSONB, default=dict)
     
     purchase_order = relationship("PurchaseOrder")
     vendor = relationship("Vendor")
@@ -116,6 +119,7 @@ class PurchaseVoucher(BaseVoucher):
     vehicle_number = Column(String)
     lr_rr_number = Column(String)
     e_way_bill_number = Column(String)
+    additional_charges = Column(JSONB, default=dict)
     
     vendor = relationship("Vendor")
     purchase_order = relationship("PurchaseOrder")
@@ -148,6 +152,7 @@ class PurchaseReturn(BaseVoucher):
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
     reference_voucher_id = Column(Integer, ForeignKey("purchase_vouchers.id"))
     reason = Column(Text)
+    additional_charges = Column(JSONB, default=dict)
     
     vendor = relationship("Vendor")
     reference_voucher = relationship("PurchaseVoucher")

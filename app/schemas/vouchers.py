@@ -101,6 +101,7 @@ class PurchaseVoucherCreate(VoucherBase):
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
     e_way_bill_number: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseVoucherItemCreate] = []
 
 class PurchaseVoucherUpdate(BaseModel):
@@ -114,6 +115,7 @@ class PurchaseVoucherUpdate(BaseModel):
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
     e_way_bill_number: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     cgst_amount: Optional[float] = None
     sgst_amount: Optional[float] = None
@@ -134,6 +136,7 @@ class PurchaseVoucherInDB(VoucherInDBBase):
     vehicle_number: Optional[str]
     lr_rr_number: Optional[str]
     e_way_bill_number: Optional[str]
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseVoucherItemInDB]
     vendor: Optional[VendorMinimal] = None
 
@@ -148,6 +151,7 @@ class SalesVoucherItemInDB(SalesVoucherItemCreate):
 class SalesVoucherCreate(VoucherBase):
     customer_id: int
     sales_order_id: Optional[int] = None
+    delivery_challan_id: Optional[int] = None
     invoice_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
@@ -156,11 +160,13 @@ class SalesVoucherCreate(VoucherBase):
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
     e_way_bill_number: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesVoucherItemCreate] = []
 
 class SalesVoucherUpdate(BaseModel):
     customer_id: Optional[int] = None
     sales_order_id: Optional[int] = None
+    delivery_challan_id: Optional[int] = None
     invoice_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
@@ -169,6 +175,7 @@ class SalesVoucherUpdate(BaseModel):
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
     e_way_bill_number: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     cgst_amount: Optional[float] = None
     sgst_amount: Optional[float] = None
@@ -181,6 +188,7 @@ class SalesVoucherUpdate(BaseModel):
 class SalesVoucherInDB(VoucherInDBBase):
     customer_id: int
     sales_order_id: Optional[int]
+    delivery_challan_id: Optional[int]
     invoice_date: Optional[datetime]
     due_date: Optional[datetime]
     payment_terms: Optional[str]
@@ -189,6 +197,7 @@ class SalesVoucherInDB(VoucherInDBBase):
     vehicle_number: Optional[str]
     lr_rr_number: Optional[str]
     e_way_bill_number: Optional[str]
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesVoucherItemInDB]
 
 # Purchase Order
@@ -219,6 +228,7 @@ class PurchaseOrderCreate(VoucherBase):
     total_discount_type: Optional[str] = None
     total_discount: Optional[float] = 0.0
     round_off: Optional[float] = 0.0
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseOrderItemCreate] = []
 
 class PurchaseOrderUpdate(BaseModel):
@@ -230,6 +240,7 @@ class PurchaseOrderUpdate(BaseModel):
     total_discount_type: Optional[str] = None
     total_discount: Optional[float] = None
     round_off: Optional[float] = None
+    additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -244,6 +255,7 @@ class PurchaseOrderInDB(VoucherInDBBase):
     total_discount_type: Optional[str]
     total_discount: float
     round_off: float = 0.0  # Added default to prevent validation errors on existing data
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseOrderItemInDB]
     vendor: Optional[VendorMinimal] = None
 
@@ -276,6 +288,7 @@ class SalesOrderCreate(VoucherBase):
     delivery_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesOrderItemCreate] = []
 
 class SalesOrderUpdate(BaseModel):
@@ -283,6 +296,7 @@ class SalesOrderUpdate(BaseModel):
     delivery_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -293,6 +307,7 @@ class SalesOrderInDB(VoucherInDBBase):
     delivery_date: Optional[datetime]
     payment_terms: Optional[str]
     terms_conditions: Optional[str]
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesOrderItemInDB]
 
 class SalesOrderAutoPopulateResponse(BaseModel):
@@ -331,6 +346,7 @@ class GRNCreate(VoucherBase):
     transport_mode: Optional[str] = None
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[GRNItemCreate] = []
 
 class GRNUpdate(BaseModel):
@@ -342,6 +358,7 @@ class GRNUpdate(BaseModel):
     transport_mode: Optional[str] = None
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -356,6 +373,7 @@ class GRNInDB(VoucherInDBBase):
     transport_mode: Optional[str]
     vehicle_number: Optional[str]
     lr_rr_number: Optional[str]
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[GRNItemInDB]
     vendor: Optional[VendorMinimal] = None
     purchase_order: Optional[PurchaseOrderMinimal] = None
@@ -440,6 +458,7 @@ class ProformaInvoiceCreate(VoucherBase):
     terms_conditions: Optional[str] = None
     parent_id: Optional[int] = None  # For revisions
     revision_number: Optional[int] = 0
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[ProformaInvoiceItemCreate] = []
 
 class ProformaInvoiceUpdate(BaseModel):
@@ -456,6 +475,7 @@ class ProformaInvoiceUpdate(BaseModel):
     notes: Optional[str] = None
     parent_id: Optional[int] = None  # For revisions
     revision_number: Optional[int] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: Optional[List[ProformaInvoiceItemCreate]] = None
 
 class ProformaInvoiceInDB(VoucherInDBBase):
@@ -465,6 +485,7 @@ class ProformaInvoiceInDB(VoucherInDBBase):
     terms_conditions: Optional[str]
     parent_id: Optional[int]
     revision_number: Optional[int] = 0
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[ProformaInvoiceItemInDB]
 
 # Quotation
@@ -487,6 +508,7 @@ class QuotationCreate(VoucherBase):
     round_off: Optional[float] = 0.0
     parent_id: Optional[int] = None  # For revisions
     revision_number: Optional[int] = 0
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[QuotationItemCreate] = []
 
 class QuotationUpdate(BaseModel):
@@ -503,6 +525,7 @@ class QuotationUpdate(BaseModel):
     notes: Optional[str] = None
     parent_id: Optional[int] = None  # For revisions
     revision_number: Optional[int] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: Optional[List[QuotationItemCreate]] = None
 
 class QuotationInDB(VoucherInDBBase):
@@ -516,6 +539,7 @@ class QuotationInDB(VoucherInDBBase):
     round_off: Optional[float] = 0.0
     parent_id: Optional[int]
     revision_number: Optional[int] = 0
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[QuotationItemInDB]
 
 # Credit Note
@@ -718,12 +742,14 @@ class PurchaseReturnCreate(VoucherBase):
     vendor_id: int
     reference_voucher_id: Optional[int] = None
     reason: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseReturnItemCreate] = []
 
 class PurchaseReturnUpdate(BaseModel):
     vendor_id: Optional[int] = None
     reference_voucher_id: Optional[int] = None
     reason: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     cgst_amount: Optional[float] = None
     sgst_amount: Optional[float] = None
@@ -737,6 +763,7 @@ class PurchaseReturnInDB(VoucherInDBBase):
     vendor_id: int
     reference_voucher_id: Optional[int]
     reason: Optional[str]
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseReturnItemInDB]
 
 # Sales Return
@@ -751,12 +778,14 @@ class SalesReturnCreate(VoucherBase):
     customer_id: int
     reference_voucher_id: Optional[int] = None
     reason: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesReturnItemCreate] = []
 
 class SalesReturnUpdate(BaseModel):
     customer_id: Optional[int] = None
     reference_voucher_id: Optional[int] = None
     reason: Optional[str] = None
+    additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     cgst_amount: Optional[float] = None
     sgst_amount: Optional[float] = None
@@ -770,6 +799,7 @@ class SalesReturnInDB(VoucherInDBBase):
     customer_id: int
     reference_voucher_id: Optional[int]
     reason: Optional[str]
+    additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesReturnItemInDB]
 
 # Email notification schemas

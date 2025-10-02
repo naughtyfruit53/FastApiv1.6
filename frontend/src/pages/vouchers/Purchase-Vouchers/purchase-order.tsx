@@ -32,7 +32,7 @@ import VoucherItemTable from "../../../components/VoucherItemTable"; // New comm
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges'; // New common totals
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
-import { getVoucherConfig, getVoucherStyles } from "../../../utils/voucherUtils";
+import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
@@ -152,6 +152,8 @@ const PurchaseOrderPage: React.FC = () => {
     handleDiscountDialogClose,
   } = useVoucherDiscounts();
   const [descriptionEnabled, setDescriptionEnabled] = useState(false);
+  const [additionalChargesEnabled, setAdditionalChargesEnabled] = useState(false);
+  const [additionalChargesModalOpen, setAdditionalChargesModalOpen] = useState(false);
   const [additionalCharges, setAdditionalCharges] = useState<AdditionalChargesData>({
     freight: 0,
     installation: 0,
@@ -161,12 +163,43 @@ const PurchaseOrderPage: React.FC = () => {
     unloading: 0,
     miscellaneous: 0,
   });
+  const [localAdditionalCharges, setLocalAdditionalCharges] = useState<AdditionalChargesData>(additionalCharges);
 
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
     if (!checked) {
       fields.forEach((_, index) => setValue(`items.${index}.description`, ''));
     }
+  };
+
+  const handleToggleAdditionalCharges = (checked: boolean) => {
+    setAdditionalChargesEnabled(checked);
+    if (checked) {
+      setLocalAdditionalCharges(additionalCharges);
+      setAdditionalChargesModalOpen(true);
+    } else {
+      setAdditionalCharges({
+        freight: 0,
+        installation: 0,
+        packing: 0,
+        insurance: 0,
+        loading: 0,
+        unloading: 0,
+        miscellaneous: 0,
+      });
+    }
+  };
+
+  const handleAdditionalChargesConfirm = () => {
+    setAdditionalCharges(localAdditionalCharges);
+    setAdditionalChargesModalOpen(false);
+  };
+
+  const handleAdditionalChargesCancel = () => {
+    if (Object.values(localAdditionalCharges).every(value => value === 0)) {
+      setAdditionalChargesEnabled(false);
+    }
+    setAdditionalChargesModalOpen(false);
   };
 
   const selectedProducts = useMemo(() => {
@@ -181,18 +214,24 @@ const PurchaseOrderPage: React.FC = () => {
     name: fields.map((_, i) => `items.${i}.product_id`),
   });
 
+  // Use useWatch for items and total_discount to ensure reactivity
+  const items = useWatch({ control, name: "items" }) || [];
+  const totalDiscountValue = useWatch({ control, name: "total_discount" }) || 0;
+
   // Override totals with additional charges
   const totalsWithAdditionalCharges = useMemo(() => {
-    const items = watch("items") || [];
+    console.log('Calculating totals with items:', items); // Debug log to check if items are updating correctly
     return calculateVoucherTotals(
       items,
       isIntrastate,
       lineDiscountEnabled ? lineDiscountType : null,
       totalDiscountEnabled ? totalDiscountType : null,
-      watch("total_discount") || 0,
+      totalDiscountValue,
       additionalCharges
     );
-  }, [watch("items"), isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, watch("total_discount"), additionalCharges, watch]);
+  }, [items, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, totalDiscountValue, additionalCharges]);
+
+  const localComputedItems = totalsWithAdditionalCharges.computedItems; // Use the fully calculated items for table display
 
   const finalTotalAmount = totalsWithAdditionalCharges.totalAmount;
   const finalTotalAdditionalCharges = totalsWithAdditionalCharges.totalAdditionalCharges;
@@ -281,12 +320,14 @@ const PurchaseOrderPage: React.FC = () => {
         sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
         igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
-        if (voucher.additional_charges) {
+    });
+    if (voucher.additional_charges) {
       setAdditionalCharges(voucher.additional_charges);
+      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));
     } else {
       setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+      setAdditionalChargesEnabled(false);
     }
-  };
   };
 
   const handleEditWithData = (voucher: any) => {
@@ -302,10 +343,12 @@ const PurchaseOrderPage: React.FC = () => {
         igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
-        if (voucher.additional_charges) {
+    if (voucher.additional_charges) {
       setAdditionalCharges(voucher.additional_charges);
+      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));
     } else {
       setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+      setAdditionalChargesEnabled(false);
     }
     // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['purchase-order', voucher.id], voucher);
@@ -324,10 +367,12 @@ const PurchaseOrderPage: React.FC = () => {
         igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
-        if (voucher.additional_charges) {
+    if (voucher.additional_charges) {
       setAdditionalCharges(voucher.additional_charges);
+      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));
     } else {
       setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+      setAdditionalChargesEnabled(false);
     }
     // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['purchase-order', voucher.id], voucher);
@@ -341,11 +386,13 @@ const PurchaseOrderPage: React.FC = () => {
         date: formattedDate,
       };
       reset(formattedData);
-    if (voucher.additional_charges) {
-      setAdditionalCharges(voucher.additional_charges);
-    } else {
-      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
-    }
+      if (voucherData.additional_charges) {
+        setAdditionalCharges(voucherData.additional_charges);
+        setAdditionalChargesEnabled(Object.values(voucherData.additional_charges).some(v => v > 0));
+      } else {
+        setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
+        setAdditionalChargesEnabled(false);
+      }
 
       if (voucherData.items && voucherData.items.length > 0) {
         remove();
@@ -381,7 +428,7 @@ const PurchaseOrderPage: React.FC = () => {
     handleFinalSubmit(
       data,
       watch,
-      computedItems,
+      localComputedItems, // Use localComputedItems for consistency
       isIntrastate,
       finalTotalAmount,
       totalRoundOff,
@@ -583,29 +630,34 @@ const PurchaseOrderPage: React.FC = () => {
               append={append}
               mode={mode}
               isIntrastate={isIntrastate}
-              computedItems={computedItems}
+              computedItems={localComputedItems} // Use fully calculated items for accurate line totals
               lineDiscountEnabled={lineDiscountEnabled}
               lineDiscountType={lineDiscountType}
               totalDiscountEnabled={totalDiscountEnabled}
               descriptionEnabled={descriptionEnabled}
+              additionalChargesEnabled={additionalChargesEnabled}
               handleToggleLineDiscount={handleToggleLineDiscount}
               handleToggleTotalDiscount={handleToggleTotalDiscount}
               handleToggleDescription={handleToggleDescription}
+              handleToggleAdditionalCharges={handleToggleAdditionalCharges}
               stockLoading={stockLoading}
               getStockColor={getStockColor}
               selectedProducts={selectedProducts}
               showLineDiscountCheckbox={mode !== "view"}
               showTotalDiscountCheckbox={mode !== "view"}
               showDescriptionCheckbox={mode !== "view"}
-                      <Grid size={12}>
-            <AdditionalCharges
-              charges={additionalCharges}
-              onChange={setAdditionalCharges}
-              mode={mode}
+              showAdditionalChargesCheckbox={mode !== "view"}
             />
           </Grid>
-/>
-          </Grid>
+          {additionalChargesEnabled && mode === 'view' && (
+            <Grid size={12}>
+              <AdditionalCharges
+                charges={additionalCharges}
+                onChange={setAdditionalCharges}
+                mode={mode}
+              />
+            </Grid>
+          )}
           <Grid size={12}>
             <VoucherFormTotals
               totalSubtotal={totalsWithAdditionalCharges.totalSubtotal}
@@ -654,8 +706,27 @@ const PurchaseOrderPage: React.FC = () => {
         <DialogContent><Typography>Round off amount is {totalRoundOff.toFixed(2)}. Proceed with save?</Typography></DialogContent>
         <DialogActions>
           <Button onClick={() => setRoundOffConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, computedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config,
+          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, localComputedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config,
       additionalCharges); }} variant="contained">Confirm</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={additionalChargesModalOpen}
+        onClose={handleAdditionalChargesCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Additional Charges</DialogTitle>
+        <DialogContent>
+          <AdditionalCharges
+            charges={localAdditionalCharges}
+            onChange={setLocalAdditionalCharges}
+            mode="edit"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleAdditionalChargesCancel}>Cancel</Button>
+          <Button onClick={handleAdditionalChargesConfirm} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
     </Box>

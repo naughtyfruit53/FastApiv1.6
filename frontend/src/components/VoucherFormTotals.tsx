@@ -41,6 +41,7 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
   getAmountInWords,
   totalAdditionalCharges = 0,
 }) => {
+  const safeNumber = (value: number) => isNaN(value) ? 0 : value;
   return (
     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
       <Box sx={{ minWidth: 300 }}>
@@ -48,7 +49,7 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
           <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px' }}>
             <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>Subtotal:</Typography>
             <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-              ₹{totalSubtotal.toLocaleString()}
+              ₹{safeNumber(totalSubtotal).toLocaleString()}
             </Typography>
           </Box>
 
@@ -83,10 +84,10 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
             </Box>
           )}
 
-          {totalAdditionalCharges > 0 && (
+          {safeNumber(totalAdditionalCharges) > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
               <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>Additional Charges:</Typography>
-              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{totalAdditionalCharges.toLocaleString()}</Typography>
+              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{safeNumber(totalAdditionalCharges).toLocaleString()}</Typography>
             </Box>
           )}
 
@@ -94,26 +95,26 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
             <>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
                 <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>CGST:</Typography>
-                <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{totalCgst.toLocaleString()}</Typography>
+                <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{safeNumber(totalCgst).toLocaleString()}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
                 <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>SGST:</Typography>
-                <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{totalSgst.toLocaleString()}</Typography>
+                <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{safeNumber(totalSgst).toLocaleString()}</Typography>
               </Box>
             </>
           ) : (
             <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
               <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>IGST:</Typography>
-              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{totalIgst.toLocaleString()}</Typography>
+              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{safeNumber(totalIgst).toLocaleString()}</Typography>
             </Box>
           )}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
             <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>Round Off:</Typography>
-            <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{totalRoundOff > 0 ? '+' : ''}{totalRoundOff.toLocaleString()}</Typography>
+            <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{safeNumber(totalRoundOff) > 0 ? '+' : ''}{safeNumber(totalRoundOff).toLocaleString()}</Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
             <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>Total:</Typography>
-            <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>₹{Math.round(totalAmount).toLocaleString()}</Typography>
+            <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>₹{safeNumber(Math.round(totalAmount)).toLocaleString()}</Typography>
           </Box>
         </Box>
       </Box>

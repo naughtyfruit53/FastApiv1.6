@@ -1,6 +1,7 @@
 # app/models/vouchers/sales.py
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean, UniqueConstraint, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func  # Added import for func
 from app.core.database import Base
@@ -58,6 +59,7 @@ class SalesVoucher(BaseVoucher):
     lr_rr_number = Column(String)
     e_way_bill_number = Column(String)
     voucher_type = Column(String, nullable=False, default="sales", index=True)
+    additional_charges = Column(JSONB, default=dict)
     
     customer = relationship("Customer")
     sales_order = relationship("SalesOrder")
@@ -90,6 +92,7 @@ class SalesReturn(BaseVoucher):
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     reference_voucher_id = Column(Integer, ForeignKey("sales_vouchers.id"))
     reason = Column(Text)
+    additional_charges = Column(JSONB, default=dict)
     
     customer = relationship("Customer")
     reference_voucher = relationship("SalesVoucher")

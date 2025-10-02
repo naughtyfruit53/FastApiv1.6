@@ -1,6 +1,7 @@
 # app/models/vouchers/presales.py
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean, UniqueConstraint, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func  # Added import for func
 from app.core.database import Base
@@ -20,6 +21,7 @@ class Quotation(BaseVoucher):
     round_off = Column(Float, default=0.0)  # Added to match schema and PDF calculations
     parent_id = Column(Integer, ForeignKey("quotations.id"), nullable=True)  # Link to original/previous revision
     revision_number = Column(Integer, default=0)  # 0 for original, 1 for Rev 1, etc.
+    additional_charges = Column(JSONB, default=dict)
     
     customer = relationship("app.models.customer_models.Customer")
     items = relationship("app.models.vouchers.presales.QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
@@ -60,6 +62,7 @@ class ProformaInvoice(BaseVoucher):
     terms_conditions = Column(Text)
     parent_id = Column(Integer, ForeignKey("proforma_invoices.id"), nullable=True)  # Link to original/previous revision
     revision_number = Column(Integer, default=0)  # 0 for original, 1 for Rev 1, etc.
+    additional_charges = Column(JSONB, default=dict)
     
     customer = relationship("app.models.customer_models.Customer")
     items = relationship("app.models.vouchers.presales.ProformaInvoiceItem", back_populates="proforma_invoice", cascade="all, delete-orphan")
@@ -98,6 +101,7 @@ class SalesOrder(BaseVoucher):
     delivery_date = Column(DateTime(timezone=True))
     payment_terms = Column(String)
     terms_conditions = Column(Text)
+    additional_charges = Column(JSONB, default=dict)
     
     customer = relationship("app.models.customer_models.Customer")
     items = relationship("app.models.vouchers.presales.SalesOrderItem", back_populates="sales_order", cascade="all, delete-orphan")

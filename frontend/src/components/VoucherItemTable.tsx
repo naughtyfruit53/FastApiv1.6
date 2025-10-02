@@ -39,15 +39,18 @@ interface VoucherItemTableProps {
   lineDiscountType: string;
   totalDiscountEnabled: boolean;
   descriptionEnabled: boolean;
+  additionalChargesEnabled: boolean;
   handleToggleLineDiscount: (checked: boolean) => void;
   handleToggleTotalDiscount: (checked: boolean) => void;
   handleToggleDescription: (checked: boolean) => void;
+  handleToggleAdditionalCharges: (checked: boolean) => void;
   stockLoading: { [key: number]: boolean };
   getStockColor: (stock: number, reorder: number) => string;
   selectedProducts: any[];
   showLineDiscountCheckbox?: boolean; // New prop
   showTotalDiscountCheckbox?: boolean; // New prop
   showDescriptionCheckbox?: boolean; // New prop
+  showAdditionalChargesCheckbox?: boolean;
 }
 
 const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
@@ -64,15 +67,18 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
   lineDiscountType,
   totalDiscountEnabled,
   descriptionEnabled,
+  additionalChargesEnabled,
   handleToggleLineDiscount,
   handleToggleTotalDiscount,
   handleToggleDescription,
+  handleToggleAdditionalCharges,
   stockLoading,
   getStockColor,
   selectedProducts,
   showLineDiscountCheckbox = false,
   showTotalDiscountCheckbox = false,
   showDescriptionCheckbox = false,
+  showAdditionalChargesCheckbox = false,
 }) => {
   const handleAddItem = () => {
     append({
@@ -125,7 +131,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
 
   return (
     <>
-      {mode !== "view" && (showLineDiscountCheckbox || showTotalDiscountCheckbox || showDescriptionCheckbox) && (
+      {mode !== "view" && (showLineDiscountCheckbox || showTotalDiscountCheckbox || showDescriptionCheckbox || showAdditionalChargesCheckbox) && (
         <Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'flex-start' }}>
           {showLineDiscountCheckbox && (
             <FormControlLabel
@@ -158,6 +164,17 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                 />
               }
               label="Enable Description"
+            />
+          )}
+          {showAdditionalChargesCheckbox && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={additionalChargesEnabled}
+                  onChange={(e) => handleToggleAdditionalCharges(e.target.checked)}
+                />
+              }
+              label="Enable Additional Charges"
             />
           )}
         </Box>
