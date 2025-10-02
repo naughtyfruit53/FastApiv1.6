@@ -93,7 +93,7 @@ AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False,
 
 # Sync engine for background workers
 # Adjust driver for sync if asyncpg
-sync_driver = driver.replace('asyncpg', 'psycopg')
+sync_driver = driver.replace('asyncpg', 'psycopg2')
 sync_database_url = url_obj.set(drivername=sync_driver).render_as_string(hide_password=False)
 
 sync_connect_args = {
@@ -102,7 +102,7 @@ sync_connect_args = {
     "options": "-c statement_timeout=60s"
 }
 if not is_session_mode:
-    sync_connect_args["prepare_threshold"] = None
+    sync_connect_args["prepare_threshold"] = 0
     logger.info("Disabled prepared statements for sync engine in transaction mode")
 
 sync_exec_options = {}
