@@ -62,6 +62,9 @@ const AdditionalCharges: React.FC<AdditionalChargesProps> = ({
     setEnabledCharges({ ...enabledCharges, [key]: enabled });
     if (!enabled) {
       onChange({ ...charges, [key]: 0 });
+    } else {
+      // When enabling, set to 0 if not already set
+      onChange({ ...charges, [key]: charges[key] || 0 });
     }
   };
 
@@ -120,7 +123,7 @@ const AdditionalCharges: React.FC<AdditionalChargesProps> = ({
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {CHARGE_TYPES.map(({ key, label }) => (
-          <Box key={key}>
+          <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <FormControlLabel
               control={
                 <Checkbox
@@ -130,7 +133,7 @@ const AdditionalCharges: React.FC<AdditionalChargesProps> = ({
                 />
               }
               label={label}
-              sx={{ mb: 0.5 }}
+              sx={{ flexGrow: 1, m: 0 }} // Take space, no margin
             />
             {enabledCharges[key] && (
               <TextField
@@ -138,12 +141,11 @@ const AdditionalCharges: React.FC<AdditionalChargesProps> = ({
                 value={charges[key] || 0}
                 onChange={(e) => handleAmountChange(key, parseFloat(e.target.value) || 0)}
                 size="small"
-                fullWidth
+                sx={{ width: 150 }} // Fixed width for alignment
                 inputProps={{ min: 0, step: 0.01 }}
                 InputProps={{
                   startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
                 }}
-                sx={{ ml: 4 }}
               />
             )}
           </Box>

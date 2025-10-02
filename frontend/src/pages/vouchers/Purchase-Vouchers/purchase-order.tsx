@@ -667,6 +667,7 @@ const PurchaseOrderPage: React.FC = () => {
               totalAmount={totalsWithAdditionalCharges.totalAmount}
               totalRoundOff={totalsWithAdditionalCharges.totalRoundOff}
               totalAdditionalCharges={totalsWithAdditionalCharges.totalAdditionalCharges}
+              additionalCharges={additionalCharges} // Added passing detailed charges
               isIntrastate={isIntrastate}
               totalDiscountEnabled={totalDiscountEnabled}
               totalDiscountType={totalDiscountType}

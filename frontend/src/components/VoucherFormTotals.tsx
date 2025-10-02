@@ -3,6 +3,7 @@
 import React from 'react';
 import { Box, Typography, TextField, InputAdornment, IconButton } from '@mui/material';
 import { Clear } from '@mui/icons-material';
+import { AdditionalChargesData } from './AdditionalCharges'; // Import type
 
 interface VoucherFormTotalsProps {
   totalSubtotal: number;
@@ -21,6 +22,7 @@ interface VoucherFormTotalsProps {
   handleToggleTotalDiscount: (checked: boolean) => void;
   getAmountInWords: (amount: number) => string;
   totalAdditionalCharges?: number;
+  additionalCharges?: AdditionalChargesData; // Added prop for detailed charges
 }
 
 const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
@@ -40,8 +42,13 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
   handleToggleTotalDiscount,
   getAmountInWords,
   totalAdditionalCharges = 0,
+  additionalCharges = {}, // Default to empty object
 }) => {
   const safeNumber = (value: number) => isNaN(value) ? 0 : value;
+
+  // Function to capitalize charge keys (e.g., 'freight' -> 'Freight')
+  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+
   return (
     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
       <Box sx={{ minWidth: 300 }}>
@@ -85,10 +92,19 @@ const VoucherFormTotals: React.FC<VoucherFormTotalsProps> = ({
           )}
 
           {safeNumber(totalAdditionalCharges) > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
-              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>Additional Charges:</Typography>
-              <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{safeNumber(totalAdditionalCharges).toLocaleString()}</Typography>
-            </Box>
+            <>
+              {Object.entries(additionalCharges).map(([key, value]) => {
+                if (safeNumber(value) > 0) {
+                  return (
+                    <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', width: '200px', mt: 1 }}>
+                      <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>{capitalize(key)}:</Typography>
+                      <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>₹{safeNumber(value).toLocaleString()}</Typography>
+                    </Box>
+                  );
+                }
+                return null;
+              })}
+            </>
           )}
 
           {isIntrastate ? (

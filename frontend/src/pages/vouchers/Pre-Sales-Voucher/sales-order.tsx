@@ -33,12 +33,8 @@ import VoucherReferenceDropdown from "../../../components/VoucherReferenceDropdo
 import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {
-  getVoucherConfig,
-  getVoucherStyles,
-  calculateVoucherTotals,
-} from "../../../utils/voucherUtils";
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
@@ -215,18 +211,24 @@ const SalesOrderPage: React.FC = () => {
     name: fields.map((_, i) => `items.${i}.product_id`),
   });
 
+  // Use useWatch for items and total_discount to ensure reactivity
+  const items = useWatch({ control, name: "items" }) || [];
+  const totalDiscountValue = useWatch({ control, name: "total_discount" }) || 0;
+
   // Override totals with additional charges
   const totalsWithAdditionalCharges = useMemo(() => {
-    const items = watch("items") || [];
+    console.log('Calculating totals with items:', items); // Debug log to check if items are updating correctly
     return calculateVoucherTotals(
       items,
       isIntrastate,
       lineDiscountEnabled ? lineDiscountType : null,
       totalDiscountEnabled ? totalDiscountType : null,
-      watch("total_discount") || 0,
+      totalDiscountValue,
       additionalCharges
     );
-  }, [watch("items"), isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, watch("total_discount"), additionalCharges, watch]);
+  }, [items, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, totalDiscountValue, additionalCharges]);
+
+  const localComputedItems = totalsWithAdditionalCharges.computedItems; // Use the fully calculated items for table display
 
   const finalTotalAmount = totalsWithAdditionalCharges.totalAmount;
   const finalTotalAdditionalCharges = totalsWithAdditionalCharges.totalAdditionalCharges;
@@ -415,7 +417,7 @@ const SalesOrderPage: React.FC = () => {
     handleFinalSubmit(
       data,
       watch,
-      computedItems,
+      localComputedItems, // Use localComputedItems for consistency
       isIntrastate,
       finalTotalAmount,
       totalRoundOff,
@@ -603,7 +605,7 @@ const SalesOrderPage: React.FC = () => {
               append={append}
               mode={mode}
               isIntrastate={isIntrastate}
-              computedItems={computedItems}
+              computedItems={localComputedItems} // Use fully calculated items for accurate line totals
               lineDiscountEnabled={lineDiscountEnabled}
               lineDiscountType={lineDiscountType}
               totalDiscountEnabled={totalDiscountEnabled}
@@ -640,6 +642,7 @@ const SalesOrderPage: React.FC = () => {
               totalAmount={totalsWithAdditionalCharges.totalAmount}
               totalRoundOff={totalsWithAdditionalCharges.totalRoundOff}
               totalAdditionalCharges={totalsWithAdditionalCharges.totalAdditionalCharges}
+              additionalCharges={additionalCharges} // Added passing detailed charges
               isIntrastate={isIntrastate}
               totalDiscountEnabled={totalDiscountEnabled}
               totalDiscountType={totalDiscountType}
@@ -679,7 +682,7 @@ const SalesOrderPage: React.FC = () => {
         <DialogContent><Typography>Round off amount is {totalRoundOff.toFixed(2)}. Proceed with save?</Typography></DialogContent>
         <DialogActions>
           <Button onClick={() => setRoundOffConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, computedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config, additionalCharges); }} variant="contained">Confirm</Button>
+          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, localComputedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config, additionalCharges); }} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
       <Dialog
