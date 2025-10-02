@@ -33,6 +33,7 @@ driver = url_obj.drivername
 parsed_url = urllib.parse.urlparse(database_url)
 port = int(parsed_url.port) if parsed_url.port else 5432
 
+# Corrected based on Supabase docs: session mode uses port 5432 on pooler, transaction uses 6543
 is_session_mode = port == 5432
 
 # Database engine configuration based on mode
@@ -48,7 +49,7 @@ if is_session_mode:
     }
     logger.info("Using Supabase session mode (port 5432) - pool_size=1, max_overflow=0")
 else:
-    # Transaction mode: larger pool
+    # Transaction mode: larger pool (but consider smaller for pooler)
     engine_kwargs = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
@@ -92,17 +93,18 @@ except Exception as e:
 AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False, autoflush=False, bind=async_engine)
 
 # Sync engine for background workers
-# Adjust driver for sync if asyncpg
-sync_driver = driver.replace('asyncpg', 'psycopg2')
+# Adjust driver for sync if asyncpg, using psycopg (psycopg3)
+sync_driver = driver.replace('asyncpg', 'psycopg')
 sync_database_url = url_obj.set(drivername=sync_driver).render_as_string(hide_password=False)
 
 sync_connect_args = {
     "connect_timeout": 120,
     "keepalives_idle": 60,
-    "options": "-c statement_timeout=60s"
+    "options": "-c statement_timeout=60s",
+    "sslmode": "require"  # Ensure SSL is required for Supabase
 }
 if not is_session_mode:
-    sync_connect_args["prepare_threshold"] = 0
+    sync_connect_args["prepare_threshold"] = None
     logger.info("Disabled prepared statements for sync engine in transaction mode")
 
 sync_exec_options = {}
