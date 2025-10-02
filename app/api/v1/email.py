@@ -288,15 +288,9 @@ async def trigger_manual_sync(
         )
     
     # Trigger sync in background
-    success = email_sync_worker.sync_account_now(account_id)
+    background_tasks.add_task(email_management_service.sync_service.sync_account, account_id)
     
-    if success:
-        return {"message": "Sync triggered successfully", "account_id": account_id}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to trigger sync"
-        )
+    return {"message": "Sync triggered in background", "account_id": account_id}
 
 
 @router.get("/accounts/{account_id}/status", response_model=SyncStatusResponse)
@@ -534,18 +528,6 @@ async def download_attachment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Attachment not found"
         )
-    
-    # Security check
-    if attachment.is_quarantined:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Attachment is quarantined and cannot be downloaded"
-        )
-    
-    # Update download tracking
-    attachment.download_count += 1
-    attachment.last_downloaded_at = datetime.utcnow()
-    await db.commit()
     
     # Return file content (implementation depends on file storage method)
     # This is a placeholder - actual implementation would handle file serving

@@ -96,13 +96,6 @@ except Exception as import_error:
     logger.error(f"Failed to import products_router: {str(import_error)}")
     raise
 
-try:
-    from app.api.v1 import stock as v1_stock
-    logger.info("Successfully imported stock_router")
-except Exception as import_error:
-    logger.error(f"Failed to import stock_router: {str(import_error)}")
-    raise
-
 # Add import for new business module routers
 try:
     from app.api.v1 import crm as v1_crm
@@ -513,7 +506,7 @@ async def startup_event():
     """Initialize application: log CORS config, setup database, and seed super admin"""
     logger.info("Starting up TritIQ Business Suite API...")
     try:
-        await create_tables()
+        create_tables()
         logger.info("Database tables created successfully")
         from app.core.seed_super_admin import check_database_schema_updated
         db = AsyncSessionLocal()

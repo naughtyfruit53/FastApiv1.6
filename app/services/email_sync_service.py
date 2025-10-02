@@ -85,14 +85,22 @@ class EmailSyncService:
                     credentials['email'],
                     credentials['access_token']
                 )
-                imap.authenticate('XOAUTH2', lambda x: auth_string)
+                try:
+                    imap.authenticate('XOAUTH2', lambda x: auth_string)
+                except imaplib.IMAP4.error as e:
+                    logger.error(f"OAuth authentication failed for account {account.id}: {str(e)}")
+                    return None
                 
             elif account.incoming_auth_method == 'password' and account.username and account.password_encrypted:
                 # Password authentication
                 from app.utils.encryption import decrypt_field, EncryptionKeys
                 password = decrypt_field(account.password_encrypted, EncryptionKeys.PII_KEY)
                 logger.info(f"Using password auth for {account.username}, password length: {len(password) if password else 0}")
-                imap.login(account.username, password)
+                try:
+                    imap.login(account.username, password)
+                except imaplib.IMAP4.error as e:
+                    logger.error(f"Password authentication failed for account {account.id}: {str(e)}")
+                    return None
             else:
                 logger.error(f"No valid authentication method for account {account.id}")
                 return None

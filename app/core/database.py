@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import ProgrammingError
 import psycopg2.errors as pg_errors
 import asyncio
+import urllib.parse
 
 logger = logging.getLogger(__name__)
 
@@ -25,22 +26,47 @@ if not (database_url.startswith("postgresql://") or database_url.startswith("pos
 
 logger.info(f"Using database: {database_url.split('@')[1] if '@' in database_url else 'URL parsed'}")  # Mask credentials
 
-# Database engine configuration
-engine_kwargs = {
-    "pool_pre_ping": True,
-    "pool_recycle": 300,
-    "echo": settings.DEBUG,
-    "pool_size": 10,
-    "max_overflow": 20,
-    "pool_timeout": 60,  # Increased for timeout issues
+# Parse URL to detect port for Supabase mode
+parsed_url = urllib.parse.urlparse(database_url)
+port = int(parsed_url.port) if parsed_url.port else 5432
+
+is_session_mode = port == 5432
+
+# Database engine configuration based on mode
+if is_session_mode:
+    # Session mode: small pool
+    engine_kwargs = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "echo": settings.DEBUG,
+        "pool_size": 1,
+        "max_overflow": 0,
+        "pool_timeout": 120,
+    }
+    logger.info("Using Supabase session mode (port 5432) - pool_size=1, max_overflow=0")
+else:
+    # Transaction mode: larger pool
+    engine_kwargs = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "echo": settings.DEBUG,
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 120,
+    }
+    logger.info("Using Supabase transaction mode - pool_size=10, max_overflow=20")
+
+# Common connect_args
+connect_args = {
+    "timeout": 120,  # Connection timeout
+    "command_timeout": 60,  # Query timeout
+    "server_settings": {"statement_timeout": "60s", "tcp_keepalives_idle": "60"}  # DB-level statement timeout and keepalive
 }
 
-# For session mode (port 5432), we can use default caching as it supports prepared statements
-connect_args = {
-    "timeout": 60,  # Connection timeout
-    "command_timeout": 60,  # Query timeout
-    "server_settings": {"statement_timeout": "60s"}  # DB-level statement timeout
-}
+# Disable prepared statements for transaction mode (port 6543)
+if not is_session_mode:
+    connect_args["statement_cache_size"] = 0
+    logger.info("Disabled prepared statements for transaction mode")
 
 logger.debug(f"Creating async engine with connect_args: {connect_args} and kwargs: {engine_kwargs}")
 
@@ -57,7 +83,14 @@ AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False,
 
 # Sync engine for background workers
 sync_database_url = database_url.replace("postgresql+asyncpg", "postgresql+psycopg2").replace("postgres+asyncpg", "postgres+psycopg2")
-sync_engine = create_engine(sync_database_url, **engine_kwargs)
+sync_connect_args = {
+    "keepalives": 1,
+    "keepalives_idle": 60,
+}
+if not is_session_mode:
+    sync_connect_args["prepare_threshold"] = None
+    logger.info("Disabled prepared statements for sync engine in transaction mode")
+sync_engine = create_engine(sync_database_url, connect_args=sync_connect_args, **engine_kwargs)
 
 # Sync Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
@@ -163,10 +196,9 @@ async def execute_with_retry(operation_func, max_retries: int = 3, *args, **kwar
     raise last_exception
 
 # Create all tables with error handling for duplicates
-async def create_tables():
+def create_tables():
     try:
-        async with async_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        Base.metadata.create_all(bind=sync_engine)
         logger.info("Database tables created successfully")
     except ProgrammingError as e:
         if isinstance(e.orig, (pg_errors.DuplicateTable, pg_errors.DuplicateObject)):
