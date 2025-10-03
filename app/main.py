@@ -330,6 +330,15 @@ app.include_router(
 )
 logger.info("OAuth router included successfully at prefix: /api/v1/oauth")
 
+# Health API
+from app.api.v1 import health as v1_health
+app.include_router(
+    v1_health.router,
+    prefix="/api/v1",
+    tags=["health"]
+)
+logger.info("Health router included successfully at prefix: /api/v1/health")
+
 # ------------------------------------------------------------------------------
 # LEGACY API ROUTERS (business modules)
 # ------------------------------------------------------------------------------
