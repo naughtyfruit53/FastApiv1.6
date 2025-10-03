@@ -13,6 +13,16 @@ build/
 #Environment files
 .env
 *.env
+.env.local
+.env.*.local
+
+# OAuth credentials and secrets
+oauth_credentials.json
+client_secrets.json
+credentials.json
+token.pickle
+token.json
+*.credentials
 
 #IDE and editor files
 .vscode/

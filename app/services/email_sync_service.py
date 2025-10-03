@@ -39,35 +39,7 @@ from app.services.oauth_service import OAuth2Service
 logger = logging.getLogger(__name__)
 
 
-class PreConnectedIMAP(imaplib.IMAP4):
-    """
-    Custom IMAP4 subclass for pre-connected SSL socket
-    """
-    def __init__(self, ssl_sock):
-        self.sock = ssl_sock
-        self.file = self.sock.makefile('rb')
-        self.tls = True
-        # Replicate parent __init__ without calling open
-        self.host = ''
-        self.port = 0
-        self.timeout = None
-        self.debug = imaplib.Debug
-        self.state = 'LOGOUT'
-        self.literal = None
-        self.tagged_commands = {}
-        self.untagged_responses = {}
-        self.continuation_response = ''
-        self.is_readonly = False
-        self.tagnum = 0
-        self._expecting_data = False
-        self._cmd_log_len = 10
-        self._cmd_log_idx = 0
-        self._cmd_log = {}  # Last `_cmd_log_len' interactions
-        self._logfile = None
-        self.welcome = self._get_response()
-
-    def open(self, host='', port=imaplib.IMAP4_PORT, timeout=None):
-        pass  # Override to skip automatic connection
+# Removed PreConnectedIMAP class - using standard imaplib.IMAP4_SSL instead
 
 
 class EmailSyncService:
@@ -91,64 +63,63 @@ class EmailSyncService:
             '*': ['style', 'class']
         }
     
-    def get_imap_connection(self, account: MailAccount, db: Session) -> Optional[PreConnectedIMAP]:
+    def get_imap_connection(self, account: MailAccount, db: Session) -> Optional[imaplib.IMAP4_SSL]:
         """
         Establish IMAP connection with OAuth2 or password authentication
+        Uses standard imaplib.IMAP4_SSL for better compatibility
         """
         try:
             port = account.incoming_port or (993 if account.incoming_ssl else 143)
             logger.info(f"Attempting IMAP connection to {account.incoming_server}:{port} with SSL={account.incoming_ssl}")
             logger.info(f"Auth method: {account.incoming_auth_method}, Username: {account.username}, OAuth ID: {account.oauth_token_id}, Password set: {bool(account.password_encrypted)}")
             
-            # Test basic connectivity with retry, forcing IPv4
-            connected = False
-            for attempt in range(3):
-                try:
-                    # Manually create IPv4 socket and connect
-                    test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    test_socket.settimeout(10)
-                    test_socket.connect((account.incoming_server, port))
-                    test_socket.close()
-                    logger.info(f"TCP connection test succeeded on attempt {attempt + 1} with IPv4")
-                    connected = True
-                    break
-                except socket.error as se:
-                    logger.warning(f"TCP connection test failed on attempt {attempt + 1}: {str(se)}")
-                    time.sleep(2)  # Wait 2 seconds before retry
-            
-            if not connected:
-                logger.error("All TCP connection attempts failed")
-                return None
-            
-            # Create custom SSL context for Windows compatibility
+            # Create SSL context
             context = ssl.create_default_context()
             context.check_hostname = True
             context.verify_mode = ssl.CERT_REQUIRED
-            context.minimum_version = ssl.TLSVersion.TLSv1_2  # Force TLS 1.2
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
             
-            logger.info(f"SSL context created: min_version={context.minimum_version.name}, check_hostname={context.check_hostname}, verify_mode={context.verify_mode.name}")
+            # Connect using standard IMAP4_SSL
+            if account.incoming_ssl:
+                imap = imaplib.IMAP4_SSL(
+                    host=account.incoming_server,
+                    port=port,
+                    ssl_context=context,
+                    timeout=30
+                )
+            else:
+                imap = imaplib.IMAP4(host=account.incoming_server, port=port, timeout=30)
             
-            # Manually create socket and wrap with SSL
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(30)
-            try:
-                sock.connect((account.incoming_server, port))
-                logger.info("Socket connect succeeded")
-            except Exception as e:
-                logger.error(f"Socket connect failed: {str(e)}")
-                return None
-            ssl_sock = context.wrap_socket(sock, server_hostname=account.incoming_server)
-            logger.info("SSL wrap succeeded")
+            logger.info(f"IMAP connection established to {account.incoming_server}:{port}")
             
-            # Create IMAP object with pre-connected socket
-            imap = PreConnectedIMAP(ssl_sock)
-            logger.info(f"IMAP welcome: {imap.welcome}")
-            
-            # Authenticate
-            if account.incoming_auth_method == 'oauth2' and account.oauth_token_id:
-                # OAuth2 authentication
-                oauth_service = OAuth2Service(db)
-                credentials = oauth_service.get_email_credentials(account.oauth_token_id)
+            # Authenticate based on method
+            if account.incoming_auth_method in ['oauth', 'oauth2', 'xoauth2'] and account.oauth_token_id:
+                # OAuth2 XOAUTH2 authentication
+                # Use synchronous wrapper for async OAuth service
+                import asyncio
+                from app.core.database import async_session_maker
+                
+                async def get_credentials_async():
+                    async with async_session_maker() as async_db:
+                        oauth_service = OAuth2Service(async_db)
+                        return await oauth_service.get_email_credentials(account.oauth_token_id)
+                
+                # Run async function in new event loop if needed
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # If we're already in an async context, we need to handle this differently
+                        # For now, create a new loop in a thread
+                        import concurrent.futures
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(asyncio.run, get_credentials_async())
+                            credentials = future.result(timeout=10)
+                    else:
+                        credentials = loop.run_until_complete(get_credentials_async())
+                except RuntimeError:
+                    # No event loop, create new one
+                    credentials = asyncio.run(get_credentials_async())
+                
                 if not credentials:
                     logger.error(f"Failed to get OAuth2 credentials for account {account.id}")
                     return None
@@ -165,18 +136,19 @@ class EmailSyncService:
                     return None
                 
                 try:
+                    # XOAUTH2 authentication
                     auth_bytes = base64.b64encode(auth_string.encode('utf-8'))
                     imap.authenticate('XOAUTH2', lambda x: auth_bytes)
-                    logger.info("OAuth authentication succeeded")
+                    logger.info("OAuth2 XOAUTH2 authentication succeeded")
                 except imaplib.IMAP4.error as e:
-                    logger.error(f"OAuth authentication failed for account {account.id}: {str(e)}")
+                    logger.error(f"OAuth2 authentication failed for account {account.id}: {str(e)}")
                     return None
                 
             elif account.incoming_auth_method == 'password' and account.username and account.password_encrypted:
                 # Password authentication
                 from app.utils.encryption import decrypt_field, EncryptionKeys
                 password = decrypt_field(account.password_encrypted, EncryptionKeys.PII)
-                logger.info(f"Using password auth for {account.username}, password length: {len(password) if password else 0}")
+                logger.info(f"Using password auth for {account.username}")
                 try:
                     imap.login(account.username, password)
                     logger.info("Password authentication succeeded")
@@ -187,7 +159,7 @@ class EmailSyncService:
                 logger.error(f"No valid authentication method for account {account.id}")
                 return None
             
-            logger.info("IMAP connection established successfully")
+            logger.info("IMAP connection and authentication successful")
             return imap
             
         except Exception as e:
@@ -236,64 +208,94 @@ class EmailSyncService:
         db.add(sync_log)
         db.commit()
         
-        try:
-            # Connect to IMAP
-            imap = self.get_imap_connection(account, db)
-            if not imap:
-                raise Exception("Failed to connect to IMAP server")
-            
-            # Sync folders
-            folders_to_sync = account.sync_folders or ['INBOX']
-            total_new = 0
-            total_updated = 0
-            
-            for folder in folders_to_sync:
+        # Exponential backoff retry logic
+        max_retries = 3
+        base_delay = 2  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                # Connect to IMAP with exponential backoff
+                imap = None
+                for conn_attempt in range(3):
+                    try:
+                        imap = self.get_imap_connection(account, db)
+                        if imap:
+                            break
+                        # Exponential backoff before retry
+                        if conn_attempt < 2:
+                            delay = base_delay * (2 ** conn_attempt)
+                            logger.info(f"Connection failed, retrying in {delay}s (attempt {conn_attempt + 1}/3)")
+                            time.sleep(delay)
+                    except Exception as conn_e:
+                        logger.warning(f"Connection attempt {conn_attempt + 1} failed: {str(conn_e)}")
+                        if conn_attempt < 2:
+                            delay = base_delay * (2 ** conn_attempt)
+                            time.sleep(delay)
+                
+                if not imap:
+                    raise Exception("Failed to connect to IMAP server after retries")
+                
+                # Sync folders
+                folders_to_sync = account.sync_folders or ['INBOX']
+                total_new = 0
+                total_updated = 0
+                
+                for folder in folders_to_sync:
+                    try:
+                        new_count, updated_count = self._sync_folder(imap, account, folder, db, full_sync)
+                        total_new += new_count
+                        total_updated += updated_count
+                    except Exception as e:
+                        logger.error(f"Error syncing folder {folder} for account {account_id}: {str(e)}")
+                
+                # Update sync status
+                account.last_sync_at = datetime.utcnow()
+                account.last_sync_error = None
+                account.total_messages_synced += total_new
+                
+                # Mark full sync as completed
+                if full_sync:
+                    account.full_sync_completed = True
+                
+                # Update sync log
+                sync_log.status = 'success'
+                sync_log.completed_at = datetime.utcnow()
+                sync_log.messages_new = total_new
+                sync_log.messages_updated = total_updated
+                sync_log.duration_seconds = (sync_log.completed_at - sync_log.started_at).total_seconds()
+                
+                db.commit()
+                
+                # Close IMAP connection
                 try:
-                    new_count, updated_count = self._sync_folder(imap, account, folder, db, full_sync)
-                    total_new += new_count
-                    total_updated += updated_count
-                except Exception as e:
-                    logger.error(f"Error syncing folder {folder} for account {account_id}: {str(e)}")
-            
-            # Update sync status
-            account.last_sync_at = datetime.utcnow()
-            account.last_sync_error = None
-            account.total_messages_synced += total_new
-            
-            # Mark full sync as completed
-            if full_sync:
-                account.full_sync_completed = True
-            
-            # Update sync log
-            sync_log.status = 'success'
-            sync_log.completed_at = datetime.utcnow()
-            sync_log.messages_new = total_new
-            sync_log.messages_updated = total_updated
-            sync_log.duration_seconds = (sync_log.completed_at - sync_log.started_at).total_seconds()
-            
-            db.commit()
-            
-            # Close IMAP connection
-            imap.close()
-            imap.logout()
-            
-            logger.info(f"Successfully synced account {account_id}: {total_new} new, {total_updated} updated")
-            return True
-            
-        except Exception as e:
-            error_msg = f"Sync failed for account {account_id}: {str(e)}"
-            logger.error(error_msg)
-            
-            # Update account and sync log
-            account.last_sync_error = error_msg
-            sync_log.status = 'error'
-            sync_log.error_message = error_msg
-            sync_log.completed_at = datetime.utcnow()
-            
-            db.commit()
-            return False
+                    imap.close()
+                    imap.logout()
+                except:
+                    pass  # Ignore errors on close
+                
+                logger.info(f"Successfully synced account {account_id}: {total_new} new, {total_updated} updated")
+                return True
+                
+            except Exception as e:
+                error_msg = f"Sync attempt {attempt + 1} failed for account {account_id}: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                
+                if attempt < max_retries - 1:
+                    # Exponential backoff before retry
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"Retrying sync in {delay}s (attempt {attempt + 2}/{max_retries})")
+                    time.sleep(delay)
+                else:
+                    # Final failure - update account and sync log
+                    account.last_sync_error = error_msg
+                    sync_log.status = 'error'
+                    sync_log.error_message = error_msg
+                    sync_log.completed_at = datetime.utcnow()
+                    
+                    db.commit()
+                    return False
     
-    def _sync_folder(self, imap: PreConnectedIMAP, account: MailAccount, folder: str, db: Session, full_sync: bool = False) -> Tuple[int, int]:
+    def _sync_folder(self, imap: imaplib.IMAP4_SSL, account: MailAccount, folder: str, db: Session, full_sync: bool = False) -> Tuple[int, int]:
         """
         Sync a specific folder
         Returns tuple of (new_messages_count, updated_messages_count)

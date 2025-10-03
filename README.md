@@ -221,6 +221,7 @@ python scripts/audit_ui_features.py --verbose
 - 🔍 **Audit Logging**: Comprehensive security and operation auditing
 - 📱 **Responsive UI**: Modern Material-UI interface
 - 🔔 **Notification System**: Multi-channel notifications (email, SMS, push, in-app)
+- 🔐 **OAuth2 Email Integration**: Secure Gmail/Outlook integration with XOAUTH2
 
 ### 🆕 Service CRM Integration with RBAC System
 
@@ -646,6 +647,153 @@ npm run lint
 - **Database Operations**: All CRUD operations tracked
 - **Email Operations**: Email sending results and errors
 - **API Access**: Request logging and rate limiting
+
+## 📧 OAuth2 Email Integration
+
+### Overview
+Secure Gmail and Outlook/Office 365 integration using OAuth2 with XOAUTH2 for IMAP/SMTP access.
+
+### Features
+- ✅ **OAuth2 Authentication**: Secure authorization without storing passwords
+- 🔄 **Automatic Token Refresh**: Seamless token renewal with exponential backoff
+- 🔐 **AES-GCM Encryption**: Military-grade encryption for OAuth tokens
+- 📥 **IMAP Email Sync**: Full email synchronization with retry logic
+- 📤 **SMTP Sending**: Send emails via OAuth2
+- 🏥 **Health Monitoring**: Real-time status of email accounts and tokens
+- 🔧 **CLI Tools**: Bulk token refresh and management utilities
+
+### Quick Setup
+
+#### 1. Configure OAuth Providers
+
+**Google (Gmail):**
+1. Create project in [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable Gmail API
+3. Create OAuth 2.0 credentials
+4. Add redirect URI: `http://localhost:3000/auth/callback`
+5. Set scopes: `https://mail.google.com/`, `userinfo.email`, `userinfo.profile`
+
+**Microsoft (Outlook):**
+1. Register app in [Azure Portal](https://portal.azure.com/)
+2. Configure API permissions: `Mail.ReadWrite`, `Mail.Send`, `User.Read`
+3. Add redirect URI: `http://localhost:3000/auth/callback`
+4. Create client secret
+
+#### 2. Environment Variables
+
+Add to `.env`:
+```bash
+# Google OAuth2
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Microsoft OAuth2
+MICROSOFT_CLIENT_ID=your_microsoft_client_id
+MICROSOFT_CLIENT_SECRET=your_microsoft_client_secret
+MICROSOFT_TENANT_ID=common
+
+# Encryption Keys (generate using commands below)
+ENCRYPTION_KEY_PII=base64_encoded_fernet_key
+ENCRYPTION_KEY_OAUTH_AES_GCM=base64_encoded_aes_key
+
+# OAuth Redirect URI
+OAUTH_REDIRECT_URI=http://localhost:3000/auth/callback
+```
+
+#### 3. Generate Encryption Keys
+
+```bash
+# Generate Fernet key for PII
+python -c "from cryptography.fernet import Fernet; import base64; print(f'ENCRYPTION_KEY_PII={base64.b64encode(Fernet.generate_key()).decode()}')"
+
+# Generate AES-GCM key for OAuth tokens
+python -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM; import base64; print(f'ENCRYPTION_KEY_OAUTH_AES_GCM={base64.b64encode(AESGCM.generate_key(bit_length=256)).decode()}')"
+```
+
+### Usage
+
+#### Connect Email Account
+
+1. Navigate to OAuth login: `/api/v1/oauth/login/google` or `/api/v1/oauth/login/microsoft`
+2. Complete provider authorization
+3. Account automatically added to mail accounts
+4. Initial email sync starts automatically
+
+#### CLI Token Management
+
+```bash
+# List all OAuth tokens
+python scripts/refresh_oauth_tokens.py --list
+
+# Refresh all expiring tokens
+python scripts/refresh_oauth_tokens.py --refresh-all
+
+# Refresh Google tokens only
+python scripts/refresh_oauth_tokens.py --refresh-all --provider google
+
+# Dry run mode
+python scripts/refresh_oauth_tokens.py --refresh-all --dry-run
+
+# Refresh specific token
+python scripts/refresh_oauth_tokens.py --token-id 123
+```
+
+#### Health Monitoring
+
+```bash
+# Check email sync health
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/health/email-sync
+
+# Check OAuth token health
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/health/oauth-tokens
+```
+
+### API Endpoints
+
+- `GET /api/v1/oauth/login/{provider}` - Initiate OAuth flow
+- `GET /api/v1/oauth/callback/{provider}` - OAuth callback handler
+- `GET /api/v1/oauth/tokens` - List user's OAuth tokens
+- `POST /api/v1/oauth/tokens/{id}/refresh` - Refresh specific token
+- `POST /api/v1/oauth/tokens/{id}/revoke` - Revoke token
+- `GET /api/v1/health/email-sync` - Email sync health check
+- `GET /api/v1/health/oauth-tokens` - OAuth token health check
+
+### Security Features
+
+- 🔐 **AES-GCM Encryption**: Tokens encrypted with authenticated encryption
+- 🔄 **Automatic Refresh**: Tokens refreshed before expiry
+- 🛡️ **PKCE**: Proof Key for Code Exchange for enhanced security
+- 🔒 **State Parameter**: CSRF protection
+- 📝 **Audit Logging**: All OAuth operations logged
+- 🚫 **Scope Limitation**: Only email access, no other data
+- ⏱️ **Token Expiry**: Time-limited access tokens
+- 🔑 **Separate Keys**: Different encryption keys for different token types
+
+### Documentation
+
+- 📘 [Backend OAuth Implementation](./docs/OAUTH_BACKEND.md)
+- 📙 [OAuth Email Setup Guide](./docs/OAUTH_EMAIL_SETUP.md)
+- 🧪 [Testing OAuth Integration](./tests/test_oauth.py)
+
+### Troubleshooting
+
+**"OAuth authentication failed":**
+- Check token expiry status
+- Verify client credentials
+- Review audit logs
+- Try manual token refresh
+
+**"Failed to connect to IMAP":**
+- Verify server configuration
+- Check network/firewall
+- Review SSL certificate
+- Check provider API status
+
+**"Token refresh failed":**
+- Verify refresh token exists
+- Check client credentials
+- Review provider consent
+- Check for revoked access
 
 ## 📧 Email System
 
