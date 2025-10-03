@@ -1,10 +1,5 @@
 'use client';
 
-/**
- * OAuth Callback Page
- * Handles OAuth2 callback from providers and completes the authentication flow
- */
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { Box, Typography, CircularProgress, Alert, Paper, Button } from '@mui/material';
@@ -16,7 +11,7 @@ import { useEmail } from '../../context/EmailContext';
 const OAuthCallback: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { setSelectedToken } = useEmail();
+  const { setSelectedAccountId } = useEmail();
   const { handleOAuthCallback } = useOAuth();
   
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -57,10 +52,10 @@ const OAuthCallback: React.FC = () => {
         setStatus('success');
         setMessage(`Successfully connected ${storedProvider} email account`);
 
-        // Set the new token as selected
-        if (result.token_id) {
-          setSelectedToken(result.token_id);
-          localStorage.setItem('selectedEmailToken', result.token_id.toString());
+        // Set the new account as selected
+        if (result.account_id) {
+          setSelectedAccountId(result.account_id);
+          localStorage.setItem('selectedEmailAccount', result.account_id.toString());
         }
 
         // Invalidate queries to refresh accounts
@@ -70,7 +65,7 @@ const OAuthCallback: React.FC = () => {
         localStorage.removeItem(`oauth_provider_${state as string}`);
 
         setTimeout(() => {
-          router.push('/email');
+          router.push('/email/accounts');
         }, 3000);
 
       } catch (err: any) {
@@ -82,14 +77,14 @@ const OAuthCallback: React.FC = () => {
     };
 
     if (router.isReady) processCallback();
-  }, [router.isReady, router.query, handleOAuthCallback, router, queryClient, setSelectedToken]);
+  }, [router.isReady, router.query, handleOAuthCallback, router, queryClient, setSelectedAccountId]);
 
   const handleRetry = () => {
-    router.push('/email');
+    router.push('/email/oauth');
   };
 
   const handleGoBack = () => {
-    router.push('/email');
+    router.push('/email/accounts');
   };
 
   return (

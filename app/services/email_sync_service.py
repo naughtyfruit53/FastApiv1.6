@@ -15,8 +15,12 @@ import hashlib
 import os
 import re
 import bleach
+import socket
+import ssl
+import time
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List, Tuple
+from urllib.parse import urlparse, urljoin
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import decode_header
@@ -33,6 +37,37 @@ from app.utils.text_processing import extract_plain_text, sanitize_html
 from app.services.oauth_service import OAuth2Service
 
 logger = logging.getLogger(__name__)
+
+
+class PreConnectedIMAP(imaplib.IMAP4):
+    """
+    Custom IMAP4 subclass for pre-connected SSL socket
+    """
+    def __init__(self, ssl_sock):
+        self.sock = ssl_sock
+        self.file = self.sock.makefile('rb')
+        self.tls = True
+        # Replicate parent __init__ without calling open
+        self.host = ''
+        self.port = 0
+        self.timeout = None
+        self.debug = imaplib.Debug
+        self.state = 'LOGOUT'
+        self.literal = None
+        self.tagged_commands = {}
+        self.untagged_responses = {}
+        self.continuation_response = ''
+        self.is_readonly = False
+        self.tagnum = 0
+        self._expecting_data = False
+        self._cmd_log_len = 10
+        self._cmd_log_idx = 0
+        self._cmd_log = {}  # Last `_cmd_log_len' interactions
+        self._logfile = None
+        self.welcome = self._get_response()
+
+    def open(self, host='', port=imaplib.IMAP4_PORT, timeout=None):
+        pass  # Override to skip automatic connection
 
 
 class EmailSyncService:
@@ -56,7 +91,7 @@ class EmailSyncService:
             '*': ['style', 'class']
         }
     
-    def get_imap_connection(self, account: MailAccount, db: Session) -> Optional[imaplib.IMAP4_SSL]:
+    def get_imap_connection(self, account: MailAccount, db: Session) -> Optional[PreConnectedIMAP]:
         """
         Establish IMAP connection with OAuth2 or password authentication
         """
@@ -65,12 +100,49 @@ class EmailSyncService:
             logger.info(f"Attempting IMAP connection to {account.incoming_server}:{port} with SSL={account.incoming_ssl}")
             logger.info(f"Auth method: {account.incoming_auth_method}, Username: {account.username}, OAuth ID: {account.oauth_token_id}, Password set: {bool(account.password_encrypted)}")
             
-            # Create IMAP connection
-            if account.incoming_ssl:
-                imap = imaplib.IMAP4_SSL(account.incoming_server, port)
-            else:
-                imap = imaplib.IMAP4(account.incoming_server, port)
-                imap.starttls()
+            # Test basic connectivity with retry, forcing IPv4
+            connected = False
+            for attempt in range(3):
+                try:
+                    # Manually create IPv4 socket and connect
+                    test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    test_socket.settimeout(10)
+                    test_socket.connect((account.incoming_server, port))
+                    test_socket.close()
+                    logger.info(f"TCP connection test succeeded on attempt {attempt + 1} with IPv4")
+                    connected = True
+                    break
+                except socket.error as se:
+                    logger.warning(f"TCP connection test failed on attempt {attempt + 1}: {str(se)}")
+                    time.sleep(2)  # Wait 2 seconds before retry
+            
+            if not connected:
+                logger.error("All TCP connection attempts failed")
+                return None
+            
+            # Create custom SSL context for Windows compatibility
+            context = ssl.create_default_context()
+            context.check_hostname = True
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.minimum_version = ssl.TLSVersion.TLSv1_2  # Force TLS 1.2
+            
+            logger.info(f"SSL context created: min_version={context.minimum_version.name}, check_hostname={context.check_hostname}, verify_mode={context.verify_mode.name}")
+            
+            # Manually create socket and wrap with SSL
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(30)
+            try:
+                sock.connect((account.incoming_server, port))
+                logger.info("Socket connect succeeded")
+            except Exception as e:
+                logger.error(f"Socket connect failed: {str(e)}")
+                return None
+            ssl_sock = context.wrap_socket(sock, server_hostname=account.incoming_server)
+            logger.info("SSL wrap succeeded")
+            
+            # Create IMAP object with pre-connected socket
+            imap = PreConnectedIMAP(ssl_sock)
+            logger.info(f"IMAP welcome: {imap.welcome}")
             
             # Authenticate
             if account.incoming_auth_method == 'oauth2' and account.oauth_token_id:
@@ -81,12 +153,21 @@ class EmailSyncService:
                     logger.error(f"Failed to get OAuth2 credentials for account {account.id}")
                     return None
                 
-                auth_string = self._build_oauth2_auth_string(
-                    credentials['email'],
-                    credentials['access_token']
-                )
+                email_addr = credentials.get('email')
+                access_token = credentials.get('access_token')
+                if not email_addr or not access_token:
+                    logger.error(f"Missing email or access_token for account {account.id}")
+                    return None
+                
+                auth_string = self._build_oauth2_auth_string(email_addr, access_token)
+                if not auth_string:
+                    logger.error(f"Failed to build auth_string for account {account.id}")
+                    return None
+                
                 try:
-                    imap.authenticate('XOAUTH2', lambda x: auth_string)
+                    auth_bytes = base64.b64encode(auth_string.encode('utf-8'))
+                    imap.authenticate('XOAUTH2', lambda x: auth_bytes)
+                    logger.info("OAuth authentication succeeded")
                 except imaplib.IMAP4.error as e:
                     logger.error(f"OAuth authentication failed for account {account.id}: {str(e)}")
                     return None
@@ -94,10 +175,11 @@ class EmailSyncService:
             elif account.incoming_auth_method == 'password' and account.username and account.password_encrypted:
                 # Password authentication
                 from app.utils.encryption import decrypt_field, EncryptionKeys
-                password = decrypt_field(account.password_encrypted, EncryptionKeys.PII_KEY)
+                password = decrypt_field(account.password_encrypted, EncryptionKeys.PII)
                 logger.info(f"Using password auth for {account.username}, password length: {len(password) if password else 0}")
                 try:
                     imap.login(account.username, password)
+                    logger.info("Password authentication succeeded")
                 except imaplib.IMAP4.error as e:
                     logger.error(f"Password authentication failed for account {account.id}: {str(e)}")
                     return None
@@ -105,18 +187,21 @@ class EmailSyncService:
                 logger.error(f"No valid authentication method for account {account.id}")
                 return None
             
+            logger.info("IMAP connection established successfully")
             return imap
             
         except Exception as e:
-            logger.error(f"IMAP connection failed for account {account.id}: {str(e)}")
+            logger.error(f"IMAP connection failed for account {account.id}: {str(e)}", exc_info=True)
             return None
     
-    def _build_oauth2_auth_string(self, email: str, access_token: str) -> str:
+    def _build_oauth2_auth_string(self, email: str, access_token: str) -> Optional[str]:
         """
         Build OAuth2 authentication string for IMAP/SMTP
         """
-        auth_string = f'user={email}\x01auth=Bearer {access_token}\x01\x01'
-        return base64.b64encode(auth_string.encode()).decode()
+        if not email or not access_token:
+            logger.error("Email or access token is missing for building auth string")
+            return None
+        return f'user={email}\x01auth=Bearer {access_token}\x01\x01'
     
     def sync_account(self, account_id: int, full_sync: bool = False) -> bool:
         """
@@ -208,7 +293,7 @@ class EmailSyncService:
             db.commit()
             return False
     
-    def _sync_folder(self, imap: imaplib.IMAP4_SSL, account: MailAccount, folder: str, db: Session, full_sync: bool = False) -> Tuple[int, int]:
+    def _sync_folder(self, imap: PreConnectedIMAP, account: MailAccount, folder: str, db: Session, full_sync: bool = False) -> Tuple[int, int]:
         """
         Sync a specific folder
         Returns tuple of (new_messages_count, updated_messages_count)
@@ -572,7 +657,7 @@ class EmailSyncService:
         Automatically link email to customers/vendors based on email addresses
         """
         try:
-            from app.models.customer_models import Customer, Vendor
+            from app.models.base import Customer, Vendor
             
             # Extract all email addresses from the message
             all_emails = set()
@@ -629,7 +714,7 @@ class EmailSyncService:
             # Look for existing thread
             thread = None
             
-            # First, try to find by references or in-reply-to
+            # First, try to find by references or in-reply_to
             if references or in_reply_to:
                 ref_ids = []
                 if references:

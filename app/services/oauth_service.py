@@ -270,8 +270,10 @@ class OAuth2Service:
         if existing_token:
             # Update existing token
             existing_token.access_token = token_response["access_token"]
-            existing_token.refresh_token = token_response.get("refresh_token")
-            existing_token.id_token = token_response.get("id_token")
+            if "refresh_token" in token_response:
+                existing_token.refresh_token = token_response["refresh_token"]
+            if "id_token" in token_response:
+                existing_token.id_token = token_response["id_token"]
             existing_token.expires_at = expires_at
             existing_token.status = TokenStatus.ACTIVE
             existing_token.scope = token_response.get("scope")
@@ -288,14 +290,17 @@ class OAuth2Service:
                 provider=provider,
                 email_address=email,
                 display_name=display_name,
-                access_token=token_response["access_token"],
-                refresh_token=token_response.get("refresh_token"),
-                id_token=token_response.get("id_token"),
                 scope=token_response.get("scope"),
                 expires_at=expires_at,
                 status=TokenStatus.ACTIVE,
                 provider_metadata=user_info
             )
+            
+            user_token.access_token = token_response["access_token"]
+            if "refresh_token" in token_response:
+                user_token.refresh_token = token_response["refresh_token"]
+            if "id_token" in token_response:
+                user_token.id_token = token_response["id_token"]
             
             self.db.add(user_token)
             await self.db.commit()
@@ -428,11 +433,12 @@ class OAuth2Service:
             return None
         
         try:
-            # Decrypt access token
-            access_token = decrypt_field(
-                user_token.access_token_encrypted,
-                EncryptionKeys.PII_KEY
-            )
+            # Use property to get decrypted access_token
+            access_token = user_token.access_token
+            
+            if not access_token:
+                logger.error("Decrypted access_token is empty or None")
+                return None
             
             credentials = {
                 "provider": user_token.provider.value,

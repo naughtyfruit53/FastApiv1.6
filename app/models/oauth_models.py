@@ -9,6 +9,7 @@ from enum import Enum as PyEnum
 
 from app.core.database import Base
 from app.models.encrypted_fields import EncryptedPII
+from app.utils.encryption import encrypt_field, decrypt_field, EncryptionKeys
 
 
 class OAuthProvider(PyEnum):
@@ -78,32 +79,32 @@ class UserEmailToken(Base):
     @property
     def access_token(self) -> str:
         """Get decrypted access token"""
-        return self.access_token_encrypted or ""
+        return decrypt_field(self.access_token_encrypted, EncryptionKeys.PII) or ""
     
     @access_token.setter
     def access_token(self, value: str):
         """Set encrypted access token"""
-        self.access_token_encrypted = value
+        self.access_token_encrypted = encrypt_field(value, EncryptionKeys.PII) if value else None
     
     @property
     def refresh_token(self) -> str:
         """Get decrypted refresh token"""
-        return self.refresh_token_encrypted or ""
+        return decrypt_field(self.refresh_token_encrypted, EncryptionKeys.PII) or ""
     
     @refresh_token.setter
     def refresh_token(self, value: str):
         """Set encrypted refresh token"""
-        self.refresh_token_encrypted = value
+        self.refresh_token_encrypted = encrypt_field(value, EncryptionKeys.PII) if value else None
     
     @property
     def id_token(self) -> str:
         """Get decrypted ID token"""
-        return self.id_token_encrypted or ""
+        return decrypt_field(self.id_token_encrypted, EncryptionKeys.PII) or ""
     
     @id_token.setter
     def id_token(self, value: str):
         """Set encrypted ID token"""
-        self.id_token_encrypted = value
+        self.id_token_encrypted = encrypt_field(value, EncryptionKeys.PII) if value else None
     
     def is_expired(self) -> bool:
         """Check if token is expired"""

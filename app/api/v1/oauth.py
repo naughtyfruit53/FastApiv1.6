@@ -1,3 +1,5 @@
+# app/api/v1/oauth.py
+
 """
 OAuth2 Authentication API endpoints for Google and Microsoft
 """
@@ -173,6 +175,15 @@ async def oauth_callback(
                 existing_account.is_active = True
                 existing_account.sync_status = EmailSyncStatus.ACTIVE
                 existing_account.updated_at = datetime.utcnow()
+                existing_account.incoming_server = 'imap.gmail.com' if oauth_provider == OAuthProvider.GOOGLE else 'outlook.office365.com'
+                existing_account.incoming_port = 993
+                existing_account.incoming_ssl = True
+                existing_account.incoming_auth_method = 'oauth2'
+                existing_account.outgoing_server = 'smtp.gmail.com' if oauth_provider == OAuthProvider.GOOGLE else 'smtp.office365.com'
+                existing_account.outgoing_port = 587
+                existing_account.outgoing_ssl = True
+                existing_account.outgoing_auth_method = 'oauth2'
+                existing_account.username = user_token.email_address
                 mail_account = existing_account
             else:
                 # Create new account
@@ -189,6 +200,15 @@ async def oauth_callback(
                     is_active=True,
                     sync_status=EmailSyncStatus.ACTIVE,
                     created_at=datetime.utcnow(),
+                    incoming_server='imap.gmail.com' if oauth_provider == OAuthProvider.GOOGLE else 'outlook.office365.com',
+                    incoming_port=993,
+                    incoming_ssl=True,
+                    incoming_auth_method='oauth2',
+                    outgoing_server='smtp.gmail.com' if oauth_provider == OAuthProvider.GOOGLE else 'smtp.office365.com',
+                    outgoing_port=587,
+                    outgoing_ssl=True,
+                    outgoing_auth_method='oauth2',
+                    username=user_token.email_address
                 )
                 db.add(mail_account)
                 mail_account = mail_account
@@ -209,6 +229,7 @@ async def oauth_callback(
             "success": True,
             "message": "OAuth authentication successful",
             "token_id": user_token.id,
+            "account_id": mail_account.id,
             "email": user_token.email_address,
             "provider": provider
         }
@@ -289,7 +310,7 @@ async def get_token_details(
         organization_id=current_user.organization_id
     )
     result = await db.execute(stmt)
-    token = result.scalar_one_or_none()
+    token = result.scalars().first()
     
     if not token:
         raise HTTPException(
@@ -343,7 +364,7 @@ async def update_token(
         organization_id=current_user.organization_id
     )
     result = await db.execute(stmt)
-    token = result.scalar_one_or_none()
+    token = result.scalars().first()
     
     if not token:
         raise HTTPException(
@@ -403,7 +424,7 @@ async def refresh_token(
         organization_id=current_user.organization_id
     )
     result = await db.execute(stmt)
-    token = result.scalar_one_or_none()
+    token = result.scalars().first()
     
     if not token:
         raise HTTPException(
@@ -438,7 +459,7 @@ async def revoke_token(
         organization_id=current_user.organization_id
     )
     result = await db.execute(stmt)
-    token = result.scalar_one_or_none()
+    token = result.scalars().first()
     
     if not token:
         raise HTTPException(
@@ -468,7 +489,7 @@ async def sync_emails(
         organization_id=current_user.organization_id
     )
     result = await db.execute(stmt)
-    token = result.scalar_one_or_none()
+    token = result.scalars().first()
     
     if not token:
         raise HTTPException(
