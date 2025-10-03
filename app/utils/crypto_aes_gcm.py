@@ -7,8 +7,6 @@ import base64
 import logging
 from typing import Optional
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
 
 logger = logging.getLogger(__name__)
 
