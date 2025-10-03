@@ -318,28 +318,7 @@ const QuotationPage: React.FC = () => {
   const handleReviseWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
     handleRevise(voucher.id);
-    reset({
-      ...voucher,
-      date: new Date().toISOString().split('T')[0],
-      voucher_number: `${voucher.voucher_number} Rev ${voucher.revision_number + 1 || 1}`,
-      parent_id: voucher.id,
-      revision_number: voucher.revision_number + 1 || 1,
-      items: voucher.items.map((item: any) => ({
-        ...item,
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : item.gst_rate,
-      })),
-    });
-    if (voucher.additional_charges) {
-      setAdditionalCharges(voucher.additional_charges);
-      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));
-    } else {
-      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
-      setAdditionalChargesEnabled(false);
-    }
-    // Prefill cache to avoid duplicate fetch
-    queryClient.setQueryData(['quotation', voucher.id], voucher);
+    // Remove the reset here - let the hook's useEffect handle it when voucherData loads
   };
 
   const handleViewWithData = (voucher: any) => {

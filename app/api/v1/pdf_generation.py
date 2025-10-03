@@ -23,6 +23,7 @@ from app.models.vouchers.financial import PaymentVoucher, ReceiptVoucher
 from app.models.customer_models import Vendor, Customer
 from app.models.hr_models import EmployeeProfile
 import logging
+import json  # Added for json parsing
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["pdf-generation"])
@@ -349,6 +350,10 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             else:
                 stmt = stmt.options(joinedload(model_class.items))
         
+        # Remove joinedload for additional_charges as it's a column property
+        # if hasattr(model_class, 'additional_charges'):
+        #     stmt = stmt.options(joinedload(model_class.additional_charges))
+        
         result = await db.execute(stmt)  # Await execute
         voucher = result.scalars().first()  # Use scalars().first()
         
@@ -471,6 +476,12 @@ async def _voucher_to_dict(voucher, db: AsyncSession) -> Dict[str, Any]:  # Chan
         voucher_data['items'] = [_item_to_dict(item) for item in voucher.items]
     else:
         voucher_data['items'] = []
+    
+    # Add additional charges if available
+    if hasattr(voucher, 'additional_charges') and voucher.additional_charges:
+        voucher_data['additional_charges'] = voucher.additional_charges
+    else:
+        voucher_data['additional_charges'] = []
     
     return voucher_data
 

@@ -1,10 +1,12 @@
+// frontend/src/hooks/useVoucherNumbering.ts
+
 // Voucher numbering utilities and hooks
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import api from "../lib/api";
 interface UseVoucherNumberingProps {
   apiEndpoint: string;
-  mode: "create" | "edit" | "view";
+  mode: "create" | "edit" | "view" | "revise";
   setValue: (name: string, value: any) => void;
   voucherData?: any;
 }
@@ -25,7 +27,7 @@ export const useVoucherNumbering = ({
   useEffect(() => {
     if (mode === "create" && nextVoucherNumber) {
       setValue("voucher_number", nextVoucherNumber);
-    } else if (voucherData && voucherData.voucher_number) {
+    } else if ((mode === "edit" || mode === "view") && voucherData && voucherData.voucher_number) {
       setValue("voucher_number", voucherData.voucher_number);
     }
   }, [mode, nextVoucherNumber, voucherData, setValue]);

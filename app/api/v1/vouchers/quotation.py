@@ -99,7 +99,7 @@ async def create_quotation(
             latest_revision = result.scalar() or 0
             
             quotation_data['revision_number'] = latest_revision + 1
-            quotation_data['voucher_number'] = f"{parent.voucher_number} Rev {quotation_data['revision_number']}"
+            quotation_data['voucher_number'] = f"{parent.voucher_number} -rev {quotation_data['revision_number']}"
             quotation_data['parent_id'] = quotation.parent_id
         else:
             # Generate unique voucher number if not provided or blank

@@ -283,7 +283,7 @@
                             <td class="col-sr">{{ loop.index }}</td>
                             <td class="col-product">{{ item.product_name|default(item.description, 'Product') }}{% if item.description and item.product_name != item.description %}<br><small>{{ item.description }}</small>{% endif %}</td>
                             <td class="col-hsn">{{ item.hsn_code|default('-') }}</td>
-                            <td class="col-qty num">{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}</td>
+                            <td class="col-qty num">{% if item.quantity > 0 %}{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}{% else %}-{% endif %}</td>
                             <td class="col-rate num">{{ item.unit_price|format_currency(show_symbol=True) }}</td>
                             {% if line_discount_enabled %}
                             <td class="col-disc num">

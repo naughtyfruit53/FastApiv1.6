@@ -19,6 +19,7 @@ from app.models.erp_models import BankAccount  # Added for bank details in PDFs
 import logging
 import base64
 import re  # Added for sanitizing filenames
+import json  # Added for parsing JSON strings
 
 # Import settings for dynamic wkhtmltopdf path
 from app.core.config import settings
@@ -425,6 +426,58 @@ class VoucherPDFGenerator:
                 total_igst += gst_calc['igst_amount']
                 total_quantity += quantity  # Accumulate quantity
             
+        # Process additional charges and append as special items
+        additional_charges = voucher_data.get('additional_charges', {})
+        if isinstance(additional_charges, str):
+            try:
+                additional_charges = json.loads(additional_charges)
+            except json.JSONDecodeError:
+                additional_charges = {}
+                logger.warning(f"Invalid JSON in additional_charges for voucher {voucher_data.get('id')}")
+        if isinstance(additional_charges, dict):
+            for name, amount in additional_charges.items():
+                if amount > 0:
+                    gst_rate = 18.0  # Default GST rate for charges; adjust if needed
+                    item_subtotal = float(amount)
+                    discount_amount = 0
+                    taxable_amount = item_subtotal - discount_amount
+                    
+                    gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
+                    
+                    item_total = taxable_amount + gst_calc['total_gst']
+                    
+                    processed_item = {
+                        'product_name': name.capitalize() + ' Charge',
+                        'description': '',
+                        'hsn_code': '',
+                        'quantity': 0,  # Set to 0 to avoid adding to total_quantity
+                        'unit': '',
+                        'unit_price': amount,
+                        'discount_percentage': 0,
+                        'discount_amount': 0,
+                        'gst_rate': gst_rate,
+                        'subtotal': item_subtotal,
+                        'taxable_amount': taxable_amount,
+                        'cgst_rate': gst_calc['cgst_rate'],
+                        'sgst_rate': gst_calc['sgst_rate'],
+                        'igst_rate': gst_calc['igst_rate'],
+                        'cgst_amount': gst_calc['cgst_amount'],
+                        'sgst_amount': gst_calc['sgst_amount'],
+                        'igst_amount': gst_calc['igst_amount'],
+                        'total_amount': item_total,
+                        'is_charge': True  # Flag for template if needed
+                    }
+                    
+                    processed_items.append(processed_item)
+                    
+                    subtotal += item_subtotal
+                    total_taxable += taxable_amount
+                    total_cgst += gst_calc['cgst_amount']
+                    total_sgst += gst_calc['sgst_amount']
+                    total_igst += gst_calc['igst_amount']
+                    # Do not add to total_quantity for charges
+
+        if processed_items:
             grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
             
             # Calculate round off

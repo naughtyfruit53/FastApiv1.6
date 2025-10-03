@@ -155,7 +155,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   // Enhanced form management with reference support
   const defaultValues = useMemo(() => {
     const baseValues = {
-      voucher_number: "",
+      voucher_number: "Loading...",
       date: new Date().toISOString().slice(0, 10),
       reference: "",
       notes: "",
@@ -194,7 +194,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
             unit_price: 0.0, // Ensure 2 decimal places
             original_unit_price: 0.0,
             discount_percentage: 0,
-            discount_amount: 0,
+            discount_amount: 0.0,
           },
         ],
       };
@@ -425,9 +425,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       await refetchVoucherList(); // Explicit refetch after invalidation
       router.push({ query: { mode: "create" } }, undefined, { shallow: true });
       setMode("create");
-      reset(defaultValues);
       const { data: newNextNumber } = await refetchNextNumber();
-      setValue("voucher_number", newNextNumber);
+      reset({
+        ...defaultValues,
+        voucher_number: newNextNumber
+      });
     },
     onError: (error: any) => {
       console.error("[useVoucherPage] Error creating voucher:", error);
@@ -789,16 +791,24 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   }, [setAddShippingLoading, setShowShippingModal]);
   // Effects - Enhanced data loading to fix bug where vouchers don't load saved data properly
   useEffect(() => {
-    if (mode === "create" && nextVoucherNumber) {
-      setValue("voucher_number", nextVoucherNumber);
-    } else if (voucherData) {
+    if (voucherData && (mode === "view" || mode === "edit" || mode === "revise")) {
       console.log("[useVoucherPage] Loading voucher data:", voucherData);
       // Reset with voucher data
       const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
-      const formattedData = {
+      let formattedData: any = {
         ...voucherData,
         date: formattedDate,
       };
+      if (mode === "revise") {
+        formattedData = {
+          ...formattedData,
+          date: new Date().toISOString().split('T')[0],
+          voucher_number: `${voucherData.voucher_number} -rev ${(voucherData.revision_number || 0) + 1}`,
+          parent_id: voucherData.id,
+          revision_number: (voucherData.revision_number || 0) + 1,
+          id: undefined, // New ID for revision
+        };
+      }
       reset(formattedData);
       // Reconstruct and set 'entity' for financial vouchers
       if (config.hasItems === false && voucherData.entity_id && voucherData.entity_type) {
@@ -852,7 +862,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     voucherData,
     mode,
     reset,
-    nextVoucherNumber,
     setValue,
     defaultValues,
     config.hasItems,
@@ -861,6 +870,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     replace,
     isIntrastate,
   ]);
+  useEffect(() => {
+    if (nextVoucherNumber && mode === "create") {
+      setValue("voucher_number", nextVoucherNumber);
+    }
+  }, [nextVoucherNumber, mode, setValue]);
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "refreshMasterData") {

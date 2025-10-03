@@ -18,6 +18,8 @@ import bleach
 import socket
 import ssl
 import time
+import concurrent.futures
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List, Tuple
 from urllib.parse import urlparse, urljoin
@@ -29,7 +31,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
 
 from app.core.config import settings
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, AsyncSessionLocal
 from app.models.email import (
     MailAccount, Email, EmailThread, EmailAttachment, EmailSyncStatus, EmailStatus, EmailPriority, EmailSyncLog
 )
@@ -95,30 +97,9 @@ class EmailSyncService:
             # Authenticate based on method
             if account.incoming_auth_method in ['oauth', 'oauth2', 'xoauth2'] and account.oauth_token_id:
                 # OAuth2 XOAUTH2 authentication
-                # Use synchronous wrapper for async OAuth service
-                import asyncio
-                from app.core.database import async_session_maker
-                
-                async def get_credentials_async():
-                    async with async_session_maker() as async_db:
-                        oauth_service = OAuth2Service(async_db)
-                        return await oauth_service.get_email_credentials(account.oauth_token_id)
-                
-                # Run async function in new event loop if needed
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        # If we're already in an async context, we need to handle this differently
-                        # For now, create a new loop in a thread
-                        import concurrent.futures
-                        with concurrent.futures.ThreadPoolExecutor() as executor:
-                            future = executor.submit(asyncio.run, get_credentials_async())
-                            credentials = future.result(timeout=10)
-                    else:
-                        credentials = loop.run_until_complete(get_credentials_async())
-                except RuntimeError:
-                    # No event loop, create new one
-                    credentials = asyncio.run(get_credentials_async())
+                # Use synchronous OAuth service
+                oauth_service = OAuth2Service()
+                credentials = oauth_service.sync_get_email_credentials(account.oauth_token_id, db)
                 
                 if not credentials:
                     logger.error(f"Failed to get OAuth2 credentials for account {account.id}")

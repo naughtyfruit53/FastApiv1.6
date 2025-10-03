@@ -4,14 +4,13 @@ Health check endpoints for monitoring system components
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
-from app.core.database import get_db, SessionLocal
+from app.core.database import get_db
 from app.models.email import MailAccount, EmailSyncLog, EmailSyncStatus
 from app.models.oauth_models import UserEmailToken, TokenStatus
-from app.dependencies.auth import get_current_active_user, get_current_super_admin
+from app.api.v1.auth import get_current_active_user, get_current_super_admin
 from app.models.user_models import User
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -57,33 +56,35 @@ async def email_sync_health(
         # Get recent sync activity (last 24 hours)
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         
-        # Use synchronous session for EmailSyncLog if it's not async-enabled
-        sync_db = SessionLocal()
-        try:
-            recent_syncs = sync_db.query(EmailSyncLog).join(
-                MailAccount, EmailSyncLog.account_id == MailAccount.id
-            ).filter(
-                MailAccount.organization_id == organization_id,
-                EmailSyncLog.started_at >= twenty_four_hours_ago
-            ).count()
-            
-            successful_syncs = sync_db.query(EmailSyncLog).join(
-                MailAccount, EmailSyncLog.account_id == MailAccount.id
-            ).filter(
-                MailAccount.organization_id == organization_id,
-                EmailSyncLog.started_at >= twenty_four_hours_ago,
-                EmailSyncLog.status == 'success'
-            ).count()
-            
-            failed_syncs = sync_db.query(EmailSyncLog).join(
-                MailAccount, EmailSyncLog.account_id == MailAccount.id
-            ).filter(
-                MailAccount.organization_id == organization_id,
-                EmailSyncLog.started_at >= twenty_four_hours_ago,
-                EmailSyncLog.status == 'error'
-            ).count()
-        finally:
-            sync_db.close()
+        # Converted to async queries
+        stmt = select(func.count(EmailSyncLog.id)).select_from(EmailSyncLog).join(
+            MailAccount, EmailSyncLog.account_id == MailAccount.id
+        ).where(
+            MailAccount.organization_id == organization_id,
+            EmailSyncLog.started_at >= twenty_four_hours_ago
+        )
+        result = await db.execute(stmt)
+        recent_syncs = result.scalar() or 0
+        
+        stmt = select(func.count(EmailSyncLog.id)).select_from(EmailSyncLog).join(
+            MailAccount, EmailSyncLog.account_id == MailAccount.id
+        ).where(
+            MailAccount.organization_id == organization_id,
+            EmailSyncLog.started_at >= twenty_four_hours_ago,
+            EmailSyncLog.status == 'success'
+        )
+        result = await db.execute(stmt)
+        successful_syncs = result.scalar() or 0
+        
+        stmt = select(func.count(EmailSyncLog.id)).select_from(EmailSyncLog).join(
+            MailAccount, EmailSyncLog.account_id == MailAccount.id
+        ).where(
+            MailAccount.organization_id == organization_id,
+            EmailSyncLog.started_at >= twenty_four_hours_ago,
+            EmailSyncLog.status == 'error'
+        )
+        result = await db.execute(stmt)
+        failed_syncs = result.scalar() or 0
         
         # Determine overall health status
         health_status = "healthy"
