@@ -28,16 +28,56 @@
 {% endblock %}
 
 {% block voucher_specific_footer %}
-{% if voucher.notes %}
-<div class="terms" style="border-top: var(--cell-border);">
-    <table>
-        <tbody>
-            <tr><td style="font-weight:700;">Additional Notes</td></tr>
-            {% for note in voucher.notes.split('\n') %}
-            <tr><td>{{ note|trim }}</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+{% if voucher.delivery_terms %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Delivery Terms</div>
+    <div style="font-size: 10px;">
+        {{ voucher.delivery_terms }}
+    </div>
 </div>
 {% endif %}
+
+{% if voucher.payment_terms %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Payment Terms</div>
+    <div style="font-size: 10px;">
+        {{ voucher.payment_terms }}
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top: 15px;">
+    <div class="section-title">Bank Details for Payment</div>
+    <div style="font-size: 10px;">
+        {% if company.bank_details %}
+        A/c Holder's Name: {{ company.bank_details.holder_name }}<br>
+        A/c No.: {{ company.bank_details.account_number }}<br>
+        IFS Code: {{ company.bank_details.ifsc }}<br>
+        Bank Name & Branch : {{ company.bank_details.bank_name }} & {{ company.bank_details.branch }}
+        {% else %}
+        No bank details available.
+        {% endif %}
+    </div>
+</div>
+
+{% if voucher.notes %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Additional Notes</div>
+    <div style="font-size: 10px;">
+        {{ voucher.notes }}
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
+    <strong>Important Notes:</strong><br>
+    • Quality inspection will be conducted upon receipt of goods.<br>
+    • Payment terms as per agreement.<br>
+    • All disputes subject to our jurisdiction.<br>
+    • Supplier must deliver as per specifications.
+</div>
+
+<div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
+    We appreciate your partnership and prompt service.
+</div>
 {% endblock %}
