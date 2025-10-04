@@ -65,6 +65,11 @@ class UserEmailToken(Base):
     last_sync_status = Column(String(50), nullable=True)
     last_sync_error = Column(Text, nullable=True)
     
+    # Incremental sync tracking (restored from working commit c2fadf02)
+    # These enable efficient delta/history-based sync instead of full sync every time
+    last_history_id = Column(String(255), nullable=True, index=True)  # Gmail history API
+    last_delta_token = Column(Text, nullable=True)  # Microsoft Graph delta queries
+    
     # Security and audit
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
