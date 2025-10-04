@@ -33,7 +33,7 @@ from sqlalchemy import and_, or_, desc
 from app.core.config import settings
 from app.core.database import SessionLocal, AsyncSessionLocal
 from app.models.email import (
-    MailAccount, Email, EmailThread, EmailAttachment, EmailSyncStatus, EmailStatus, EmailPriority, EmailSyncLog
+    MailAccount, Email, EmailThread, EmailAttachment, EmailSyncStatus, EmailStatus, EmailPriority, EmailSyncLog, EmailAccountType
 )
 from app.models.oauth_models import TokenStatus
 from app.utils.text_processing import extract_plain_text, sanitize_html

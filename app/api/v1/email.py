@@ -9,9 +9,10 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, delete
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.services.rbac import PermissionChecker
 from app.services.email_service import email_management_service, link_email_to_customer_vendor, auto_link_emails_by_sender
 from app.services.email_sync_worker import email_sync_worker
@@ -28,7 +29,7 @@ from app.models.user_models import User
 from app.schemas.email_schemas import (
     MailAccountCreate, MailAccountUpdate, MailAccountResponse,
     EmailResponse, EmailThreadResponse, EmailAttachmentResponse,
-    SyncStatusResponse, ManualSyncRequest
+    SyncStatusResponse, ManualSyncRequest, EmailListResponse, EmailListItemResponse
 )
 
 router = APIRouter(prefix="/email", tags=["Email"])
@@ -340,9 +341,9 @@ async def get_account_sync_status(
     return status_info
 
 
-@router.get("/accounts/{account_id}/emails", response_model=Dict[str, Any])
+@router.get("/accounts/{account_id}/emails", response_model=EmailListResponse)
 async def get_account_emails(
-    account_id: int,
+    account_id: int = Path(..., gt=0),
     current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
     folder: str = Query("INBOX", description="Email folder to fetch from"),
     limit: int = Query(50, ge=1, le=200),
@@ -387,14 +388,17 @@ async def get_account_emails(
     total_result = await db.execute(total_stmt)
     total_count = total_result.scalar()
     
-    return {
-        "emails": emails,
-        "total_count": total_count,
-        "offset": offset,
-        "limit": limit,
-        "has_more": offset + limit < total_count,
-        "folder": folder
-    }
+    # Convert emails to Pydantic models
+    email_responses = [EmailListItemResponse.from_orm(email) for email in emails]
+    
+    return EmailListResponse(
+        emails=email_responses,
+        total_count=total_count,
+        offset=offset,
+        limit=limit,
+        has_more=offset + limit < total_count,
+        folder=folder
+    )
 
 
 @router.get("/emails/{email_id}", response_model=EmailResponse)
@@ -411,6 +415,8 @@ async def get_email_detail(
         Email.id == email_id,
         MailAccount.user_id == current_user.id
     )
+    if include_attachments:
+        stmt = stmt.options(joinedload(Email.attachments))
     result = await db.execute(stmt)
     email = result.scalars().first()
     
@@ -420,9 +426,7 @@ async def get_email_detail(
             detail="Email not found"
         )
     
-    email_detail = email_management_service.get_email_detail(email_id, include_attachments)
-    
-    return email_detail
+    return EmailResponse.from_orm(email)
 
 
 @router.put("/emails/{email_id}/status")
@@ -957,7 +961,7 @@ async def list_shared_inboxes(
         
         account_list = []
         for account in shared_accounts:
-            unread_stmt = select(func.count(Email.id)).filter(
+            unread_stmt = select(func.count()).filter(
                 Email.account_id == account.id,
                 Email.status == EmailStatus.UNREAD
             )

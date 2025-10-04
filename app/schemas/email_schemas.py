@@ -139,7 +139,7 @@ class EmailAddressSchema(BaseModel):
     email: str
 
 
-class EmailResponse(BaseModel):
+class EmailListItemResponse(BaseModel):
     id: int
     message_id: str
     subject: str
@@ -179,11 +179,25 @@ class EmailResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
     
+    class Config:
+        from_attributes = True
+
+
+class EmailResponse(EmailListItemResponse):
     # Attachments (if included)
     attachments: Optional[List['EmailAttachmentResponse']] = None
     
     class Config:
         from_attributes = True
+
+# Email List Response
+class EmailListResponse(BaseModel):
+    emails: List[EmailListItemResponse]
+    total_count: int
+    offset: int
+    limit: int
+    has_more: bool
+    folder: str
 
 
 # Email Thread Schemas

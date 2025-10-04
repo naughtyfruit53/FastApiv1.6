@@ -8,8 +8,7 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
 from app.core.database import Base
-from app.models.encrypted_fields import EncryptedPII
-from app.utils.encryption import encrypt_field, decrypt_field, EncryptionKeys
+from app.utils.crypto_aes_gcm import encrypt_aes_gcm, decrypt_aes_gcm, EncryptionKeysAESGCM
 
 
 class OAuthProvider(PyEnum):
@@ -45,9 +44,9 @@ class UserEmailToken(Base):
     display_name = Column(String(255), nullable=True)
     
     # Encrypted OAuth tokens
-    access_token_encrypted = Column(EncryptedPII(), nullable=False)
-    refresh_token_encrypted = Column(EncryptedPII(), nullable=True)
-    id_token_encrypted = Column(EncryptedPII(), nullable=True)
+    access_token_encrypted = Column(Text, nullable=False)
+    refresh_token_encrypted = Column(Text, nullable=True)
+    id_token_encrypted = Column(Text, nullable=True)
     
     # Token metadata
     scope = Column(Text, nullable=True)  # Space-separated list of granted scopes
@@ -84,32 +83,32 @@ class UserEmailToken(Base):
     @property
     def access_token(self) -> str:
         """Get decrypted access token"""
-        return decrypt_field(self.access_token_encrypted, EncryptionKeys.PII) or ""
+        return decrypt_aes_gcm(self.access_token_encrypted, EncryptionKeysAESGCM.OAUTH) or ""
     
     @access_token.setter
     def access_token(self, value: str):
         """Set encrypted access token"""
-        self.access_token_encrypted = encrypt_field(value, EncryptionKeys.PII) if value else None
+        self.access_token_encrypted = encrypt_aes_gcm(value, EncryptionKeysAESGCM.OAUTH) if value else None
     
     @property
     def refresh_token(self) -> str:
         """Get decrypted refresh token"""
-        return decrypt_field(self.refresh_token_encrypted, EncryptionKeys.PII) or ""
+        return decrypt_aes_gcm(self.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) or ""
     
     @refresh_token.setter
     def refresh_token(self, value: str):
         """Set encrypted refresh token"""
-        self.refresh_token_encrypted = encrypt_field(value, EncryptionKeys.PII) if value else None
+        self.refresh_token_encrypted = encrypt_aes_gcm(value, EncryptionKeysAESGCM.OAUTH) if value else None
     
     @property
     def id_token(self) -> str:
         """Get decrypted ID token"""
-        return decrypt_field(self.id_token_encrypted, EncryptionKeys.PII) or ""
+        return decrypt_aes_gcm(self.id_token_encrypted, EncryptionKeysAESGCM.OAUTH) or ""
     
     @id_token.setter
     def id_token(self, value: str):
         """Set encrypted ID token"""
-        self.id_token_encrypted = encrypt_field(value, EncryptionKeys.PII) if value else None
+        self.id_token_encrypted = encrypt_aes_gcm(value, EncryptionKeysAESGCM.OAUTH) if value else None
     
     def is_expired(self) -> bool:
         """Check if token is expired"""

@@ -40,6 +40,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 import * as emailService from '../../services/emailService';
+import { useEmail } from '../../context/EmailContext';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
@@ -58,10 +59,11 @@ interface AttachmentFile extends File {
 const Composer: React.FC<ComposerProps> = ({
   mode,
   originalEmail,
-  selectedAccount,
+  selectedAccount: propSelectedAccount,
   onClose,
   onSent
 }) => {
+  const { selectedAccountId } = useEmail();
   const [to, setTo] = useState<emailService.EmailAddress[]>([]);
   const [cc, setCc] = useState<emailService.EmailAddress[]>([]);
   const [bcc, setBcc] = useState<emailService.EmailAddress[]>([]);
@@ -72,10 +74,27 @@ const Composer: React.FC<ComposerProps> = ({
   const [showCC, setShowCC] = useState(false);
   const [showBCC, setShowBCC] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [localSelectedAccountId, setLocalSelectedAccountId] = useState<number | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch available email templates
+  // Fetch available email accounts
+  const { data: accounts = [], isLoading: accountsLoading } = useQuery({
+    queryKey: ['mail-accounts'],
+    queryFn: emailService.getMailAccounts
+  });
+
+  // Determine effective selected account
+  const effectiveSelectedAccountId = propSelectedAccount?.id || localSelectedAccountId || selectedAccountId;
+
+  // Auto-select if only one account
+  React.useEffect(() => {
+    if (accounts.length === 1 && !effectiveSelectedAccountId) {
+      setLocalSelectedAccountId(accounts[0].id);
+    }
+  }, [accounts, effectiveSelectedAccountId]);
+
+  // Fetch templates
   const { data: templates = [] } = useQuery({
     queryKey: ['email-templates'],
     queryFn: emailService.getEmailTemplates
@@ -84,10 +103,10 @@ const Composer: React.FC<ComposerProps> = ({
   // Send email mutation
   const sendEmailMutation = useMutation({
     mutationFn: (emailData: emailService.ComposeEmail) => {
-      if (!selectedAccount) {
+      if (!effectiveSelectedAccountId) {
         throw new Error('No account selected');
       }
-      return emailService.composeEmail(emailData, selectedAccount.id);
+      return emailService.composeEmail(emailData, effectiveSelectedAccountId);
     },
     onSuccess: (result) => {
       onSent?.(result.email_id);
@@ -207,7 +226,7 @@ const Composer: React.FC<ComposerProps> = ({
     sendEmailMutation.mutate(emailData);
   };
 
-  const canSend = to.length > 0 && subject.trim() && body.trim() && selectedAccount && !sendEmailMutation.isPending;
+  const canSend = to.length > 0 && subject.trim() && body.trim() && effectiveSelectedAccountId && !sendEmailMutation.isPending;
 
   const quillModules = {
     toolbar: [
@@ -254,10 +273,27 @@ const Composer: React.FC<ComposerProps> = ({
           </Alert>
         )}
 
-        {/* Account selector */}
-        {!selectedAccount && (
+        {/* Account selector if multiple accounts */}
+        {accounts.length > 1 && (
+          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+            <InputLabel>Send from</InputLabel>
+            <Select
+              value={effectiveSelectedAccountId || ''}
+              label="Send from"
+              onChange={(e) => setLocalSelectedAccountId(Number(e.target.value))}
+            >
+              {accounts.map(account => (
+                <MenuItem key={account.id} value={account.id}>
+                  {account.email_address} ({account.provider})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+
+        {accounts.length === 0 && (
           <Alert severity="warning" sx={{ mb: 2 }}>
-            Please select an email account to send from
+            No email accounts configured
           </Alert>
         )}
       </CardContent>
@@ -275,9 +311,9 @@ const Composer: React.FC<ComposerProps> = ({
             onKeyPress={(e) => {
               if (e.key === 'Enter' || e.key === ',') {
                 e.preventDefault();
-                const value = (e.target as HTMLInputElement).value.trim();
-                if (value && value.includes('@')) {
-                  handleAddRecipient('to', value);
+                const newRecipient = { email: (e.target as HTMLInputElement).value.trim() };
+                if (newRecipient.email && newRecipient.email.includes('@')) {
+                  setTo([...to, newRecipient]);
                   (e.target as HTMLInputElement).value = '';
                 }
               }
@@ -315,9 +351,9 @@ const Composer: React.FC<ComposerProps> = ({
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
-                    const value = (e.target as HTMLInputElement).value.trim();
-                    if (value && value.includes('@')) {
-                      handleAddRecipient('cc', value);
+                    const newRecipient = { email: (e.target as HTMLInputElement).value.trim() };
+                    if (newRecipient.email && newRecipient.email.includes('@')) {
+                      setCc([...cc, newRecipient]);
                       (e.target as HTMLInputElement).value = '';
                     }
                   }
@@ -348,9 +384,9 @@ const Composer: React.FC<ComposerProps> = ({
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
-                    const value = (e.target as HTMLInputElement).value.trim();
-                    if (value && value.includes('@')) {
-                      handleAddRecipient('bcc', value);
+                    const newRecipient = { email: (e.target as HTMLInputElement).value.trim() };
+                    if (newRecipient.email && newRecipient.email.includes('@')) {
+                      setBcc([...bcc, newRecipient]);
                       (e.target as HTMLInputElement).value = '';
                     }
                   }
