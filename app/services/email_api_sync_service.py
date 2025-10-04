@@ -135,9 +135,12 @@ class EmailAPISyncService:
         new_emails = 0
         
         # Check if we can use incremental sync with history
-        if not force_sync and token.last_history_id:
+        # Note: last_history_id would need to be added to UserEmailToken model
+        # For now, we'll always do full sync which is safer
+        history_id = getattr(token, 'last_history_id', None)
+        if not force_sync and history_id:
             try:
-                logger.info(f"Attempting incremental sync with history_id: {token.last_history_id}")
+                logger.info(f"Attempting incremental sync with history_id: {history_id}")
                 new_emails = self._sync_google_history(service, token, db)
             except HttpError as e:
                 if e.resp.status == 404:
@@ -147,6 +150,7 @@ class EmailAPISyncService:
                     raise
         else:
             # Full sync - limit to last 30 days for initial sync
+            logger.info("Performing full sync (history tracking not yet enabled)")
             new_emails = self._full_sync_google_emails(service, token, db, force_sync)
         
         logger.info(f"Gmail API sync completed: {new_emails} new emails")
@@ -174,9 +178,11 @@ class EmailAPISyncService:
                     new_emails += self._process_google_message(service, token, db, msg['id'])
             
             # Update history ID for next incremental sync
+            # Note: Would need to add last_history_id field to UserEmailToken model
             if history_response.get('historyId'):
-                token.last_history_id = str(history_response['historyId'])
-                db.commit()
+                if hasattr(token, 'last_history_id'):
+                    token.last_history_id = str(history_response['historyId'])
+                    db.commit()
             
             return new_emails
             
@@ -225,7 +231,7 @@ class EmailAPISyncService:
         logger.info(f"Total messages to process: {len(messages)}")
         
         new_emails = 0
-        latest_history_id = token.last_history_id or '1'
+        latest_history_id = getattr(token, 'last_history_id', '1') or '1'
         
         for msg in messages:
             # Skip if already exists
@@ -246,7 +252,9 @@ class EmailAPISyncService:
                 pass
         
         # Save history ID for next sync
-        token.last_history_id = latest_history_id
+        # Note: Would need to add last_history_id field to UserEmailToken model
+        if hasattr(token, 'last_history_id'):
+            token.last_history_id = latest_history_id
         db.commit()
         
         return new_emails
@@ -290,24 +298,25 @@ class EmailAPISyncService:
             body_html, body_text, attachments_data, size_bytes = self._parse_google_payload(msg_detail['payload'])
             
             # Create email record
+            # Note: thread_id in Email model is FK to email_threads, not provider thread ID
+            # For now, we'll skip thread assignment and let it be handled later
             email = Email(
                 message_id=message_id,
-                thread_id=msg_detail.get('threadId'),
+                provider_message_id=msg_detail.get('threadId'),  # Store provider thread ID here
                 subject=headers.get('subject', ''),
                 from_address=headers.get('from', ''),
                 from_name=self._extract_name_from_header(headers.get('from', '')),
-                to_addresses=self._parse_addresses(headers.get('to', '')),
-                cc_addresses=self._parse_addresses(headers.get('cc', '')),
-                bcc_addresses=self._parse_addresses(headers.get('bcc', '')),
+                to_addresses=self._parse_address_list(headers.get('to', '')),
+                cc_addresses=self._parse_address_list(headers.get('cc', '')) if headers.get('cc') else None,
+                bcc_addresses=self._parse_address_list(headers.get('bcc', '')) if headers.get('bcc') else None,
                 reply_to=headers.get('reply-to', ''),
                 sent_at=datetime.fromtimestamp(int(msg_detail['internalDate'])/1000),
                 received_at=datetime.fromtimestamp(int(msg_detail['internalDate'])/1000),
                 body_text=body_text,
                 body_html=body_html,
                 status=EmailStatus.UNREAD if 'UNREAD' in labels else EmailStatus.READ,
-                # is_flagged=is_flagged,  # Remove if column doesn't exist
-                # is_important=is_important,  # Remove if column doesn't exist
-                # labels=labels,  # Remove if column doesn't exist
+                is_flagged=is_flagged,
+                is_important=is_important,
                 folder=folder,
                 size_bytes=size_bytes,
                 has_attachments=bool(attachments_data),
@@ -423,10 +432,40 @@ class EmailAPISyncService:
         return match.group(1).strip() if match else header
     
     def _parse_addresses(self, header: str) -> List[str]:
-        """Parse comma-separated email addresses"""
+        """Parse comma-separated email addresses (legacy format)"""
         if not header:
             return []
         return [addr.strip().strip('<>') for addr in header.split(',') if addr.strip()]
+    
+    def _parse_address_list(self, header: str) -> List[Dict[str, str]]:
+        """
+        Parse email addresses into list of dicts for JSONB storage.
+        Expected format: [{"email": "user@example.com", "name": "User Name"}]
+        """
+        if not header:
+            return []
+        
+        addresses = []
+        for addr in header.split(','):
+            addr = addr.strip()
+            if not addr:
+                continue
+            
+            # Try to parse "Name <email>" format
+            match = re.match(r'([^<]+)<([^>]+)>', addr)
+            if match:
+                addresses.append({
+                    "name": match.group(1).strip(),
+                    "email": match.group(2).strip()
+                })
+            else:
+                # Just an email address
+                addresses.append({
+                    "email": addr.strip('<>'),
+                    "name": None
+                })
+        
+        return addresses
     
     def _sync_microsoft_emails(self, token: UserEmailToken, db: Session, force_sync: bool) -> int:
         """
@@ -472,7 +511,8 @@ class EmailAPISyncService:
         new_emails = 0
         
         # Use delta token for incremental sync if available
-        delta_token = token.last_delta_token if not force_sync else None
+        # Note: Would need to add last_delta_token field to UserEmailToken model
+        delta_token = getattr(token, 'last_delta_token', None) if not force_sync else None
         
         for folder_id in folders:
             try:
