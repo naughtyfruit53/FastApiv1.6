@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, delete
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
+from pydantic import BaseModel
 
 from app.core.database import get_db, SessionLocal
 from app.services.rbac import PermissionChecker
@@ -41,6 +42,8 @@ ADMIN_PERMISSIONS = ["crm_admin"]
 MANAGER_PERMISSIONS = ["mail:accounts:update", "crm_admin"] 
 USER_PERMISSIONS = ["mail:accounts:read", "mail:accounts:update", "crm_admin"]
 
+class UpdateEmailStatus(BaseModel):
+    new_status: EmailStatus
 
 @router.post("/accounts", response_model=MailAccountResponse)
 async def create_mail_account(
@@ -432,7 +435,7 @@ async def get_email_detail(
 @router.put("/emails/{email_id}/status")
 async def update_email_status(
     email_id: int,
-    new_status: EmailStatus,
+    update_data: UpdateEmailStatus,
     current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
     db: AsyncSession = Depends(get_db)
 ):
@@ -452,7 +455,7 @@ async def update_email_status(
             detail="Email not found"
         )
     
-    email.status = new_status
+    email.status = update_data.new_status
     email.updated_at = datetime.utcnow()
     
     # Update thread unread count if marking as read/unread
@@ -461,14 +464,14 @@ async def update_email_status(
         thread_result = await db.execute(thread_stmt)
         thread = thread_result.scalars().first()
         if thread:
-            if new_status == EmailStatus.UNREAD:
+            if update_data.new_status == EmailStatus.UNREAD:
                 thread.unread_count += 1
-            elif email.status == EmailStatus.UNREAD and new_status != EmailStatus.UNREAD:
+            elif email.status == EmailStatus.UNREAD and update_data.new_status != EmailStatus.UNREAD:
                 thread.unread_count = max(0, thread.unread_count - 1)
     
     await db.commit()
     
-    return {"message": "Email status updated", "new_status": new_status.value}
+    return {"message": "Email status updated", "new_status": update_data.new_status.value}
 
 
 @router.get("/threads", response_model=List[EmailThreadResponse])
@@ -523,6 +526,48 @@ async def get_email_thread(
         )
     
     return thread
+
+
+@router.get("/threads/{thread_id}/emails", response_model=List[EmailResponse])
+async def get_thread_emails(
+    thread_id: int = Path(..., gt=0),
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    include_attachments: bool = Query(True, description="Include attachment details"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all emails in a thread, ordered by received date
+    Requires email:read permissions
+    """
+    # Verify thread access
+    thread_stmt = select(EmailThread).join(MailAccount).filter(
+        EmailThread.id == thread_id,
+        MailAccount.user_id == current_user.id
+    )
+    thread_result = await db.execute(thread_stmt)
+    thread = thread_result.scalars().first()
+    
+    if not thread:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email thread not found or access denied"
+        )
+    
+    # Fetch emails
+    stmt = select(Email).filter(
+        Email.thread_id == thread_id
+    ).order_by(Email.received_at.asc())
+    
+    if include_attachments:
+        stmt = stmt.options(joinedload(Email.attachments))
+    
+    result = await db.execute(stmt)
+    emails = result.scalars().all()
+    
+    if not emails:
+        return []
+    
+    return [EmailResponse.from_orm(email) for email in emails]
 
 
 @router.get("/attachments/{attachment_id}/download")

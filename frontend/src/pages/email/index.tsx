@@ -75,14 +75,7 @@ const EmailModule: React.FC = () => {
     setSelectedEmail(email);
     if (email.thread_id) {
       setSelectedThreadId(email.thread_id);
-      setCurrentView('thread');
-    } else {
-      setCurrentView('thread');
     }
-  };
-
-  const handleThreadSelect = (threadId: number) => {
-    setSelectedThreadId(threadId);
     setCurrentView('thread');
   };
 
@@ -111,21 +104,21 @@ const EmailModule: React.FC = () => {
           <Inbox
             selectedAccount={selectedAccount}
             onEmailSelect={handleEmailSelect}
-            onThreadSelect={handleThreadSelect}
             onCompose={() => handleCompose('new')}
             onAccountSelect={handleSelectAccount}
           />
         );
       case 'thread':
-        return selectedThreadId ? (
+        return (
           <ThreadView
             threadId={selectedThreadId}
+            initialEmail={selectedEmail}
             onBack={handleBackToInbox}
             onReply={(email) => handleCompose('reply', email)}
             onReplyAll={(email) => handleCompose('replyAll', email)}
             onForward={(email) => handleCompose('forward', email)}
           />
-        ) : null;
+        );
       case 'compose':
         return (
           <Composer

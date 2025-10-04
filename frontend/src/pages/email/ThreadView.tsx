@@ -35,18 +35,21 @@ import {
   Download as DownloadIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { emailService, Email, EmailAttachment } from '../../services/emailService';
+import * as emailService from '../../services/emailService';
+import { apiClient as api } from '../../services/api/client';
 
 interface ThreadViewProps {
-  threadId: number;
+  threadId?: number;
+  initialEmail?: emailService.Email;
   onBack?: () => void;
-  onReply?: (email: Email) => void;
-  onReplyAll?: (email: Email) => void;
-  onForward?: (email: Email) => void;
+  onReply?: (email: emailService.Email) => void;
+  onReplyAll?: (email: emailService.Email) => void;
+  onForward?: (email: emailService.Email) => void;
 }
 
 const ThreadView: React.FC<ThreadViewProps> = ({
   threadId,
+  initialEmail,
   onBack,
   onReply,
   onReplyAll,
@@ -55,40 +58,55 @@ const ThreadView: React.FC<ThreadViewProps> = ({
   const [expandedEmails, setExpandedEmails] = useState<Set<number>>(new Set());
   const queryClient = useQueryClient();
 
-  // Fetch thread details
+  // Fetch thread details if threadId provided
   const { 
     data: thread,
     isLoading: threadLoading,
     error: threadError
   } = useQuery({
     queryKey: ['email-thread', threadId],
-    queryFn: () => emailService.getEmailThread(threadId)
+    queryFn: () => threadId ? emailService.getEmailThread(threadId) : Promise.resolve(null),
+    enabled: !!threadId
   });
 
-  // Fetch thread emails
+  // Fetch thread emails if threadId provided
   const { 
-    data: emails = [],
+    data: fetchedEmails = [],
     isLoading: emailsLoading,
     error: emailsError
   } = useQuery({
     queryKey: ['thread-emails', threadId],
     queryFn: async () => {
-      // For now, we'll simulate getting emails from the thread
-      // In a real implementation, you'd have a specific endpoint for thread emails
-      await emailService.getEmailThreads();
-      // This is a placeholder - the actual implementation would fetch emails for the specific thread
-      return [];
+      if (!threadId) return [];
+      const response = await api.get(`/email/threads/${threadId}/emails`);
+      return response.data;
     },
     enabled: !!threadId
   });
 
+  // Use initialEmail if no threadId
+  const emails = threadId ? fetchedEmails : (initialEmail ? [initialEmail] : []);
+
+  // Use thread data or derive from single email
+  const effectiveThread = thread || (initialEmail ? {
+    id: initialEmail.id,
+    subject: initialEmail.subject,
+    participants: [initialEmail.from_address, ...initialEmail.to_addresses.map(a => a.email)],
+    message_count: 1,
+    unread_count: initialEmail.status === 'unread' ? 1 : 0,
+    has_attachments: initialEmail.has_attachments,
+    status: initialEmail.status,
+    priority: initialEmail.priority,
+  } : null);
+
   // Update email status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: ({ emailId, status }: { emailId: number; status: Email['status'] }) =>
+    mutationFn: ({ emailId, status }: { emailId: number; status: emailService.Email['status'] }) =>
       emailService.updateEmailStatus(emailId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-thread'] });
       queryClient.invalidateQueries({ queryKey: ['thread-emails'] });
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
     }
   });
 
@@ -114,10 +132,9 @@ const ThreadView: React.FC<ThreadViewProps> = ({
     });
   };
 
-  const handleDownloadAttachment = async (attachment: EmailAttachment) => {
+  const handleDownloadAttachment = async (attachment: emailService.EmailAttachment) => {
     try {
       await emailService.downloadAttachment(attachment.id);
-      // In a real implementation, this would trigger the actual file download
       console.log('Download triggered for:', attachment.filename);
     } catch (error) {
       console.error('Failed to download attachment:', error);
@@ -129,7 +146,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({
     return date.toLocaleString();
   };
 
-  const renderEmailContent = (email: Email) => {
+  const renderEmailContent = (email: emailService.Email) => {
     const isExpanded = expandedEmails.has(email.id);
     
     return (
@@ -367,6 +384,16 @@ const ThreadView: React.FC<ThreadViewProps> = ({
     );
   }
 
+  if (emails.length === 0) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography color="text.secondary">
+          No emails to display
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -379,24 +406,24 @@ const ThreadView: React.FC<ThreadViewProps> = ({
             
             <Box>
               <Typography variant="h6" noWrap>
-                {thread?.subject || 'Email Thread'}
+                {effectiveThread?.subject || 'Email Thread'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {thread?.message_count || emails.length} messages • {thread?.participants.join(', ')}
+                {effectiveThread?.message_count || emails.length} messages • {effectiveThread?.participants.join(', ')}
               </Typography>
             </Box>
           </Box>
 
-          {thread && (
+          {effectiveThread && (
             <Box sx={{ display: 'flex', gap: 1 }}>
-              {thread.unread_count > 0 && (
+              {effectiveThread.unread_count > 0 && (
                 <Chip 
-                  label={`${thread.unread_count} unread`} 
+                  label={`${effectiveThread.unread_count} unread`} 
                   size="small" 
                   color="primary" 
                 />
               )}
-              {thread.has_attachments && (
+              {effectiveThread.has_attachments && (
                 <Chip 
                   label="Has attachments" 
                   size="small" 
@@ -411,17 +438,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({
 
       {/* Email list */}
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-        {emails.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography color="text.secondary">
-              No emails found in this thread
-            </Typography>
-          </Box>
-        ) : (
-          <>
-            {emails.map(email => renderEmailContent(email))}
-          </>
-        )}
+        {emails.map(email => renderEmailContent(email))}
       </Box>
     </Box>
   );

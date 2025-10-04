@@ -110,8 +110,8 @@ const Inbox: React.FC<InboxProps> = ({
 
   // Update email status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: ({ emailId, status }: { emailId: number; status: Email['status'] }) =>
-      updateEmailStatus(emailId, status),
+    mutationFn: ({ emailId, new_status }: { emailId: number; new_status: Email['status'] }) =>
+      updateEmailStatus(emailId, new_status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
     }
@@ -128,7 +128,7 @@ const Inbox: React.FC<InboxProps> = ({
   const handleEmailClick = (email: Email) => {
     // Mark as read if unread
     if (email.status === 'unread') {
-      updateStatusMutation.mutate({ emailId: email.id, status: 'read' });
+      updateStatusMutation.mutate({ emailId: email.id, new_status: 'read' });
     }
     
     // Navigate to thread view if part of thread, otherwise email detail
@@ -142,7 +142,7 @@ const Inbox: React.FC<InboxProps> = ({
   const handleToggleStar = (emailId: number, isFlagged: boolean) => {
     updateStatusMutation.mutate({
       emailId,
-      status: isFlagged ? 'read' : 'flagged'
+      new_status: isFlagged ? 'read' : 'flagged'
     });
   };
 
@@ -158,12 +158,12 @@ const Inbox: React.FC<InboxProps> = ({
   };
 
   const handleArchive = (emailId: number) => {
-    updateStatusMutation.mutate({ emailId, status: 'archived' });
+    updateStatusMutation.mutate({ emailId, new_status: 'archived' });
     handleMenuClose();
   };
 
   const handleDelete = (emailId: number) => {
-    updateStatusMutation.mutate({ emailId, status: 'deleted' });
+    updateStatusMutation.mutate({ emailId, new_status: 'deleted' });
     handleMenuClose();
   };
 
@@ -174,18 +174,19 @@ const Inbox: React.FC<InboxProps> = ({
   };
 
   const formatEmailDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = diff / (1000 * 60 * 60);
-
-    if (hours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (hours < 24 * 7) {
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
+    const localDate = new Date(dateString);
+  
+    // Format as 'MM/DD/YYYY hh:mm A' (e.g., '02/24/2025 3:29 PM')
+    const formatted = localDate.toLocaleString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  
+    return formatted;
   };
 
   const getEmailPreview = (email: Email) => {

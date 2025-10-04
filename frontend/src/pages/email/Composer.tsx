@@ -155,17 +155,19 @@ const Composer: React.FC<ComposerProps> = ({
     return `--- Forwarded Message ---\nFrom: ${from}\nTo: ${to}\nDate: ${date}\nSubject: ${email.subject}\n\n${email.body_text || email.body_html || ''}`;
   };
 
-  const handleAddRecipient = (type: 'to' | 'cc' | 'bcc', email: string) => {
-    const newRecipient = { email: email.trim() };
+  const handleAddRecipient = (type: 'to' | 'cc' | 'bcc', value: string) => {
+    const emails = value.split(',').map(e => e.trim()).filter(e => e);
+    const newRecipients = emails.map(email => ({ email }));
+    
     switch (type) {
       case 'to':
-        setTo([...to, newRecipient]);
+        setTo(prev => [...prev, ...newRecipients]);
         break;
       case 'cc':
-        setCc([...cc, newRecipient]);
+        setCc(prev => [...prev, ...newRecipients]);
         break;
       case 'bcc':
-        setBcc([...bcc, newRecipient]);
+        setBcc(prev => [...prev, ...newRecipients]);
         break;
     }
   };
@@ -311,9 +313,9 @@ const Composer: React.FC<ComposerProps> = ({
             onKeyPress={(e) => {
               if (e.key === 'Enter' || e.key === ',') {
                 e.preventDefault();
-                const newRecipient = { email: (e.target as HTMLInputElement).value.trim() };
-                if (newRecipient.email && newRecipient.email.includes('@')) {
-                  setTo([...to, newRecipient]);
+                const value = (e.target as HTMLInputElement).value.trim();
+                if (value) {
+                  handleAddRecipient('to', value);
                   (e.target as HTMLInputElement).value = '';
                 }
               }
@@ -351,9 +353,9 @@ const Composer: React.FC<ComposerProps> = ({
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
-                    const newRecipient = { email: (e.target as HTMLInputElement).value.trim() };
-                    if (newRecipient.email && newRecipient.email.includes('@')) {
-                      setCc([...cc, newRecipient]);
+                    const value = (e.target as HTMLInputElement).value.trim();
+                    if (value) {
+                      handleAddRecipient('cc', value);
                       (e.target as HTMLInputElement).value = '';
                     }
                   }
@@ -384,9 +386,9 @@ const Composer: React.FC<ComposerProps> = ({
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
-                    const newRecipient = { email: (e.target as HTMLInputElement).value.trim() };
-                    if (newRecipient.email && newRecipient.email.includes('@')) {
-                      setBcc([...bcc, newRecipient]);
+                    const value = (e.target as HTMLInputElement).value.trim();
+                    if (value) {
+                      handleAddRecipient('bcc', value);
                       (e.target as HTMLInputElement).value = '';
                     }
                   }
@@ -438,7 +440,7 @@ const Composer: React.FC<ComposerProps> = ({
             value={body}
             onChange={setBody}
             modules={quillModules}
-            style={{ height: '200px' }}
+            style={{ height: '100%' }}
           />
         </Box>
 

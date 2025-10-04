@@ -318,7 +318,7 @@ export const composeEmail = async (email: ComposeEmail, accountId: number): Prom
       });
     }
 
-    const response = await api.post(`/email/accounts/${accountId}/send`, formData, {
+    const response = await api.post(`/email/compose`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -369,7 +369,7 @@ export const getEmailTemplates = async (): Promise<any[]> => {
     return response.data;
   } catch (error) {
     console.error('[EmailService] Failed to fetch email templates:', error);
-    throw error;
+    return [];
   }
 };
 
