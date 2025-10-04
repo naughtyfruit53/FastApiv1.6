@@ -41,6 +41,15 @@ from app.services.oauth_service import OAuth2Service
 
 logger = logging.getLogger(__name__)
 
+# Import API sync service for OAuth2 providers
+# This is the restored working logic from commit c2fadf02
+try:
+    from app.services.email_api_sync_service import EmailAPISyncService
+    api_sync_available = True
+except ImportError:
+    api_sync_available = False
+    logger.warning("Email API sync service not available, falling back to IMAP only")
+
 
 class EmailSyncService:
     """
@@ -176,6 +185,24 @@ class EmailSyncService:
         if not (manual or (account.sync_enabled and account.sync_status == EmailSyncStatus.ACTIVE)):
             logger.info(f"Sync skipped for account {account_id}")
             return True
+        
+        # RESTORED LOGIC FROM WORKING COMMIT c2fadf02:
+        # Prefer API-based sync for OAuth2 accounts (gmail_api, outlook_api)
+        # This was the key to successful sync before IMAP issues
+        if api_sync_available and account.account_type in [EmailAccountType.GMAIL_API, EmailAccountType.OUTLOOK_API]:
+            logger.info(f"Using API-based sync for account {account_id} (type: {account.account_type})")
+            api_sync = EmailAPISyncService(db)
+            success, emails_synced, error = api_sync.sync_account_via_api(account, db, full_sync)
+            
+            if success:
+                logger.info(f"API sync successful: {emails_synced} emails synced")
+                return True
+            else:
+                logger.error(f"API sync failed: {error}")
+                # Fall through to IMAP if API fails (though it shouldn't for these account types)
+                if account.account_type in [EmailAccountType.GMAIL_API, EmailAccountType.OUTLOOK_API]:
+                    # Don't fall back to IMAP for API-only account types
+                    return False
         
         # Create sync log
         sync_log = EmailSyncLog(
