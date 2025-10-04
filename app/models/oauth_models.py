@@ -4,7 +4,7 @@ OAuth2 and Email Token Management Models
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum, JSON
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
 from app.core.database import Base
@@ -13,17 +13,17 @@ from app.utils.encryption import encrypt_field, decrypt_field, EncryptionKeys
 
 
 class OAuthProvider(PyEnum):
-    GOOGLE = "google"
-    MICROSOFT = "microsoft"
-    OUTLOOK = "outlook"
-    GMAIL = "gmail"
+    GOOGLE = "GOOGLE"
+    MICROSOFT = "MICROSOFT"
+    OUTLOOK = "OUTLOOK"
+    GMAIL = "GMAIL"
 
 
 class TokenStatus(PyEnum):
-    ACTIVE = "active"
-    EXPIRED = "expired"
-    REVOKED = "revoked"
-    REFRESH_FAILED = "refresh_failed"
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    REVOKED = "REVOKED"
+    REFRESH_FAILED = "REFRESH_FAILED"
 
 
 class UserEmailToken(Base):
@@ -110,7 +110,8 @@ class UserEmailToken(Base):
         """Check if token is expired"""
         if not self.expires_at:
             return False
-        return datetime.utcnow() >= self.expires_at
+        # Make utcnow timezone-aware for comparison
+        return datetime.now(timezone.utc) >= self.expires_at
     
     def is_active(self) -> bool:
         """Check if token is active and usable"""
@@ -154,4 +155,4 @@ class OAuthState(Base):
     
     def is_expired(self) -> bool:
         """Check if state is expired"""
-        return datetime.utcnow() >= self.expires_at
+        return datetime.now(timezone.utc) >= self.expires_at

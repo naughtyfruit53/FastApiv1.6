@@ -22,7 +22,7 @@ from sqlalchemy import delete
 from app.core.config import settings
 from app.core.database import SessionLocal, sync_engine
 from app.models.email import MailAccount, EmailSyncStatus, EmailSyncLog
-from app.services.email_service import email_management_service
+from app.services.email_sync_service import email_sync_service
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +242,7 @@ class EmailSyncWorker:
             logger.info(f"Starting sync for account {account_id}")
             
             # Use the email management service for sync
-            success = email_management_service.sync_service.sync_account(account_id)
+            success = email_sync_service.sync_account(account_id)
             
             if success:
                 logger.info(f"Successfully synced account {account_id}")

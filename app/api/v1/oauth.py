@@ -13,7 +13,7 @@ from typing import List, Optional
 import traceback
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user as get_current_user
+from app.api.v1.auth import get_current_active_user
 from app.models.user_models import User
 from app.models.oauth_models import UserEmailToken, OAuthProvider, TokenStatus
 from app.models.email import MailAccount, EmailAccountType, EmailSyncStatus
@@ -58,7 +58,7 @@ async def get_oauth_providers():
 async def oauth_login(
     provider: str,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -66,7 +66,7 @@ async def oauth_login(
     """
     # Validate provider
     try:
-        oauth_provider = OAuthProvider(provider.lower())
+        oauth_provider = OAuthProvider(provider.upper())
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -126,7 +126,7 @@ async def oauth_callback(
     
     # Validate provider
     try:
-        oauth_provider = OAuthProvider(provider.lower())
+        oauth_provider = OAuthProvider(provider.upper())
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -143,6 +143,14 @@ async def oauth_callback(
             state=state,
             redirect_uri=redirect_uri
         )
+        
+        # Check if refresh_token was received (critical for offline access)
+        if 'refresh_token' not in token_response or not token_response['refresh_token']:
+            logger.warning(f"No refresh token received for provider {provider}. User may need to revoke app access and re-authorize.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No refresh token received. Please revoke app access in your Google account settings and try authorizing again to grant offline access."
+            )
         
         # Store tokens
         try:
@@ -168,7 +176,7 @@ async def oauth_callback(
                 # Update existing account
                 existing_account.name = user_token.display_name or "Default Mail Account"
                 existing_account.account_type = mail_account_type
-                existing_account.provider = oauth_provider.value
+                existing_account.provider = oauth_provider.name
                 existing_account.oauth_token_id = user_token.id
                 existing_account.sync_enabled = True
                 existing_account.sync_frequency_minutes = 15
@@ -191,7 +199,7 @@ async def oauth_callback(
                     name=user_token.display_name or "Default Mail Account",
                     email_address=user_token.email_address,
                     account_type=mail_account_type,
-                    provider=oauth_provider.value,
+                    provider=oauth_provider.name,
                     oauth_token_id=user_token.id,
                     sync_enabled=True,
                     sync_frequency_minutes=15,
@@ -249,7 +257,7 @@ async def oauth_callback(
 
 @router.get("/tokens", response_model=List[UserEmailTokenResponse])
 async def get_user_tokens(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -298,7 +306,7 @@ async def get_user_tokens(
 @router.get("/tokens/{token_id}", response_model=UserEmailTokenWithDetails)
 async def get_token_details(
     token_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -352,7 +360,7 @@ async def get_token_details(
 async def update_token(
     token_id: int,
     token_update: UserEmailTokenUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -412,7 +420,7 @@ async def update_token(
 @router.post("/tokens/{token_id}/refresh")
 async def refresh_token(
     token_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -438,7 +446,7 @@ async def refresh_token(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to refresh token"
+            detail="Failed to refresh token. If no refresh token is available, please re-authorize the account after revoking access in your Google settings ."
         )
     
     return {"success": True, "message": "Token refreshed successfully"}
@@ -447,7 +455,7 @@ async def refresh_token(
 @router.delete("/tokens/{token_id}")
 async def revoke_token(
     token_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -477,7 +485,7 @@ async def revoke_token(
 async def sync_emails(
     token_id: int,
     sync_request: EmailSyncRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """

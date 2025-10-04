@@ -35,13 +35,11 @@ from app.core.database import SessionLocal, AsyncSessionLocal
 from app.models.email import (
     MailAccount, Email, EmailThread, EmailAttachment, EmailSyncStatus, EmailStatus, EmailPriority, EmailSyncLog
 )
+from app.models.oauth_models import TokenStatus
 from app.utils.text_processing import extract_plain_text, sanitize_html
 from app.services.oauth_service import OAuth2Service
 
 logger = logging.getLogger(__name__)
-
-
-# Removed PreConnectedIMAP class - using standard imaplib.IMAP4_SSL instead
 
 
 class EmailSyncService:
@@ -73,7 +71,7 @@ class EmailSyncService:
         try:
             port = account.incoming_port or (993 if account.incoming_ssl else 143)
             logger.info(f"Attempting IMAP connection to {account.incoming_server}:{port} with SSL={account.incoming_ssl}")
-            logger.info(f"Auth method: {account.incoming_auth_method}, Username: {account.username}, OAuth ID: {account.oauth_token_id}, Password set: {bool(account.password_encrypted)}")
+            logger.info(f"Account provider: {account.provider}, auth_method: {account.incoming_auth_method}, has_token: {bool(account.oauth_token_id)}, has_password: {bool(account.password_encrypted)}")
             
             # Create SSL context
             context = ssl.create_default_context()
@@ -94,8 +92,8 @@ class EmailSyncService:
             
             logger.info(f"IMAP connection established to {account.incoming_server}:{port}")
             
-            # Authenticate based on method
-            if account.incoming_auth_method in ['oauth', 'oauth2', 'xoauth2'] and account.oauth_token_id:
+            # Authenticate based on credentials available
+            if account.oauth_token_id:
                 # OAuth2 XOAUTH2 authentication
                 # Use synchronous OAuth service
                 oauth_service = OAuth2Service()
@@ -125,7 +123,7 @@ class EmailSyncService:
                     logger.error(f"OAuth2 authentication failed for account {account.id}: {str(e)}")
                     return None
                 
-            elif account.incoming_auth_method == 'password' and account.username and account.password_encrypted:
+            elif account.username and account.password_encrypted:
                 # Password authentication
                 from app.utils.encryption import decrypt_field, EncryptionKeys
                 password = decrypt_field(account.password_encrypted, EncryptionKeys.PII)
@@ -156,27 +154,27 @@ class EmailSyncService:
             return None
         return f'user={email}\x01auth=Bearer {access_token}\x01\x01'
     
-    def sync_account(self, account_id: int, full_sync: bool = False) -> bool:
+    def sync_account(self, account_id: int, full_sync: bool = False, manual: bool = False) -> bool:
         """
         Sync emails for a specific account
         """
         if self.db:
-            return self._perform_sync(self.db, account_id, full_sync)
+            return self._perform_sync(self.db, account_id, full_sync, manual)
         else:
             db = SessionLocal()
             try:
-                return self._perform_sync(db, account_id, full_sync)
+                return self._perform_sync(db, account_id, full_sync, manual)
             finally:
                 db.close()
     
-    def _perform_sync(self, db: Session, account_id: int, full_sync: bool = False) -> bool:
+    def _perform_sync(self, db: Session, account_id: int, full_sync: bool = False, manual: bool = False) -> bool:
         account = db.query(MailAccount).filter(MailAccount.id == account_id).first()
         if not account:
             logger.error(f"Account {account_id} not found")
             return False
         
-        if not account.sync_enabled or account.sync_status != EmailSyncStatus.ACTIVE:
-            logger.info(f"Sync disabled for account {account_id}")
+        if not (manual or (account.sync_enabled and account.sync_status == EmailSyncStatus.ACTIVE)):
+            logger.info(f"Sync skipped for account {account_id}")
             return True
         
         # Create sync log
@@ -195,6 +193,20 @@ class EmailSyncService:
         
         for attempt in range(max_retries):
             try:
+                # Refresh token if needed before connecting
+                if account.oauth_token_id:
+                    oauth_service = OAuth2Service()
+                    refresh_result = oauth_service.sync_refresh_token(account.oauth_token_id, db)
+                    if not refresh_result:
+                        if attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt)
+                            logger.info(f"Refresh failed, retrying in {delay}s")
+                            time.sleep(delay)
+                        else:
+                            account.sync_status = EmailSyncStatus.ERROR
+                            db.commit()
+                            return False
+                
                 # Connect to IMAP with exponential backoff
                 imap = None
                 for conn_attempt in range(3):

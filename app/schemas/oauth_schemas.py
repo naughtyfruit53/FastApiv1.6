@@ -11,17 +11,17 @@ from app.models.oauth_models import OAuthProvider, TokenStatus
 
 
 class OAuthProviderEnum(str, Enum):
-    GOOGLE = "google"
-    MICROSOFT = "microsoft"
-    OUTLOOK = "outlook"
-    GMAIL = "gmail"
+    GOOGLE = "GOOGLE"
+    MICROSOFT = "MICROSOFT"
+    OUTLOOK = "OUTLOOK"
+    GMAIL = "GMAIL"
 
 
 class TokenStatusEnum(str, Enum):
-    ACTIVE = "active"
-    EXPIRED = "expired"
-    REVOKED = "revoked"
-    REFRESH_FAILED = "refresh_failed"
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    REVOKED = "REVOKED"
+    REFRESH_FAILED = "REFRESH_FAILED"
 
 
 # OAuth2 Flow Schemas

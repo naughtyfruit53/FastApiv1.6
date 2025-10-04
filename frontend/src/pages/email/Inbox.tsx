@@ -49,6 +49,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMailAccounts, getEmails, updateEmailStatus, triggerSync, Email, MailAccount, EmailListResponse } from '../../services/emailService';
 import OAuthLoginButton from '../../components/OAuthLoginButton';
+import EmailSelector from '../../components/email/EmailSelector'; // Assuming this component exists
 
 interface InboxProps {
   selectedAccount?: MailAccount;
@@ -259,37 +260,10 @@ const Inbox: React.FC<InboxProps> = ({
           {accountsLoading ? (
             <Skeleton variant="rectangular" height={40} />
           ) : (
-            accounts.map((account) => (
-              <Box
-                key={account.id}
-                onClick={() => onAccountSelect && onAccountSelect(account.id)}
-                sx={{
-                  p: 1,
-                  borderRadius: 1,
-                  bgcolor: selectedAccount?.id === account.id ? 'primary.light' : 'transparent',
-                  cursor: 'pointer',
-                  mb: 1,
-                  '&:hover': {
-                    bgcolor: selectedAccount?.id === account.id ? 'primary.main' : 'action.hover'
-                  }
-                }}
-              >
-                <Typography variant="body2" noWrap>
-                  {account.display_name || account.email_address}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {account.email_address}
-                </Typography>
-                {account.sync_status && (
-                  <Chip
-                    label={account.sync_status}
-                    size="small"
-                    color={account.sync_status === 'active' ? 'success' : 'default'}
-                    sx={{ mt: 0.5 }}
-                  />
-                )}
-              </Box>
-            ))
+            <EmailSelector 
+              accounts={accounts}
+              onSelect={onAccountSelect!}
+            />
           )}
         </Box>
       </Box>

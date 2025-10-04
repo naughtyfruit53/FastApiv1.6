@@ -39,14 +39,14 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
-import { emailService, ComposeEmail, Email, MailAccount, EmailAddress } from '../../services/emailService';
+import * as emailService from '../../services/emailService';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 interface ComposerProps {
   mode: 'new' | 'reply' | 'replyAll' | 'forward';
-  originalEmail?: Email;
-  selectedAccount?: MailAccount;
+  originalEmail?: emailService.Email;
+  selectedAccount?: emailService.MailAccount;
   onClose?: () => void;
   onSent?: (emailId: number) => void;
 }
@@ -62,9 +62,9 @@ const Composer: React.FC<ComposerProps> = ({
   onClose,
   onSent
 }) => {
-  const [to, setTo] = useState<EmailAddress[]>([]);
-  const [cc, setCc] = useState<EmailAddress[]>([]);
-  const [bcc, setBcc] = useState<EmailAddress[]>([]);
+  const [to, setTo] = useState<emailService.EmailAddress[]>([]);
+  const [cc, setCc] = useState<emailService.EmailAddress[]>([]);
+  const [bcc, setBcc] = useState<emailService.EmailAddress[]>([]);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
@@ -83,7 +83,7 @@ const Composer: React.FC<ComposerProps> = ({
 
   // Send email mutation
   const sendEmailMutation = useMutation({
-    mutationFn: (emailData: ComposeEmail) => {
+    mutationFn: (emailData: emailService.ComposeEmail) => {
       if (!selectedAccount) {
         throw new Error('No account selected');
       }
@@ -121,14 +121,14 @@ const Composer: React.FC<ComposerProps> = ({
     }
   }, [mode, originalEmail]);
 
-  const generateReplyBody = (email: Email) => {
+  const generateReplyBody = (email: emailService.Email) => {
     const date = new Date(email.received_at).toLocaleString();
     const from = email.from_name ? `${email.from_name} <${email.from_address}>` : email.from_address;
     
     return `\n\n--- Original Message ---\nFrom: ${from}\nDate: ${date}\nSubject: ${email.subject}\n\n${email.body_text || email.body_html || ''}`;
   };
 
-  const generateForwardBody = (email: Email) => {
+  const generateForwardBody = (email: emailService.Email) => {
     const date = new Date(email.received_at).toLocaleString();
     const from = email.from_name ? `${email.from_name} <${email.from_address}>` : email.from_address;
     const to = email.to_addresses.map(addr => addr.name ? `${addr.name} <${addr.email}>` : addr.email).join(', ');
@@ -192,7 +192,7 @@ const Composer: React.FC<ComposerProps> = ({
   };
 
   const handleSend = () => {
-    const emailData: ComposeEmail = {
+    const emailData: emailService.ComposeEmail = {
       to,
       cc: cc.length > 0 ? cc : undefined,
       bcc: bcc.length > 0 ? bcc : undefined,

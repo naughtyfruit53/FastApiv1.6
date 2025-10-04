@@ -20,6 +20,8 @@ from app.utils.crypto_aes_gcm import encrypt_aes_gcm, decrypt_aes_gcm
 from app.utils.encryption import EncryptionKeys
 from app.core.database import SessionLocal
 from app.utils.crypto_aes_gcm import EncryptionKeysAESGCM
+import requests
+from app.lib.redact import redact
 
 logger = logging.getLogger(__name__)
 
@@ -29,24 +31,31 @@ class OAuth2Service:
 
     def __init__(self, db: AsyncSession = None):
         self.db = db
-        self.google_scopes = ['https://mail.google.com/']
+        self.google_scopes = ['openid', 'https://mail.google.com/', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
         self.microsoft_scopes = ['Mail.ReadWrite', 'Mail.Send', 'offline_access']
 
     async def create_authorization_url(self, provider: OAuthProvider, user_id: int, organization_id: int, redirect_uri: str) -> tuple[str, str]:
         """Create OAuth2 authorization URL for the provider"""
         state = self._generate_state(user_id, organization_id)
         
-        if provider == OAuthProvider.GOOGLE:
+        if provider == OAuthProvider.GOOGLE or provider == OAuthProvider.GMAIL:
             from google_auth_oauthlib.flow import Flow
-            flow = Flow.from_client_secrets_file(
-                settings.GOOGLE_CLIENT_SECRETS_FILE,
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": settings.GOOGLE_CLIENT_ID,
+                        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token"
+                    }
+                },
                 scopes=self.google_scopes,
                 redirect_uri=redirect_uri
             )
-            auth_url, _ = flow.authorization_url(prompt='consent', state=state)
+            auth_url, _ = flow.authorization_url(prompt='consent', state=state, access_type='offline')
             return auth_url, state
             
-        elif provider == OAuthProvider.MICROSOFT:
+        elif provider == OAuthProvider.MICROSOFT or provider == OAuthProvider.OUTLOOK:
             from msal import ConfidentialClientApplication
             app = ConfidentialClientApplication(
                 settings.MICROSOFT_CLIENT_ID,
@@ -81,10 +90,17 @@ class OAuth2Service:
         """Exchange authorization code for tokens"""
         user_id, organization_id = self._parse_state(state)
         
-        if provider == OAuthProvider.GOOGLE:
+        if provider == OAuthProvider.GOOGLE or provider == OAuthProvider.GMAIL:
             from google_auth_oauthlib.flow import Flow
-            flow = Flow.from_client_secrets_file(
-                settings.GOOGLE_CLIENT_SECRETS_FILE,
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": settings.GOOGLE_CLIENT_ID,
+                        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token"
+                    }
+                },
                 scopes=self.google_scopes,
                 redirect_uri=redirect_uri
             )
@@ -94,17 +110,21 @@ class OAuth2Service:
                 'access_token': credentials.token,
                 'refresh_token': credentials.refresh_token,
                 'id_token': credentials.id_token,
-                'token_type': credentials.token_type,
+                'token_type': 'bearer',
                 'expires_in': credentials.expiry.timestamp() - datetime.now().timestamp(),
                 'scope': ' '.join(credentials.scopes)
             }
-            from google.oauth2.credentials import Credentials
-            creds = Credentials(token=credentials.token)
-            user_info = creds._request('https://www.googleapis.com/userinfo/v2/me')
+            logger.info(f"Token response for Google: refresh_token present = {bool(credentials.refresh_token)}")
+            headers = {"Authorization": f"Bearer {credentials.token}"}
+            response = requests.get("https://www.googleapis.com/oauth2/v1/userinfo", headers=headers)
+            if response.status_code != 200:
+                logger.error(f"Failed to get Google user info: {response.text}")
+                raise ValueError(f"Failed to get user info: {response.text}")
+            user_info = response.json()
             
             return token_response, user_info, user_id, organization_id
             
-        elif provider == OAuthProvider.MICROSOFT:
+        elif provider == OAuthProvider.MICROSOFT or provider == OAuthProvider.OUTLOOK:
             from msal import ConfidentialClientApplication
             app = ConfidentialClientApplication(
                 settings.MICROSOFT_CLIENT_ID,
@@ -118,8 +138,10 @@ class OAuth2Service:
             )
             
             if 'error' in token_response:
+                logger.error(f"Microsoft OAuth error: {token_response['error_description']}")
                 raise ValueError(f"Microsoft OAuth error: {token_response['error_description']}")
             
+            logger.info(f"Token response for Microsoft: refresh_token present = {bool(token_response.get('refresh_token'))}")
             # Get user info
             # client = MicrosoftGraphClient(token_response['access_token'])  # Commented out
             # user_info = client.me()  # Commented out
@@ -135,7 +157,7 @@ class OAuth2Service:
         stmt = select(UserEmailToken).filter_by(
             user_id=user_id,
             organization_id=organization_id,
-            provider=provider.value,
+            provider=provider.name,
             email_address=user_info['email']
         )
         result = await self.db.execute(stmt)
@@ -151,7 +173,7 @@ class OAuth2Service:
         token_data = UserEmailToken(
             user_id=user_id,
             organization_id=organization_id,
-            provider=provider.value,
+            provider=provider.name,
             email_address=user_info['email'],
             display_name=user_info.get('name') or user_info.get('displayName'),
             access_token_encrypted=encrypted_access,
@@ -194,11 +216,14 @@ class OAuth2Service:
         token = result.scalar_one_or_none()
         
         if not token:
+            logger.error(f"No token found for id {token_id}")
             return None
         
         if token.is_expired():
+            logger.info(f"Token {token_id} expired, attempting refresh")
             success = await self.refresh_token(token_id)
             if not success:
+                logger.error(f"Failed to refresh token {token_id}")
                 return None
             
             await self.db.refresh(token)
@@ -212,6 +237,7 @@ class OAuth2Service:
         token = result.scalar_one_or_none()
         
         if not token or token.status != TokenStatus.ACTIVE:
+            logger.error(f"Invalid or inactive token for refresh: {token_id}")
             return False
         
         refresh_token = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
@@ -219,10 +245,13 @@ class OAuth2Service:
             token.status = TokenStatus.REFRESH_FAILED
             token.last_sync_error = "No refresh token available"
             await self.db.commit()
+            logger.error(f"No refresh token available for token_id {token_id}")
             return False
         
         try:
-            if token.provider == OAuthProvider.GOOGLE.value:
+            new_access_token = None
+            new_expiry = None
+            if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
                 creds = Credentials(
                     token=None,
                     refresh_token=refresh_token,
@@ -233,8 +262,9 @@ class OAuth2Service:
                 creds.refresh(Request())
                 new_access_token = creds.token
                 new_expiry = creds.expiry
+                logger.info(f"Successfully refreshed Google token {token_id}")
                 
-            elif token.provider == OAuthProvider.MICROSOFT.value:
+            elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
                 from msal import ConfidentialClientApplication
                 app = ConfidentialClientApplication(
                     settings.MICROSOFT_CLIENT_ID,
@@ -247,18 +277,23 @@ class OAuth2Service:
                     refresh_token=refresh_token
                 )
                 if 'error' in result:
+                    logger.error(f"Microsoft token refresh error for {token_id}: {result['error_description']}")
                     raise ValueError(result['error_description'])
                 new_access_token = result['access_token']
                 new_expiry = datetime.utcnow() + timedelta(seconds=result['expires_in'])
+                logger.info(f"Successfully refreshed Microsoft token {token_id}")
             
             # Update token
-            token.access_token_encrypted = encrypt_aes_gcm(new_access_token, EncryptionKeysAESGCM.OAUTH)
-            token.expires_at = new_expiry
-            token.updated_at = datetime.utcnow()
-            token.refresh_count += 1
-            token.last_sync_error = None
-            await self.db.commit()
-            return True
+            if new_access_token and new_expiry:
+                token.access_token_encrypted = encrypt_aes_gcm(new_access_token, EncryptionKeysAESGCM.OAUTH)
+                token.expires_at = new_expiry
+                token.updated_at = datetime.utcnow()
+                token.refresh_count += 1
+                token.last_sync_error = None
+                await self.db.commit()
+                return True
+            else:
+                raise ValueError("No new access token or expiry received")
             
         except Exception as e:
             token.status = TokenStatus.REFRESH_FAILED
@@ -274,24 +309,26 @@ class OAuth2Service:
         token = result.scalar_one_or_none()
         
         if not token:
+            logger.error(f"No token found for revoke: {token_id}")
             return False
         
         try:
-            if token.provider == OAuthProvider.GOOGLE.value:
-                access_token = decrypt_aes_gcm(token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
-                if access_token:
+            access_token = decrypt_aes_gcm(token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+            if access_token:
+                if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
                     import requests
                     response = requests.get(f"https://oauth2.googleapis.com/revoke?token={access_token}")
                     if not response.ok:
-                        logger.warning(f"Google token revoke failed: {response.text}")
-            
-            elif token.provider == OAuthProvider.MICROSOFT.value:
-                # Microsoft doesn't have a revoke endpoint for tokens
-                pass
+                        logger.warning(f"Google token revoke failed for {token_id}: {response.text}")
+                
+                elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
+                    # Microsoft doesn't have a revoke endpoint for tokens
+                    pass
             
             token.status = TokenStatus.REVOKED
             token.updated_at = datetime.utcnow()
             await self.db.commit()
+            logger.info(f"Token {token_id} revoked successfully")
             return True
             
         except Exception as e:
@@ -302,14 +339,29 @@ class OAuth2Service:
         """Get decrypted email credentials"""
         user_token = await self.get_valid_token(token_id)
         if not user_token:
+            logger.error(f"Failed to get valid token for {token_id}")
             return None
         
-        return {
-            'email': user_token.email_address,
-            'access_token': decrypt_aes_gcm(user_token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH),
-            'refresh_token': decrypt_aes_gcm(user_token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.refresh_token_encrypted else None,
-            'id_token': decrypt_aes_gcm(user_token.id_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.id_token_encrypted else None,
-        }
+        try:
+            access_token = decrypt_aes_gcm(user_token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+            refresh_token = decrypt_aes_gcm(user_token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.refresh_token_encrypted else None
+            id_token = decrypt_aes_gcm(user_token.id_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.id_token_encrypted else None
+            
+            if not access_token:
+                logger.error(f"No access_token after decryption for token_id {token_id}")
+                return None
+                
+            logger.info(f"Successfully decrypted credentials for token {token_id}: access_present={bool(access_token)}, refresh_present={bool(refresh_token)}")
+            
+            return {
+                'email': user_token.email_address,
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'id_token': id_token,
+            }
+        except Exception as e:
+            logger.error(f"Failed to decrypt credentials for token {token_id}: {str(e)}")
+            return None
 
     def sync_get_valid_token(self, token_id: int, db: Session) -> Optional[UserEmailToken]:
         """Synchronous version of get_valid_token"""
@@ -318,11 +370,14 @@ class OAuth2Service:
         token = result.scalar_one_or_none()
         
         if not token:
+            logger.error(f"No token found for id {token_id}")
             return None
         
         if token.is_expired():
+            logger.info(f"Token {token_id} expired, attempting refresh")
             success = self.sync_refresh_token(token_id, db)
             if not success:
+                logger.error(f"Failed to refresh token {token_id}")
                 return None
             
             db.refresh(token)
@@ -336,6 +391,7 @@ class OAuth2Service:
         token = result.scalar_one_or_none()
         
         if not token or token.status != TokenStatus.ACTIVE:
+            logger.error(f"Invalid or inactive token for refresh: {token_id}")
             return False
         
         refresh_token = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
@@ -343,10 +399,13 @@ class OAuth2Service:
             token.status = TokenStatus.REFRESH_FAILED
             token.last_sync_error = "No refresh token available"
             db.commit()
+            logger.error(f"No refresh token available for token_id {token_id}")
             return False
         
         try:
-            if token.provider == OAuthProvider.GOOGLE.value:
+            new_access_token = None
+            new_expiry = None
+            if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
                 creds = Credentials(
                     token=None,
                     refresh_token=refresh_token,
@@ -357,8 +416,9 @@ class OAuth2Service:
                 creds.refresh(Request())
                 new_access_token = creds.token
                 new_expiry = creds.expiry
+                logger.info(f"Successfully refreshed Google token {token_id}")
                 
-            elif token.provider == OAuthProvider.MICROSOFT.value:
+            elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
                 from msal import ConfidentialClientApplication
                 app = ConfidentialClientApplication(
                     settings.MICROSOFT_CLIENT_ID,
@@ -371,18 +431,23 @@ class OAuth2Service:
                     refresh_token=refresh_token
                 )
                 if 'error' in result:
+                    logger.error(f"Microsoft token refresh error for {token_id}: {result['error_description']}")
                     raise ValueError(result['error_description'])
                 new_access_token = result['access_token']
                 new_expiry = datetime.utcnow() + timedelta(seconds=result['expires_in'])
+                logger.info(f"Successfully refreshed Microsoft token {token_id}")
             
             # Update token
-            token.access_token_encrypted = encrypt_aes_gcm(new_access_token, EncryptionKeysAESGCM.OAUTH)
-            token.expires_at = new_expiry
-            token.updated_at = datetime.utcnow()
-            token.refresh_count += 1
-            token.last_sync_error = None
-            db.commit()
-            return True
+            if new_access_token and new_expiry:
+                token.access_token_encrypted = encrypt_aes_gcm(new_access_token, EncryptionKeysAESGCM.OAUTH)
+                token.expires_at = new_expiry
+                token.updated_at = datetime.utcnow()
+                token.refresh_count += 1
+                token.last_sync_error = None
+                db.commit()
+                return True
+            else:
+                raise ValueError("No new access token or expiry received")
             
         except Exception as e:
             token.status = TokenStatus.REFRESH_FAILED
@@ -395,11 +460,135 @@ class OAuth2Service:
         """Synchronous version of get_email_credentials"""
         user_token = self.sync_get_valid_token(token_id, db)
         if not user_token:
+            logger.error(f"No valid token found for token_id {token_id}")
             return None
         
-        return {
-            'email': user_token.email_address,
-            'access_token': decrypt_aes_gcm(user_token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH),
-            'refresh_token': decrypt_aes_gcm(user_token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.refresh_token_encrypted else None,
-            'id_token': decrypt_aes_gcm(user_token.id_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.id_token_encrypted else None,
-        }
+        try:
+            access_token = decrypt_aes_gcm(user_token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+            refresh_token = decrypt_aes_gcm(user_token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.refresh_token_encrypted else None
+            id_token = decrypt_aes_gcm(user_token.id_token_encrypted, EncryptionKeysAESGCM.OAUTH) if user_token.id_token_encrypted else None
+            
+            if not access_token:
+                logger.error(f"No access_token after decryption for token_id {token_id}")
+                return None
+                
+            logger.info(f"Successfully decrypted credentials for token {token_id}: access_present={bool(access_token)}, refresh_present={bool(refresh_token)}")
+            
+            return {
+                'email': user_token.email_address,
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'id_token': id_token,
+            }
+        except Exception as e:
+            logger.error(f"Failed to decrypt credentials for token {token_id}: {str(e)}")
+            return None
+
+    def refresh_token(self, token_id: int, db: Session) -> Dict[str, Any]:
+        """
+        Refresh OAuth token with detailed response
+        """
+        stmt = select(UserEmailToken).filter_by(id=token_id)
+        result = db.execute(stmt)
+        token = result.scalar_one_or_none()
+        
+        if not token or token.status != TokenStatus.ACTIVE:
+            logger.error(f"Invalid or inactive token for refresh: {token_id}")
+            return {
+                'success': False,
+                'status': TokenStatus.REFRESH_FAILED.name,
+                'access_token_encrypted': None,
+                'expires_at': None,
+                'provider_response_redacted': None,
+                'error': "Invalid or inactive token"
+            }
+        
+        refresh_token_plain = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+        if not refresh_token_plain:
+            token.status = TokenStatus.REFRESH_FAILED
+            token.last_sync_error = "No refresh token available"
+            db.commit()
+            logger.error(f"No refresh token available for token_id {token_id}")
+            return {
+                'success': False,
+                'status': TokenStatus.REFRESH_FAILED.name,
+                'access_token_encrypted': None,
+                'expires_at': None,
+                'provider_response_redacted': None,
+                'error': "No refresh token available"
+            }
+        
+        try:
+            new_access_token = None
+            new_expiry = None
+            token_url = ""
+            if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
+                token_url = 'https://oauth2.googleapis.com/token'
+                creds = Credentials(
+                    token=None,
+                    refresh_token=refresh_token_plain,
+                    client_id=settings.GOOGLE_CLIENT_ID,
+                    client_secret=settings.GOOGLE_CLIENT_SECRET,
+                    token_uri=token_url
+                )
+                creds.refresh(Request())
+                new_access_token = creds.token
+                new_expiry = creds.expiry
+                
+            elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
+                token_url = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'  # Adapt if needed
+                from msal import ConfidentialClientApplication
+                app = ConfidentialClientApplication(
+                    settings.MICROSOFT_CLIENT_ID,
+                    authority=settings.MICROSOFT_AUTHORITY,
+                    client_credential=settings.MICROSOFT_CLIENT_SECRET
+                )
+                result = app.acquire_token_silent_with_error(
+                    scopes=token.scope.split(),
+                    account=None,
+                    refresh_token=refresh_token_plain
+                )
+                if 'error' in result:
+                    logger.error(f"Microsoft token refresh error for {token_id}: {result['error_description']}")
+                    raise ValueError(result['error_description'])
+                new_access_token = result['access_token']
+                new_expiry = datetime.utcnow() + timedelta(seconds=result['expires_in'])
+            
+            # Update token if success
+            if new_access_token and new_expiry:
+                encrypted_access = encrypt_aes_gcm(new_access_token, EncryptionKeysAESGCM.OAUTH)
+                token.access_token_encrypted = encrypted_access
+                token.expires_at = new_expiry
+                token.updated_at = datetime.utcnow()
+                token.refresh_count += 1
+                token.last_sync_error = None
+                token.status = TokenStatus.ACTIVE
+                token.last_refresh_response = redact('Success', [refresh_token_plain, new_access_token])
+                db.commit()
+                return {
+                    'success': True,
+                    'status': TokenStatus.ACTIVE.name,
+                    'access_token_encrypted': encrypted_access,
+                    'expires_at': new_expiry,
+                    'provider_response_redacted': 'Success',
+                    'error': None
+                }
+            else:
+                raise ValueError("No new access token or expiry received")
+            
+        except Exception as e:
+            redacted_error = redact(str(e), [refresh_token_plain])
+            token.status = TokenStatus.REFRESH_FAILED
+            token.last_sync_error = redacted_error
+            token.last_refresh_response = redact("Refresh failed", [refresh_token_plain])
+            db.commit()
+            logger.error(f"Token refresh failed for {token_id}: {redacted_error}")
+            status_code = TokenStatus.REAUTH_REQUIRED.name if 'invalid_grant' in str(e) else TokenStatus.REFRESH_FAILED.name
+            return {
+                'success': False,
+                'status': status_code,
+                'access_token_encrypted': None,
+                'expires_at': None,
+                'provider_response_redacted': redact("Refresh failed", [refresh_token_plain]),
+                'error': redacted_error
+            }

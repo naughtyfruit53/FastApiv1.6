@@ -4,6 +4,7 @@
 Email API endpoints with RBAC, sync management, and CRUD operations
 """
 
+import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +32,8 @@ from app.schemas.email_schemas import (
 )
 
 router = APIRouter(prefix="/email", tags=["Email"])
+
+logger = logging.getLogger(__name__)
 
 # RBAC permissions - updated to match default permissions naming
 ADMIN_PERMISSIONS = ["crm_admin"]
@@ -296,13 +299,10 @@ async def trigger_manual_sync(
         )
     
     if not account.sync_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Sync is disabled for this account"
-        )
-    
-    # Trigger sync in background
-    background_tasks.add_task(email_management_service.sync_service.sync_account, account_id)
+        logger.warning(f"Manual sync triggered for disabled account {account_id}")
+
+    # Trigger sync in background with manual=True
+    background_tasks.add_task(email_management_service.sync_service.sync_account, account_id, manual=True)
     
     return {"message": "Sync triggered in background", "account_id": account_id}
 
