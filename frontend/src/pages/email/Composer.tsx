@@ -75,8 +75,10 @@ const Composer: React.FC<ComposerProps> = ({
   const [showBCC, setShowBCC] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [localSelectedAccountId, setLocalSelectedAccountId] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const toInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch available email accounts
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
@@ -84,15 +86,24 @@ const Composer: React.FC<ComposerProps> = ({
     queryFn: emailService.getMailAccounts
   });
 
-  // Determine effective selected account
-  const effectiveSelectedAccountId = propSelectedAccount?.id || localSelectedAccountId || selectedAccountId;
+  // For reply/forward modes, fetch the original email's account if not provided
+  const { data: originalAccount } = useQuery({
+    queryKey: ['original-account', originalEmail?.id],
+    queryFn: () => originalEmail?.id ? emailService.getMailAccountForEmail(originalEmail.id) : null,
+    enabled: !!originalEmail && (mode === 'reply' || mode === 'replyAll' || mode === 'forward')
+  });
 
-  // Auto-select if only one account
+  // Determine default selected account: use original's for reply/forward, else prop or global
   React.useEffect(() => {
-    if (accounts.length === 1 && !effectiveSelectedAccountId) {
+    if (originalAccount?.id) {
+      setLocalSelectedAccountId(originalAccount.id);
+    } else if (accounts.length > 0 && !localSelectedAccountId) {
       setLocalSelectedAccountId(accounts[0].id);
     }
-  }, [accounts, effectiveSelectedAccountId]);
+  }, [originalAccount, accounts, localSelectedAccountId]);
+
+  // Effective account ID for sending
+  const effectiveSelectedAccountId = propSelectedAccount?.id || localSelectedAccountId || selectedAccountId;
 
   // Fetch templates
   const { data: templates = [] } = useQuery({
@@ -186,6 +197,16 @@ const Composer: React.FC<ComposerProps> = ({
     }
   };
 
+  const handleToBlur = () => {
+    if (toInputRef.current) {
+      const value = toInputRef.current.value.trim();
+      if (value) {
+        handleAddRecipient('to', value);
+        toInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
@@ -213,12 +234,27 @@ const Composer: React.FC<ComposerProps> = ({
   };
 
   const handleSend = () => {
+    if (sendEmailMutation.isPending) return;
+
+    if (!effectiveSelectedAccountId) {
+      setErrorMessage('Please select an account to send from.');
+      return;
+    }
+    if (to.length === 0) {
+      setErrorMessage('Please add at least one recipient in the "To" field.');
+      return;
+    }
+    if (!subject.trim()) {
+      setErrorMessage('Please enter a subject.');
+      return;
+    }
+
     const emailData: emailService.ComposeEmail = {
-      to,
-      cc: cc.length > 0 ? cc : undefined,
-      bcc: bcc.length > 0 ? bcc : undefined,
+      to_email: to.map(r => r.email).join(', '), // Converted to comma-separated string for backend
+      cc: cc.length > 0 ? cc.map(r => r.email).join(', ') : undefined,
+      bcc: bcc.length > 0 ? bcc.map(r => r.email).join(', ') : undefined,
       subject,
-      body_html: body,
+      body: body, // Changed to 'body' assuming backend expects this
       attachments: attachments.length > 0 ? attachments : undefined,
       priority: priority !== 'normal' ? priority : undefined,
       reply_to_id: mode === 'reply' || mode === 'replyAll' ? originalEmail?.id : undefined,
@@ -227,8 +263,6 @@ const Composer: React.FC<ComposerProps> = ({
 
     sendEmailMutation.mutate(emailData);
   };
-
-  const canSend = to.length > 0 && subject.trim() && body.trim() && effectiveSelectedAccountId && !sendEmailMutation.isPending;
 
   const quillModules = {
     toolbar: [
@@ -241,6 +275,8 @@ const Composer: React.FC<ComposerProps> = ({
       ['clean']
     ]
   };
+
+  const selectedAccountDetails = accounts.find(acc => acc.id === effectiveSelectedAccountId);
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -275,23 +311,33 @@ const Composer: React.FC<ComposerProps> = ({
           </Alert>
         )}
 
-        {/* Account selector if multiple accounts */}
-        {accounts.length > 1 && (
-          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-            <InputLabel>Send from</InputLabel>
-            <Select
-              value={effectiveSelectedAccountId || ''}
-              label="Send from"
-              onChange={(e) => setLocalSelectedAccountId(Number(e.target.value))}
-            >
-              {accounts.map(account => (
-                <MenuItem key={account.id} value={account.id}>
-                  {account.email_address} ({account.provider})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
+        {/* From field */}
+        <Box sx={{ mb: 2 }}>
+          {accounts.length === 1 ? (
+            <TextField
+              fullWidth
+              label="From"
+              size="small"
+              value={accounts[0].email_address}
+              InputProps={{ readOnly: true }}
+            />
+          ) : (
+            <FormControl fullWidth size="small">
+              <InputLabel>From</InputLabel>
+              <Select
+                value={effectiveSelectedAccountId || ''}
+                label="From"
+                onChange={(e) => setLocalSelectedAccountId(Number(e.target.value))}
+              >
+                {accounts.map(account => (
+                  <MenuItem key={account.id} value={account.id}>
+                    {account.email_address} ({account.provider})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </Box>
 
         {accounts.length === 0 && (
           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -305,6 +351,7 @@ const Composer: React.FC<ComposerProps> = ({
         {/* Recipients */}
         <Box sx={{ mb: 2 }}>
           <TextField
+            inputRef={toInputRef}
             fullWidth
             label="To"
             size="small"
@@ -320,6 +367,7 @@ const Composer: React.FC<ComposerProps> = ({
                 }
               }
             }}
+            onBlur={handleToBlur}
           />
           
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
@@ -474,6 +522,13 @@ const Composer: React.FC<ComposerProps> = ({
           </Box>
         )}
 
+        {/* Error message */}
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
+
         {/* Actions */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -481,7 +536,7 @@ const Composer: React.FC<ComposerProps> = ({
               variant="contained"
               startIcon={sendEmailMutation.isPending ? <CircularProgress size={16} /> : <SendIcon />}
               onClick={handleSend}
-              disabled={!canSend}
+              disabled={sendEmailMutation.isPending}
             >
               {sendEmailMutation.isPending ? 'Sending...' : 'Send'}
             </Button>

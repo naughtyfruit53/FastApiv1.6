@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
-        # Brevo config
-        self.brevo_api_key = getattr(settings, 'BREVO_API_KEY', None)
+        # Brevo api config
+        self.brevo_api_api_key = getattr(settings, 'BREVO_API_KEY', None)
         self.from_email = getattr(settings, 'BREVO_FROM_EMAIL', None) or getattr(settings, 'EMAILS_FROM_EMAIL', 'naughtyfruit53@gmail.com')
         self.from_name = getattr(settings, 'BREVO_FROM_NAME', None) or getattr(settings, 'EMAILS_FROM_NAME', 'TritIQ Business Suite')
         
@@ -47,10 +47,10 @@ class EmailService:
         self.max_retry_attempts = getattr(settings, 'EMAIL_RETRY_ATTEMPTS', 3)
         self.retry_delay = getattr(settings, 'EMAIL_RETRY_DELAY_SECONDS', 5)
         
-        if self.brevo_api_key and self.enable_brevo:
+        if self.brevo_api_api_key and self.enable_brevo:
             try:
                 configuration = sib_api_v3_sdk.Configuration()
-                configuration.api_key['api-key'] = self.brevo_api_key
+                configuration.api_key['api-key'] = self.brevo_api_api_key
                 self.api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
                 logger.info("Brevo email service initialized successfully")
             except Exception as e:
@@ -80,7 +80,7 @@ class EmailService:
                                  email_type: EmailType,
                                  organization_id: Optional[int] = None,
                                  user_id: Optional[int] = None) -> EmailSend:
-        """Create initial audit record for email send"""
+        """Create initial record for email send"""
         email_send = EmailSend(
             to_email=to_email,
             from_email=self.from_email,
@@ -148,7 +148,7 @@ class EmailService:
     
     def _validate_email_config(self) -> tuple[bool, str]:
         """Validate email configuration"""
-        if self.brevo_api_key and self.enable_brevo:
+        if self.brevo_api_api_key and self.enable_brevo:
             return True, "Brevo configuration is valid"
         elif self.fallback_enabled and all([self.smtp_host, self.smtp_port, self.smtp_username, self.smtp_password, self.emails_from_email]):
             return True, "SMTP fallback configuration is valid"
@@ -448,8 +448,7 @@ TRITIQ ERP Team
     <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0;">
         <strong>⚠️ Important:</strong> You will be required to change this password on your next login.
     </div>
-    <p><strong>Reset by:</strong> {reset_by}<br>
-       <strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+    <p><strong>Reset by:</strong> {reset_by}<strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
     <p style="color: #d73527;"><strong>If you did not request this password reset, please contact your system administrator immediately.</strong></p>
     <p>Best regards,<br>TRITIQ ERP Team</p>
 </body>
@@ -602,8 +601,6 @@ TRITIQ ERP System
                                       db: Optional[Session] = None) -> tuple[bool, Optional[str]]:
         """Send password reset email with secure token URL"""
         try:
-            logger.debug(f"Preparing password reset token email for {user_email}")
-            
             subject = "TRITIQ ERP - Password Reset Request"
             
             # Create email content
@@ -706,10 +703,7 @@ TRITIQ ERP Team
                 'reset_by': reset_by,
                 'organization_name': organization_name or 'Your Organization',
                 'reset_date': datetime.now().strftime('%Y-%m-%d'),
-                'reset_time': datetime.now().strftime('%H:%M:%S'),
-                'sent_date': datetime.now().strftime('%Y-%m-%d'),
-                'sent_time': datetime.now().strftime('%H:%M:%S'),
-                'admin_contact': self.from_email
+                'reset_time': datetime.now().strftime('%H:%M:%S')
             }
             
             plain_text, html_content = self.load_email_template('password_reset', **template_vars)
@@ -898,7 +892,7 @@ TRITIQ ERP Team
             # Check attempts
             if otp_verification.attempts >= otp_verification.max_attempts:
                 return False, "Maximum OTP attempts exceeded"
-            
+                
             # Increment attempts
             otp_verification.attempts += 1
             
@@ -949,7 +943,7 @@ TRITIQ ERP Team
             # Get BCC recipients based on sender's role and organization settings
             bcc_emails = []
             if sender_user:
-                bcc_emails = self.role_hierarchy_service.get_bcc_recipient_for_user(db, sender_user)
+                bcc_emails = self.role_hierarchy_service.get_bcc_recipients_for_user(db, sender_user)
                 organization_id = organization_id or sender_user.organization_id
                 user_id = user_id or sender_user.id
             
@@ -1004,13 +998,14 @@ TRITIQ ERP Team
                         logger.warning(f"Brevo failed for {to_email}, trying SMTP fallback")
                         # Note: SMTP fallback doesn't support BCC in current implementation
                         # This could be enhanced if needed
-                        fallback_success, fallback_error = self._send_email_smtp(to_email, subject, body, html_body)
+                        fallback_success, fallback_error, fallback_message_id = self._send_email_smtp(to_email, subject, body, html_body, email_send)
                         if fallback_success:
                             self._update_email_audit_record(
                                 db=db,
                                 email_send=email_send,
                                 status=EmailStatus.SENT,
-                                provider_used=EmailProvider.SMTP
+                                provider_used=EmailProvider.SMTP,
+                                provider_message_id=fallback_message_id
                             )
                             db.commit()
                             logger.warning(f"Email sent via SMTP fallback to {to_email} (BCC not supported in fallback)")
@@ -1030,7 +1025,7 @@ TRITIQ ERP Team
                 # No Brevo, try SMTP fallback
                 if self.fallback_enabled:
                     logger.info(f"Using SMTP for {to_email} (BCC not supported)")
-                    success, error_msg = self._send_email_smtp(to_email, subject, body, html_body)
+                    success, error_msg, message_id = self._send_email_smtp(to_email, subject, body, html_body, email_send)
                     
                     status = EmailStatus.SENT if success else EmailStatus.FAILED
                     self._update_email_audit_record(
@@ -1038,6 +1033,7 @@ TRITIQ ERP Team
                         email_send=email_send,
                         status=status,
                         provider_used=EmailProvider.SMTP,
+                        provider_message_id=message_id if success else None,
                         error_message=error_msg if not success else None
                     )
                     db.commit()

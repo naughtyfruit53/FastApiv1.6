@@ -15,12 +15,15 @@ import { useEmail } from '../../context/EmailContext';
 import Inbox from './Inbox';
 import ThreadView from './ThreadView';
 import Composer from './Composer';
+import Sidebar from '../../components/email/Sidebar';
 import EmailSelector from '../../components/email/EmailSelector';
 import OAuthLoginButton from '../../components/OAuthLoginButton';
+import { useRouter } from 'next/router';
 
 type View = 'inbox' | 'thread' | 'compose' | 'select-account' | 'settings' | 'search' | 'attachments';
 
 const EmailModule: React.FC = () => {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { getUserTokens } = useOAuth();
   const { selectedAccountId, setSelectedAccountId } = useEmail();
@@ -30,6 +33,10 @@ const EmailModule: React.FC = () => {
   const [selectedThreadId, setSelectedThreadId] = useState<number | undefined>();
   const [composerMode, setComposerMode] = useState<'new' | 'reply' | 'replyAll' | 'forward'>('new');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [currentFolder, setCurrentFolder] = useState('INBOX');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
 
   // Fetch OAuth tokens
   const { data: tokens = [], isLoading: tokensLoading, error: tokensError } = useQuery({
@@ -97,15 +104,29 @@ const EmailModule: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['emails'] });
   };
 
-  const renderCurrentView = () => {
+  const handleFolderSelect = (folder: string) => {
+    setCurrentFolder(folder);
+    setPage(1); // Reset page when changing folder
+    setCurrentView('inbox'); // Ensure switch back to inbox view
+  };
+
+  const renderMainContent = () => {
     switch (currentView) {
       case 'inbox':
         return (
           <Inbox
             selectedAccount={selectedAccount}
             onEmailSelect={handleEmailSelect}
+            onThreadSelect={setSelectedThreadId}
             onCompose={() => handleCompose('new')}
             onAccountSelect={handleSelectAccount}
+            currentFolder={currentFolder}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            page={page}
+            setPage={setPage}
           />
         );
       case 'thread':
@@ -128,18 +149,6 @@ const EmailModule: React.FC = () => {
             onClose={handleBackToInbox}
             onSent={handleBackToInbox}
           />
-        );
-      case 'settings':
-        return (
-          <Box sx={{ p: 3 }}>
-            <Typography variant="h5" gutterBottom>Email Settings</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Manage your email accounts, sync settings, and preferences
-            </Typography>
-            <Button variant="outlined" onClick={handleBackToInbox} sx={{ mt: 2 }}>
-              Back to Inbox
-            </Button>
-          </Box>
         );
       case 'search':
         return (
@@ -227,14 +236,23 @@ const EmailModule: React.FC = () => {
           <IconButton color="inherit" onClick={() => handleCompose('new')}>
             <AddIcon />
           </IconButton>
-          <IconButton color="inherit" onClick={() => setCurrentView('settings')}>
+          <IconButton color="inherit" onClick={() => router.push('/email/accounts')}>
             <SettingsIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ flex: 1, overflow: 'hidden' }}>
-        {renderCurrentView()}
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Sidebar
+          accounts={accounts}
+          currentFolder={currentFolder}
+          onFolderSelect={handleFolderSelect}
+          onCompose={() => handleCompose('new')}
+          onSelectAccount={handleSelectAccount}
+        />
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          {renderMainContent()}
+        </Box>
       </Box>
 
       <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>

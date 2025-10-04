@@ -79,6 +79,7 @@ export interface Email {
   created_at: string;
   updated_at?: string;
   attachments?: EmailAttachment[];
+  account_id?: number; // Added for original account lookup
 }
 
 export interface EmailThread {
@@ -131,18 +132,17 @@ export interface MailAccount {
 }
 
 export interface ComposeEmail {
-  to: EmailAddress[];
-  cc?: EmailAddress[];
-  bcc?: EmailAddress[];
+  to_email: string;
+  cc?: string;
+  bcc?: string;
   subject: string;
-  body_text?: string;
-  body_html?: string;
+  body: string;
+  attachments?: File[];
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
   reply_to_id?: number;
   forward_from_id?: number;
-  attachments?: File[];
   template_id?: number;
   template_data?: Record<string, any>;
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
   request_delivery_receipt?: boolean;
   request_read_receipt?: boolean;
 }
@@ -175,6 +175,16 @@ export const getMailAccount = async (accountId: number): Promise<MailAccount> =>
     return response.data;
   } catch (error) {
     console.error('[EmailService] Failed to fetch mail account:', error);
+    throw error;
+  }
+};
+
+export const getMailAccountForEmail = async (emailId: number): Promise<MailAccount> => {
+  try {
+    const response = await api.get(`/email/emails/${emailId}/account`);
+    return response.data;
+  } catch (error) {
+    console.error('[EmailService] Failed to fetch account for email:', error);
     throw error;
   }
 };
@@ -296,33 +306,33 @@ export const getEmailThread = async (threadId: number): Promise<EmailThread> => 
 
 export const composeEmail = async (email: ComposeEmail, accountId: number): Promise<{ message: string; email_id: number }> => {
   try {
-    const formData = new FormData();
-    
-    // Add basic email data
-    formData.append('to', JSON.stringify(email.to));
-    if (email.cc) formData.append('cc', JSON.stringify(email.cc));
-    if (email.bcc) formData.append('bcc', JSON.stringify(email.bcc));
-    formData.append('subject', email.subject);
-    if (email.body_text) formData.append('body_text', email.body_text);
-    if (email.body_html) formData.append('body_html', email.body_html);
-    if (email.reply_to_id) formData.append('reply_to_id', email.reply_to_id.toString());
-    if (email.forward_from_id) formData.append('forward_from_id', email.forward_from_id.toString());
-    if (email.template_id) formData.append('template_id', email.template_id.toString());
-    if (email.template_data) formData.append('template_data', JSON.stringify(email.template_data));
-    if (email.priority) formData.append('priority', email.priority);
-    
-    // Add attachments
-    if (email.attachments) {
+    const params = new URLSearchParams();
+    params.append('account_id', accountId.toString());
+    params.append('to_email', email.to_email);
+    params.append('subject', email.subject);
+    params.append('body', email.body);
+    if (email.cc) params.append('cc', email.cc);
+    if (email.bcc) params.append('bcc', email.bcc);
+    if (email.priority) params.append('priority', email.priority);
+    if (email.reply_to_id) params.append('reply_to_id', email.reply_to_id.toString());
+    if (email.forward_from_id) params.append('forward_from_id', email.forward_from_id.toString());
+    if (email.template_id) params.append('template_id', email.template_id.toString());
+    if (email.template_data) params.append('template_data', JSON.stringify(email.template_data));
+
+    let response;
+    if (email.attachments && email.attachments.length > 0) {
+      const formData = new FormData();
       email.attachments.forEach((file, index) => {
         formData.append(`attachment_${index}`, file);
       });
+      response = await api.post(`/email/compose?${params.toString()}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } else {
+      response = await api.post(`/email/compose?${params.toString()}`, {});
     }
-
-    const response = await api.post(`/email/compose`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
     return response.data;
   } catch (error) {
     console.error('[EmailService] Failed to compose email:', error);

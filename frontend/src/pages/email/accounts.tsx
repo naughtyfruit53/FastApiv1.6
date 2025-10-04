@@ -34,6 +34,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMailAccounts, deleteMailAccount, MailAccount } from '../../services/emailService';
 import { useRouter } from 'next/navigation';
+import SyncStatus from './sync';
+import EmailTemplates from './templates';
 
 const EmailAccountSettings: React.FC = () => {
   const router = useRouter();
@@ -42,7 +44,7 @@ const EmailAccountSettings: React.FC = () => {
   const [selectedAccount, setSelectedAccount] = useState<MailAccount | null>(null);
 
   // Fetch accounts
-  const { data: accounts = [], isLoading, error } = useQuery({
+  const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['mailAccounts'],
     queryFn: getMailAccounts,
   });
@@ -73,18 +75,10 @@ const EmailAccountSettings: React.FC = () => {
     router.push('/email/oauth');
   };
 
-  if (isLoading) {
+  if (accountsLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 4 }}>
-        <Alert severity="error">Failed to load email accounts. Please try again later.</Alert>
       </Box>
     );
   }
@@ -158,6 +152,14 @@ const EmailAccountSettings: React.FC = () => {
           </List>
         </Paper>
       )}
+
+      <Divider sx={{ my: 4 }} />
+
+      <SyncStatus />
+
+      <Divider sx={{ my: 4 }} />
+
+      <EmailTemplates />
 
       {/* Delete Confirmation Dialog */}
       <Dialog
