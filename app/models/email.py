@@ -433,3 +433,39 @@ class EmailSyncLog(Base):
         Index('idx_email_sync_log_status', 'status'),
         {'extend_existing': True}
     )
+
+
+class VoucherEmailTemplate(Base):
+    """
+    Email templates for different voucher types and entity types
+    """
+    __tablename__ = "voucher_email_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenant
+    organization_id: Mapped[int] = mapped_column(
+        Integer, 
+        ForeignKey("organizations.id", name="fk_voucher_email_templates_organization_id"),
+        nullable=False, 
+        index=True
+    )
+    
+    # Template identification
+    voucher_type: Mapped[str] = mapped_column(String(50), nullable=False)  # purchase_order, sales_order, etc.
+    entity_type: Mapped[str] = mapped_column(String(50), nullable=False)   # customer, vendor
+    
+    # Email content
+    subject_template: Mapped[str] = mapped_column(String(500), nullable=False)
+    body_template: Mapped[Text] = mapped_column(Text, nullable=False)
+    
+    # Metadata
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    __table_args__ = (
+        Index('idx_voucher_email_template_org_type', 'organization_id', 'voucher_type', 'entity_type'),
+        UniqueConstraint('organization_id', 'voucher_type', 'entity_type', name='uq_org_voucher_entity_template'),
+        {'extend_existing': True}
+    )

@@ -6,15 +6,16 @@ Voucher service for auto-population and business logic
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, delete
-from typing import Type, Union, Any
+from typing import Type, Union, Any, Optional
 from datetime import datetime
 from decimal import Decimal
 import logging
+from app.models.organization_settings import OrganizationSettings, VoucherCounterResetPeriod
 
 logger = logging.getLogger(__name__)
 
 class VoucherNumberService:
-    """Service for generating voucher numbers"""
+    """Service for generating voucher numbers with org-level settings support"""
     
     @staticmethod
     async def generate_voucher_number(
@@ -25,18 +26,64 @@ class VoucherNumberService:
     ) -> str:
         """
         Generate a unique voucher number for the organization
+        Supports:
+        - Org-level prefix (Requirement 5)
+        - Counter reset periods: monthly, quarterly, annually (Requirement 6)
         
-        Format: {PREFIX}/{FISCAL_YEAR}/{SEQUENCE}
-        Example: SV/2526/00001
+        Format examples:
+        - With prefix: PM-PO/2526/00001
+        - Quarterly: PO/2526/Q1/00001
+        - Monthly: PO/2526/APR/00001
         """
-        current_year = datetime.now().year
-        current_month = datetime.now().month
+        current_date = datetime.now()
+        current_year = current_date.year
+        current_month = current_date.month
+        
+        # Get organization settings
+        stmt = select(OrganizationSettings).where(
+            OrganizationSettings.organization_id == organization_id
+        )
+        result = await db.execute(stmt)
+        org_settings = result.scalar_one_or_none()
+        
+        # Build prefix with org-level prefix if enabled
+        full_prefix = prefix
+        if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
+            full_prefix = f"{org_settings.voucher_prefix}-{prefix}"
+        
+        # Calculate fiscal year (assuming April start)
         fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
         
-        # Get the latest voucher number for this prefix, fiscal year, and organization
+        # Determine counter reset period and format accordingly
+        reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+        
+        period_segment = ""
+        if reset_period == VoucherCounterResetPeriod.MONTHLY:
+            # Format: PO/2526/JAN/00001
+            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                          'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            period_segment = month_names[current_month - 1]
+        elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+            # Format: PO/2526/Q1/00001
+            quarter = ((current_month - 1) // 3) + 1
+            period_segment = f"Q{quarter}"
+        elif reset_period == VoucherCounterResetPeriod.ANNUALLY:
+            # Format: PO/2526/00001 (no period segment)
+            period_segment = ""
+        # For NEVER, we'll use annually as default
+        
+        # Build pattern for search
+        if period_segment:
+            search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+            base_number = f"{full_prefix}/{fiscal_year}/{period_segment}"
+        else:
+            search_pattern = f"{full_prefix}/{fiscal_year}/%"
+            base_number = f"{full_prefix}/{fiscal_year}"
+        
+        # Get the latest voucher number for this prefix, fiscal year, period and organization
         stmt = select(model).where(
             model.organization_id == organization_id,
-            model.voucher_number.like(f"{prefix}/{fiscal_year}/%")
+            model.voucher_number.like(search_pattern)
         ).order_by(desc(model.voucher_number)).limit(1)
         result = await db.execute(stmt)
         latest_voucher = result.scalar_one_or_none()
@@ -53,7 +100,7 @@ class VoucherNumberService:
             next_sequence = 1
         
         # Generate new voucher number
-        voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:05d}"
+        voucher_number = f"{base_number}/{next_sequence:05d}"
         
         # Ensure uniqueness (in case of race conditions)
         while True:
@@ -62,7 +109,7 @@ class VoucherNumberService:
             if not result.scalar_one_or_none():
                 break
             next_sequence += 1
-            voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:05d}"
+            voucher_number = f"{base_number}/{next_sequence:05d}"
         
         return voucher_number
 

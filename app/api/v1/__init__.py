@@ -12,6 +12,8 @@ from .ledger import router as ledger_router
 from .vouchers import router as vouchers_router  # Updated import for vouchers
 from .master_data import router as master_data_router  # Added import for master_data
 from .email import router as email_router # Added import for email
+from .voucher_email_templates import router as voucher_email_templates_router  # Added for requirement 2
+from .voucher_format_templates import router as voucher_format_templates_router  # Added for requirement 7
 
 api_v1_router = APIRouter(prefix="/v1")
 
@@ -25,3 +27,5 @@ api_v1_router.include_router(ledger_router)
 api_v1_router.include_router(vouchers_router, prefix="/vouchers")
 api_v1_router.include_router(master_data_router, prefix="/master-data", tags=["master-data"])  # Added master_data inclusion
 api_v1_router.include_router(email_router, prefix="/email", tags=["email"])  # Added email inclusion
+api_v1_router.include_router(voucher_email_templates_router)  # Added voucher email templates
+api_v1_router.include_router(voucher_format_templates_router)  # Added voucher format templates
