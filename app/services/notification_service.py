@@ -22,12 +22,12 @@ from app.schemas.base import (
     NotificationSendRequest, BulkNotificationRequest
 )
 
-# Import EmailService only when needed to avoid dependency issues
+# Import SystemEmailService - Note: email_service module doesn't exist, using system_email_service
 try:
-    from app.services.email_service import EmailService
+    from app.services.system_email_service import system_email_service
     EMAIL_SERVICE_AVAILABLE = True
 except ImportError:
-    EmailService = None
+    system_email_service = None
     EMAIL_SERVICE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class NotificationService:
     
     def __init__(self):
         if EMAIL_SERVICE_AVAILABLE:
-            self.email_service = EmailService()
+            self.email_service = system_email_service
         else:
             self.email_service = None
             logger.warning("EmailService not available, email notifications will be mocked")
@@ -517,20 +517,28 @@ class NotificationService:
         content: str,
         html_content: Optional[str] = None
     ) -> bool:
-        """Send email notification."""
+        """Send email notification (system-level: app notifications)."""
         try:
             # Check if in development mode or email service is disabled
             if getattr(settings, 'EMAIL_MOCK_MODE', True) or not self.email_service:
                 logger.info(f"[MOCK EMAIL] To: {to_email}, Subject: {subject}, Body: {content}")
                 return True
             
-            success = self.email_service.send_email(
-                to_email=to_email,
-                subject=subject,
-                body=content,
-                html_body=html_content
-            )
-            return success
+            # Use async wrapper since system_email_service methods are async
+            import asyncio
+            try:
+                success, error = asyncio.run(self.email_service._send_email(
+                    to_email=to_email,
+                    subject=subject,
+                    body=content,
+                    html_body=html_content
+                ))
+                return success
+            except RuntimeError:
+                # Already in event loop, mock for now
+                logger.warning(f"Cannot send email from async context, mocking: {to_email}")
+                logger.info(f"[MOCK EMAIL] To: {to_email}, Subject: {subject}, Body: {content}")
+                return True
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")
             return False

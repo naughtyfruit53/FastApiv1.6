@@ -12,7 +12,7 @@ from app.api.v1.auth import get_current_super_admin, get_current_active_user
 from app.services.user_service import UserService
 from app.schemas.user import UserCreate, UserUpdate, UserInDB, AdminPasswordResetRequest, AdminPasswordResetResponse
 from app.core.security import get_password_hash
-from app.services.email_service import email_service
+from app.services.system_email_service import system_email_service
 from app.core.logging import log_password_reset, log_security_event, log_database_operation
 import logging
 from app.models.user_models import User
@@ -107,12 +107,14 @@ async def reset_user_password(
                     email_retry_attempts += 1
                     logger.info(f"Attempting to send password reset email (attempt {email_retry_attempts}/{max_email_retries})")
                     
-                    email_sent, email_error = email_service.send_password_reset_email(
+                    email_sent, email_error = await system_email_service.send_password_reset_email(
                         user_email=target_user.email,
                         user_name=target_user.full_name or target_user.email,
                         new_password=new_password,
                         reset_by=current_user.email,
-                        organization_name=target_user.organization.name if target_user.organization else None
+                        organization_name=target_user.organization.name if target_user.organization else None,
+                        organization_id=target_user.organization_id,
+                        user_id=target_user.id
                     )
                     
                     if email_sent:

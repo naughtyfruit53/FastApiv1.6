@@ -25,7 +25,7 @@ from app.schemas.reset import ResetScope
 from app.schemas.organization import OrganizationCreate, OrganizationInDB  # Assume this exists or add if needed
 from app.services.user_service import UserService
 from app.services.organization_service import OrganizationService  # Assume service for org creation
-from app.services.email_service import email_service
+from app.services.system_email_service import system_email_service
 import logging
 
 logger = logging.getLogger(__name__)
@@ -193,12 +193,15 @@ async def admin_reset_user_password(
             request=request
         )
         
-        # Send password reset email
-        email_service.send_password_reset_email(
+        # Send password reset email (system-level: app password reset)
+        await system_email_service.send_password_reset_email(
             user_email=reset_request.target_email,
             user_name=target_user.full_name,
             new_password=reset_response.new_password,
-            reset_by=current_user.full_name
+            reset_by=current_user.full_name,
+            organization_name=target_user.organization.name if target_user.organization else None,
+            organization_id=target_user.organization_id,
+            user_id=target_user.id
         )
         
         logger.info(f"Password reset by {current_user.email} for user {reset_request.target_email}")
@@ -355,15 +358,21 @@ async def set_temporary_password(
             reset_type="TEMPORARY_PASSWORD"
         )
         
-        # Try to send email notification
+        # Try to send email notification (system-level: app temporary password)
         try:
-            if email_service.send_temporary_password_notification(
-                temp_request.target_email,
-                temp_password,
-                expires_at,
-                current_user.full_name or current_user.email
-            ):
+            success, error = await system_email_service.send_password_reset_email(
+                user_email=temp_request.target_email,
+                user_name=target_user.full_name or target_user.email,
+                new_password=temp_password,
+                reset_by=current_user.full_name or current_user.email,
+                organization_name=target_user.organization.name if target_user.organization else None,
+                organization_id=target_user.organization_id,
+                user_id=target_user.id
+            )
+            if success:
                 logger.info(f"Temporary password email sent to {temp_request.target_email}")
+            else:
+                logger.warning(f"Failed to send temporary password email: {error}")
         except Exception as e:
             logger.warning(f"Failed to send temporary password email: {e}")
         

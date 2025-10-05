@@ -215,10 +215,11 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
         const url = window.URL.createObjectURL(blob);
 
         if (download) {
-          // Force download
+          // Force download with voucher number as filename (replace / with -)
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${voucherType}_${voucherNumber || voucherId}.pdf`;
+          const safeVoucherNumber = voucherNumber ? voucherNumber.replace(/\//g, '-') : `voucher_${voucherId}`;
+          a.download = `${safeVoucherNumber}.pdf`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
