@@ -21,7 +21,7 @@ from app.schemas.user import (
 )
 from app.services.user_service import UserService
 from app.services.otp_service import OTPService
-from app.services.email_service import email_service
+from app.services.system_email_service import system_email_service
 from .user import get_current_active_user, get_current_super_admin
 from app.core.logging import log_password_change
 import secrets
@@ -358,16 +358,15 @@ async def admin_reset_password(
         user.must_change_password = True
         db.commit()
         
-        # Send email
-        success, error = email_service.send_password_reset_email(
+        # Send email (system-level: app password reset)
+        success, error = await system_email_service.send_password_reset_email(
             user_email=reset_data.user_email,
             user_name=user.full_name or user.username,
             new_password=new_password,
             reset_by=current_user.email,
             organization_name=user.organization.name if user.organization else None,
             organization_id=user.organization_id,
-            user_id=user.id,
-            db=db
+            user_id=user.id
         )
         
         # Log successful password reset with enhanced details

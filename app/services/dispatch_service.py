@@ -540,17 +540,15 @@ class CompletionRecordService:
             completion_record.feedback_request_sent_at = datetime.now(timezone.utc)
             self.db.commit()
             
-            # Import here to avoid circular imports
-            from app.services.email_service import EmailService
+            # Import here to avoid circular imports (system-level: app notifications)
+            from app.services.system_email_service import system_email_service
+            import asyncio
             
             # Send feedback request email to customer
             if hasattr(completion_record, 'installation_job') and completion_record.installation_job:
                 job = completion_record.installation_job
                 if hasattr(job, 'customer') and job.customer:
                     customer = job.customer
-                    
-                    # Create feedback request email
-                    email_service = EmailService(self.db)
                     
                     feedback_url = f"/feedback/submit?job_id={job.id}&completion_id={completion_record.id}"
                     
@@ -571,13 +569,31 @@ class CompletionRecordService:
                     """
                     
                     try:
-                        email_service.send_email(
-                            to_email=customer.email,
-                            subject="Service Feedback Request",
-                            body=email_body,
-                            organization_id=completion_record.organization_id
-                        )
-                        logger.info(f"Feedback request email sent to customer {customer.id} for completion {completion_record.id}")
+                        # Use async wrapper since system_email_service methods are async
+                        try:
+                            success, error = asyncio.run(system_email_service._send_email(
+                                to_email=customer.email,
+                                subject="Service Feedback Request",
+                                body=email_body,
+                                organization_id=completion_record.organization_id
+                            ))
+                        except RuntimeError:
+                            # Already in event loop, use thread executor
+                            import concurrent.futures
+                            with concurrent.futures.ThreadPoolExecutor() as executor:
+                                future = executor.submit(
+                                    asyncio.run,
+                                    system_email_service._send_email(
+                                        to_email=customer.email,
+                                        subject="Service Feedback Request",
+                                        body=email_body,
+                                        organization_id=completion_record.organization_id
+                                    )
+                                )
+                                success, error = future.result()
+                        
+                        if success:
+                            logger.info(f"Feedback request email sent to customer {customer.id} for completion {completion_record.id}")
                     except Exception as e:
                         logger.error(f"Failed to send feedback request email: {e}")
                         # Don't fail the completion if email fails

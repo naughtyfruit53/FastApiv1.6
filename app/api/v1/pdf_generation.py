@@ -200,8 +200,11 @@ async def download_voucher_pdf(
             current_user=current_user
         )
         
-        # Return PDF response for download
-        filename = f"{voucher_type}_{voucher_data.get('voucher_number', 'voucher')}.pdf"
+        # Return PDF response for download with voucher number as filename
+        voucher_number = voucher_data.get('voucher_number', 'voucher')
+        # Sanitize voucher number for filename (replace / with -)
+        safe_filename = voucher_number.replace('/', '-').replace('\\', '-')
+        filename = f"{safe_filename}.pdf"
         
         return Response(
             content=pdf_io.getvalue(),

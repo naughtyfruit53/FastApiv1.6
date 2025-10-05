@@ -913,9 +913,9 @@ async def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email
                         error = err
                         logger.warning(f"Failed to send from user account: {err}. Falling back to system.")
         
-        # Fallback to system if not sent via user
+        # Fallback to system if not sent via user (org-level task using system fallback)
         if not sent:
-            success, error = await self._send_email(
+            success, error = await system_email_service._send_email(
                 to_email=recipient_email,
                 subject=subject,
                 body=plain_text,

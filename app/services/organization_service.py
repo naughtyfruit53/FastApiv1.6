@@ -6,7 +6,7 @@ from app.schemas.organization import OrganizationLicenseCreate, OrganizationLice
 from app.schemas.user import UserCreate, UserRole
 from app.core.security import get_password_hash, create_access_token
 from app.services.otp_service import OTPService
-from app.services.email_service import email_service
+from app.services.system_email_service import system_email_service
 from app.services.rbac import RBACService
 from app.services.role_management_service import RoleManagementService
 from app.services.user_service import UserService
@@ -14,6 +14,7 @@ from app.services.ledger_service import LedgerService
 import secrets
 import string
 import logging
+import asyncio
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -85,17 +86,34 @@ class OrganizationService:
             organization_id=org.id
         )
         
-        # Send email with temp password
-        success, error = email_service.send_user_creation_email(
-            user_email=super_admin.email,
-            user_name=super_admin.full_name,
-            temp_password=temp_password,
-            organization_name=org.name,
-            login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
-            organization_id=org.id,
-            user_id=super_admin.id,
-            db=db
-        )
+        # Send email with temp password (system-level: account creation)
+        try:
+            success, error = asyncio.run(system_email_service.send_user_creation_email(
+                user_email=super_admin.email,
+                user_name=super_admin.full_name,
+                temp_password=temp_password,
+                organization_name=org.name,
+                login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
+                organization_id=org.id,
+                user_id=super_admin.id
+            ))
+        except RuntimeError:
+            # Already in event loop, create new loop in thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    system_email_service.send_user_creation_email(
+                        user_email=super_admin.email,
+                        user_name=super_admin.full_name,
+                        temp_password=temp_password,
+                        organization_name=org.name,
+                        login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
+                        organization_id=org.id,
+                        user_id=super_admin.id
+                    )
+                )
+                success, error = future.result()
         
         if not success:
             logger.warning(f"License created but welcome email failed: {error}")
