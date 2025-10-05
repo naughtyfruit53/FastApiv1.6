@@ -16,6 +16,7 @@ import { CompanyProvider } from "../context/CompanyContext"; // Add CompanyProvi
 import { EmailProvider } from "../context/EmailContext"; // Added import for EmailProvider
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
+import ChatbotNavigator from "../components/ChatbotNavigator"; // Import chatbot component
 
 // Create modern theme using our design system
 const theme = createTheme({
@@ -177,10 +178,15 @@ function MyApp({ Component, pageProps }: AppProps): any {
     const { user, logout } = useAuth();
     const showMegaMenu =
       !!user && router.pathname !== "/login" && router.pathname !== "/";
+    const showChatbot = !!user && router.pathname !== "/login" && router.pathname !== "/";
+    
     return (
-      <Layout user={user} onLogout={logout} showMegaMenu={showMegaMenu}>
-        <Component {...pageProps} />
-      </Layout>
+      <>
+        <Layout user={user} onLogout={logout} showMegaMenu={showMegaMenu}>
+          <Component {...pageProps} />
+        </Layout>
+        {showChatbot && <ChatbotNavigator />}
+      </>
     );
   };
 

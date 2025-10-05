@@ -115,7 +115,7 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
     handleClose();
   };
 
-  const showEmailPrompt = () => {
+  const showEmailPrompt = async () => {
     if (!isEmailSetup) {
       setError({ 
         message: 'Email not configured. Please setup your email account first.', 
@@ -133,10 +133,39 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
       return;
     }
 
-    // Set default email content
-    const voucherTypeLabel = voucherType.charAt(0).toUpperCase() + voucherType.slice(1).replace('_', ' ');
-    setEmailSubject(`${voucherTypeLabel} - ${voucherNumber || `#${voucherId}`}`);
-    setEmailBody(`Dear Customer/Vendor,\n\nPlease find attached the ${voucherTypeLabel.toLowerCase()} document.\n\nThank you for your business.\n\nBest regards,\nYour Company Team`);
+    // Try to get email template from API
+    try {
+      const entityType = ['purchase'].includes(voucherType) ? 'vendor' : 'customer';
+      const voucherTypeNormalized = voucherType.replace('-', '_');
+      
+      const response = await api.get(
+        `/api/v1/voucher-email-templates/default/${voucherTypeNormalized}/${entityType}`
+      );
+      
+      if (response.data) {
+        // Use template with variable substitution
+        const subject = response.data.subject_template
+          .replace('{voucher_number}', voucherNumber || `#${voucherId}`)
+          .replace('{organization_name}', 'Your Company'); // TODO: Get actual org name
+        
+        const body = response.data.body_template
+          .replace('{vendor_name}', 'Vendor Name') // TODO: Get actual name
+          .replace('{customer_name}', 'Customer Name') // TODO: Get actual name
+          .replace('{voucher_number}', voucherNumber || `#${voucherId}`)
+          .replace('{voucher_date}', new Date().toLocaleDateString())
+          .replace('{total_amount}', 'Amount') // TODO: Get actual amount
+          .replace('{organization_name}', 'Your Company'); // TODO: Get actual org name
+        
+        setEmailSubject(subject);
+        setEmailBody(body);
+      }
+    } catch (err) {
+      // Fallback to default if API call fails
+      const voucherTypeLabel = voucherType.charAt(0).toUpperCase() + voucherType.slice(1).replace('_', ' ');
+      setEmailSubject(`${voucherTypeLabel} - ${voucherNumber || `#${voucherId}`}`);
+      setEmailBody(`Dear Customer/Vendor,\n\nPlease find attached the ${voucherTypeLabel.toLowerCase()} document.\n\nThank you for your business.\n\nBest regards,\nYour Company Team`);
+    }
+    
     setEmailDialogOpen(true);
   };
 
