@@ -141,7 +141,7 @@ class TestLicenseCreationEmailNotification:
         
         with patch('app.api.v1.organizations.get_current_user', return_value=mock_super_admin), \
              patch('app.api.v1.organizations.get_db', return_value=mock_db), \
-             patch('app.api.v1.organizations.email_service') as mock_email_service, \
+             patch('app.api.v1.organizations.system_email_service') as mock_email_service, \
              patch('app.api.v1.organizations.Organization', return_value=mock_org), \
              patch('app.api.v1.organizations.User', return_value=mock_user), \
              patch('app.api.v1.organizations.get_password_hash', return_value="hashed_password"):
@@ -191,7 +191,7 @@ class TestPasswordResetUnification:
         
         with patch('app.api.v1.password.get_current_super_admin', return_value=mock_super_admin), \
              patch('app.api.v1.password.get_db', return_value=mock_db), \
-             patch('app.api.v1.password.email_service') as mock_email_service, \
+             patch('app.api.v1.password.system_email_service') as mock_email_service, \
              patch('app.api.v1.password.get_password_hash', return_value="hashed_password"), \
              patch('app.api.v1.password.log_password_reset') as mock_log_reset, \
              patch('app.api.v1.password.log_security_event') as mock_log_security:

@@ -377,11 +377,11 @@ class TestVoucherEmailIntegration:
     
     def test_voucher_email_function_exists(self):
         """Test that voucher email sending function exists"""
-        from app.services.email_service import send_voucher_email
+        from app.services.system_email_service import send_voucher_email
         assert callable(send_voucher_email)
     
     def test_email_linking_function_exists(self):
         """Test that email linking function exists"""
-        from app.services.email_service import link_email_to_customer_vendor, auto_link_emails_by_sender
+        from app.services.system_email_service import link_email_to_customer_vendor, auto_link_emails_by_sender
         assert callable(link_email_to_customer_vendor)
         assert callable(auto_link_emails_by_sender)

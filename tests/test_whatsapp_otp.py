@@ -170,7 +170,7 @@ class TestOTPServiceWhatsAppIntegration:
     def test_generate_and_send_otp_whatsapp_success(self, otp_service, mock_db):
         """Test OTP generation and WhatsApp sending success"""
         with patch('app.services.otp_service.whatsapp_service') as mock_wa_service:
-            with patch('app.services.otp_service.email_service') as mock_email_service:
+            with patch('app.services.otp_service.system_email_service') as mock_email_service:
                 mock_wa_service.is_available.return_value = True
                 mock_wa_service.send_otp.return_value = (True, None)
                 
@@ -187,7 +187,7 @@ class TestOTPServiceWhatsAppIntegration:
     def test_generate_and_send_otp_whatsapp_fallback_to_email(self, otp_service, mock_db):
         """Test OTP fallback to email when WhatsApp fails"""
         with patch('app.services.otp_service.whatsapp_service') as mock_wa_service:
-            with patch('app.services.otp_service.email_service') as mock_email_service:
+            with patch('app.services.otp_service.system_email_service') as mock_email_service:
                 mock_wa_service.is_available.return_value = True
                 mock_wa_service.send_otp.return_value = (False, 'WhatsApp failed')
                 mock_email_service.send_otp_email.return_value = True
@@ -205,7 +205,7 @@ class TestOTPServiceWhatsAppIntegration:
     def test_generate_and_send_otp_email_only(self, otp_service, mock_db):
         """Test OTP generation with email only"""
         with patch('app.services.otp_service.whatsapp_service') as mock_wa_service:
-            with patch('app.services.otp_service.email_service') as mock_email_service:
+            with patch('app.services.otp_service.system_email_service') as mock_email_service:
                 mock_email_service.send_otp_email.return_value = True
                 
                 success = otp_service.generate_and_send_otp(
@@ -220,7 +220,7 @@ class TestOTPServiceWhatsAppIntegration:
     def test_generate_and_send_otp_both_methods_fail(self, otp_service, mock_db):
         """Test OTP generation when both methods fail"""
         with patch('app.services.otp_service.whatsapp_service') as mock_wa_service:
-            with patch('app.services.otp_service.email_service') as mock_email_service:
+            with patch('app.services.otp_service.system_email_service') as mock_email_service:
                 mock_wa_service.is_available.return_value = True
                 mock_wa_service.send_otp.return_value = (False, 'WhatsApp failed')
                 mock_email_service.send_otp_email.return_value = False

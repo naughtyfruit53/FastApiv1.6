@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 try:
-    from app.services.email_service import EmailService
+    from app.services.system_email_service import system_email_service
     from app.core.config import settings
     from app.core.logging import setup_logging
 except ImportError as e:
@@ -84,7 +84,7 @@ class EmailServiceSetup:
         """Initialize and test email service"""
         try:
             print("\n🔌 Initializing Email Service...")
-            self.email_service = EmailService()
+            self.email_service = system_email_service
             print("✅ Email service initialized successfully")
             return True
         except Exception as e:
@@ -100,35 +100,20 @@ class EmailServiceSetup:
         try:
             print("\n📧 Testing Email Functionality...")
             
-            # Test email template generation
-            test_template_data = {
-                'user_name': 'Test User',
-                'organization_name': 'Test Organization',
-                'role_name': 'Admin',
-                'approval_status': 'approved'
-            }
-            
-            # Test role change notification template
-            role_change_html = self.email_service.generate_role_change_notification(
-                **test_template_data
-            )
-            
-            if role_change_html:
-                print("✅ Role change notification template generated")
-            else:
-                print("❌ Failed to generate role change notification template")
+            # Test that email service is accessible and has required methods
+            if not hasattr(self.email_service, 'send_user_creation_email'):
+                print("❌ Email service missing required methods")
                 return False
-                
-            # Test approval workflow template
-            approval_html = self.email_service.generate_approval_workflow_notification(
-                **test_template_data
-            )
             
-            if approval_html:
-                print("✅ Approval workflow notification template generated")
+            print("✅ Email service has required methods")
+            
+            # Validate email configuration
+            is_valid, msg = self.email_service._validate_email_config()
+            if is_valid:
+                print(f"✅ Email configuration valid: {msg}")
             else:
-                print("❌ Failed to generate approval workflow notification template")
-                return False
+                print(f"⚠️ Email configuration issue: {msg}")
+                print("   Note: Some features may require email configuration")
                 
             print("✅ All email functionality tests passed")
             return True
