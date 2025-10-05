@@ -28,7 +28,7 @@ from email.mime.multipart import MIMEMultipart
 from email.header import decode_header
 from email.utils import parsedate_tz, mktime_tz, parseaddr
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc
+from sqlalchemy import and_, or_, desc, func
 
 from app.core.config import settings
 from app.core.database import SessionLocal, AsyncSessionLocal
@@ -196,6 +196,10 @@ class EmailSyncService:
             
             if success:
                 logger.info(f"API sync successful: {emails_synced} emails synced")
+                # Update total_messages_synced to reflect actual count in DB
+                total_emails = db.query(func.count(Email.id)).filter(Email.account_id == account_id).scalar()
+                account.total_messages_synced = total_emails
+                db.commit()
                 return True
             else:
                 logger.error(f"API sync failed: {error}")
@@ -271,7 +275,11 @@ class EmailSyncService:
                 # Update sync status
                 account.last_sync_at = datetime.utcnow()
                 account.last_sync_error = None
-                account.total_messages_synced += total_new
+                account.total_messages_synced += total_new + total_updated  # Add both new and updated
+                
+                # Update to actual count in DB for accuracy
+                total_emails = db.query(func.count(Email.id)).filter(Email.account_id == account_id).scalar()
+                account.total_messages_synced = total_emails
                 
                 # Mark full sync as completed
                 if full_sync:

@@ -30,9 +30,11 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Email as EmailIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMailAccounts, deleteMailAccount, MailAccount } from '../../services/emailService';
+import { getUserTokens, refreshToken } from '../../services/userService'; // Added refreshToken
 import { useRouter } from 'next/navigation';
 import SyncStatus from './sync';
 import EmailTemplates from './templates';
@@ -41,12 +43,22 @@ const EmailAccountSettings: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reauthDialogOpen, setReauthDialogOpen] = useState(false);
+  const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<MailAccount | null>(null);
+  const [selectedTokenId, setSelectedTokenId] = useState<number | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
   // Fetch accounts
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['mailAccounts'],
     queryFn: getMailAccounts,
+  });
+
+  // Fetch tokens
+  const { data: tokens = [], isLoading: tokensLoading } = useQuery({
+    queryKey: ['userTokens'],
+    queryFn: getUserTokens,
   });
 
   // Delete mutation
@@ -56,6 +68,16 @@ const EmailAccountSettings: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['mailAccounts'] });
       setDeleteDialogOpen(false);
       setSelectedAccount(null);
+    },
+  });
+
+  // Refresh mutation
+  const refreshMutation = useMutation({
+    mutationFn: refreshToken,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userTokens'] });
+      setRefreshDialogOpen(false);
+      setSelectedTokenId(null);
     },
   });
 
@@ -75,7 +97,39 @@ const EmailAccountSettings: React.FC = () => {
     router.push('/email/oauth');
   };
 
-  if (accountsLoading) {
+  const handleReauthClick = (account: MailAccount) => {
+    // Find the token for this account
+    const token = tokens.find(t => t.id === account.oauth_token_id);
+    if (token && token.status === 'REFRESH_FAILED') {
+      setSelectedProvider(token.provider);
+      setReauthDialogOpen(true);
+    }
+  };
+
+  const handleRefreshClick = (account: MailAccount) => {
+    // Find the token for this account
+    const token = tokens.find(t => t.id === account.oauth_token_id);
+    if (token) {
+      setSelectedTokenId(token.id);
+      setRefreshDialogOpen(true);
+    }
+  };
+
+  const handleReauthConfirm = () => {
+    if (selectedProvider) {
+      // Navigate to OAuth login for re-authorization
+      router.push(`/email/oauth?provider=${selectedProvider}&reauth=true`);
+    }
+    setReauthDialogOpen(false);
+  };
+
+  const handleRefreshConfirm = () => {
+    if (selectedTokenId) {
+      refreshMutation.mutate(selectedTokenId);
+    }
+  };
+
+  if (accountsLoading || tokensLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
@@ -119,36 +173,60 @@ const EmailAccountSettings: React.FC = () => {
       ) : (
         <Paper>
           <List>
-            {accounts.map((account, index) => (
-              <React.Fragment key={account.id}>
-                {index > 0 && <Divider />}
-                <ListItem>
-                  <ListItemText
-                    primary={account.display_name || account.email_address}
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2" color="text.primary">
-                          {account.email_address}
-                        </Typography>
-                        {' — '}
-                        {account.account_type?.toUpperCase()}
-                        {account.sync_enabled ? ' (Sync Enabled)' : ' (Sync Disabled)'}
-                      </>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      aria-label="delete"
-                      onClick={() => handleDeleteClick(account)}
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              </React.Fragment>
-            ))}
+            {accounts.map((account, index) => {
+              const token = tokens.find(t => t.id === account.oauth_token_id);
+              const isFailed = token && token.status === 'REFRESH_FAILED';
+              return (
+                <React.Fragment key={account.id}>
+                  {index > 0 && <Divider />}
+                  <ListItem>
+                    <ListItemText
+                      primary={account.display_name || account.email_address}
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="text.primary">
+                            {account.email_address}
+                          </Typography>
+                          {' — '}
+                          {account.account_type?.toUpperCase()}
+                          {account.sync_enabled ? ' (Sync Enabled)' : ' (Sync Disabled)'}
+                        </>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        aria-label="refresh"
+                        onClick={() => handleRefreshClick(account)}
+                        color="primary"
+                        sx={{ mr: 1 }}
+                      >
+                        <RefreshIcon />
+                      </IconButton>
+                      {isFailed && (
+                        <IconButton
+                          edge="end"
+                          aria-label="reauthorize"
+                          onClick={() => handleReauthClick(account)}
+                          color="warning"
+                          sx={{ mr: 1 }}
+                        >
+                          <RefreshIcon />
+                        </IconButton>
+                      )}
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleDeleteClick(account)}
+                        color="error"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                </React.Fragment>
+              );
+            })}
           </List>
         </Paper>
       )}
@@ -183,6 +261,56 @@ const EmailAccountSettings: React.FC = () => {
             disabled={deleteMutation.isPending}
           >
             {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Re-authorize Confirmation Dialog */}
+      <Dialog
+        open={reauthDialogOpen}
+        onClose={() => setReauthDialogOpen(false)}
+      >
+        <DialogTitle>Re-authorize Email Account</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Your authentication token has expired or is invalid. Re-authorization is required to continue using this account.
+          </Alert>
+          <DialogContentText>
+            This will redirect you to {selectedProvider?.toUpperCase()} to grant access again. Your existing data will remain intact.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReauthDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleReauthConfirm}
+            color="primary"
+            variant="contained"
+          >
+            Re-authorize
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Refresh Confirmation Dialog */}
+      <Dialog
+        open={refreshDialogOpen}
+        onClose={() => setRefreshDialogOpen(false)}
+      >
+        <DialogTitle>Refresh Token</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to refresh this token? This will attempt to get a new access token using the refresh token.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRefreshDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleRefreshConfirm}
+            color="primary"
+            variant="contained"
+            disabled={refreshMutation.isPending}
+          >
+            {refreshMutation.isPending ? 'Refreshing...' : 'Refresh'}
           </Button>
         </DialogActions>
       </Dialog>

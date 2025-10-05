@@ -27,6 +27,7 @@ from app.models.email import (
     MailAccount, Email, EmailThread, EmailAttachment, EmailSyncLog,
     EmailAccountType, EmailSyncStatus, EmailStatus
 )
+from app.models.organization_settings import OrganizationSettings
 from app.models.user_models import User
 from app.schemas.email_schemas import (
     MailAccountCreate, MailAccountUpdate, MailAccountResponse,
@@ -307,7 +308,7 @@ async def trigger_manual_sync(
         logger.warning(f"Manual sync triggered for disabled account {account_id}")
 
     # Trigger sync in background with manual=True
-    background_tasks.add_task(email_management_service.sync_service.sync_account, account_id, manual=True)
+    background_tasks.add_task(email_sync_worker.sync_account_now, account_id)
     
     return {"message": "Sync triggered in background", "account_id": account_id}
 
@@ -1120,7 +1121,6 @@ async def compose_email(
     Compose and send email from user's connected account using provider API.
     Supports Mail 1 Level Up BCC if enabled in organization settings.
     """
-    from app.models import EmailType
     from app.services.system_email_service import system_email_service
     
     try:

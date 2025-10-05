@@ -25,12 +25,13 @@ import base64
 from app.core.config import settings
 from msal import ConfidentialClientApplication
 import requests
+from app.utils.crypto_aes_gcm import encrypt_aes_gcm, decrypt_aes_gcm, EncryptionKeysAESGCM
 
 logger = get_logger(__name__)
 
 class UserEmailService:
     def __init__(self):
-        self.oauth_service = OAuth2Service()
+        pass  # Removed self.oauth_service initialization; will create locally in methods
 
     async def send_email(self, 
                          db: AsyncSession,
@@ -56,6 +57,9 @@ class UserEmailService:
             (success: bool, error_msg: Optional[str])
         """
         try:
+            # Create local OAuth2Service instance with db
+            oauth_service = OAuth2Service(db)
+            
             # Get mail account
             stmt = select(MailAccount).filter(MailAccount.id == account_id)
             result = await db.execute(stmt)
@@ -68,7 +72,7 @@ class UserEmailService:
                 return False, "No OAuth token associated with account"
             
             # Get valid token (will refresh if needed)
-            token = await self.oauth_service.get_valid_token(account.oauth_token_id)
+            token = await oauth_service.get_valid_token(account.oauth_token_id)
             if not token:
                 return False, "Failed to get valid OAuth token"
             
@@ -76,9 +80,9 @@ class UserEmailService:
             error = None
             
             if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
-                success, error = await self._send_google_email(token, to_email, subject, body, html_body, bcc_emails)
+                success, error = await self._send_google_email(oauth_service, token, to_email, subject, body, html_body, bcc_emails)
             elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
-                success, error = await self._send_microsoft_email(token, to_email, subject, body, html_body, bcc_emails)
+                success, error = await self._send_microsoft_email(oauth_service, token, to_email, subject, body, html_body, bcc_emails)
             else:
                 return False, f"Unsupported provider: {token.provider}"
             
@@ -94,6 +98,7 @@ class UserEmailService:
             return False, error_msg
     
     async def _send_google_email(self, 
+                                 oauth_service: OAuth2Service,
                                  token: UserEmailToken,
                                  to_email: str, 
                                  subject: str, 
@@ -103,8 +108,8 @@ class UserEmailService:
         """Send email via Gmail API"""
         try:
             # Decrypt tokens
-            access_token = self.oauth_service.decrypt_aes_gcm(token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
-            refresh_token = self.oauth_service.decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if token.refresh_token_encrypted else None
+            access_token = oauth_service.decrypt_aes_gcm(token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+            refresh_token = oauth_service.decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if token.refresh_token_encrypted else None
             
             creds = Credentials(
                 token=access_token,
@@ -156,6 +161,7 @@ class UserEmailService:
             return False, f"Failed to send via Gmail API: {str(e)}"
     
     async def _send_microsoft_email(self, 
+                                    oauth_service: OAuth2Service,
                                     token: UserEmailToken,
                                     to_email: str, 
                                     subject: str, 
@@ -171,7 +177,7 @@ class UserEmailService:
                 client_credential=settings.MICROSOFT_CLIENT_SECRET
             )
             
-            refresh_token = self.oauth_service.decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+            refresh_token = oauth_service.decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
             result = app.acquire_token_by_refresh_token(
                 refresh_token,
                 scopes=["https://graph.microsoft.com/Mail.Send"]

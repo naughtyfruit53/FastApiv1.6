@@ -60,6 +60,16 @@ export const userService = {
     }
   },
 
+  // Refresh OAuth token
+  refreshToken: async (tokenId: number): Promise<any> => {
+    try {
+      const response = await api.post(`/oauth/tokens/${tokenId}/refresh`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to refresh token");
+    }
+  },
+
   // NEW: Validate role before creation
   validateRole: (role: string): boolean => {
     const validRoles = ["super_admin", "org_admin", "management", "manager", "executive"];
