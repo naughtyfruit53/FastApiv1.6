@@ -1,11 +1,20 @@
 # app/models/organization_settings.py
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 from typing import Optional
 from datetime import datetime
+import enum
+
+
+class VoucherCounterResetPeriod(enum.Enum):
+    """Voucher counter reset period options"""
+    NEVER = "never"
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    ANNUALLY = "annually"
 
 class OrganizationSettings(Base):
     """Organization-wide settings including email preferences"""
@@ -21,6 +30,20 @@ class OrganizationSettings(Base):
     
     # Future extensibility for other organization-wide settings
     auto_send_notifications: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    
+    # Voucher Settings (Requirement 5)
+    voucher_prefix: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)  # Max 5 chars
+    voucher_prefix_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Voucher Counter Reset Settings (Requirement 6)
+    voucher_counter_reset_period: Mapped[VoucherCounterResetPeriod] = mapped_column(
+        SQLEnum(VoucherCounterResetPeriod, values_callable=lambda enum: [e.value for e in enum]),
+        default=VoucherCounterResetPeriod.ANNUALLY,
+        nullable=False
+    )
+    
+    # Voucher Format Template (Requirement 7)
+    voucher_format_template_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Custom settings (JSON for flexibility)
     custom_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
@@ -38,5 +61,36 @@ class OrganizationSettings(Base):
     __table_args__ = (
         Index('idx_organization_settings_organization_id', 'organization_id'),
         Index('idx_organization_settings_mail_1_level_up', 'mail_1_level_up_enabled'),
+        {'extend_existing': True}
+    )
+
+
+class VoucherFormatTemplate(Base):
+    """Voucher format templates for PDF and email generation (Requirement 7)"""
+    __tablename__ = "voucher_format_templates"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Template identification
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    
+    # Template configuration (JSON with layout, styles, etc.)
+    template_config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    
+    # Preview image
+    preview_image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    
+    # Availability
+    is_system_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # System vs custom
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    __table_args__ = (
+        Index('idx_voucher_format_template_active', 'is_active'),
+        Index('idx_voucher_format_template_system', 'is_system_template'),
         {'extend_existing': True}
     )

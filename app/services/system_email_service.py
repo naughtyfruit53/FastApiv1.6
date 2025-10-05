@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.core.logging import log_email_operation
 from app.models import User, OTPVerification, EmailSend, EmailProvider, EmailStatus, EmailType
+from app.models.email import MailAccount
 from app.models.vouchers import PurchaseVoucher, SalesVoucher, PurchaseOrder, SalesOrder
 from app.services.role_hierarchy_service import RoleHierarchyService
 import logging
@@ -28,7 +29,7 @@ import brevo_python as sib_api_v3_sdk
 from brevo_python.rest import ApiException
 
 # Assuming engine is defined in database.py; adjust if needed
-from app.core.database import sync_engine, SessionLocal
+from app.core.database import sync_engine, SessionLocal, AsyncSessionLocal
 from app.services.user_email_service import user_email_service
 
 logger = logging.getLogger(__name__)
@@ -828,8 +829,8 @@ system_email_service = SystemEmailService()
 async def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email: str, recipient_name: str,
                       organization_id: Optional[int] = None, created_by_id: int = None) -> tuple[bool, Optional[str]]:
     """
-    Send email for a voucher with enhanced audit logging.
-    Sends from creator's email if connected, else system email.
+    Send email for a voucher using user_email_service only (privacy requirement).
+    NO FALLBACK to system email - fails if user email account is not available.
     Returns tuple of (success: bool, error_message: Optional[str])
     """
     db = AsyncSessionLocal()
@@ -860,6 +861,11 @@ async def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email
         if not created_by_id:
             created_by_id = voucher.created_by_id if hasattr(voucher, 'created_by_id') else None
         
+        if not created_by_id:
+            error_msg = "Creator ID is required for sending voucher emails"
+            logger.error(error_msg)
+            return False, error_msg
+        
         # Generate details string; adjust based on actual model fields
         details = (
             f"Voucher Number: {voucher.voucher_number}\n"
@@ -878,55 +884,46 @@ async def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email
         
         subject = f"TRITIQ ERP - {voucher_type.replace('_', ' ').title()} #{voucher.voucher_number}"
         
-        # Try to send from creator's email if possible
-        sent = False
-        error = None
-        if created_by_id:
-            # Fetch creator
-            stmt = select(User).filter(User.id == created_by_id)
-            result = await db.execute(stmt)
-            creator = result.scalars().first()
-            
-            if creator:
-                # Find creator's mail account (assume first active one)
-                stmt = select(MailAccount).filter(
-                    MailAccount.user_id == created_by_id,
-                    MailAccount.is_active == True,
-                    MailAccount.sync_enabled == True
-                ).limit(1)
-                result = await db.execute(stmt)
-                account = result.scalars().first()
-                
-                if account:
-                    success, err = await user_email_service.send_email(
-                        db=db,
-                        account_id=account.id,
-                        to_email=recipient_email,
-                        subject=subject,
-                        body=plain_text,
-                        html_body=html_content
-                    )
-                    if success:
-                        sent = True
-                        logger.info(f"Voucher email sent from user {created_by_id}'s account to {recipient_email}")
-                    else:
-                        error = err
-                        logger.warning(f"Failed to send from user account: {err}. Falling back to system.")
+        # Fetch creator
+        stmt = select(User).filter(User.id == created_by_id)
+        result = await db.execute(stmt)
+        creator = result.scalars().first()
         
-        # Fallback to system if not sent via user (org-level task using system fallback)
-        if not sent:
-            success, error = await system_email_service._send_email(
-                to_email=recipient_email,
-                subject=subject,
-                body=plain_text,
-                html_body=html_content,
-                email_type=EmailType.NOTIFICATION,
-                organization_id=organization_id,
-                user_id=created_by_id or None,
-                db=db
-            )
+        if not creator:
+            error_msg = f"Creator user not found: {created_by_id}"
+            logger.error(error_msg)
+            return False, error_msg
         
-        return success, error
+        # Find creator's mail account (assume first active one)
+        stmt = select(MailAccount).filter(
+            MailAccount.user_id == created_by_id,
+            MailAccount.is_active == True,
+            MailAccount.sync_enabled == True
+        ).limit(1)
+        result = await db.execute(stmt)
+        account = result.scalars().first()
+        
+        if not account:
+            error_msg = f"No active email account found for user {created_by_id}. Please connect an email account to send vouchers."
+            logger.error(error_msg)
+            return False, error_msg
+        
+        # Send using user_email_service ONLY - no fallback
+        success, err = await user_email_service.send_email(
+            db=db,
+            account_id=account.id,
+            to_email=recipient_email,
+            subject=subject,
+            body=plain_text,
+            html_body=html_content
+        )
+        
+        if success:
+            logger.info(f"Voucher email sent from user {created_by_id}'s account to {recipient_email}")
+        else:
+            logger.error(f"Failed to send voucher email from user account: {err}")
+        
+        return success, err
         
     except Exception as e:
         error_msg = f"Failed to send voucher email for {voucher_type} #{voucher_id}: {str(e)}"
