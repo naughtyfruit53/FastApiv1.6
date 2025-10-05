@@ -16,7 +16,7 @@ from app.schemas import UserCreate, UserInDB
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
-from app.services.email_service import email_service  # Assuming email_service exists for sending emails
+from app.services.system_email_service import system_email_service  # Use system_email_service for sending emails
 from app.services.otp_service import OTPService  # Import OTP service class
 
 logger = logging.getLogger(__name__)
@@ -252,7 +252,7 @@ async def create_user_in_organization(
         logger.info(f"User {new_user.email} created in org {org.name} by {current_user.email}")
 
         # Send welcome email with login link (OTP already sent if password was None)
-        success, error = email_service.send_user_creation_email(
+        success, error = await system_email_service.send_user_creation_email(
             user_email=new_user.email,
             user_name=new_user.full_name,
             temp_password=user_data.password,
@@ -535,7 +535,7 @@ async def reset_user_password(
         db.commit()
         
         # Send email with new password
-        success, error = email_service.send_password_reset_email(
+        success, error = await system_email_service.send_password_reset_email(
             user_email=user.email,
             user_name=user.full_name,
             new_password=new_password,

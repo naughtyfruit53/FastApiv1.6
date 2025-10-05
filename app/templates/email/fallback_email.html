@@ -1,0 +1,30 @@
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2 style="color: #007bff;">TRITIQ ERP - {{{title}}}</h2>
+    <p>Dear {{{user_name}}},</p>
+    <p>{{{message}}}</p>
+    
+    {{#if new_password}}
+    <div style="background-color: #f8f9fa; border: 2px solid #007bff; padding: 15px; margin: 20px 0; text-align: center;">
+        <strong>New Password: <span style="font-family: monospace; color: #007bff;">{{{new_password}}}</span></strong>
+    </div>
+    {{/if}}
+    
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0;">
+        <strong>⚠️ Important:</strong> {{{important_note}}}
+    </div>
+    
+    {{#if details}}
+    <h3>Details:</h3>
+    <ul>
+        {{#each details}}
+        <li><strong>{{@key}}:</strong> {{{this}}}</li>
+        {{/each}}
+    </ul>
+    {{/if}}
+    
+    <p style="color: #d73527;"><strong>{{{security_note}}}</strong></p>
+    
+    <p>Best regards,<br>TRITIQ ERP Team</p>
+</body>
+</html>

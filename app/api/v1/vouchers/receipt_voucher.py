@@ -10,7 +10,7 @@ from app.models import User
 from app.models.vouchers.financial import ReceiptVoucher
 from app.models.erp_models import ChartOfAccounts
 from app.schemas.vouchers import ReceiptVoucherCreate, ReceiptVoucherInDB, ReceiptVoucherUpdate
-from app.services.email_service import send_voucher_email
+from app.services.system_email_service import send_voucher_email
 import logging
 import re
 from sqlalchemy.sql import text  # Added import for text

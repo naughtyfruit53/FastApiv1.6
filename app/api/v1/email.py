@@ -15,7 +15,8 @@ from pydantic import BaseModel
 
 from app.core.database import get_db, SessionLocal
 from app.services.rbac import PermissionChecker
-from app.services.email_service import email_management_service, link_email_to_customer_vendor, auto_link_emails_by_sender
+from app.services.system_email_service import system_email_service, link_email_to_customer_vendor, auto_link_emails_by_sender
+from app.services.user_email_service import user_email_service
 from app.services.email_sync_worker import email_sync_worker
 from app.services.oauth_service import OAuth2Service
 from app.services.calendar_sync_service import calendar_sync_service
@@ -391,7 +392,7 @@ async def get_account_emails(
     total_result = await db.execute(total_stmt)
     total_count = total_result.scalar()
     
-    # Convert emails to Pydantic models
+    # Convert to Pydantic models
     email_responses = [EmailListItemResponse.from_orm(email) for email in emails]
     
     return EmailListResponse(
@@ -1053,7 +1054,7 @@ async def link_email_to_entity(
                 detail="Must provide either customer_id or vendor_id"
             )
         
-        success, error = link_email_to_customer_vendor(
+        success, error = await link_email_to_customer_vendor(
             email_id=email_id,
             customer_id=customer_id,
             vendor_id=vendor_id,
@@ -1092,7 +1093,7 @@ async def auto_link_emails(
     Automatically link emails to customers/vendors based on sender addresses
     """
     try:
-        result = auto_link_emails_by_sender(
+        result = await auto_link_emails_by_sender(
             organization_id=current_user.organization_id,
             limit=limit
         )
@@ -1107,34 +1108,40 @@ async def auto_link_emails(
 
 @router.post("/compose", response_model=Dict[str, Any])
 async def compose_email(
-    to_email: str,
-    subject: str,
-    body: str,
-    html_body: Optional[str] = None,
+    account_id: int = Query(..., description="ID of the email account to send from"),
+    to_email: str = Query(..., description="Recipient email"),
+    subject: str = Query(..., description="Email subject"),
+    body: str = Query(..., description="Plain text body"),
+    html_body: Optional[str] = Query(None, description="Optional HTML body"),
     current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Compose and send email with automatic role-based BCC functionality.
-    
-    This endpoint demonstrates the Mail 1 Level Up feature:
-    - Executive emails will BCC their assigned Manager
-    - Manager emails will BCC Management users  
-    - Management emails will not BCC anyone (top level)
+    Compose and send email from user's connected account using provider API.
+    Supports Mail 1 Level Up BCC if enabled in organization settings.
     """
-    from app.services.email_service import email_service
     from app.models import EmailType
+    from app.services.system_email_service import system_email_service
     
     try:
-        # Use the enhanced email service with BCC functionality
-        success, error_msg = await email_service.send_email_with_role_bcc(
+        # Check if Mail 1 Level Up is enabled
+        stmt = select(OrganizationSettings).filter(OrganizationSettings.organization_id == current_user.organization_id)
+        result = await db.execute(stmt)
+        org_settings = result.scalars().first()
+        
+        bcc_emails = []
+        if org_settings and org_settings.mail_1_level_up_enabled and current_user:
+            bcc_emails = await system_email_service.role_hierarchy_service.get_bcc_recipient_for_user(db, current_user)
+        
+        # Send via user email service
+        success, error = await user_email_service.send_email(
             db=db,
+            account_id=account_id,
             to_email=to_email,
             subject=subject,
             body=body,
             html_body=html_body,
-            sender_user=current_user,
-            email_type=EmailType.TRANSACTIONAL
+            bcc_emails=bcc_emails
         )
         
         if success:
@@ -1143,12 +1150,12 @@ async def compose_email(
                 "to_email": to_email,
                 "subject": subject,
                 "sender_role": current_user.role,
-                "mail_1_level_up_applied": True
+                "mail_1_level_up_applied": bool(bcc_emails)
             }
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to send email: {error_msg}"
+                detail=f"Failed to send email: {error}"
             )
             
     except Exception as e:

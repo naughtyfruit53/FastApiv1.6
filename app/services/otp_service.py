@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 import logging
 import random
 import string
+import asyncio
 
 from app.models.system_models import OTPVerification
 from app.core.security import get_password_hash, verify_password
-from app.services.email_service import email_service  # Import for sending email
+from app.services.system_email_service import system_email_service  # Import for sending email
 from app.services.whatsapp_service import whatsapp_service  # Import for sending WhatsApp
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,8 @@ class OTPService:
             # Fallback to email if WhatsApp failed or not requested
             if not delivery_success:
                 template = "factory_reset_otp.html" if purpose == "reset_data" else "otp.html"
-                success, error = email_service.send_otp_email(email, otp, purpose, template=template)
+                loop = asyncio.get_event_loop()
+                success, error = loop.run_until_complete(system_email_service.send_otp_email(email, otp, purpose, template=template))
                 
                 if success:
                     delivery_success = True

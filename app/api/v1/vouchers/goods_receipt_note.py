@@ -10,7 +10,7 @@ from app.api.v1.auth import get_current_active_user
 from app.models import User, Stock
 from app.models.vouchers.purchase import GoodsReceiptNote, GoodsReceiptNoteItem, PurchaseOrderItem
 from app.schemas.vouchers import GRNCreate, GRNInDB, GRNUpdate
-from app.services.email_service import send_voucher_email
+from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
 

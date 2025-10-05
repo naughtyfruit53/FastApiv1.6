@@ -1,7 +1,5 @@
 # app/api/v1/organizations/license_routes.py
 
-# app/api/v1/organizations/license_routes.py
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Dict
@@ -14,7 +12,7 @@ from app.api.v1.auth import get_current_active_user
 from app.models import Organization, User
 from app.schemas.user import UserRole
 from app.schemas import OrganizationLicenseCreate, OrganizationLicenseResponse
-from .services import OrganizationService, email_service, EMAIL_SERVICE_AVAILABLE
+from .services import OrganizationService
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +125,6 @@ async def create_organization_license(
             detail="Only super administrators can create organization licenses"
         )
     
-    result = OrganizationService.create_license(db, license_data, current_user)
+    result = await OrganizationService.create_license(db, license_data, current_user)
 
     return result

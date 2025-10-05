@@ -25,27 +25,9 @@ from app.core.security import get_password_hash
 from app.core.logging import log_license_creation, log_email_operation
 from app.services.rbac import RBACService
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
-from app.services.email_service import email_service
+from app.services.system_email_service import system_email_service
 
 logger = logging.getLogger(__name__)
-
-email_service = None
-EMAIL_SERVICE_AVAILABLE = False
-
-def _initialize_email_service():
-    """Initialize email service if available."""
-    global email_service, EMAIL_SERVICE_AVAILABLE
-    try:
-        from app.services.email_service import email_service as _email_service
-        email_service = _email_service
-        EMAIL_SERVICE_AVAILABLE = True
-        logger.info("Email service initialized successfully")
-    except ImportError as e:
-        EMAIL_SERVICE_AVAILABLE = False
-        email_service = None
-        logger.warning(f"Email service not available: {e}")
-
-_initialize_email_service()
 
 def generate_subdomain(name: str) -> str:
     """Generate a clean subdomain from organization name"""
@@ -250,7 +232,7 @@ class OrganizationService:
 
             log_license_creation(organization.name, license_data.superadmin_email, current_user.email)
 
-            success, email_error = email_service.send_license_creation_email(
+            success, email_error = await system_email_service.send_license_creation_email(
                 license_data.superadmin_email,
                 "Organization Admin",
                 license_data.organization_name,

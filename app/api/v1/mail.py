@@ -1,7 +1,7 @@
 # app/api/v1/mail.py
 
 """
-Mail and Email Management API endpoints - Enhanced Brevo transactional email support
+Mail and Email Management API endpoints - Enhanced Brevo transactional transactional email support
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
@@ -16,7 +16,7 @@ from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.config import settings
 from app.models import User, EmailSend, EmailStatus, EmailProvider, EmailType
-from app.services.email_service import email_service
+from app.services.system_email_service import system_email_service
 from app.api.v1.user import get_current_active_user
 from app.schemas.user import (
     PasswordResetTokenRequest, PasswordResetConfirmRequest, 
@@ -68,7 +68,7 @@ async def request_password_reset(
         reset_url = f"{getattr(settings, 'FRONTEND_URL', 'https://fast-apiv1-6.vercel.app')}/reset-password?token={reset_token}&email={user.email}"
         
         # Send reset email with token
-        success, error = email_service.send_password_reset_token_email(
+        success, error = await system_email_service.send_password_reset_token_email(
             user_email=user.email,
             user_name=user.full_name or user.username,
             reset_url=reset_url,

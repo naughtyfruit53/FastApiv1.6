@@ -15,12 +15,13 @@ from app.schemas.user import (
 )
 from app.core.security import get_password_hash, verify_password, is_super_admin_email
 from app.core.audit import AuditLogger
-from app.services.email_service import email_service
+from app.services.system_email_service import system_email_service
 from app.services.rbac import RBACService  # ADDED FOR ROLE ASSIGNMENT
 from app.services.otp_service import OTPService  # Import OTP service class
 import secrets
 import string
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -356,13 +357,14 @@ class UserService:
         email_sent = False
         email_error = None
         try:
-            success, error = email_service.send_password_reset_email(
+            loop = asyncio.get_event_loop()
+            success, error = loop.run_until_complete(system_email_service.send_password_reset_email(
                 target_email, 
                 target_user.full_name or target_user.username,
                 new_password, 
                 admin_user.full_name or admin_user.email,
                 organization_name=None
-            )
+            ))
             email_sent = success
             email_error = error
         except Exception as e:
@@ -425,13 +427,14 @@ class UserService:
                 email_sent = False
                 email_error = None
                 try:
-                    success, error = email_service.send_password_reset_email(
+                    loop = asyncio.get_event_loop()
+                    success, error = loop.run_until_complete(system_email_service.send_password_reset_email(
                         user.email, 
                         user.full_name or user.username,
                         new_password, 
                         admin_user.full_name or admin_user.email,
                         organization_name=None
-                    )
+                    ))
                     email_sent = success
                     email_error = error
                 except Exception as e:
@@ -505,13 +508,14 @@ class UserService:
                 email_sent = False
                 email_error = None
                 try:
-                    success, error = email_service.send_password_reset_email(
+                    loop = asyncio.get_event_loop()
+                    success, error = loop.run_until_complete(system_email_service.send_password_reset_email(
                         user.email, 
                         user.full_name or user.username,
                         new_password, 
                         admin_user.full_name or admin_user.email,
                         organization_name=None
-                    )
+                    ))
                     email_sent = success
                     email_error = error
                 except Exception as e:

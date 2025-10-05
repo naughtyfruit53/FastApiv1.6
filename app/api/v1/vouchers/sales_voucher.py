@@ -12,10 +12,11 @@ from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.sales import SalesVoucher, SalesVoucherItem
 from app.schemas.vouchers import SalesVoucherCreate, SalesVoucherInDB, SalesVoucherUpdate
-from app.services.email_service import send_voucher_email
+from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sales-vouchers"])
@@ -99,7 +100,6 @@ async def create_sales_voucher(
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
                     db, "SV", current_user.organization_id, SalesVoucher
                 )
-        
         db_invoice = SalesVoucher(**invoice_data)
         db.add(db_invoice)
         await db.flush()
@@ -179,11 +179,12 @@ async def create_sales_voucher(
         
         if send_email and db_invoice.customer and db_invoice.customer.email:
             background_tasks.add_task(
-                send_voucher_email,
-                voucher_type="sales_voucher",
-                voucher_id=db_invoice.id,
-                recipient_email=db_invoice.customer.email,
-                recipient_name=db_invoice.customer.name
+                lambda: asyncio.run(send_voucher_email(
+                    voucher_type="sales_voucher",
+                    voucher_id=db_invoice.id,
+                    recipient_email=db_invoice.customer.email,
+                    recipient_name=db_invoice.customer.name
+                ))
             )
         
         logger.info(f"Sales voucher {db_invoice.voucher_number} created by {current_user.email}")

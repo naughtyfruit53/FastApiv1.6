@@ -46,6 +46,7 @@ from app.core.config import settings
 from app.models.oauth_models import UserEmailToken, OAuthProvider
 from app.models.email import MailAccount, Email, EmailAttachment, EmailAccountType, EmailStatus, EmailSyncStatus
 from app.utils.crypto_aes_gcm import encrypt_aes_gcm, EncryptionKeysAESGCM
+from app.services.oauth_service import OAuth2Service
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ class EmailAPISyncService:
     
     def __init__(self, db: Session = None):
         self.db = db
+        self.oauth_service = OAuth2Service()
     
     def sync_account_via_api(self, account: MailAccount, db: Session, force_full_sync: bool = False) -> Tuple[bool, int, Optional[str]]:
         """

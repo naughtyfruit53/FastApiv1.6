@@ -9,13 +9,13 @@ from typing import List, Dict, Optional
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission
-from app.models import User
+from app.models import User, Organization
 from app.schemas.user import UserRole
 from app.schemas import UserCreate, UserInDB
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
-from .services import email_service, EMAIL_SERVICE_AVAILABLE  # Assuming this is where email_service is defined
+from app.services.system_email_service import system_email_service  # Use system_email_service for sending emails
 
 import logging
 import secrets
@@ -122,13 +122,16 @@ async def resend_organization_invitation(
   
     try:
         # Send invitation email (if email service is configured)
-        if EMAIL_SERVICE_AVAILABLE and email_service:
-            await email_service.send_email(
+        if system_email_service.enable_brevo:
+            success, error = await system_email_service._send_email(
                 to_email=user.email,
                 subject=f"Invitation to join {org.name} (Resent)",
                 body=f"You have been invited to join {org.name}. Please login with your credentials to complete your account setup."
             )
-            logger.info(f"Invitation email resent to {user.email}")
+            if success:
+                logger.info(f"Invitation email resent to {user.email}")
+            else:
+                logger.error(f"Failed to resend invitation email: {error}")
       
         logger.info(f"Invitation resent for {user.email} in organization {org.name} by {current_user.email}")
         return {"message": f"Invitation resent to {user.email}"}
@@ -275,13 +278,16 @@ async def invite_user_to_organization(
       
         # Send invitation email (if email service is configured)
         try:
-            if EMAIL_SERVICE_AVAILABLE and email_service:
-                await email_service.send_email(
+            if system_email_service.enable_brevo:
+                success, error = await system_email_service._send_email(
                     to_email=new_user.email,
                     subject=f"Invitation to join {org.name}",
                     body=f"You have been invited to join {org.name}. Please login with your temporary password: {temp_password} and change it upon first login."
                 )
-                logger.info(f"Invitation email sent to {new_user.email}")
+                if success:
+                    logger.info(f"Invitation email sent to {new_user.email}")
+                else:
+                    logger.error(f"Failed to send invitation email: {error}")
             else:
                 logger.info("Email service not available - skipping invitation email")
         except Exception as email_error:

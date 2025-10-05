@@ -11,7 +11,7 @@ from app.models.customer_models import Vendor, Customer  # Vendor and Customer a
 from app.models.hr_models import EmployeeProfile as Employee  # Employee is EmployeeProfile in hr_models.py
 from app.models.erp_models import ChartOfAccounts
 from app.schemas.vouchers import PaymentVoucherCreate, PaymentVoucherInDB, PaymentVoucherUpdate
-from app.services.email_service import send_voucher_email
+from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
 
