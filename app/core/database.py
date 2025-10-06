@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 import logging
 from fastapi import HTTPException
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.exc import SQLAlchemyError
 import psycopg.errors as pg_errors
 import asyncio
 import urllib.parse
@@ -38,18 +38,18 @@ is_session_mode = port == 5432
 
 # Database engine configuration based on mode
 if is_session_mode:
-    # Session mode: small pool
+    # Session mode: small pool (increased from 1/0 to 5/10 to handle concurrent requests)
     engine_kwargs = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
         "echo": settings.DEBUG,
-        "pool_size": 1,
-        "max_overflow": 0,
+        "pool_size": 5,  # Increased to handle multiple concurrent requests
+        "max_overflow": 10,  # Allow temporary overflow
         "pool_timeout": 120,
     }
-    logger.info("Using Supabase session mode (port 5432) - pool_size=1, max_overflow=0")
+    logger.info("Using Supabase session mode (port 5432) - pool_size=5, max_overflow=10")
 else:
-    # Transaction mode: larger pool (but consider smaller for pooler)
+    # Transaction mode: larger pool
     engine_kwargs = {
         "pool_pre_ping": True,
         "pool_recycle": 300,

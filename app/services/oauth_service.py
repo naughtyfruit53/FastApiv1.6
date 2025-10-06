@@ -41,6 +41,10 @@ class OAuth2Service:
         
         if provider == OAuthProvider.GOOGLE or provider == OAuthProvider.GMAIL:
             from google_auth_oauthlib.flow import Flow
+            # Check if credentials are configured
+            if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+                logger.error("Google OAuth credentials not configured in environment variables.")
+                raise ValueError("Google OAuth credentials (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET) are not set in .env file. Please configure them to use Google authentication.")
             flow = Flow.from_client_config(
                 {
                     "web": {
@@ -58,6 +62,10 @@ class OAuth2Service:
             
         elif provider == OAuthProvider.MICROSOFT or provider == OAuthProvider.OUTLOOK:
             from msal import ConfidentialClientApplication
+            # Check if credentials are configured
+            if not settings.MICROSOFT_CLIENT_ID or not settings.MICROSOFT_CLIENT_SECRET:
+                logger.error("Microsoft OAuth credentials not configured in environment variables.")
+                raise ValueError("Microsoft OAuth credentials (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET) are not set in .env file. Please configure them to use Microsoft authentication.")
             app = ConfidentialClientApplication(
                 settings.MICROSOFT_CLIENT_ID,
                 authority=settings.MICROSOFT_AUTHORITY,
@@ -93,6 +101,10 @@ class OAuth2Service:
         
         if provider == OAuthProvider.GOOGLE or provider == OAuthProvider.GMAIL:
             from google_auth_oauthlib.flow import Flow
+            # Check if credentials are configured
+            if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+                logger.error("Google OAuth credentials not configured in environment variables.")
+                raise ValueError("Google OAuth credentials (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET) are not set in .env file. Please configure them to use Google authentication.")
             flow = Flow.from_client_config(
                 {
                     "web": {
@@ -127,6 +139,10 @@ class OAuth2Service:
             
         elif provider == OAuthProvider.MICROSOFT or provider == OAuthProvider.OUTLOOK:
             from msal import ConfidentialClientApplication
+            # Check if credentials are configured
+            if not settings.MICROSOFT_CLIENT_ID or not settings.MICROSOFT_CLIENT_SECRET:
+                logger.error("Microsoft OAuth credentials not configured in environment variables.")
+                raise ValueError("Microsoft OAuth credentials (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET) are not set in .env file. Please configure them to use Microsoft authentication.")
             app = ConfidentialClientApplication(
                 settings.MICROSOFT_CLIENT_ID,
                 authority=settings.MICROSOFT_AUTHORITY,
@@ -306,6 +322,14 @@ class OAuth2Service:
             new_expiry = None
             
             if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
+                # Check if Google credentials are configured
+                if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+                    error_msg = "Google OAuth credentials (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET) are not set in .env file. Please configure them to use Google authentication."
+                    logger.error(error_msg)
+                    token.status = TokenStatus.REFRESH_FAILED
+                    token.last_sync_error = error_msg
+                    await self.db.commit()
+                    return False
                 try:
                     creds = Credentials(
                         token=None,
@@ -341,6 +365,14 @@ class OAuth2Service:
                     raise ValueError(error_msg)
                 
             elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
+                # Check if Microsoft credentials are configured
+                if not settings.MICROSOFT_CLIENT_ID or not settings.MICROSOFT_CLIENT_SECRET:
+                    error_msg = "Microsoft OAuth credentials (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET) are not set in .env file. Please configure them to use Microsoft authentication."
+                    logger.error(error_msg)
+                    token.status = TokenStatus.REFRESH_FAILED
+                    token.last_sync_error = error_msg
+                    await self.db.commit()
+                    return False
                 try:
                     from msal import ConfidentialClientApplication
                     app = ConfidentialClientApplication(
@@ -443,6 +475,14 @@ class OAuth2Service:
             new_expiry = None
             
             if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
+                # Check if Google credentials are configured
+                if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+                    error_msg = "Google OAuth credentials (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET) are not set in .env file. Please configure them to use Google authentication."
+                    logger.error(error_msg)
+                    token.status = TokenStatus.REFRESH_FAILED
+                    token.last_sync_error = error_msg
+                    db.commit()
+                    return False
                 try:
                     creds = Credentials(
                         token=None,
@@ -478,6 +518,14 @@ class OAuth2Service:
                     raise ValueError(error_msg)
                 
             elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
+                # Check if Microsoft credentials are configured
+                if not settings.MICROSOFT_CLIENT_ID or not settings.MICROSOFT_CLIENT_SECRET:
+                    error_msg = "Microsoft OAuth credentials (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET) are not set in .env file. Please configure them to use Microsoft authentication."
+                    logger.error(error_msg)
+                    token.status = TokenStatus.REFRESH_FAILED
+                    token.last_sync_error = error_msg
+                    db.commit()
+                    return False
                 try:
                     from msal import ConfidentialClientApplication
                     app = ConfidentialClientApplication(

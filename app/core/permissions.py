@@ -90,6 +90,10 @@ class Permission:
     # CRM Admin Permissions
     CRM_ADMIN = "crm_admin"
     CRM_SETTINGS = "crm_settings"
+    
+    # Voucher management permissions
+    VIEW_VOUCHERS = "view_vouchers"
+    MANAGE_VOUCHERS = "manage_vouchers"
 
 
 class PermissionChecker:
@@ -117,6 +121,8 @@ class PermissionChecker:
             Permission.VIEW_AUDIT_LOGS,
             Permission.VIEW_ALL_AUDIT_LOGS,
             Permission.FACTORY_RESET,
+            Permission.VIEW_VOUCHERS,
+            Permission.MANAGE_VOUCHERS,
             # Note: App Super Admins don't have ACCESS_ORG_SETTINGS (per requirements)
         ],
         'org_admin': [
@@ -130,6 +136,8 @@ class PermissionChecker:
             Permission.RESET_ORG_DATA,  # Org admins can reset their org data
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,  # Org admins have access to org settings
+            Permission.VIEW_VOUCHERS,
+            Permission.MANAGE_VOUCHERS,
         ],
         'management': [
             Permission.VIEW_USERS,
@@ -139,6 +147,8 @@ class PermissionChecker:
             Permission.RESET_ORG_DATA,
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,
+            Permission.VIEW_VOUCHERS,
+            Permission.MANAGE_VOUCHERS,
         ],
         'manager': [
             Permission.VIEW_USERS,  # Can view users (their executives)
@@ -146,10 +156,12 @@ class PermissionChecker:
             Permission.RESET_OWN_PASSWORD,
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,  # Limited access
+            Permission.VIEW_VOUCHERS,
         ],
         'executive': [
             Permission.RESET_OWN_PASSWORD,
             Permission.ACCESS_ORG_SETTINGS,  # Basic access
+            Permission.VIEW_VOUCHERS,
         ],
     }
     
