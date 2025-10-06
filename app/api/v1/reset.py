@@ -439,6 +439,49 @@ async def request_emergency_access(
         )
 
 
+@router.post("/data/factory-default")
+async def factory_default_system(
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_super_admin)
+):
+    """
+    Complete system factory reset - RESTRICTED TO GOD SUPERADMIN ONLY
+    Removes ALL organizations, users, and data - resets entire system
+    Only naughtyfruit53@gmail.com can perform this operation
+    """
+    try:
+        # The actual email check happens in the service
+        result = ResetService.factory_default_system(db=db, admin_user=current_user)
+        
+        # Log the factory reset
+        AuditLogger.log_data_reset(
+            db=db,
+            admin_email=current_user.email,
+            admin_user_id=current_user.id,
+            success=True,
+            ip_address=get_client_ip(request),
+            user_agent=get_user_agent(request),
+            reset_scope="FACTORY_DEFAULT",
+            details={
+                "action": "factory_default_system",
+                "deleted_counts": result.get("deleted", {})
+            }
+        )
+        
+        logger.warning(f"FACTORY DEFAULT COMPLETED by {current_user.email}")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Factory default error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to perform factory default reset"
+        )
+
+
 @router.get("/audit/logs")
 async def get_reset_audit_logs(
     organization_id: Optional[int] = None,

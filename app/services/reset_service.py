@@ -20,17 +20,31 @@ class ResetService:
     """Service for system-level reset operations"""
     
     @staticmethod
-    def factory_default_system(db: Session) -> Dict[str, Any]:
+    def factory_default_system(db: Session, admin_user: User) -> Dict[str, Any]:
         """
-        Complete system factory reset (for App Super Admin only)
+        Complete system factory reset (for God Super Admin only - naughtyfruit53@gmail.com)
         Removes ALL organizations, users, and data - resets entire system
         
         Args:
             db: Database session
+            admin_user: Admin user performing the reset (must be god superadmin)
             
         Returns:
             dict: Result with message and deleted counts
+            
+        Raises:
+            HTTPException: If user is not the god superadmin
         """
+        # Restrict to god superadmin only
+        GOD_SUPERADMIN_EMAIL = "naughtyfruit53@gmail.com"
+        if admin_user.email != GOD_SUPERADMIN_EMAIL:
+            from fastapi import HTTPException, status
+            logger.error(f"Unauthorized factory reset attempt by {admin_user.email}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Factory reset is restricted to god superadmin ({GOD_SUPERADMIN_EMAIL}) only"
+            )
+        
         try:
             result = {"message": "System factory reset completed", "deleted": {}}
             

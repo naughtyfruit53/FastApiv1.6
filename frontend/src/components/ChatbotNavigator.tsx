@@ -126,6 +126,28 @@ const ChatbotNavigator: React.FC = () => {
   };
 
   const processUserMessage = async (message: string): Promise<{ message: string; actions?: ChatAction[] }> => {
+    // Try to use backend API first
+    try {
+      const response = await fetch('/api/v1/chatbot/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          message: data.message,
+          actions: data.actions,
+        };
+      }
+    } catch (error) {
+      console.warn('Backend chatbot unavailable, using fallback logic', error);
+    }
+
+    // Fallback to client-side processing if backend fails
     const lowerMsg = message.toLowerCase();
 
     // Navigate commands
