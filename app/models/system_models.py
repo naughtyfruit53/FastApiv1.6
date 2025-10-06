@@ -460,6 +460,15 @@ class EmailSend(Base):
     failed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     
+    # Email scheduling and analytics (Requirement 4: Email scheduling and analytics)
+    scheduled_send_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    opened_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    clicked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    bounced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    bounce_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    open_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    click_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
     # Feature flags
     is_brevo_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     

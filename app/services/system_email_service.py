@@ -1055,3 +1055,119 @@ async def auto_link_emails_by_sender(organization_id: int, limit: int = 100) -> 
         }
     finally:
         await db.close()
+
+# Email Scheduling and Analytics Functions (Requirement 4)
+
+async def schedule_email(
+    db: AsyncSession,
+    to_email: str,
+    subject: str,
+    body: str,
+    scheduled_send_at: datetime,
+    organization_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    email_type: EmailType = EmailType.SYSTEM
+) -> Dict[str, Any]:
+    """
+    Schedule an email to be sent at a future time.
+    Requirement 4: Email scheduling
+    """
+    try:
+        email_send = EmailSend(
+            to_email=to_email,
+            from_email=system_email_service.from_email,
+            subject=subject,
+            email_type=email_type,
+            provider_used=EmailProvider.BREVO,
+            status=EmailStatus.PENDING,
+            organization_id=organization_id,
+            user_id=user_id,
+            scheduled_send_at=scheduled_send_at
+        )
+        
+        db.add(email_send)
+        await db.commit()
+        await db.refresh(email_send)
+        
+        logger.info(f"Email scheduled for {to_email} at {scheduled_send_at}")
+        
+        return {
+            "success": True,
+            "email_id": email_send.id,
+            "scheduled_at": scheduled_send_at.isoformat()
+        }
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error scheduling email: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def track_email_open(db: AsyncSession, email_id: int) -> Dict[str, Any]:
+    """
+    Track when an email is opened.
+    Requirement 4: Email analytics (open rates)
+    """
+    try:
+        stmt = select(EmailSend).where(EmailSend.id == email_id)
+        result = await db.execute(stmt)
+        email_send = result.scalar_one_or_none()
+        
+        if not email_send:
+            return {"success": False, "error": "Email not found"}
+        
+        if not email_send.opened_at:
+            email_send.opened_at = datetime.utcnow()
+        
+        email_send.open_count = (email_send.open_count or 0) + 1
+        await db.commit()
+        
+        return {"success": True, "email_id": email_id, "open_count": email_send.open_count}
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error tracking email open: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def get_email_analytics(
+    db: AsyncSession,
+    organization_id: Optional[int] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> Dict[str, Any]:
+    """
+    Get email analytics (open rates, bounce rates, etc.).
+    Requirement 4: Email analytics reporting
+    """
+    try:
+        stmt = select(EmailSend)
+        
+        if organization_id:
+            stmt = stmt.where(EmailSend.organization_id == organization_id)
+        if start_date:
+            stmt = stmt.where(EmailSend.created_at >= start_date)
+        if end_date:
+            stmt = stmt.where(EmailSend.created_at <= end_date)
+        
+        result = await db.execute(stmt)
+        emails = result.scalars().all()
+        
+        total_emails = len(emails)
+        sent_emails = sum(1 for e in emails if e.status in [EmailStatus.SENT, EmailStatus.DELIVERED])
+        opened_emails = sum(1 for e in emails if e.opened_at is not None)
+        bounced_emails = sum(1 for e in emails if e.bounced_at is not None)
+        
+        open_rate = (opened_emails / sent_emails * 100) if sent_emails > 0 else 0
+        bounce_rate = (bounced_emails / total_emails * 100) if total_emails > 0 else 0
+        
+        return {
+            "success": True,
+            "total_emails": total_emails,
+            "sent_emails": sent_emails,
+            "opened_emails": opened_emails,
+            "bounced_emails": bounced_emails,
+            "open_rate": round(open_rate, 2),
+            "bounce_rate": round(bounce_rate, 2)
+        }
+    except Exception as e:
+        logger.error(f"Error getting email analytics: {e}")
+        return {"success": False, "error": str(e)}
