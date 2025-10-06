@@ -72,9 +72,16 @@ async def get_organization_roles(
     _: int = Depends(require_same_organization)
 ):
     """Get all service roles for an organization"""
-    logger.info(f"User {current_user.id} requesting roles for organization {organization_id}")
-    roles = await rbac_service.get_roles(organization_id, is_active=is_active)
-    return roles
+    try:
+        logger.info(f"User {current_user.id} requesting roles for organization {organization_id}")
+        roles = await rbac_service.get_roles(organization_id, is_active=is_active)
+        return roles
+    except Exception as e:
+        logger.error(f"Error fetching roles for organization {organization_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch organization roles: {str(e)}"
+        )
 
 @router.post("/organizations/{organization_id}/roles", response_model=ServiceRoleInDB)
 async def create_service_role(
@@ -85,12 +92,33 @@ async def create_service_role(
     _: int = Depends(require_same_organization)
 ):
     """Create a new service role"""
-    logger.info(f"User {current_user.id} creating role '{role.name}' for organization {organization_id}")
-    
-    role.organization_id = organization_id
-    
-    db_role = await rbac_service.create_role(role, created_by_user_id=current_user.id)
-    return db_role
+    try:
+        logger.info(f"User {current_user.id} creating role '{role.name}' for organization {organization_id}")
+        
+        # Validate role name is a valid ServiceRoleType enum value
+        try:
+            from app.schemas.rbac import ServiceRoleType
+            # This will raise ValueError if invalid
+            ServiceRoleType(role.name)
+        except ValueError:
+            logger.error(f"Invalid role type: {role.name}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role type '{role.name}'. Must be one of: {', '.join([r.value for r in ServiceRoleType])}"
+            )
+        
+        role.organization_id = organization_id
+        
+        db_role = await rbac_service.create_role(role, created_by_user_id=current_user.id)
+        return db_role
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating service role: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create role: {str(e)}"
+        )
 
 @router.get("/roles/{role_id}", response_model=ServiceRoleWithPermissions)
 async def get_service_role(
@@ -99,24 +127,33 @@ async def get_service_role(
     current_user: User = Depends(require_role_management_permission)
 ):
     """Get a specific service role with its permissions"""
-    logger.info(f"User {current_user.id} requesting role {role_id}")
-    
-    organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
-    
-    role = await rbac_service.get_role_with_permissions(role_id)
-    if not role:
-        raise HTTPException(status_code=404, detail="Role not found")
-    
-    if organization_id and role.organization_id != organization_id:
+    try:
+        logger.info(f"User {current_user.id} requesting role {role_id}")
+        
+        organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
+        
+        role = await rbac_service.get_role_with_permissions(role_id)
+        if not role:
+            raise HTTPException(status_code=404, detail="Role not found")
+        
+        if organization_id and role.organization_id != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to role from different organization"
+            )
+        
+        role_dict = role.__dict__.copy()
+        role_dict['permissions'] = [rp.permission for rp in role.role_permissions]
+        
+        return role_dict
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching service role {role_id}: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to role from different organization"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch role: {str(e)}"
         )
-    
-    role_dict = role.__dict__.copy()
-    role_dict['permissions'] = [rp.permission for rp in role.role_permissions]
-    
-    return role_dict
 
 @router.put("/roles/{role_id}", response_model=ServiceRoleInDB)
 async def update_service_role(
@@ -126,12 +163,26 @@ async def update_service_role(
     current_user: User = Depends(require_role_management_permission)
 ):
     """Update a service role"""
-    logger.info(f"User {current_user.id} updating role {role_id}")
-    
-    organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
-    
-    db_role = await rbac_service.update_role(role_id, updates, organization_id=organization_id)
-    return db_role
+    try:
+        logger.info(f"User {current_user.id} updating role {role_id}")
+        
+        organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
+        
+        db_role = await rbac_service.update_role(role_id, updates, organization_id=organization_id)
+        if not db_role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Role not found"
+            )
+        return db_role
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating service role {role_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update role: {str(e)}"
+        )
 
 @router.delete("/roles/{role_id}")
 async def delete_service_role(
@@ -140,15 +191,24 @@ async def delete_service_role(
     current_user: User = Depends(require_role_management_permission)
 ):
     """Delete a service role"""
-    logger.info(f"User {current_user.id} deleting role {role_id}")
-    
-    organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
-    
-    success = await rbac_service.delete_role(role_id, organization_id=organization_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Role not found")
-    
-    return {"message": "Role deleted successfully"}
+    try:
+        logger.info(f"User {current_user.id} deleting role {role_id}")
+        
+        organization_id = None if getattr(current_user, 'is_super_admin', False) else current_user.organization_id
+        
+        success = await rbac_service.delete_role(role_id, organization_id=organization_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Role not found")
+        
+        return {"message": "Role deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting service role {role_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete role: {str(e)}"
+        )
 
 @router.post("/organizations/{organization_id}/roles/initialize")
 async def initialize_default_roles(
@@ -158,13 +218,20 @@ async def initialize_default_roles(
     _: int = Depends(require_same_organization)
 ):
     """Initialize default service roles for an organization"""
-    logger.info(f"User {current_user.id} initializing default roles for organization {organization_id}")
-    
-    roles = await rbac_service.initialize_default_roles(organization_id)
-    return {
-        "message": f"Initialized {len(roles)} default roles",
-        "roles": roles
-    }
+    try:
+        logger.info(f"User {current_user.id} initializing default roles for organization {organization_id}")
+        
+        roles = await rbac_service.initialize_default_roles(organization_id)
+        return {
+            "message": f"Initialized {len(roles)} default roles",
+            "roles": roles
+        }
+    except Exception as e:
+        logger.error(f"Error initializing default roles for organization {organization_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to initialize default roles: {str(e)}"
+        )
 
 # User Role Assignment Endpoints
 @router.post("/users/{user_id}/roles", response_model=RoleAssignmentResponse)
@@ -175,11 +242,11 @@ async def assign_roles_to_user(
     current_user: User = Depends(require_role_management_permission)
 ):
     """Assign service roles to a user"""
-    logger.info(f"User {current_user.id} assigning roles to user {user_id}")
-    
-    assignment.user_id = user_id
-    
     try:
+        logger.info(f"User {current_user.id} assigning roles to user {user_id}")
+        
+        assignment.user_id = user_id
+        
         assignments = await rbac_service.assign_multiple_roles_to_user(
             user_id, assignment.role_ids, assigned_by_id=current_user.id
         )
@@ -190,9 +257,17 @@ async def assign_roles_to_user(
             assignments=assignments
         )
     except HTTPException as e:
+        logger.error(f"HTTP error assigning roles to user {user_id}: {e.detail}")
         return RoleAssignmentResponse(
             success=False,
             message=f"Failed to assign roles: {e.detail}",
+            assignments=[]
+        )
+    except Exception as e:
+        logger.error(f"Error assigning roles to user {user_id}: {str(e)}", exc_info=True)
+        return RoleAssignmentResponse(
+            success=False,
+            message=f"Failed to assign roles: {str(e)}",
             assignments=[]
         )
 
@@ -204,13 +279,22 @@ async def remove_role_from_user(
     current_user: User = Depends(require_role_management_permission)
 ):
     """Remove a specific role from a user"""
-    logger.info(f"User {current_user.id} removing role {role_id} from user {user_id}")
-    
-    success = await rbac_service.remove_role_from_user(user_id, role_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Role assignment not found")
-    
-    return {"message": "Role removed successfully"}
+    try:
+        logger.info(f"User {current_user.id} removing role {role_id} from user {user_id}")
+        
+        success = await rbac_service.remove_role_from_user(user_id, role_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Role assignment not found")
+        
+        return {"message": "Role removed successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing role {role_id} from user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove role: {str(e)}"
+        )
 
 @router.delete("/users/{user_id}/roles")
 async def remove_all_roles_from_user(
