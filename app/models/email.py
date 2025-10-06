@@ -469,3 +469,145 @@ class VoucherEmailTemplate(Base):
         UniqueConstraint('organization_id', 'voucher_type', 'entity_type', name='uq_org_voucher_entity_template'),
         {'extend_existing': True}
     )
+
+
+class EmailScheduleStatus(enum.Enum):
+    """Status of scheduled emails"""
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ScheduledEmail(Base):
+    """
+    Scheduled emails with delayed send functionality
+    """
+    __tablename__ = "scheduled_emails"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenant
+    organization_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+    
+    # Email details
+    to_address: Mapped[str] = mapped_column(String(255), nullable=False)
+    cc_addresses: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    bcc_addresses: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    subject: Mapped[str] = mapped_column(String(500), nullable=False)
+    body: Mapped[Text] = mapped_column(Text, nullable=False)
+    
+    # Scheduling
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Status
+    status: Mapped[EmailScheduleStatus] = mapped_column(
+        SQLEnum(EmailScheduleStatus, values_callable=lambda enum: [e.value for e in enum]),
+        default=EmailScheduleStatus.PENDING,
+        nullable=False,
+        index=True
+    )
+    
+    # Error tracking
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Attachments (JSON array of file paths)
+    attachment_paths: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    __table_args__ = (
+        Index('idx_scheduled_email_status_time', 'status', 'scheduled_at'),
+        Index('idx_scheduled_email_org', 'organization_id', 'scheduled_at'),
+        {'extend_existing': True}
+    )
+
+
+class EmailAnalytics(Base):
+    """
+    Email tracking and analytics (delivery, open, bounce tracking)
+    """
+    __tablename__ = "email_analytics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenant
+    organization_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True
+    )
+    
+    # Email identification
+    email_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("emails.id"),
+        nullable=True,
+        index=True
+    )
+    scheduled_email_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("scheduled_emails.id"),
+        nullable=True,
+        index=True
+    )
+    
+    # Email details for tracking
+    message_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    to_address: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    
+    # Delivery tracking
+    delivered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Open tracking
+    opened: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    opened_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    open_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Click tracking
+    clicked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    clicked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    click_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Bounce tracking
+    bounced: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    bounced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    bounce_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # hard, soft
+    bounce_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Spam tracking
+    marked_as_spam: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    marked_as_spam_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # User agent and location (for opens)
+    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    __table_args__ = (
+        Index('idx_email_analytics_org_delivered', 'organization_id', 'delivered'),
+        Index('idx_email_analytics_opened', 'opened', 'opened_at'),
+        Index('idx_email_analytics_bounced', 'bounced', 'bounced_at'),
+        {'extend_existing': True}
+    )

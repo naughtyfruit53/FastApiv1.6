@@ -544,6 +544,28 @@ class VoucherPDFGenerator:
             # Prepare data for template
             template_data = await self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)  # Await since now async
             
+            # Load format template configuration from organization settings
+            from app.models.organization_settings import OrganizationSettings, VoucherFormatTemplate
+            stmt_settings = select(OrganizationSettings).filter(
+                OrganizationSettings.organization_id == organization_id
+            )
+            result_settings = await db.execute(stmt_settings)
+            org_settings = result_settings.scalars().first()
+            
+            # Apply format template configuration if available
+            if org_settings and org_settings.voucher_format_template_id:
+                stmt_template = select(VoucherFormatTemplate).filter(
+                    VoucherFormatTemplate.id == org_settings.voucher_format_template_id,
+                    VoucherFormatTemplate.is_active == True
+                )
+                result_template = await db.execute(stmt_template)
+                format_template = result_template.scalars().first()
+                
+                if format_template and format_template.template_config:
+                    # Apply template configuration to template_data
+                    template_data['format_config'] = format_template.template_config
+                    logger.info(f"Using format template: {format_template.name} for voucher")
+            
             # Get template for voucher type
             if voucher_type in ['purchase', 'purchase-vouchers']:
                 template_name = 'purchase_voucher.html'

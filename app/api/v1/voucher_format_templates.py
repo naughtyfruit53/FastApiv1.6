@@ -161,3 +161,73 @@ async def get_default_system_templates(
     result = await db.execute(stmt)
     templates = result.scalars().all()
     return templates
+
+
+@router.get("/{template_id}/preview")
+async def preview_voucher_format_template(
+    template_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+):
+    """
+    Generate a preview image/PDF for a voucher format template
+    Returns sample voucher rendered with the template configuration
+    """
+    from fastapi.responses import StreamingResponse
+    from app.services.pdf_generation_service import pdf_generator
+    import io
+    
+    stmt = select(VoucherFormatTemplate).where(
+        VoucherFormatTemplate.id == template_id
+    )
+    result = await db.execute(stmt)
+    template = result.scalar_one_or_none()
+    
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Voucher format template not found"
+        )
+    
+    # Generate a sample voucher with dummy data
+    sample_voucher_data = {
+        'id': 1,
+        'voucher_number': 'PO/2425/00001',
+        'voucher_date': '2024-01-15',
+        'due_date': '2024-02-15',
+        'vendor_name': 'Sample Vendor Pvt Ltd',
+        'vendor_address': '123 Sample Street, Sample City',
+        'vendor_gst': '29ABCDE1234F1Z5',
+        'total_amount': 11800.00,
+        'items': [
+            {
+                'product_name': 'Sample Product A',
+                'hsn_code': '1234',
+                'quantity': 10,
+                'unit': 'PCS',
+                'unit_price': 1000.00,
+                'gst_rate': 18.0
+            }
+        ]
+    }
+    
+    try:
+        # Generate PDF with the template
+        pdf_bytes = await pdf_generator.generate_voucher_pdf(
+            voucher_type='purchase-orders',
+            voucher_data=sample_voucher_data,
+            db=db,
+            organization_id=current_user.organization_id,
+            current_user=current_user
+        )
+        
+        return StreamingResponse(
+            pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"inline; filename=template_preview_{template_id}.pdf"}
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate preview: {str(e)}"
+        )

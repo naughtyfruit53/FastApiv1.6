@@ -1,7 +1,8 @@
 # app/api/v1/organizations/user_routes.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Dict
 import logging
 import secrets
@@ -29,147 +30,164 @@ async def list_organization_users(
     skip: int = 0,
     limit: int = 100,
     active_only: bool = True,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """List users in organization"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    try:
+        if not current_user.is_super_admin and current_user.organization_id != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this organization"
+            )
+      
+        if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions to list users"
+            )
+      
+        stmt = select(User).filter(User.organization_id == organization_id)
+      
+        if active_only:
+            stmt = stmt.filter(User.is_active == True)
+      
+        stmt = stmt.offset(skip).limit(limit)
+        result = await db.execute(stmt)
+        users = result.scalars().all()
+        return users
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing organization users: {e}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list users"
         )
-  
-    if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to list users"
-        )
-  
-    query = db.query(User).filter(User.organization_id == organization_id)
-  
-    if active_only:
-        query = query.filter(User.is_active == True)
-  
-    users = query.offset(skip).limit(limit).all()
-    return users
 
 @user_router.post("/{organization_id:int}/users", response_model=UserInDB)
 async def create_user_in_organization(
     organization_id: int,
     user_data: UserCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Create user in organization (management or super admin only)"""
-    # Determine if current_user is platform user
-    is_platform_user = not hasattr(current_user, 'organization_id') or current_user.organization_id is None
-    
-    if is_platform_user:
-        if getattr(current_user, 'role', '') != 'super_admin':
+    try:
+        # Determine if current_user is platform user
+        is_platform_user = not hasattr(current_user, 'organization_id') or current_user.organization_id is None
+        
+        if is_platform_user:
+            if getattr(current_user, 'role', '') != 'super_admin':
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied to this organization"
+                )
+        else:
+            if not getattr(current_user, 'is_super_admin', False) and current_user.organization_id != organization_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied to this organization"
+                )
+      
+        if is_platform_user:
+            if getattr(current_user, 'role', '') != 'super_admin':
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only super administrators can create users"
+                )
+        else:
+            if not getattr(current_user, 'is_super_admin', False) and current_user.role not in ["management", "org_admin", "manager"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only authorized users can create users"
+                )
+      
+        result = await db.execute(select(Organization).filter(Organization.id == organization_id))
+        org = result.scalars().first()
+        if not org:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this organization"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
             )
-    else:
-        if not getattr(current_user, 'is_super_admin', False) and current_user.organization_id != organization_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this organization"
-            )
-  
-    if is_platform_user:
-        if getattr(current_user, 'role', '') != 'super_admin':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only super administrators can create users"
-            )
-    else:
-        if not getattr(current_user, 'is_super_admin', False) and current_user.role not in ["management", "org_admin", "manager"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only authorized users can create users"
-            )
-  
-    org = db.query(Organization).filter(Organization.id == organization_id).first()
-    if not org:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
-  
-    existing_user = db.query(User).filter(
-        User.email == user_data.email,
-        User.organization_id == organization_id
-    ).first()
-    if existing_user:
+      
+        result = await db.execute(select(User).filter(
+            User.email == user_data.email,
+            User.organization_id == organization_id
+        ))
+        existing_user = result.scalars().first()
+        if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered in this organization"
         )
   
-    if not is_platform_user and not getattr(current_user, 'is_super_admin', False):
-        user_count = db.query(User).filter(
-            User.organization_id == organization_id,
-            User.is_active == True
-        ).count()
-      
-        if user_count >= org.max_users:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Maximum user limit ({org.max_users}) reached for this organization"
-            )
-  
-    if user_data.role == "management" and not (is_platform_user or getattr(current_user, 'is_super_admin', False) or current_user.role == "org_admin"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators or organization administrators can assign management role"
-        )
-  
-    # Additional check for managers creating users
-    if not is_platform_user and current_user.role == "manager":
-        if user_data.role != "executive":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Managers can only create executives"
-            )
-        user_data.reporting_manager_id = current_user.id
-  
-    # Role-specific validation
-    if user_data.role == "manager":
-        if not user_data.assigned_modules or not any(user_data.assigned_modules.values()):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Managers must have at least one module assigned"
-            )
-    elif user_data.role == "executive":
-        if not user_data.reporting_manager_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Executives must have a reporting manager"
-            )
-        manager = db.query(User).filter(
-            User.id == user_data.reporting_manager_id,
-            User.role == "manager",
-            User.organization_id == organization_id,
-            User.is_active == True
-        ).first()
-        if not manager:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid reporting manager - must be an active manager in the same organization"
-            )
-        if not user_data.sub_module_permissions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Executives must have sub-module permissions defined"
-            )
-        # Validate sub_modules against manager's assigned modules
-        for module in user_data.sub_module_permissions.keys():
-            if not manager.assigned_modules.get(module, False):
+        if not is_platform_user and not getattr(current_user, 'is_super_admin', False):
+            from sqlalchemy import func as sql_func
+            result = await db.execute(select(sql_func.count()).select_from(User).filter(
+                User.organization_id == organization_id,
+                User.is_active == True
+            ))
+            user_count = result.scalar()
+          
+            if user_count >= org.max_users:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Cannot assign sub-modules for {module} - reporting manager does not have access to this module"
+                    detail=f"Maximum user limit ({org.max_users}) reached for this organization"
                 )
+      
+        if user_data.role == "management" and not (is_platform_user or getattr(current_user, 'is_super_admin', False) or current_user.role == "org_admin"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only super administrators or organization administrators can assign management role"
+            )
+      
+        # Additional check for managers creating users
+        if not is_platform_user and current_user.role == "manager":
+            if user_data.role != "executive":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Managers can only create executives"
+                )
+            user_data.reporting_manager_id = current_user.id
+      
+        # Role-specific validation
+        if user_data.role == "manager":
+            if not user_data.assigned_modules or not any(user_data.assigned_modules.values()):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Managers must have at least one module assigned"
+                )
+        elif user_data.role == "executive":
+            if not user_data.reporting_manager_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Executives must have a reporting manager"
+                )
+            result = await db.execute(select(User).filter(
+                User.id == user_data.reporting_manager_id,
+                User.role == "manager",
+                User.organization_id == organization_id,
+                User.is_active == True
+            ))
+            manager = result.scalars().first()
+            if not manager:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid reporting manager - must be an active manager in the same organization"
+                )
+            if not user_data.sub_module_permissions:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Executives must have sub-module permissions defined"
+                )
+            # Validate sub_modules against manager's assigned modules
+            for module in user_data.sub_module_permissions.keys():
+                if not manager.assigned_modules.get(module, False):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Cannot assign sub-modules for {module} - reporting manager does not have access to this module"
+                    )
   
     supabase_uuid = None
     try:

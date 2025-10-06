@@ -30,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import { organizationService } from '../../services/authService';
 import adminService from '../../services/adminService';
 import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
+import { useAuth } from '../../context/AuthContext';
 
 interface Organization {
   id: number;
@@ -49,6 +50,29 @@ const LicenseManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Restrict to app-level accounts only (super admins without organization)
+  const { user } = useAuth();
+  
+  if (!user?.is_super_admin || user?.organization_id) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Security sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
+          <Typography variant="h5" gutterBottom>
+            Access Restricted
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            License management is only available to platform super administrators.
+            Organization-level administrators cannot access this feature.
+          </Typography>
+          <Button variant="contained" onClick={() => router.push('/dashboard')}>
+            Return to Dashboard
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
 
   // API calls using real service
   const { data: organizations, isLoading } = useQuery({
