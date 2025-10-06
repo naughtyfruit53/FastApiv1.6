@@ -31,12 +31,15 @@ const FactoryReset: React.FC = () => {
   >("organization_data");
   const isSuperAdmin = isAppSuperAdmin(user);
   const isOrgAdmin = isOrgSuperAdmin(user);
+  const isGodSuperAdmin = user?.email === 'naughtyfruit53@gmail.com';
   const canReset = canFactoryReset(user);
-  if (!canReset) {
+  
+  // Only god superadmin can access factory reset
+  if (!canReset && !isGodSuperAdmin) {
     return (
       <Alert severity="error">
         You don&apos;t have permission to access reset functionality. Only
-        organization administrators and app super administrators can perform
+        organization administrators and the god superadmin (naughtyfruit53@gmail.com) can perform
         resets.
       </Alert>
     );
@@ -101,8 +104,8 @@ const FactoryReset: React.FC = () => {
             </Paper>
           </Grid>
         )}
-        {/* App Super Admin - Factory Default */}
-        {isSuperAdmin && (
+        {/* God Super Admin Only - Factory Default */}
+        {isGodSuperAdmin && (
           <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3, height: "100%" }}>
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>

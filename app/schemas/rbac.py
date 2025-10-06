@@ -28,6 +28,15 @@ class ServiceModule(str, Enum):
     CUSTOMER_FEEDBACK = "customer_feedback"
     SERVICE_CLOSURE = "service_closure"
     MAIL = "mail"  # Added for mail permissions
+    
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        """Check if a value is a valid module"""
+        try:
+            cls(value)
+            return True
+        except ValueError:
+            return False
 
 
 class ServiceAction(str, Enum):
@@ -52,6 +61,8 @@ class ServicePermissionBase(BaseModel):
     module: ServiceModule = Field(..., description="Module this permission applies to")
     action: ServiceAction = Field(..., description="Action this permission allows")
     is_active: bool = Field(True, description="Whether permission is active")
+    
+    model_config = ConfigDict(use_enum_values=False)  # Keep enum objects, not just values
 
 
 class ServicePermissionCreate(ServicePermissionBase):
@@ -81,7 +92,7 @@ class ServiceRoleBase(BaseModel):
 
 
 class ServiceRoleCreate(ServiceRoleBase):
-    organization_id: int = Field(..., description="Organization ID")
+    organization_id: int = Field(..., description="Organization ID", gt=0)
     permission_ids: List[int] = Field(default_factory=list, description="List of permission IDs to assign")
 
 
