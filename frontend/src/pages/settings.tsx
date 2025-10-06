@@ -76,6 +76,10 @@ export default function Settings() {
   const canAccessOrgSettings = canAccessOrganizationSettings(user);
   const showFactoryResetOnly = canShowFactoryResetOnly(user);
   const showOrgDataResetOnly = canShowOrgDataResetOnly(user);
+  
+  // CRITICAL: God superadmin check for global reset
+  const GOD_SUPERADMIN_EMAIL = "naughtyfruit53@gmail.com";
+  const isGodSuperAdmin = user?.email?.toLowerCase() === GOD_SUPERADMIN_EMAIL.toLowerCase();
   /**
    * @deprecated Organization name should come from React user context, not localStorage
    * Organization context is automatically managed by the backend session
@@ -333,8 +337,8 @@ export default function Settings() {
                   . This action cannot be undone.
                 </Typography>
               </Alert>
-              {/* App Super Admin: Only Factory Reset */}
-              {showFactoryResetOnly && (
+              {/* App Super Admin: Only Factory Reset (God Superadmin only) */}
+              {showFactoryResetOnly && isGodSuperAdmin && (
                 <Button
                   variant="contained"
                   color="error"
@@ -349,6 +353,13 @@ export default function Settings() {
                     "Restore to Factory Defaults"
                   )}
                 </Button>
+              )}
+              {showFactoryResetOnly && !isGodSuperAdmin && (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    Global reset is restricted to god superadmin only (naughtyfruit53@gmail.com)
+                  </Typography>
+                </Alert>
               )}
               {/* Org Super Admin: Only Reset Organization Data */}
               {showOrgDataResetOnly && (
@@ -401,13 +412,15 @@ export default function Settings() {
                 </>
               )}
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                {showFactoryResetOnly
-                  ? "Restore to Factory Defaults: Wipes all app data including organizations, licenses, and license holders"
-                  : showOrgDataResetOnly
-                    ? "Reset Organization Data: Removes all business data but not organization settings"
-                    : isSuperAdmin
-                      ? "As app super admin, this will reset all organization data"
-                      : "Reset data: removes all business data but keeps organization settings"}
+                {showFactoryResetOnly && isGodSuperAdmin
+                  ? "Restore to Factory Defaults: Wipes all app data including organizations, licenses, and license holders (God Superadmin only)"
+                  : showFactoryResetOnly && !isGodSuperAdmin
+                    ? "Global reset is restricted to god superadmin (naughtyfruit53@gmail.com)"
+                    : showOrgDataResetOnly
+                      ? "Reset Organization Data: Removes all business data but not organization settings"
+                      : isSuperAdmin
+                        ? "As app super admin, this will reset all organization data"
+                        : "Reset data: removes all business data but keeps organization settings"}
               </Typography>
             </Paper>
           </Grid>

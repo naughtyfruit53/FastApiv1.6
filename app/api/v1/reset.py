@@ -183,8 +183,17 @@ async def reset_all_organizations_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
-    """Reset data for all organizations (super admin only)"""
+    """Reset data for all organizations (god superadmin only - naughtyfruit53@gmail.com)"""
     try:
+        # CRITICAL SECURITY: Only god superadmin (naughtyfruit53@gmail.com) can perform global reset
+        GOD_SUPERADMIN_EMAIL = "naughtyfruit53@gmail.com"
+        if current_user.email.lower() != GOD_SUPERADMIN_EMAIL.lower():
+            logger.warning(f"Unauthorized global reset attempt by {current_user.email}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Global reset is restricted to god superadmin only"
+            )
+        
         # Only super admin can perform global reset
         PermissionChecker.require_permission(
             Permission.RESET_ANY_DATA,

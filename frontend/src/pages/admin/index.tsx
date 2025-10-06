@@ -20,8 +20,11 @@ import {
 import { useAuth } from "../../context/AuthContext";
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const isGodAccount = user?.email === "naughty@grok.com";
+  // CRITICAL: God superadmin check
+  const GOD_SUPERADMIN_EMAIL = "naughtyfruit53@gmail.com";
+  const isGodAccount = user?.email?.toLowerCase() === GOD_SUPERADMIN_EMAIL.toLowerCase();
   const isSuperAdmin = user?.is_super_admin || user?.role === "super_admin";
+  const isOrgLevelAccount = user?.organization_id != null;
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -32,46 +35,50 @@ const AdminDashboard: React.FC = () => {
         application.
       </Typography>
       <Grid container spacing={3}>
-        {/* License Management */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper>
-            <Box sx={{ p: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <Security sx={{ mr: 2, color: "primary.main" }} />
-                <Typography variant="h6">License Management</Typography>
+        {/* License Management - Only for app-level accounts */}
+        {!isOrgLevelAccount && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Paper>
+              <Box sx={{ p: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Security sx={{ mr: 2, color: "primary.main" }} />
+                  <Typography variant="h6">License Management</Typography>
+                </Box>
+                <Typography variant="body2" color="textSecondary" paragraph>
+                  Create new organization licenses and view existing licenses.
+                  Restricted to license creation and viewing only.
+                </Typography>
+                <Link href="/admin/license-management" passHref>
+                  <Button variant="contained" fullWidth>
+                    Manage Licenses
+                  </Button>
+                </Link>
               </Box>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                Create new organization licenses and view existing licenses.
-                Restricted to license creation and viewing only.
-              </Typography>
-              <Link href="/admin/license-management" passHref>
-                <Button variant="contained" fullWidth>
-                  Manage Licenses
-                </Button>
-              </Link>
-            </Box>
-          </Paper>
-        </Grid>
-        {/* Manage Organizations */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper>
-            <Box sx={{ p: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <Business sx={{ mr: 2, color: "primary.main" }} />
-                <Typography variant="h6">Manage Organizations</Typography>
+            </Paper>
+          </Grid>
+        )}
+        {/* Manage Organizations - Only for app-level accounts */}
+        {!isOrgLevelAccount && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Paper>
+              <Box sx={{ p: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Business sx={{ mr: 2, color: "primary.main" }} />
+                  <Typography variant="h6">Manage Organizations</Typography>
+                </Box>
+                <Typography variant="body2" color="textSecondary" paragraph>
+                  Full organization management including password resets, status
+                  changes, and data operations.
+                </Typography>
+                <Link href="/admin/manage-organizations" passHref>
+                  <Button variant="contained" fullWidth>
+                    Manage Organizations
+                  </Button>
+                </Link>
               </Box>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                Full organization management including password resets, status
-                changes, and data operations.
-              </Typography>
-              <Link href="/admin/manage-organizations" passHref>
-                <Button variant="contained" fullWidth>
-                  Manage Organizations
-                </Button>
-              </Link>
-            </Box>
-          </Paper>
-        </Grid>
+            </Paper>
+          </Grid>
+        )}
         {/* App User Management - Only for God Account */}
         {isGodAccount && (
           <Grid size={{ xs: 12, md: 6 }}>
