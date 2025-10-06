@@ -685,9 +685,56 @@ async def send_escalation_notification(ticket: Ticket, reason: str):
     pass
 
 async def process_bot_response(db: Session, conversation: ChatbotConversation, user_message: ChatbotMessage):
-    """Process bot response to user message"""
-    # Implementation would use AI/NLP to generate bot response
-    pass
+    """
+    Process bot response to user message using AI/NLP.
+    Requirement 2: AI/NLP capabilities for chatbot
+    """
+    try:
+        from app.services.chatbot_ai_service import chatbot_ai_service
+        
+        # Generate AI response
+        ai_response = chatbot_ai_service.generate_response(
+            message=user_message.content,
+            context={
+                "conversation_id": conversation.id,
+                "previous_intent": conversation.intent
+            }
+        )
+        
+        if ai_response["success"]:
+            # Update conversation with detected intent
+            conversation.intent = ai_response["intent"]
+            conversation.confidence_score = ai_response["confidence"]
+            
+            # Create bot response message
+            bot_message = ChatbotMessage(
+                conversation_id=conversation.id,
+                message_type="bot",
+                content=ai_response["response"],
+                message_format="text",
+                intent_detected=ai_response["intent"],
+                confidence_score=ai_response["confidence"],
+                entities_extracted=ai_response.get("entities", {})
+            )
+            
+            db.add(bot_message)
+            await db.commit()
+            
+            logger.info(f"Bot response generated for conversation {conversation.id} with intent {ai_response['intent']}")
+        else:
+            logger.error(f"Failed to generate bot response: {ai_response.get('error')}")
+            
+    except Exception as e:
+        logger.error(f"Error processing bot response: {e}")
+        # Create fallback response
+        bot_message = ChatbotMessage(
+            conversation_id=conversation.id,
+            message_type="bot",
+            content="I'm having trouble understanding right now. Could you try rephrasing your question?",
+            message_format="text"
+        )
+        db.add(bot_message)
+        await db.commit()
 
 async def create_ticket_from_conversation(db: Session, conversation: ChatbotConversation):
     """Create ticket from escalated conversation"""
