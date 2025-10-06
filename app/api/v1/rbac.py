@@ -39,6 +39,27 @@ async def get_service_permissions(
 ):
     """Get all service permissions with optional filtering"""
     logger.info(f"User {current_user.id} requesting service permissions")
+    
+    # Validate module if provided
+    if module:
+        from app.schemas.rbac import ServiceModule
+        if not ServiceModule.is_valid(module):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid module '{module}'. Must be one of: {', '.join([m.value for m in ServiceModule])}"
+            )
+    
+    # Validate action if provided
+    if action:
+        from app.schemas.rbac import ServiceAction
+        try:
+            ServiceAction(action)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid action '{action}'. Must be one of: {', '.join([a.value for a in ServiceAction])}"
+            )
+    
     permissions = await rbac_service.get_permissions(module=module, action=action)
     return permissions
 
@@ -73,9 +94,18 @@ async def get_organization_roles(
 ):
     """Get all service roles for an organization"""
     try:
+        # Validate organization_id is positive
+        if organization_id <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id. Must be a positive integer."
+            )
+        
         logger.info(f"User {current_user.id} requesting roles for organization {organization_id}")
         roles = await rbac_service.get_roles(organization_id, is_active=is_active)
         return roles
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching roles for organization {organization_id}: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -93,6 +123,13 @@ async def create_service_role(
 ):
     """Create a new service role"""
     try:
+        # Validate organization_id is positive
+        if organization_id <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id. Must be a positive integer."
+            )
+        
         logger.info(f"User {current_user.id} creating role '{role.name}' for organization {organization_id}")
         
         # Validate role name is a valid ServiceRoleType enum value
@@ -107,6 +144,7 @@ async def create_service_role(
                 detail=f"Invalid role type '{role.name}'. Must be one of: {', '.join([r.value for r in ServiceRoleType])}"
             )
         
+        # Ensure organization_id matches between path and body
         role.organization_id = organization_id
         
         db_role = await rbac_service.create_role(role, created_by_user_id=current_user.id)

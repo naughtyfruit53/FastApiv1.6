@@ -72,7 +72,7 @@ const AppUserManagement: React.FC = () => {
     phone: "",
   });
   // Check if current user is the god account
-  const isGodAccount = user?.email === "naughty@grok.com";
+  const isGodAccount = user?.email === "naughtyfruit53@gmail.com";
   const queryClient = useQueryClient();
   const { data: appUsers } = useQuery({
     queryKey: ["appUsers"],
@@ -352,7 +352,7 @@ const AppUserManagement: React.FC = () => {
                         @{appUser.username}
                       </Typography>
                     </Box>
-                    {appUser.email === "naughty@grok.com" && (
+                    {appUser.email === "naughtyfruit53@gmail.com" && (
                       <Tooltip title="God Account - Cannot be deleted">
                         <Shield sx={{ ml: 1, color: "gold" }} />
                       </Tooltip>
@@ -377,7 +377,7 @@ const AppUserManagement: React.FC = () => {
                   >
                     <RestartAlt />
                   </IconButton>
-                  {appUser.email !== "naughty@grok.com" && (
+                  {appUser.email !== "naughtyfruit53@gmail.com" && (
                     <>
                       <IconButton
                         size="small"

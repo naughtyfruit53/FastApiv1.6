@@ -24,7 +24,7 @@ This document serves as the **source of truth** for all implemented features in 
 |---------|-------------|------------------------|------------------|-------------------|------------------|-------|
 | **Platform Statistics** | `GET /api/v1/platform/*` | `AppSuperAdminDashboard.tsx` | App Super Admin | `/dashboard` | ❌ | Dashboard available for app admins |
 | **Organization Management** | `GET/POST/PUT/DELETE /api/v1/organizations/*` | `/admin/manage-organizations.tsx`<br>`/admin/organizations/*` | App Super Admin | `/admin/manage-organizations` | ❌ | Admin area for org management |
-| **Organization License Creation** | `POST /api/v1/organizations/*/license` | `/admin/license-management.tsx`<br>`CreateOrganizationLicenseModal.tsx` | App Super Admin | License Management button in mega menu | ✅ | Exposed in app admin menu |
+| **Organization License Creation** | `POST /api/v1/organizations/*/license` | `/admin/license-management.tsx`<br>`CreateOrganizationLicenseModal.tsx` | App Super Admin (app-level only, no org_id) | License Management button in mega menu | ✅ | Restricted to app-level admins, hidden from org accounts |
 | **Organization Members** | `GET /api/v1/organizations/*/members` | `OrganizationMembersDialog.tsx` | Org Super Admin | Settings page | ❌ | **RECOMMENDATION**: Add to settings submenu |
 | **App User Management** | `GET/POST/PUT/DELETE /api/v1/app-users/*` | `/admin/app-user-management.tsx` | App Super Admin | `/admin/app-user-management` | ❌ | Available in admin area |
 
@@ -124,8 +124,9 @@ This document serves as the **source of truth** for all implemented features in 
 | Feature | API Route(s) | Frontend Component/Page | Required Role(s) | Current Access Path | Mega Menu Exposed | Notes |
 |---------|-------------|------------------------|------------------|-------------------|------------------|-------|
 | **General Settings** | `GET/PUT /api/v1/settings/*` | `/settings/Settings.tsx`<br>`/settings.tsx` | Org Admin+ | Settings menu | ✅ | Well integrated |
-| **Data Management** | `GET/PUT /api/v1/settings/data/*` | `/settings/DataManagement.tsx` | Org Super Admin | Settings → Data Management | ❌ | Advanced data operations |
-| **Factory Reset** | `POST /api/v1/settings/factory-reset` | `/settings/FactoryReset.tsx` | Org Super Admin | Settings → Factory Reset | ❌ | Dangerous operation, properly hidden |
+| **Voucher Settings** | `GET/PUT /api/v1/voucher-settings/*` | `/settings/voucher-settings.tsx` | Org Admin+ | Settings menu → Voucher Settings | ✅ | Organization-level voucher configuration |
+| **Data Management** | `GET/PUT /api/v1/settings/data/*` | `/settings/DataManagement.tsx` | God Super Admin (naughtyfruit53@gmail.com) | Settings → Data Management | ✅ | Restricted to god superadmin only |
+| **Factory Reset** | `POST /api/v1/settings/factory-reset` | `/settings/FactoryReset.tsx` | God Super Admin (naughtyfruit53@gmail.com) | Settings → Factory Reset | ✅ | Restricted to god superadmin only |
 | **Pincode Services** | `GET /api/v1/pincode/*` | Embedded in forms | Org User+ | Within address forms | ❌ | Utility service, no UI needed |
 | **PDF Extraction** | `POST /api/v1/pdf-extraction/*` | `ProductFileUpload.tsx` | Org User+ | Within product forms | ❌ | Embedded feature |
 | **Company Audit Logs** | `GET /api/v1/audit/*` | Not exposed | Org Super Admin | Not accessible via UI | ❌ | **ACTION NEEDED**: Add to admin/audit section |

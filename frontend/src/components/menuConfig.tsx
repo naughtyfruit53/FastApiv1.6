@@ -582,10 +582,9 @@ export const menuItems = {
           { name: 'General Settings', path: '/settings', icon: <Settings /> },
           { name: 'Company Profile', path: '/settings/company', icon: <Business /> },
           { name: 'User Management', path: '/settings/user-management', icon: <People /> },
-          { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage /> },
-          { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build /> },
-          { name: 'Add User', path: '/settings/add-user', icon: <PersonAdd /> },
-          { name: 'Advanced User Management', path: '/settings/user-management', icon: <SupervisorAccount /> }
+          { name: 'Voucher Settings', path: '/settings/voucher-settings', icon: <ReceiptLong /> },
+          { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage />, godSuperAdminOnly: true },
+          { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build />, godSuperAdminOnly: true }
         ]
       },
       {

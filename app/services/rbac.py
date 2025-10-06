@@ -47,6 +47,8 @@ class RBACService:
                        action: Optional[str] = None,
                        is_active: bool = True) -> List[ServicePermission]:
         """Get service permissions with optional filtering"""
+        from app.schemas.rbac import ServiceModule, ServiceAction
+        
         stmt = select(ServicePermission)
         
         if is_active is not None:
@@ -57,7 +59,20 @@ class RBACService:
             stmt = stmt.where(ServicePermission.action == action)
             
         result = await self.db.execute(stmt.order_by(ServicePermission.module, ServicePermission.action))
-        return result.scalars().all()
+        permissions = result.scalars().all()
+        
+        # Filter out permissions with invalid modules (e.g., sticky_notes that shouldn't exist)
+        valid_permissions = []
+        valid_modules = {m.value for m in ServiceModule}
+        valid_actions = {a.value for a in ServiceAction}
+        
+        for perm in permissions:
+            if perm.module in valid_modules and perm.action in valid_actions:
+                valid_permissions.append(perm)
+            else:
+                logger.warning(f"Filtering out permission with invalid module/action: {perm.name} (module={perm.module}, action={perm.action})")
+        
+        return valid_permissions
     
     async def get_permission_by_name(self, name: str) -> Optional[ServicePermission]:
         """Get permission by name"""

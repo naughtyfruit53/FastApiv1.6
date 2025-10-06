@@ -192,6 +192,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const isSuperAdmin = isAppSuperAdmin(user);
+  const isGodSuperAdmin = user?.email === 'naughtyfruit53@gmail.com';
 
   const hasServicePermission = (permission: string): boolean => {
     try {
@@ -314,13 +315,21 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     }
 
     const filterMenuItems = (subSection: any) => {
-      return subSection.items.map((item: any) => {
-        const disabled =
-          (item.role && !canManageUsers(user)) ||
-          (item.superAdminOnly && !isSuperAdmin) ||
-          (item.servicePermission && !hasServicePermission(item.servicePermission));
-        return { ...item, __disabled: Boolean(disabled) };
-      });
+      return subSection.items
+        .filter((item: any) => {
+          // Filter out items that require god superadmin access
+          if (item.godSuperAdminOnly && !isGodSuperAdmin) {
+            return false;
+          }
+          return true;
+        })
+        .map((item: any) => {
+          const disabled =
+            (item.role && !canManageUsers(user)) ||
+            (item.superAdminOnly && !isSuperAdmin) ||
+            (item.servicePermission && !hasServicePermission(item.servicePermission));
+          return { ...item, __disabled: Boolean(disabled) };
+        });
     };
 
     const normalizedSections = menu.sections.map((section: any) => {

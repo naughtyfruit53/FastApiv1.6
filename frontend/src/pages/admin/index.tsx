@@ -20,7 +20,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const isGodAccount = user?.email === "naughty@grok.com";
+  const isGodAccount = user?.email === "naughtyfruit53@gmail.com";
   const isSuperAdmin = user?.is_super_admin || user?.role === "super_admin";
   const isAppLevelAdmin = isSuperAdmin && !user?.organization_id; // App-level accounts have no organization
   
