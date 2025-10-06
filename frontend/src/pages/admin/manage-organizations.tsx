@@ -61,21 +61,13 @@ const ManageOrganizations: React.FC = () => {
     "hold" | "activate" | "reset" | "delete" | null
   >(null);
   const [orgModules, setOrgModules] = useState<{ [key: string]: boolean }>({});
-  const [availableModules] = useState<{ [key: string]: any }>();
+  
   // API calls using real service
   const { data: organizations, isLoading, error } = useQuery({
     queryKey: ["organizations"],
     queryFn: organizationService.getAllOrganizations,
   });
-  if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          {error.message || "Failed to load organizations"}
-        </Alert>
-      </Container>
-    );
-  }
+  
   // Fetch available modules
   const { data: availableModulesData } = useQuery({
     queryKey: ["available-modules"],
@@ -93,6 +85,17 @@ const ManageOrganizations: React.FC = () => {
       return response.json();
     },
   });
+  
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          {error.message || "Failed to load organizations"}
+        </Alert>
+      </Container>
+    );
+  }
+  
   const updateOrganizationMutation = useMutation({
     mutationFn: async ({
       orgId,
@@ -199,7 +202,7 @@ const ManageOrganizations: React.FC = () => {
         });
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error("Failed to fetch organization modules:", err);
       setOrgModules({
         CRM: true,
         ERP: true,
@@ -241,7 +244,7 @@ const ManageOrganizations: React.FC = () => {
       console.log("Organization modules updated successfully");
     },
     onError: (error) => {
-      console.error(msg, err);
+      console.error("Failed to update organization modules:", error);
     },
   });
   const handleModuleChange = (module: string, enabled: boolean) => {

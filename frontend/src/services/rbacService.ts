@@ -334,6 +334,53 @@ export const rbacService = {
     }
     return { valid: true };
   },
+  
+  // Filter roles for user assignment in organization settings
+  filterRolesForAssignment: (
+    roles: ServiceRole[],
+    organizationId: number,
+    onlyActive: boolean = true,
+  ): ServiceRole[] => {
+    return roles.filter((role) => {
+      // Filter by organization
+      if (role.organization_id !== organizationId) {
+        return false;
+      }
+      // Filter by active status if required
+      if (onlyActive && !role.is_active) {
+        return false;
+      }
+      return true;
+    });
+  },
+  
+  // Get assignable roles for a specific organization with filtering
+  getAssignableRoles: async (
+    organizationId: number,
+    options?: {
+      includeInactive?: boolean;
+      currentUserOrgId?: number;
+    },
+  ): Promise<ServiceRole[]> => {
+    try {
+      const isActive = !options?.includeInactive;
+      const roles = await rbacService.getOrganizationRoles(
+        organizationId,
+        isActive,
+      );
+      
+      // Further filter roles based on organization match
+      if (options?.currentUserOrgId && options.currentUserOrgId !== organizationId) {
+        throw new Error("Cannot access roles from different organization");
+      }
+      
+      return rbacService.filterRolesForAssignment(roles, organizationId, isActive);
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to fetch assignable roles",
+      );
+    }
+  },
 };
 // Export permission constants for easy import
 export * from "../types/rbac.types";
