@@ -78,7 +78,7 @@ const VoucherSettingsPage: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await api.get('/api/v1/organizations/settings');
+      const response = await api.get('/organizations/settings');
       if (response.data) {
         setSettings({
           voucher_prefix: response.data.voucher_prefix || '',
@@ -97,7 +97,7 @@ const VoucherSettingsPage: React.FC = () => {
 
   const fetchTemplates = async () => {
     try {
-      const response = await api.get('/api/v1/voucher-format-templates');
+      const response = await api.get('/voucher-format-templates');
       setTemplates(response.data || []);
     } catch (err) {
       console.error('Error fetching templates:', err);
@@ -137,7 +137,7 @@ const VoucherSettingsPage: React.FC = () => {
     setSuccess(null);
 
     try {
-      await api.put('/api/v1/organizations/settings', settings);
+      await api.put('/organizations/settings', settings);
       setSuccess('Settings saved successfully!');
     } catch (err: any) {
       console.error('Error saving settings:', err);

@@ -79,6 +79,15 @@ from app.api.v1 import chart_of_accounts as v1_chart_of_accounts
 # Import email router
 from app.api.v1 import email as v1_email
 
+# Import voucher email templates router
+from app.api.v1 import voucher_email_templates as v1_voucher_email_templates
+
+# Import voucher format templates router
+from app.api.v1 import voucher_format_templates as v1_voucher_format_templates
+
+# Import chatbot router
+from app.api.v1 import chatbot as v1_chatbot
+
 logger = logging.getLogger(__name__)
 
 # Log imports with try/except for error handling
@@ -204,7 +213,7 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json"
 )
 
-app.router.redirect_slashes = False
+# Removed app.router.redirect_slashes = False to enable default slash redirection
 
 # Temporarily disable TenantMiddleware to test if it's causing the 404 (re-enable after testing)
 # app.add_middleware(TenantMiddleware)
@@ -499,6 +508,18 @@ logger.info("Chart of Accounts router included successfully at prefix: /api/v1")
 # Include email router
 app.include_router(v1_email.router, prefix="/api/v1", tags=["email"])
 logger.info("Email router included successfully at prefix: /api/v1")
+
+# Include voucher email templates router
+app.include_router(v1_voucher_email_templates.router, prefix="/api/v1/voucher-email-templates", tags=["voucher-email-templates"])
+logger.info("Voucher Email Templates router included successfully at prefix: /api/v1/voucher-email-templates")
+
+# Include voucher format templates router
+app.include_router(v1_voucher_format_templates.router, prefix="/api/v1/voucher-format-templates", tags=["voucher-format-templates"])
+logger.info("Voucher Format Templates router included successfully at prefix: /api/v1/voucher-format-templates")
+
+# Include chatbot router
+app.include_router(v1_chatbot.router, prefix="/api/v1/chatbot", tags=["chatbot"])
+logger.info("Chatbot router included successfully at prefix: /api/v1/chatbot")
 
 @app.get("/routes")
 def get_routes():

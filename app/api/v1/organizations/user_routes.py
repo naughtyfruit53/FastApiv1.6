@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func as sql_func
 from typing import List, Dict
 import logging
 import secrets
@@ -117,13 +117,12 @@ async def create_user_in_organization(
         ))
         existing_user = result.scalars().first()
         if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered in this organization"
-        )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered in this organization"
+            )
   
         if not is_platform_user and not getattr(current_user, 'is_super_admin', False):
-            from sqlalchemy import func as sql_func
             result = await db.execute(select(sql_func.count()).select_from(User).filter(
                 User.organization_id == organization_id,
                 User.is_active == True
@@ -189,113 +188,123 @@ async def create_user_in_organization(
                         detail=f"Cannot assign sub-modules for {module} - reporting manager does not have access to this module"
                     )
   
-    supabase_uuid = None
-    try:
-        # If no password provided, generate and send OTP
-        if user_data.password is None:
-            otp_service_instance = OTPService(db)
-            success, otp = otp_service_instance.generate_and_send_otp(
-                email=user_data.email,
-                purpose="registration",
-                organization_id=organization_id,
-                phone_number=user_data.phone
-            )
-            if not success:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to generate and send OTP"
-                )
-            user_data.password = otp  # Set OTP as initial password
-        
-        supabase_user = supabase_auth_service.create_user(
-            email=user_data.email,
-            password=user_data.password,
-            user_metadata={
-                "full_name": user_data.full_name,
-                "role": user_data.role if user_data.role else "executive",
-                "organization_id": organization_id
-            }
-        )
-        supabase_uuid = supabase_user["supabase_uuid"]
-    except SupabaseAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-  
-    try:
-        hashed_password = get_password_hash(user_data.password)
-        new_user = User(
-            organization_id=organization_id,
-            email=user_data.email,
-            hashed_password=hashed_password,
-            full_name=user_data.full_name,
-            role=user_data.role or "executive",
-            department=user_data.department,
-            designation=user_data.designation,
-            employee_id=user_data.employee_id,
-            phone=user_data.phone,
-            is_active=user_data.is_active if user_data.is_active is not None else True,
-            supabase_uuid=supabase_uuid,
-            assigned_modules=user_data.assigned_modules,
-            reporting_manager_id=user_data.reporting_manager_id,
-            sub_module_permissions=user_data.sub_module_permissions,
-            must_change_password=True  # Force change on first login
-        )
-        
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        
-        # Assign OrganizationRole
-        org_role = db.query(OrganizationRole).filter(
-            OrganizationRole.organization_id == organization_id,
-            OrganizationRole.name == new_user.role
-        ).first()
-        
-        if org_role:
-            assignment = UserOrganizationRole(
-                organization_id=organization_id,
-                user_id=new_user.id,
-                role_id=org_role.id,
-                assigned_by_id=current_user.id,
-                is_active=True
-            )
-            db.add(assignment)
-            db.commit()
-            logger.info(f"Assigned role '{new_user.role}' to user {new_user.email}")
-        else:
-            logger.warning(f"Role '{new_user.role}' not found - skipping assignment")
-        
-        logger.info(f"User {new_user.email} created in org {org.name} by {current_user.email}")
-
-        # Send welcome email with login link (OTP already sent if password was None)
-        success, error = await system_email_service.send_user_creation_email(
-            user_email=new_user.email,
-            user_name=new_user.full_name,
-            temp_password=user_data.password,
-            organization_name=org.name,
-            login_url="https://fast-apiv1-6.vercel.app/",
-            organization_id=new_user.organization_id,
-            user_id=new_user.id,
-            db=db
-        )
-        
-        if not success:
-            logger.warning(f"User created but welcome email failed for {new_user.email}: {error}")
-
-        return new_user
-      
-    except Exception as e:
+        supabase_uuid = None
         try:
-            supabase_auth_service.delete_user(supabase_uuid)
-        except Exception as cleanup_e:
-            logger.error(f"Failed to cleanup Supabase user {supabase_uuid}: {cleanup_e}")
-        db.rollback()
-        logger.error(f"Error creating user in organization: {e}")
+            # If no password provided, generate and send OTP
+            if user_data.password is None:
+                otp_service_instance = OTPService(db)
+                success, otp = await otp_service_instance.generate_and_send_otp(
+                    email=user_data.email,
+                    purpose="registration",
+                    organization_id=organization_id,
+                    phone_number=user_data.phone
+                )
+                if not success:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to generate and send OTP"
+                    )
+                user_data.password = otp  # Set OTP as initial password
+            
+            supabase_user = supabase_auth_service.create_user(
+                email=user_data.email,
+                password=user_data.password,
+                user_metadata={
+                    "full_name": user_data.full_name,
+                    "role": user_data.role if user_data.role else "executive",
+                    "organization_id": organization_id
+                }
+            )
+            supabase_uuid = supabase_user["supabase_uuid"]
+        except SupabaseAuthError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+  
+        try:
+            hashed_password = get_password_hash(user_data.password)
+            new_user = User(
+                organization_id=organization_id,
+                email=user_data.email,
+                hashed_password=hashed_password,
+                full_name=user_data.full_name,
+                role=user_data.role or "executive",
+                department=user_data.department,
+                designation=user_data.designation,
+                employee_id=user_data.employee_id,
+                phone=user_data.phone,
+                is_active=user_data.is_active if user_data.is_active is not None else True,
+                supabase_uuid=supabase_uuid,
+                assigned_modules=user_data.assigned_modules,
+                reporting_manager_id=user_data.reporting_manager_id,
+                sub_module_permissions=user_data.sub_module_permissions,
+                must_change_password=True  # Force change on first login
+            )
+            
+            db.add(new_user)
+            await db.commit()
+            await db.refresh(new_user)
+            
+            # Assign OrganizationRole
+            stmt = select(OrganizationRole).filter(
+                OrganizationRole.organization_id == organization_id,
+                OrganizationRole.name == new_user.role
+            )
+            result = await db.execute(stmt)
+            org_role = result.scalars().first()
+            
+            if org_role:
+                assignment = UserOrganizationRole(
+                    organization_id=organization_id,
+                    user_id=new_user.id,
+                    role_id=org_role.id,
+                    assigned_by_id=current_user.id,
+                    is_active=True
+                )
+                db.add(assignment)
+                await db.commit()
+                logger.info(f"Assigned role '{new_user.role}' to user {new_user.email}")
+            else:
+                logger.warning(f"Role '{new_user.role}' not found - skipping assignment")
+            
+            logger.info(f"User {new_user.email} created in org {org.name} by {current_user.email}")
+
+            # Send welcome email with login link (OTP already sent if password was None)
+            success, error = await system_email_service.send_user_creation_email(
+                user_email=new_user.email,
+                user_name=new_user.full_name,
+                temp_password=user_data.password,
+                organization_name=org.name,
+                login_url="https://fast-apiv1-6.vercel.app/",
+                organization_id=new_user.organization_id,
+                user_id=new_user.id,
+                db=db
+            )
+            
+            if not success:
+                logger.warning(f"User created but welcome email failed for {new_user.email}: {error}")
+
+            return new_user
+      
+        except Exception as e:
+            try:
+                supabase_auth_service.delete_user(supabase_uuid)
+            except Exception as cleanup_e:
+                logger.error(f"Failed to cleanup Supabase user {supabase_uuid}: {cleanup_e}")
+            await db.rollback()
+            logger.error(f"Error creating user in organization: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user in organization"
+            )
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error in create_user_in_organization: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create user in organization"
+            detail="Failed to create user"
         )
 
 @user_router.put("/{organization_id:int}/users/{user_id:int}", response_model=UserInDB)
@@ -303,7 +312,7 @@ async def update_user_in_organization(
     organization_id: int,
     user_id: int,
     user_update: Dict,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Update user in organization (management or super admin only)"""
@@ -313,10 +322,12 @@ async def update_user_in_organization(
             detail="Access denied to this organization"
         )
   
-    user = db.query(User).filter(
+    stmt = select(User).filter(
         User.id == user_id,
         User.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    user = result.scalars().first()
   
     if not user:
         raise HTTPException(
@@ -364,12 +375,14 @@ async def update_user_in_organization(
                 detail="Managers must have at least one module assigned"
             )
     if "reporting_manager_id" in user_update and user.role == "executive":
-        manager = db.query(User).filter(
+        stmt = select(User).filter(
             User.id == user_update["reporting_manager_id"],
             User.role == "manager",
             User.organization_id == organization_id,
             User.is_active == True
-        ).first()
+        )
+        result = await db.execute(stmt)
+        manager = result.scalars().first()
         if not manager:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -377,7 +390,9 @@ async def update_user_in_organization(
             )
     if "sub_module_permissions" in user_update and user.role == "executive":
         reporting_manager_id = user_update.get("reporting_manager_id", user.reporting_manager_id)
-        manager = db.query(User).filter(User.id == reporting_manager_id).first()
+        stmt = select(User).filter(User.id == reporting_manager_id)
+        result = await db.execute(stmt)
+        manager = result.scalars().first()
         if manager:
             for module in user_update["sub_module_permissions"].keys():
                 if not manager.assigned_modules.get(module, False):
@@ -393,23 +408,28 @@ async def update_user_in_organization(
             elif hasattr(user, field):
                 setattr(user, field, value)
       
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
         
         # Update OrganizationRole assignment if role changed
         if "role" in user_update:
             # Remove old assignment
-            old_assignment = db.query(UserOrganizationRole).filter(
+            stmt = select(UserOrganizationRole).filter(
                 UserOrganizationRole.user_id == user.id
-            ).first()
+            )
+            result = await db.execute(stmt)
+            old_assignment = result.scalars().first()
             if old_assignment:
                 db.delete(old_assignment)
+                await db.commit()
             
             # Add new
-            new_role = db.query(OrganizationRole).filter(
+            stmt = select(OrganizationRole).filter(
                 OrganizationRole.organization_id == organization_id,
                 OrganizationRole.name == user_update["role"]
-            ).first()
+            )
+            result = await db.execute(stmt)
+            new_role = result.scalars().first()
             if new_role:
                 new_assignment = UserOrganizationRole(
                     organization_id=organization_id,
@@ -419,14 +439,14 @@ async def update_user_in_organization(
                     is_active=True
                 )
                 db.add(new_assignment)
-                db.commit()
+                await db.commit()
                 logger.info(f"Updated role to '{user_update['role']}' for user {user.email}")
       
         logger.info(f"User {user.email} updated in organization {organization_id} by {current_user.email}")
         return user
       
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating user in organization: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -437,7 +457,7 @@ async def update_user_in_organization(
 async def delete_user_from_organization(
     organization_id: int,
     user_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Delete user from organization (management or super admin only)"""
@@ -459,10 +479,12 @@ async def delete_user_from_organization(
             detail="Cannot delete your own account"
         )
   
-    user = db.query(User).filter(
+    stmt = select(User).filter(
         User.id == user_id,
         User.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    user = result.scalars().first()
   
     if not user:
         raise HTTPException(
@@ -471,11 +493,13 @@ async def delete_user_from_organization(
         )
   
     if user.role == "management" and not current_user.is_super_admin:
-        admin_count = db.query(User).filter(
+        stmt = select(sql_func.count()).select_from(User).filter(
             User.organization_id == organization_id,
             User.role == "management",
             User.is_active == True
-        ).count()
+        )
+        result = await db.execute(stmt)
+        admin_count = result.scalar()
       
         if admin_count <= 1:
             raise HTTPException(
@@ -485,20 +509,22 @@ async def delete_user_from_organization(
   
     try:
         # Remove role assignment
-        assignment = db.query(UserOrganizationRole).filter(
+        stmt = select(UserOrganizationRole).filter(
             UserOrganizationRole.user_id == user_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        assignment = result.scalars().first()
         if assignment:
             db.delete(assignment)
         
         db.delete(user)
-        db.commit()
+        await db.commit()
         
         logger.info(f"User {user.email} deleted from organization {organization_id} by {current_user.email}")
         return {"message": f"User {user.email} deleted successfully"}
       
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting user from organization: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -509,7 +535,7 @@ async def delete_user_from_organization(
 async def reset_user_password(
     organization_id: int,
     user_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Reset user password (management or super admin only)"""
@@ -525,10 +551,12 @@ async def reset_user_password(
             detail="Only management can reset passwords"
         )
   
-    user = db.query(User).filter(
+    stmt = select(User).filter(
         User.id == user_id,
         User.organization_id == organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    user = result.scalars().first()
   
     if not user:
         raise HTTPException(
@@ -550,7 +578,7 @@ async def reset_user_password(
         # Update hashed password
         user.hashed_password = get_password_hash(new_password)
         user.must_change_password = True  # Force password change on next login
-        db.commit()
+        await db.commit()
         
         # Send email with new password
         success, error = await system_email_service.send_password_reset_email(
@@ -572,7 +600,7 @@ async def reset_user_password(
         }
       
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error resetting user password: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

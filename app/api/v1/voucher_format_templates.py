@@ -196,7 +196,7 @@ async def preview_voucher_format_template(
         'voucher_date': '2024-01-15',
         'due_date': '2024-02-15',
         'vendor_name': 'Sample Vendor Pvt Ltd',
-        'vendor_address': '123 Sample Street, Sample City',
+        'vendor_address': '123 Sample Street, Sample City, Sample',
         'vendor_gst': '29ABCDE1234F1Z5',
         'total_amount': 11800.00,
         'items': [
