@@ -161,3 +161,95 @@ async def get_default_system_templates(
     result = await db.execute(stmt)
     templates = result.scalars().all()
     return templates
+
+
+@router.get("/{template_id}/preview")
+async def preview_voucher_format_template(
+    template_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+):
+    """
+    Generate a preview for a voucher format template using sample data.
+    Returns a preview image URL or sample PDF.
+    """
+    from app.services.pdf_generation_service import VoucherPDFGenerator
+    from io import BytesIO
+    import base64
+    
+    # Get the template
+    stmt = select(VoucherFormatTemplate).where(
+        VoucherFormatTemplate.id == template_id
+    )
+    result = await db.execute(stmt)
+    template = result.scalar_one_or_none()
+    
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Voucher format template not found"
+        )
+    
+    # If preview image already exists, return it
+    if template.preview_image_url:
+        return {
+            "template_id": template_id,
+            "template_name": template.name,
+            "preview_type": "image",
+            "preview_url": template.preview_image_url
+        }
+    
+    # Generate sample PDF preview
+    try:
+        pdf_generator = VoucherPDFGenerator()
+        
+        # Sample voucher data for preview
+        sample_voucher_data = {
+            "voucher_number": "PO/2024/001",
+            "voucher_date": "01/04/2024",
+            "party_name": "Sample Vendor Ltd.",
+            "items": [
+                {
+                    "description": "Sample Product 1",
+                    "quantity": 10,
+                    "rate": 100.00,
+                    "amount": 1000.00
+                },
+                {
+                    "description": "Sample Product 2",
+                    "quantity": 5,
+                    "rate": 200.00,
+                    "amount": 1000.00
+                }
+            ],
+            "subtotal": 2000.00,
+            "tax_amount": 360.00,
+            "total_amount": 2360.00
+        }
+        
+        # Generate preview PDF
+        pdf_io = await pdf_generator.generate_voucher_pdf(
+            voucher_type="purchase",
+            voucher_data=sample_voucher_data,
+            db=db,
+            organization_id=current_user.organization_id or 1,
+            current_user=current_user
+        )
+        
+        # Convert to base64 for preview
+        pdf_bytes = pdf_io.getvalue()
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        return {
+            "template_id": template_id,
+            "template_name": template.name,
+            "preview_type": "pdf",
+            "preview_data": f"data:application/pdf;base64,{pdf_base64}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating preview for template {template_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate preview: {str(e)}"
+        )

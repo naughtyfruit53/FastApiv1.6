@@ -544,8 +544,29 @@ class VoucherPDFGenerator:
             # Prepare data for template
             template_data = await self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)  # Await since now async
             
-            # Get template for voucher type
-            if voucher_type in ['purchase', 'purchase-vouchers']:
+            # Fetch organization's selected format template
+            from app.models.organization_settings import OrganizationSettings, VoucherFormatTemplate
+            stmt = select(OrganizationSettings).where(OrganizationSettings.organization_id == organization_id)
+            result = await db.execute(stmt)
+            org_settings = result.scalar_one_or_none()
+            
+            # Get custom template if selected
+            custom_template_file = None
+            if org_settings and org_settings.voucher_format_template_id:
+                stmt = select(VoucherFormatTemplate).where(
+                    VoucherFormatTemplate.id == org_settings.voucher_format_template_id,
+                    VoucherFormatTemplate.is_active == True
+                )
+                result = await db.execute(stmt)
+                format_template = result.scalar_one_or_none()
+                if format_template and format_template.template_file:
+                    custom_template_file = format_template.template_file
+                    logger.info(f"Using custom template: {custom_template_file} for voucher type: {voucher_type}")
+            
+            # Get template for voucher type (with custom template override)
+            if custom_template_file:
+                template_name = custom_template_file
+            elif voucher_type in ['purchase', 'purchase-vouchers']:
                 template_name = 'purchase_voucher.html'
             elif voucher_type == 'purchase-orders':
                 template_name = 'purchase_order.html'
@@ -573,7 +594,7 @@ class VoucherPDFGenerator:
             except Exception:
                 # Fallback to base template
                 template = self.jinja_env.get_template('base_voucher.html')
-                logger.warning(f"Template {template_name} not found at at {template.filename}, using base template")
+                logger.warning(f"Template {template_name} not found, using base template")
             
             # Render HTML
             html_content = template.render(**template_data)

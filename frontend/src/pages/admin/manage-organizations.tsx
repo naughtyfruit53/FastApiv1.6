@@ -67,15 +67,6 @@ const ManageOrganizations: React.FC = () => {
     queryKey: ["organizations"],
     queryFn: organizationService.getAllOrganizations,
   });
-  if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          {error.message || "Failed to load organizations"}
-        </Alert>
-      </Container>
-    );
-  }
   // Fetch available modules
   const { data: availableModulesData } = useQuery({
     queryKey: ["available-modules"],
@@ -279,6 +270,18 @@ const ManageOrganizations: React.FC = () => {
     };
     return <Chip label={config.label} color={config.color} size="small" />;
   };
+  
+  // Handle errors after all hooks are defined (fixes React hooks early return bug)
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          {error.message || "Failed to load organizations"}
+        </Alert>
+      </Container>
+    );
+  }
+  
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
