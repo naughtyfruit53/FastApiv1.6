@@ -25,6 +25,7 @@ import AddCustomerModal from '../../../components/AddCustomerModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
+import TrackingDetailsDialog from '../../../components/TrackingDetailsDialog';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
@@ -293,6 +294,22 @@ const DeliveryChallanPage: React.FC = () => {
     if (voucherData) reset(voucherData);
   };
 
+  // State for tracking dialog
+  const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
+  const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
+
+  const handleEditTracking = (voucher: any) => {
+    setSelectedVoucherForTracking(voucher);
+    setTrackingDialogOpen(true);
+  };
+
+  const handleTrackingDialogClose = () => {
+    setTrackingDialogOpen(false);
+    setSelectedVoucherForTracking(null);
+    // Refresh the voucher list to show updated tracking
+    refreshMasterData();
+  };
+
   const enhancedCustomerOptions = [...(customerList || []), { id: null, name: "Add New Customer..." }];
 
   const indexContent = (
@@ -326,6 +343,7 @@ const DeliveryChallanPage: React.FC = () => {
                     onDelete={handleDelete}
                     onPrint={handleGeneratePDF}
                     onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Delivery Challan")}
+                    onEditTracking={handleEditTracking}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -517,7 +535,27 @@ const DeliveryChallanPage: React.FC = () => {
       <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Delivery Challan" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Delivery Challan")} />
+      <VoucherContextMenu 
+        contextMenu={contextMenu} 
+        voucher={null} 
+        voucherType="Delivery Challan" 
+        onClose={handleCloseContextMenu} 
+        onView={handleViewWithData} 
+        onEdit={handleEditWithData} 
+        onDelete={handleDelete} 
+        onPrint={handleGeneratePDF} 
+        onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Delivery Challan")}
+        onEditTracking={handleEditTracking}
+      />
+      {selectedVoucherForTracking && (
+        <TrackingDetailsDialog
+          open={trackingDialogOpen}
+          onClose={handleTrackingDialogClose}
+          voucherType="delivery_challan"
+          voucherId={selectedVoucherForTracking.id}
+          voucherNumber={selectedVoucherForTracking.voucher_number}
+        />
+      )}
     </>
   );
 };
