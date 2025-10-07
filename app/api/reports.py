@@ -848,6 +848,88 @@ def _check_ledger_access(current_user: User):
             detail="Access denied. Ledger reports require Super Admin, Admin, or authorized Standard User permissions."
         )
 
+@router.get("/pending-purchase-orders-with-grn-status")
+async def get_pending_purchase_orders_with_grn_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get pending purchase orders with GRN status and tracking information for inventory management"""
+    try:
+        org_id = require_current_organization_id()
+        
+        # Get all purchase orders
+        purchase_orders = TenantQueryMixin.filter_by_tenant(
+            db.query(PurchaseOrder), PurchaseOrder, org_id
+        ).all()
+        
+        pending_orders = []
+        
+        for po in purchase_orders:
+            # Check if GRN exists for this PO
+            grns = TenantQueryMixin.filter_by_tenant(
+                db.query(GoodsReceiptNote), GoodsReceiptNote, org_id
+            ).filter(GoodsReceiptNote.purchase_order_id == po.id).all()
+            
+            # Calculate total ordered vs received
+            total_ordered_qty = sum(item.quantity for item in po.items)
+            total_received_qty = sum(
+                sum(grn_item.received_quantity for grn_item in grn.items)
+                for grn in grns
+            )
+            
+            # Determine if PO is fully received
+            is_fully_received = total_received_qty >= total_ordered_qty if total_ordered_qty > 0 else False
+            
+            # Only include POs that are not fully received
+            if not is_fully_received:
+                # Determine color coding
+                # Red: no tracking details
+                # Yellow: has tracking but GRN pending
+                # (Green would be for complete, which we exclude here)
+                has_tracking = bool(po.tracking_number or po.transporter_name)
+                
+                color_status = "yellow" if has_tracking else "red"
+                
+                pending_orders.append({
+                    "id": po.id,
+                    "voucher_number": po.voucher_number,
+                    "date": po.date,
+                    "vendor_name": po.vendor.name if po.vendor else "Unknown",
+                    "vendor_id": po.vendor_id,
+                    "total_amount": po.total_amount,
+                    "status": po.status,
+                    "total_ordered_qty": total_ordered_qty,
+                    "total_received_qty": total_received_qty,
+                    "pending_qty": total_ordered_qty - total_received_qty,
+                    "grn_count": len(grns),
+                    "has_tracking": has_tracking,
+                    "transporter_name": po.transporter_name,
+                    "tracking_number": po.tracking_number,
+                    "tracking_link": po.tracking_link,
+                    "color_status": color_status,
+                    "days_pending": (datetime.now().date() - po.date.date()).days if po.date else 0
+                })
+        
+        # Sort by date (newest first)
+        pending_orders.sort(key=lambda x: x["date"], reverse=True)
+        
+        return {
+            "orders": pending_orders,
+            "summary": {
+                "total_orders": len(pending_orders),
+                "total_value": sum(order["total_amount"] for order in pending_orders),
+                "with_tracking": sum(1 for order in pending_orders if order["has_tracking"]),
+                "without_tracking": sum(1 for order in pending_orders if not order["has_tracking"])
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting pending purchase orders with GRN status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get pending purchase orders"
+        )
+
 
 def canAccessLedger(user) -> bool:
     """Check if user can access ledger functionality"""

@@ -12,6 +12,8 @@ import {
   ContentCopy,
   LocalShipping,
   History,  // New icon for revise
+  AssignmentTurnedIn,  // For GRN creation
+  TrackChanges,  // For tracking details
 } from '@mui/icons-material';
 
 interface VoucherContextMenuProps {
@@ -25,6 +27,8 @@ interface VoucherContextMenuProps {
   onDuplicate?: (voucher: any) => void;
   onCreateDispatch?: (voucher: any) => void;
   onRevise?: (voucher: any) => void;  // New prop for revise
+  onCreateGRN?: (voucher: any) => void;  // New prop for GRN creation
+  onEditTracking?: (voucher: any) => void;  // New prop for tracking details
   showKebab?: boolean;
   contextMenu?: { mouseX: number; mouseY: number; voucher?: any } | null;
   onClose: () => void;
@@ -41,6 +45,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   onDuplicate,
   onCreateDispatch,
   onRevise,
+  onCreateGRN,
+  onEditTracking,
   showKebab = false,
   contextMenu = null,
   onClose,
@@ -103,6 +109,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
 
   const hasEmail = !!onEmail && !!getEmailRecipient();
   const isDeliveryChallan = voucherType?.toLowerCase().includes('delivery challan');
+  const isPurchaseOrder = voucherType?.toLowerCase().includes('purchase order');
+  const supportsTracking = isPurchaseOrder || isDeliveryChallan;
 
   return (
     <>
@@ -139,6 +147,16 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
         {isDeliveryChallan && onCreateDispatch && (
           <MenuItem onClick={handleAction(onCreateDispatch)}>
             <LocalShipping sx={{ mr: 1 }} /> Create Dispatch Order
+          </MenuItem>
+        )}
+        {isPurchaseOrder && onCreateGRN && (
+          <MenuItem onClick={handleAction(onCreateGRN)}>
+            <AssignmentTurnedIn sx={{ mr: 1 }} /> Create GRN
+          </MenuItem>
+        )}
+        {supportsTracking && onEditTracking && (
+          <MenuItem onClick={handleAction(onEditTracking)}>
+            <TrackChanges sx={{ mr: 1 }} /> Add/Edit Tracking Details
           </MenuItem>
         )}
         {onRevise && (

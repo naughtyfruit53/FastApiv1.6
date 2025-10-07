@@ -242,3 +242,92 @@ async def delete_delivery_challan(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete delivery challan"
         )
+
+@router.put("/{invoice_id}/tracking")
+async def update_delivery_challan_tracking(
+    invoice_id: int,
+    transporter_name: Optional[str] = None,
+    tracking_number: Optional[str] = None,
+    tracking_link: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update tracking details for a delivery challan"""
+    try:
+        stmt = select(DeliveryChallan).where(
+            DeliveryChallan.id == invoice_id,
+            DeliveryChallan.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        dc = result.scalar_one_or_none()
+        
+        if not dc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Delivery challan not found"
+            )
+        
+        # Update tracking fields
+        if transporter_name is not None:
+            dc.transporter_name = transporter_name
+        if tracking_number is not None:
+            dc.tracking_number = tracking_number
+        if tracking_link is not None:
+            dc.tracking_link = tracking_link
+        
+        await db.commit()
+        await db.refresh(dc)
+        
+        logger.info(f"Tracking details updated for DC {dc.voucher_number} by {current_user.email}")
+        return {
+            "message": "Tracking details updated successfully",
+            "transporter_name": dc.transporter_name,
+            "tracking_number": dc.tracking_number,
+            "tracking_link": dc.tracking_link
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating tracking details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update tracking details"
+        )
+
+@router.get("/{invoice_id}/tracking")
+async def get_delivery_challan_tracking(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get tracking details for a delivery challan"""
+    try:
+        stmt = select(DeliveryChallan).where(
+            DeliveryChallan.id == invoice_id,
+            DeliveryChallan.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        dc = result.scalar_one_or_none()
+        
+        if not dc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Delivery challan not found"
+            )
+        
+        return {
+            "transporter_name": dc.transporter_name,
+            "tracking_number": dc.tracking_number,
+            "tracking_link": dc.tracking_link
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving tracking details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve tracking details"
+        )

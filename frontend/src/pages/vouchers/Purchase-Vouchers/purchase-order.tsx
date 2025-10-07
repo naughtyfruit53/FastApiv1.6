@@ -25,6 +25,7 @@ import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
 import VoucherContextMenu from "../../../components/VoucherContextMenu"; // Updated to merged component
+import TrackingDetailsDialog from "../../../components/TrackingDetailsDialog";
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
@@ -451,7 +452,64 @@ const PurchaseOrderPage: React.FC = () => {
     if (voucherData) reset(voucherData);
   };
 
+  // State for tracking dialog
+  const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
+  const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
+
+  const handleEditTracking = (voucher: any) => {
+    setSelectedVoucherForTracking(voucher);
+    setTrackingDialogOpen(true);
+  };
+
+  const handleTrackingDialogClose = () => {
+    setTrackingDialogOpen(false);
+    setSelectedVoucherForTracking(null);
+    // Refresh the voucher list to show updated tracking
+    refreshMasterData();
+  };
+
+  const handleCreateGRN = (voucher: any) => {
+    // Navigate to GRN page with PO data pre-filled
+    router.push({
+      pathname: '/vouchers/Purchase-Vouchers/grn',
+      query: { po_id: voucher.id }
+    });
+  };
+
   const enhancedVendorOptions = [...(vendorList || []), { id: null, name: "Add New Vendor..." }];
+
+  // Helper function to determine PO color status
+  const getPOColorStatus = (voucher: any) => {
+    // This is a simplified version since we don't have GRN data loaded in index
+    // In a full implementation, you'd fetch GRN status or include it in the voucher data
+    const hasTracking = !!(voucher.tracking_number || voucher.transporter_name);
+    
+    // For now, we'll use simplified logic:
+    // - Red if no tracking
+    // - Yellow if has tracking (we assume GRN is pending unless explicitly complete)
+    // - Green if status is 'completed' or 'closed'
+    
+    if (voucher.status === 'completed' || voucher.status === 'closed') {
+      return 'green';
+    } else if (hasTracking) {
+      return 'yellow';
+    } else {
+      return 'red';
+    }
+  };
+
+  const getColorCode = (status: string) => {
+    switch (status) {
+      case 'red':
+        return '#f44336';
+      case 'yellow':
+        return '#ff9800';
+      case 'green':
+        return '#4caf50';
+      default:
+        return '#9e9e9e';
+    }
+  };
 
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -469,8 +527,19 @@ const PurchaseOrderPage: React.FC = () => {
           {latestVouchers.length === 0 ? (
             <TableRow><TableCell colSpan={5} align="center">No purchase orders available</TableCell></TableRow>
           ) : (
-            latestVouchers.slice(0, 7).map((voucher: any) => (
-              <TableRow key={voucher.id} hover onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} sx={{ cursor: "pointer" }}>
+            latestVouchers.slice(0, 7).map((voucher: any) => {
+              const colorStatus = getPOColorStatus(voucher);
+              const colorCode = getColorCode(colorStatus);
+              return (
+              <TableRow 
+                key={voucher.id} 
+                hover 
+                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} 
+                sx={{ 
+                  cursor: "pointer",
+                  borderLeft: `4px solid ${colorCode}`
+                }}
+              >
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{voucher.date ? new Date(voucher.date).toLocaleDateString() : "N/A"}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
@@ -484,12 +553,15 @@ const PurchaseOrderPage: React.FC = () => {
                     onDelete={handleDelete}
                     onPrint={handleGeneratePDF}
                     onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
+                    onCreateGRN={handleCreateGRN}
+                    onEditTracking={handleEditTracking}
                     showKebab={true}
                     onClose={() => {}}
                   />
                 </TableCell>
               </TableRow>
-            ))
+            );
+            })
           )}
         </TableBody>
       </Table>
@@ -781,7 +853,28 @@ const PurchaseOrderPage: React.FC = () => {
       <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onAdd={(newVendor) => { setValue("vendor_id", newVendor.id); refreshMasterData(); }} loading={addVendorLoading} setLoading={setAddVendorLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Purchase Order" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")} />
+      <VoucherContextMenu 
+        contextMenu={contextMenu} 
+        voucher={null} 
+        voucherType="Purchase Order" 
+        onClose={handleCloseContextMenu} 
+        onView={handleViewWithData} 
+        onEdit={handleEditWithData} 
+        onDelete={handleDelete} 
+        onPrint={handleGeneratePDF} 
+        onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
+        onCreateGRN={handleCreateGRN}
+        onEditTracking={handleEditTracking}
+      />
+      {selectedVoucherForTracking && (
+        <TrackingDetailsDialog
+          open={trackingDialogOpen}
+          onClose={handleTrackingDialogClose}
+          voucherType="purchase_order"
+          voucherId={selectedVoucherForTracking.id}
+          voucherNumber={selectedVoucherForTracking.voucher_number}
+        />
+      )}
     </>
   );
 };
