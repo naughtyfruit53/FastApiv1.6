@@ -24,6 +24,8 @@ from app.models.customer_models import Vendor, Customer
 from app.models.hr_models import EmployeeProfile
 import logging
 import json  # Added for json parsing
+from datetime import datetime
+from app.models.organization_settings import OrganizationSettings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["pdf-generation"])
@@ -112,8 +114,8 @@ async def generate_voucher_pdf(
     check_voucher_permission(voucher_type, current_user, db)
     
     try:
-        # Get voucher data based on type
-        voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)  # Await since now async
+        # Get voucher data
+        voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)  # Await
         
         if not voucher_data:
             raise HTTPException(
@@ -122,7 +124,7 @@ async def generate_voucher_pdf(
             )
         
         # Generate PDF
-        pdf_io = await pdf_generator.generate_voucher_pdf(  # Await since now async
+        pdf_io = await pdf_generator.generate_voucher_pdf(  # Await
             voucher_type=voucher_type,
             voucher_data=voucher_data,
             db=db,
@@ -131,13 +133,16 @@ async def generate_voucher_pdf(
         )
         
         # Return PDF response
-        filename = f"{voucher_type}_{voucher_data.get('voucher_number', 'voucher')}.pdf"
+        voucher_number = voucher_data.get('voucher_number', 'voucher')
+        safe_filename = voucher_number.replace('/', '-').replace('\\', '-')
+        filename = f"{safe_filename}.pdf"
+        logger.info(f"Setting inline filename header: {filename}")
         
         return Response(
             content=pdf_io.getvalue(),
             media_type='application/pdf',
             headers={
-                "Content-Disposition": f"inline; filename={filename}",
+                "Content-Disposition": f'inline; filename="{filename}"',
                 "Cache-Control": "no-cache"
             }
         )
@@ -205,12 +210,13 @@ async def download_voucher_pdf(
         # Sanitize voucher number for filename (replace / with -)
         safe_filename = voucher_number.replace('/', '-').replace('\\', '-')
         filename = f"{safe_filename}.pdf"
+        logger.info(f"Setting download filename header: {filename}")
         
         return Response(
             content=pdf_io.getvalue(),
             media_type='application/pdf',
             headers={
-                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Disposition": f'attachment; filename="{filename}"',
                 "Cache-Control": "no-cache"
             }
         )
@@ -364,8 +370,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             return None
         
         # Convert to dictionary
-        voucher_data = await _voucher_to_dict(voucher, db)  # Await since now async
-        voucher_data['voucher_type'] = voucher_type
+        voucher_data = await _voucher_to_dict(voucher, db, voucher_type)  # Pass voucher_type
         
         return voucher_data
         
@@ -376,7 +381,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
             detail=f"Failed to retrieve voucher data"
         )
 
-async def _voucher_to_dict(voucher, db: AsyncSession) -> Dict[str, Any]:  # Changed to async def and AsyncSession
+async def _voucher_to_dict(voucher, db: AsyncSession, voucher_type: str) -> Dict[str, Any]:  # Added voucher_type parameter
     """
     Convert voucher ORM object to dictionary for template rendering
     """
@@ -397,6 +402,12 @@ async def _voucher_to_dict(voucher, db: AsyncSession) -> Dict[str, Any]:  # Chan
         'round_off': float(getattr(voucher, 'round_off', 0.0) or 0.0),
         'total_amount': float(getattr(voucher, 'total_amount', 0.0) or 0.0),
     }
+    
+    # Log voucher number details
+    logger.info(f"Voucher number from DB: type={type(voucher.voucher_number)}, value={voucher.voucher_number}, isdigit={str(voucher.voucher_number).isdigit() if voucher.voucher_number else False}")
+    
+    # Simplified: always use the raw voucher_number from DB as-is, without any formatting
+    logger.info(f"Using raw voucher_number for filename: {voucher.voucher_number}")
     
     # Add type-specific fields
     if hasattr(voucher, 'due_date'):

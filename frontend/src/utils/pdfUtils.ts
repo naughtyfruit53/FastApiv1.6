@@ -1,5 +1,5 @@
-// Unified PDF generation utility for all voucher types
 // frontend/src/utils/pdfUtils.ts
+
 import api from "../lib/api";
 
 export interface VoucherPdfConfig {
@@ -58,16 +58,35 @@ export const generateVoucherPDF = async (
     }
     // Call backend API for PDF generation
     const response = await api.post(
-      `/pdf-generation/voucher/${config.voucherType}/${voucherId}`,
+      `/pdf-generation/voucher/${config.voucherType}/${voucherId}/download`,
       {},
       { responseType: 'blob' }
     );
     // Handle the response blob
     const blob = response.data;
     const url = window.URL.createObjectURL(blob);
+
+    // Improved filename extraction from Content-Disposition
+    let filename = `${config.voucherTitle.replace(/\s+/g, '_')}_${voucherId}.pdf`; // Fallback filename
+    const contentDisposition = response.headers['content-disposition'];
+    console.log('Content-Disposition header:', contentDisposition);
+    if (contentDisposition) {
+      // Better regex to handle filename with or without quotes
+      const filenameRegex = /filename\*?=['"]?(?:UTF-\d['"]*)?([^;\r\n"']*)['"]?;?/i;
+      const matches = filenameRegex.exec(contentDisposition);
+      if (matches && matches[1]) {
+        filename = matches[1].replace(/['"]/g, '');
+        console.log('Extracted filename:', filename);
+      } else {
+        console.warn('Failed to extract filename from header');
+      }
+    } else {
+      console.warn('No Content-Disposition header found');
+    }
+
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${config.voucherTitle.replace(/\s+/g, "")}_${voucherId}.pdf`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -117,7 +136,7 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
     entityType: "vendor",
   },
   "purchase-order": {
-    voucherType: "purchase-order",
+    voucherType: "purchase-orders",
     voucherTitle: "PURCHASE ORDER",
     showItems: true,
     showTaxDetails: true,
@@ -258,7 +277,7 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
 export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
   const config = VOUCHER_PDF_CONFIGS[voucherType];
   if (!config) {
-    console.warn(`No PDF configuration found for voucher type: ${voucherType}`);
+    console.warn(`No PDF configuration found for voucher type: {voucherType}`);
     return {
       voucherType,
       voucherTitle: voucherType.toUpperCase().replace(/-/g, " "),

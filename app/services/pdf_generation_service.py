@@ -450,7 +450,7 @@ class VoucherPDFGenerator:
                         'product_name': name.capitalize() + ' Charge',
                         'description': '',
                         'hsn_code': '',
-                        'quantity': 0,  # Set to 0 to avoid adding to total_quantity
+                        'quantity': 0,
                         'unit': '',
                         'unit_price': amount,
                         'discount_percentage': 0,

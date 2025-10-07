@@ -243,12 +243,21 @@ const VoucherPDFButton: React.FC<VoucherPDFButtonProps> = ({
         const blob = new Blob([response.data], { type: 'application/pdf' });
         const url = window.URL.createObjectURL(blob);
 
+        // Extract filename from Content-Disposition header
+        let filename = `voucher_${voucherId}.pdf`; // Fallback filename
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (match && match[1]) {
+            filename = match[1];
+          }
+        }
+
         if (download) {
-          // Force download with voucher number as filename (replace / with -)
+          // Force download with extracted filename
           const a = document.createElement('a');
           a.href = url;
-          const safeVoucherNumber = voucherNumber ? voucherNumber.replace(/\//g, '-') : `voucher_${voucherId}`;
-          a.download = `${safeVoucherNumber}.pdf`;
+          a.download = filename;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
