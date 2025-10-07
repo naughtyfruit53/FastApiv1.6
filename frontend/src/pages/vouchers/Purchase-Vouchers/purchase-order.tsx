@@ -478,6 +478,39 @@ const PurchaseOrderPage: React.FC = () => {
 
   const enhancedVendorOptions = [...(vendorList || []), { id: null, name: "Add New Vendor..." }];
 
+  // Helper function to determine PO color status
+  const getPOColorStatus = (voucher: any) => {
+    // This is a simplified version since we don't have GRN data loaded in index
+    // In a full implementation, you'd fetch GRN status or include it in the voucher data
+    const hasTracking = !!(voucher.tracking_number || voucher.transporter_name);
+    
+    // For now, we'll use simplified logic:
+    // - Red if no tracking
+    // - Yellow if has tracking (we assume GRN is pending unless explicitly complete)
+    // - Green if status is 'completed' or 'closed'
+    
+    if (voucher.status === 'completed' || voucher.status === 'closed') {
+      return 'green';
+    } else if (hasTracking) {
+      return 'yellow';
+    } else {
+      return 'red';
+    }
+  };
+
+  const getColorCode = (status: string) => {
+    switch (status) {
+      case 'red':
+        return '#f44336';
+      case 'yellow':
+        return '#ff9800';
+      case 'green':
+        return '#4caf50';
+      default:
+        return '#9e9e9e';
+    }
+  };
+
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
       <Table stickyHeader size="small">
@@ -494,8 +527,19 @@ const PurchaseOrderPage: React.FC = () => {
           {latestVouchers.length === 0 ? (
             <TableRow><TableCell colSpan={5} align="center">No purchase orders available</TableCell></TableRow>
           ) : (
-            latestVouchers.slice(0, 7).map((voucher: any) => (
-              <TableRow key={voucher.id} hover onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} sx={{ cursor: "pointer" }}>
+            latestVouchers.slice(0, 7).map((voucher: any) => {
+              const colorStatus = getPOColorStatus(voucher);
+              const colorCode = getColorCode(colorStatus);
+              return (
+              <TableRow 
+                key={voucher.id} 
+                hover 
+                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} 
+                sx={{ 
+                  cursor: "pointer",
+                  borderLeft: `4px solid ${colorCode}`
+                }}
+              >
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{voucher.date ? new Date(voucher.date).toLocaleDateString() : "N/A"}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
@@ -516,7 +560,8 @@ const PurchaseOrderPage: React.FC = () => {
                   />
                 </TableCell>
               </TableRow>
-            ))
+            );
+            })
           )}
         </TableBody>
       </Table>

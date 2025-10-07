@@ -24,7 +24,10 @@ import {
   Add, 
   Visibility, 
   Edit, 
-  Delete 
+  Delete,
+  FileDownload,
+  FileUpload,
+  GetApp
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
@@ -36,6 +39,9 @@ const BOMManagement: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -90,6 +96,90 @@ const BOMManagement: React.FC = () => {
     setShowAddModal(true);
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get('/bom/export/template', {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'BOM_Import_Template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      alert('Failed to download template');
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/bom/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setImportMessage(
+        `Successfully imported ${response.data.imported_count} BOMs` +
+        (response.data.errors?.length ? `\n\nErrors: ${response.data.errors.join('\n')}` : '')
+      );
+      
+      queryClient.invalidateQueries({ queryKey: ['boms'] });
+    } catch (error: any) {
+      console.error('Error importing BOMs:', error);
+      setImportMessage(
+        'Failed to import BOMs: ' + 
+        (error.response?.data?.detail || error.message)
+      );
+    } finally {
+      setImporting(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get('/bom/export', {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'BOM_Export.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error exporting BOMs:', error);
+      alert('Failed to export BOMs: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (isLoadingBOMs) {
     return <CircularProgress />;
   }
@@ -99,14 +189,52 @@ const BOMManagement: React.FC = () => {
       <Box sx={{ mt: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">Bill of Materials (BOM)</Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleCreate}
-          >
-            Create BOM
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<GetApp />}
+              onClick={handleDownloadTemplate}
+            >
+              Template
+            </Button>
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={importing ? <CircularProgress size={20} /> : <FileUpload />}
+              disabled={importing}
+            >
+              Import
+              <input
+                type="file"
+                hidden
+                accept=".xlsx,.xls"
+                onChange={handleImport}
+              />
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={exporting ? <CircularProgress size={20} /> : <FileDownload />}
+              onClick={handleExport}
+              disabled={exporting || !bomList?.length}
+            >
+              Export
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleCreate}
+            >
+              Create BOM
+            </Button>
+          </Box>
         </Box>
+        {importMessage && (
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
+              {importMessage}
+            </Typography>
+          </Box>
+        )}
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
