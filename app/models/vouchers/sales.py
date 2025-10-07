@@ -18,6 +18,10 @@ class DeliveryChallan(BaseVoucher):
     vehicle_number = Column(String)
     lr_rr_number = Column(String)
     destination = Column(String)
+    # Tracking fields
+    transporter_name = Column(String)
+    tracking_number = Column(String)
+    tracking_link = Column(String)
     
     customer = relationship("Customer")
     sales_order = relationship("SalesOrder")

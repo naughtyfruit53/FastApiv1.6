@@ -416,3 +416,92 @@ async def delete_purchase_order(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete purchase order"
         )
+
+@router.put("/{invoice_id}/tracking")
+async def update_purchase_order_tracking(
+    invoice_id: int,
+    transporter_name: Optional[str] = None,
+    tracking_number: Optional[str] = None,
+    tracking_link: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update tracking details for a purchase order"""
+    try:
+        stmt = select(PurchaseOrder).where(
+            PurchaseOrder.id == invoice_id,
+            PurchaseOrder.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        po = result.scalar_one_or_none()
+        
+        if not po:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Purchase order not found"
+            )
+        
+        # Update tracking fields
+        if transporter_name is not None:
+            po.transporter_name = transporter_name
+        if tracking_number is not None:
+            po.tracking_number = tracking_number
+        if tracking_link is not None:
+            po.tracking_link = tracking_link
+        
+        await db.commit()
+        await db.refresh(po)
+        
+        logger.info(f"Tracking details updated for PO {po.voucher_number} by {current_user.email}")
+        return {
+            "message": "Tracking details updated successfully",
+            "transporter_name": po.transporter_name,
+            "tracking_number": po.tracking_number,
+            "tracking_link": po.tracking_link
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating tracking details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update tracking details"
+        )
+
+@router.get("/{invoice_id}/tracking")
+async def get_purchase_order_tracking(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get tracking details for a purchase order"""
+    try:
+        stmt = select(PurchaseOrder).where(
+            PurchaseOrder.id == invoice_id,
+            PurchaseOrder.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        po = result.scalar_one_or_none()
+        
+        if not po:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Purchase order not found"
+            )
+        
+        return {
+            "transporter_name": po.transporter_name,
+            "tracking_number": po.tracking_number,
+            "tracking_link": po.tracking_link
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving tracking details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve tracking details"
+        )
