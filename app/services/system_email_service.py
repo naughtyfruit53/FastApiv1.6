@@ -146,8 +146,7 @@ class SystemEmailService:
                         subject: str, 
                         body: str, 
                         html_body: Optional[str] = None, 
-                        bcc_emails: Optional[list] = None,
-                        email_send: Optional[EmailSend] = None) -> tuple[bool, Optional[str], Optional[str]]:
+                        bcc_emails: Optional[list] = None) -> tuple[bool, Optional[str], Optional[str]]:
         """Send email via Brevo with enhanced error handling and BCC support"""
         logger.debug(f"Attempting to send email via Brevo to {to_email} with BCC: {bcc_emails}")
         try:
@@ -235,7 +234,12 @@ class SystemEmailService:
                 # Try Brevo first if available and enabled
                 if self.api_instance and self.enable_brevo:
                     logger.debug("Trying Brevo")
-                    success, error, message_id = self._send_email_brevo(to_email, subject, body, html_body, email_send)
+                    success, error, message_id = self._send_email_brevo(
+                        to_email=to_email, 
+                        subject=subject, 
+                        body=body, 
+                        html_body=html_body
+                    )
                     
                     if success:
                         await self._update_email_audit_record(
@@ -727,13 +731,13 @@ class SystemEmailService:
             
             # Try Brevo first
             if self.api_instance and self.enable_brevo:
-                success, error_msg, message_id = self._send_email_brevo(
-                    to_email=to_email,
-                    subject=subject,
-                    body=body,
+                logger.debug("Trying Brevo")
+                success, error, message_id = self._send_email_brevo(
+                    to_email=to_email, 
+                    subject=subject, 
+                    body=body, 
                     html_body=html_body,
-                    bcc_emails=bcc_emails,
-                    email_send=email_send
+                    bcc_emails=bcc_emails
                 )
                 
                 if success:
@@ -741,7 +745,7 @@ class SystemEmailService:
                         db=db,
                         email_send=email_send,
                         status=EmailStatus.SENT,
-                        provider_used=EmailProvider.BREVO,
+                        provider_used=EmailProvider.BREVO, 
                         provider_message_id=message_id
                     )
                     await db.commit()
@@ -759,7 +763,7 @@ class SystemEmailService:
                         email_send=email_send,
                         status=EmailStatus.FAILED,
                         provider_used=EmailProvider.BREVO,
-                        error_message=error_msg
+                        error_message=error
                     )
                     
                     if self.fallback_enabled:
@@ -788,25 +792,26 @@ class SystemEmailService:
                             )
                     
                     await db.commit()
-                    return False, error_msg
+                    return False, error
             else:
                 # No Brevo, try SMTP fallback
                 if self.fallback_enabled:
-                    logger.info(f"Using SMTP for {to_email} (BCC not supported)")
-                    success, error_msg, message_id = self._send_email_smtp(to_email, subject, body, html_body, email_send)
-                    
-                    status = EmailStatus.SENT if success else EmailStatus.FAILED
-                    await self._update_email_audit_record(
-                        db=db,
-                        email_send=email_send,
-                        status=status,
-                        provider_used=EmailProvider.SMTP,
-                        provider_message_id=message_id if success else None,
-                        error_message=error_msg if not success else None
-                    )
-                    await db.commit()
-                    
-                    return success, error_msg
+                    if self.fallback_enabled:
+                        logger.info(f"Using SMTP for {to_email} (BCC not supported)")
+                        success, error_msg, message_id = self._send_email_smtp(to_email, subject, body, html_body, email_send)
+                        
+                        status = EmailStatus.SENT if success else EmailStatus.FAILED
+                        await self._update_email_audit_record(
+                            db=db,
+                            email_send=email_send,
+                            status=status,
+                            provider_used=EmailProvider.SMTP,
+                            provider_message_id=message_id if success else None,
+                            error_message=error_msg if not success else None
+                        )
+                        await db.commit()
+                        
+                        return success, error_msg
                 else:
                     error_msg = "No email service configured"
                     await self._update_email_audit_record(

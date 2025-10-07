@@ -2,11 +2,10 @@
 
 from datetime import datetime, timedelta
 from typing import Optional, Tuple, Dict, Any, Union
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 import random
 import string
-import asyncio
 
 from app.models.system_models import OTPVerification
 from app.core.security import get_password_hash, verify_password
@@ -19,10 +18,10 @@ logger = logging.getLogger(__name__)
 class OTPService:
     """OTP service using database for storage"""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
     
-    def generate_and_send_otp(self, email: str, purpose: str = "login", organization_id: Optional[int] = None, additional_data: Optional[Dict[str, Any]] = None, phone_number: Optional[str] = None, delivery_method: str = "email") -> Tuple[bool, Optional[str]]:
+    async def generate_and_send_otp(self, email: str, purpose: str = "login", organization_id: Optional[int] = None, additional_data: Optional[Dict[str, Any]] = None, phone_number: Optional[str] = None, delivery_method: str = "email") -> Tuple[bool, Optional[str]]:
         """Generate OTP and send via specified method (WhatsApp preferred, email fallback). Returns success and the plain OTP."""
         try:
             # Generate 6-digit OTP
@@ -42,7 +41,7 @@ class OTPService:
             )
             
             self.db.add(otp_verification)
-            self.db.commit()
+            await self.db.commit()
             
             # Try WhatsApp first if phone number provided and delivery method allows
             delivery_success = False
@@ -63,8 +62,7 @@ class OTPService:
             # Fallback to email if WhatsApp failed or not requested
             if not delivery_success:
                 template = "factory_reset_otp.html" if purpose == "reset_data" else "otp.html"
-                loop = asyncio.get_event_loop()
-                success, error = loop.run_until_complete(system_email_service.send_otp_email(email, otp, purpose, template=template))
+                success, error = await system_email_service.send_otp_email(email, otp, purpose, template=template)
                 
                 if success:
                     delivery_success = True
@@ -74,7 +72,7 @@ class OTPService:
                     logger.error(f"Failed to send OTP via email to {email} for {purpose}")
             
             if not delivery_success:
-                self.db.rollback()
+                await self.db.rollback()
                 return False, None
             
             # Update the OTP record for audit purposes (using existing fields)
@@ -84,20 +82,22 @@ class OTPService:
             return True, otp
             
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             logger.error(f"Failed to generate OTP for {email}: {e}")
             return False, None
     
-    def verify_otp(self, email: str, otp: str, purpose: str = "login", return_data: bool = False) -> Union[bool, Tuple[bool, Dict[str, Any]]]:
+    async def verify_otp(self, email: str, otp: str, purpose: str = "login", return_data: bool = False) -> Union[bool, Tuple[bool, Dict[str, Any]]]:
         """Verify OTP"""
         try:
             # Find latest OTP record
-            otp_record = self.db.query(OTPVerification).filter(
-                OTPVerification.email == email,
-                OTPVerification.purpose == purpose,
-                OTPVerification.is_used == False,
-                OTPVerification.expires_at > datetime.utcnow()
-            ).order_by(OTPVerification.created_at.desc()).first()
+            otp_record = (await self.db.execute(
+                select(OTPVerification).filter(
+                    OTPVerification.email == email,
+                    OTPVerification.purpose == purpose,
+                    OTPVerification.is_used == False,
+                    OTPVerification.expires_at > datetime.utcnow()
+                ).order_by(OTPVerification.created_at.desc())
+            )).scalars().first()
             
             if not otp_record:
                 logger.warning(f"No valid OTP found for {email} ({purpose})")
@@ -108,14 +108,14 @@ class OTPService:
                 otp_record.attempts += 1
                 if otp_record.attempts >= otp_record.max_attempts:
                     otp_record.is_used = True  # Mark as used after max attempts
-                self.db.commit()
+                await self.db.commit()
                 logger.warning(f"Invalid OTP attempt for {email} ({purpose}), attempts: {otp_record.attempts}")
                 return False if not return_data else (False, {})
             
             # Mark as used
             otp_record.is_used = True
             otp_record.used_at = datetime.utcnow()
-            self.db.commit()
+            await self.db.commit()
             
             logger.info(f"OTP verified successfully for {email} ({purpose})")
             return True if not return_data else (True, {})

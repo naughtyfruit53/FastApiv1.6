@@ -545,10 +545,10 @@ async def reset_user_password(
             detail="Access denied to this organization"
         )
   
-    if not current_user.is_super_admin and current_user.role != "management":
+    if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only management can reset passwords"
+            detail="Only administrators can reset passwords"
         )
   
     stmt = select(User).filter(
