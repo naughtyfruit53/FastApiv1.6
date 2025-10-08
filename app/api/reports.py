@@ -853,11 +853,22 @@ async def get_pending_purchase_orders_with_grn_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get pending purchase orders with GRN status and tracking information for inventory management"""
+    """
+    Get pending purchase orders with GRN status and tracking information for inventory management.
+    
+    This endpoint returns ALL purchase orders that:
+    1. Have at least one item with pending_quantity > 0, OR
+    2. Have not been fully received yet
+    
+    Color coding:
+    - Red: No tracking details (no transporter_name and no tracking_number)
+    - Yellow: Has tracking but GRN still pending
+    - Green: GRN complete (not shown in pending orders)
+    """
     try:
         org_id = require_current_organization_id()
         
-        # Get all purchase orders
+        # Get all purchase orders with items
         purchase_orders = TenantQueryMixin.filter_by_tenant(
             db.query(PurchaseOrder), PurchaseOrder, org_id
         ).all()
@@ -865,27 +876,25 @@ async def get_pending_purchase_orders_with_grn_status(
         pending_orders = []
         
         for po in purchase_orders:
-            # Check if GRN exists for this PO
-            grns = TenantQueryMixin.filter_by_tenant(
-                db.query(GoodsReceiptNote), GoodsReceiptNote, org_id
-            ).filter(GoodsReceiptNote.purchase_order_id == po.id).all()
+            # Skip if PO has no items
+            if not po.items:
+                continue
             
-            # Calculate total ordered vs received
+            # Calculate total ordered vs received using pending_quantity from items
             total_ordered_qty = sum(item.quantity for item in po.items)
-            total_received_qty = sum(
-                sum(grn_item.received_quantity for grn_item in grn.items)
-                for grn in grns
-            )
+            total_pending_qty = sum(item.pending_quantity for item in po.items)
+            total_received_qty = total_ordered_qty - total_pending_qty
             
-            # Determine if PO is fully received
-            is_fully_received = total_received_qty >= total_ordered_qty if total_ordered_qty > 0 else False
-            
-            # Only include POs that are not fully received
-            if not is_fully_received:
+            # Only include POs that have pending quantities
+            if total_pending_qty > 0:
+                # Check if GRN exists for this PO
+                grns = TenantQueryMixin.filter_by_tenant(
+                    db.query(GoodsReceiptNote), GoodsReceiptNote, org_id
+                ).filter(GoodsReceiptNote.purchase_order_id == po.id).all()
+                
                 # Determine color coding
-                # Red: no tracking details
+                # Red: no tracking details (neither transporter_name nor tracking_number)
                 # Yellow: has tracking but GRN pending
-                # (Green would be for complete, which we exclude here)
                 has_tracking = bool(po.tracking_number or po.transporter_name)
                 
                 color_status = "yellow" if has_tracking else "red"
@@ -900,7 +909,7 @@ async def get_pending_purchase_orders_with_grn_status(
                     "status": po.status,
                     "total_ordered_qty": total_ordered_qty,
                     "total_received_qty": total_received_qty,
-                    "pending_qty": total_ordered_qty - total_received_qty,
+                    "pending_qty": total_pending_qty,
                     "grn_count": len(grns),
                     "has_tracking": has_tracking,
                     "transporter_name": po.transporter_name,
@@ -924,7 +933,7 @@ async def get_pending_purchase_orders_with_grn_status(
         }
         
     except Exception as e:
-        logger.error(f"Error getting pending purchase orders with GRN status: {e}")
+        logger.error(f"Error getting pending purchase orders with GRN status: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get pending purchase orders"
