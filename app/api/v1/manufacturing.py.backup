@@ -143,8 +143,8 @@ async def create_manufacturing_order(
     )
     
     db.add(db_order)
-    await db.commit()
-    await db.refresh(db_order)
+    await await db.commit()
+    await await db.refresh(db_order)
     
     return db_order
 
@@ -428,11 +428,9 @@ async def get_manufacturing_journal_vouchers(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    stmt = select(ManufacturingJournalVoucher).where(
+    vouchers = db.query(ManufacturingJournalVoucher).filter(
         ManufacturingJournalVoucher.organization_id == current_user.organization_id
-    ).offset(skip).limit(limit)
-    result = await db.execute(stmt)
-    vouchers = result.scalars().all()
+    ).offset(skip).limit(limit).all()
     return vouchers
 
 @router.get("/manufacturing-journal-vouchers/next-number")
@@ -452,7 +450,7 @@ async def create_manufacturing_journal_voucher(
     current_user = Depends(get_current_active_user)
 ):
     # Verify Manufacturing Order and BOM exist
-    stmt = select(ManufacturingOrder).where(
+    mo = db.query(ManufacturingOrder).filter(
         ManufacturingOrder.id == voucher_data.manufacturing_order_id,
         ManufacturingOrder.organization_id == current_user.organization_id
     ).first()
@@ -460,12 +458,10 @@ async def create_manufacturing_journal_voucher(
     if not mo:
         raise HTTPException(status_code=404, detail="Manufacturing order not found")
     
-    stmt = select(BillOfMaterials).where(
+    bom = db.query(BillOfMaterials).filter(
         BillOfMaterials.id == voucher_data.bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
-    )
-    result = await db.execute(stmt)
-    bom = result.scalar_one_or_none()
+    ).first()
     
     if not bom:
         raise HTTPException(status_code=404, detail="BOM not found")
@@ -566,11 +562,9 @@ async def get_material_receipt_vouchers(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    stmt = select(MaterialReceiptVoucher).where(
+    vouchers = db.query(MaterialReceiptVoucher).filter(
         MaterialReceiptVoucher.organization_id == current_user.organization_id
-    ).offset(skip).limit(limit)
-    result = await db.execute(stmt)
-    vouchers = result.scalars().all()
+    ).offset(skip).limit(limit).all()
     return vouchers
 
 @router.get("/material-receipt-vouchers/next-number")
@@ -659,11 +653,9 @@ async def get_job_card_vouchers(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    stmt = select(JobCardVoucher).where(
+    vouchers = db.query(JobCardVoucher).filter(
         JobCardVoucher.organization_id == current_user.organization_id
-    ).offset(skip).limit(limit)
-    result = await db.execute(stmt)
-    vouchers = result.scalars().all()
+    ).offset(skip).limit(limit).all()
     return vouchers
 
 @router.get("/job-card-vouchers/next-number")
@@ -762,16 +754,14 @@ async def get_stock_journals(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    stmt = select(StockJournal).where(
+    query = db.query(StockJournal).filter(
         StockJournal.organization_id == current_user.organization_id
     )
     
     if journal_type:
-        stmt = stmt.where(StockJournal.journal_type == journal_type)
+        query = query.filter(StockJournal.journal_type == journal_type)
     
-    stmt = stmt.offset(skip).limit(limit)
-    result = await db.execute(stmt)
-    journals = result.scalars().all()
+    journals = query.offset(skip).limit(limit).all()
     return journals
 
 @router.get("/stock-journals/next-number")
