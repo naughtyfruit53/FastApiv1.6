@@ -21,6 +21,10 @@ from app.schemas.integration import ExternalIntegrationResponse
 from app.services.rbac import RBACService
 from app.core.rbac_dependencies import check_service_permission
 
+# Import added for pending PO report
+from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem, GoodsReceiptNoteItem
+from app.models.customer_models import Vendor as VendorModel  # Corrected import
+
 router = APIRouter()
 
 # Base schema for reporting hub
@@ -66,6 +70,16 @@ class ModuleReport(BaseModel):
     data: Dict[str, Any]
     charts: List[Dict[str, Any]]
     summary: Dict[str, Any]
+
+# Added response model for pending PO report
+class PendingPurchaseOrderResponse(BaseModel):
+    po_id: int
+    po_number: str
+    vendor_name: str
+    ordered_quantity: float
+    received_quantity: float
+    pending_quantity: float
+    grn_status: str
 
 # Executive Dashboard
 @router.get("/dashboard/executive", response_model=ExecutiveDashboard)
@@ -745,3 +759,56 @@ async def export_dashboard(
         "export_id": f"export_{int(datetime.now().timestamp())}",
         "estimated_completion": datetime.now() + timedelta(minutes=5)
     }
+
+# Added endpoint to fix the error
+@router.get("/reports/pending-purchase-orders-with-grn-status", response_model=List[PendingPurchaseOrderResponse])
+def get_pending_purchase_orders_with_grn_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get pending purchase orders with GRN status"""
+    org_id = current_user.organization_id
+    
+    try:
+        # Use ORM query for better debugging
+        query = (
+            db.query(
+                PurchaseOrder.id.label("po_id"),
+                PurchaseOrder.voucher_number.label("po_number"),
+                VendorModel.name.label("vendor_name"),
+                func.sum(PurchaseOrderItem.quantity).label("ordered_quantity"),
+                func.coalesce(func.sum(GoodsReceiptNoteItem.accepted_quantity), 0).label("received_quantity"),
+                (func.sum(PurchaseOrderItem.quantity) - func.coalesce(func.sum(GoodsReceiptNoteItem.accepted_quantity), 0)).label("pending_quantity"),
+                func.case(
+                    [
+                        (func.sum(GoodsReceiptNoteItem.accepted_quantity).is_(None), "none"),
+                        (func.sum(GoodsReceiptNoteItem.accepted_quantity) < func.sum(PurchaseOrderItem.quantity), "partial"),
+                    ],
+                    else_="complete"
+                ).label("grn_status")
+            )
+            .join(PurchaseOrderItem, PurchaseOrder.id == PurchaseOrderItem.purchase_order_id)
+            .join(VendorModel, PurchaseOrder.vendor_id == VendorModel.id)
+            .outerjoin(GoodsReceiptNoteItem, PurchaseOrderItem.id == GoodsReceiptNoteItem.po_item_id)
+            .filter(PurchaseOrder.organization_id == org_id)
+            .group_by(PurchaseOrder.id, PurchaseOrder.voucher_number, VendorModel.name)
+            .having((func.sum(PurchaseOrderItem.quantity) - func.coalesce(func.sum(GoodsReceiptNoteItem.accepted_quantity), 0)) > 0)
+            .order_by(desc(PurchaseOrder.date))
+        )
+        
+        rows = query.all()
+        
+        return [PendingPurchaseOrderResponse(
+            po_id=row.po_id,
+            po_number=row.po_number,
+            vendor_name=row.vendor_name,
+            ordered_quantity=float(row.ordered_quantity),
+            received_quantity=float(row.received_quantity),
+            pending_quantity=float(row.pending_quantity),
+            grn_status=row.grn_status
+        ) for row in rows]
+    
+    except Exception as e:
+        import traceback
+        logger.error(f"Error getting pending purchase orders with GRN status: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generating report: {str(e)}")

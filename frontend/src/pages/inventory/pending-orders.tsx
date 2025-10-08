@@ -78,7 +78,7 @@ const PendingOrdersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/api/v1/reports/pending-purchase-orders-with-grn-status');
+      const response = await api.get('/reports/pending-purchase-orders-with-grn-status');
       setOrders(response.data.orders || []);
       setSummary(response.data.summary || {
         total_orders: 0,

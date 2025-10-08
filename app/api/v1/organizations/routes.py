@@ -171,7 +171,7 @@ async def factory_default_system(
         )
     try:
         from app.services.reset_service import ResetService
-        result = ResetService.factory_default_system(db)
+        result = await ResetService.factory_default_system(db, current_user)
         return {
             "message": "System has been reset to factory defaults successfully",
             "warning": "All organizations, users, and data have been permanently deleted",
@@ -363,7 +363,7 @@ async def verify_reset_otp_and_reset(
             )
         
         from app.services.org_reset_service import OrgResetService
-        result = OrgResetService.reset_organization_business_data(db, current_user.organization_id)
+        result = await OrgResetService.reset_organization_business_data(db, current_user.organization_id)
         return {
             "message": "Organization data has been reset successfully",
             "details": result.get("deleted", {}),
@@ -396,7 +396,7 @@ async def reset_organization_data(
   
     try:
         from app.services.org_reset_service import OrgResetService
-        result = OrgResetService.reset_organization_business_data(db, current_user.organization_id)
+        result = await OrgResetService.reset_organization_business_data(db, current_user.organization_id)
         return {
             "message": "Organization data has been reset successfully",
             "details": result.get("deleted", {}),

@@ -3,9 +3,8 @@
 """
 System-level reset service for factory default operations
 """
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import func
-from sqlalchemy import text  # Added for raw SQL execution
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import delete, select, text  # Added for raw SQL execution
 from typing import Dict, Any
 from app.models.user_models import Organization, User, ServiceRole, UserServiceRole, ServiceRolePermission
 from app.models.system_models import Company, EmailNotification, PaymentTerm, OTPVerification, AuditLog
@@ -20,7 +19,7 @@ class ResetService:
     """Service for system-level reset operations"""
     
     @staticmethod
-    def factory_default_system(db: Session, admin_user: User) -> Dict[str, Any]:
+    async def factory_default_system(db: AsyncSession, admin_user: User) -> Dict[str, Any]:
         """
         Complete system factory reset (for God Super Admin only - naughtyfruit53@gmail.com)
         Removes ALL organizations, users, and data - resets entire system
@@ -51,69 +50,115 @@ class ResetService:
             # Delete in reverse dependency order to avoid foreign key constraints
             
             # Delete all user_service_roles (dependent on users and roles)
-            deleted_user_service_roles = db.query(UserServiceRole).delete()
+            res_user_service_roles = await db.execute(delete(UserServiceRole))
+            deleted_user_service_roles = res_user_service_roles.rowcount
             result["deleted"]["user_service_roles"] = deleted_user_service_roles
             
             # Delete all service_role_permissions (dependent on roles)
-            deleted_role_permissions = db.query(ServiceRolePermission).delete()
+            res_role_permissions = await db.execute(delete(ServiceRolePermission))
+            deleted_role_permissions = res_role_permissions.rowcount
             result["deleted"]["service_role_permissions"] = deleted_role_permissions
             
             # Delete all service_roles (dependent on organizations)
-            deleted_service_roles = db.query(ServiceRole).delete()
+            res_service_roles = await db.execute(delete(ServiceRole))
+            deleted_service_roles = res_service_roles.rowcount
             result["deleted"]["service_roles"] = deleted_service_roles
             
             # Delete all email notifications
-            deleted_notifications = db.query(EmailNotification).delete()
+            res_notifications = await db.execute(delete(EmailNotification))
+            deleted_notifications = res_notifications.rowcount
             result["deleted"]["email_notifications"] = deleted_notifications
             
             # Delete all stock entries
-            deleted_stock = db.query(Stock).delete()
+            res_stock = await db.execute(delete(Stock))
+            deleted_stock = res_stock.rowcount
             result["deleted"]["stock"] = deleted_stock
             
             # Delete all payment terms
-            deleted_payment_terms = db.query(PaymentTerm).delete()
+            res_payment_terms = await db.execute(delete(PaymentTerm))
+            deleted_payment_terms = res_payment_terms.rowcount
             result["deleted"]["payment_terms"] = deleted_payment_terms
             
             # Delete all products
-            deleted_products = db.query(Product).delete()
+            res_products = await db.execute(delete(Product))
+            deleted_products = res_products.rowcount
             result["deleted"]["products"] = deleted_products
             
             # Delete all customers
-            deleted_customers = db.query(Customer).delete()
+            res_customers = await db.execute(delete(Customer))
+            deleted_customers = res_customers.rowcount
             result["deleted"]["customers"] = deleted_customers
             
             # Delete all vendors
-            deleted_vendors = db.query(Vendor).delete()
+            res_vendors = await db.execute(delete(Vendor))
+            deleted_vendors = res_vendors.rowcount
             result["deleted"]["vendors"] = deleted_vendors
             
             # Delete all companies
-            deleted_companies = db.query(Company).delete()
+            res_companies = await db.execute(delete(Company))
+            deleted_companies = res_companies.rowcount
             result["deleted"]["companies"] = deleted_companies
             
             # Delete all OTP verifications
-            deleted_otps = db.query(OTPVerification).delete()
+            res_otps = await db.execute(delete(OTPVerification))
+            deleted_otps = res_otps.rowcount
             result["deleted"]["otp_verifications"] = deleted_otps
             
+            # Delete audit logs (references users)
+            res_audit_logs = await db.execute(delete(AuditLog))
+            deleted_audit_logs = res_audit_logs.rowcount
+            result["deleted"]["audit_logs"] = deleted_audit_logs
+            
+            # Delete bank accounts (references chart_of_accounts)
+            res_bank_accounts = await db.execute(text("DELETE FROM bank_accounts"))
+            deleted_bank_accounts = res_bank_accounts.rowcount
+            result["deleted"]["bank_accounts"] = deleted_bank_accounts
+            
+            # Delete chart of accounts (references users)
+            res_chart_of_accounts = await db.execute(text("DELETE FROM chart_of_accounts"))
+            deleted_chart_of_accounts = res_chart_of_accounts.rowcount
+            result["deleted"]["chart_of_accounts"] = deleted_chart_of_accounts
+            
+            # Delete snappymail configs (references users)
+            res_snappymail_configs = await db.execute(text("DELETE FROM snappymail_configs"))
+            deleted_snappymail_configs = res_snappymail_configs.rowcount
+            result["deleted"]["snappymail_configs"] = deleted_snappymail_configs
+            
+            # Delete email attachments (references emails)
+            res_email_attachments = await db.execute(text("DELETE FROM email_attachments"))
+            deleted_email_attachments = res_email_attachments.rowcount
+            result["deleted"]["email_attachments"] = deleted_email_attachments
+            
+            # Delete emails (references mail_accounts)
+            res_emails = await db.execute(text("DELETE FROM emails"))
+            deleted_emails = res_emails.rowcount
+            result["deleted"]["emails"] = deleted_emails
+            
+            # Delete mail accounts (references users)
+            res_mail_accounts = await db.execute(text("DELETE FROM mail_accounts"))
+            deleted_mail_accounts = res_mail_accounts.rowcount
+            result["deleted"]["mail_accounts"] = deleted_mail_accounts
+            
             # Delete all non-super-admin users
-            deleted_users = db.query(User).filter(
-                User.is_super_admin == False
-            ).delete()
+            res_users = await db.execute(delete(User).where(User.is_super_admin == False))
+            deleted_users = res_users.rowcount
             result["deleted"]["users"] = deleted_users
             
             # Delete all organizations
-            deleted_organizations = db.query(Organization).delete()
+            res_organizations = await db.execute(delete(Organization))
+            deleted_organizations = res_organizations.rowcount
             result["deleted"]["organizations"] = deleted_organizations
             
             # Reset sequence IDs to 1 (wrapped in text() for SQLAlchemy)
-            db.execute(text("ALTER SEQUENCE organizations_id_seq RESTART WITH 1;"))
-            db.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1;"))
-            db.execute(text("ALTER SEQUENCE service_roles_id_seq RESTART WITH 1;"))
-            db.execute(text("ALTER SEQUENCE user_service_roles_id_seq RESTART WITH 1;"))
-            db.execute(text("ALTER SEQUENCE service_role_permissions_id_seq RESTART WITH 1;"))
+            await db.execute(text("ALTER SEQUENCE organizations_id_seq RESTART WITH 1;"))
+            await db.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1;"))
+            await db.execute(text("ALTER SEQUENCE service_roles_id_seq RESTART WITH 1;"))
+            await db.execute(text("ALTER SEQUENCE user_service_roles_id_seq RESTART WITH 1;"))
+            await db.execute(text("ALTER SEQUENCE service_role_permissions_id_seq RESTART WITH 1;"))
             # Add other sequences if needed (e.g., for companies, customers, etc.)
             
             # Commit database changes
-            db.commit()
+            await db.commit()
             
             # Delete all Supabase auth users
             try:
@@ -131,12 +176,12 @@ class ResetService:
             return result
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error during factory default system reset: {str(e)}", exc_info=True)
             raise e
     
     @staticmethod
-    def reset_organization_business_data(db: Session, organization_id: int) -> Dict[str, Any]:
+    async def reset_organization_business_data(db: AsyncSession, organization_id: int) -> Dict[str, Any]:
         """
         Reset organization business data (preserves users and org settings)
         Removes business data like products, stock, customers, vendors, etc.
@@ -152,84 +197,71 @@ class ResetService:
             result = {"message": "Organization business data reset completed", "deleted": {}}
             
             # Validate organization exists
-            org = db.query(Organization).filter(Organization.id == organization_id).first()
+            org = await db.scalar(select(Organization).where(Organization.id == organization_id))
             if not org:
                 raise ValueError(f"Organization with ID {organization_id} not found")
             
             # Delete business data in reverse dependency order to avoid foreign key constraints
             
             # Delete all user_service_roles for this org
-            deleted_user_service_roles = db.query(UserServiceRole).filter(
-                UserServiceRole.organization_id == organization_id
-            ).delete()
+            res_user_service_roles = await db.execute(delete(UserServiceRole).where(UserServiceRole.organization_id == organization_id))
+            deleted_user_service_roles = res_user_service_roles.rowcount
             result["deleted"]["user_service_roles"] = deleted_user_service_roles
             
             # Delete all service_role_permissions for this org
-            deleted_role_permissions = db.query(ServiceRolePermission).filter(
-                ServiceRolePermission.organization_id == organization_id
-            ).delete()
+            res_role_permissions = await db.execute(delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id))
+            deleted_role_permissions = res_role_permissions.rowcount
             result["deleted"]["service_role_permissions"] = deleted_role_permissions
             
             # Delete all service_roles for this org
-            deleted_service_roles = db.query(ServiceRole).filter(
-                ServiceRole.organization_id == organization_id
-            ).delete()
+            res_service_roles = await db.execute(delete(ServiceRole).where(ServiceRole.organization_id == organization_id))
+            deleted_service_roles = res_service_roles.rowcount
             result["deleted"]["service_roles"] = deleted_service_roles
             
             # Delete all email notifications for this org
-            deleted_notifications = db.query(EmailNotification).filter(
-                EmailNotification.organization_id == organization_id
-            ).delete()
+            res_notifications = await db.execute(delete(EmailNotification).where(EmailNotification.organization_id == organization_id))
+            deleted_notifications = res_notifications.rowcount
             result["deleted"]["email_notifications"] = deleted_notifications
             
             # Delete all stock entries for this org
-            deleted_stock = db.query(Stock).filter(
-                Stock.organization_id == organization_id
-            ).delete()
+            res_stock = await db.execute(delete(Stock).where(Stock.organization_id == organization_id))
+            deleted_stock = res_stock.rowcount
             result["deleted"]["stock"] = deleted_stock
             
             # Delete all payment terms for this org
-            deleted_payment_terms = db.query(PaymentTerm).filter(
-                PaymentTerm.organization_id == organization_id
-            ).delete()
+            res_payment_terms = await db.execute(delete(PaymentTerm).where(PaymentTerm.organization_id == organization_id))
+            deleted_payment_terms = res_payment_terms.rowcount
             result["deleted"]["payment_terms"] = deleted_payment_terms
             
             # Delete all products for this org
-            deleted_products = db.query(Product).filter(
-                Product.organization_id == organization_id
-            ).delete()
+            res_products = await db.execute(delete(Product).where(Product.organization_id == organization_id))
+            deleted_products = res_products.rowcount
             result["deleted"]["products"] = deleted_products
             
             # Delete all customers for this org
-            deleted_customers = db.query(Customer).filter(
-                Customer.organization_id == organization_id
-            ).delete()
+            res_customers = await db.execute(delete(Customer).where(Customer.organization_id == organization_id))
+            deleted_customers = res_customers.rowcount
             result["deleted"]["customers"] = deleted_customers
             
             # Delete all vendors for this org
-            deleted_vendors = db.query(Vendor).filter(
-                Vendor.organization_id == organization_id
-            ).delete()
+            res_vendors = await db.execute(delete(Vendor).where(Vendor.organization_id == organization_id))
+            deleted_vendors = res_vendors.rowcount
             result["deleted"]["vendors"] = deleted_vendors
             
             # Delete all companies for this org
-            deleted_companies = db.query(Company).filter(
-                Company.organization_id == organization_id
-            ).delete()
+            res_companies = await db.execute(delete(Company).where(Company.organization_id == organization_id))
+            deleted_companies = res_companies.rowcount
             result["deleted"]["companies"] = deleted_companies
-            
-            # Reset organization status to indicate incomplete setup
-            org.company_details_completed = False
             
             # Note: We preserve users and organization settings
             # Note: We preserve audit logs for compliance
             
-            db.commit()
+            await db.commit()
             logger.info(f"Organization {organization_id} business data reset completed - users and org settings preserved")
             
             return result
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error during organization {organization_id} business data reset: {str(e)}", exc_info=True)
             raise e
