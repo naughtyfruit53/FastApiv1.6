@@ -258,6 +258,11 @@ class PurchaseOrderInDB(VoucherInDBBase):
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseOrderItemInDB]
     vendor: Optional[VendorMinimal] = None
+    grn_status: Optional[str] = None  # GRN status: "pending", "partial", "complete"
+    color_status: Optional[str] = None  # Color coding: "red", "yellow", "green"
+    transporter_name: Optional[str] = None  # Tracking information
+    tracking_number: Optional[str] = None
+    tracking_link: Optional[str] = None
 
     @field_validator('round_off', mode='before')
     @classmethod

@@ -232,7 +232,22 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredVouchers.map((voucher) => (
+                {filteredVouchers.map((voucher) => {
+                  // Determine color coding for purchase orders
+                  const getColorStatus = () => {
+                    if (voucher.color_status) {
+                      return voucher.color_status;
+                    }
+                    return null;
+                  };
+                  
+                  const colorStatus = getColorStatus();
+                  const borderColor = colorStatus === 'green' ? '#4caf50' : 
+                                     colorStatus === 'yellow' ? '#ff9800' : 
+                                     colorStatus === 'red' ? '#f44336' : 
+                                     'transparent';
+                  
+                  return (
                   <TableRow
                     key={voucher.id}
                     hover
@@ -240,6 +255,7 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                     onContextMenu={(e) => handleContextMenu(e, voucher)}
                     sx={{
                       cursor: "pointer",
+                      borderLeft: colorStatus ? `4px solid ${borderColor}` : 'none',
                       "&:hover": {
                         backgroundColor: "action.hover",
                       },
@@ -260,7 +276,8 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                       ₹{voucher.total_amount?.toLocaleString() || "0"}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
                 {filteredVouchers.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} align="center">
