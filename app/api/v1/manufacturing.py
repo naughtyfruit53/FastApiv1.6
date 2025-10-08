@@ -1,7 +1,9 @@
 # app/api/v1/manufacturing.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime
 import logging
@@ -72,25 +74,27 @@ async def get_manufacturing_orders(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    query = db.query(ManufacturingOrder).filter(
+    stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.organization_id == current_user.organization_id
     )
     
     if status:
-        query = query.filter(ManufacturingOrder.production_status == status)
+        stmt = stmt.where(ManufacturingOrder.production_status == status)
     
-    orders = query.offset(skip).limit(limit).all()
+    stmt = stmt.offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
     return orders
 
 @router.get("/manufacturing-orders/next-number")
 async def get_next_manufacturing_order_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    next_number = VoucherNumberService.generate_voucher_number(
+    next_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MO", current_user.organization_id, ManufacturingOrder
     )
     return next_number
@@ -98,20 +102,22 @@ async def get_next_manufacturing_order_number(
 @router.post("/manufacturing-orders/", response_model=ManufacturingOrderResponse)
 async def create_manufacturing_order(
     order_data: ManufacturingOrderCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     # Verify BOM exists
-    bom = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == order_data.bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    bom = result.scalar_one_or_none()
     
     if not bom:
         raise HTTPException(status_code=404, detail="BOM not found")
     
     # Generate voucher number
-    voucher_number = VoucherNumberService.generate_voucher_number(
+    voucher_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MO", current_user.organization_id, ManufacturingOrder
     )
     
@@ -137,21 +143,23 @@ async def create_manufacturing_order(
     )
     
     db.add(db_order)
-    db.commit()
-    db.refresh(db_order)
+    await db.commit()
+    await db.refresh(db_order)
     
     return db_order
 
 @router.get("/manufacturing-orders/{order_id}", response_model=ManufacturingOrderResponse)
 async def get_manufacturing_order(
     order_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    order = db.query(ManufacturingOrder).filter(
+    stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.id == order_id,
         ManufacturingOrder.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    order = result.scalar_one_or_none()
     
     if not order:
         raise HTTPException(status_code=404, detail="Manufacturing order not found")
@@ -163,20 +171,22 @@ async def get_manufacturing_order(
 async def get_material_issues(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    issues = db.query(MaterialIssue).filter(
+    stmt = select(MaterialIssue).where(
         MaterialIssue.organization_id == current_user.organization_id
-    ).offset(skip).limit(limit).all()
+    ).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    issues = result.scalars().all()
     return issues
 
 @router.get("/material-issues/next-number")
 async def get_next_material_issue_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    next_number = VoucherNumberService.generate_voucher_number(
+    next_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MI", current_user.organization_id, MaterialIssue
     )
     return next_number
@@ -184,10 +194,10 @@ async def get_next_material_issue_number(
 @router.post("/material-issues/")
 async def create_material_issue(
     issue_data: MaterialIssueCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    voucher_number = VoucherNumberService.generate_voucher_number(
+    voucher_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MI", current_user.organization_id, MaterialIssue
     )
     
@@ -208,7 +218,7 @@ async def create_material_issue(
     )
     
     db.add(db_issue)
-    db.flush()
+    await db.flush()
     
     # Add items
     from app.models.vouchers import MaterialIssueItem
@@ -226,8 +236,8 @@ async def create_material_issue(
         )
         db.add(item)
     
-    db.commit()
-    db.refresh(db_issue)
+    await db.commit()
+    await db.refresh(db_issue)
     return db_issue
 
 # Enhanced Material Issue Schemas
@@ -415,20 +425,22 @@ class StockJournalCreate(BaseModel):
 async def get_manufacturing_journal_vouchers(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    vouchers = db.query(ManufacturingJournalVoucher).filter(
+    stmt = select(ManufacturingJournalVoucher).where(
         ManufacturingJournalVoucher.organization_id == current_user.organization_id
-    ).offset(skip).limit(limit).all()
+    ).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    vouchers = result.scalars().all()
     return vouchers
 
 @router.get("/manufacturing-journal-vouchers/next-number")
 async def get_next_manufacturing_journal_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    next_number = VoucherNumberService.generate_voucher_number(
+    next_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MJV", current_user.organization_id, ManufacturingJournalVoucher
     )
     return next_number
@@ -436,11 +448,11 @@ async def get_next_manufacturing_journal_number(
 @router.post("/manufacturing-journal-vouchers/")
 async def create_manufacturing_journal_voucher(
     voucher_data: ManufacturingJournalVoucherCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     # Verify Manufacturing Order and BOM exist
-    mo = db.query(ManufacturingOrder).filter(
+    stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.id == voucher_data.manufacturing_order_id,
         ManufacturingOrder.organization_id == current_user.organization_id
     ).first()
@@ -448,16 +460,18 @@ async def create_manufacturing_journal_voucher(
     if not mo:
         raise HTTPException(status_code=404, detail="Manufacturing order not found")
     
-    bom = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == voucher_data.bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    bom = result.scalar_one_or_none()
     
     if not bom:
         raise HTTPException(status_code=404, detail="BOM not found")
     
     # Generate voucher number
-    voucher_number = VoucherNumberService.generate_voucher_number(
+    voucher_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MJV", current_user.organization_id, ManufacturingJournalVoucher
     )
     
@@ -492,7 +506,7 @@ async def create_manufacturing_journal_voucher(
     )
     
     db.add(db_voucher)
-    db.flush()
+    await db.flush()
     
     # Add finished products
     for fp_data in voucher_data.finished_products:
@@ -540,8 +554,8 @@ async def create_manufacturing_journal_voucher(
         )
         db.add(bp)
     
-    db.commit()
-    db.refresh(db_voucher)
+    await db.commit()
+    await db.refresh(db_voucher)
     return db_voucher
 
 # Material Receipt Voucher Endpoints
@@ -549,20 +563,22 @@ async def create_manufacturing_journal_voucher(
 async def get_material_receipt_vouchers(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    vouchers = db.query(MaterialReceiptVoucher).filter(
+    stmt = select(MaterialReceiptVoucher).where(
         MaterialReceiptVoucher.organization_id == current_user.organization_id
-    ).offset(skip).limit(limit).all()
+    ).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    vouchers = result.scalars().all()
     return vouchers
 
 @router.get("/material-receipt-vouchers/next-number")
 async def get_next_material_receipt_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    next_number = VoucherNumberService.generate_voucher_number(
+    next_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MRV", current_user.organization_id, MaterialReceiptVoucher
     )
     return next_number
@@ -570,11 +586,11 @@ async def get_next_material_receipt_number(
 @router.post("/material-receipt-vouchers/")
 async def create_material_receipt_voucher(
     voucher_data: MaterialReceiptVoucherCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     # Generate voucher number
-    voucher_number = VoucherNumberService.generate_voucher_number(
+    voucher_number = await VoucherNumberService.generate_voucher_number_async(
         db, "MRV", current_user.organization_id, MaterialReceiptVoucher
     )
     
@@ -604,7 +620,7 @@ async def create_material_receipt_voucher(
     )
     
     db.add(db_voucher)
-    db.flush()
+    await db.flush()
     
     # Add items
     for item_data in voucher_data.items:
@@ -631,8 +647,8 @@ async def create_material_receipt_voucher(
         )
         db.add(item)
     
-    db.commit()
-    db.refresh(db_voucher)
+    await db.commit()
+    await db.refresh(db_voucher)
     return db_voucher
 
 # Job Card Voucher Endpoints
@@ -640,20 +656,22 @@ async def create_material_receipt_voucher(
 async def get_job_card_vouchers(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    vouchers = db.query(JobCardVoucher).filter(
+    stmt = select(JobCardVoucher).where(
         JobCardVoucher.organization_id == current_user.organization_id
-    ).offset(skip).limit(limit).all()
+    ).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    vouchers = result.scalars().all()
     return vouchers
 
 @router.get("/job-card-vouchers/next-number")
 async def get_next_job_card_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    next_number = VoucherNumberService.generate_voucher_number(
+    next_number = await VoucherNumberService.generate_voucher_number_async(
         db, "JCV", current_user.organization_id, JobCardVoucher
     )
     return next_number
@@ -661,11 +679,11 @@ async def get_next_job_card_number(
 @router.post("/job-card-vouchers/")
 async def create_job_card_voucher(
     voucher_data: JobCardVoucherCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     # Generate voucher number
-    voucher_number = VoucherNumberService.generate_voucher_number(
+    voucher_number = await VoucherNumberService.generate_voucher_number_async(
         db, "JCV", current_user.organization_id, JobCardVoucher
     )
     
@@ -695,7 +713,7 @@ async def create_job_card_voucher(
     )
     
     db.add(db_voucher)
-    db.flush()
+    await db.flush()
     
     # Add supplied materials
     for sm_data in voucher_data.supplied_materials:
@@ -731,8 +749,8 @@ async def create_job_card_voucher(
         )
         db.add(ro)
     
-    db.commit()
-    db.refresh(db_voucher)
+    await db.commit()
+    await db.refresh(db_voucher)
     return db_voucher
 
 # Stock Journal Endpoints
@@ -741,25 +759,27 @@ async def get_stock_journals(
     skip: int = 0,
     limit: int = 100,
     journal_type: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    query = db.query(StockJournal).filter(
+    stmt = select(StockJournal).where(
         StockJournal.organization_id == current_user.organization_id
     )
     
     if journal_type:
-        query = query.filter(StockJournal.journal_type == journal_type)
+        stmt = stmt.where(StockJournal.journal_type == journal_type)
     
-    journals = query.offset(skip).limit(limit).all()
+    stmt = stmt.offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    journals = result.scalars().all()
     return journals
 
 @router.get("/stock-journals/next-number")
 async def get_next_stock_journal_number(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    next_number = VoucherNumberService.generate_voucher_number(
+    next_number = await VoucherNumberService.generate_voucher_number_async(
         db, "SJ", current_user.organization_id, StockJournal
     )
     return next_number
@@ -767,11 +787,11 @@ async def get_next_stock_journal_number(
 @router.post("/stock-journals/")
 async def create_stock_journal(
     journal_data: StockJournalCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     # Generate voucher number
-    voucher_number = VoucherNumberService.generate_voucher_number(
+    voucher_number = await VoucherNumberService.generate_voucher_number_async(
         db, "SJ", current_user.organization_id, StockJournal
     )
     
@@ -804,7 +824,7 @@ async def create_stock_journal(
     )
     
     db.add(db_journal)
-    db.flush()
+    await db.flush()
     
     # Add entries
     for entry_data in journal_data.entries:
@@ -834,6 +854,6 @@ async def create_stock_journal(
         )
         db.add(entry)
     
-    db.commit()
-    db.refresh(db_journal)
+    await db.commit()
+    await db.refresh(db_journal)
     return db_journal

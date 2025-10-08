@@ -59,14 +59,19 @@ const ChatbotNavigator: React.FC = () => {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Send welcome message
+      // Send welcome message with enhanced capabilities
       addBotMessage(
-        "Hello! I'm your ERP assistant. I can help you with:\n\n" +
-        "• Navigate to any page\n" +
-        "• Create vendors, customers, or products\n" +
-        "• View low-stock items\n" +
-        "• Repeat purchase orders\n" +
-        "• Generate reports\n\n" +
+        "👋 Hello! I'm your AI business assistant. I can help you with:\n\n" +
+        "🎯 **Business Advice**: Get recommendations on inventory, cash flow, and sales\n" +
+        "📝 **Voucher Creation**: Create invoices, orders, and other documents\n" +
+        "🎪 **Lead Management**: Track prospects and opportunities\n" +
+        "💰 **Tax & GST**: Information on rates, filing, and compliance\n" +
+        "🧭 **Navigation**: Quick access to any page\n\n" +
+        "Try asking me:\n" +
+        '• "Give me business advice"\n' +
+        '• "Create a sales order"\n' +
+        '• "What are GST rates?"\n' +
+        '• "Show low stock items"\n\n' +
         "What would you like to do?"
       );
     }
