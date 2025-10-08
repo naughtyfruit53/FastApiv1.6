@@ -18,17 +18,107 @@ class VoucherNumberService:
     """Service for generating voucher numbers with org-level settings support"""
     
     @staticmethod
-    async def generate_voucher_number(
+    def generate_voucher_number(
+        db: Union[AsyncSession, Any], 
+        prefix: str, 
+        organization_id: int, 
+        model: Type[Any]
+    ) -> str:
+        """
+        Synchronous version of generate_voucher_number for sync database sessions.
+        Used primarily in manufacturing endpoints.
+        
+        Format examples:
+        - With prefix: PM-PO/2526/00001
+        - Quarterly: PO/2526/Q1/00001
+        - Monthly: PO/2526/APR/00001
+        """
+        from sqlalchemy.orm import Session
+        
+        # Check if this is a sync session
+        is_sync = isinstance(db, Session)
+        
+        current_date = datetime.now()
+        current_year = current_date.year
+        current_month = current_date.month
+        
+        # Get organization settings (sync version)
+        if is_sync:
+            org_settings = db.query(OrganizationSettings).filter(
+                OrganizationSettings.organization_id == organization_id
+            ).first()
+        else:
+            # This shouldn't happen, but handle it
+            raise TypeError("Use generate_voucher_number_async for AsyncSession")
+        
+        # Build prefix with org-level prefix if enabled
+        full_prefix = prefix
+        if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
+            full_prefix = f"{org_settings.voucher_prefix}-{prefix}"
+        
+        # Calculate fiscal year (assuming April start)
+        fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
+        
+        # Determine counter reset period and format accordingly
+        reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+        
+        period_segment = ""
+        if reset_period == VoucherCounterResetPeriod.MONTHLY:
+            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                          'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            period_segment = month_names[current_month - 1]
+        elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+            quarter = ((current_month - 1) // 3) + 1
+            period_segment = f"Q{quarter}"
+        elif reset_period == VoucherCounterResetPeriod.ANNUALLY:
+            period_segment = ""
+        
+        # Build pattern for search
+        if period_segment:
+            search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+            base_number = f"{full_prefix}/{fiscal_year}/{period_segment}"
+        else:
+            search_pattern = f"{full_prefix}/{fiscal_year}/%"
+            base_number = f"{full_prefix}/{fiscal_year}"
+        
+        # Get the latest voucher number (sync version)
+        latest_voucher = db.query(model).filter(
+            model.organization_id == organization_id,
+            model.voucher_number.like(search_pattern)
+        ).order_by(desc(model.voucher_number)).first()
+        
+        if latest_voucher:
+            voucher_num = latest_voucher.voucher_number.split(' Rev ')[0]
+            try:
+                last_sequence = int(voucher_num.split('/')[-1])
+                next_sequence = last_sequence + 1
+            except (ValueError, IndexError):
+                next_sequence = 1
+        else:
+            next_sequence = 1
+        
+        # Generate new voucher number
+        voucher_number = f"{base_number}/{next_sequence:05d}"
+        
+        # Ensure uniqueness (in case of race conditions)
+        while True:
+            existing = db.query(model).filter(model.voucher_number == voucher_number).first()
+            if not existing:
+                break
+            next_sequence += 1
+            voucher_number = f"{base_number}/{next_sequence:05d}"
+        
+        return voucher_number
+    
+    @staticmethod
+    async def generate_voucher_number_async(
         db: AsyncSession, 
         prefix: str, 
         organization_id: int, 
         model: Type[Any]
     ) -> str:
         """
-        Generate a unique voucher number for the organization
-        Supports:
-        - Org-level prefix (Requirement 5)
-        - Counter reset periods: monthly, quarterly, annually (Requirement 6)
+        Async version of generate_voucher_number for async database sessions.
         
         Format examples:
         - With prefix: PM-PO/2526/00001
@@ -59,18 +149,14 @@ class VoucherNumberService:
         
         period_segment = ""
         if reset_period == VoucherCounterResetPeriod.MONTHLY:
-            # Format: PO/2526/JAN/00001
             month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
                           'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
             period_segment = month_names[current_month - 1]
         elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
-            # Format: PO/2526/Q1/00001
             quarter = ((current_month - 1) // 3) + 1
             period_segment = f"Q{quarter}"
         elif reset_period == VoucherCounterResetPeriod.ANNUALLY:
-            # Format: PO/2526/00001 (no period segment)
             period_segment = ""
-        # For NEVER, we'll use annually as default
         
         # Build pattern for search
         if period_segment:
@@ -89,8 +175,7 @@ class VoucherNumberService:
         latest_voucher = result.scalar_one_or_none()
         
         if latest_voucher:
-            # Extract sequence number from the last voucher (handle revisions by ignoring Rev suffix)
-            voucher_num = latest_voucher.voucher_number.split(' Rev ')[0]  # Strip revision if present
+            voucher_num = latest_voucher.voucher_number.split(' Rev ')[0]
             try:
                 last_sequence = int(voucher_num.split('/')[-1])
                 next_sequence = last_sequence + 1

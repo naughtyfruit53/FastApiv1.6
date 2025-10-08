@@ -89,81 +89,89 @@ export const menuItems = {
       }
     ]
   },
-  // ERP menu now contains inventory and vouchers only
-  erp: {
-    title: 'ERP',
-    icon: <Business />,
+  // Inventory menu - separated from ERP
+  inventory: {
+    title: 'Inventory',
+    icon: <Inventory />,
     sections: [
       {
-        title: 'Inventory',
+        title: 'Stock Management',
         items: [
           { name: 'Current Stock', path: '/inventory/stock', icon: <Inventory /> },
           { name: 'Stock Movements', path: '/inventory/movements', icon: <SwapHoriz /> },
           { name: 'Low Stock Report', path: '/inventory/low-stock', icon: <TrendingUp /> },
-          { name: 'Bulk Import', path: '/inventory/bulk-import', icon: <CloudUpload /> },
-          { name: 'Inventory Dashboard', path: '/inventory', icon: <Dashboard /> },
-          { name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
-          { name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
-          { name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
+          { name: 'Pending Orders', path: '/inventory/pending-orders', icon: <Schedule /> },
+          { name: 'Inventory Dashboard', path: '/inventory', icon: <Dashboard /> }
         ]
       },
       {
-        title: 'Vouchers',
+        title: 'Warehouse Management',
         items: [
-          {
-            name: 'Purchase Vouchers',
-            subItems: [
-              { name: 'Purchase Order', path: '/vouchers/Purchase-Vouchers/purchase-order', icon: <LocalShipping /> },
-              { name: 'GRN (Goods Received Note)', path: '/vouchers/Purchase-Vouchers/grn', icon: <Inventory /> },
-              { name: 'Purchase Voucher', path: '/vouchers/Purchase-Vouchers/purchase-voucher', icon: <ShoppingCart /> },
-              { name: 'Purchase Return', path: '/vouchers/Purchase-Vouchers/purchase-return', icon: <SwapHoriz /> }
-            ]
-          },
-          {
-            name: 'Pre-Sales Vouchers',
-            subItems: [
-              { name: 'Quotation', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
-              { name: 'Proforma Invoice', path: '/vouchers/Pre-Sales-Voucher/proforma-invoice', icon: <ReceiptLong /> },
-              { name: 'Sales Order', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Assessment /> }
-            ]
-          },
-          {
-            name: 'Sales Vouchers',
-            subItems: [
-              { name: 'Sales Voucher', path: '/vouchers/Sales-Vouchers/sales-voucher', icon: <TrendingUp /> },
-              { name: 'Delivery Challan', path: '/vouchers/Sales-Vouchers/delivery-challan', icon: <LocalShipping /> },
-              { name: 'Sales Return', path: '/vouchers/Sales-Vouchers/sales-return', icon: <SwapHoriz /> }
-            ]
-          },
-          {
-            name: 'Financial Vouchers',
-            subItems: [
-              { name: 'Payment Voucher', path: '/vouchers/Financial-Vouchers/payment-voucher', icon: <AccountBalance /> },
-              { name: 'Receipt Voucher', path: '/vouchers/Financial-Vouchers/receipt-voucher', icon: <AccountBalance /> },
-              { name: 'Journal Voucher', path: '/vouchers/Financial-Vouchers/journal-voucher', icon: <AccountBalance /> },
-              { name: 'Contra Voucher', path: '/vouchers/Financial-Vouchers/contra-voucher', icon: <AccountBalance /> },
-              { name: 'Credit Note', path: '/vouchers/Financial-Vouchers/credit-note', icon: <AccountBalance /> },
-              { name: 'Debit Note', path: '/vouchers/Financial-Vouchers/debit-note', icon: <AccountBalance /> },
-              { name: 'Non-Sales Credit Note', path: '/vouchers/Financial-Vouchers/non-sales-credit-note', icon: <AccountBalance /> }
-            ]
-          },
-          {
-            name: 'Manufacturing Vouchers',
-            subItems: [
-              { name: 'Production Order', path: '/vouchers/Manufacturing-Vouchers/production-order', icon: <Build /> },
-              { name: 'Material Requisition', path: '/vouchers/Manufacturing-Vouchers/material-requisition', icon: <Storage /> },
-              { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
-              { name: 'Finished Good Receipt', path: '/vouchers/Manufacturing-Vouchers/finished-good-receipt', icon: <Inventory /> }
-            ]
-          },
-          {
-            name: 'Others',
-            subItems: [
-              { name: 'RFQ (Request for Quotation)', path: '/vouchers/Others/rfq', icon: <Assignment /> },
-              { name: 'Dispatch Details', path: '/vouchers/Others/dispatch-details', icon: <LocalShipping /> },
-              { name: 'Inter Department Voucher', path: '/vouchers/Others/inter-department-voucher', icon: <SwapHoriz /> }
-            ]
-          }
+          { name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
+          { name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
+          { name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> },
+          { name: 'Bulk Import', path: '/inventory/bulk-import', icon: <CloudUpload /> }
+        ]
+      }
+    ]
+  },
+  // Vouchers menu - separated from ERP
+  vouchers: {
+    title: 'Vouchers',
+    icon: <ReceiptLong />,
+    sections: [
+      {
+        title: 'Purchase Vouchers',
+        items: [
+          { name: 'Purchase Order', path: '/vouchers/Purchase-Vouchers/purchase-order', icon: <LocalShipping /> },
+          { name: 'GRN (Goods Received Note)', path: '/vouchers/Purchase-Vouchers/grn', icon: <Inventory /> },
+          { name: 'Purchase Voucher', path: '/vouchers/Purchase-Vouchers/purchase-voucher', icon: <ShoppingCart /> },
+          { name: 'Purchase Return', path: '/vouchers/Purchase-Vouchers/purchase-return', icon: <SwapHoriz /> }
+        ]
+      },
+      {
+        title: 'Pre-Sales Vouchers',
+        items: [
+          { name: 'Quotation', path: '/vouchers/Pre-Sales-Voucher/quotation', icon: <NoteAdd /> },
+          { name: 'Proforma Invoice', path: '/vouchers/Pre-Sales-Voucher/proforma-invoice', icon: <ReceiptLong /> },
+          { name: 'Sales Order', path: '/vouchers/Pre-Sales-Voucher/sales-order', icon: <Assessment /> }
+        ]
+      },
+      {
+        title: 'Sales Vouchers',
+        items: [
+          { name: 'Sales Voucher', path: '/vouchers/Sales-Vouchers/sales-voucher', icon: <TrendingUp /> },
+          { name: 'Delivery Challan', path: '/vouchers/Sales-Vouchers/delivery-challan', icon: <LocalShipping /> },
+          { name: 'Sales Return', path: '/vouchers/Sales-Vouchers/sales-return', icon: <SwapHoriz /> }
+        ]
+      },
+      {
+        title: 'Financial Vouchers',
+        items: [
+          { name: 'Payment Voucher', path: '/vouchers/Financial-Vouchers/payment-voucher', icon: <AccountBalance /> },
+          { name: 'Receipt Voucher', path: '/vouchers/Financial-Vouchers/receipt-voucher', icon: <AccountBalance /> },
+          { name: 'Journal Voucher', path: '/vouchers/Financial-Vouchers/journal-voucher', icon: <AccountBalance /> },
+          { name: 'Contra Voucher', path: '/vouchers/Financial-Vouchers/contra-voucher', icon: <AccountBalance /> },
+          { name: 'Credit Note', path: '/vouchers/Financial-Vouchers/credit-note', icon: <AccountBalance /> },
+          { name: 'Debit Note', path: '/vouchers/Financial-Vouchers/debit-note', icon: <AccountBalance /> },
+          { name: 'Non-Sales Credit Note', path: '/vouchers/Financial-Vouchers/non-sales-credit-note', icon: <AccountBalance /> }
+        ]
+      },
+      {
+        title: 'Manufacturing Vouchers',
+        items: [
+          { name: 'Production Order', path: '/vouchers/Manufacturing-Vouchers/production-order', icon: <Build /> },
+          { name: 'Material Requisition', path: '/vouchers/Manufacturing-Vouchers/material-requisition', icon: <Storage /> },
+          { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
+          { name: 'Finished Good Receipt', path: '/vouchers/Manufacturing-Vouchers/finished-good-receipt', icon: <Inventory /> }
+        ]
+      },
+      {
+        title: 'Other Vouchers',
+        items: [
+          { name: 'RFQ (Request for Quotation)', path: '/vouchers/Others/rfq', icon: <Assignment /> },
+          { name: 'Dispatch Details', path: '/vouchers/Others/dispatch-details', icon: <LocalShipping /> },
+          { name: 'Inter Department Voucher', path: '/vouchers/Others/inter-department-voucher', icon: <SwapHoriz /> }
         ]
       }
     ]
@@ -643,7 +651,8 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
     : [
         // Note: Dashboard top-level removed by user request
         { title: 'Master Data', subSections: menuItems.masterData.sections },
-        { title: 'ERP', subSections: menuItems.erp.sections },
+        { title: 'Inventory', subSections: menuItems.inventory.sections },
+        { title: 'Vouchers', subSections: menuItems.vouchers.sections },
         // Merge Finance & Accounting into single section
         { 
           title: 'Finance & Accounting', 
@@ -660,6 +669,5 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         { title: 'HR Management', subSections: menuItems.hrManagement.sections },
         { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections }
         // Email and Settings moved to top-level menu
-        // Vouchers & Transactions removed per request
-        // Mobile Apps removed per request
+        // ERP removed and split into Inventory and Vouchers
       ];

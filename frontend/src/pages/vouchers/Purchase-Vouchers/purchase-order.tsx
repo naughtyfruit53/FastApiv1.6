@@ -479,23 +479,23 @@ const PurchaseOrderPage: React.FC = () => {
   const enhancedVendorOptions = [...(vendorList || []), { id: null, name: "Add New Vendor..." }];
 
   // Helper function to determine PO color status
+  // Red: no tracking; Yellow: tracking present, GRN pending; Green: GRN complete
   const getPOColorStatus = (voucher: any) => {
-    // This is a simplified version since we don't have GRN data loaded in index
-    // In a full implementation, you'd fetch GRN status or include it in the voucher data
     const hasTracking = !!(voucher.tracking_number || voucher.transporter_name);
+    const grnStatus = voucher.grn_status || 'pending';
     
-    // For now, we'll use simplified logic:
-    // - Red if no tracking
-    // - Yellow if has tracking (we assume GRN is pending unless explicitly complete)
-    // - Green if status is 'completed' or 'closed'
-    
-    if (voucher.status === 'completed' || voucher.status === 'closed') {
+    // Green: GRN complete (all items received)
+    if (grnStatus === 'complete') {
       return 'green';
-    } else if (hasTracking) {
-      return 'yellow';
-    } else {
-      return 'red';
     }
+    
+    // Yellow: Tracking present, GRN pending or partial
+    if (hasTracking) {
+      return 'yellow';
+    }
+    
+    // Red: No tracking
+    return 'red';
   };
 
   const getColorCode = (status: string) => {

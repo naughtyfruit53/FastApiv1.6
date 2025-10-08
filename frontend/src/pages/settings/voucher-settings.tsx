@@ -42,6 +42,16 @@ interface VoucherSettings {
   voucher_prefix_enabled: boolean;
   voucher_counter_reset_period: 'never' | 'monthly' | 'quarterly' | 'annually';
   voucher_format_template_id: number | null;
+  // Terms & Conditions for different voucher types
+  purchase_order_terms?: string;
+  purchase_voucher_terms?: string;
+  sales_order_terms?: string;
+  sales_voucher_terms?: string;
+  quotation_terms?: string;
+  proforma_invoice_terms?: string;
+  delivery_challan_terms?: string;
+  grn_terms?: string;
+  manufacturing_terms?: string;
 }
 
 interface VoucherFormatTemplate {
@@ -57,7 +67,16 @@ const VoucherSettingsPage: React.FC = () => {
     voucher_prefix: '',
     voucher_prefix_enabled: false,
     voucher_counter_reset_period: 'annually',
-    voucher_format_template_id: null
+    voucher_format_template_id: null,
+    purchase_order_terms: '',
+    purchase_voucher_terms: '',
+    sales_order_terms: '',
+    sales_voucher_terms: '',
+    quotation_terms: '',
+    proforma_invoice_terms: '',
+    delivery_challan_terms: '',
+    grn_terms: '',
+    manufacturing_terms: ''
   });
   const [templates, setTemplates] = useState<VoucherFormatTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -339,6 +358,131 @@ const VoucherSettingsPage: React.FC = () => {
                     Preview Template
                   </Button>
                 )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Terms & Conditions Section */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Terms & Conditions
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Configure default terms & conditions for each voucher type. These will appear in PDFs.
+                </Typography>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Purchase Order Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.purchase_order_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, purchase_order_terms: e.target.value })}
+                      placeholder="Enter default terms for Purchase Orders..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Purchase Voucher Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.purchase_voucher_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, purchase_voucher_terms: e.target.value })}
+                      placeholder="Enter default terms for Purchase Vouchers..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Sales Order Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.sales_order_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, sales_order_terms: e.target.value })}
+                      placeholder="Enter default terms for Sales Orders..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Sales Voucher Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.sales_voucher_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, sales_voucher_terms: e.target.value })}
+                      placeholder="Enter default terms for Sales Vouchers..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Quotation Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.quotation_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, quotation_terms: e.target.value })}
+                      placeholder="Enter default terms for Quotations..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Proforma Invoice Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.proforma_invoice_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, proforma_invoice_terms: e.target.value })}
+                      placeholder="Enter default terms for Proforma Invoices..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Delivery Challan Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.delivery_challan_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, delivery_challan_terms: e.target.value })}
+                      placeholder="Enter default terms for Delivery Challans..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="GRN Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.grn_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, grn_terms: e.target.value })}
+                      placeholder="Enter default terms for Goods Receipt Notes..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Manufacturing Terms"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={settings.manufacturing_terms || ''}
+                      onChange={(e) => setSettings({ ...settings, manufacturing_terms: e.target.value })}
+                      placeholder="Enter default terms for Manufacturing Vouchers..."
+                      variant="outlined"
+                    />
+                  </Grid>
+                </Grid>
               </CardContent>
             </Card>
           </Grid>

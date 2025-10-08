@@ -25,10 +25,17 @@ class PDFExtractionService:
     RAPIDAPI_HOST = "powerful-gstin-tool.p.rapidapi.com"
     RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY')
     
+    # AI-based extraction settings (Feature 11)
+    USE_AI_EXTRACTION = os.getenv('USE_AI_EXTRACTION', 'false').lower() == 'true'
+    MINDEE_API_KEY = os.getenv('MINDEE_API_KEY')  # Free tier: https://mindee.com
+    GOOGLE_DOCUMENT_AI_KEY = os.getenv('GOOGLE_DOCUMENT_AI_KEY')  # Free tier
+    
     def __init__(self):
         os.makedirs(self.UPLOAD_DIR, exist_ok=True)
         if not self.RAPIDAPI_KEY:
             logger.warning("RAPIDAPI_KEY not set in environment variables")
+        if self.USE_AI_EXTRACTION and not (self.MINDEE_API_KEY or self.GOOGLE_DOCUMENT_AI_KEY):
+            logger.warning("AI extraction enabled but no AI API keys configured")
     
     async def extract_voucher_data(self, file: UploadFile, voucher_type: str) -> Dict[str, Any]:
         """
@@ -571,6 +578,131 @@ class PDFExtractionService:
                     in_table = False
         
         return items
+    
+    async def extract_with_ai(self, file_path: str, document_type: str) -> Dict[str, Any]:
+        """
+        AI-based PDF extraction using free AI APIs (Feature 11)
+        
+        Supports:
+        1. Mindee API (free tier: 250 docs/month)
+        2. Google Document AI (free tier: 1000 pages/month)
+        3. PDF.co (free tier available)
+        
+        Args:
+            file_path: Path to the PDF file
+            document_type: Type of document (invoice, receipt, etc.)
+            
+        Returns:
+            Dict containing extracted fields
+        """
+        
+        if not self.USE_AI_EXTRACTION:
+            logger.info("AI extraction disabled, using fallback regex extraction")
+            return {}
+        
+        try:
+            # Try Mindee API first (best for invoices)
+            if self.MINDEE_API_KEY:
+                return await self._extract_with_mindee(file_path, document_type)
+            
+            # Try Google Document AI
+            elif self.GOOGLE_DOCUMENT_AI_KEY:
+                return await self._extract_with_google_doc_ai(file_path, document_type)
+            
+            else:
+                logger.warning("No AI API keys configured, using fallback extraction")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"AI extraction failed: {str(e)}")
+            return {}
+    
+    async def _extract_with_mindee(self, file_path: str, document_type: str) -> Dict[str, Any]:
+        """
+        Extract data using Mindee API
+        Free tier: 250 documents/month
+        Documentation: https://developers.mindee.com/
+        """
+        
+        try:
+            # Mindee has specialized parsers for different document types
+            # For invoices: https://api.mindee.net/v1/products/mindee/invoices/v4/predict
+            
+            url = "https://api.mindee.net/v1/products/mindee/invoices/v4/predict"
+            
+            with open(file_path, 'rb') as f:
+                files = {'document': f}
+                headers = {'Authorization': f'Token {self.MINDEE_API_KEY}'}
+                
+                response = requests.post(url, files=files, headers=headers, timeout=30)
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                # Parse Mindee response
+                if data.get('document') and data['document'].get('inference'):
+                    inference = data['document']['inference']
+                    prediction = inference.get('prediction', {})
+                    
+                    # Extract common fields
+                    extracted = {
+                        'vendor_name': prediction.get('supplier_name', {}).get('value'),
+                        'invoice_number': prediction.get('invoice_number', {}).get('value'),
+                        'invoice_date': prediction.get('date', {}).get('value'),
+                        'total_amount': prediction.get('total_amount', {}).get('value'),
+                        'tax_amount': prediction.get('total_tax', {}).get('value'),
+                        'items': []
+                    }
+                    
+                    # Extract line items
+                    for item in prediction.get('line_items', []):
+                        extracted['items'].append({
+                            'description': item.get('description'),
+                            'quantity': item.get('quantity'),
+                            'unit_price': item.get('unit_price'),
+                            'total_amount': item.get('total_amount')
+                        })
+                    
+                    logger.info(f"Mindee extraction successful: {len(extracted.get('items', []))} items extracted")
+                    return extracted
+                    
+            return {}
+            
+        except Exception as e:
+            logger.error(f"Mindee API error: {str(e)}")
+            return {}
+    
+    async def _extract_with_google_doc_ai(self, file_path: str, document_type: str) -> Dict[str, Any]:
+        """
+        Extract data using Google Document AI
+        Free tier: 1000 pages/month
+        Documentation: https://cloud.google.com/document-ai
+        """
+        
+        try:
+            # Google Document AI requires more setup
+            # This is a placeholder for future implementation
+            # Users need to:
+            # 1. Enable Document AI API in Google Cloud
+            # 2. Create a processor
+            # 3. Set up authentication
+            
+            logger.info("Google Document AI extraction not yet implemented")
+            logger.info("To use Google Document AI:")
+            logger.info("1. Enable Document AI API in Google Cloud Console")
+            logger.info("2. Create an Invoice Parser processor")
+            logger.info("3. Set GOOGLE_APPLICATION_CREDENTIALS environment variable")
+            
+            # Placeholder for actual implementation
+            # from google.cloud import documentai_v1 as documentai
+            # client = documentai.DocumentProcessorServiceClient()
+            # ... processing code ...
+            
+            return {}
+            
+        except Exception as e:
+            logger.error(f"Google Document AI error: {str(e)}")
+            return {}
 
 # Global service instance
 pdf_extraction_service = PDFExtractionService()

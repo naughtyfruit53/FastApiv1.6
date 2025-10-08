@@ -45,6 +45,17 @@ class OrganizationSettings(Base):
     # Voucher Format Template (Requirement 7)
     voucher_format_template_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
+    # Terms & Conditions for different voucher types (Feature 8)
+    purchase_order_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    purchase_voucher_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    sales_order_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    sales_voucher_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    quotation_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    proforma_invoice_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delivery_challan_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    grn_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturing_terms: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
     # Custom settings (JSON for flexibility)
     custom_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
