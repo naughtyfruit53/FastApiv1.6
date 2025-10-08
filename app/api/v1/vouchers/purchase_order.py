@@ -58,7 +58,7 @@ async def get_purchase_orders(
     result = await db.execute(stmt.offset(skip).limit(limit))
     purchase_orders = result.unique().scalars().all()
     
-    # Add GRN completion status to each PO for color coding
+    # Add GRN completion status and color coding to each PO
     for po in purchase_orders:
         # Check if any GRN exists for this PO
         grn_stmt = select(GoodsReceiptNote).where(
@@ -67,13 +67,15 @@ async def get_purchase_orders(
         grn_result = await db.execute(grn_stmt)
         grns = grn_result.scalars().all()
         
-        # Compute GRN status
+        # Compute GRN status based on pending quantities
         # Check if all items are fully received
         all_items_received = True
+        has_pending_items = False
         if po.items:
             for item in po.items:
                 if item.pending_quantity > 0:
                     all_items_received = False
+                    has_pending_items = True
                     break
         
         # Set grn_status attribute (not persisted, just for API response)
@@ -83,6 +85,19 @@ async def get_purchase_orders(
             po.grn_status = "partial"
         else:
             po.grn_status = "pending"
+        
+        # Set color_status for UI highlighting
+        # Red: no tracking details and GRN pending
+        # Yellow: has tracking but GRN still pending
+        # Green: GRN complete (all items received)
+        has_tracking = bool(po.tracking_number or po.transporter_name)
+        
+        if all_items_received:
+            po.color_status = "green"
+        elif has_tracking:
+            po.color_status = "yellow"
+        else:
+            po.color_status = "red"
     
     return purchase_orders
 
