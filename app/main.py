@@ -48,6 +48,7 @@ from app.api.v1 import inventory as v1_inventory
 
 # Add import for GST
 from app.api.v1 import gst as v1_gst
+from app.api.v1 import gst_search as v1_gst_search
 
 # Add imports for new ERP modules
 from app.api.v1 import erp as v1_erp
@@ -330,6 +331,14 @@ app.include_router(
     tags=["gst"]
 )
 logger.info("GST router included successfully at prefix: /api/v1/gst")
+
+# GST Search API
+app.include_router(
+    v1_gst_search.router,
+    prefix="/api/v1",
+    tags=["gst-search"]
+)
+logger.info("GST Search router included successfully at prefix: /api/v1")
 
 # OAuth API
 app.include_router(
