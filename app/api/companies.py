@@ -8,7 +8,7 @@ from typing import List, Optional
 from datetime import datetime
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user, get_current_org_admin_user
-from app.core.tenant import TenantQueryMixin, TenantQueryFilter
+from app.core.tenant import TenantQueryMixin, TenantQueryFilter, require_current_organization_id
 from app.core.org_restrictions import require_organization_access, ensure_organization_context
 from app.models import User, Company, Organization
 from app.models.user_models import UserCompany
@@ -57,12 +57,29 @@ async def get_current_company(
     logger.info(f"[/companies/current] User context: role={current_user.role}, is_super_admin={current_user.is_super_admin}, org_id={current_user.organization_id}")
     
     try:
-        # For super admins, return a default or null response since they don't have an organization
+        # For super admins, return a placeholder empty company (no org context post-reset)
         if current_user.is_super_admin and current_user.organization_id is None:
-            logger.info(f"[/companies/current] Super admin access without organization context - returning no company setup")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No company associated with super admin account"
+            logger.info(f"[/companies/current] Super admin access without organization context - returning placeholder")
+            return CompanyInDB(
+                id=0,
+                name="Global Super Admin",
+                organization_id=0,
+                address1="Super Admin Address",
+                address2=None,
+                city="Global",
+                state="Global",
+                pin_code="123456",
+                state_code="00",
+                contact_number="0000000000",
+                email=None,
+                gst_number=None,
+                pan_number=None,
+                business_type=None,
+                industry=None,
+                website=None,
+                logo_path=None,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
         
         # For organization users, ensure organization context

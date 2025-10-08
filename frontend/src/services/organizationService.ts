@@ -3,7 +3,9 @@ import api from "../lib/api";
 export const organizationService = {
   createLicense: async (data: any): Promise<any> => {
     try {
-      const response = await api.post("/organizations/license/create", data);
+      const response = await api.post("/organizations/license/create", data, {
+        timeout: 60000  // Increased to 60 seconds for long processing
+      });
       // Organization context is managed by backend session only
       return response.data;
     } catch (error: any) {

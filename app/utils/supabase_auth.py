@@ -1,24 +1,27 @@
 """
-Supabase Auth API utility utility module for user management integration.
+Supabase Auth API utility module for user management integration.
 
 This module encapsulates Supabase Auth Admin API operations to ensure
 users created via FastAPI are also created in Supabase Auth system.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)  # Moved up to be available in except block
 
 # Make supabase optional for testing
 try:
     from supabase import create_client, Client
+    from supabase.lib.client_options import ClientOptions
     SUPABASE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    logger.error(f"Supabase import failed: {str(e)}")  # Added logging for import error
     SUPABASE_AVAILABLE = False
     Client = None
     create_client = None
-
-logger = logging.getLogger(__name__)
+    ClientOptions = None
 
 
 class SupabaseAuthError(Exception):
@@ -40,11 +43,59 @@ class SupabaseAuthService:
                 "SUPABASE_URL and SUPABASE_SERVICE_KEY must be configured"
             )
         
-        # Create Supabase client with service key for admin operations
+        # Create Supabase client with service key for admin operations (updated to v2.x API)
         self.client: Client = create_client(
             settings.SUPABASE_URL, 
-            settings.SUPABASE_SERVICE_KEY
+            settings.SUPABASE_SERVICE_KEY,
+            options=ClientOptions(
+                auto_refresh_token=False,
+                persist_session=False,
+            )
         )
+    
+    def get_all_users(self) -> List[Dict[str, Any]]:
+        """
+        Get all users from Supabase Auth.
+        
+        Returns:
+            List of user data dictionaries
+            
+        Raises:
+            SupabaseAuthError: If request fails
+        """
+        if not self.client:
+            logger.warning("Supabase not available - user list skipped")
+            return []
+            
+        try:
+            # List all users (paginated; fetch all for small scale) - updated to v2.x pagination
+            all_users = []
+            page = 1
+            per_page = 1000  # Max per page
+            while True:
+                response = self.client.auth.admin.list_users(page=page, per_page=per_page)
+                users = response.users if hasattr(response, 'users') else response if isinstance(response, list) else []
+                if not users:
+                    break
+                for user in users:
+                    all_users.append({
+                        "id": user.id,
+                        "email": user.email,
+                        "created_at": user.created_at,
+                        "updated_at": user.updated_at,
+                        "user_metadata": user.user_metadata or {}
+                    })
+                if len(users) < per_page:
+                    break
+                page += 1
+            
+            logger.info(f"Retrieved {len(all_users)} users from Supabase Auth")
+            return all_users
+            
+        except Exception as e:
+            error_msg = f"Failed to get all users from Supabase Auth: {str(e)}"
+            logger.error(error_msg)
+            raise SupabaseAuthError(error_msg) from e
     
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """
@@ -64,11 +115,15 @@ class SupabaseAuthService:
             return None
             
         try:
-            # List users (assuming small number; for large, implement pagination)
-            response = self.client.auth.admin.list_users(per_page=1000)
-            
-            if hasattr(response, 'users'):
-                for user in response.users:
+            # List users and find by email (no direct get_by_email, so paginate and search) - updated to v2.x
+            page = 1
+            per_page = 1000
+            while True:
+                response = self.client.auth.admin.list_users(page=page, per_page=per_page)
+                
+                users = response.users if hasattr(response, 'users') else response if isinstance(response, list) else []
+                
+                for user in users:
                     if user.email.lower() == email.lower():
                         return {
                             "supabase_uuid": user.id,
@@ -77,6 +132,10 @@ class SupabaseAuthService:
                             "updated_at": user.updated_at,
                             "user_metadata": user.user_metadata or {}
                         }
+                
+                if len(users) < per_page:
+                    break
+                page += 1
             
             return None
             
@@ -110,7 +169,7 @@ class SupabaseAuthService:
             return {"supabase_uuid": None, "email": email}
             
         try:
-            # Use admin API to create user
+            # Use admin API to create user - updated to v2.x (dict still works, but confirm email)
             response = self.client.auth.admin.create_user({
                 "email": email,
                 "password": password,
@@ -153,7 +212,8 @@ class SupabaseAuthService:
             return True
             
         try:
-            response = self.client.auth.admin.delete_user(supabase_uuid)
+            # Updated to v2.x API, with should_soft_delete=False
+            response = self.client.auth.admin.delete_user(supabase_uuid, should_soft_delete=False)
             # Validate the response to ensure deletion was successful
             if hasattr(response, "error") and response.error:
                 error_msg = f"Failed to delete user {supabase_uuid} from Supabase Auth: {response.error}"
@@ -190,6 +250,7 @@ class SupabaseAuthService:
             return {"supabase_uuid": supabase_uuid}
             
         try:
+            # Updated to v2.x API
             response = self.client.auth.admin.update_user_by_id(supabase_uuid, updates)
             
             if not response.user:
@@ -227,6 +288,7 @@ class SupabaseAuthService:
             return None
             
         try:
+            # Updated to v2.x API
             response = self.client.auth.admin.get_user_by_id(supabase_uuid)
             
             if not response.user:

@@ -7,7 +7,9 @@ Password management endpoints for authentication
 import logging  # <-- ADDED THIS IMPORT
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload  # ADDED: For eager loading relationships
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
@@ -23,11 +25,11 @@ from app.services.user_service import UserService
 from app.services.otp_service import OTPService
 from app.services.system_email_service import system_email_service
 from .user import get_current_active_user, get_current_super_admin
-from app.core.logging import log_password_change
+from app.core.logging import get_logger, log_password_change, log_security_event  # Corrected import
 import secrets
 import string
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -37,7 +39,7 @@ async def change_password(
     password_data: PasswordChangeRequest = Body(...),
     request: Request = None,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Change user password with audit logging"""
     logger.info(f"🔐 Password change request received for user {current_user.email}")
@@ -61,7 +63,7 @@ async def change_password(
             if not password_data.current_password:
                 logger.error(f"❌ Current password not provided for normal password change")
                 # Log failed password change attempt
-                AuditLogger.log_password_reset(
+                await AuditLogger.log_password_reset(
                     db=db,
                     admin_email=current_user.email,
                     target_email=current_user.email,
@@ -82,7 +84,7 @@ async def change_password(
             if not verify_password(password_data.current_password, current_user.hashed_password):
                 logger.error(f"❌ Current password verification failed for user {current_user.email}")
                 # Log failed password change attempt
-                AuditLogger.log_password_reset(
+                await AuditLogger.log_password_reset(
                     db=db,
                     admin_email=current_user.email,
                     target_email=current_user.email,
@@ -116,9 +118,9 @@ async def change_password(
         current_user.force_password_reset = False
         
         # Clear temporary password if exists
-        UserService.clear_temporary_password(db, current_user)
+        await UserService.clear_temporary_password(db, current_user)
         
-        db.commit()
+        await db.commit()
         
         # Generate new JWT token to prevent session invalidation
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -139,8 +141,8 @@ async def change_password(
             expires_delta=refresh_token_expires
         )
         
-        # Log successful password change
-        AuditLogger.log_password_reset(
+        # Log successful password change attempt
+        await AuditLogger.log_password_reset(
             db=db,
             admin_email=current_user.email,
             target_email=current_user.email,
@@ -172,7 +174,7 @@ async def change_password(
     except Exception as e:
         logger.error(f"💥 Unexpected error during password change for user {current_user.email}: {str(e)}")
         log_password_change(current_user.email, "UNKNOWN", False, str(e), False)
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error changing password"
@@ -183,15 +185,16 @@ async def change_password(
 async def forgot_password(
     forgot_data: ForgotPasswordRequest = Body(...),
     request: Request = None,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Request password reset via OTP with audit logging"""
     try:
         # Check if user exists
-        user = UserService.get_user_by_email(db, forgot_data.email)
+        result = await db.execute(select(User).where(User.email == forgot_data.email))
+        user = result.scalar_one_or_none()
         
         # Log forgot password request
-        AuditLogger.log_password_reset(
+        await AuditLogger.log_password_reset(
             db=db,
             admin_email="system",
             target_email=forgot_data.email,
@@ -220,7 +223,7 @@ async def forgot_password(
         
         # Generate and send OTP for password reset
         otp_service = OTPService(db)
-        success = otp_service.generate_and_send_otp(forgot_data.email, "password_reset")
+        success = await otp_service.generate_and_send_otp(forgot_data.email, "password_reset")
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -237,6 +240,7 @@ async def forgot_password(
         raise
     except Exception as e:
         logger.error(f"Forgot password error: {e}")
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during password reset request"
@@ -247,19 +251,20 @@ async def forgot_password(
 async def reset_password(
     reset_data: PasswordResetRequest = Body(...),
     request: Request = None,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Reset password using OTP with audit logging"""
     try:
         # Verify OTP for password reset
         otp_service = OTPService(db)
-        otp_valid = otp_service.verify_otp(reset_data.email, reset_data.otp, "password_reset")
+        otp_valid = await otp_service.verify_otp(reset_data.email, reset_data.otp, "password_reset")
         
         # Find user
-        user = UserService.get_user_by_email(db, reset_data.email)
+        result = await db.execute(select(User).where(User.email == reset_data.email))
+        user = result.scalar_one_or_none()
         
         # Log password reset attempt
-        AuditLogger.log_password_reset(
+        await AuditLogger.log_password_reset(
             db=db,
             admin_email="system",
             target_email=reset_data.email,
@@ -298,9 +303,9 @@ async def reset_password(
         # Reset failed login attempts and clear temporary password
         user.failed_login_attempts = 0
         user.locked_until = None
-        UserService.clear_temporary_password(db, user)
+        await UserService.clear_temporary_password(db, user)
         
-        db.commit()
+        await db.commit()
         
         # Generate new JWT token to prevent session invalidation after password reset
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -333,7 +338,7 @@ async def reset_password(
         raise
     except Exception as e:
         logger.error(f"Password reset error: {e}")
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during password reset"
@@ -345,33 +350,45 @@ async def admin_reset_password(
     reset_data: AdminPasswordResetRequest = Body(...),
     request: Request = None,
     current_user: User = Depends(get_current_super_admin),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Admin password reset endpoint"""
     try:
-        user = db.query(User).filter(User.email == reset_data.user_email).first()
+        # Async query for user with eager loading of organization to avoid lazy load issues - FIXED
+        result = await db.execute(
+            select(User)
+            .options(selectinload(User.organization))  # Eager load organization
+            .where(User.email == reset_data.user_email)
+        )
+        user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         new_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
-        user.hashed_password = get_password_hash(new_password)
+        hashed_password = get_password_hash(new_password)
+        user.hashed_password = hashed_password
         user.must_change_password = True
-        db.commit()
+        
+        # Access organization_name BEFORE commit to avoid lazy load after - FIXED
+        organization_name = user.organization.name if user.organization else None
+        
+        await db.commit()
+        
+        logger.debug(f"Starting email send for admin reset to {user.email}")  # ADDED: Debug log
         
         # Send email (system-level: app password reset)
         success, error = await system_email_service.send_password_reset_email(
             user_email=reset_data.user_email,
-            user_name=user.full_name or user.username,
+            user_name=user.full_name or user.email,
             new_password=new_password,
             reset_by=current_user.email,
-            organization_name=user.organization.name if user.organization else None,
+            organization_name=organization_name,
             organization_id=user.organization_id,
             user_id=user.id
         )
         
         # Log successful password reset with enhanced details
-        from app.core.logging import log_password_reset, log_security_event
-        log_password_reset(user.email, current_user.email, True)
+        log_password_change(user.email, current_user.email, True)
         log_security_event(
             "Admin Password Reset Success",
             user_email=current_user.email,
@@ -390,8 +407,8 @@ async def admin_reset_password(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
         logger.error(f"Admin password reset error: {e}")
+        await db.rollback()
         raise HTTPException(
             status_code=500,
             detail="Error during admin password reset"

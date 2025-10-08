@@ -61,9 +61,21 @@ async def get_current_organization(
 ):
     """Get current user's organization"""
     if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not associated with any organization"
+        # For super admins (post-reset), return a placeholder empty organization
+        return OrganizationInDB(
+            id=0,
+            name="Global Super Admin",
+            subdomain="superadmin",
+            primary_email="superadmin@example.com",
+            primary_phone="0000000000",
+            address1="Super Admin Address",
+            city="Global",
+            state="Global",
+            pin_code="123456",
+            gst_number=None,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            enabled_modules={}
         )
   
     result = await db.execute(select(Organization).filter_by(id=current_user.organization_id))

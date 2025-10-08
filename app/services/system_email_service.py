@@ -23,6 +23,7 @@ from app.models.email import MailAccount
 from app.models.vouchers import PurchaseVoucher, SalesVoucher, PurchaseOrder, SalesOrder
 from app.services.role_hierarchy_service import RoleHierarchyService
 import logging
+import asyncio
 
 # Brevo (Sendinblue) import
 import brevo_python as sib_api_v3_sdk
@@ -43,6 +44,7 @@ class SystemEmailService:
         
         # Feature flags
         self.enable_brevo = getattr(settings, 'ENABLE_BREVO_EMAIL', True)
+        self.fallback_enabled = getattr(settings, 'EMAIL_FALLBACK_ENABLED', True)  # ADDED: Default to True for SMTP fallback if needed
         self.max_retry_attempts = getattr(settings, 'EMAIL_RETRY_ATTEMPTS', 3)
         self.retry_delay = getattr(settings, 'EMAIL_RETRY_DELAY_SECONDS', 5)
         
@@ -166,6 +168,9 @@ class SystemEmailService:
             
             response = self.api_instance.send_transac_email(send_smtp_email)
             
+            # Detailed logging for debug
+            logger.debug(f"Brevo full response: status_code={getattr(response, 'status_code', 'N/A')}, body={getattr(response, 'body', 'N/A')}")
+            
             # Extract message ID from response
             message_id = None
             if hasattr(response, 'message_id'):
@@ -173,13 +178,17 @@ class SystemEmailService:
             elif isinstance(response, dict) and 'messageId' in response:
                 message_id = response['messageId']
             
-            logger.info(f"Email sent successfully via Brevo to {to_email}. Response: {response}")
+            if message_id:
+                logger.info(f"✅ Email queued via Brevo to {to_email} (Message ID: {message_id})")
+            else:
+                logger.warning(f"⚠️ Email queued via Brevo to {to_email} but no Message ID returned")
+            
             log_email_operation("send", to_email, True)
             
             return True, None, message_id
             
         except ApiException as e:
-            error_msg = f"Brevo API error: {str(e)} - Body: {e.body if hasattr(e, 'body') else 'No body'}"
+            error_msg = f"Brevo API error (code {e.status}): {str(e)} - Body: {getattr(e, 'body', 'No body')}"
             logger.error(error_msg)
             log_email_operation("send", to_email, False, error_msg)
             return False, error_msg, None
@@ -234,11 +243,15 @@ class SystemEmailService:
                 # Try Brevo first if available and enabled
                 if self.api_instance and self.enable_brevo:
                     logger.debug("Trying Brevo")
-                    success, error, message_id = self._send_email_brevo(
-                        to_email=to_email, 
-                        subject=subject, 
-                        body=body, 
-                        html_body=html_body
+                    loop = asyncio.get_event_loop()
+                    success, error, message_id = await loop.run_in_executor(
+                        None,
+                        self._send_email_brevo,
+                        to_email,
+                        subject,
+                        body,
+                        html_body,
+                        None  # bcc_emails is None here, adjust if needed
                     )
                     
                     if success:
@@ -257,11 +270,11 @@ class SystemEmailService:
                         )
                         logger.warning(f"❌ Brevo failed on attempt {attempt}: {error}")
                 
-                # Wait before retry (except on last attempt)
+                # Wait before retry (except on last attempt) - FIXED: Use async sleep
                 if attempt <= self.max_retry_attempts:
                     retry_delay = self.retry_delay * (2 ** (attempt - 1))  # Exponential backoff
                     logger.debug(f"Waiting {retry_delay} seconds before retry...")
-                    time.sleep(retry_delay)
+                    await asyncio.sleep(retry_delay)
             
             # All attempts failed
             await self._update_email_audit_record(
@@ -287,7 +300,7 @@ class SystemEmailService:
             if close_db:
                 await db.close()
     
-    async def load_email_template(self, template_name: str, **kwargs) -> tuple[str, str]:
+    def load_email_template(self, template_name: str, **kwargs) -> tuple[str, str]:
         """
         Load and render email template with variables.
         Returns tuple of (plain_text, html_content)
@@ -295,10 +308,10 @@ class SystemEmailService:
         try:
             template_path = Path(__file__).parent.parent / "templates" / "email" / f"{template_name}.html"
             
-            logger.debug(f"Loading template from: {template_path}")
+            logger.debug(f"Loading template from: {template_path} with vars: {kwargs}")
             if not template_path.exists():
                 logger.warning(f"Email template not found: {template_path}")
-                return await self._generate_fallback_content(**kwargs)
+                return self._generate_fallback_content(**kwargs)
             
             with open(template_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
@@ -311,11 +324,12 @@ class SystemEmailService:
             # Generate plain text version from HTML (simplified)
             plain_text = self._html_to_plain(html_content, **kwargs)
             
+            logger.debug(f"Rendered template {template_name}: plain length={len(plain_text)}, html length={len(html_content)}")
             return plain_text, html_content
             
         except Exception as e:
             logger.error(f"Error loading email template {template_name}: {e}")
-            return await self._generate_fallback_content(**kwargs)
+            return self._generate_fallback_content(**kwargs)
     
     def _html_to_plain(self, html_content: str, **kwargs) -> str:
         """Convert HTML to plain text (simplified version)"""
@@ -329,10 +343,10 @@ class SystemEmailService:
         
         return plain
     
-    async def _generate_fallback_content(self, **kwargs) -> tuple[str, str]:
+    def _generate_fallback_content(self, **kwargs) -> tuple[str, str]:
         """Generate fallback email content when template is not available"""
         # Load fallback template with provided kwargs
-        return await self.load_email_template('fallback_email', **kwargs)
+        return self.load_email_template('fallback_email', **kwargs)
     
     async def send_license_creation_email(self,
                                    org_admin_email: str,
@@ -349,17 +363,23 @@ class SystemEmailService:
         errors = []
         
         try:
+            # Log template vars for debug
+            admin_vars = {
+                'org_admin_name': org_admin_name,
+                'organization_name': organization_name,
+                'temp_password': temp_password,
+                'subdomain': subdomain,
+                'org_code': org_code,
+                'created_by': created_by,
+                'login_url': login_url
+            }
+            logger.debug(f"License admin email vars: {admin_vars}")
+            
             # Email to new organization admin
             admin_subject = f"Welcome to {organization_name} - Org Super Admin Account Created"
-            admin_plain, admin_html = await self.load_email_template(
+            admin_plain, admin_html = self.load_email_template(
                 'license_creation_admin',
-                org_admin_name=org_admin_name,
-                organization_name=organization_name,
-                temp_password=temp_password,
-                subdomain=subdomain,
-                org_code=org_code,
-                created_by=created_by,
-                login_url=login_url
+                **admin_vars
             )
             
             admin_success, admin_error = await self._send_email(
@@ -380,16 +400,21 @@ class SystemEmailService:
             
             # Email to super admin who created the license (if requested)
             if notify_creator and created_by != org_admin_email:
+                creator_vars = {
+                    'organization_name': organization_name,
+                    'subdomain': subdomain,
+                    'org_code': org_code,
+                    'org_admin_email': org_admin_email,
+                    'org_admin_name': org_admin_name,
+                    'temp_password': temp_password,
+                    'created_by': created_by
+                }
+                logger.debug(f"License creator email vars: {creator_vars}")
+                
                 creator_subject = f"Organization License Created: {organization_name}"
-                creator_plain, creator_html = await self.load_email_template(
+                creator_plain, creator_html = self.load_email_template(
                     'license_creation_creator',
-                    organization_name=organization_name,
-                    subdomain=subdomain,
-                    org_code=org_code,
-                    org_admin_email=org_admin_email,
-                    org_admin_name=org_admin_name,
-                    temp_password=temp_password,
-                    created_by=created_by
+                    **creator_vars
                 )
                 
                 creator_success, creator_error = await self._send_email(
@@ -431,7 +456,7 @@ class SystemEmailService:
         try:
             subject = "TRITIQ ERP - Password Reset Request"
             
-            plain_text, html_content = await self.load_email_template(
+            plain_text, html_content = self.load_email_template(
                 'password_reset_token',
                 user_name=user_name,
                 reset_url=reset_url,
@@ -482,7 +507,7 @@ class SystemEmailService:
                 'reset_time': datetime.now().strftime('%H:%M:%S')
             }
             
-            plain_text, html_content = await self.load_email_template('password_reset_notification', **template_vars)
+            plain_text, html_content = self.load_email_template('password_reset_notification', **template_vars)
             
             subject = "TRITIQ ERP - Password Reset Notification"
             
@@ -529,7 +554,7 @@ class SystemEmailService:
                 'login_url': login_url
             }
             
-            plain_text, html_content = await self.load_email_template('user_creation', **template_vars)
+            plain_text, html_content = self.load_email_template('user_creation', **template_vars)
             
             subject = "Welcome to TRITIQ ERP - Your Account Has Been Created"
             
@@ -569,7 +594,7 @@ class SystemEmailService:
         """Send OTP via email with enhanced audit logging"""
         try:
             subject = f"TRITIQ ERP - OTP for {purpose.title()}"
-            plain_text, html_content = await self.load_email_template('otp_email', otp=otp, purpose=purpose)
+            plain_text, html_content = self.load_email_template('otp_email', otp=otp, purpose=purpose)
             
             success, error = await self._send_email(
                 to_email=to_email,
@@ -732,12 +757,16 @@ class SystemEmailService:
             # Try Brevo first
             if self.api_instance and self.enable_brevo:
                 logger.debug("Trying Brevo")
-                success, error, message_id = self._send_email_brevo(
-                    to_email=to_email, 
-                    subject=subject, 
-                    body=body, 
-                    html_body=html_body,
-                    bcc_emails=bcc_emails
+                
+                loop = asyncio.get_event_loop()
+                success, error, message_id = await loop.run_in_executor(
+                    None,
+                    self._send_email_brevo,
+                    to_email,
+                    subject,
+                    body,
+                    html_body,
+                    bcc_emails
                 )
                 
                 if success:
@@ -885,7 +914,7 @@ async def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email
             'details': details
         }
         
-        plain_text, html_content = await system_email_service.load_email_template('voucher_notification', **template_vars)
+        plain_text, html_content = system_email_service.load_email_template('voucher_notification', **template_vars)
         
         subject = f"TRITIQ ERP - {voucher_type.replace('_', ' ').title()} #{voucher.voucher_number}"
         

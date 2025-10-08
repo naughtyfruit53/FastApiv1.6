@@ -148,7 +148,7 @@ class OrganizationService:
             result = await db.execute(select(User).filter_by(email=license_data.superadmin_email))
             existing_user = result.scalars().first()
             if existing_user:
-                raise HTTPException(status_code=400, detail="Email already registered in the system")
+                raise HTTPException(status_code=400, detail="Email already registered in the system. Please use a different email.")
             
             subdomain = license_data.subdomain or generate_subdomain(license_data.organization_name)
             result = await db.execute(select(Organization).filter_by(subdomain=subdomain))
@@ -232,19 +232,19 @@ class OrganizationService:
 
             log_license_creation(organization.name, license_data.superadmin_email, current_user.email)
 
-            success, email_error = await system_email_service.send_license_creation_email(
-                license_data.superadmin_email,
-                "Organization Admin",
-                license_data.organization_name,
-                temp_password,
-                subdomain,
-                organization.org_code,
-                current_user.email,
+            success, error = await system_email_service.send_license_creation_email(
+                org_admin_email=license_data.superadmin_email,
+                org_admin_name="Organization Admin",
+                organization_name=license_data.organization_name,
+                temp_password=temp_password,
+                subdomain=organization.subdomain,
+                org_code=organization.org_code,
+                created_by=current_user.email,
                 notify_creator=True
             )
 
             if not success:
-                logger.warning(f"Failed to send license creation email: {email_error}")
+                logger.warning(f"Failed to send license creation email: {error}")
 
             return {
                 "organization_name": organization.name,

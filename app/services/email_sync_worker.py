@@ -48,8 +48,8 @@ class EmailSyncWorker:
         self.max_workers = getattr(settings, 'EMAIL_SYNC_MAX_WORKERS', 3)
         self.batch_size = getattr(settings, 'EMAIL_SYNC_BATCH_SIZE', 5)
         
-        # Job store configuration
-        self.jobstore_url = getattr(settings, 'DATABASE_URL', 'sqlite:///./email_sync_jobs.db').replace("postgresql+asyncpg", "postgresql+psycopg2").replace("postgres+asyncpg", "postgres+psycopg2")
+        # Job store configuration - updated to use psycopg (psycopg3 sync dialect)
+        self.jobstore_url = getattr(settings, 'DATABASE_URL', 'sqlite:///./email_sync_jobs.db').replace("postgresql+asyncpg", "postgresql+psycopg").replace("postgres+asyncpg", "postgres+psycopg")
         
         # Initialize scheduler if enabled
         if self.sync_enabled:

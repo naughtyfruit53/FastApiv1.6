@@ -1,4 +1,5 @@
 aiosqlite==0.21.0
+aiosqlite==0.21.0
 alembic==1.13.1
 apscheduler==3.10.4  # Background task scheduling
 asyncpg==0.30.0
@@ -40,6 +41,7 @@ requests==2.31.0
 scikit-learn==1.5.2
 scipy==1.14.1
 sqlalchemy==2.0.43
+supabase==2.21.1  # Updated to latest version (as of October 2025)
 uvicorn==0.24.0
 xlrd==2.0.2
 

@@ -25,6 +25,8 @@ CUSTOM_RAW_SQL_TABLES = [
     'email_attachments',
     'emails',
     'mail_accounts',
+    'email_sends',  # Added to clear user_id foreign key before deleting users
+    'organization_settings',  # Added to clear organization_id foreign key before deleting organizations
 ]
 
 class ResetService:
@@ -163,11 +165,11 @@ class ResetService:
             result["deleted"]["organizations"] = deleted_organizations
             logger.info(f"Deleted {deleted_organizations} organizations")
             
-            # Reset sequence IDs to 1
+            # Reset sequence IDs to 1 (but advance users_id_seq to 2 to account for persistent super admin id=1)
             logger.info("Step 16: Resetting sequence IDs")
             sequences_to_reset = [
                 "organizations_id_seq",
-                "users_id_seq",
+                "users_id_seq",  # Will be advanced to 2 below
                 "service_roles_id_seq",
                 "user_service_roles_id_seq",
                 "service_role_permissions_id_seq",
@@ -180,8 +182,13 @@ class ResetService:
             ]
             for seq in sequences_to_reset:
                 try:
-                    await db.execute(text(f"ALTER SEQUENCE {seq} RESTART WITH 1;"))
-                    logger.info(f"Reset sequence {seq}")
+                    if seq == "users_id_seq":
+                        # Advance to 2 since super admin (id=1) persists
+                        await db.execute(text(f"ALTER SEQUENCE {seq} RESTART WITH 2;"))
+                        logger.info(f"Advanced sequence {seq} to 2 (preserves super admin id=1)")
+                    else:
+                        await db.execute(text(f"ALTER SEQUENCE {seq} RESTART WITH 1;"))
+                        logger.info(f"Reset sequence {seq}")
                 except Exception as e:
                     logger.warning(f"Failed to reset sequence {seq}: {str(e)}")
             

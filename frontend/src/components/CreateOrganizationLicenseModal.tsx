@@ -695,6 +695,39 @@ const CreateOrganizationLicenseModal: React.FC<
           )}
         </DialogActions>
       </Dialog>
+      {loading && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000, // High z-index to overlay everything
+          }}
+        >
+          <Box
+            sx={{
+              bgcolor: 'background.paper',
+              p: 4,
+              borderRadius: 2,
+              textAlign: 'center',
+            }}
+          >
+            <CircularProgress sx={{ mb: 2 }} />
+            <Typography variant="h6">
+              Creating license...
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              This may take up to 30 seconds. Please wait...
+            </Typography>
+          </Box>
+        </Box>
+      )}
       {/* Module Selection Dialog */}
       <Dialog
         open={moduleDialogOpen}

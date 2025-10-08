@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
+from pydantic import ConfigDict
 
 class BaseSchema(BaseModel):
     id: Optional[int] = None
@@ -11,8 +12,7 @@ class BaseSchema(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OrganizationStatus(str, Enum):
     ACTIVE = "active"
@@ -171,7 +171,7 @@ class PasswordChangeRequest(BaseModel):
             raise ValueError('Password must be at least 8 characters long')
         return v
 
-class ForgotPasswordRequest(BaseModel):
+class ForgotPasswordModal(BaseModel):
     email: EmailStr
 
 class PasswordResetRequest(BaseModel):
@@ -189,8 +189,7 @@ class PasswordResetResponse(BaseModel):
 class PasswordChangeResponse(BaseModel):
     message: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Vendor schemas
 class VendorBase(BaseModel):
@@ -230,8 +229,7 @@ class VendorInDB(VendorBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Customer schemas (same structure as Vendor)
 class CustomerBase(BaseModel):
@@ -272,8 +270,7 @@ class CustomerInDB(CustomerBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Product schemas
 class ProductBase(BaseModel):
@@ -321,16 +318,14 @@ class ProductFileInDB(ProductFileBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class ProductFileResponse(ProductFileBase):
     id: int
     product_id: int
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Customer File Schemas
 class CustomerFileBase(BaseModel):
@@ -351,16 +346,14 @@ class CustomerFileInDB(CustomerFileBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class CustomerFileResponse(CustomerFileBase):
     id: int
     customer_id: int
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Vendor File Schemas
 class VendorFileBase(BaseModel):
@@ -381,16 +374,14 @@ class VendorFileInDB(VendorFileBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class VendorFileResponse(VendorFileBase):
     id: int
     vendor_id: int
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class ProductInDB(ProductBase):
     id: int
@@ -399,8 +390,7 @@ class ProductInDB(ProductBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Product response schema using product_name field for frontend consistency
 class ProductResponse(BaseModel):
@@ -453,8 +443,7 @@ class ProductResponse(BaseModel):
             ]
         )
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Stock schemas
 class StockBase(BaseModel):
@@ -476,8 +465,7 @@ class StockInDB(StockBase):
     organization_id: int
     last_updated: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class BulkStockRequest(BaseModel):
     items: List[Dict[str, Any]]
@@ -501,8 +489,7 @@ class EmailNotificationInDB(EmailNotificationBase):
     error_message: Optional[str] = None
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Payment term schemas
 class PaymentTermBase(BaseModel):
@@ -524,8 +511,7 @@ class PaymentTermInDB(PaymentTermBase):
     organization_id: int
     is_active: bool = True
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Enhanced bulk import/export response schemas
 class BulkImportResponse(BaseModel):
@@ -608,8 +594,7 @@ class NotificationTemplateInDB(NotificationTemplateBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class NotificationLogBase(BaseModel):
     recipient_type: str  # customer, user, segment
@@ -640,8 +625,7 @@ class NotificationLogInDB(NotificationLogBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class NotificationPreferenceBase(BaseModel):
     subject_type: str  # user, customer
@@ -666,8 +650,7 @@ class NotificationPreferenceInDB(NotificationPreferenceBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # Bulk notification request schemas
 class BulkNotificationRequest(BaseModel):

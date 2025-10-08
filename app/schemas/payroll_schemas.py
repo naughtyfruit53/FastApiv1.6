@@ -1,15 +1,16 @@
-# app/schemas/payroll_schemas.py
+# app/schemas/payroll.py
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Annotated
+from pydantic import SkipValidation
 from datetime import datetime, date
 from decimal import Decimal
 
 # Salary Structure Schemas
 class SalaryStructureBase(BaseModel):
     structure_name: str = Field(..., description="Salary structure name")
-    effective_from: date = Field(..., description="Effective from date")
-    effective_to: Optional[date] = None
+    effective_from: Annotated[date, SkipValidation] = Field(..., description="Effective from date")
+    effective_to: Optional[Annotated[date, SkipValidation]] = None
     is_active: bool = Field(default=True)
     
     # Basic salary components
@@ -39,8 +40,8 @@ class SalaryStructureCreate(SalaryStructureBase):
 
 class SalaryStructureUpdate(BaseModel):
     structure_name: Optional[str] = None
-    effective_from: Optional[date] = None
-    effective_to: Optional[date] = None
+    effective_from: Optional[Annotated[date, SkipValidation]] = None
+    effective_to: Optional[Annotated[date, SkipValidation]] = None
     is_active: Optional[bool] = None
     basic_salary: Optional[Decimal] = None
     hra: Optional[Decimal] = None
@@ -73,9 +74,9 @@ class SalaryStructureResponse(SalaryStructureBase):
 # Payroll Period Schemas
 class PayrollPeriodBase(BaseModel):
     period_name: str = Field(..., description="Payroll period name")
-    period_start: date = Field(..., description="Period start date")
-    period_end: date = Field(..., description="Period end date")
-    payroll_date: date = Field(..., description="Actual pay date")
+    period_start: Annotated[date, SkipValidation] = Field(..., description="Period start date")
+    period_end: Annotated[date, SkipValidation] = Field(..., description="Period end date")
+    payroll_date: Annotated[date, SkipValidation] = Field(..., description="Actual pay date")
     notes: Optional[str] = None
 
 class PayrollPeriodCreate(PayrollPeriodBase):
@@ -83,9 +84,9 @@ class PayrollPeriodCreate(PayrollPeriodBase):
 
 class PayrollPeriodUpdate(BaseModel):
     period_name: Optional[str] = None
-    period_start: Optional[date] = None
-    period_end: Optional[date] = None
-    payroll_date: Optional[date] = None
+    period_start: Optional[Annotated[date, SkipValidation]] = None
+    period_end: Optional[Annotated[date, SkipValidation]] = None
+    payroll_date: Optional[Annotated[date, SkipValidation]] = None
     status: Optional[str] = None
     notes: Optional[str] = None
 
@@ -110,7 +111,7 @@ class PayrollPeriodResponse(PayrollPeriodBase):
 # Payslip Schemas
 class PayslipBase(BaseModel):
     payslip_number: str = Field(..., description="Unique payslip number")
-    pay_date: date = Field(..., description="Pay date")
+    pay_date: Annotated[date, SkipValidation] = Field(..., description="Pay date")
     
     # Attendance summary
     working_days: int = Field(..., description="Total working days")
@@ -250,9 +251,9 @@ class EmployeeLoanResponse(EmployeeLoanBase):
     employee_id: int
     organization_id: int
     status: str
-    applied_date: date
-    approved_date: Optional[date] = None
-    disbursed_date: Optional[date] = None
+    applied_date: Annotated[date, SkipValidation]
+    approved_date: Optional[Annotated[date, SkipValidation]] = None
+    disbursed_date: Optional[Annotated[date, SkipValidation]] = None
     outstanding_amount: Decimal
     paid_amount: Decimal
     approved_by_id: Optional[int] = None
@@ -357,7 +358,7 @@ class BulkSalaryUpdate(BaseModel):
     employee_ids: List[int]
     increment_percentage: Optional[Decimal] = None
     increment_amount: Optional[Decimal] = None
-    effective_from: date
+    effective_from: Annotated[date, SkipValidation]
     
 class SalaryUpdateResult(BaseModel):
     total_employees: int
@@ -428,7 +429,7 @@ class PayrollComponentList(BaseModel):
 # Payroll Run Schemas
 class PayrollRunBase(BaseModel):
     run_name: str = Field(..., description="Payroll run name")
-    run_date: date = Field(..., description="Run date")
+    run_date: Annotated[date, SkipValidation] = Field(..., description="Run date")
     notes: Optional[str] = Field(None, description="Run notes")
 
 class PayrollRunCreate(PayrollRunBase):
@@ -436,7 +437,7 @@ class PayrollRunCreate(PayrollRunBase):
 
 class PayrollRunUpdate(BaseModel):
     run_name: Optional[str] = None
-    run_date: Optional[date] = None
+    run_date: Optional[Annotated[date, SkipValidation]] = None
     status: Optional[str] = None
     notes: Optional[str] = None
 
@@ -458,7 +459,7 @@ class PayrollRunResponse(PayrollRunBase):
     total_expense_amount: Decimal
     total_payable_amount: Decimal
     payment_vouchers_generated: bool
-    payment_date: Optional[date] = None
+    payment_date: Optional[Annotated[date, SkipValidation]] = None
     approved_by_id: Optional[int] = None
     approved_at: Optional[datetime] = None
     created_at: datetime
@@ -515,7 +516,7 @@ class PayrollGLPreview(BaseModel):
 
 class PayrollGLPosting(BaseModel):
     payroll_run_id: int
-    posting_date: date = Field(..., description="GL posting date")
+    posting_date: Annotated[date, SkipValidation] = Field(..., description="GL posting date")
     reference_number: Optional[str] = Field(None, description="Reference voucher number")
     narration: Optional[str] = Field(None, description="Posting narration")
 
@@ -629,7 +630,7 @@ class AdvancedPayrollSettings(BaseModel):
 class BulkPayrollProcessing(BaseModel):
     payroll_run_ids: List[int] = Field(..., description="List of payroll run IDs to process")
     operation: str = Field(..., description="Operation: post_to_gl, generate_payments, reverse_posting")
-    processing_date: date = Field(..., description="Date for processing")
+    processing_date: Annotated[date, SkipValidation] = Field(..., description="Date for processing")
     batch_size: int = Field(default=50, description="Batch size for processing")
     
 class BulkPayrollProcessingResult(BaseModel):
@@ -654,8 +655,8 @@ class PayrollComponentReport(BaseModel):
 class PayrollPeriodReport(BaseModel):
     period_id: int
     period_name: str
-    start_date: date
-    end_date: date
+    start_date: Annotated[date, SkipValidation]
+    end_date: Annotated[date, SkipValidation]
     total_employees: int
     total_gross: Decimal
     total_deductions: Decimal
