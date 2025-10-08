@@ -6,6 +6,7 @@ User service for user management operations
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
+from sqlalchemy.ext.asyncio import AsyncSession  # ADDED: For async methods
 from datetime import datetime, timedelta, timezone
 from app.models import User, PlatformUser, OrganizationRole, UserOrganizationRole
 from app.schemas.user import (
@@ -571,11 +572,11 @@ class UserService:
         db.commit()
     
     @staticmethod
-    def clear_temporary_password(db: Session, user: User) -> None:
+    async def clear_temporary_password(db: AsyncSession, user: User) -> None:  # FIXED: Made async, use AsyncSession & await commit
         """Clear temporary password for user"""
         user.temp_password_hash = None
         user.temp_password_expires = None
-        db.commit()
+        await db.commit()  # FIXED: Await async commit
     
     @staticmethod
     def update_login_attempt(

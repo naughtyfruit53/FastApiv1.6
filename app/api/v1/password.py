@@ -42,26 +42,26 @@ async def change_password(
     db: AsyncSession = Depends(get_db)
 ):
     """Change user password with audit logging"""
-    logger.info(f"🔐 Password change request received for user {current_user.email}")
-    logger.info(f"📝 Request payload: new_password=*****, current_password={'PROVIDED' if password_data.current_password else 'NOT_PROVIDED'}, confirm_password={'PROVIDED' if password_data.confirm_password else 'NOT_PROVIDED'}")
-    logger.info(f"👤 User details: must_change_password={current_user.must_change_password}, role={current_user.role}")
+    logger.info(f"[LOCK] Password change request received for user {current_user.email}")  # FIXED: Removed emoji
+    logger.info(f"[DOC] Request payload: new_password=*****, current_password={'PROVIDED' if password_data.current_password else 'NOT_PROVIDED'}, confirm_password={'PROVIDED' if password_data.confirm_password else 'NOT_PROVIDED'}")  # FIXED: Removed emoji
+    logger.info(f"[USER] User details: must_change_password={current_user.must_change_password}, role={current_user.role}")  # FIXED: Removed emoji
     
     try:
         # Handle mandatory password change (e.g., for super admin first login)
         if current_user.must_change_password:
-            logger.info(f"🔄 Processing mandatory password change for user {current_user.email}")
+            logger.info(f"[RELOAD] Processing mandatory password change for user {current_user.email}")  # FIXED: Removed emoji
             # For mandatory password changes, confirm_password is required if provided
             if password_data.confirm_password is not None and password_data.new_password != password_data.confirm_password:
-                logger.error(f"❌ Password confirmation mismatch for mandatory password change")
+                logger.error(f"[X] Password confirmation mismatch for mandatory password change")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="New passwords do not match"
                 )
         else:
-            logger.info(f"🔄 Processing normal password change for user {current_user.email}")
+            logger.info(f"[RELOAD] Processing normal password change for user {current_user.email}")  # FIXED: Removed emoji
             # For normal password changes, require and verify current password
             if not password_data.current_password:
-                logger.error(f"❌ Current password not provided for normal password change")
+                logger.error(f"[X] Current password not provided for normal password change")
                 # Log failed password change attempt
                 await AuditLogger.log_password_reset(
                     db=db,
@@ -82,7 +82,7 @@ async def change_password(
                 )
             
             if not verify_password(password_data.current_password, current_user.hashed_password):
-                logger.error(f"❌ Current password verification failed for user {current_user.email}")
+                logger.error(f"[X] Current password verification failed for user {current_user.email}")
                 # Log failed password change attempt
                 await AuditLogger.log_password_reset(
                     db=db,
@@ -104,13 +104,13 @@ async def change_password(
             
             # For normal password changes, validate confirm_password if provided
             if password_data.confirm_password is not None and password_data.new_password != password_data.confirm_password:
-                logger.error(f"❌ Password confirmation mismatch for normal password change")
+                logger.error(f"[X] Password confirmation mismatch for normal password change")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="New passwords do not match"
                 )
         
-        logger.info(f"✅ Password validation successful, updating password for user {current_user.email}")
+        logger.info(f"[CHECK] Password validation successful, updating password for user {current_user.email}")  # FIXED: Removed emoji
         
         # Update password
         current_user.hashed_password = get_password_hash(password_data.new_password)
@@ -159,7 +159,7 @@ async def change_password(
         change_type = "MANDATORY" if current_user.must_change_password else "NORMAL"
         log_password_change(current_user.email, change_type, True, None, True)
         
-        logger.info(f"🎉 Password changed successfully for user {current_user.email}, new JWT token issued")
+        logger.info(f"[PARTY] Password changed successfully for user {current_user.email}, new JWT token issued")  # FIXED: Removed emoji
         return PasswordChangeResponse(
             message="Password changed successfully",
             access_token=new_access_token,
@@ -168,11 +168,11 @@ async def change_password(
         )
         
     except HTTPException as he:
-        logger.error(f"❌ HTTP Exception during password change: {he.detail}")
+        logger.error(f"[X] HTTP Exception during password change: {he.detail}")
         log_password_change(current_user.email, "UNKNOWN", False, he.detail, False)
         raise he
     except Exception as e:
-        logger.error(f"💥 Unexpected error during password change for user {current_user.email}: {str(e)}")
+        logger.error(f"[BOOM] Unexpected error during password change for user {current_user.email}: {str(e)}")  # FIXED: Removed emoji
         log_password_change(current_user.email, "UNKNOWN", False, str(e), False)
         await db.rollback()
         raise HTTPException(
