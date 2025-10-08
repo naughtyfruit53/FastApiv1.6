@@ -31,7 +31,9 @@ async def get_purchase_orders(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get all purchase orders"""
+    """Get all purchase orders with GRN completion status for color coding"""
+    from app.models.vouchers.purchase import GoodsReceiptNote
+    
     stmt = select(PurchaseOrder).options(
         joinedload(PurchaseOrder.vendor),
         joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
@@ -54,8 +56,35 @@ async def get_purchase_orders(
         stmt = stmt.order_by(PurchaseOrder.created_at.desc())
     
     result = await db.execute(stmt.offset(skip).limit(limit))
-    invoices = result.unique().scalars().all()
-    return invoices
+    purchase_orders = result.unique().scalars().all()
+    
+    # Add GRN completion status to each PO for color coding
+    for po in purchase_orders:
+        # Check if any GRN exists for this PO
+        grn_stmt = select(GoodsReceiptNote).where(
+            GoodsReceiptNote.purchase_order_id == po.id
+        )
+        grn_result = await db.execute(grn_stmt)
+        grns = grn_result.scalars().all()
+        
+        # Compute GRN status
+        # Check if all items are fully received
+        all_items_received = True
+        if po.items:
+            for item in po.items:
+                if item.pending_quantity > 0:
+                    all_items_received = False
+                    break
+        
+        # Set grn_status attribute (not persisted, just for API response)
+        if all_items_received and grns:
+            po.grn_status = "complete"
+        elif grns:
+            po.grn_status = "partial"
+        else:
+            po.grn_status = "pending"
+    
+    return purchase_orders
 
 @router.get("/next-number", response_model=str)
 async def get_next_purchase_order_number(
