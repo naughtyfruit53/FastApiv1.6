@@ -7,10 +7,7 @@ interface QueryFunctionContext {
   signal?: AbortSignal;
 }
 // Fetch stock quantity for a specific product
-export const getProductStock = async ({
-  queryKey,
-  signal,
-}: QueryFunctionContext): Promise<any> => {
+export const getProductStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
   const [, productId] = queryKey; // Expect queryKey = ['productStock', productId]
   if (!productId) {
     return null;
@@ -27,10 +24,7 @@ export const getProductStock = async ({
   }
 };
 // Fetch outstanding balance for a specific customer or vendor
-export const getAccountBalance = async ({
-  queryKey,
-  signal,
-}: QueryFunctionContext): Promise<any> => {
+export const getAccountBalance = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
   const [, accountType, accountId] = queryKey; // Expect queryKey = ['accountBalance', accountType, accountId]
   if (!accountType || !accountId) {
     return null;
@@ -60,10 +54,7 @@ export const getAccountBalance = async ({
   }
 };
 // Fetch stock movements
-export const getStockMovements = async ({
-  queryKey,
-  signal,
-}: QueryFunctionContext): Promise<any> => {
+export const getStockMovements = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
   const [, params] = queryKey; // Expect queryKey = ['stockMovements', { search, recent }]
   const response = await api.get("/stock/movements", {
     params,
@@ -72,9 +63,7 @@ export const getStockMovements = async ({
   return response.data;
 };
 // Fetch low stock report
-export const getLowStockReport = async ({
-  signal,
-}: QueryFunctionContext): Promise<any> => {
+export const getLowStockReport = async ({ signal }: QueryFunctionContext): Promise<any> => {
   const response = await api.get("/stock/low-stock", { signal });
   return response.data;
 };
@@ -95,4 +84,15 @@ export const getLastVendorForProduct = async (
   } catch {
     return null;
   }
+};
+// Add bulkImportStock function
+export const bulkImportStock = async (file: File): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/stock/bulk', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
 };

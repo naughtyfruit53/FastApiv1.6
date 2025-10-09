@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button, Box, Typography, Input, Alert } from "@mui/material";
-import { masterDataService } from "../services/authService"; // Import the service
+import { bulkImportStock } from "../services/stockService"; // Import from stockService
 import { handleApiError } from "../utils/errorHandling";
 import { useAuth } from "../context/AuthContext";
 import { useCompany } from "../context/CompanyContext";
@@ -37,7 +37,7 @@ const StockBulkImport = (): void => {
     setIsUploading(true);
     setError(null);
     try {
-      const res = await masterDataService.bulkImportStock(selectedFile);
+      const res = await bulkImportStock(selectedFile);
       setResponse(res);
       setError(null);
     } catch (err: any) {

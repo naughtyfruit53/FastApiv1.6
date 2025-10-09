@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import logging
 from app.api.v1.auth import get_current_active_user
+from app.models.user_models import Organization  # Assuming Organization is in user_models
+from app.models.system_models import Company  # Fixed import: Company is in system_models.py
 
 logger = logging.getLogger(__name__)
 
