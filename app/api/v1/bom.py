@@ -12,6 +12,7 @@ from app.api.v1.auth import get_current_active_user
 from app.models.vouchers import BillOfMaterials, BOMComponent
 from app.models import Product
 from app.services.voucher_service import VoucherNumberService
+from sqlalchemy.ext.asyncio import AsyncSession  # Added import for AsyncSession
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -107,7 +108,7 @@ async def get_boms(
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
     output_item_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Get all BOMs for the organization"""
@@ -133,7 +134,7 @@ async def get_boms(
 @router.get("/{bom_id}", response_model=BOMResponse)
 async def get_bom(
     bom_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Get a specific BOM by ID"""
@@ -154,7 +155,7 @@ async def get_bom(
 @router.post("/", response_model=BOMResponse)
 async def create_bom(
     bom_data: BOMCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Create a new BOM"""
@@ -253,7 +254,7 @@ async def create_bom(
 async def update_bom(
     bom_id: int,
     bom_data: BOMUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Update an existing BOM"""
@@ -271,7 +272,6 @@ async def update_bom(
         )
     
     # Check if BOM is in use (has manufacturing orders)
-    # This is a basic check - in production you might want more sophisticated validation
     from app.models.vouchers import ManufacturingOrder
     in_use = db.query(ManufacturingOrder).filter(
         ManufacturingOrder.bom_id == bom_id,
@@ -343,7 +343,7 @@ async def update_bom(
 @router.delete("/{bom_id}")
 async def delete_bom(
     bom_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Delete a BOM (only if not in use)"""
@@ -384,7 +384,7 @@ async def delete_bom(
 async def get_bom_cost_breakdown(
     bom_id: int,
     production_quantity: float = 1.0,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Get detailed cost breakdown for a BOM"""
@@ -440,7 +440,7 @@ async def get_bom_cost_breakdown(
 
 @router.get("/export/template")
 async def download_bom_template(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Download BOM import template Excel file"""
@@ -507,7 +507,7 @@ async def download_bom_template(
 @router.post("/import")
 async def import_boms_from_excel(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Import BOMs from Excel file"""
@@ -542,23 +542,26 @@ async def import_boms_from_excel(
                 
                 # Find or create output item
                 output_item_ref = str(first_row.get('output_item_code/name', '')).strip()
-                output_item = db.query(Product).filter(
-                    Product.organization_id == current_user.organization_id
-                ).filter(
+                stmt = select(Product).where(
+                    Product.organization_id == current_user.organization_id,
                     (Product.product_code == output_item_ref) | 
                     (Product.product_name == output_item_ref)
-                ).first()
+                )
+                result = await db.execute(stmt)
+                output_item = result.scalar_one_or_none()
                 
                 if not output_item:
                     errors.append(f"Output item '{output_item_ref}' not found for BOM '{bom_name}'")
                     continue
                 
                 # Check if BOM already exists
-                existing_bom = db.query(BillOfMaterials).filter(
+                stmt = select(BillOfMaterials).where(
                     BillOfMaterials.organization_id == current_user.organization_id,
                     BillOfMaterials.bom_name == bom_name,
                     BillOfMaterials.version == str(first_row.get('version', '1.0'))
-                ).first()
+                )
+                result = await db.execute(stmt)
+                existing_bom = result.scalar_one_or_none()
                 
                 if existing_bom:
                     errors.append(f"BOM '{bom_name}' version '{first_row.get('version', '1.0')}' already exists")
@@ -584,7 +587,7 @@ async def import_boms_from_excel(
                 )
                 
                 db.add(new_bom)
-                db.flush()
+                await db.flush()
                 
                 # Add components
                 for idx, row in bom_data.iterrows():
@@ -592,12 +595,13 @@ async def import_boms_from_excel(
                     if not component_ref:
                         continue
                     
-                    component_item = db.query(Product).filter(
-                        Product.organization_id == current_user.organization_id
-                    ).filter(
+                    stmt = select(Product).where(
+                        Product.organization_id == current_user.organization_id,
                         (Product.product_code == component_ref) | 
                         (Product.product_name == component_ref)
-                    ).first()
+                    )
+                    result = await db.execute(stmt)
+                    component_item = result.scalar_one_or_none()
                     
                     if not component_item:
                         errors.append(f"Component '{component_ref}' not found for BOM '{bom_name}'")
@@ -629,7 +633,7 @@ async def import_boms_from_excel(
                 errors.append(f"Error importing BOM '{bom_name}': {str(e)}")
                 continue
         
-        db.commit()
+        await db.commit()
         
         return {
             "message": f"Successfully imported {imported_count} BOMs",
@@ -638,7 +642,7 @@ async def import_boms_from_excel(
         }
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error importing BOMs: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -648,7 +652,7 @@ async def import_boms_from_excel(
 
 @router.get("/export")
 async def export_boms_to_excel(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
     """Export BOMs to Excel file"""
@@ -658,9 +662,11 @@ async def export_boms_to_excel(
     from openpyxl.styles import Font, PatternFill
     
     # Get all BOMs for the organization
-    boms = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.organization_id == current_user.organization_id
-    ).all()
+    )
+    result = await db.execute(stmt)
+    boms = result.scalars().all()
     
     if not boms:
         raise HTTPException(

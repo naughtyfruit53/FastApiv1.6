@@ -33,7 +33,7 @@ interface BOMComponent {
 }
 interface BOM {
   id?: number;
-  bom_name: string;
+  bom_name: str;
   output_item_id: number;
   output_quantity: number;
   version: string;

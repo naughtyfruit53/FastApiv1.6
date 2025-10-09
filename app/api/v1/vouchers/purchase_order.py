@@ -1,7 +1,6 @@
 # app/api/v1/vouchers/purchase_order.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -107,7 +106,7 @@ async def get_next_purchase_order_number(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available purchase order number"""
-    return await VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number_async(
         db, "PO", current_user.organization_id, PurchaseOrder
     )
 
@@ -129,7 +128,7 @@ async def create_purchase_order(
         
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "PO", current_user.organization_id, PurchaseOrder
             )
         else:
@@ -140,7 +139,7 @@ async def create_purchase_order(
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
-                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "PO", current_user.organization_id, PurchaseOrder
                 )
         
