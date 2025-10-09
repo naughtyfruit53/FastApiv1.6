@@ -93,10 +93,11 @@ const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
   };
 
   useEffect(() => {
-    if (open && !selectedAccount && formData.account_type && !formData.account_code) {
+    if (open && !selectedAccount && formData.account_type) {
+      // Always fetch account code when opening modal for new account
       handleTypeChange({ target: { value: formData.account_type } });
     }
-  }, [open, selectedAccount, formData.account_type, formData.account_code]);
+  }, [open, selectedAccount]);
 
   // Validate form before submit
   const isFormValid = () => {
