@@ -100,7 +100,7 @@ class BOMResponse(BaseModel):
         from_attributes = True
 
 
-@router.get("/bom", response_model=List[BOMResponse])
+@router.get("/", response_model=List[BOMResponse])
 async def get_boms(
     skip: int = 0,
     limit: int = 100,
@@ -130,7 +130,7 @@ async def get_boms(
     return boms
 
 
-@router.get("/bom/{bom_id}", response_model=BOMResponse)
+@router.get("/{bom_id}", response_model=BOMResponse)
 async def get_bom(
     bom_id: int,
     db: Session = Depends(get_db),
@@ -151,7 +151,7 @@ async def get_bom(
     return bom
 
 
-@router.post("/bom", response_model=BOMResponse)
+@router.post("/", response_model=BOMResponse)
 async def create_bom(
     bom_data: BOMCreate,
     db: Session = Depends(get_db),
@@ -249,7 +249,7 @@ async def create_bom(
     return db_bom
 
 
-@router.put("/bom/{bom_id}", response_model=BOMResponse)
+@router.put("/{bom_id}", response_model=BOMResponse)
 async def update_bom(
     bom_id: int,
     bom_data: BOMUpdate,
@@ -340,7 +340,7 @@ async def update_bom(
     return db_bom
 
 
-@router.delete("/bom/{bom_id}")
+@router.delete("/{bom_id}")
 async def delete_bom(
     bom_id: int,
     db: Session = Depends(get_db),
@@ -380,7 +380,7 @@ async def delete_bom(
     return {"message": "BOM deleted successfully"}
 
 
-@router.get("/bom/{bom_id}/cost-breakdown")
+@router.get("/{bom_id}/cost-breakdown")
 async def get_bom_cost_breakdown(
     bom_id: int,
     production_quantity: float = 1.0,
@@ -438,7 +438,7 @@ async def get_bom_cost_breakdown(
     }
 
 
-@router.get("/bom/export/template")
+@router.get("/export/template")
 async def download_bom_template(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)
@@ -504,7 +504,7 @@ async def download_bom_template(
     )
 
 
-@router.post("/bom/import")
+@router.post("/import")
 async def import_boms_from_excel(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -646,7 +646,7 @@ async def import_boms_from_excel(
         )
 
 
-@router.get("/bom/export")
+@router.get("/export")
 async def export_boms_to_excel(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)

@@ -530,6 +530,10 @@ logger.info("Voucher Format Templates router included successfully at prefix: /a
 app.include_router(v1_chatbot.router, prefix="/api/v1/chatbot", tags=["chatbot"])
 logger.info("Chatbot router included successfully at prefix: /api/v1/chatbot")
 
+# Add BOM router inclusion (missing previously)
+app.include_router(v1_bom.router, prefix="/api/v1/bom", tags=["bom"])
+logger.info("BOM router included successfully at prefix: /api/v1/bom")
+
 @app.get("/routes")
 def get_routes():
     """Temporary endpoint to list all registered routes for debugging 404 issues"""
