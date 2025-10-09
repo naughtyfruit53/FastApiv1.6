@@ -275,7 +275,7 @@ const ProductsPage: React.FC = () => {
                     <TableCell>{item.part_number || "N/A"}</TableCell>
                     <TableCell>{item.unit}</TableCell>
                     <TableCell>₹{item.unit_price}</TableCell>
-                   <TableCell>{item.gst_rate}%</TableCell>
+                    <TableCell>{item.gst_rate > 1 ? item.gst_rate : (item.gst_rate * 100)}%</TableCell>
                     <TableCell>
                       <Chip
                         label={

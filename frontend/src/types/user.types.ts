@@ -26,6 +26,7 @@ export interface User {
   is_super_admin?: boolean;
   organization_id?: number;
   must_change_password?: boolean;
+  company_details_completed?: boolean;
   full_name?: string;
   avatar_path?: string;
   // Add other fields

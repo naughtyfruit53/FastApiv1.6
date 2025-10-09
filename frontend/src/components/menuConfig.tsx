@@ -84,7 +84,8 @@ export const menuItems = {
         items: [
           { name: 'Chart of Accounts', path: '/masters/chart-of-accounts', icon: <AccountBalance /> },
           { name: 'Tax Codes', path: '/masters/tax-codes', icon: <Assessment /> },
-          { name: 'Payment Terms', path: '/masters/payment-terms', icon: <Business /> }
+          { name: 'Payment Terms', path: '/masters/payment-terms', icon: <Business /> },
+          { name: 'Bank Account', path: '/bank-accounts', icon: <AccountBalance /> }
         ]
       }
     ]

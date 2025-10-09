@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
   Dialog,
@@ -16,11 +16,13 @@ import {
   Paper,
   Autocomplete,
   Box,
+  Checkbox,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
-import { getProducts } from "../services/masterService";
+import { getProducts, createProduct } from "../services/masterService";
+import AddProductModal from "./AddProductModal";
 interface BOMComponent {
   component_item_id: number;
   quantity_required: number;
@@ -86,6 +88,11 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
   mode,
 }) => {
   const queryClient = useQueryClient();
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [addingItemType, setAddingItemType] = useState<"component" | "output" | null>(null);
+  const [addingComponentIndex, setAddingComponentIndex] = useState<number | null>(null);
+  const [showNotesFields, setShowNotesFields] = useState<{ [key: number]: boolean }>({});
+  
   const {
     control,
     handleSubmit,
@@ -194,10 +201,49 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
     const overheadCost = watch("overhead_cost") || 0;
     return materialCost + laborCost + overheadCost;
   };
+  
+  const handleAddProduct = async (newProduct: any) => {
+    try {
+      const createdProduct = await createProduct(newProduct);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      
+      if (addingItemType === "output") {
+        setValue("output_item_id", createdProduct.id);
+      } else if (addingItemType === "component" && addingComponentIndex !== null) {
+        setValue(`components.${addingComponentIndex}.component_item_id`, createdProduct.id);
+        setValue(`components.${addingComponentIndex}.unit`, createdProduct.unit || "PCS");
+        setValue(`components.${addingComponentIndex}.unit_cost`, createdProduct.unit_price || 0);
+      }
+      
+      setShowAddProductModal(false);
+      setAddingItemType(null);
+      setAddingComponentIndex(null);
+    } catch (error) {
+      console.error("Error adding product:", error);
+    }
+  };
+  
+  const handleComponentItemChange = (index: number, newValue: any) => {
+    if (newValue) {
+      setValue(`components.${index}.component_item_id`, newValue.id || 0);
+      setValue(`components.${index}.unit`, newValue.unit || "PCS");
+      setValue(`components.${index}.unit_cost`, newValue.unit_price || 0);
+    } else {
+      setValue(`components.${index}.component_item_id`, 0);
+    }
+  };
+  
+  const toggleNotesField = (index: number) => {
+    setShowNotesFields((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
   if (isLoadingProducts) {
     return <CircularProgress />;
   }
   return (
+    <>
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>{mode === "create" ? "Create BOM" : "Edit BOM"}</DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -247,16 +293,24 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
             </Grid>
             <Grid size={6}>
               <Autocomplete
-                options={productOptions}
+                options={[
+                  ...productOptions,
+                  { id: -1, product_name: "➕ Add Output Item" },
+                ]}
                 getOptionLabel={(option) => option.product_name || ""}
                 value={
                   productOptions.find(
                     (p: any) => p.id === watch("output_item_id"),
                   ) || null
                 }
-                onChange={(_, newValue) =>
-                  setValue("output_item_id", newValue?.id || 0)
-                }
+                onChange={(_, newValue) => {
+                  if (newValue?.id === -1) {
+                    setAddingItemType("output");
+                    setShowAddProductModal(true);
+                  } else {
+                    setValue("output_item_id", newValue?.id || 0);
+                  }
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -330,13 +384,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                 }}
               >
                 <Typography variant="h6">Components</Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<Add />}
-                  onClick={addComponent}
-                >
-                  Add Component
-                </Button>
               </Box>
             </Grid>
             {fields.map((field, index) => (
@@ -345,7 +392,10 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                   <Grid container spacing={2}>
                     <Grid size={4}>
                       <Autocomplete
-                        options={productOptions}
+                        options={[
+                          ...productOptions,
+                          { id: -1, product_name: "➕ Add Component Item" },
+                        ]}
                         getOptionLabel={(option) => option.product_name || ""}
                         value={
                           productOptions.find(
@@ -354,12 +404,15 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                               watch(`components.${index}.component_item_id`),
                           ) || null
                         }
-                        onChange={(_, newValue) =>
-                          setValue(
-                            `components.${index}.component_item_id`,
-                            newValue?.id || 0,
-                          )
-                        }
+                        onChange={(_, newValue) => {
+                          if (newValue?.id === -1) {
+                            setAddingItemType("component");
+                            setAddingComponentIndex(index);
+                            setShowAddProductModal(true);
+                          } else {
+                            handleComponentItemChange(index, newValue);
+                          }
+                        }}
                         renderInput={(params) => (
                           <TextField
                             {...params}
@@ -447,17 +500,43 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                       </IconButton>
                     </Grid>
                     <Grid size={12}>
-                      <TextField
-                        {...control.register(
-                          `components.${index}.notes` as const,
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={showNotesFields[index] || false}
+                              onChange={() => toggleNotesField(index)}
+                              size="small"
+                            />
+                          }
+                          label="Add Notes"
+                        />
+                        {showNotesFields[index] && (
+                          <TextField
+                            {...control.register(
+                              `components.${index}.notes` as const,
+                            )}
+                            label="Component Notes"
+                            fullWidth
+                            size="small"
+                            sx={{ flex: 1 }}
+                          />
                         )}
-                        label="Component Notes"
-                        fullWidth
-                        size="small"
-                      />
+                      </Box>
                     </Grid>
                   </Grid>
                 </Paper>
+                {/* Add Component button after each line */}
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 1, mb: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Add />}
+                    onClick={addComponent}
+                    size="small"
+                  >
+                    Add Component
+                  </Button>
+                </Box>
               </Grid>
             ))}
             {/* Costing */}
@@ -517,6 +596,20 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
         </DialogActions>
       </form>
     </Dialog>
+    
+    {/* Add Product Modal */}
+    {showAddProductModal && (
+      <AddProductModal
+        open={showAddProductModal}
+        onClose={() => {
+          setShowAddProductModal(false);
+          setAddingItemType(null);
+          setAddingComponentIndex(null);
+        }}
+        onAdd={handleAddProduct}
+      />
+    )}
+    </>
   );
 };
 export default AddBOMModal;

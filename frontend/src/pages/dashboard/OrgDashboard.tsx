@@ -1,6 +1,6 @@
 // frontend/src/pages/dashboard/OrgDashboard.tsx
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Chip, Alert, Paper, List, ListItem, ListItemText, ListItemAvatar, Avatar } from "@mui/material";
+import { Box, Typography, Chip, Alert, Paper, List, ListItem, ListItemText, ListItemAvatar, Avatar, Button } from "@mui/material";
 import {
   Business,
   People,
@@ -15,6 +15,7 @@ import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
 import { useAuth } from "../../context/AuthContext";
 import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
+import CompanyDetailsModal from "../../components/CompanyDetailsModal";
 interface OrgStatistics {
   total_products: number;
   total_products_trend: number;
@@ -50,12 +51,30 @@ const OrgDashboard: React.FC = () => {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCompanyDetailsModal, setShowCompanyDetailsModal] = useState(false);
+  const [companyDetailsSkipped, setCompanyDetailsSkipped] = useState(false);
   
   const isSuperAdmin = isAppSuperAdmin(user) || isOrgSuperAdmin(user);
+  
   useEffect(() => {
     fetchOrgStatistics();
     fetchRecentActivities();
-  }, []);
+    
+    // Check if company details need to be completed
+    const checkCompanyDetails = () => {
+      // Only show for org super admin on first login if company details not completed
+      if (isOrgSuperAdmin(user) && user?.company_details_completed === false) {
+        const skippedFlag = localStorage.getItem('company_details_skipped');
+        if (!skippedFlag) {
+          setShowCompanyDetailsModal(true);
+        } else {
+          setCompanyDetailsSkipped(true);
+        }
+      }
+    };
+    
+    checkCompanyDetails();
+  }, [user]);
   const fetchOrgStatistics = async () => {
     try {
       const data = await adminService.getOrgStatistics();
@@ -406,6 +425,51 @@ const OrgDashboard: React.FC = () => {
           </Box>
         )}
       </Paper>
+      
+      {/* Show alert if company details were skipped */}
+      {companyDetailsSkipped && (
+        <Alert
+          severity="warning"
+          sx={{ mt: 2 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                setShowCompanyDetailsModal(true);
+                setCompanyDetailsSkipped(false);
+              }}
+            >
+              Complete Now
+            </Button>
+          }
+        >
+          Company details are not complete. Click "Complete Now" to add your company information.
+        </Alert>
+      )}
+      
+      {/* Company Details Modal */}
+      <CompanyDetailsModal
+        open={showCompanyDetailsModal}
+        onClose={() => {
+          // If skipped, set flag in localStorage
+          if (user?.company_details_completed === false) {
+            localStorage.setItem('company_details_skipped', 'true');
+            setCompanyDetailsSkipped(true);
+          }
+          setShowCompanyDetailsModal(false);
+        }}
+        onSuccess={() => {
+          // Clear skipped flag on successful completion
+          localStorage.removeItem('company_details_skipped');
+          setShowCompanyDetailsModal(false);
+          setCompanyDetailsSkipped(false);
+          // Refresh user context to update company_details_completed flag
+          window.location.reload();
+        }}
+        isRequired={user?.company_details_completed === false && isOrgSuperAdmin(user)}
+        mode="create"
+      />
     </DashboardLayout>
   );
 };

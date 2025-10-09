@@ -244,6 +244,11 @@ async def create_bom(
         )
         db.add(component)
     
+    # Update output item: set unit price to total BOM cost per unit and mark as manufactured
+    unit_price = total_cost / bom_data.output_quantity if bom_data.output_quantity > 0 else total_cost
+    output_item.unit_price = unit_price
+    output_item.is_manufactured = True
+    
     db.commit()
     db.refresh(db_bom)
     
