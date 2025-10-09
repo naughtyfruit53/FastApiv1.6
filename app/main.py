@@ -534,6 +534,10 @@ logger.info("Chatbot router included successfully at prefix: /api/v1/chatbot")
 app.include_router(v1_bom.router, prefix="/api/v1/bom", tags=["bom"])
 logger.info("BOM router included successfully at prefix: /api/v1/bom")
 
+# Add Manufacturing router inclusion (added to fix 404 errors)
+app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])
+logger.info("Manufacturing router included successfully at prefix: /api/v1")
+
 @app.get("/routes")
 def get_routes():
     """Temporary endpoint to list all registered routes for debugging 404 issues"""

@@ -1,3 +1,4 @@
+// frontend/src/components/AddBOMModal.tsx
 import React, { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
@@ -17,12 +18,20 @@ import {
   Autocomplete,
   Box,
   Checkbox,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Fab,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 import { getProducts, createProduct } from "../services/masterService";
 import AddProductModal from "./AddProductModal";
+
 interface BOMComponent {
   component_item_id: number;
   quantity_required: number;
@@ -33,9 +42,10 @@ interface BOMComponent {
   sequence: number;
   notes?: string;
 }
+
 interface BOM {
   id?: number;
-  bom_name: str;
+  bom_name: string;
   output_item_id: number;
   output_quantity: number;
   version: string;
@@ -49,6 +59,7 @@ interface BOM {
   is_active: boolean;
   components: BOMComponent[];
 }
+
 const defaultBOM: BOM = {
   bom_name: "",
   output_item_id: 0,
@@ -73,13 +84,15 @@ const defaultBOM: BOM = {
     },
   ],
 };
+
 interface AddBOMModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (_data: BOM) => void;
+  onAdd: (data: BOM) => void;
   initialData?: BOM;
   mode: "create" | "edit";
 }
+
 const AddBOMModal: React.FC<AddBOMModalProps> = ({
   open,
   onClose,
@@ -91,7 +104,7 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [addingItemType, setAddingItemType] = useState<"component" | "output" | null>(null);
   const [addingComponentIndex, setAddingComponentIndex] = useState<number | null>(null);
-  const [showNotesFields, setShowNotesFields] = useState<{ [key: number]: boolean }>({});
+  const [showNotes, setShowNotes] = useState(false);
   
   const {
     control,
@@ -151,7 +164,7 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
       reset(defaultBOM);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error saving BOM:", error);
     },
   });
   const onSubmit = (data: BOM) => {
@@ -233,12 +246,6 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
     }
   };
   
-  const toggleNotesField = (index: number) => {
-    setShowNotesFields((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  };
   if (isLoadingProducts) {
     return <CircularProgress />;
   }
@@ -294,8 +301,8 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
             <Grid size={6}>
               <Autocomplete
                 options={[
-                  ...productOptions,
                   { id: -1, product_name: "➕ Add Output Item" },
+                  ...productOptions,
                 ]}
                 getOptionLabel={(option) => option.product_name || ""}
                 value={
@@ -384,161 +391,172 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                 }}
               >
                 <Typography variant="h6">Components</Typography>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showNotes}
+                      onChange={(e) => setShowNotes(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Add Notes"
+                />
               </Box>
             </Grid>
-            {fields.map((field, index) => (
-              <Grid size={12} key={field.id}>
-                <Paper sx={{ p: 2, mb: 2 }}>
-                  <Grid container spacing={2}>
-                    <Grid size={4}>
-                      <Autocomplete
-                        options={[
-                          ...productOptions,
-                          { id: -1, product_name: "➕ Add Component Item" },
-                        ]}
-                        getOptionLabel={(option) => option.product_name || ""}
-                        value={
-                          productOptions.find(
-                            (p: any) =>
-                              p.id ===
-                              watch(`components.${index}.component_item_id`),
-                          ) || null
-                        }
-                        onChange={(_, newValue) => {
-                          if (newValue?.id === -1) {
-                            setAddingItemType("component");
-                            setAddingComponentIndex(index);
-                            setShowAddProductModal(true);
-                          } else {
-                            handleComponentItemChange(index, newValue);
-                          }
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Component Item *"
-                            size="small"
-                            required
-                            error={
-                              !watch(`components.${index}.component_item_id`)
-                            }
-                            helperText={
-                              !watch(`components.${index}.component_item_id`)
-                                ? "Component item is required"
-                                : ""
-                            }
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid size={2}>
-                      <TextField
-                        {...control.register(
-                          `components.${index}.quantity_required` as const,
-                          {
-                            required: "Quantity is required",
-                            min: {
-                              value: 0.01,
-                              message: "Quantity must be greater than 0",
-                            },
-                          },
-                        )}
-                        label="Quantity *"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        error={!!errors.components?.[index]?.quantity_required}
-                        helperText={
-                          errors.components?.[index]?.quantity_required?.message
-                        }
-                        InputProps={{ inputProps: { step: 0.01, min: 0.01 } }}
-                      />
-                    </Grid>
-                    <Grid size={1}>
-                      <TextField
-                        {...control.register(
-                          `components.${index}.unit` as const,
-                        )}
-                        label="Unit"
-                        fullWidth
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid size={2}>
-                      <TextField
-                        {...control.register(
-                          `components.${index}.unit_cost` as const,
-                          { min: 0 },
-                        )}
-                        label="Unit Cost"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        InputProps={{ inputProps: { step: 0.01 } }}
-                      />
-                    </Grid>
-                    <Grid size={2}>
-                      <TextField
-                        {...control.register(
-                          `components.${index}.wastage_percentage` as const,
-                          { min: 0, max: 100 },
-                        )}
-                        label="Wastage %"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        InputProps={{ inputProps: { step: 0.1 } }}
-                      />
-                    </Grid>
-                    <Grid size={1}>
-                      <IconButton
-                        onClick={() => removeComponent(index)}
-                        color="error"
-                        disabled={fields.length === 1}
-                      >
-                        <Remove />
-                      </IconButton>
-                    </Grid>
-                    <Grid size={12}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={showNotesFields[index] || false}
-                              onChange={() => toggleNotesField(index)}
+            <Grid size={12}>
+              <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "30%" }}>Component Item *</TableCell>
+                      <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Quantity *</TableCell>
+                      <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Unit</TableCell>
+                      <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Unit Cost</TableCell>
+                      <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Wastage %</TableCell>
+                      <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {fields.map((field, index) => (
+                      <React.Fragment key={field.id}>
+                        <TableRow>
+                          <TableCell sx={{ p: 1 }}>
+                            <Autocomplete
+                              options={[
+                                { id: -1, product_name: "➕ Add Component Item" },
+                                ...productOptions,
+                              ]}
+                              getOptionLabel={(option) => option.product_name || ""}
+                              value={
+                                productOptions.find(
+                                  (p: any) =>
+                                    p.id ===
+                                    watch(`components.${index}.component_item_id`),
+                                ) || null
+                              }
+                              onChange={(_, newValue) => {
+                                if (newValue?.id === -1) {
+                                  setAddingItemType("component");
+                                  setAddingComponentIndex(index);
+                                  setShowAddProductModal(true);
+                                } else {
+                                  handleComponentItemChange(index, newValue);
+                                }
+                              }}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  label="Component Item *"
+                                  size="small"
+                                  required
+                                  error={
+                                    !watch(`components.${index}.component_item_id`)
+                                  }
+                                  helperText={
+                                    !watch(`components.${index}.component_item_id`)
+                                      ? "Component item is required"
+                                      : ""
+                                  }
+                                />
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell align="center" sx={{ p: 1 }}>
+                            <TextField
+                              {...control.register(
+                                `components.${index}.quantity_required` as const,
+                                {
+                                  required: "Quantity is required",
+                                  min: {
+                                    value: 0.01,
+                                    message: "Quantity must be greater than 0",
+                                  },
+                                },
+                              )}
+                              label="Quantity *"
+                              type="number"
+                              fullWidth
+                              size="small"
+                              error={!!errors.components?.[index]?.quantity_required}
+                              helperText={
+                                errors.components?.[index]?.quantity_required?.message
+                              }
+                              InputProps={{ inputProps: { step: 0.01, min: 0.01 } }}
+                            />
+                          </TableCell>
+                          <TableCell align="center" sx={{ p: 1 }}>
+                            <TextField
+                              {...control.register(
+                                `components.${index}.unit` as const,
+                              )}
+                              label="Unit"
+                              fullWidth
                               size="small"
                             />
-                          }
-                          label="Add Notes"
-                        />
-                        {showNotesFields[index] && (
-                          <TextField
-                            {...control.register(
-                              `components.${index}.notes` as const,
-                            )}
-                            label="Component Notes"
-                            fullWidth
-                            size="small"
-                            sx={{ flex: 1 }}
-                          />
+                          </TableCell>
+                          <TableCell align="center" sx={{ p: 1 }}>
+                            <TextField
+                              {...control.register(
+                                `components.${index}.unit_cost` as const,
+                                { min: 0 },
+                              )}
+                              label="Unit Cost"
+                              type="number"
+                              fullWidth
+                              size="small"
+                              InputProps={{ inputProps: { step: 0.01 } }}
+                            />
+                          </TableCell>
+                          <TableCell align="center" sx={{ p: 1 }}>
+                            <TextField
+                              {...control.register(
+                                `components.${index}.wastage_percentage` as const,
+                                { min: 0, max: 100 },
+                              )}
+                              label="Wastage %"
+                              type="number"
+                              fullWidth
+                              size="small"
+                              InputProps={{ inputProps: { step: 0.1 } }}
+                            />
+                          </TableCell>
+                          <TableCell align="center" sx={{ p: 1 }}>
+                            <IconButton
+                              onClick={() => removeComponent(index)}
+                              color="error"
+                              disabled={fields.length === 1}
+                            >
+                              <Remove />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                        {showNotes && (
+                          <TableRow>
+                            <TableCell colSpan={6} sx={{ p: 1 }}>
+                              <TextField
+                                {...control.register(
+                                  `components.${index}.notes` as const,
+                                )}
+                                label="Component Notes"
+                                fullWidth
+                                size="small"
+                                multiline
+                                rows={1}
+                              />
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Paper>
-                {/* Add Component button after each line */}
-                <Box sx={{ display: "flex", justifyContent: "center", mt: 1, mb: 1 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Add />}
-                    onClick={addComponent}
-                    size="small"
-                  >
-                    Add Component
-                  </Button>
-                </Box>
-              </Grid>
-            ))}
+                      </React.Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
+                <Fab color="primary" size="small" onClick={addComponent}>
+                  <Add />
+                </Fab>
+              </Box>
+            </Grid>
             {/* Costing */}
             <Grid size={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
@@ -612,4 +630,5 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
     </>
   );
 };
+
 export default AddBOMModal;

@@ -1,26 +1,27 @@
 # app/api/v1/bom.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import select, delete
 from typing import List, Optional
+from datetime import datetime
+from pydantic import BaseModel
 import logging
+import pandas as pd
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from fastapi.responses import StreamingResponse
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.models.vouchers import BillOfMaterials, BOMComponent
 from app.models import Product
-from app.services.voucher_service import VoucherNumberService
-from sqlalchemy.ext.asyncio import AsyncSession  # Added import for AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-# Pydantic schemas for BOM
-from pydantic import BaseModel
-from datetime import datetime
 
 
 class BOMComponentCreate(BaseModel):
@@ -112,22 +113,24 @@ async def get_boms(
     current_user = Depends(get_current_active_user)
 ):
     """Get all BOMs for the organization"""
-    query = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.organization_id == current_user.organization_id
     )
     
     if search:
-        query = query.filter(
+        stmt = stmt.where(
             BillOfMaterials.bom_name.ilike(f"%{search}%")
         )
     
     if is_active is not None:
-        query = query.filter(BillOfMaterials.is_active == is_active)
+        stmt = stmt.where(BillOfMaterials.is_active == is_active)
     
     if output_item_id:
-        query = query.filter(BillOfMaterials.output_item_id == output_item_id)
+        stmt = stmt.where(BillOfMaterials.output_item_id == output_item_id)
     
-    boms = query.offset(skip).limit(limit).all()
+    stmt = stmt.offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    boms = result.scalars().all()
     return boms
 
 
@@ -138,10 +141,12 @@ async def get_bom(
     current_user = Depends(get_current_active_user)
 ):
     """Get a specific BOM by ID"""
-    bom = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    bom = result.scalar_one_or_none()
     
     if not bom:
         raise HTTPException(
@@ -161,10 +166,12 @@ async def create_bom(
     """Create a new BOM"""
     
     # Check if output item exists
-    output_item = db.query(Product).filter(
+    stmt = select(Product).where(
         Product.id == bom_data.output_item_id,
         Product.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    output_item = result.scalar_one_or_none()
     
     if not output_item:
         raise HTTPException(
@@ -173,11 +180,13 @@ async def create_bom(
         )
     
     # Check for duplicate BOM name + version
-    existing_bom = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.organization_id == current_user.organization_id,
         BillOfMaterials.bom_name == bom_data.bom_name,
         BillOfMaterials.version == bom_data.version
-    ).first()
+    )
+    result = await db.execute(stmt)
+    existing_bom = result.scalar_one_or_none()
     
     if existing_bom:
         raise HTTPException(
@@ -211,15 +220,17 @@ async def create_bom(
     )
     
     db.add(db_bom)
-    db.flush()  # Get the ID
+    await db.flush()  # Get the ID
     
     # Create components
     for idx, comp_data in enumerate(bom_data.components):
         # Verify component item exists
-        component_item = db.query(Product).filter(
+        stmt = select(Product).where(
             Product.id == comp_data.component_item_id,
             Product.organization_id == current_user.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        component_item = result.scalar_one_or_none()
         
         if not component_item:
             raise HTTPException(
@@ -249,8 +260,8 @@ async def create_bom(
     output_item.unit_price = unit_price
     output_item.is_manufactured = True
     
-    db.commit()
-    db.refresh(db_bom)
+    await db.commit()
+    await db.refresh(db_bom)
     
     return db_bom
 
@@ -265,10 +276,12 @@ async def update_bom(
     """Update an existing BOM"""
     
     # Get existing BOM
-    db_bom = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    db_bom = result.scalar_one_or_none()
     
     if not db_bom:
         raise HTTPException(
@@ -278,11 +291,13 @@ async def update_bom(
     
     # Check if BOM is in use (has manufacturing orders)
     from app.models.vouchers import ManufacturingOrder
-    in_use = db.query(ManufacturingOrder).filter(
+    stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.bom_id == bom_id,
         ManufacturingOrder.organization_id == current_user.organization_id,
         ManufacturingOrder.production_status.in_(["planned", "in_progress"])
-    ).first()
+    )
+    result = await db.execute(stmt)
+    in_use = result.scalar_one_or_none()
     
     if in_use and bom_data.components is not None:
         raise HTTPException(
@@ -300,16 +315,18 @@ async def update_bom(
     # Update components if provided
     if components_data is not None:
         # Delete existing components
-        db.query(BOMComponent).filter(BOMComponent.bom_id == bom_id).delete()
+        await db.execute(delete(BOMComponent).where(BOMComponent.bom_id == bom_id))
         
         # Create new components
         material_cost = 0
         for idx, comp_data in enumerate(components_data):
             # Verify component item exists
-            component_item = db.query(Product).filter(
+            stmt = select(Product).where(
                 Product.id == comp_data.component_item_id,
                 Product.organization_id == current_user.organization_id
-            ).first()
+            )
+            result = await db.execute(stmt)
+            component_item = result.scalar_one_or_none()
             
             if not component_item:
                 raise HTTPException(
@@ -339,8 +356,8 @@ async def update_bom(
         db_bom.material_cost = material_cost
         db_bom.total_cost = material_cost + db_bom.labor_cost + db_bom.overhead_cost
     
-    db.commit()
-    db.refresh(db_bom)
+    await db.commit()
+    await db.refresh(db_bom)
     
     return db_bom
 
@@ -354,10 +371,12 @@ async def delete_bom(
     """Delete a BOM (only if not in use)"""
     
     # Get existing BOM
-    db_bom = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    db_bom = result.scalar_one_or_none()
     
     if not db_bom:
         raise HTTPException(
@@ -367,10 +386,12 @@ async def delete_bom(
     
     # Check if BOM is in use (has manufacturing orders)
     from app.models.vouchers import ManufacturingOrder
-    in_use = db.query(ManufacturingOrder).filter(
+    stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.bom_id == bom_id,
         ManufacturingOrder.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    in_use = result.scalar_one_or_none()
     
     if in_use:
         raise HTTPException(
@@ -378,9 +399,9 @@ async def delete_bom(
             detail="Cannot delete BOM that is in use in manufacturing orders"
         )
     
-    # Delete the BOM (components will be deleted due to cascade)
-    db.delete(db_bom)
-    db.commit()
+    # Delete a BOM (only if not in use)
+    await db.delete(db_bom)
+    await db.commit()
     
     return {"message": "BOM deleted successfully"}
 
@@ -394,10 +415,12 @@ async def get_bom_cost_breakdown(
 ):
     """Get detailed cost breakdown for a BOM"""
     
-    bom = db.query(BillOfMaterials).filter(
+    stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    bom = result.scalar_one_or_none()
     
     if not bom:
         raise HTTPException(
@@ -449,13 +472,6 @@ async def download_bom_template(
     current_user = Depends(get_current_active_user)
 ):
     """Download BOM import template Excel file"""
-    from fastapi.responses import StreamingResponse
-    from app.services.excel_service import ExcelService
-    import io
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-    
-    # Create a new workbook
     wb = Workbook()
     ws = wb.active
     ws.title = "BOM Import Template"
@@ -516,7 +532,6 @@ async def import_boms_from_excel(
     current_user = Depends(get_current_active_user)
 ):
     """Import BOMs from Excel file"""
-    from app.services.excel_service import ExcelService
     import pandas as pd
     import io
     
@@ -661,10 +676,6 @@ async def export_boms_to_excel(
     current_user = Depends(get_current_active_user)
 ):
     """Export BOMs to Excel file"""
-    from fastapi.responses import StreamingResponse
-    import io
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
     
     # Get all BOMs for the organization
     stmt = select(BillOfMaterials).where(

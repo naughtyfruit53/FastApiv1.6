@@ -69,7 +69,7 @@ class MaterialIssueCreate(BaseModel):
     items: List[MaterialIssueItemCreate] = []
 
 # Manufacturing Order Endpoints
-@router.get("/manufacturing-orders/", response_model=List[ManufacturingOrderResponse])
+@router.get("/manufacturing-orders", response_model=List[ManufacturingOrderResponse])
 async def get_manufacturing_orders(
     skip: int = 0,
     limit: int = 100,
@@ -99,7 +99,7 @@ async def get_next_manufacturing_order_number(
     )
     return next_number
 
-@router.post("/manufacturing-orders/", response_model=ManufacturingOrderResponse)
+@router.post("/manufacturing-orders")
 async def create_manufacturing_order(
     order_data: ManufacturingOrderCreate,
     db: AsyncSession = Depends(get_db),
@@ -167,7 +167,7 @@ async def get_manufacturing_order(
     return order
 
 # Material Issue Endpoints
-@router.get("/material-issues/")
+@router.get("/material-issues")
 async def get_material_issues(
     skip: int = 0,
     limit: int = 100,
@@ -191,7 +191,7 @@ async def get_next_material_issue_number(
     )
     return next_number
 
-@router.post("/material-issues/")
+@router.post("/material-issues")
 async def create_material_issue(
     issue_data: MaterialIssueCreate,
     db: AsyncSession = Depends(get_db),
@@ -421,7 +421,7 @@ class StockJournalCreate(BaseModel):
     entries: List[StockJournalEntryCreate] = []
 
 # Manufacturing Journal Voucher Endpoints
-@router.get("/manufacturing-journal-vouchers/")
+@router.get("/manufacturing-journal-vouchers")
 async def get_manufacturing_journal_vouchers(
     skip: int = 0,
     limit: int = 100,
@@ -445,7 +445,7 @@ async def get_next_manufacturing_journal_number(
     )
     return next_number
 
-@router.post("/manufacturing-journal-vouchers/")
+@router.post("/manufacturing-journal-vouchers")
 async def create_manufacturing_journal_voucher(
     voucher_data: ManufacturingJournalVoucherCreate,
     db: AsyncSession = Depends(get_db),
@@ -455,7 +455,9 @@ async def create_manufacturing_journal_voucher(
     stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.id == voucher_data.manufacturing_order_id,
         ManufacturingOrder.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    mo = result.scalar_one_or_none()
     
     if not mo:
         raise HTTPException(status_code=404, detail="Manufacturing order not found")
@@ -559,7 +561,7 @@ async def create_manufacturing_journal_voucher(
     return db_voucher
 
 # Material Receipt Voucher Endpoints
-@router.get("/material-receipt-vouchers/")
+@router.get("/material-receipt-vouchers")
 async def get_material_receipt_vouchers(
     skip: int = 0,
     limit: int = 100,
@@ -583,7 +585,7 @@ async def get_next_material_receipt_number(
     )
     return next_number
 
-@router.post("/material-receipt-vouchers/")
+@router.post("/material-receipt-vouchers")
 async def create_material_receipt_voucher(
     voucher_data: MaterialReceiptVoucherCreate,
     db: AsyncSession = Depends(get_db),
@@ -652,7 +654,7 @@ async def create_material_receipt_voucher(
     return db_voucher
 
 # Job Card Voucher Endpoints
-@router.get("/job-card-vouchers/")
+@router.get("/job-card-vouchers")
 async def get_job_card_vouchers(
     skip: int = 0,
     limit: int = 100,
@@ -676,7 +678,7 @@ async def get_next_job_card_number(
     )
     return next_number
 
-@router.post("/job-card-vouchers/")
+@router.post("/job-card-vouchers")
 async def create_job_card_voucher(
     voucher_data: JobCardVoucherCreate,
     db: AsyncSession = Depends(get_db),
@@ -754,7 +756,7 @@ async def create_job_card_voucher(
     return db_voucher
 
 # Stock Journal Endpoints
-@router.get("/stock-journals/")
+@router.get("/stock-journals")
 async def get_stock_journals(
     skip: int = 0,
     limit: int = 100,
@@ -784,7 +786,7 @@ async def get_next_stock_journal_number(
     )
     return next_number
 
-@router.post("/stock-journals/")
+@router.post("/stock-journals")
 async def create_stock_journal(
     journal_data: StockJournalCreate,
     db: AsyncSession = Depends(get_db),
@@ -797,7 +799,7 @@ async def create_stock_journal(
     
     # Calculate total amount from entries
     total_amount = sum(
-        (entry.debit_value or 0.0) - (entry.credit_value or 0.0) 
+        (entry.debit_quantity * entry.unit_rate) - (entry.credit_quantity * entry.unit_rate) 
         for entry in journal_data.entries
     )
     
