@@ -518,7 +518,7 @@ async def update_job_parts(
 @router.get("/alerts", response_model=List[InventoryAlertResponse])
 async def get_inventory_alerts(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 100000,  # Increased limit
     status: Optional[AlertStatus] = None,
     priority: Optional[AlertPriority] = None,
     alert_type: Optional[AlertType] = None,
@@ -620,14 +620,6 @@ async def get_inventory_usage_report(
 ):
     """Generate inventory usage report"""
     organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="inventory_reports", 
-        action="read",
-        db=db
-    )
     
     # Default date range to last 30 days if not provided
     if not end_date:

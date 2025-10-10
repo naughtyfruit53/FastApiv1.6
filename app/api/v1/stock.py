@@ -27,7 +27,7 @@ router = APIRouter()
 @router.get("", response_model=List[StockWithProduct])
 async def get_stock(
     skip: int = 0,
-    limit: int = 100,
+    limit: Optional[int] = Query(None),
     product_id: Optional[int] = None,  # Make product_id Optional to allow empty or missing
     low_stock_only: bool = False,
     search: str = Query("", description="Search term for stock items"),
@@ -97,7 +97,10 @@ async def get_stock(
             stmt = stmt.where(Stock.quantity > 0)
         
         logger.info(f"Executing stock query with skip={skip}, limit={limit}")
-        result = await db.execute(stmt.offset(skip).limit(limit))
+        stmt = stmt.offset(skip)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        result = await db.execute(stmt)
         product_stock_pairs = result.all()
         logger.info(f"Found {len(product_stock_pairs)} stock items")
         

@@ -97,13 +97,18 @@ export const bulkImportStock = async (file: File): Promise<any> => {
 };
 // NEW: Fetch stock list with params from queryKey
 export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
-  const [, params] = queryKey; // Expect queryKey = ['stock', {search: searchText, show_zero: boolean}]
-  const response = await api.get("/stock", {
-    params: {
-      search: params?.search,
-      show_zero: params?.show_zero,
-    },
-    signal,
-  });
+  const [, rawParams] = queryKey; // Expect queryKey = ['stock', {search: searchText, show_zero: boolean}]
+  const params: any = {
+    skip: rawParams.skip ?? 0,
+    low_stock_only: rawParams.low_stock_only ?? false,
+    search: rawParams.search ?? "",
+    show_zero: rawParams.show_zero ?? false,
+  };
+  if (rawParams.limit != null) params.limit = rawParams.limit;
+  const productId = rawParams.product_id;
+  if (productId && !isNaN(Number(productId)) && productId !== "") {
+    params.product_id = Number(productId);
+  }
+  const response = await api.get("/stock", { params, signal });
   return response.data;
 };
