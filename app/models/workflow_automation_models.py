@@ -183,7 +183,7 @@ class WorkflowTemplateAdvanced(Base):
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'code', name='uq_workflow_template_org_code'),
-        Index('idx_workflow_template_org_category', 'organization_id', 'category'),
+        Index('idx_workflow_adv_template_org_category', 'organization_id', 'category'),  # Changed name to avoid conflict
         Index('idx_workflow_template_active', 'is_active'),
         {'extend_existing': True}
     )
@@ -288,9 +288,9 @@ class AutomationWorkflowInstance(Base):
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     # Data and variables
-    input_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # Input data for the workflow
-    current_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # Current state of workflow data
-    output_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # Output data from completed workflow
+    input_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    current_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    output_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # Progress tracking
     total_steps: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

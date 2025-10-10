@@ -4,7 +4,7 @@ OAuth2 and Email Token Management Models
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum, JSON
 from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from enum import Enum as PyEnum
 
 from app.core.database import Base
@@ -114,8 +114,8 @@ class UserEmailToken(Base):
         """Check if token is expired"""
         if not self.expires_at:
             return False
-        # Make utcnow timezone-aware for comparison
-        return datetime.now(timezone.utc) >= self.expires_at
+        # Use naive UTC comparison to match how expires_at is stored
+        return datetime.utcnow() >= self.expires_at
     
     def is_active(self) -> bool:
         """Check if token is active and usable"""
@@ -159,4 +159,4 @@ class OAuthState(Base):
     
     def is_expired(self) -> bool:
         """Check if state is expired"""
-        return datetime.now(timezone.utc) >= self.expires_at
+        return datetime.utcnow() >= self.expires_at

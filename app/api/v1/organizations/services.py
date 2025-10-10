@@ -6,7 +6,8 @@ Organization services - Business logic for organization management
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
-from sqlalchemy import select
+from sqlalchemy import select, desc  # Added desc import
+from sqlalchemy.orm import joinedload  # Added joinedload import for eager loading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
@@ -147,6 +148,7 @@ class OrganizationService:
         result = await db.execute(
             select(AuditLog)
             .filter_by(organization_id=organization_id)
+            .options(joinedload(AuditLog.user))  # Eager load user to avoid lazy load in async context
             .order_by(desc(AuditLog.timestamp))
             .limit(limit)
         )

@@ -170,6 +170,15 @@ class OAuth2Service:
 
     async def store_user_tokens(self, user_id: int, organization_id: int, provider: OAuthProvider, token_response: Dict[str, Any], user_info: Dict[str, Any]) -> UserEmailToken:
         """Store or update OAuth tokens in database"""
+        # Check for refresh token
+        if not token_response.get('refresh_token'):
+            error_msg = "No refresh token received. Please revoke app access in your account settings and re-authorize the application to grant offline access."
+            logger.error(
+                f"OAuth authorization failed to obtain refresh token for user {user_id}, provider {provider}. "
+                f"Error: {error_msg}"
+            )
+            raise ValueError(error_msg)
+        
         # Check for existing token
         stmt = select(UserEmailToken).filter_by(
             user_id=user_id,
@@ -350,7 +359,7 @@ class OAuth2Service:
                     if not creds.expiry:
                         raise ValueError("Refresh completed but expiry is None. Possible incomplete response from Google.")
                     new_access_token = creds.token
-                    new_expiry = creds.expiry
+                    new_expiry = creds.expiry.replace(tzinfo=None)  # Make naive to match database
                     logger.info(
                         f"Successfully refreshed Google token {token_id}. "
                         f"Email: {token.email_address}, New expiry: {new_expiry}"
@@ -503,7 +512,7 @@ class OAuth2Service:
                     if not creds.expiry:
                         raise ValueError("Refresh completed but expiry is None. Possible incomplete response from Google.")
                     new_access_token = creds.token
-                    new_expiry = creds.expiry
+                    new_expiry = creds.expiry.replace(tzinfo=None)  # Make naive to match database
                     logger.info(
                         f"Successfully refreshed Google token {token_id}. "
                         f"Email: {token.email_address}, New expiry: {new_expiry}"

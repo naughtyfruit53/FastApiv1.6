@@ -73,8 +73,8 @@ async def oauth_login(
             detail=f"Unsupported OAuth provider: {provider}"
         )
     
-    # Get redirect URI from request or use default
-    redirect_uri = settings.OAUTH_REDIRECT_URI
+    # Get redirect URI from request or use default, now with provider in path
+    redirect_uri = f"{settings.OAUTH_REDIRECT_URI}/{provider}"
     
     # Create OAuth service and generate authorization URL
     oauth_service = OAuth2Service(db)
@@ -136,7 +136,7 @@ async def oauth_callback(
     # Exchange code for tokens
     oauth_service = OAuth2Service(db)
     try:
-        redirect_uri = settings.OAUTH_REDIRECT_URI
+        redirect_uri = f"{settings.OAUTH_REDIRECT_URI}/{provider}"
         token_response, user_info, user_id, organization_id = await oauth_service.exchange_code_for_tokens(
             provider=oauth_provider,
             code=code,

@@ -79,7 +79,7 @@ export const useOAuth = () => {
     } catch (err: any) {
       let errorMsg = err.response?.data?.detail || 'Failed to fetch OAuth providers. Please verify that the backend is running and NEXT_PUBLIC_API_URL is correctly set to the backend host (e.g., http://127.0.0.1:8000).';
       if (err.response?.status === 404) {
-        errorMsg = 'Backend OAuth providers endpoint not found. Ensure the backend server is running on port 8000 and that the route is defined.';
+        errorMsg = 'Backend OAuth providers endpoint not found. Ensure the backend server is running and that the route is defined.';
       }
       setError(errorMsg);
       throw err;
@@ -98,10 +98,8 @@ export const useOAuth = () => {
       // Fetch the authorization URL from the backend with auth headers
       const response = await apiClient.post(`/api/v1/oauth/login/${provider}`);
       const { authorization_url, state } = response.data;
-      console.log(`Storing provider for state: ${state} - ${provider}`);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`oauth_provider_${state}`, provider);
-      }
+      // Store provider with state for callback verification
+      localStorage.setItem(`oauth_provider_${state}`, provider);
       console.log(`Redirecting to OAuth provider: ${authorization_url}`);
       if (typeof window !== 'undefined') {
         window.location.href = authorization_url;
@@ -134,7 +132,7 @@ export const useOAuth = () => {
       setError(null);
 
       if (error) {
-        throw new Error(errorDescription || error);
+        throw new Error((errorDescription as string) || (error as string));
       }
 
       const response = await apiClient.get(`/api/v1/oauth/callback/${provider.toLowerCase()}`, {

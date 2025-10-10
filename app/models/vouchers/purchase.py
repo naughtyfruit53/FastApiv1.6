@@ -167,7 +167,7 @@ class PurchaseReturn(BaseVoucher):
         # Unique voucher number per organization
         UniqueConstraint('organization_id', 'voucher_number', name='uq_pr_org_voucher_number'),
         Index('idx_pr_org_vendor', 'organization_id', 'vendor_id'),
-        Index('idx_pr_org_date', 'organization_id', 'date'),
+        Index('idx_purchase_return_org_date', 'organization_id', 'date'),  # Changed name to avoid conflict
     )
 
 class PurchaseReturnItem(VoucherItemBase):
