@@ -857,7 +857,6 @@ const PurchaseOrderPage: React.FC = () => {
         contextMenu={contextMenu} 
         voucher={null} 
         voucherType="Purchase Order" 
-        onClose={handleCloseContextMenu} 
         onView={handleViewWithData} 
         onEdit={handleEditWithData} 
         onDelete={handleDelete} 
@@ -865,6 +864,7 @@ const PurchaseOrderPage: React.FC = () => {
         onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
         onCreateGRN={handleCreateGRN}
         onEditTracking={handleEditTracking}
+        onClose={() => {}}
       />
       {selectedVoucherForTracking && (
         <TrackingDetailsDialog

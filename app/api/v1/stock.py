@@ -3,11 +3,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, outerjoin, or_
+from sqlalchemy import select, or_
 from typing import List, Optional, Dict, Any
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin
 from app.core.org_restrictions import require_current_organization_id, validate_company_setup
 from app.models import User, Stock, Product, Organization, Company, InventoryTransaction, PurchaseVoucher, Vendor
 from app.schemas.stock import (
@@ -60,30 +59,34 @@ async def get_stock(
                 detail="Access denied. You do not have permission to view stock information."
             )
         
-        if getattr(current_user, 'is_super_admin', False):
-            logger.info("Super admin access - querying all stocks")
-            stmt = select(Stock, Product).join(Product)
+        is_super_admin = getattr(current_user, 'is_super_admin', False)
+        org_id = current_user.organization_id if not is_super_admin else None
+        
+        if not is_super_admin and org_id is None:
+            logger.error(f"User {current_user.email} has no organization_id set")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is not associated with any organization"
+            )
+        
+        # Always select from Product to include zeros when show_zero=true
+        if show_zero:
+            logger.info("Using outer join to include zero stock products")
+            stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id, isouter=True)
         else:
-            # For non-super-admin users, use their organization_id directly
-            org_id = current_user.organization_id
-            if org_id is None:
-                logger.error(f"User {current_user.email} has no organization_id set")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="User is not associated with any organization"
-                )
-            logger.info(f"Organization-specific access for org_id: {org_id}")
-            stmt = select(Stock, Product).join(Product)
-            stmt = TenantQueryMixin.filter_by_tenant(stmt, Stock, org_id)
-    
+            logger.info("Using inner join for non-zero stock")
+            stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id)
+        
+        if not is_super_admin:
+            stmt = stmt.where(Product.organization_id == org_id)
+        
         if product_id is not None:
             logger.info(f"Filtering by product_id: {product_id}")
-            stmt = stmt.where(Stock.product_id == product_id)
+            stmt = stmt.where(Product.id == product_id)
         
         if low_stock_only:
             logger.info("Filtering for low stock items only")
-            # Filter for products where stock quantity <= reorder level
-            stmt = stmt.where(Stock.quantity <= Product.reorder_level)
+            stmt = stmt.where(or_(Stock.quantity <= Product.reorder_level, Stock.quantity.is_(None)))
         
         if search:
             logger.info(f"Searching for products with term: {search}")
@@ -95,23 +98,31 @@ async def get_stock(
         
         logger.info(f"Executing stock query with skip={skip}, limit={limit}")
         result = await db.execute(stmt.offset(skip).limit(limit))
-        stock_product_pairs = result.all()
-        logger.info(f"Found {len(stock_product_pairs)} stock items")
+        product_stock_pairs = result.all()
+        logger.info(f"Found {len(product_stock_pairs)} stock items")
         
         # Transform the results to include product information
         result_list = []
-        for stock, product in stock_product_pairs:
+        for product, stock in product_stock_pairs:
             try:
+                effective_quantity = stock.quantity if stock else 0.0
+                effective_unit = stock.unit if stock else product.unit
+                effective_location = stock.location if stock else ""
+                effective_last_updated = stock.last_updated if stock else product.updated_at
+                effective_id = stock.id if stock else 0
+                effective_org_id = stock.organization_id if stock else product.organization_id
+                
                 unit_price = product.unit_price or 0.0
-                total_value = stock.quantity * unit_price
+                total_value = effective_quantity * unit_price
+                
                 stock_with_product = StockWithProduct(
-                    id=stock.id,
-                    organization_id=stock.organization_id,
-                    product_id=stock.product_id,
-                    quantity=stock.quantity,
-                    unit=stock.unit,
-                    location=stock.location,
-                    last_updated=stock.last_updated,
+                    id=effective_id,
+                    organization_id=effective_org_id,
+                    product_id=product.id,
+                    quantity=effective_quantity,
+                    unit=effective_unit,
+                    location=effective_location,
+                    last_updated=effective_last_updated,
                     product_name=product.product_name,
                     product_hsn_code=product.hsn_code,
                     product_part_number=product.part_number,
@@ -123,7 +134,7 @@ async def get_stock(
                 )
                 result_list.append(stock_with_product)
             except Exception as e:
-                logger.error(f"Error creating StockWithProduct for stock ID {stock.id}: {e}")
+                logger.error(f"Error creating StockWithProduct for product ID {product.id}: {e}")
                 logger.error(f"Stock data: {stock.__dict__ if hasattr(stock, '__dict__') else 'No dict'}")
                 logger.error(f"Product data: {product.__dict__ if hasattr(product, '__dict__') else 'No dict'}")
                 # Continue processing other items instead of failing completely
@@ -160,10 +171,10 @@ async def get_low_stock(
     
     if getattr(current_user, 'is_super_admin', False):
         logger.info("Super admin access - querying all low stock items")
-        stmt = select(Stock, Product).outerjoin(Stock, Stock.product_id == Product.id).where(
+        stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id, isouter=True).where(
             or_(
                 Stock.quantity <= Product.reorder_level,
-                Stock.id == None  # Products without stock entries
+                Stock.id.is_(None)  # Products without stock entries
             ),
             Product.reorder_level > 0  # Exclude products with reorder_level = 0
         )
@@ -177,21 +188,21 @@ async def get_low_stock(
                 detail="User is not associated with any organization"
             )
         logger.info(f"Organization-specific low stock access for org_id: {org_id}")
-        stmt = select(Stock, Product).outerjoin(Stock, Stock.product_id == Product.id).where(
+        stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id, isouter=True).where(
             or_(
                 Stock.quantity <= Product.reorder_level,
-                Stock.id == None  # Products without stock entries
+                Stock.id.is_(None)  # Products without stock entries
             ),
             Product.reorder_level > 0,  # Exclude products with reorder_level = 0
             Product.organization_id == org_id
         )
     
     result = await db.execute(stmt)
-    stock_product_pairs = result.all()
+    product_stock_pairs = result.all()
     
     # Transform the results to include product information, handling missing stock
     result_list = []
-    for stock, product in stock_product_pairs:
+    for product, stock in product_stock_pairs:
         try:
             effective_quantity = stock.quantity if stock else 0.0
             effective_location = stock.location if stock else ""

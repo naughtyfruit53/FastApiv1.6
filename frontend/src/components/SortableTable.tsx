@@ -37,6 +37,7 @@ interface SortableTableProps<T> {
   emptyMessage?: string;
   loading?: boolean;
   actions?: (_row: T) => React.ReactNode;
+  rowSx?: (_row: T) => object;
 }
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   const aVal = a[orderBy];
@@ -173,6 +174,7 @@ function SortableTable<T>({
   emptyMessage = "No data available",
   loading = false,
   actions,
+  rowSx,
 }: SortableTableProps<T>) {
   const [order, setOrder] = useState<Order>(defaultOrder);
   const [orderBy, setOrderBy] = useState<keyof T>(
@@ -238,7 +240,8 @@ function SortableTable<T>({
                   key={index}
                   sx={{
                     cursor: onRowClick ? "pointer" : "default",
-                    "&:hover": onRowClick
+                    ...(rowSx ? rowSx(row) : {}),
+                    '&:hover': onRowClick
                       ? { backgroundColor: "action.hover" }
                       : {},
                   }}

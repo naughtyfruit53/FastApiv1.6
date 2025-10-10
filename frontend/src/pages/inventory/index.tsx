@@ -32,26 +32,27 @@ import {
 } from "@mui/material";
 import {
   Add,
-  Edit,
   Refresh,
   Warning,
   TrendingUp,
   TrendingDown,
   Inventory,
   SwapHoriz,
-  Visibility,
   GetApp,
   Publish,
   Print,
   MoreVert,
   History as HistoryIcon,
   ShoppingCart as PurchaseIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Edit as EditIcon,
+  Tune as AdjustIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { masterDataService } from "../../services/authService";
 import { getProductMovements, getLastVendorForProduct } from "../../services/stockService";
 import { useRouter } from "next/router";
-import ExcelImportExport from "../../components/ExcelImportExport";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Table from "@mui/material/Table";
@@ -65,6 +66,8 @@ import { toast } from "react-toastify";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { organizationService } from "../../services/organizationService";
+import SortableTable, { HeadCell } from "../../components/SortableTable";
+import AddProductModal from "../../components/AddProductModal";
 
 declare module "jspdf" {
   interface jsPDF {
@@ -107,7 +110,7 @@ const InventoryManagement: React.FC = () => {
   const [movementsDialogOpen, setMovementsDialogOpen] = useState(false);
   const [selectedMovements, setSelectedMovements] = useState<any[]>([]);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [menuProductId, setMenuProductId] = useState<number | null>(null);
+  const [menuItem, setMenuItem] = useState<any>(null);
   const [importExportAnchorEl, setImportExportAnchorEl] = useState<null | HTMLElement>(null);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const [manualFormData, setManualFormData] = useState({
@@ -116,7 +119,10 @@ const InventoryManagement: React.FC = () => {
     unit: "",
   });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({ quantity: 0 });
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [selectedProductForEdit, setSelectedProductForEdit] = useState<any>(null);
   
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -127,8 +133,8 @@ const InventoryManagement: React.FC = () => {
     isLoading: stockLoading,
     refetch: refetchStock,
   } = useQuery({
-    queryKey: ["stock"],
-    queryFn: () => masterDataService.getStock(),
+    queryKey: ["stock", {search: searchText, show_zero: showZero}],
+    queryFn: masterDataService.getStock,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
@@ -228,98 +234,79 @@ const InventoryManagement: React.FC = () => {
             item.is_low_stock || item.quantity <= (item.reorder_level || 0),
         )
       : stockItems;
-    if (searchText) {
-      const lowerSearch = searchText.toLowerCase();
-      filteredItems = filteredItems.filter((stock: any) =>
-        stock.product_name.toLowerCase().includes(lowerSearch)
-      );
-    }
-    if (!showZero) {
-      filteredItems = filteredItems.filter((stock: any) => stock.quantity > 0);
-    }
+
+    const headCells: HeadCell<any>[] = [
+      { 
+        id: 'product_name', 
+        label: 'Product Name', 
+        numeric: false,
+        render: (value, row) => (
+          <Typography 
+            sx={{ cursor: 'pointer', color: 'primary.main', textDecoration: 'underline' }}
+            onClick={() => handleEditProduct(row)}
+          >
+            {value}
+          </Typography>
+        )
+      },
+      { id: 'quantity', label: 'Current Stock', numeric: true },
+      { id: 'unit', label: 'Unit', numeric: false },
+      { id: 'unit_price', label: 'Unit Price', numeric: true, render: (value) => `₹${(value || 0).toLocaleString()}` },
+      { id: 'total_value', label: 'Total Value', numeric: true, render: (value, row) => `₹${(value || row.quantity * (row.unit_price || 0)).toLocaleString()}` },
+      { id: 'reorder_level', label: 'Reorder Level', numeric: true },
+      {
+        id: 'status' as any, // Dummy id for calculated column
+        label: 'Status',
+        numeric: false,
+        sortable: false,
+        render: (value, row) => (
+          <Chip
+            label={
+              row.quantity <= 0
+                ? "Out of Stock"
+                : row.quantity <= (row.reorder_level || 0)
+                  ? "Low Stock"
+                  : "Normal"
+            }
+            color={
+              row.quantity <= 0
+                ? "error"
+                : row.quantity <= (row.reorder_level || 0)
+                  ? "warning"
+                  : "success"
+            }
+            size="small"
+          />
+        ),
+      },
+    ];
+
     return (
       <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Product Name</TableCell>
-              <TableCell>Current Stock</TableCell>
-              <TableCell>Unit</TableCell>
-              <TableCell>Unit Price</TableCell>
-              <TableCell>Total Value</TableCell>
-              <TableCell>Reorder Level</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredItems.map((item) => (
-              <TableRow key={item.product_id || item.id}>
-                <TableCell>{item.product_name}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    {item.quantity}
-                    {item.quantity <= (item.reorder_level || 0) && (
-                      <Warning sx={{ color: "orange", ml: 1 }} />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell>{item.unit}</TableCell>
-                <TableCell>
-                  ₹{(item.unit_price || 0).toLocaleString()}
-                </TableCell>
-                <TableCell>
-                  ₹
-                  {(
-                    item.total_value || item.quantity * (item.unit_price || 0)
-                  ).toLocaleString()}
-                </TableCell>
-                <TableCell>{item.reorder_level || 0}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={
-                      item.quantity <= (item.reorder_level || 0)
-                        ? "Low Stock"
-                        : item.quantity === 0
-                          ? "Out of Stock"
-                          : "Normal"
-                    }
-                    color={
-                      item.quantity === 0
-                        ? "error"
-                        : item.quantity <= (item.reorder_level || 0)
-                          ? "warning"
-                          : "success"
-                    }
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={() => openAdjustmentDialog(item)}
-                  >
-                    <Edit />
-                  </IconButton>
-                  <IconButton size="small" color="info">
-                    <Visibility />
-                  </IconButton>
-                  <IconButton size="small" color="secondary">
-                    <SwapHoriz />
-                  </IconButton>
-                  <IconButton
-                    onClick={(e) =>
-                      handleMenuClick(e, item.product_id)
-                    }
-                  >
-                    <MoreVert />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <SortableTable
+          data={filteredItems}
+          headCells={headCells}
+          defaultOrderBy="product_name"
+          actions={(item) => (
+            <>
+              <IconButton
+                onClick={(e) =>
+                  handleMenuClick(e, item)
+                }
+              >
+                <MoreVert />
+              </IconButton>
+            </>
+          )}
+          rowSx={(item) => ({
+            backgroundColor:
+              item.quantity <= 0
+                ? 'error.light'
+                : item.quantity <= (item.reorder_level || 0)
+                  ? 'warning.light'
+                  : 'success.light',
+          })}
+        />
       </TableContainer>
     );
   };
@@ -507,20 +494,20 @@ const InventoryManagement: React.FC = () => {
 
   const handleMenuClick = (
     event: React.MouseEvent<HTMLElement>,
-    productId: number,
+    item: any,
   ) => {
     setMenuAnchorEl(event.currentTarget);
-    setMenuProductId(productId);
+    setMenuItem(item);
   };
 
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
-    setMenuProductId(null);
+    setMenuItem(null);
   };
 
   const handleShowMovement = async () => {
-    if (menuProductId) {
-      const movements = await getProductMovements(menuProductId);
+    if (menuItem) {
+      const movements = await getProductMovements(menuItem.product_id);
       setSelectedMovements(movements);
       setMovementsDialogOpen(true);
     }
@@ -528,13 +515,49 @@ const InventoryManagement: React.FC = () => {
   };
 
   const handleCreatePurchaseOrder = async () => {
-    if (menuProductId) {
-      const lastVendor = await getLastVendorForProduct(menuProductId);
+    if (menuItem) {
+      const lastVendor = await getLastVendorForProduct(menuItem.product_id);
       router.push(
-        `/vouchers/Purchase-Vouchers/purchase-order?productId=${menuProductId}${lastVendor ? `&vendorId=${lastVendor.id}` : ""}`,
+        `/vouchers/Purchase-Vouchers/purchase-order?productId=${menuItem.product_id}${lastVendor ? `&vendorId=${lastVendor.id}` : ""}`,
       );
     }
     handleMenuClose();
+  };
+
+  const handleEditStockQuantity = () => {
+    if (menuItem) {
+      handleEditStock(menuItem);
+    }
+    handleMenuClose();
+  };
+
+  const handleAdjustStockItem = () => {
+    if (menuItem) {
+      openAdjustmentDialog(menuItem);
+    }
+    handleMenuClose();
+  };
+
+  const handleEditProduct = (item: any) => {
+    setSelectedProductForEdit(item);
+    setProductModalOpen(true);
+  };
+
+  const handleProductModalClose = () => {
+    setProductModalOpen(false);
+    setSelectedProductForEdit(null);
+  };
+
+  const handleProductUpdate = async (updatedProduct: any) => {
+    try {
+      await masterDataService.updateProduct(updatedProduct.id, updatedProduct);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      toast.success("Product updated successfully");
+      handleProductModalClose();
+    } catch (err) {
+      toast.error("Failed to update product");
+    }
   };
 
   const handleImportExportClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -577,69 +600,66 @@ const InventoryManagement: React.FC = () => {
             item.is_low_stock || item.quantity <= (item.reorder_level || 0),
         )
       : stockItems;
-    if (searchText) {
-      const lowerSearch = searchText.toLowerCase();
-      filteredItems = filteredItems.filter((stock: any) =>
-        stock.product_name.toLowerCase().includes(lowerSearch)
-      );
-    }
-    if (!showZero) {
-      filteredItems = filteredItems.filter((stock: any) => stock.quantity > 0);
-    }
+
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {filteredItems.map((stock: any) => (
-          <Card 
-            key={stock.id} 
-            sx={{ 
-              backgroundColor: stock.quantity <= stock.reorder_level ? 'warning.light' : 'inherit',
-              boxShadow: 1,
-              borderRadius: 2
-            }}
-          >
-            <CardContent sx={{ p: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                {stock.product_name}
-              </Typography>
-              <Typography variant="body2">
-                Quantity: {stock.quantity} {stock.unit}
-              </Typography>
-              <Typography variant="body2">
-                Unit Price: {stock.unit_price}
-              </Typography>
-              <Typography variant="body2">
-                Total Value: {stock.total_value}
-              </Typography>
-              <Typography variant="body2">
-                Reorder Level: {stock.reorder_level}
-              </Typography>
-              <Typography variant="body2">
-                Last Updated: {stock.last_updated}
-              </Typography>
-            </CardContent>
-            <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
-              <IconButton
-                onClick={() =>
-                  alert(`Details: {stock.description}`)
-                }
-                size="small"
-              >
-                <Visibility />
-              </IconButton>
-              <IconButton onClick={() => handleEditStock(stock)} size="small">
-                <Edit />
-              </IconButton>
-              <IconButton
-                onClick={(e) =>
-                  handleMenuClick(e, stock.product_id)
-                }
-                size="small"
-              >
-                <MoreVert />
-              </IconButton>
-            </CardActions>
-          </Card>
-        ))}
+        {filteredItems.map((stock: any) => {
+          let rowColor = 'inherit';
+          if (stock.quantity <= 0) {
+            rowColor = 'error.light';
+          } else if (stock.quantity <= (stock.reorder_level || 0)) {
+            rowColor = 'warning.light';
+          } else {
+            rowColor = 'success.light';
+          }
+          return (
+            <Card 
+              key={stock.id} 
+              sx={{ 
+                backgroundColor: rowColor,
+                boxShadow: 1,
+                borderRadius: 2
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Typography 
+                  variant="subtitle1" 
+                  fontWeight="bold" 
+                  gutterBottom
+                  sx={{ cursor: 'pointer', color: 'primary.main', textDecoration: 'underline' }}
+                  onClick={() => handleEditProduct(stock)}
+                >
+                  {stock.product_name}
+                </Typography>
+                <Typography variant="body2">
+                  Quantity: {stock.quantity} {stock.unit}
+                </Typography>
+                <Typography variant="body2">
+                  Unit Price: {stock.unit_price}
+                </Typography>
+                <Typography variant="body2">
+                  Total Value: {stock.total_value}
+                </Typography>
+                <Typography variant="body2">
+                  Reorder Level: {stock.reorder_level}
+                </Typography>
+                <Typography variant="body2">
+                  Last Updated: {stock.last_updated}
+                </Typography>
+              </CardContent>
+              <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+                <IconButton
+                  onClick={(e) =>
+                    handleMenuClick(e, stock)
+                  }
+                  size="small"
+                >
+                  <MoreVert />
+                </IconButton>
+              </CardActions>
+            </Card>
+          );
+        })}
       </Box>
     );
   };
@@ -691,30 +711,29 @@ const InventoryManagement: React.FC = () => {
             <Box
               sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}
             >
-              <Typography variant="h6">Current Stock Levels</Typography>
+              <TextField
+                label="Search"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={showZero}
+                            onChange={(e) => setShowZero(e.target.checked)}
+                          />
+                        }
+                        label="Zero Stock"
+                        labelPlacement="start"
+                        sx={{ mr: 0 }}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
+              />
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <TextField
-                  label="Search"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={showZero}
-                              onChange={(e) => setShowZero(e.target.checked)}
-                            />
-                          }
-                          label="Zero Stock"
-                          labelPlacement="start"
-                          sx={{ mr: 0 }}
-                        />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
                 <Button variant="contained" startIcon={<Add />} onClick={handleManualEntry}>
                   Add Stock Entry
                 </Button>
@@ -758,11 +777,6 @@ const InventoryManagement: React.FC = () => {
                 </Button>
               </Box>
             </Box>
-            <ExcelImportExport
-              data={stock || []}
-              entity="Stock"
-              onImport={handleImportStock}
-            />
             {isMobile ? renderMobileCards(stock || []) : renderDesktopTable(stock || [])}
           </TabPanel>
           <TabPanel value={tabValue} index={1}>
@@ -1023,6 +1037,18 @@ const InventoryManagement: React.FC = () => {
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
       >
+        <MenuItem onClick={handleEditStockQuantity}>
+          <ListItemIcon>
+            <EditIcon />
+          </ListItemIcon>
+          <ListItemText>Edit Stock Quantity</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleAdjustStockItem}>
+          <ListItemIcon>
+            <AdjustIcon />
+          </ListItemIcon>
+          <ListItemText>Adjust Stock</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleShowMovement}>
           <ListItemIcon>
             <HistoryIcon />
@@ -1036,6 +1062,15 @@ const InventoryManagement: React.FC = () => {
           <ListItemText>Create Purchase Order</ListItemText>
         </MenuItem>
       </Menu>
+      {/* Product Edit Modal */}
+      <AddProductModal
+        open={productModalOpen}
+        onClose={handleProductModalClose}
+        onAdd={() => {}} // Not used for edit
+        onUpdate={handleProductUpdate}
+        productData={selectedProductForEdit}
+        mode="edit"
+      />
     </Box>
   );
 };

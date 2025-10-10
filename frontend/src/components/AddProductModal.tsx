@@ -29,8 +29,11 @@ interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (_data: any) => Promise<void>;
+  onUpdate?: (_data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
+  productData?: any;
+  mode?: 'add' | 'edit';
 }
 interface ProductFormData {
   product_name: string;
@@ -60,8 +63,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   open,
   onClose,
   onAdd,
+  onUpdate,
   loading = false,
   initialName = "",
+  productData,
+  mode = 'add',
 }) => {
   const {
     register,
@@ -145,21 +151,36 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [hsnSearchLoading, setHsnSearchLoading] = React.useState(false);
   const [hsnApiSuggestions, setHsnApiSuggestions] = React.useState<HsnResult[]>([]);
   React.useEffect(() => {
-    if (open && initialName) {
-      reset({
-        product_name: initialName,
-        hsn_code: "",
-        part_number: "",
-        unit: "PCS",
-        unit_price: 0,
-        gst_rate: 18,
-        is_gst_inclusive: false,
-        reorder_level: 0,
-        description: "",
-        is_manufactured: false,
-      });
+    if (open) {
+      if (mode === 'edit' && productData) {
+        reset({
+          product_name: productData.product_name,
+          hsn_code: productData.product_hsn_code || "",
+          part_number: productData.product_part_number || "",
+          unit: productData.unit,
+          unit_price: productData.unit_price,
+          gst_rate: productData.gst_rate,
+          is_gst_inclusive: productData.is_gst_inclusive || false,
+          reorder_level: productData.reorder_level || 0,
+          description: productData.description || "",
+          is_manufactured: productData.is_manufactured || false,
+        });
+      } else {
+        reset({
+          product_name: initialName,
+          hsn_code: "",
+          part_number: "",
+          unit: "PCS",
+          unit_price: 0,
+          gst_rate: 18,
+          is_gst_inclusive: false,
+          reorder_level: 0,
+          description: "",
+          is_manufactured: false,
+        });
+      }
     }
-  }, [open, initialName, reset]);
+  }, [open, initialName, reset, mode, productData]);
   const onSubmit = async (productData: ProductFormData) => {
     try {
       // Remove empty fields to match backend schema
@@ -191,7 +212,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           );
         }),
       );
-      await onAdd(cleanData);
+      if (mode === 'edit') {
+        await onUpdate!({ ...cleanData, id: productData.id });
+      } else {
+        await onAdd(cleanData);
+      }
       reset();
       onClose(); // Close modal on success
     } catch (err: any) {
@@ -229,7 +254,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         // Auto-fill if single result
         const selected = results[0];
         setValue("hsn_code", selected.hsn_code);
-        setValue("gst_rate", selected.gst_rate);
+        setValue("gst_rate", normalizeGstRate(selected.gst_rate));
         if (selected.description && !watchedDescription && !watchedProductName) {
           setValue("description", selected.description);
         }
@@ -269,7 +294,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   // Handler for selecting HSN from API popup
   const handleApiHsnSelect = (selected: HsnResult) => {
     setValue("hsn_code", selected.hsn_code);
-    setValue("gst_rate", selected.gst_rate);
+    setValue("gst_rate", normalizeGstRate(selected.gst_rate));
     if (selected.description && !watchedDescription && !watchedProductName) {
       setValue("description", selected.description);
     }
@@ -281,13 +306,17 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     // Fetch GST rate via API for selected HSN
     hsnSearch({ queryKey: ["hsn-search", hsn, 1] }).then((results) => {
       if (results.length > 0) {
-        setValue("gst_rate", results[0].gst_rate);
+        setValue("gst_rate", normalizeGstRate(results[0].gst_rate));
       }
     }).catch((err) => {
       console.error("Failed to fetch GST for selected HSN:", err);
       toast.error("Failed to fetch GST rate - enter manually");
     });
     setHsnPopupOpen(false);
+  };
+  // Normalize GST rate (handle both fraction and percentage)
+  const normalizeGstRate = (rate: number): number => {
+    return rate > 1 ? rate : rate * 100;
   };
   return (
     <>
@@ -302,7 +331,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       >
         <DialogTitle>
           <Typography variant="h6" component="div">
-            Add New Product
+            {mode === 'edit' ? 'Edit Product' : 'Add New Product'}
           </Typography>
         </DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -473,7 +502,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               disabled={loading}
               startIcon={loading ? <CircularProgress size={20} /> : null}
             >
-              {loading ? "Adding..." : "Add Product"}
+              {loading ? (mode === 'edit' ? "Updating..." : "Adding...") : (mode === 'edit' ? "Update Product" : "Add Product")}
             </Button>
           </DialogActions>
         </form>
@@ -498,7 +527,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   <ListItem key={option.hsn_code} disablePadding>
                     <ListItemButton onClick={() => handleApiHsnSelect(option)}>
                       <ListItemText 
-                        primary={`${option.hsn_code} (${option.gst_rate}%)`}
+                        primary={`${option.hsn_code} (${normalizeGstRate(option.gst_rate)}%)`}
                         secondary={option.description} 
                       />
                     </ListItemButton>
