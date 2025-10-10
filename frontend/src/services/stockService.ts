@@ -1,5 +1,4 @@
 // frontend/src/services/stockService.ts
-// services/stockService.ts
 // Service for fetching stock and balance information for voucher forms
 import api from "../lib/api";
 interface QueryFunctionContext {
@@ -93,6 +92,18 @@ export const bulkImportStock = async (file: File): Promise<any> => {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
+  });
+  return response.data;
+};
+// NEW: Fetch stock list with params from queryKey
+export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
+  const [, params] = queryKey; // Expect queryKey = ['stock', {search: searchText, show_zero: boolean}]
+  const response = await api.get("/stock", {
+    params: {
+      search: params?.search,
+      show_zero: params?.show_zero,
+    },
+    signal,
   });
   return response.data;
 };

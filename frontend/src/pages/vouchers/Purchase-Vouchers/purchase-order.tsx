@@ -278,6 +278,11 @@ const PurchaseOrderPage: React.FC = () => {
     if (mode === "create" && productId && productList) {
       const product = productList.find((p) => p.id === Number(productId));
       if (product) {
+        const gst_rate = normalizeGstRate(product.gst_rate ?? 18);
+        // NEW: Check if first row is empty (product_id null/undefined) and remove it before appending
+        if (fields.length === 1 && !watch(`items.0.product_id`)) {
+          remove(0);
+        }
         append({
           product_id: product.id,
           product_name: product.product_name || product.name,
@@ -286,10 +291,10 @@ const PurchaseOrderPage: React.FC = () => {
           original_unit_price: product.unit_price || 0,
           discount_percentage: 0,
           discount_amount: 0,
-          gst_rate: product.gst_rate ?? 18,
-          cgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
-          sgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
-          igst_rate: isIntrastate ? 0 : product.gst_rate ?? 18,
+          gst_rate: gst_rate,
+          cgst_rate: isIntrastate ? gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : gst_rate,
           amount: 0,
           unit: product.unit,
           current_stock: 0,
@@ -298,7 +303,7 @@ const PurchaseOrderPage: React.FC = () => {
         });
       }
     }
-  }, [mode, productId, productList, append, isIntrastate]);
+  }, [mode, productId, productList, append, isIntrastate, fields.length, watch, remove]); // NEW: Added fields.length, watch, remove
 
   useEffect(() => {
     if (mode === "create" && vendorId && vendorList) {
@@ -851,7 +856,7 @@ const PurchaseOrderPage: React.FC = () => {
         }
       />
       <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onAdd={(newVendor) => { setValue("vendor_id", newVendor.id); refreshMasterData(); }} loading={addVendorLoading} setLoading={setAddVendorLoading} />
-      <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
+      <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, normalizeGstRate(newProduct.gst_rate ?? 18)); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : normalizeGstRate(newProduct.gst_rate ?? 18)); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
       <VoucherContextMenu 
         contextMenu={contextMenu} 
@@ -877,6 +882,10 @@ const PurchaseOrderPage: React.FC = () => {
       )}
     </>
   );
+};
+
+const normalizeGstRate = (rate: number): number => {
+  return rate > 1 ? rate : rate * 100;
 };
 
 export default PurchaseOrderPage;

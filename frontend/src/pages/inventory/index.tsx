@@ -50,8 +50,8 @@ import {
   Tune as AdjustIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { masterDataService } from "../../services/authService";
-import { getProductMovements, getLastVendorForProduct } from "../../services/stockService";
+import { masterDataService } from "../../services/authService"; // Keep for other calls if needed
+import { getStock, getProductMovements, getLastVendorForProduct } from "../../services/stockService"; // CHANGED: Import getStock from stockService
 import { useRouter } from "next/router";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -101,7 +101,7 @@ const InventoryManagement: React.FC = () => {
   const router = useRouter();
   const [tabValue, setTabValue] = useState(0);
   const [searchText, setSearchText] = useState("");
-  const [showZero, setShowZero] = useState(false);
+  const [hideZero, setHideZero] = useState(false);
   const [adjustmentDialog, setAdjustmentDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adjustment, setAdjustment] = useState({ quantity: "", reason: "" });
@@ -133,8 +133,8 @@ const InventoryManagement: React.FC = () => {
     isLoading: stockLoading,
     refetch: refetchStock,
   } = useQuery({
-    queryKey: ["stock", {search: searchText, show_zero: showZero}],
-    queryFn: masterDataService.getStock,
+    queryKey: ["stock", {search: searchText, show_zero: !hideZero}],
+    queryFn: getStock, // CHANGED: Use new getStock from stockService
     refetchInterval: 30000, // Refresh every 30 seconds
   });
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
@@ -242,7 +242,7 @@ const InventoryManagement: React.FC = () => {
         numeric: false,
         render: (value, row) => (
           <Typography 
-            sx={{ cursor: 'pointer', color: 'primary.main', textDecoration: 'underline' }}
+            sx={{ cursor: 'pointer' }}
             onClick={() => handleEditProduct(row)}
           >
             {value}
@@ -438,7 +438,7 @@ const InventoryManagement: React.FC = () => {
     try {
       await masterDataService.exportStock({
         search: searchText,
-        show_zero: showZero,
+        show_zero: !hideZero,
       });
     } catch (err) {
       alert("Failed to export stock data. Please try again.");
@@ -626,7 +626,7 @@ const InventoryManagement: React.FC = () => {
                   variant="subtitle1" 
                   fontWeight="bold" 
                   gutterBottom
-                  sx={{ cursor: 'pointer', color: 'primary.main', textDecoration: 'underline' }}
+                  sx={{ cursor: 'pointer' }}
                   onClick={() => handleEditProduct(stock)}
                 >
                   {stock.product_name}
@@ -721,11 +721,11 @@ const InventoryManagement: React.FC = () => {
                       <FormControlLabel
                         control={
                           <Checkbox
-                            checked={showZero}
-                            onChange={(e) => setShowZero(e.target.checked)}
+                            checked={hideZero}
+                            onChange={(e) => setHideZero(e.target.checked)}
                           />
                         }
-                        label="Zero Stock"
+                        label="Hide Zero Stock"
                         labelPlacement="start"
                         sx={{ mr: 0 }}
                       />

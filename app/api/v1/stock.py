@@ -31,7 +31,7 @@ async def get_stock(
     product_id: Optional[int] = None,  # Make product_id Optional to allow empty or missing
     low_stock_only: bool = False,
     search: str = Query("", description="Search term for stock items"),
-    show_zero: bool = Query(False, description="Show items with zero quantity"),
+    show_zero: bool = Query(True, description="Show items with zero quantity"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -75,7 +75,7 @@ async def get_stock(
             stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id, isouter=True)
         else:
             logger.info("Using inner join for non-zero stock")
-            stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id)
+            stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id, isouter=False)
         
         if not is_super_admin:
             stmt = stmt.where(Product.organization_id == org_id)
