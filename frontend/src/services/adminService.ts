@@ -66,6 +66,17 @@ const adminService = {
       throw error;
     }
   },
+  getInventoryValue: async (): Promise<number> => {
+    try {
+      const response = await api.get<{total_value: number}>(
+        "/inventory/reports/value",
+      );
+      return response.data.total_value;
+    } catch (error) {
+      console.error("Failed to fetch inventory value:", error);
+      throw error;
+    }
+  },
   // Add more admin-related API calls as needed, e.g., manage licenses, organizations, etc.
   createLicense: async (licenseData: Record<string, any>): Promise<any> => {
     try {

@@ -14,7 +14,7 @@ import secrets
 import string
 import re
 
-from app.models import Organization, User, Product, Customer, Vendor, Stock, ServiceRole
+from app.models import Organization, User, Product, Customer, Vendor, Stock, ServiceRole, AuditLog
 from app.schemas.user import UserRole
 from app.schemas import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
@@ -26,6 +26,7 @@ from app.core.logging import log_license_creation, log_email_operation
 from app.services.rbac import RBACService
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
 from app.services.system_email_service import system_email_service
+from app.schemas.organization import RecentActivity, RecentActivityResponse
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +140,46 @@ class OrganizationService:
             "total_stock_items": total_stock_items,
             "generated_at": datetime.utcnow().isoformat()
         }
+
+    @staticmethod
+    async def get_recent_activities(db: AsyncSession, organization_id: int, limit: int = 10) -> RecentActivityResponse:
+        """Get recent activities for the organization"""
+        result = await db.execute(
+            select(AuditLog)
+            .filter_by(organization_id=organization_id)
+            .order_by(desc(AuditLog.timestamp))
+            .limit(limit)
+        )
+        logs = result.scalars().all()
+        
+        activities = []
+        for log in logs:
+            # Simple mapping of audit log to activity
+            activity_type = {
+                'CREATE': 'created',
+                'UPDATE': 'updated',
+                'DELETE': 'deleted'
+            }.get(log.action, 'modified')
+            
+            title = f"{log.table_name} {activity_type}"
+            description = f"{log.user.full_name if log.user else 'System'} {activity_type} a record in {log.table_name}"
+            if log.changes:
+                description += f" (changes: {len(log.changes)} fields)"
+            
+            activities.append(RecentActivity(
+                id=str(log.id),
+                type=log.table_name.lower(),
+                title=title,
+                description=description,
+                timestamp=log.timestamp.isoformat(),
+                user_name=log.user.full_name if log.user else None
+            ))
+        
+        return RecentActivityResponse(
+            activities=activities,
+            total_count=len(activities),
+            generated_at=datetime.utcnow().isoformat()
+        )
 
     @staticmethod
     async def create_license(db: AsyncSession, license_data: OrganizationLicenseCreate, current_user: User) -> Dict:

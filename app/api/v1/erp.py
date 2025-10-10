@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, desc, asc, func
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime, date
@@ -797,7 +797,7 @@ async def get_financial_dashboard(
     _ : None = Depends(validate_company_setup)
 ):
     """Get financial dashboard data"""
-    # Get key financial metrics
+    # Get total assets
     stmt_assets = select(func.sum(ChartOfAccounts.current_balance)).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.account_type == 'asset'
@@ -805,6 +805,7 @@ async def get_financial_dashboard(
     result_assets = await db.execute(stmt_assets)
     total_assets = result_assets.scalar() or 0
     
+    # Get total liabilities
     stmt_liabilities = select(func.sum(ChartOfAccounts.current_balance)).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.account_type == 'liability'
@@ -812,6 +813,7 @@ async def get_financial_dashboard(
     result_liabilities = await db.execute(stmt_liabilities)
     total_liabilities = result_liabilities.scalar() or 0
     
+    # Get total equity
     stmt_equity = select(func.sum(ChartOfAccounts.current_balance)).where(
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.account_type == 'equity'
@@ -842,6 +844,13 @@ async def get_financial_dashboard(
     result_bank = await db.execute(stmt_bank)
     total_bank_balance = result_bank.scalar() or 0
     
+    # Get inventory value
+    stmt_inventory = select(func.sum(Stock.quantity * Product.unit_price)).join(
+        Product, Stock.product_id == Product.id
+    ).where(Stock.organization_id == organization_id)
+    result_inventory = await db.execute(stmt_inventory)
+    inventory_value = result_inventory.scalar() or 0
+    
     return {
         "total_assets": float(total_assets),
         "total_liabilities": float(total_liabilities),
@@ -849,6 +858,7 @@ async def get_financial_dashboard(
         "pending_accounts_payable": float(pending_ap),
         "pending_accounts_receivable": float(pending_ar),
         "total_bank_balance": float(total_bank_balance),
+        "inventory_value": float(inventory_value),
         "working_capital": float(total_assets - total_liabilities),
         "current_ratio": float(total_assets / total_liabilities) if total_liabilities > 0 else 0
     }

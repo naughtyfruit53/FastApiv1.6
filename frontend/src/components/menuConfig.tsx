@@ -98,7 +98,7 @@ export const menuItems = {
       {
         title: 'Stock Management',
         items: [
-          { name: 'Current Stock', path: '/inventory/stock', icon: <Inventory /> },
+          { name: 'Current Stock', path: '/inventory', icon: <Inventory /> },
           { name: 'Stock Movements', path: '/inventory/movements', icon: <SwapHoriz /> },
           { name: 'Low Stock Report', path: '/inventory/low-stock', icon: <TrendingUp /> },
           { name: 'Pending Orders', path: '/inventory/pending-orders', icon: <Schedule /> },

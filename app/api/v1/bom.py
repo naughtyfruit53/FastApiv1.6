@@ -238,7 +238,16 @@ async def create_bom(
                 detail=f"Component item ID {comp_data.component_item_id} not found"
             )
         
-        total_comp_cost = comp_data.quantity_required * comp_data.unit_cost * (1 + comp_data.wastage_percentage / 100)
+        # Use discounted price if available
+        stmt_discount = select(PurchaseOrderItem.discounted_price).where(
+            PurchaseOrderItem.product_id == comp_data.component_item_id
+        ).order_by(PurchaseOrderItem.created_at.desc()).limit(1)
+        result_discount = await db.execute(stmt_discount)
+        discounted_price = result_discount.scalar_one_or_none()
+        
+        unit_cost = discounted_price if discounted_price else comp_data.unit_cost
+        
+        total_comp_cost = comp_data.quantity_required * unit_cost * (1 + comp_data.wastage_percentage / 100)
         
         component = BOMComponent(
             organization_id=current_user.organization_id,
@@ -246,7 +255,7 @@ async def create_bom(
             component_item_id=comp_data.component_item_id,
             quantity_required=comp_data.quantity_required,
             unit=comp_data.unit,
-            unit_cost=comp_data.unit_cost,
+            unit_cost=unit_cost,
             total_cost=total_comp_cost,
             wastage_percentage=comp_data.wastage_percentage,
             is_optional=comp_data.is_optional,
@@ -334,7 +343,16 @@ async def update_bom(
                     detail=f"Component item ID {comp_data.component_item_id} not found"
                 )
             
-            total_comp_cost = comp_data.quantity_required * comp_data.unit_cost * (1 + comp_data.wastage_percentage / 100)
+            # Use discounted price if available
+            stmt_discount = select(PurchaseOrderItem.discounted_price).where(
+                PurchaseOrderItem.product_id == comp_data.component_item_id
+            ).order_by(PurchaseOrderItem.created_at.desc()).limit(1)
+            result_discount = await db.execute(stmt_discount)
+            discounted_price = result_discount.scalar_one_or_none()
+            
+            unit_cost = discounted_price if discounted_price else comp_data.unit_cost
+            
+            total_comp_cost = comp_data.quantity_required * unit_cost * (1 + comp_data.wastage_percentage / 100)
             material_cost += total_comp_cost
             
             component = BOMComponent(
@@ -343,7 +361,7 @@ async def update_bom(
                 component_item_id=comp_data.component_item_id,
                 quantity_required=comp_data.quantity_required,
                 unit=comp_data.unit,
-                unit_cost=comp_data.unit_cost,
+                unit_cost=unit_cost,
                 total_cost=total_comp_cost,
                 wastage_percentage=comp_data.wastage_percentage,
                 is_optional=comp_data.is_optional,

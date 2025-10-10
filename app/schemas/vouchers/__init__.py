@@ -1,7 +1,7 @@
-# app/schemas/__init__.py
+# app/schemas/vouchers/__init__.py
 
 # Import from base
-from .vouchers.base import (
+from .base import (
     VoucherBase, VoucherInDBBase, VoucherItemBase, VoucherItemWithTax, SimpleVoucherItem,
     ChartOfAccountMinimal, ProductMinimal, VendorMinimal, PurchaseOrderMinimal,
     EmailNotificationBase, EmailNotificationCreate, EmailNotificationInDB,
@@ -11,7 +11,7 @@ from .vouchers.base import (
 )
 
 # Import from purchase
-from .vouchers.purchase import (
+from .purchase import (
     PurchaseVoucherItemCreate, PurchaseVoucherItemInDB, PurchaseVoucherCreate,
     PurchaseVoucherUpdate, PurchaseVoucherInDB, PurchaseOrderItemCreate,
     PurchaseOrderItemInDB, PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderInDB,
@@ -21,7 +21,7 @@ from .vouchers.purchase import (
 )
 
 # Import from sales
-from .vouchers.sales import (
+from .sales import (
     SalesVoucherItemCreate, SalesVoucherItemInDB, SalesVoucherCreate,
     SalesVoucherUpdate, SalesVoucherInDB, SalesOrderItemCreate,
     SalesOrderItemInDB, SalesOrderCreate, SalesOrderUpdate, SalesOrderInDB,
@@ -32,14 +32,14 @@ from .vouchers.sales import (
 )
 
 # Import from presales
-from .vouchers.presales import (
+from .presales import (
     ProformaInvoiceItemCreate, ProformaInvoiceItemInDB, ProformaInvoiceCreate,
     ProformaInvoiceUpdate, ProformaInvoiceInDB, QuotationItemCreate,
     QuotationItemInDB, QuotationCreate, QuotationUpdate, QuotationInDB
 )
 
 # Import from financial
-from .vouchers.financial import (
+from .financial import (
     CreditNoteItemCreate, CreditNoteItemInDB, CreditNoteCreate,
     CreditNoteUpdate, CreditNoteInDB, DebitNoteItemCreate,
     DebitNoteItemInDB, DebitNoteCreate, DebitNoteUpdate, DebitNoteInDB,
@@ -51,101 +51,7 @@ from .vouchers.financial import (
     InterDepartmentVoucherCreate, InterDepartmentVoucherUpdate, InterDepartmentVoucherInDB
 )
 
-# User schemas
-from .user import (
-    UserRole,
-    PlatformUserRole,
-    PasswordChangeRequest,
-    ForgotPasswordRequest,
-    PasswordResetRequest,
-    PasswordChangeResponse,
-    UserBase,
-    UserCreate,
-    UserUpdate,
-    UserInDB,
-    UserLogin,
-    Token,
-    TokenData,
-    PlatformUserBase,
-    PlatformUserCreate,
-    PlatformUserUpdate,
-    PlatformUserInDB,
-    OTPRequest,
-    OTPVerifyRequest,
-    OTPResponse,
-)
-
-# Organization schemas
-from .organization import (
-    OrganizationBase,
-    OrganizationCreate,
-    OrganizationUpdate,
-    OrganizationInDB,
-    OrganizationLicenseCreate,
-    OrganizationLicenseResponse
-)
-
-# Organization settings schemas
-from .organization_settings import (
-    OrganizationSettingsBase,
-    OrganizationSettingsCreate,
-    OrganizationSettingsUpdate,
-    OrganizationSettingsInDB,
-    OrganizationSettingsResponse
-)
-
-# Company schemas
-from .company import (
-    CompanyBase,
-    CompanyCreate,
-    CompanyUpdate,
-    CompanyInDB,
-    CompanyResponse,
-    CompanyListResponse,
-    CompanyValidationError,
-    CompanyErrorResponse,
-    CompanyBulkImportResponse
-)
-
-# Base schemas
-from .base import (
-    OrganizationStatus,
-    PlanType,
-    VendorBase,
-    VendorCreate,
-    VendorUpdate,
-    VendorInDB,
-    CustomerBase,
-    CustomerCreate,
-    CustomerUpdate,
-    CustomerInDB,
-    ProductBase,
-    ProductCreate,
-    ProductUpdate,
-    ProductInDB,
-    StockBase,
-    StockCreate,
-    StockUpdate,
-    StockInDB,
-    BulkStockRequest,
-    NotificationTemplateBase,
-    NotificationTemplateCreate,
-    NotificationTemplateUpdate,
-    NotificationTemplateInDB,
-    NotificationLogBase,
-    NotificationLogCreate,
-    NotificationLogInDB,
-    NotificationPreferenceBase,
-    NotificationPreferenceCreate,
-    NotificationPreferenceUpdate,
-    NotificationPreferenceInDB,
-    BulkNotificationRequest,
-    NotificationSendRequest,
-    NotificationSendResponse,
-    BulkNotificationResponse
-)
-
-# Re-export all for backward compatibility
+# Re-export all for backward compatibility in vouchers submodule
 __all__ = [
     # base
     'VoucherBase', 'VoucherInDBBase', 'VoucherItemBase', 'VoucherItemWithTax', 'SimpleVoucherItem',
@@ -186,89 +92,5 @@ __all__ = [
     'ContraVoucherCreate', 'ContraVoucherUpdate', 'ContraVoucherInDB',
     'JournalVoucherCreate', 'JournalVoucherUpdate', 'JournalVoucherInDB',
     'InterDepartmentVoucherItemCreate', 'InterDepartmentVoucherItemInDB',
-    'InterDepartmentVoucherCreate', 'InterDepartmentVoucherUpdate', 'InterDepartmentVoucherInDB',
-
-    # User schemas
-    "UserRole",
-    "PlatformUserRole",
-    "PasswordChangeRequest",
-    "ForgotPasswordRequest",
-    "PasswordResetRequest",
-    "PasswordChangeResponse",
-    "UserBase",
-    "UserCreate",
-    "UserUpdate",
-    "UserInDB",
-    "UserLogin",
-    "Token",
-    "TokenData",
-    "PlatformUserBase",
-    "PlatformUserCreate",
-    "PlatformUserUpdate",
-    "PlatformUserInDB",
-    "OTPRequest",
-    "OTPVerifyRequest",
-    "OTPResponse",
-    
-    # Organization schemas
-    "OrganizationBase",
-    "OrganizationCreate",
-    "OrganizationUpdate",
-    "OrganizationInDB",
-    "OrganizationLicenseCreate",
-    "OrganizationLicenseResponse",
-    
-    # Organization settings schemas
-    "OrganizationSettingsBase",
-    "OrganizationSettingsCreate",
-    "OrganizationSettingsUpdate",
-    "OrganizationSettingsInDB",
-    "OrganizationSettingsResponse",
-    
-    # Company schemas
-    "CompanyBase",
-    "CompanyCreate",
-    "CompanyUpdate",
-    "CompanyInDB",
-    "CompanyResponse",
-    "CompanyListResponse",
-    "CompanyValidationError",
-    "CompanyErrorResponse",
-    "CompanyBulkImportResponse",
-
-    # Base schemas
-    "OrganizationStatus",
-    "PlanType",
-    "VendorBase",
-    "VendorCreate",
-    "VendorUpdate",
-    "VendorInDB",
-    "CustomerBase",
-    "CustomerCreate",
-    "CustomerUpdate",
-    "CustomerInDB",
-    "ProductBase",
-    "ProductCreate",
-    "ProductUpdate",
-    "ProductInDB",
-    "StockBase",
-    "StockCreate",
-    "StockUpdate",
-    "StockInDB",
-    "BulkStockRequest",
-    "NotificationTemplateBase",
-    "NotificationTemplateCreate",
-    "NotificationTemplateUpdate",
-    "NotificationTemplateInDB",
-    "NotificationLogBase",
-    "NotificationLogCreate",
-    "NotificationLogInDB",
-    "NotificationPreferenceBase",
-    "NotificationPreferenceCreate",
-    "NotificationPreferenceUpdate",
-    "NotificationPreferenceInDB",
-    "BulkNotificationRequest",
-    "NotificationSendRequest",
-    "NotificationSendResponse",
-    "BulkNotificationResponse"
+    'InterDepartmentVoucherCreate', 'InterDepartmentVoucherUpdate', 'InterDepartmentVoucherInDB'
 ]

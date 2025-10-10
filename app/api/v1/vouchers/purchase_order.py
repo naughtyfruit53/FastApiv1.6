@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from io import BytesIO
@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem
-from app.schemas.vouchers import PurchaseOrderCreate, PurchaseOrderInDB, PurchaseOrderUpdate
+from app.schemas.vouchers.purchase import PurchaseOrderCreate, PurchaseOrderInDB, PurchaseOrderUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
@@ -189,6 +189,9 @@ async def create_purchase_order(
                 item_dict['sgst_amount'] +
                 item_dict['igst_amount']
             )
+            
+            # Calculate discounted_price
+            item_dict['discounted_price'] = item_dict['unit_price'] - (item_dict['discount_amount'] / item_dict['quantity']) if item_dict['quantity'] > 0 else item_dict['unit_price']
             
             item = PurchaseOrderItem(
                 purchase_order_id=db_invoice.id,
@@ -372,6 +375,9 @@ async def update_purchase_order(
                     item_dict['igst_amount']
                 )
                 
+                # Calculate discounted_price
+                item_dict['discounted_price'] = item_dict['unit_price'] - (item_dict['discount_amount'] / item_dict['quantity']) if item_dict['quantity'] > 0 else item_dict['unit_price']
+                
                 item = PurchaseOrderItem(
                     purchase_order_id=invoice_id,
                     delivered_quantity=0.0,
@@ -548,3 +554,35 @@ async def get_purchase_order_tracking(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve tracking details"
         )
+
+@router.get("/product/{product_id}/previous-discount")
+async def get_previous_discount(
+    product_id: int,
+    vendor_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get previous discount for a product (optionally for specific vendor)"""
+    try:
+        stmt = select(PurchaseOrderItem).join(PurchaseOrder).where(
+            PurchaseOrderItem.product_id == product_id,
+            PurchaseOrder.organization_id == current_user.organization_id
+        ).order_by(PurchaseOrder.date.desc())
+        
+        if vendor_id:
+            stmt = stmt.where(PurchaseOrder.vendor_id == vendor_id)
+        
+        result = await db.execute(stmt.limit(1))
+        last_item = result.scalar_one_or_none()
+        
+        if not last_item:
+            return {"discount_percentage": 0.0, "discount_amount": 0.0}
+        
+        return {
+            "discount_percentage": last_item.discount_percentage,
+            "discount_amount": last_item.discount_amount
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching previous discount: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch previous discount")

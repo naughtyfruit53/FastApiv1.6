@@ -1,3 +1,5 @@
+# app/api/v1/inventory.py
+
 """
 Inventory & Parts Management API endpoints
 """
@@ -6,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc, asc, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
+from decimal import Decimal
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -21,11 +24,12 @@ from app.schemas.inventory import (
     InventoryTransactionCreate, InventoryTransactionUpdate, InventoryTransactionResponse,
     JobPartsCreate, JobPartsUpdate, JobPartsResponse,
     InventoryAlertCreate, InventoryAlertUpdate, InventoryAlertResponse,
-    InventoryUsageReport, InventoryValueReport, LowStockReport,
+    InventoryUsageReport, LowStockReport,
     BulkJobPartsAssignment, BulkInventoryAdjustment, BulkInventoryResponse,
     InventoryFilter, InventoryListResponse, TransactionType, JobPartsStatus,
     AlertType, AlertStatus, AlertPriority
 )
+from app.schemas.organization import TotalInventoryValue  # Add this import
 import logging
 
 logger = logging.getLogger(__name__)
@@ -422,7 +426,8 @@ async def assign_parts_to_job(
         **job_part_with_relations.__dict__,
         product_name=job_part_with_relations.product.product_name,
         job_number=job_part_with_relations.job.job_number,
-        allocated_by_name=job_part_with_relations.allocated_by.full_name if job_part_with_relations.allocated_by else None
+        allocated_by_name=job_part_with_relations.allocated_by.full_name if job_part_with_relations.allocated_by else None,
+        used_by_name=job_part_with_relations.used_by.full_name if job_part_with_relations.used_by else None
     )
 
 
@@ -440,7 +445,7 @@ async def update_job_parts(
     check_service_permission(
         user=current_user, 
         module="job_parts", 
-        action="create",
+        action="update",
         db=db
     )
     
@@ -489,7 +494,6 @@ async def update_job_parts(
                 raise HTTPException(status_code=400, detail=f"Inventory error: {str(e)}")
     
     await db.commit()
-    await db.refresh(job_part)
     
     # Load related data for response
     stmt = select(JobParts).options(
@@ -721,6 +725,24 @@ async def get_inventory_usage_report(
         report.append(report_item)
     
     return report
+
+
+@router.get("/reports/value", response_model=TotalInventoryValue)
+async def get_inventory_value(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get total inventory value"""
+    organization_id = require_current_organization_id(current_user)
+    
+    stmt = select(func.sum(Stock.quantity * Product.unit_price)).join(
+        Product, Stock.product_id == Product.id
+    ).where(Stock.organization_id == organization_id)
+    
+    result = await db.execute(stmt)
+    total_value = result.scalar() or 0.0
+    
+    return TotalInventoryValue(total_value=total_value)
 
 
 @router.get("/reports/low-stock", response_model=List[LowStockReport])

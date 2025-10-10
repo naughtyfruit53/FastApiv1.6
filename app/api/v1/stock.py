@@ -348,7 +348,7 @@ async def get_product_stock(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. You do not have permission to view stock information."
         )
-    
+        
     stmt = select(Stock).where(Stock.product_id == product_id)
     result = await db.execute(stmt)
     stock = result.scalar_one_or_none()
@@ -476,6 +476,9 @@ async def update_stock(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Product not found"
             )
+        
+        previous_quantity = 0.0
+        new_quantity = max(0, adjustment.quantity_change)
         
         stock = Stock(
             organization_id=org_id,
@@ -963,3 +966,49 @@ async def export_stock_excel(
     
     excel_data = StockExcelService.export_stock(stock_data)
     return ExcelService.create_streaming_response(excel_data, "stock_export.xlsx")
+
+async def update_stock_from_po(po_id: int, db: AsyncSession):
+    """Update stock valuation using discounted prices from PO items (called after GRN or PO completion)"""
+    stmt = select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id == po_id)
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    
+    for item in items:
+        # Get or create stock
+        stmt_stock = select(Stock).where(Stock.product_id == item.product_id)
+        result_stock = await db.execute(stmt_stock)
+        stock = result_stock.scalar_one_or_none()
+        
+        if not stock:
+            stock = Stock(
+                organization_id=item.purchase_order.organization_id,
+                product_id=item.product_id,
+                quantity=item.quantity,
+                unit=item.unit,
+                location=""  # Default or from config
+            )
+            db.add(stock)
+            await db.flush()
+        
+        # Update quantity (add received quantity; assume full for simplicity, adjust for partial GRN)
+        stock.quantity += item.quantity
+        
+        # Update valuation - use simple average for now (can change to weighted)
+        current_value = stock.quantity * item.product.unit_price  # Old value
+        new_value = item.quantity * item.discounted_price
+        total_quantity = stock.quantity + item.quantity
+        new_avg_price = (current_value + new_value) / total_quantity if total_quantity > 0 else item.discounted_price
+        item.product.unit_price = new_avg_price  # Update product's effective price for future use
+        
+        # Log transaction
+        transaction = InventoryTransaction(
+            organization_id=stock.organization_id,
+            product_id=stock.product_id,
+            quantity=item.quantity,
+            transaction_type="purchase",
+            reference_number=item.purchase_order.voucher_number,
+            notes=f"PO {item.purchase_order.voucher_number} - Discounted price: {item.discounted_price}"
+        )
+        db.add(transaction)
+    
+    await db.commit()

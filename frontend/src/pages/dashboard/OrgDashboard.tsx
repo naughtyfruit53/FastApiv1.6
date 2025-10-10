@@ -60,7 +60,7 @@ const OrgDashboard: React.FC = () => {
     fetchOrgStatistics();
     fetchRecentActivities();
     
-    // Check if company details need to be completed
+    // Check if company details need to be completed before allowing access
     const checkCompanyDetails = () => {
       // Only show for org super admin on first login if company details not completed
       if (isOrgSuperAdmin(user) && user?.company_details_completed === false) {
@@ -78,7 +78,8 @@ const OrgDashboard: React.FC = () => {
   const fetchOrgStatistics = async () => {
     try {
       const data = await adminService.getOrgStatistics();
-      setStatistics(data);
+      const inventoryValue = await adminService.getInventoryValue();
+      setStatistics({...data, inventory_value: inventoryValue});
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -363,11 +364,6 @@ const OrgDashboard: React.FC = () => {
             <Typography variant="body2" color="textSecondary">
               Active Users
             </Typography>
-            {isSuperAdmin && statistics.total_org_users && (
-              <Typography variant="caption" color="textSecondary" sx={{ display: "block", mt: 0.5 }}>
-                of {statistics.total_org_users} total users
-              </Typography>
-            )}
           </Box>
           <Box sx={{ textAlign: "center" }}>
             <Typography

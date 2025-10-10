@@ -1,7 +1,7 @@
 # app/schemas/organization.py
 
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from datetime import datetime
 
 class OrganizationBase(BaseModel):
@@ -55,3 +55,19 @@ class OrganizationLicenseResponse(BaseModel):
     superadmin_email: str
     temp_password: str
     message: str
+
+class RecentActivity(BaseModel):
+    id: str
+    type: str
+    title: str
+    description: str
+    timestamp: str
+    user_name: Optional[str] = None
+
+class RecentActivityResponse(BaseModel):
+    activities: List[RecentActivity]
+    total_count: int
+    generated_at: str
+
+class TotalInventoryValue(BaseModel):
+    total_value: float

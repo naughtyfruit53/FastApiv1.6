@@ -53,6 +53,7 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     sgst_amount = Column(Float, default=0.0)
     igst_amount = Column(Float, default=0.0)
     description = Column(Text)
+    discounted_price = Column(Float, default=0.0)
     
     purchase_order = relationship("PurchaseOrder", back_populates="items")
     product = relationship("Product")  # Added relationship to Product

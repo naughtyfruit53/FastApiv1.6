@@ -9,7 +9,7 @@ from sqlalchemy import select, or_
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission, require_platform_permission
-from app.models import Organization, User, Product, Customer, Vendor, Stock
+from app.models import Organization, User, Product, Customer, Vendor, Stock, AuditLog
 from app.schemas.user import UserRole
 from app.schemas import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
@@ -169,6 +169,20 @@ async def get_org_level_statistics(
             detail="Organization context required for statistics"
         )
     return await OrganizationService.get_org_statistics(db, current_user.organization_id)
+
+@router.get("/recent-activities")
+async def get_recent_activities(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get recent activities for the organization"""
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization context required for recent activities"
+        )
+    return await OrganizationService.get_recent_activities(db, current_user.organization_id, limit)
 
 @router.post("/factory-default")
 async def factory_default_system(

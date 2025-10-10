@@ -187,6 +187,7 @@ class NotificationTemplate(Base):
     """
     Model for notification templates supporting multi-channel messaging.
     Supports email, SMS, and push notifications with variable substitution.
+    which extracts/summarizes based on the provided instructions.
     """
     __tablename__ = "notification_templates"
  
@@ -209,7 +210,7 @@ class NotificationTemplate(Base):
     html_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # HTML version for emails
  
     # Trigger configuration
-    trigger_event: Mapped[Optional[str]] = mapped_column(String, nullable=True) # customer_interaction, low_engagement, appointment_scheduled
+    trigger_event: Mapped[Optional[str]] = mapped_column(String, nullable=True) # What triggered this notification
     trigger_conditions: Mapped[Optional[str]] = mapped_column(JSON, nullable=True) # JSON conditions for automated triggers
  
     # Template variables (JSON array of variable names that can be substituted)
