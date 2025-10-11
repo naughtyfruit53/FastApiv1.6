@@ -3,31 +3,8 @@ import {Typography, Container, Box, Alert, Grid, Card, CardContent, Chip} from '
 import { CheckCircle, Schedule, Build, Inventory } from '@mui/icons-material';
 
 const FinishedGoodsReceipt: React.FC = () => {
-  // Mock data for demonstration
-  const recentProduction = [
-    {
-      id: 1,
-      productionOrder: 'MO/2425/00000001',
-      bomName: 'Laptop Assembly v1.0',
-      plannedQty: 50,
-      producedQty: 45,
-      goodQty: 42,
-      rejectQty: 3,
-      status: 'completed',
-      completionDate: '2024-08-14'
-    },
-    {
-      id: 2,
-      productionOrder: 'MO/2425/00000002',
-      bomName: 'Desktop PC v2.1',
-      plannedQty: 30,
-      producedQty: 28,
-      goodQty: 25,
-      rejectQty: 3,
-      status: 'in_progress',
-      completionDate: null
-    }
-  ];
+  // Empty array - production orders to be loaded from API
+  const recentProduction: any[] = [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

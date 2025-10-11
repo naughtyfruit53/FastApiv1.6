@@ -702,9 +702,6 @@ const InventoryManagement: React.FC = () => {
               aria-label="inventory tabs"
             >
               <Tab label="Current Stock" />
-              <Tab label="Low Stock Alert" />
-              <Tab label="Stock Movements" />
-              <Tab label="Stock Valuation" />
             </Tabs>
           </Box>
           <TabPanel value={tabValue} index={0}>
@@ -778,41 +775,6 @@ const InventoryManagement: React.FC = () => {
               </Box>
             </Box>
             {isMobile ? renderMobileCards(stock || []) : renderDesktopTable(stock || [])}
-          </TabPanel>
-          <TabPanel value={tabValue} index={1}>
-            <Box sx={{ mb: 3 }}>
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Items below reorder level require immediate attention
-              </Alert>
-              <Typography variant="h6">Low Stock Alert</Typography>
-            </Box>
-            {renderStockTable(
-              lowStock || stock || [],
-              true,
-              lowStockLoading || stockLoading,
-            )}
-          </TabPanel>
-          <TabPanel value={tabValue} index={2}>
-            <Box
-              sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}
-            >
-              <Typography variant="h6">Stock Movements</Typography>
-              <Button variant="contained" startIcon={<SwapHoriz />}>
-                View All Movements
-              </Button>
-            </Box>
-            <Typography>Stock movement tracking coming soon...</Typography>
-          </TabPanel>
-          <TabPanel value={tabValue} index={3}>
-            <Box
-              sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}
-            >
-              <Typography variant="h6">Stock Valuation Report</Typography>
-              <Button variant="contained" startIcon={<TrendingUp />}>
-                Generate Report
-              </Button>
-            </Box>
-            <Typography>Stock valuation reporting coming soon...</Typography>
           </TabPanel>
         </Paper>
       </Container>

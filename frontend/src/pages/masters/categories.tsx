@@ -46,43 +46,8 @@ const CategoriesPage: React.FC = () => {
     parent_category_id: "",
     is_active: true,
   });
-  // Mock data for demonstration
-  const categories = [
-    {
-      id: 1,
-      name: "Electronics",
-      description: "Electronic components and devices",
-      parent_category: null,
-      product_count: 25,
-      is_active: true,
-    },
-    {
-      id: 2,
-      name: "Components",
-      description: "Electronic components",
-      parent_category: "Electronics",
-      parent_category_id: 1,
-      product_count: 15,
-      is_active: true,
-    },
-    {
-      id: 3,
-      name: "Cables",
-      description: "Various types of cables",
-      parent_category: "Electronics",
-      parent_category_id: 1,
-      product_count: 8,
-      is_active: true,
-    },
-    {
-      id: 4,
-      name: "Hardware",
-      description: "Hardware items and tools",
-      parent_category: null,
-      product_count: 12,
-      is_active: true,
-    },
-  ];
+  // Empty categories array - to be loaded from API
+  const categories: any[] = [];
   const resetForm = () => {
     setFormData({
       name: "",
