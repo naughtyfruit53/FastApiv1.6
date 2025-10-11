@@ -20,7 +20,8 @@ import {
   ListItemAvatar,
   ListItemText,
   Alert,
-  Skeleton
+  Skeleton,
+  Snackbar
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -56,6 +57,8 @@ const ThreadView: React.FC<ThreadViewProps> = ({
   onForward
 }) => {
   const [expandedEmails, setExpandedEmails] = useState<Set<number>>(new Set());
+  const [showImagesToast, setShowImagesToast] = useState(true);
+  const [loadImages, setLoadImages] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch thread details if threadId provided
@@ -110,6 +113,21 @@ const ThreadView: React.FC<ThreadViewProps> = ({
     }
   });
 
+  React.useEffect(() => {
+    if (emails.length > 0) {
+      // Expand all emails by default
+      const allIds = new Set(emails.map(e => e.id));
+      setExpandedEmails(allIds);
+      
+      // Mark all unread as read
+      emails.forEach(email => {
+        if (email.status === 'unread') {
+          updateStatusMutation.mutate({ emailId: email.id, status: 'read' });
+        }
+      });
+    }
+  }, [emails.map(e => e.id).join(',')]);  // Depend on email IDs
+
   const handleToggleExpand = (emailId: number) => {
     const newExpanded = new Set(expandedEmails);
     if (newExpanded.has(emailId)) {
@@ -143,12 +161,30 @@ const ThreadView: React.FC<ThreadViewProps> = ({
 
   const formatEmailDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString();
+    // Format as dd/mm/yyyy HH:MM AM/PM in user's timezone
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  };
+
+  const handleLoadImages = () => {
+    setLoadImages(true);
+    setShowImagesToast(false);
   };
 
   const renderEmailContent = (email: emailService.Email) => {
     const isExpanded = expandedEmails.has(email.id);
     
+    // Process HTML for images: if not loading, remove src; else load
+    const processedHtml = loadImages 
+      ? email.body_html 
+      : email.body_html?.replace(/<img[^>]*src=["']([^"']+)["'][^>]*>/gi, '<img alt="Image blocked for security" style="opacity:0.5">');
+
     return (
       <Card key={email.id} sx={{ mb: 1, border: 1, borderColor: 'divider' }}>
         <CardContent sx={{ p: 2 }}>
@@ -188,12 +224,6 @@ const ThreadView: React.FC<ThreadViewProps> = ({
             </Box>
           </Box>
 
-          {!isExpanded && (
-            <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }} onClick={() => handleToggleExpand(email.id)}>
-              {email.subject}
-            </Typography>
-          )}
-
           <Collapse in={isExpanded}>
             <Divider sx={{ my: 1 }} />
             
@@ -214,7 +244,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({
                   ).join(', ')}
                 </Typography>
                 
-                {email.cc_addresses && email.cc_addresses.length > 0 && (
+                {email.cc_addresses?.length > 0 && (
                   <Typography variant="caption" color="text.secondary">
                     <strong>CC:</strong> {email.cc_addresses.map(addr => 
                       addr.name ? `${addr.name} <${addr.email}>` : addr.email
@@ -239,14 +269,14 @@ const ThreadView: React.FC<ThreadViewProps> = ({
                 {email.is_important && (
                   <Chip label="Important" size="small" color="warning" />
                 )}
-                {email.labels?.map(label => (
+                {email.labels?.map((label) => (
                   <Chip key={label} label={label} size="small" variant="outlined" />
                 ))}
               </Box>
             </Box>
 
             {/* Attachments */}
-            {email.attachments && email.attachments.length > 0 && (
+            {email.attachments?.length > 0 && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" fontWeight="bold" gutterBottom>
                   <AttachmentIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
@@ -305,7 +335,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({
             <Box sx={{ mb: 2 }}>
               {email.body_html ? (
                 <div 
-                  dangerouslySetInnerHTML={{ __html: email.body_html }}
+                  dangerouslySetInnerHTML={{ __html: processedHtml }}
                   style={{
                     maxWidth: '100%',
                     overflow: 'hidden',
@@ -440,6 +470,30 @@ const ThreadView: React.FC<ThreadViewProps> = ({
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {emails.map(email => renderEmailContent(email))}
       </Box>
+
+      {/* Images Toast */}
+      <Snackbar
+        open={showImagesToast}
+        autoHideDuration={null}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          action={
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button color="inherit" size="small" onClick={handleLoadImages}>
+                Display images
+              </Button>
+              <Button color="inherit" size="small" onClick={() => setShowImagesToast(false)}>
+                Dismiss
+              </Button>
+            </Box>
+          }
+          sx={{ width: '100%' }}
+        >
+          This email contains remote images. Display images from this sender?
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

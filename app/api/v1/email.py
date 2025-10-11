@@ -1,5 +1,3 @@
-# app/api/v1/email.py
-
 """
 Email API endpoints with RBAC, sync management, and CRUD operations
 """
@@ -350,10 +348,10 @@ async def get_account_sync_status(
 async def get_account_emails(
     account_id: int = Path(..., gt=0),
     current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
-    folder: str = Query("INBOX", description="Email folder to fetch from"),
+    folder: str = Query("INBOX", description="Filter by folder"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    status_filter: Optional[EmailStatus] = Query(None, description="Filter by email status"),
+    status_filter: Optional[EmailStatus] = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -752,7 +750,7 @@ async def sync_calendar_tasks(
 @router.get("/search")
 async def search_emails(
     query: str = Query(..., description="Search query"),
-    account_ids: Optional[List[int]] = Query(None, description="Email account IDs to search"),
+    account_ids: Optional[List[int]] = Query(None, description="Filter by account IDs"),
     customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
     vendor_id: Optional[int] = Query(None, description="Filter by vendor ID"),
     date_from: Optional[str] = Query(None, description="Start date filter (ISO format)"),
@@ -1153,13 +1151,62 @@ async def compose_email(
                 "mail_1_level_up_applied": bool(bcc_emails)
             }
         else:
+            if "REFRESH_FAILED" in error or "cannot be reused" in error:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"{error} To fix, revoke the token using POST /api/v1/email/oauth/revoke/{account.oauth_token_id}, then re-authorize via POST /api/v1/oauth/login/{account.provider}. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to send email: {error}"
+                )
+            
+    except Exception as e:
+        if "REFRESH_FAILED" in str(e) or "cannot be reused" in str(e):
+            # Get account to get token_id
+            stmt = select(MailAccount).filter(MailAccount.id == account_id)
+            result = await db.execute(stmt)
+            account = result.scalars().first()
+            token_id = account.oauth_token_id if account else "unknown"
+            provider = account.provider if account else "unknown"
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Token refresh failed: {str(e)}. Revoke token with POST /api/v1/email/oauth/revoke/{token_id}, then re-authorize with POST /api/v1/oauth/login/{provider}. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
+            )
+        else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to send email: {error}"
+                detail=f"Error composing email: {str(e)}"
+            )
+
+
+@router.post("/oauth/revoke/{token_id}")
+async def revoke_oauth_token(
+    token_id: int = Path(..., description="OAuth token ID to revoke"),
+    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Revoke OAuth token and mark as REVOKED
+    Allows users to revoke failed tokens and re-authorize
+    """
+    try:
+        oauth_service = OAuth2Service(db)
+        success = await oauth_service.revoke_token(token_id)
+        
+        if success:
+            return {
+                "message": "Token revoked successfully. You can now re-authorize the account. If recently changed to production, re-auth to get non-expiring refresh token. If issues persist, check Google account permissions at myaccount.google.com/permissions and revoke old access."
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to revoke token"
             )
             
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error composing email: {str(e)}"
+            detail=f"Error revoking token: {str(e)}"
         )

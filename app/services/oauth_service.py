@@ -1,5 +1,3 @@
-# app/services/oauth_service.py
-
 """
 OAuth2 Service for handling authentication with Google and Microsoft
 """
@@ -32,7 +30,7 @@ class OAuth2Service:
 
     def __init__(self, db: AsyncSession = None):
         self.db = db
-        self.google_scopes = ['openid', 'https://mail.google.com/', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+        self.google_scopes = ['openid', 'https://mail.google.com/', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']  # Removed 'offline_access' as it's not a scope; handled via access_type
         self.microsoft_scopes = ['Mail.ReadWrite', 'Mail.Send', 'offline_access']
 
     async def create_authorization_url(self, provider: OAuthProvider, user_id: int, organization_id: int, redirect_uri: str) -> tuple[str, str]:
@@ -124,7 +122,7 @@ class OAuth2Service:
                 'refresh_token': credentials.refresh_token,
                 'id_token': credentials.id_token,
                 'token_type': 'bearer',
-                'expires_in': credentials.expiry.timestamp() - datetime.now().timestamp(),
+                'expires_in': int((credentials.expiry - datetime.utcnow()).total_seconds()),
                 'scope': ' '.join(credentials.scopes)
             }
             logger.info(f"Token response for Google: refresh_token present = {bool(credentials.refresh_token)}")
@@ -250,7 +248,8 @@ class OAuth2Service:
             logger.error(
                 f"Token {token_id} has REFRESH_FAILED status and cannot be reused. "
                 f"User must re-authorize the account. Email: {token.email_address}, "
-                f"Provider: {token.provider}, Last error: {token.last_sync_error}"
+                f"Provider: {token.provider}, Last error: {token.last_sync_error}. "
+                f"Check if project is in 'Testing' mode."
             )
             return None
         
@@ -284,7 +283,7 @@ class OAuth2Service:
                     f"Failed to refresh token {token_id}. Token marked as REFRESH_FAILED. "
                     f"Remediation: User must revoke app access in their {token.provider} account "
                     f"settings and re-authorize the application to grant offline access. "
-                    f"Email: {token.email_address}"
+                    f"Email: {token.email_address}. Check if project is in 'Testing' mode."
                 )
                 return None
             
@@ -302,13 +301,6 @@ class OAuth2Service:
         
         if not token:
             logger.error(f"Token refresh failed: No token found for id {token_id}")
-            return False
-        
-        if token.status != TokenStatus.ACTIVE:
-            logger.error(
-                f"Token refresh failed: Token {token_id} has invalid status {token.status}. "
-                f"Email: {token.email_address}, Provider: {token.provider}"
-            )
             return False
         
         refresh_token = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
@@ -355,9 +347,9 @@ class OAuth2Service:
                         f"id_token_set={creds.id_token is not None}, scopes={creds.scopes}"
                     )
                     if not creds.token:
-                        raise ValueError("Refresh completed but access token is None. Check if offline access was granted.")
+                        raise ValueError("Refresh completed but access token is None. Check if offline access was granted or revoke and re-authorize.")
                     if not creds.expiry:
-                        raise ValueError("Refresh completed but expiry is None. Possible incomplete response from Google.")
+                        raise ValueError("Refresh completed but expiry is None. Possible incomplete response from Google; check app configuration.")
                     new_access_token = creds.token
                     new_expiry = creds.expiry.replace(tzinfo=None)  # Make naive to match database
                     logger.info(
@@ -366,10 +358,12 @@ class OAuth2Service:
                     )
                 except RefreshError as re:
                     error_msg = f"Google OAuth refresh error: {str(re)}. Possible bad token or revoked access. Error details: {re.args}"
+                    if 'invalid_grant' in str(re):
+                        error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/google. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
                     logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
                     raise ValueError(error_msg)
                 except Exception as e:
-                    error_msg = f"Google OAuth refresh failed: {str(e)}. Check client ID/secret or app configuration."
+                    error_msg = f"Google OAuth refresh failed: {str(e)}. Check client ID/secret or app configuration in Google Console."
                     logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
                     raise ValueError(error_msg)
                 
@@ -400,6 +394,8 @@ class OAuth2Service:
                     )
                     if 'error' in result:
                         error_msg = f"Microsoft OAuth error: {result.get('error_description', result.get('error'))}"
+                        if 'invalid_grant' in error_msg:
+                            error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/microsoft. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
                         logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
                         raise ValueError(error_msg)
                     if 'access_token' not in result:
@@ -432,7 +428,7 @@ class OAuth2Service:
                 )
                 return True
             else:
-                raise ValueError("No new access token or expiry received from OAuth provider")
+                raise ValueError("No new access token or expiry received from OAuth provider. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.")
             
         except Exception as e:
             error_msg = str(e)
@@ -443,161 +439,7 @@ class OAuth2Service:
                 f"Token refresh failed for token_id {token_id}: {error_msg}. "
                 f"Token marked as REFRESH_FAILED. Email: {token.email_address}, "
                 f"Provider: {token.provider}. "
-                f"Remediation: User must revoke app access and re-authorize the application."
-            )
-            return False
-
-    def sync_refresh_token(self, token_id: int, db: Session) -> bool:
-        """Synchronous version of refresh_token with enhanced error handling and logging"""
-        stmt = select(UserEmailToken).filter_by(id=token_id)
-        result = db.execute(stmt)
-        token = result.scalar_one_or_none()
-        
-        if not token:
-            logger.error(f"Token refresh failed: No token found for id {token_id}")
-            return False
-        
-        if token.status != TokenStatus.ACTIVE:
-            logger.error(
-                f"Token refresh failed: Token {token_id} has invalid status {token.status}. "
-                f"Email: {token.email_address}, Provider: {token.provider}"
-            )
-            return False
-        
-        refresh_token = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
-        if not refresh_token:
-            error_msg = (
-                "No refresh token available. User must revoke app access in their account "
-                "settings and re-authorize the application with offline access permissions."
-            )
-            token.status = TokenStatus.REFRESH_FAILED
-            token.last_sync_error = error_msg
-            db.commit()
-            logger.error(
-                f"Token refresh failed for token_id {token_id}: {error_msg} "
-                f"Email: {token.email_address}, Provider: {token.provider}"
-            )
-            return False
-        
-        try:
-            new_access_token = None
-            new_expiry = None
-            
-            if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
-                # Check if Google credentials are configured
-                if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
-                    error_msg = "Google OAuth credentials (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET) are not set in .env file. Please configure them to use Google authentication."
-                    logger.error(error_msg)
-                    token.status = TokenStatus.REFRESH_FAILED
-                    token.last_sync_error = error_msg
-                    db.commit()
-                    return False
-                try:
-                    creds = Credentials(
-                        token=None,
-                        refresh_token=refresh_token,
-                        client_id=settings.GOOGLE_CLIENT_ID,
-                        client_secret=settings.GOOGLE_CLIENT_SECRET,
-                        token_uri='https://oauth2.googleapis.com/token'
-                    )
-                    logger.info(f"Attempting Google refresh for token {token_id}. Client ID set: {bool(settings.GOOGLE_CLIENT_ID)}, Secret set: {bool(settings.GOOGLE_CLIENT_SECRET)}")
-                    creds.refresh(Request())
-                    logger.info(
-                        f"After creds.refresh() for token {token_id}: "
-                        f"token_set={creds.token is not None}, expiry_set={creds.expiry is not None}, "
-                        f"id_token_set={creds.id_token is not None}, scopes={creds.scopes}"
-                    )
-                    if not creds.token:
-                        raise ValueError("Refresh completed but access token is None. Check if offline access was granted.")
-                    if not creds.expiry:
-                        raise ValueError("Refresh completed but expiry is None. Possible incomplete response from Google.")
-                    new_access_token = creds.token
-                    new_expiry = creds.expiry.replace(tzinfo=None)  # Make naive to match database
-                    logger.info(
-                        f"Successfully refreshed Google token {token_id}. "
-                        f"Email: {token.email_address}, New expiry: {new_expiry}"
-                    )
-                except RefreshError as re:
-                    error_msg = f"Google OAuth refresh error: {str(re)}. Possible bad token or revoked access. Error details: {re.args}"
-                    logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
-                    raise ValueError(error_msg)
-                except Exception as e:
-                    error_msg = f"Google OAuth refresh failed: {str(e)}. Check client ID/secret or app configuration."
-                    logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
-                    raise ValueError(error_msg)
-                
-            elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
-                # Check if Microsoft credentials are configured
-                if not settings.MICROSOFT_CLIENT_ID or not settings.MICROSOFT_CLIENT_SECRET:
-                    error_msg = "Microsoft OAuth credentials (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET) are not set in .env file. Please configure them to use Microsoft authentication."
-                    logger.error(error_msg)
-                    token.status = TokenStatus.REFRESH_FAILED
-                    token.last_sync_error = error_msg
-                    db.commit()
-                    return False
-                try:
-                    from msal import ConfidentialClientApplication
-                    app = ConfidentialClientApplication(
-                        settings.MICROSOFT_CLIENT_ID,
-                        authority=settings.MICROSOFT_AUTHORITY,
-                        client_credential=settings.MICROSOFT_CLIENT_SECRET
-                    )
-                    result = app.acquire_token_by_refresh_token(
-                        refresh_token,
-                        scopes=token.scope.split()
-                    )
-                    logger.info(
-                        f"Microsoft refresh result for token {token_id}: "
-                        f"has_error={'error' in result}, has_access_token={'access_token' in result}, "
-                        f"has_expires_in={'expires_in' in result}, result_keys={list(result.keys())}"
-                    )
-                    if 'error' in result:
-                        error_msg = f"Microsoft OAuth error: {result.get('error_description', result.get('error'))}"
-                        logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
-                        raise ValueError(error_msg)
-                    if 'access_token' not in result:
-                        raise ValueError("Refresh completed but no access_token in result")
-                    if 'expires_in' not in result:
-                        raise ValueError("Refresh completed but no expires_in in result")
-                    new_access_token = result['access_token']
-                    new_expiry = datetime.utcnow() + timedelta(seconds=result['expires_in'])
-                    logger.info(
-                        f"Successfully refreshed Microsoft token {token_id}. "
-                        f"Email: {token.email_address}, New expiry: {new_expiry}"
-                    )
-                except Exception as e:
-                    error_msg = f"Microsoft OAuth refresh failed: {str(e)}"
-                    logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
-                    raise ValueError(error_msg)
-            
-            # Update token with new credentials
-            if new_access_token and new_expiry:
-                token.access_token_encrypted = encrypt_aes_gcm(new_access_token, EncryptionKeysAESGCM.OAUTH)
-                token.expires_at = new_expiry
-                token.updated_at = datetime.utcnow()
-                token.refresh_count += 1
-                token.last_sync_error = None  # Clear previous errors on success
-                token.last_used_at = datetime.utcnow()
-                db.commit()
-                logger.info(
-                    f"Token {token_id} updated successfully. Refresh count: {token.refresh_count}, "
-                    f"Email: {token.email_address}"
-                )
-                return True
-            else:
-                logger.error(f"No new access token or expiry after provider block for token {token_id}")
-                raise ValueError("No new access token or expiry received from OAuth provider")
-            
-        except Exception as e:
-            error_msg = str(e)
-            token.status = TokenStatus.REFRESH_FAILED
-            token.last_sync_error = error_msg
-            db.commit()
-            logger.error(
-                f"Token refresh failed for token_id {token_id}: {error_msg}. "
-                f"Token marked as REFRESH_FAILED. Email: {token.email_address}, "
-                f"Provider: {token.provider}. "
-                f"Remediation: User must revoke app access and re-authorize the application."
+                f"Remediation: User must revoke app access and re-authorize the application. Check if project is in 'Testing' mode."
             )
             return False
 
@@ -748,3 +590,153 @@ class OAuth2Service:
         except Exception as e:
             logger.error(f"Failed to decrypt credentials for token {token_id}: {str(e)}")
             return None
+
+    def sync_refresh_token(self, token_id: int, db: Session) -> bool:
+        """Synchronous refresh OAuth token with enhanced error handling and logging"""
+        stmt = select(UserEmailToken).filter_by(id=token_id)
+        result = db.execute(stmt)
+        token = result.scalar_one_or_none()
+        
+        if not token:
+            logger.error(f"Token refresh failed: No token found for id {token_id}")
+            return False
+        
+        refresh_token = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+        if not refresh_token:
+            error_msg = (
+                "No refresh token available. User must revoke app access in their account "
+                "settings and re-authorize the application with offline access permissions."
+            )
+            token.status = TokenStatus.REFRESH_FAILED
+            token.last_sync_error = error_msg
+            db.commit()
+            logger.error(
+                f"Token refresh failed for token_id {token_id}: {error_msg} "
+                f"Email: {token.email_address}, Provider: {token.provider}"
+            )
+            return False
+        
+        try:
+            new_access_token = None
+            new_expiry = None
+            
+            if token.provider == OAuthProvider.GOOGLE.name or token.provider == OAuthProvider.GMAIL.name:
+                # Check if Google credentials are configured
+                if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+                    error_msg = "Google OAuth credentials (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET) are not set in .env file. Please configure them to use Google authentication."
+                    logger.error(error_msg)
+                    token.status = TokenStatus.REFRESH_FAILED
+                    token.last_sync_error = error_msg
+                    db.commit()
+                    return False
+                try:
+                    creds = Credentials(
+                        token=None,
+                        refresh_token=refresh_token,
+                        client_id=settings.GOOGLE_CLIENT_ID,
+                        client_secret=settings.GOOGLE_CLIENT_SECRET,
+                        token_uri='https://oauth2.googleapis.com/token'
+                    )
+                    logger.info(f"Attempting Google refresh for token {token_id}. Client ID set: {bool(settings.GOOGLE_CLIENT_ID)}, Secret set: {bool(settings.GOOGLE_CLIENT_SECRET)}")
+                    creds.refresh(Request())
+                    logger.info(
+                        f"After creds.refresh() for token {token_id}: "
+                        f"token_set={creds.token is not None}, expiry_set={creds.expiry is not None}, "
+                        f"id_token_set={creds.id_token is not None}, scopes={creds.scopes}"
+                    )
+                    if not creds.token:
+                        raise ValueError("Refresh completed but access token is None. Check if offline access was granted or revoke and re-authorize.")
+                    if not creds.expiry:
+                        raise ValueError("Refresh completed but expiry is None. Possible incomplete response from Google; check app configuration.")
+                    new_access_token = creds.token
+                    new_expiry = creds.expiry.replace(tzinfo=None)  # Make naive to match database
+                    logger.info(
+                        f"Successfully refreshed Google token {token_id}. "
+                        f"Email: {token.email_address}, New expiry: {new_expiry}"
+                    )
+                except RefreshError as re:
+                    error_msg = f"Google OAuth refresh error: {str(re)}. Possible bad token or revoked access. Error details: {re.args}"
+                    if 'invalid_grant' in str(re):
+                        error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/google. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
+                    logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
+                    raise ValueError(error_msg)
+                except Exception as e:
+                    error_msg = f"Google OAuth refresh failed: {str(e)}. Check client ID/secret or app configuration in Google Console."
+                    logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
+                    raise ValueError(error_msg)
+                
+            elif token.provider == OAuthProvider.MICROSOFT.name or token.provider == OAuthProvider.OUTLOOK.name:
+                # Check if Microsoft credentials are configured
+                if not settings.MICROSOFT_CLIENT_ID or not settings.MICROSOFT_CLIENT_SECRET:
+                    error_msg = "Microsoft OAuth credentials (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET) are not set in .env file. Please configure them to use Microsoft authentication."
+                    logger.error(error_msg)
+                    token.status = TokenStatus.REFRESH_FAILED
+                    token.last_sync_error = error_msg
+                    db.commit()
+                    return False
+                try:
+                    from msal import ConfidentialClientApplication
+                    app = ConfidentialClientApplication(
+                        settings.MICROSOFT_CLIENT_ID,
+                        authority=settings.MICROSOFT_AUTHORITY,
+                        client_credential=settings.MICROSOFT_CLIENT_SECRET
+                    )
+                    result = app.acquire_token_by_refresh_token(
+                        refresh_token,
+                        scopes=token.scope.split()
+                    )
+                    logger.info(
+                        f"Microsoft refresh result for token {token_id}: "
+                        f"has_error={'error' in result}, has_access_token={'access_token' in result}, "
+                        f"has_expires_in={'expires_in' in result}, result_keys={list(result.keys())}"
+                    )
+                    if 'error' in result:
+                        error_msg = f"Microsoft OAuth error: {result.get('error_description', result.get('error'))}"
+                        if 'invalid_grant' in error_msg:
+                            error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/microsoft. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
+                        logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
+                        raise ValueError(error_msg)
+                    if 'access_token' not in result:
+                        raise ValueError("Refresh completed but no access_token in result")
+                    if 'expires_in' not in result:
+                        raise ValueError("Refresh completed but no expires_in in result")
+                    new_access_token = result['access_token']
+                    new_expiry = datetime.utcnow() + timedelta(seconds=result['expires_in'])
+                    logger.info(
+                        f"Successfully refreshed Microsoft token {token_id}. "
+                        f"Email: {token.email_address}, New expiry: {new_expiry}"
+                    )
+                except Exception as e:
+                    error_msg = f"Microsoft OAuth refresh failed: {str(e)}"
+                    logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
+                    raise ValueError(error_msg)
+            
+            # Update token with new credentials
+            if new_access_token and new_expiry:
+                token.access_token_encrypted = encrypt_aes_gcm(new_access_token, EncryptionKeysAESGCM.OAUTH)
+                token.expires_at = new_expiry
+                token.updated_at = datetime.utcnow()
+                token.refresh_count += 1
+                token.last_sync_error = None  # Clear previous errors on success
+                token.last_used_at = datetime.utcnow()
+                db.commit()
+                logger.info(
+                    f"Token {token_id} updated successfully. Refresh count: {token.refresh_count}, "
+                    f"Email: {token.email_address}"
+                )
+                return True
+            else:
+                raise ValueError("No new access token or expiry received from OAuth provider. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.")
+            
+        except Exception as e:
+            error_msg = str(e)
+            token.status = TokenStatus.REFRESH_FAILED
+            token.last_sync_error = error_msg
+            db.commit()
+            logger.error(
+                f"Token refresh failed for token_id {token_id}: {error_msg}. "
+                f"Token marked as REFRESH_FAILED. Email: {token.email_address}, "
+                f"Provider: {token.provider}. "
+                f"Remediation: User must revoke app access and re-authorize the application. Check if project is in 'Testing' mode."
+            )
+            return False

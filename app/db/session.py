@@ -5,7 +5,7 @@ Enhanced database session management with automatic rollback and retry logic.
 from contextlib import contextmanager, asynccontextmanager
 from typing import Generator, Callable, Any, Optional, Type, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError, TimeoutError
 from app.core.database import AsyncSessionLocal
 from app.core.logging import get_logger, log_database_operation
 import time
@@ -98,7 +98,7 @@ class SessionManager:
                     logger.debug(f"Operation succeeded on attempt {attempt + 1}")
                     return result
                     
-            except (OperationalError, IntegrityError) as e:
+            except (OperationalError, IntegrityError, TimeoutError, SQLAlchemyError) as e:
                 last_exception = e
                 if attempt < max_retries:
                     delay = retry_delay * (2 ** attempt) if exponential_backoff else retry_delay

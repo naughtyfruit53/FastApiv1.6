@@ -12,6 +12,7 @@ import psycopg.errors as pg_errors
 import asyncio
 import urllib.parse
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.pool import NullPool  # Import NullPool
 
 logger = logging.getLogger(__name__)
 
@@ -38,27 +39,26 @@ is_session_mode = port == 5432
 
 # Database engine configuration based on mode
 if is_session_mode:
-    # Session mode: small pool (increased from 1/0 to 5/10 to handle concurrent requests)
+    # Session mode: small pool but increased to handle leaks
     engine_kwargs = {
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_pre_ping": True,  # Test connections before use
+        "pool_recycle": 300,  # Recycle connections after 5 min idle
         "echo": settings.DEBUG,
-        "pool_size": 5,  # Increased to handle multiple concurrent requests
-        "max_overflow": 10,  # Allow temporary overflow
+        "pool_size": 5,  # Lowered to 5 to avoid hitting limits
+        "max_overflow": 10,  # Reduced overflow
         "pool_timeout": 120,
+        "pool_reset_on_return": "rollback",  # Reset on return to avoid leaks
     }
     logger.info("Using Supabase session mode (port 5432) - pool_size=5, max_overflow=10")
 else:
-    # Transaction mode: larger pool
+    # Transaction mode: Use NullPool to disable client-side pooling; let Supavisor handle it
     engine_kwargs = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
         "echo": settings.DEBUG,
-        "pool_size": 10,
-        "max_overflow": 20,
-        "pool_timeout": 120,
+        "poolclass": NullPool,  # Disable client-side pooling for transaction mode
     }
-    logger.info("Using Supabase transaction mode - pool_size=10, max_overflow=20")
+    logger.info("Using Supabase transaction mode (port 6543) - Using NullPool to avoid client-side pooling issues")
 
 # Common connect_args for async (asyncpg)
 connect_args = {
@@ -121,17 +121,19 @@ Base = declarative_base()
 
 # Dependency to get database session with enhanced error handling
 async def get_db():
-    async with AsyncSessionLocal() as db:
-        try:
-            yield db
-        except HTTPException as e:
-            raise  # Re-raise HTTP exceptions without rollback/log as DB error
-        except Exception as e:
-            logger.error(f"Database session error: {e}")
-            await db.rollback()
-            raise
-        finally:
-            await db.close()
+    db = AsyncSessionLocal()
+    logger.debug("Opening new DB session")
+    try:
+        yield db
+    except HTTPException as e:
+        raise  # Re-raise HTTP exceptions without rollback/log as DB error
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        await db.rollback()
+        raise
+    finally:
+        await db.close()
+        logger.debug("Closed DB session")
 
 # Enhanced context manager for database transactions
 class DatabaseTransaction:
@@ -140,6 +142,7 @@ class DatabaseTransaction:
     def __init__(self, db_session: AsyncSession = None):
         self.db = db_session or AsyncSessionLocal()
         self.should_close = db_session is None
+        logger.debug(f"Opening transaction, should_close={self.should_close}")
         
     async def __aenter__(self):
         return self.db
@@ -158,6 +161,7 @@ class DatabaseTransaction:
         finally:
             if self.should_close:
                 await self.db.close()
+                logger.debug("Closed transaction session")
         
         # Don't suppress exceptions
         return False
@@ -230,3 +234,9 @@ def create_tables():
     except Exception as e:
         logger.error(f"Failed to create database tables: {str(e)}")
         raise
+
+# Add shutdown cleanup
+async def dispose_engines():
+    await async_engine.dispose()
+    sync_engine.dispose()
+    logger.info("Database engines disposed")

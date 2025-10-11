@@ -1,5 +1,3 @@
-# app/services/email_sync_worker.py
-
 """
 Background Email Sync Worker using APScheduler
 Handles scheduled email synchronization tasks
@@ -187,7 +185,10 @@ class EmailSyncWorker:
                 
                 for account in batch:
                     try:
-                        self._sync_single_account(account.id)
+                        sync_result = self._sync_single_account(account.id)
+                        if sync_result:
+                            account.total_messages_synced = sync_result['total_messages_synced']
+                            db.commit()
                     except Exception as e:
                         logger.error(f"Error syncing account {account.id}: {str(e)}")
                         # Update account error status
@@ -234,7 +235,7 @@ class EmailSyncWorker:
             logger.error(f"Error getting accounts for sync: {str(e)}")
             return []
     
-    def _sync_single_account(self, account_id: int):
+    def _sync_single_account(self, account_id: int) -> Optional[Dict]:
         """
         Sync a single account with error handling
         """
@@ -242,12 +243,14 @@ class EmailSyncWorker:
             logger.info(f"Starting sync for account {account_id}")
             
             # Use the email management service for sync
-            success = email_sync_service.sync_account(account_id)
+            success, sync_result = email_sync_service.sync_account(account_id)
             
             if success:
                 logger.info(f"Successfully synced account {account_id}")
+                return sync_result
             else:
                 logger.warning(f"Sync completed with issues for account {account_id}")
+                return None
             
         except Exception as e:
             logger.error(f"Failed to sync account {account_id}: {str(e)}")

@@ -15,7 +15,9 @@ import hashlib
 import os
 import re
 import bleach
+import re
 import socket
+import re
 import ssl
 import time
 import concurrent.futures
@@ -38,6 +40,12 @@ from app.models.email import (
 from app.models.oauth_models import TokenStatus
 from app.utils.text_processing import extract_plain_text, sanitize_html
 from app.services.oauth_service import OAuth2Service
+from app.services.calendar_sync_service import calendar_sync_service
+from app.services.email_search_service import email_search_service
+from app.services.email_ai_service import email_ai_service
+from app.services.ocr_service import email_attachment_ocr_service
+
+from app.services.email_api_sync_service import EmailAPISyncService  # Import the API sync service
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +171,10 @@ class EmailSyncService:
             return None
         return f'user={email}\x01auth=Bearer {access_token}\x01\x01'
     
-    def sync_account(self, account_id: int, full_sync: bool = False, manual: bool = False) -> bool:
+    def sync_account(self, account_id: int, full_sync: bool = False, manual: bool = False) -> tuple[bool, dict]:
         """
         Sync emails for a specific account
+        Returns (success, {'new': int, 'updated': int, 'total_messages_synced': int})
         """
         if self.db:
             return self._perform_sync(self.db, account_id, full_sync, manual)
@@ -176,15 +185,15 @@ class EmailSyncService:
             finally:
                 db.close()
     
-    def _perform_sync(self, db: Session, account_id: int, full_sync: bool = False, manual: bool = False) -> bool:
+    def _perform_sync(self, db: Session, account_id: int, full_sync: bool = False, manual: bool = False) -> tuple[bool, dict]:
         account = db.query(MailAccount).filter(MailAccount.id == account_id).first()
         if not account:
             logger.error(f"Account {account_id} not found")
-            return False
+            return False, {'new': 0, 'updated': 0, 'total_messages_synced': 0}
         
         if not (manual or (account.sync_enabled and account.sync_status == EmailSyncStatus.ACTIVE)):
             logger.info(f"Sync skipped for account {account_id}")
-            return True
+            return True, {'new': 0, 'updated': 0, 'total_messages_synced': 0}
         
         # RESTORED LOGIC FROM WORKING COMMIT c2fadf02:
         # Prefer API-based sync for OAuth2 accounts (gmail_api, outlook_api)
@@ -200,13 +209,13 @@ class EmailSyncService:
                 total_emails = db.query(func.count(Email.id)).filter(Email.account_id == account_id).scalar()
                 account.total_messages_synced = total_emails
                 db.commit()
-                return True
+                return True, {'new': emails_synced, 'updated': 0, 'total_messages_synced': total_emails}
             else:
                 logger.error(f"API sync failed: {error}")
                 # Fall through to IMAP if API fails (though it shouldn't for these account types)
                 if account.account_type in [EmailAccountType.GMAIL_API, EmailAccountType.OUTLOOK_API]:
                     # Don't fall back to IMAP for API-only account types
-                    return False
+                    return False, {'new': 0, 'updated': 0, 'total_messages_synced': 0}
         
         # Create sync log
         sync_log = EmailSyncLog(
@@ -236,7 +245,7 @@ class EmailSyncService:
                         else:
                             account.sync_status = EmailSyncStatus.ERROR
                             db.commit()
-                            return False
+                            return False, {'new': 0, 'updated': 0, 'total_messages_synced': 0}
                 
                 # Connect to IMAP with exponential backoff
                 imap = None
@@ -302,7 +311,7 @@ class EmailSyncService:
                     pass  # Ignore errors on close
                 
                 logger.info(f"Successfully synced account {account_id}: {total_new} new, {total_updated} updated")
-                return True
+                return True, {'new': total_new, 'updated': total_updated, 'total_messages_synced': total_emails}
                 
             except Exception as e:
                 error_msg = f"Sync attempt {attempt + 1} failed for account {account_id}: {str(e)}"
@@ -321,7 +330,7 @@ class EmailSyncService:
                     sync_log.completed_at = datetime.utcnow()
                     
                     db.commit()
-                    return False
+                    return False, {'new': 0, 'updated': 0, 'total_messages_synced': 0}
     
     def _sync_folder(self, imap: imaplib.IMAP4_SSL, account: MailAccount, folder: str, db: Session, full_sync: bool = False) -> Tuple[int, int]:
         """

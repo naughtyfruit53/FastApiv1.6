@@ -169,19 +169,16 @@ const Inbox: React.FC<InboxProps> = ({
   };
 
   const formatEmailDate = (dateString: string) => {
-    const localDate = new Date(dateString);
-  
-    // Format as 'MM/DD/YYYY hh:mm A' (e.g., '02/24/2025 3:29 PM')
-    const formatted = localDate.toLocaleString('en-US', {
-      month: '2-digit',
+    const date = new Date(dateString);
+    // Format as dd/mm/yyyy HH:MM AM/PM in user's timezone
+    return new Intl.DateTimeFormat('en-GB', {
       day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
       hour12: true
-    });
-  
-    return formatted;
+    }).format(date);
   };
 
   const getEmailPreview = (email: Email) => {
@@ -290,7 +287,7 @@ const Inbox: React.FC<InboxProps> = ({
                               noWrap
                               sx={{ mb: 0.5 }}
                             >
-                              {email.subject || '(No subject)'}
+                              {email.subject}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" noWrap>
                               {getEmailPreview(email)}

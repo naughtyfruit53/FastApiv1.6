@@ -1,5 +1,3 @@
-# app/models/email.py
-
 """
 Email Module Core Models
 Contains all email-related models for IMAP/SMTP sync, threads, attachments, and mail accounts
@@ -34,21 +32,21 @@ class EmailSyncStatus(enum.Enum):
 
 class EmailStatus(enum.Enum):
     """Email message status"""
-    UNREAD = "unread"
-    READ = "read"
-    REPLIED = "replied"
-    FORWARDED = "forwarded"
-    ARCHIVED = "archived"
-    DELETED = "deleted"
-    SPAM = "spam"
+    UNREAD = "UNREAD"
+    READ = "READ"
+    REPLIED = "REPLIED"
+    FORWARDED = "FORWARDED"
+    ARCHIVED = "ARCHIVED"
+    DELETED = "DELETED"
+    SPAM = "SPAM"
 
 
 class EmailPriority(enum.Enum):
     """Email priority levels"""
-    LOW = "low"
-    NORMAL = "normal"
-    HIGH = "high"
-    URGENT = "urgent"
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
 
 
 class MailAccount(Base):
@@ -66,7 +64,7 @@ class MailAccount(Base):
     
     # Account type and provider
     account_type: Mapped[EmailAccountType] = mapped_column(
-        SQLEnum(EmailAccountType, values_callable=lambda enum: [e.value for e in enum]),
+        SQLEnum(EmailAccountType, name="emailaccounttype", values_callable=lambda enum: [e.value for e in enum]),
         nullable=False
     )
     provider: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # gmail, outlook, etc.
@@ -108,7 +106,7 @@ class MailAccount(Base):
     # Status tracking
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sync_status: Mapped[EmailSyncStatus] = mapped_column(
-        SQLEnum(EmailSyncStatus, values_callable=lambda enum: [e.value for e in enum]),
+        SQLEnum(EmailSyncStatus, name="emailsyncstatus", values_callable=lambda enum: [e.value for e in enum]),
         default=EmailSyncStatus.ACTIVE, 
         nullable=False
     )
@@ -171,12 +169,13 @@ class EmailThread(Base):
     
     # Thread status
     status: Mapped[EmailStatus] = mapped_column(
-        SQLEnum(EmailStatus, values_callable=lambda enum: [e.value for e in enum]),
+        SQLEnum(EmailStatus, name="email_message_status", values_callable=lambda enum: [e.value for e in enum]),
         default=EmailStatus.UNREAD, 
-        nullable=False
+        nullable=False, 
+        index=True
     )
     priority: Mapped[EmailPriority] = mapped_column(
-        SQLEnum(EmailPriority, values_callable=lambda enum: [e.value for e in enum]),
+        SQLEnum(EmailPriority, name="email_priority", values_callable=lambda enum: [e.value for e in enum]),
         default=EmailPriority.NORMAL, 
         nullable=False
     )
@@ -264,13 +263,13 @@ class Email(Base):
     
     # Message metadata
     status: Mapped[EmailStatus] = mapped_column(
-        SQLEnum(EmailStatus, values_callable=lambda enum: [e.value for e in enum]),
+        SQLEnum(EmailStatus, name="email_message_status", values_callable=lambda enum: [e.value for e in enum]),
         default=EmailStatus.UNREAD, 
         nullable=False, 
         index=True
     )
     priority: Mapped[EmailPriority] = mapped_column(
-        SQLEnum(EmailPriority, values_callable=lambda enum: [e.value for e in enum]),
+        SQLEnum(EmailPriority, name="email_priority", values_callable=lambda enum: [e.value for e in enum]),
         default=EmailPriority.NORMAL, 
         nullable=False
     )
@@ -328,7 +327,7 @@ class Email(Base):
     __table_args__ = (
         UniqueConstraint('message_id', 'account_id', name='uq_email_message_id_account'),
         Index('idx_email_org_account', 'organization_id', 'account_id'),
-        Index('idx_email_from_received', 'from_address', 'received_at'),
+        Index('idx_email_org_from_received', 'organization_id', 'from_address', 'received_at'),
         Index('idx_email_status_received', 'status', 'received_at'),
         Index('idx_email_subject_text', 'subject'),  # For search
         {'extend_existing': True}
@@ -473,10 +472,10 @@ class VoucherEmailTemplate(Base):
 
 class EmailScheduleStatus(enum.Enum):
     """Status of scheduled emails"""
-    PENDING = "pending"
-    SENT = "sent"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+    PENDING = "PENDING"
+    SENT = "SENT"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class ScheduledEmail(Base):
@@ -514,7 +513,7 @@ class ScheduledEmail(Base):
     
     # Status
     status: Mapped[EmailScheduleStatus] = mapped_column(
-        SQLEnum(EmailScheduleStatus, values_callable=lambda enum: [e.value for e in enum]),
+        SQLEnum(EmailScheduleStatus, name="email_schedule_status", values_callable=lambda enum: [e.value for e in enum]),
         default=EmailScheduleStatus.PENDING,
         nullable=False,
         index=True

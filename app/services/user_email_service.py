@@ -1,5 +1,3 @@
-# app/services/user_email_service.py
-
 """
 User Email service for sending emails via provider APIs (Google/Microsoft)
 Separated from system email logic as per requirements.
@@ -74,7 +72,7 @@ class UserEmailService:
             # Get valid token (will refresh if needed)
             token = await oauth_service.get_valid_token(account.oauth_token_id)
             if not token:
-                return False, "Failed to get valid OAuth token"
+                return False, "Failed to get valid OAuth token. If status is REFRESH_FAILED, revoke token via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/{provider}. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
             
             success = False
             error = None
@@ -90,10 +88,18 @@ class UserEmailService:
                 logger.info(f"Email sent successfully via {token.provider} API to {to_email}")
                 return True, None
             else:
+                if "REFRESH_FAILED" in error or "cannot be reused" in error:
+                    error += " To resolve, revoke the token using POST /api/v1/email/oauth/revoke/{token_id}, then re-authorize using POST /api/v1/oauth/login/{provider}. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
+                elif "Bad Request" in error:
+                    error += " Check Google API scopes and credentials. Ensure 'https://mail.google.com/' scope is enabled and app is verified if needed."
                 return False, error
                 
         except Exception as e:
             error_msg = f"Failed to send user email: {str(e)}"
+            if "REFRESH_FAILED" in error_msg or "cannot be reused" in error_msg:
+                error_msg += " To resolve, revoke the token using POST /api/v1/email/oauth/revoke/{token_id}, then re-authorize using POST /api/v1/oauth/login/{provider}. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
+            elif "Bad Request" in error_msg:
+                error_msg += " Check Google API scopes and credentials. Ensure 'https://mail.google.com/' scope is enabled and app is verified if needed."
             logger.error(error_msg)
             return False, error_msg
     
@@ -108,8 +114,8 @@ class UserEmailService:
         """Send email via Gmail API"""
         try:
             # Decrypt tokens
-            access_token = oauth_service.decrypt_aes_gcm(token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
-            refresh_token = oauth_service.decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if token.refresh_token_encrypted else None
+            access_token = decrypt_aes_gcm(token.access_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+            refresh_token = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH) if token.refresh_token_encrypted else None
             
             creds = Credentials(
                 token=access_token,
@@ -156,7 +162,10 @@ class UserEmailService:
             return True, None
             
         except HttpError as e:
-            return False, f"Gmail API error: {str(e)}"
+            error_msg = f"Gmail API error: {str(e)}"
+            if 'Bad Request' in str(e):
+                error_msg += " (400 Bad Request: Likely invalid scope or unverified app. Ensure 'https://mail.google.com/' scope and verify app in Google Console if public)."
+            return False, error_msg
         except Exception as e:
             return False, f"Failed to send via Gmail API: {str(e)}"
     
@@ -177,7 +186,7 @@ class UserEmailService:
                 client_credential=settings.MICROSOFT_CLIENT_SECRET
             )
             
-            refresh_token = oauth_service.decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
+            refresh_token = decrypt_aes_gcm(token.refresh_token_encrypted, EncryptionKeysAESGCM.OAUTH)
             result = app.acquire_token_by_refresh_token(
                 refresh_token,
                 scopes=["https://graph.microsoft.com/Mail.Send"]
