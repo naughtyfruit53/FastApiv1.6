@@ -467,6 +467,80 @@ async def start_manufacturing_order(
         'message': f"Manufacturing order {mo.voucher_number} started successfully"
     }
 
+@router.get("/manufacturing-orders/{order_id}/check-shortages")
+async def check_mo_shortages(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Check material shortages for a manufacturing order with enhanced information.
+    
+    This endpoint provides:
+    - Material shortage details
+    - Purchase order status for shortage items
+    - Color coding (warning/critical) based on PO status
+    - Recommendations for proceeding
+    
+    Use this endpoint before starting an MO or creating vouchers to check
+    if material shortages exist and whether purchase orders have been placed.
+    """
+    # Get the manufacturing order
+    stmt = select(ManufacturingOrder).where(
+        ManufacturingOrder.id == order_id,
+        ManufacturingOrder.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    mo = result.scalar_one_or_none()
+    
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing order not found")
+    
+    # Check material availability with PO status
+    is_available, shortages = await MRPService.check_material_availability_for_mo(
+        db, current_user.organization_id, order_id, include_po_status=True
+    )
+    
+    # Categorize shortages by severity
+    critical_shortages = [s for s in shortages if s.get('severity') == 'critical']
+    warning_shortages = [s for s in shortages if s.get('severity') == 'warning']
+    
+    response = {
+        'manufacturing_order_id': mo.id,
+        'voucher_number': mo.voucher_number,
+        'production_status': mo.production_status,
+        'is_material_available': is_available,
+        'total_shortage_items': len(shortages),
+        'critical_items': len(critical_shortages),
+        'warning_items': len(warning_shortages),
+        'shortages': shortages,
+        'recommendations': []
+    }
+    
+    # Add recommendations
+    if critical_shortages:
+        response['recommendations'].append({
+            'type': 'critical',
+            'message': f"{len(critical_shortages)} item(s) have no purchase order placed. Immediate action required.",
+            'action': 'Place purchase orders for critical items before proceeding.'
+        })
+    
+    if warning_shortages:
+        response['recommendations'].append({
+            'type': 'warning',
+            'message': f"{len(warning_shortages)} item(s) have purchase orders placed but not yet received.",
+            'action': 'Verify delivery dates and coordinate with procurement team.'
+        })
+    
+    if not shortages:
+        response['recommendations'].append({
+            'type': 'success',
+            'message': 'All materials are available.',
+            'action': 'You can proceed with manufacturing.'
+        })
+    
+    return response
+
 # Material Issue Endpoints
 @router.get("/material-issues")
 async def get_material_issues(

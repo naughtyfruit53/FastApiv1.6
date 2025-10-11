@@ -306,10 +306,76 @@ class MRPService:
         return pr_data
 
     @staticmethod
+    async def check_purchase_orders_for_products(
+        db: AsyncSession,
+        organization_id: int,
+        product_ids: List[int]
+    ) -> Dict[int, Dict]:
+        """
+        Check if purchase orders exist for given products
+        
+        Args:
+            db: Database session
+            organization_id: Organization ID
+            product_ids: List of product IDs to check
+            
+        Returns:
+            Dictionary mapping product_id to purchase order info
+        """
+        from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem
+        
+        if not product_ids:
+            return {}
+        
+        # Get pending purchase orders for these products
+        stmt = select(PurchaseOrderItem, PurchaseOrder).join(
+            PurchaseOrder, PurchaseOrderItem.purchase_order_id == PurchaseOrder.id
+        ).where(
+            PurchaseOrder.organization_id == organization_id,
+            PurchaseOrderItem.product_id.in_(product_ids),
+            PurchaseOrder.status.in_(['draft', 'pending', 'approved', 'partially_received']),
+            PurchaseOrderItem.pending_quantity > 0
+        )
+        
+        result = await db.execute(stmt)
+        po_items = result.all()
+        
+        # Aggregate by product
+        po_info = {}
+        for item, po in po_items:
+            if item.product_id not in po_info:
+                po_info[item.product_id] = {
+                    'has_order': True,
+                    'total_on_order': 0.0,
+                    'purchase_orders': []
+                }
+            
+            po_info[item.product_id]['total_on_order'] += item.pending_quantity
+            po_info[item.product_id]['purchase_orders'].append({
+                'po_number': po.voucher_number,
+                'po_id': po.id,
+                'quantity': item.pending_quantity,
+                'status': po.status,
+                'delivery_date': po.delivery_date.isoformat() if po.delivery_date else None
+            })
+        
+        # Add entries for products without orders
+        for product_id in product_ids:
+            if product_id not in po_info:
+                po_info[product_id] = {
+                    'has_order': False,
+                    'total_on_order': 0.0,
+                    'purchase_orders': []
+                }
+        
+        return po_info
+
+    @staticmethod
     async def check_material_availability_for_mo(
         db: AsyncSession,
         organization_id: int,
-        manufacturing_order_id: int
+        manufacturing_order_id: int,
+        include_po_status: bool = True
     ) -> Tuple[bool, List[Dict]]:
         """
         Check if all materials are available for a specific manufacturing order
@@ -318,6 +384,7 @@ class MRPService:
             db: Database session
             organization_id: Organization ID
             manufacturing_order_id: Manufacturing order ID
+            include_po_status: Whether to include purchase order status for shortage items
             
         Returns:
             Tuple of (is_available: bool, shortage_details: List[Dict])
@@ -328,10 +395,12 @@ class MRPService:
         
         shortages = []
         has_shortage = False
+        shortage_product_ids = []
         
         for req in requirements:
             if req.shortage_quantity > 0:
                 has_shortage = True
+                shortage_product_ids.append(req.product_id)
                 shortages.append({
                     'product_id': req.product_id,
                     'product_name': req.product_name,
@@ -340,6 +409,31 @@ class MRPService:
                     'shortage': req.shortage_quantity,
                     'unit': req.unit
                 })
+        
+        # Check purchase order status for shortage items
+        if include_po_status and shortage_product_ids:
+            po_info = await MRPService.check_purchase_orders_for_products(
+                db, organization_id, shortage_product_ids
+            )
+            
+            # Add PO info to shortage details
+            for shortage in shortages:
+                product_id = shortage['product_id']
+                if product_id in po_info:
+                    shortage['purchase_order_status'] = {
+                        'has_order': po_info[product_id]['has_order'],
+                        'on_order_quantity': po_info[product_id]['total_on_order'],
+                        'orders': po_info[product_id]['purchase_orders']
+                    }
+                    # Color coding: yellow if order placed, red if no order
+                    shortage['severity'] = 'warning' if po_info[product_id]['has_order'] else 'critical'
+                else:
+                    shortage['purchase_order_status'] = {
+                        'has_order': False,
+                        'on_order_quantity': 0.0,
+                        'orders': []
+                    }
+                    shortage['severity'] = 'critical'
         
         return (not has_shortage, shortages)
 
