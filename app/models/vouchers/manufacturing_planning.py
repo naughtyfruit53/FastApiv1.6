@@ -89,6 +89,100 @@ class BOMComponent(Base):
         Index('idx_bom_comp_org_item', 'organization_id', 'component_item_id'),
     )
 
+class BOMAlternateComponent(Base):
+    """Alternate components that can be used in place of primary component"""
+    __tablename__ = "bom_alternate_components"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenant field - REQUIRED
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Reference to primary BOM component
+    primary_component_id = Column(Integer, ForeignKey("bom_components.id"), nullable=False)
+    
+    # Alternate component details
+    alternate_item_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity_required = Column(Float, nullable=False)
+    unit = Column(String, nullable=False)
+    
+    # Costing
+    unit_cost = Column(Float, default=0.0)
+    cost_difference = Column(Float, default=0.0)  # Cost difference vs primary
+    
+    # Preferences
+    preference_rank = Column(Integer, default=1)  # Lower number = higher preference
+    is_preferred = Column(Boolean, default=False)
+    
+    # Conditions
+    min_order_quantity = Column(Float, default=0.0)
+    lead_time_days = Column(Integer, default=0)
+    notes = Column(Text)
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    primary_component = relationship("BOMComponent", foreign_keys=[primary_component_id])
+    alternate_item = relationship("Product", foreign_keys=[alternate_item_id])
+    
+    __table_args__ = (
+        Index('idx_bom_alt_org_primary', 'organization_id', 'primary_component_id'),
+        Index('idx_bom_alt_org_item', 'organization_id', 'alternate_item_id'),
+    )
+
+class BOMRevision(Base):
+    """Track BOM revision history and engineering changes"""
+    __tablename__ = "bom_revisions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenant field - REQUIRED
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # BOM reference
+    bom_id = Column(Integer, ForeignKey("bill_of_materials.id"), nullable=False)
+    
+    # Revision details
+    revision_number = Column(String, nullable=False)
+    revision_date = Column(DateTime(timezone=True), server_default=func.now())
+    previous_version = Column(String)
+    new_version = Column(String, nullable=False)
+    
+    # Change details
+    change_type = Column(String, nullable=False)  # 'component_add', 'component_remove', 'quantity_change', 'cost_change', 'other'
+    change_description = Column(Text, nullable=False)
+    change_reason = Column(Text)
+    
+    # Approval workflow
+    change_requested_by = Column(Integer, ForeignKey("users.id"))
+    change_approved_by = Column(Integer, ForeignKey("users.id"))
+    approval_date = Column(DateTime(timezone=True))
+    approval_status = Column(String, default="pending")  # 'pending', 'approved', 'rejected'
+    
+    # Impact assessment
+    cost_impact = Column(Float, default=0.0)
+    affected_orders_count = Column(Integer, default=0)
+    implementation_date = Column(DateTime(timezone=True))
+    
+    # Notes
+    notes = Column(Text)
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    bom = relationship("BillOfMaterials")
+    requested_by_user = relationship("User", foreign_keys=[change_requested_by])
+    approved_by_user = relationship("User", foreign_keys=[change_approved_by])
+    
+    __table_args__ = (
+        Index('idx_bom_rev_org_bom', 'organization_id', 'bom_id'),
+        Index('idx_bom_rev_org_date', 'organization_id', 'revision_date'),
+        Index('idx_bom_rev_status', 'approval_status'),
+    )
+
 # Manufacturing Order
 class ManufacturingOrder(BaseVoucher):
     __tablename__ = "manufacturing_orders"
@@ -112,6 +206,24 @@ class ManufacturingOrder(BaseVoucher):
     # Department/Location
     production_department = Column(String)
     production_location = Column(String)
+    
+    # Resource Allocation
+    assigned_operator = Column(String)
+    assigned_supervisor = Column(String)
+    machine_id = Column(String)
+    workstation_id = Column(String)
+    estimated_labor_hours = Column(Float, default=0.0)
+    actual_labor_hours = Column(Float, default=0.0)
+    
+    # Capacity Management
+    estimated_setup_time = Column(Float, default=0.0)  # in hours
+    estimated_run_time = Column(Float, default=0.0)  # in hours
+    actual_setup_time = Column(Float, default=0.0)
+    actual_run_time = Column(Float, default=0.0)
+    
+    # Progress tracking
+    completion_percentage = Column(Float, default=0.0)
+    last_updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     bom = relationship("BillOfMaterials")

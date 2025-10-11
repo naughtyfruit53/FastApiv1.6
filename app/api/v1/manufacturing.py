@@ -12,14 +12,16 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.models.vouchers import (
-    ManufacturingOrder, MaterialIssue, ProductionEntry, BillOfMaterials,
+    ManufacturingOrder, MaterialIssue, ProductionEntry, BillOfMaterials, BOMComponent,
     ManufacturingJournalVoucher, MaterialReceiptVoucher, JobCardVoucher, StockJournal,
     MaterialIssueItem, ManufacturingJournalFinishedProduct, ManufacturingJournalMaterial, 
     ManufacturingJournalByproduct, MaterialReceiptItem, JobCardSuppliedMaterial, 
     JobCardReceivedOutput, StockJournalEntry
 )
+from app.models.vouchers.manufacturing_planning import BOMAlternateComponent, BOMRevision
 from app.services.voucher_service import VoucherNumberService
 from app.services.mrp_service import MRPService
+from app.services.production_planning_service import ProductionPlanningService
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -1248,4 +1250,389 @@ async def check_material_availability(
         'manufacturing_order_id': order_id,
         'is_available': is_available,
         'shortages': shortages
+    }
+
+# BOM Management Endpoints
+@router.post("/bom/{bom_id}/clone")
+async def clone_bom(
+    bom_id: int,
+    new_name: str,
+    new_version: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Clone an existing BOM with all its components.
+    Useful for creating variations or new versions.
+    """
+    # Get source BOM
+    stmt = select(BillOfMaterials).where(
+        BillOfMaterials.id == bom_id,
+        BillOfMaterials.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    source_bom = result.scalar_one_or_none()
+    
+    if not source_bom:
+        raise HTTPException(status_code=404, detail="Source BOM not found")
+    
+    # Create new BOM
+    new_bom = BillOfMaterials(
+        organization_id=current_user.organization_id,
+        bom_name=new_name,
+        output_item_id=source_bom.output_item_id,
+        output_quantity=source_bom.output_quantity,
+        version=new_version or "1.0",
+        is_active=True,
+        description=f"Cloned from {source_bom.bom_name} v{source_bom.version}",
+        notes=source_bom.notes,
+        material_cost=source_bom.material_cost,
+        labor_cost=source_bom.labor_cost,
+        overhead_cost=source_bom.overhead_cost,
+        total_cost=source_bom.total_cost,
+        created_by=current_user.id
+    )
+    
+    db.add(new_bom)
+    await db.flush()
+    
+    # Clone components
+    stmt = select(BOMComponent).where(
+        BOMComponent.bom_id == bom_id,
+        BOMComponent.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    source_components = result.scalars().all()
+    
+    for source_comp in source_components:
+        new_comp = BOMComponent(
+            organization_id=current_user.organization_id,
+            bom_id=new_bom.id,
+            component_item_id=source_comp.component_item_id,
+            quantity_required=source_comp.quantity_required,
+            unit=source_comp.unit,
+            unit_cost=source_comp.unit_cost,
+            total_cost=source_comp.total_cost,
+            wastage_percentage=source_comp.wastage_percentage,
+            is_optional=source_comp.is_optional,
+            sequence=source_comp.sequence,
+            notes=source_comp.notes
+        )
+        db.add(new_comp)
+    
+    await db.commit()
+    await db.refresh(new_bom)
+    
+    return {
+        'id': new_bom.id,
+        'bom_name': new_bom.bom_name,
+        'version': new_bom.version,
+        'output_item_id': new_bom.output_item_id,
+        'components_cloned': len(source_components),
+        'message': f"BOM cloned successfully as '{new_name}'"
+    }
+
+@router.post("/bom/{bom_id}/revisions")
+async def create_bom_revision(
+    bom_id: int,
+    new_version: str,
+    change_type: str,
+    change_description: str,
+    change_reason: Optional[str] = None,
+    cost_impact: float = 0.0,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Create a revision record for BOM changes.
+    Tracks engineering changes for audit and compliance.
+    """
+    # Get BOM
+    stmt = select(BillOfMaterials).where(
+        BillOfMaterials.id == bom_id,
+        BillOfMaterials.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    bom = result.scalar_one_or_none()
+    
+    if not bom:
+        raise HTTPException(status_code=404, detail="BOM not found")
+    
+    # Get latest revision number
+    stmt = select(func.count(BOMRevision.id)).where(
+        BOMRevision.bom_id == bom_id,
+        BOMRevision.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    revision_count = result.scalar()
+    
+    revision_number = f"REV-{revision_count + 1:04d}"
+    
+    # Count affected orders
+    stmt = select(func.count(ManufacturingOrder.id)).where(
+        ManufacturingOrder.bom_id == bom_id,
+        ManufacturingOrder.organization_id == current_user.organization_id,
+        ManufacturingOrder.production_status.in_(['planned', 'in_progress'])
+    )
+    result = await db.execute(stmt)
+    affected_orders = result.scalar()
+    
+    # Create revision record
+    revision = BOMRevision(
+        organization_id=current_user.organization_id,
+        bom_id=bom_id,
+        revision_number=revision_number,
+        previous_version=bom.version,
+        new_version=new_version,
+        change_type=change_type,
+        change_description=change_description,
+        change_reason=change_reason,
+        change_requested_by=current_user.id,
+        approval_status="pending",
+        cost_impact=cost_impact,
+        affected_orders_count=affected_orders
+    )
+    
+    db.add(revision)
+    await db.commit()
+    await db.refresh(revision)
+    
+    return {
+        'id': revision.id,
+        'revision_number': revision.revision_number,
+        'previous_version': revision.previous_version,
+        'new_version': revision.new_version,
+        'change_type': revision.change_type,
+        'approval_status': revision.approval_status,
+        'affected_orders_count': revision.affected_orders_count,
+        'message': 'BOM revision created and pending approval'
+    }
+
+@router.get("/bom/{bom_id}/revisions")
+async def get_bom_revisions(
+    bom_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """Get all revisions for a BOM"""
+    stmt = select(BOMRevision).where(
+        BOMRevision.bom_id == bom_id,
+        BOMRevision.organization_id == current_user.organization_id
+    ).order_by(BOMRevision.revision_date.desc())
+    
+    result = await db.execute(stmt)
+    revisions = result.scalars().all()
+    
+    return [
+        {
+            'id': rev.id,
+            'revision_number': rev.revision_number,
+            'revision_date': rev.revision_date.isoformat() if rev.revision_date else None,
+            'previous_version': rev.previous_version,
+            'new_version': rev.new_version,
+            'change_type': rev.change_type,
+            'change_description': rev.change_description,
+            'approval_status': rev.approval_status,
+            'cost_impact': rev.cost_impact,
+            'affected_orders_count': rev.affected_orders_count
+        }
+        for rev in revisions
+    ]
+
+@router.post("/bom/components/{component_id}/alternates")
+async def add_alternate_component(
+    component_id: int,
+    alternate_item_id: int,
+    quantity_required: float,
+    unit: str,
+    unit_cost: float = 0.0,
+    preference_rank: int = 1,
+    is_preferred: bool = False,
+    notes: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Add an alternate component that can be used in place of the primary component.
+    Useful for material substitutions or vendor alternatives.
+    """
+    # Verify component exists
+    stmt = select(BOMComponent).where(
+        BOMComponent.id == component_id,
+        BOMComponent.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    component = result.scalar_one_or_none()
+    
+    if not component:
+        raise HTTPException(status_code=404, detail="Component not found")
+    
+    # Calculate cost difference
+    cost_difference = unit_cost - component.unit_cost
+    
+    # Create alternate
+    alternate = BOMAlternateComponent(
+        organization_id=current_user.organization_id,
+        primary_component_id=component_id,
+        alternate_item_id=alternate_item_id,
+        quantity_required=quantity_required,
+        unit=unit,
+        unit_cost=unit_cost,
+        cost_difference=cost_difference,
+        preference_rank=preference_rank,
+        is_preferred=is_preferred,
+        notes=notes
+    )
+    
+    db.add(alternate)
+    await db.commit()
+    await db.refresh(alternate)
+    
+    return {
+        'id': alternate.id,
+        'primary_component_id': component_id,
+        'alternate_item_id': alternate_item_id,
+        'quantity_required': quantity_required,
+        'unit': unit,
+        'cost_difference': cost_difference,
+        'preference_rank': preference_rank,
+        'message': 'Alternate component added successfully'
+    }
+
+@router.get("/bom/components/{component_id}/alternates")
+async def get_alternate_components(
+    component_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """Get all alternate components for a primary component"""
+    stmt = select(BOMAlternateComponent).where(
+        BOMAlternateComponent.primary_component_id == component_id,
+        BOMAlternateComponent.organization_id == current_user.organization_id
+    ).order_by(BOMAlternateComponent.preference_rank)
+    
+    result = await db.execute(stmt)
+    alternates = result.scalars().all()
+    
+    return [
+        {
+            'id': alt.id,
+            'alternate_item_id': alt.alternate_item_id,
+            'quantity_required': alt.quantity_required,
+            'unit': alt.unit,
+            'unit_cost': alt.unit_cost,
+            'cost_difference': alt.cost_difference,
+            'preference_rank': alt.preference_rank,
+            'is_preferred': alt.is_preferred,
+            'notes': alt.notes
+        }
+        for alt in alternates
+    ]
+
+# Production Planning & Scheduling Endpoints
+@router.get("/production-schedule")
+async def get_production_schedule(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    department: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Get production schedule with prioritized manufacturing orders.
+    Orders are sorted by priority score based on multiple factors.
+    """
+    schedule_items = await ProductionPlanningService.get_production_schedule(
+        db,
+        current_user.organization_id,
+        start_date=start_date,
+        end_date=end_date,
+        department=department
+    )
+    
+    return [
+        {
+            'mo_id': item.mo_id,
+            'voucher_number': item.voucher_number,
+            'product_name': item.product_name,
+            'planned_quantity': item.planned_quantity,
+            'priority': item.priority,
+            'planned_start_date': item.planned_start_date.isoformat() if item.planned_start_date else None,
+            'planned_end_date': item.planned_end_date.isoformat() if item.planned_end_date else None,
+            'estimated_hours': item.estimated_hours,
+            'assigned_resources': item.assigned_resources
+        }
+        for item in schedule_items
+    ]
+
+@router.post("/manufacturing-orders/{order_id}/allocate-resources")
+async def allocate_resources_to_order(
+    order_id: int,
+    operator: Optional[str] = None,
+    supervisor: Optional[str] = None,
+    machine_id: Optional[str] = None,
+    workstation_id: Optional[str] = None,
+    check_availability: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Allocate resources (operator, supervisor, machine, workstation) to a manufacturing order.
+    Optionally checks for resource conflicts.
+    """
+    result = await ProductionPlanningService.allocate_resources(
+        db,
+        current_user.organization_id,
+        order_id,
+        operator=operator,
+        supervisor=supervisor,
+        machine_id=machine_id,
+        workstation_id=workstation_id,
+        check_availability=check_availability
+    )
+    
+    return result
+
+@router.get("/capacity-utilization")
+async def get_capacity_utilization(
+    start_date: datetime,
+    end_date: datetime,
+    department: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Calculate capacity utilization metrics for a time period.
+    Shows planned vs actual hours, utilization rate, and order counts.
+    """
+    metrics = await ProductionPlanningService.calculate_capacity_utilization(
+        db,
+        current_user.organization_id,
+        start_date,
+        end_date,
+        department=department
+    )
+    
+    return metrics
+
+@router.post("/production-schedule/optimize")
+async def suggest_optimal_schedule(
+    planning_horizon_days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Generate an optimal production schedule based on priorities and constraints.
+    Suggests start/end dates for all pending manufacturing orders.
+    """
+    suggested_schedule = await ProductionPlanningService.suggest_optimal_schedule(
+        db,
+        current_user.organization_id,
+        planning_horizon_days=planning_horizon_days
+    )
+    
+    return {
+        'planning_horizon_days': planning_horizon_days,
+        'total_orders': len(suggested_schedule),
+        'schedule': suggested_schedule
     }
