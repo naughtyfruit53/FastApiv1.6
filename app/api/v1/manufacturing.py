@@ -1636,3 +1636,311 @@ async def suggest_optimal_schedule(
         'total_orders': len(suggested_schedule),
         'schedule': suggested_schedule
     }
+
+# Shop Floor Control & Execution Endpoints
+@router.post("/manufacturing-orders/{order_id}/update-progress")
+async def update_manufacturing_order_progress(
+    order_id: int,
+    produced_quantity: float,
+    scrap_quantity: float = 0.0,
+    completion_percentage: Optional[float] = None,
+    actual_labor_hours: Optional[float] = None,
+    notes: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Update progress on a manufacturing order.
+    Can be called multiple times during production to track progress.
+    """
+    # Get manufacturing order
+    stmt = select(ManufacturingOrder).where(
+        ManufacturingOrder.id == order_id,
+        ManufacturingOrder.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    mo = result.scalar_one_or_none()
+    
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing order not found")
+    
+    if mo.production_status not in ['in_progress', 'planned']:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update progress for order in {mo.production_status} status"
+        )
+    
+    # Update progress
+    mo.produced_quantity = produced_quantity
+    mo.scrap_quantity = scrap_quantity
+    
+    if completion_percentage is not None:
+        mo.completion_percentage = min(completion_percentage, 100.0)
+    else:
+        # Auto-calculate completion percentage
+        mo.completion_percentage = min((produced_quantity / mo.planned_quantity * 100), 100.0)
+    
+    if actual_labor_hours is not None:
+        mo.actual_labor_hours = actual_labor_hours
+    
+    # Update status if completion is 100%
+    if mo.completion_percentage >= 100.0 and mo.production_status != 'completed':
+        mo.production_status = 'completed'
+        mo.actual_end_date = datetime.now()
+    elif mo.production_status == 'planned':
+        mo.production_status = 'in_progress'
+        if not mo.actual_start_date:
+            mo.actual_start_date = datetime.now()
+    
+    # Add notes if provided
+    if notes:
+        if mo.notes:
+            mo.notes += f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M')}] {notes}"
+        else:
+            mo.notes = f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] {notes}"
+    
+    await db.commit()
+    await db.refresh(mo)
+    
+    return {
+        'id': mo.id,
+        'voucher_number': mo.voucher_number,
+        'production_status': mo.production_status,
+        'produced_quantity': mo.produced_quantity,
+        'planned_quantity': mo.planned_quantity,
+        'scrap_quantity': mo.scrap_quantity,
+        'completion_percentage': mo.completion_percentage,
+        'actual_labor_hours': mo.actual_labor_hours,
+        'message': 'Progress updated successfully'
+    }
+
+@router.get("/manufacturing-orders/{order_id}/progress")
+async def get_manufacturing_order_progress(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Get detailed progress information for a manufacturing order.
+    Includes production metrics, resource utilization, and timeline.
+    """
+    # Get manufacturing order
+    stmt = select(ManufacturingOrder).where(
+        ManufacturingOrder.id == order_id,
+        ManufacturingOrder.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    mo = result.scalar_one_or_none()
+    
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing order not found")
+    
+    # Calculate metrics
+    duration_planned = None
+    duration_actual = None
+    
+    if mo.planned_start_date and mo.planned_end_date:
+        duration_planned = (mo.planned_end_date - mo.planned_start_date).total_seconds() / 3600  # hours
+    
+    if mo.actual_start_date:
+        end_date = mo.actual_end_date if mo.actual_end_date else datetime.now()
+        duration_actual = (end_date - mo.actual_start_date).total_seconds() / 3600  # hours
+    
+    # Calculate efficiency
+    quantity_efficiency = None
+    if mo.planned_quantity > 0:
+        quantity_efficiency = (mo.produced_quantity / mo.planned_quantity * 100)
+    
+    time_efficiency = None
+    if duration_planned and duration_actual and duration_planned > 0:
+        time_efficiency = (duration_planned / duration_actual * 100)
+    
+    labor_efficiency = None
+    if mo.estimated_labor_hours > 0 and mo.actual_labor_hours:
+        labor_efficiency = (mo.estimated_labor_hours / mo.actual_labor_hours * 100)
+    
+    return {
+        'id': mo.id,
+        'voucher_number': mo.voucher_number,
+        'production_status': mo.production_status,
+        'priority': mo.priority,
+        'quantities': {
+            'planned': mo.planned_quantity,
+            'produced': mo.produced_quantity,
+            'scrap': mo.scrap_quantity,
+            'remaining': max(0, mo.planned_quantity - mo.produced_quantity)
+        },
+        'completion_percentage': mo.completion_percentage,
+        'timeline': {
+            'planned_start': mo.planned_start_date.isoformat() if mo.planned_start_date else None,
+            'planned_end': mo.planned_end_date.isoformat() if mo.planned_end_date else None,
+            'actual_start': mo.actual_start_date.isoformat() if mo.actual_start_date else None,
+            'actual_end': mo.actual_end_date.isoformat() if mo.actual_end_date else None,
+            'duration_planned_hours': round(duration_planned, 2) if duration_planned else None,
+            'duration_actual_hours': round(duration_actual, 2) if duration_actual else None
+        },
+        'resources': {
+            'operator': mo.assigned_operator,
+            'supervisor': mo.assigned_supervisor,
+            'machine': mo.machine_id,
+            'workstation': mo.workstation_id,
+            'estimated_labor_hours': mo.estimated_labor_hours,
+            'actual_labor_hours': mo.actual_labor_hours
+        },
+        'efficiency': {
+            'quantity_efficiency': round(quantity_efficiency, 2) if quantity_efficiency else None,
+            'time_efficiency': round(time_efficiency, 2) if time_efficiency else None,
+            'labor_efficiency': round(labor_efficiency, 2) if labor_efficiency else None
+        },
+        'location': {
+            'department': mo.production_department,
+            'location': mo.production_location
+        }
+    }
+
+@router.post("/manufacturing-orders/{order_id}/barcode-scan")
+async def record_barcode_scan(
+    order_id: int,
+    barcode: str,
+    scan_type: str,  # 'start', 'progress', 'complete', 'material_issue'
+    quantity: Optional[float] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Record a barcode scan event for shop floor data collection.
+    Supports various scan types for different operations.
+    """
+    # Get manufacturing order
+    stmt = select(ManufacturingOrder).where(
+        ManufacturingOrder.id == order_id,
+        ManufacturingOrder.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    mo = result.scalar_one_or_none()
+    
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing order not found")
+    
+    # Process scan based on type
+    action_taken = None
+    
+    if scan_type == 'start':
+        if mo.production_status == 'planned':
+            mo.production_status = 'in_progress'
+            mo.actual_start_date = datetime.now()
+            action_taken = 'Manufacturing order started'
+        else:
+            action_taken = f'Order already in {mo.production_status} status'
+    
+    elif scan_type == 'progress' and quantity:
+        mo.produced_quantity = quantity
+        mo.completion_percentage = min((quantity / mo.planned_quantity * 100), 100.0)
+        action_taken = f'Progress updated: {quantity} units produced'
+    
+    elif scan_type == 'complete':
+        mo.production_status = 'completed'
+        mo.actual_end_date = datetime.now()
+        if not mo.produced_quantity:
+            mo.produced_quantity = mo.planned_quantity
+        mo.completion_percentage = 100.0
+        action_taken = 'Manufacturing order completed'
+    
+    elif scan_type == 'material_issue':
+        action_taken = f'Material barcode {barcode} scanned for issue'
+        # In a real implementation, this would trigger material deduction
+    
+    # Log the scan event
+    scan_note = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Barcode scan: {barcode} - Type: {scan_type} - {action_taken}"
+    if mo.notes:
+        mo.notes += f"\n{scan_note}"
+    else:
+        mo.notes = scan_note
+    
+    await db.commit()
+    await db.refresh(mo)
+    
+    return {
+        'id': mo.id,
+        'voucher_number': mo.voucher_number,
+        'barcode': barcode,
+        'scan_type': scan_type,
+        'action_taken': action_taken,
+        'current_status': mo.production_status,
+        'produced_quantity': mo.produced_quantity,
+        'completion_percentage': mo.completion_percentage,
+        'timestamp': datetime.now().isoformat()
+    }
+
+@router.get("/shop-floor/active-orders")
+async def get_active_shop_floor_orders(
+    department: Optional[str] = None,
+    operator: Optional[str] = None,
+    machine_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Get all active manufacturing orders for shop floor display.
+    Filtered by department, operator, or machine.
+    """
+    stmt = select(ManufacturingOrder).where(
+        ManufacturingOrder.organization_id == current_user.organization_id,
+        ManufacturingOrder.production_status.in_(['planned', 'in_progress'])
+    )
+    
+    if department:
+        stmt = stmt.where(ManufacturingOrder.production_department == department)
+    
+    if operator:
+        stmt = stmt.where(ManufacturingOrder.assigned_operator == operator)
+    
+    if machine_id:
+        stmt = stmt.where(ManufacturingOrder.machine_id == machine_id)
+    
+    stmt = stmt.order_by(ManufacturingOrder.priority.desc(), ManufacturingOrder.planned_start_date)
+    
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
+    
+    # Get BOM and product details for each order
+    enriched_orders = []
+    for mo in orders:
+        stmt = select(BillOfMaterials).where(BillOfMaterials.id == mo.bom_id)
+        result = await db.execute(stmt)
+        bom = result.scalar_one_or_none()
+        
+        product_name = "Unknown"
+        if bom:
+            stmt = select(Product).where(Product.id == bom.output_item_id)
+            result = await db.execute(stmt)
+            product = result.scalar_one_or_none()
+            if product:
+                product_name = product.product_name
+        
+        enriched_orders.append({
+            'id': mo.id,
+            'voucher_number': mo.voucher_number,
+            'product_name': product_name,
+            'production_status': mo.production_status,
+            'priority': mo.priority,
+            'planned_quantity': mo.planned_quantity,
+            'produced_quantity': mo.produced_quantity,
+            'completion_percentage': mo.completion_percentage,
+            'planned_start_date': mo.planned_start_date.isoformat() if mo.planned_start_date else None,
+            'planned_end_date': mo.planned_end_date.isoformat() if mo.planned_end_date else None,
+            'assigned_operator': mo.assigned_operator,
+            'assigned_supervisor': mo.assigned_supervisor,
+            'machine_id': mo.machine_id,
+            'workstation_id': mo.workstation_id
+        })
+    
+    return {
+        'total_orders': len(enriched_orders),
+        'filters_applied': {
+            'department': department,
+            'operator': operator,
+            'machine_id': machine_id
+        },
+        'orders': enriched_orders
+    }
