@@ -224,6 +224,12 @@ const ThreadView: React.FC<ThreadViewProps> = ({
             </Box>
           </Box>
 
+          {!isExpanded && (
+            <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }} onClick={() => handleToggleExpand(email.id)}>
+              {email.subject}
+            </Typography>
+          )}
+
           <Collapse in={isExpanded}>
             <Divider sx={{ my: 1 }} />
             
@@ -332,14 +338,16 @@ const ThreadView: React.FC<ThreadViewProps> = ({
             )}
 
             {/* Email content */}
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 2, overflow: 'auto', maxHeight: '100%', whiteSpace: 'normal', width: '100%' }}>
               {email.body_html ? (
                 <div 
                   dangerouslySetInnerHTML={{ __html: processedHtml }}
                   style={{
                     maxWidth: '100%',
-                    overflow: 'hidden',
-                    wordWrap: 'break-word'
+                    wordWrap: 'break-word',
+                    fontFamily: 'Arial, sans-serif',  // Gmail-like font
+                    lineHeight: 1.5,  // Better readability
+                    padding: '8px',  // Padding for full view
                   }}
                 />
               ) : (
@@ -348,8 +356,10 @@ const ThreadView: React.FC<ThreadViewProps> = ({
                   component="pre"
                   sx={{ 
                     whiteSpace: 'pre-wrap',
-                    fontFamily: 'inherit',
-                    wordWrap: 'break-word'
+                    fontFamily: 'Arial, sans-serif',
+                    wordWrap: 'break-word',
+                    lineHeight: 1.5,
+                    padding: '8px',
                   }}
                 >
                   {email.body_text || '(No content)'}
