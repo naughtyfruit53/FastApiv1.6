@@ -33,6 +33,7 @@ class AlertType(str, Enum):
     LOW_STOCK = "low_stock"
     OUT_OF_STOCK = "out_of_stock"
     REORDER = "reorder"
+    SHORTAGE_FOR_MO = "shortage_for_mo"
 
 
 class AlertStatus(str, Enum):
