@@ -101,8 +101,7 @@ export const menuItems = {
           { name: 'Current Stock', path: '/inventory', icon: <Inventory /> },
           { name: 'Stock Movements', path: '/inventory/movements', icon: <SwapHoriz /> },
           { name: 'Low Stock Report', path: '/inventory/low-stock', icon: <TrendingUp /> },
-          { name: 'Pending Orders', path: '/inventory/pending-orders', icon: <Schedule /> },
-          { name: 'Inventory Dashboard', path: '/inventory', icon: <Dashboard /> }
+          { name: 'Pending Orders', path: '/inventory/pending-orders', icon: <Schedule /> }
         ]
       },
       {
@@ -110,8 +109,7 @@ export const menuItems = {
         items: [
           { name: 'Locations', path: '/inventory/locations', icon: <Storage /> },
           { name: 'Bin Management', path: '/inventory/bins', icon: <Storage /> },
-          { name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> },
-          { name: 'Bulk Import', path: '/inventory/bulk-import', icon: <CloudUpload /> }
+          { name: 'Cycle Count', path: '/inventory/cycle-count', icon: <Assessment /> }
         ]
       }
     ]
