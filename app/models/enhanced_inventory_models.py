@@ -48,6 +48,30 @@ class WarehouseType(enum.Enum):
     QUARANTINE = "quarantine"
 
 
+class AlertType(enum.Enum):
+    """Inventory alert types"""
+    LOW_STOCK = "low_stock"
+    OUT_OF_STOCK = "out_of_stock"
+    SHORTAGE_FOR_MO = "shortage_for_mo"
+    OVERSTOCK = "overstock"
+    EXPIRY_ALERT = "expiry_alert"
+
+
+class AlertStatus(enum.Enum):
+    """Inventory alert statuses"""
+    ACTIVE = "active"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
+
+class AlertPriority(enum.Enum):
+    """Inventory alert priorities"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
 class Warehouse(Base):
     """Warehouse/Location management"""
     __tablename__ = "warehouses"
@@ -98,6 +122,7 @@ class Warehouse(Base):
     __table_args__ = (
         UniqueConstraint('organization_id', 'warehouse_code', name='uq_org_warehouse_code'),
         Index('idx_warehouse_type', 'warehouse_type'),
+        {'extend_existing': True}
     )
 
 
@@ -143,6 +168,7 @@ class StockLocation(Base):
     # Constraints
     __table_args__ = (
         UniqueConstraint('warehouse_id', 'location_code', name='uq_warehouse_location_code'),
+        {'extend_existing': True}
     )
 
 
@@ -184,6 +210,9 @@ class ProductTracking(Base):
     batches = relationship("ProductBatch", back_populates="product_tracking")
     serials = relationship("ProductSerial", back_populates="product_tracking")
 
+    # Constraints
+    __table_args__ = {'extend_existing': True}
+
 
 class WarehouseStock(Base):
     """Warehouse-wise stock levels"""
@@ -220,6 +249,7 @@ class WarehouseStock(Base):
     __table_args__ = (
         UniqueConstraint('warehouse_id', 'product_id', name='uq_warehouse_product_stock'),
         Index('idx_warehouse_stock_org_warehouse', 'organization_id', 'warehouse_id'),
+        {'extend_existing': True}
     )
 
 
@@ -271,6 +301,7 @@ class ProductBatch(Base):
         UniqueConstraint('organization_id', 'batch_number', name='uq_org_batch_number'),
         Index('idx_batch_expiry', 'expiry_date'),
         Index('idx_batch_active', 'is_active'),
+        {'extend_existing': True}
     )
 
 
@@ -327,6 +358,7 @@ class ProductSerial(Base):
         UniqueConstraint('organization_id', 'serial_number', name='uq_org_serial_number'),
         Index('idx_serial_status', 'current_status'),
         Index('idx_serial_warranty', 'warranty_expiry_date'),
+        {'extend_existing': True}
     )
 
 
@@ -351,6 +383,7 @@ class BatchLocation(Base):
     # Constraints
     __table_args__ = (
         UniqueConstraint('batch_id', 'stock_location_id', name='uq_batch_location'),
+        {'extend_existing': True}
     )
 
 
@@ -402,6 +435,7 @@ class StockMovement(Base):
     __table_args__ = (
         Index('idx_stock_movement_org_date', 'organization_id', 'movement_date'),
         Index('idx_stock_movement_type', 'movement_type'),
+        {'extend_existing': True}
     )
 
 
@@ -438,6 +472,7 @@ class StockAdjustment(Base):
     # Constraints
     __table_args__ = (
         Index('idx_stock_adj_org_status', 'organization_id', 'status'),
+        {'extend_existing': True}
     )
 
 
@@ -471,3 +506,36 @@ class StockAdjustmentItem(Base):
     warehouse = relationship("Warehouse")
     product = relationship("Product")
     batch = relationship("ProductBatch")
+
+    # Constraints
+    __table_args__ = {'extend_existing': True}
+
+
+class InventoryAlert(Base):
+    """Inventory alerts for shortages, low stock, etc."""
+    __tablename__ = "inventory_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
+    
+    alert_type = Column(Enum(AlertType), nullable=False, index=True)
+    current_stock = Column(Numeric(12, 3), nullable=False)
+    reorder_level = Column(Numeric(12, 3), nullable=False)
+    priority = Column(Enum(AlertPriority), nullable=False)
+    message = Column(Text, nullable=False)
+    suggested_order_quantity = Column(Numeric(12, 3), nullable=True)
+    status = Column(Enum(AlertStatus), default=AlertStatus.ACTIVE, nullable=False, index=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    organization = relationship("Organization")
+    product = relationship("Product")
+
+    # Constraints
+    __table_args__ = (
+        Index('idx_alert_org_type_status', 'organization_id', 'alert_type', 'status'),
+        {'extend_existing': True}
+    )
