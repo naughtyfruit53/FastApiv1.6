@@ -114,6 +114,55 @@ export const menuItems = {
       }
     ]
   },
+  // Manufacturing menu - comprehensive manufacturing module
+  manufacturing: {
+    title: 'Manufacturing',
+    icon: <Engineering />,
+    sections: [
+      {
+        title: 'Production Management',
+        items: [
+          { name: 'Production Order', path: '/vouchers/Manufacturing-Vouchers/production-order', icon: <Build /> },
+          { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
+          { name: 'Material Requisition', path: '/vouchers/Manufacturing-Vouchers/material-requisition', icon: <Storage /> },
+          { name: 'Finished Good Receipt', path: '/vouchers/Manufacturing-Vouchers/finished-good-receipt', icon: <Inventory /> },
+          { name: 'Job Card', path: '/vouchers/Manufacturing-Vouchers/job-card', icon: <Assignment /> }
+        ]
+      },
+      {
+        title: 'Jobwork Management',
+        items: [
+          { name: 'Inward Jobwork', path: '/manufacturing/jobwork/inward', icon: <LocalShipping /> },
+          { name: 'Outward Jobwork', path: '/manufacturing/jobwork/outward', icon: <SwapHoriz /> },
+          { name: 'Jobwork Challan', path: '/manufacturing/jobwork/challan', icon: <ReceiptLong /> },
+          { name: 'Jobwork Receipt', path: '/manufacturing/jobwork/receipt', icon: <Inventory /> }
+        ]
+      },
+      {
+        title: 'Manufacturing Operations',
+        items: [
+          { name: 'Manufacturing Journal', path: '/vouchers/Manufacturing-Vouchers/manufacturing-journal', icon: <Build /> },
+          { name: 'Stock Journal', path: '/vouchers/Manufacturing-Vouchers/stock-journal', icon: <Storage /> },
+          { name: 'Material Receipt', path: '/vouchers/Manufacturing-Vouchers/material-receipt', icon: <Inventory /> }
+        ]
+      },
+      {
+        title: 'Quality Control',
+        items: [
+          { name: 'Quality Inspection', path: '/manufacturing/quality/inspection', icon: <Assessment /> },
+          { name: 'Quality Reports', path: '/manufacturing/quality/reports', icon: <BarChart /> }
+        ]
+      },
+      {
+        title: 'Manufacturing Reports',
+        items: [
+          { name: 'Production Summary', path: '/manufacturing/reports/production-summary', icon: <Assessment /> },
+          { name: 'Material Consumption', path: '/manufacturing/reports/material-consumption', icon: <BarChart /> },
+          { name: 'Manufacturing Efficiency', path: '/manufacturing/reports/efficiency', icon: <TrendingUp /> }
+        ]
+      }
+    ]
+  },
   // Vouchers menu - separated from ERP
   vouchers: {
     title: 'Vouchers',
@@ -154,15 +203,6 @@ export const menuItems = {
           { name: 'Credit Note', path: '/vouchers/Financial-Vouchers/credit-note', icon: <AccountBalance /> },
           { name: 'Debit Note', path: '/vouchers/Financial-Vouchers/debit-note', icon: <AccountBalance /> },
           { name: 'Non-Sales Credit Note', path: '/vouchers/Financial-Vouchers/non-sales-credit-note', icon: <AccountBalance /> }
-        ]
-      },
-      {
-        title: 'Manufacturing Vouchers',
-        items: [
-          { name: 'Production Order', path: '/vouchers/Manufacturing-Vouchers/production-order', icon: <Build /> },
-          { name: 'Material Requisition', path: '/vouchers/Manufacturing-Vouchers/material-requisition', icon: <Storage /> },
-          { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
-          { name: 'Finished Good Receipt', path: '/vouchers/Manufacturing-Vouchers/finished-good-receipt', icon: <Inventory /> }
         ]
       },
       {
@@ -651,6 +691,7 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         // Note: Dashboard top-level removed by user request
         { title: 'Master Data', subSections: menuItems.masterData.sections },
         { title: 'Inventory', subSections: menuItems.inventory.sections },
+        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },
         { title: 'Vouchers', subSections: menuItems.vouchers.sections },
         // Merge Finance & Accounting into single section
         { 
