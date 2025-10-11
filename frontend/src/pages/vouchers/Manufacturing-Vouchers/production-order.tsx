@@ -32,6 +32,8 @@ import api from "../../../lib/api";
 import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import AddBOMModal from "../../../components/AddBOMModal";
+import ManufacturingShortageAlert from "../../../components/ManufacturingShortageAlert";
+import useManufacturingShortages from "../../../hooks/useManufacturingShortages";
 interface ManufacturingOrder {
   id?: number;
   voucher_number?: string;
@@ -78,7 +80,16 @@ const ProductionOrder: React.FC = () => {
   const [selectedBOM, setSelectedBOM] = useState<any>(null);
   const [bomCostBreakdown, setBomCostBreakdown] = useState<any>(null);
   const [showAddBOMModal, setShowAddBOMModal] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<ManufacturingOrder | null>(null);
   const queryClient = useQueryClient();
+  
+  // Shortage checking hook
+  const {
+    shortageData,
+    checkShortages,
+    showShortageDialog,
+    setShowShortageDialog,
+  } = useManufacturingShortages(selectedId);
   const {
     control,
     handleSubmit,
@@ -197,11 +208,40 @@ const ProductionOrder: React.FC = () => {
       console.error(msg, err);
     },
   });
-  const onSubmit = (data: ManufacturingOrder) => {
+  const onSubmit = async (data: ManufacturingOrder) => {
+    // For edit mode with an existing order, check shortages before proceeding
+    if (mode === "edit" && selectedId) {
+      try {
+        const shortageInfo = await checkShortages();
+        if (shortageInfo && !shortageInfo.is_material_available) {
+          // Show shortage dialog and wait for user decision
+          setPendingSubmitData({ id: selectedId, data });
+          setShowShortageDialog(true);
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking shortages:", error);
+        // Proceed with submission if shortage check fails
+      }
+    }
+    
+    // Proceed with submission
     if (mode === "create") {
       createMutation.mutate(data);
     } else if (mode === "edit" && selectedId) {
       updateMutation.mutate({ id: selectedId, data });
+    }
+  };
+  
+  const handleProceedWithShortage = () => {
+    setShowShortageDialog(false);
+    if (pendingSubmitData) {
+      if (mode === "edit" && selectedId) {
+        updateMutation.mutate({ id: selectedId, data: pendingSubmitData.data });
+      } else if (mode === "create") {
+        createMutation.mutate(pendingSubmitData.data);
+      }
+      setPendingSubmitData(null);
     }
   };
   const handleEdit = (order: any) => {
@@ -578,36 +618,52 @@ const ProductionOrder: React.FC = () => {
                       sx={{
                         display: "flex",
                         gap: 2,
-                        justifyContent: "flex-end",
+                        justifyContent: "space-between",
                         mt: 2,
                       }}
                     >
-                      <Button
-                        variant="outlined"
-                        onClick={() => {
-                          setMode("create");
-                          setSelectedId(null);
-                          reset(defaultValues);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        disabled={
-                          createMutation.isPending || updateMutation.isPending
-                        }
-                      >
-                        {createMutation.isPending ||
-                        updateMutation.isPending ? (
-                          <CircularProgress size={20} />
-                        ) : mode === "create" ? (
-                          "Create Order"
-                        ) : (
-                          "Update Order"
+                      <Box>
+                        {mode === "edit" && selectedId && (
+                          <Button
+                            variant="outlined"
+                            color="warning"
+                            onClick={async () => {
+                              await checkShortages();
+                              setShowShortageDialog(true);
+                            }}
+                          >
+                            Check Material Shortages
+                          </Button>
                         )}
-                      </Button>
+                      </Box>
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={() => {
+                            setMode("create");
+                            setSelectedId(null);
+                            reset(defaultValues);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          disabled={
+                            createMutation.isPending || updateMutation.isPending
+                          }
+                        >
+                          {createMutation.isPending ||
+                          updateMutation.isPending ? (
+                            <CircularProgress size={20} />
+                          ) : mode === "create" ? (
+                            "Create Order"
+                          ) : (
+                            "Update Order"
+                          )}
+                        </Button>
+                      </Box>
                     </Box>
                   </Grid>
                 )}
@@ -647,6 +703,24 @@ const ProductionOrder: React.FC = () => {
         onAdd={handleAddBOM}
         mode="create"
       />
+      {/* Shortage Alert Dialog */}
+      {shortageData && (
+        <ManufacturingShortageAlert
+          open={showShortageDialog}
+          onClose={() => {
+            setShowShortageDialog(false);
+            setPendingSubmitData(null);
+          }}
+          onProceed={handleProceedWithShortage}
+          moNumber={shortageData.voucher_number}
+          isAvailable={shortageData.is_material_available}
+          shortages={shortageData.shortages || []}
+          recommendations={shortageData.recommendations || []}
+          title="Material Shortage Detected"
+          proceedButtonText="Proceed Anyway"
+          showProceedButton={true}
+        />
+      )}
     </Container>
   );
 };
