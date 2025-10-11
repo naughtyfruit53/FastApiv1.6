@@ -19,6 +19,7 @@ from app.models.vouchers import (
     JobCardReceivedOutput, StockJournalEntry
 )
 from app.services.voucher_service import VoucherNumberService
+from app.services.mrp_service import MRPService
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,7 @@ async def get_next_manufacturing_order_number(
 @router.post("/manufacturing-orders")
 async def create_manufacturing_order(
     order_data: ManufacturingOrderCreate,
+    check_material_availability: bool = True,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
@@ -143,10 +145,44 @@ async def create_manufacturing_order(
     )
     
     db.add(db_order)
+    await db.flush()  # Flush to get the ID
+    
+    # Check material availability if requested
+    material_check_result = None
+    if check_material_availability:
+        is_available, shortages = await MRPService.check_material_availability_for_mo(
+            db, current_user.organization_id, db_order.id
+        )
+        material_check_result = {
+            'is_available': is_available,
+            'shortages': shortages
+        }
+        
+        # Log warning if materials are not available
+        if not is_available:
+            logger.warning(
+                f"Manufacturing Order {voucher_number} created with material shortages: "
+                f"{len(shortages)} items short"
+            )
+    
     await db.commit()
     await db.refresh(db_order)
     
-    return db_order
+    # Return order with material availability info
+    response = {
+        'id': db_order.id,
+        'voucher_number': db_order.voucher_number,
+        'date': db_order.date,
+        'bom_id': db_order.bom_id,
+        'planned_quantity': db_order.planned_quantity,
+        'produced_quantity': db_order.produced_quantity,
+        'production_status': db_order.production_status,
+        'priority': db_order.priority,
+        'total_amount': db_order.total_amount,
+        'material_availability': material_check_result
+    }
+    
+    return response
 
 @router.get("/manufacturing-orders/{order_id}", response_model=ManufacturingOrderResponse)
 async def get_manufacturing_order(
@@ -165,6 +201,269 @@ async def get_manufacturing_order(
         raise HTTPException(status_code=404, detail="Manufacturing order not found")
     
     return order
+
+@router.post("/manufacturing-orders/{order_id}/complete")
+async def complete_manufacturing_order(
+    order_id: int,
+    completed_quantity: float,
+    scrap_quantity: float = 0.0,
+    update_inventory: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Mark a manufacturing order as completed and update inventory.
+    
+    This endpoint:
+    - Updates the MO status to 'completed'
+    - Records produced and scrap quantities
+    - Optionally updates finished goods inventory
+    - Creates inventory transactions for traceability
+    """
+    # Get the manufacturing order
+    stmt = select(ManufacturingOrder).where(
+        ManufacturingOrder.id == order_id,
+        ManufacturingOrder.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    mo = result.scalar_one_or_none()
+    
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing order not found")
+    
+    if mo.production_status == "completed":
+        raise HTTPException(status_code=400, detail="Manufacturing order already completed")
+    
+    # Get BOM to find output product
+    stmt = select(BillOfMaterials).where(
+        BillOfMaterials.id == mo.bom_id,
+        BillOfMaterials.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    bom = result.scalar_one_or_none()
+    
+    if not bom:
+        raise HTTPException(status_code=404, detail="BOM not found")
+    
+    # Update manufacturing order
+    mo.produced_quantity = completed_quantity
+    mo.scrap_quantity = scrap_quantity
+    mo.production_status = "completed"
+    mo.actual_end_date = datetime.now()
+    
+    inventory_updates = []
+    
+    # Update finished goods inventory if requested
+    if update_inventory and completed_quantity > 0:
+        from app.models.product_models import Stock
+        from app.schemas.inventory import InventoryTransactionCreate, TransactionType
+        from app.api.v1.inventory import InventoryService
+        
+        # Get or create stock record for output product
+        stmt = select(Stock).where(
+            Stock.organization_id == current_user.organization_id,
+            Stock.product_id == bom.output_item_id
+        )
+        result = await db.execute(stmt)
+        stock = result.scalar_one_or_none()
+        
+        current_stock = stock.quantity if stock else 0.0
+        new_stock = current_stock + completed_quantity
+        
+        # Update stock
+        await InventoryService.update_stock_level(
+            db,
+            current_user.organization_id,
+            bom.output_item_id,
+            new_stock
+        )
+        
+        # Create inventory transaction for traceability
+        from app.models.enhanced_inventory_models import InventoryTransaction
+        transaction = InventoryTransaction(
+            organization_id=current_user.organization_id,
+            product_id=bom.output_item_id,
+            transaction_type=TransactionType.RECEIPT,
+            quantity=completed_quantity,
+            unit=bom.output_item.unit if bom.output_item else "PCS",
+            reference_type="manufacturing_order",
+            reference_id=mo.id,
+            reference_number=mo.voucher_number,
+            notes=f"Production completion for MO {mo.voucher_number}",
+            stock_before=current_stock,
+            stock_after=new_stock,
+            transaction_date=datetime.now(),
+            created_by_id=current_user.id
+        )
+        db.add(transaction)
+        
+        inventory_updates.append({
+            'product_id': bom.output_item_id,
+            'product_name': bom.output_item.product_name if bom.output_item else "Unknown",
+            'quantity_added': completed_quantity,
+            'stock_before': current_stock,
+            'stock_after': new_stock
+        })
+    
+    await db.commit()
+    await db.refresh(mo)
+    
+    return {
+        'id': mo.id,
+        'voucher_number': mo.voucher_number,
+        'production_status': mo.production_status,
+        'produced_quantity': mo.produced_quantity,
+        'scrap_quantity': mo.scrap_quantity,
+        'actual_end_date': mo.actual_end_date,
+        'inventory_updates': inventory_updates,
+        'message': f"Manufacturing order {mo.voucher_number} completed successfully"
+    }
+
+@router.post("/manufacturing-orders/{order_id}/start")
+async def start_manufacturing_order(
+    order_id: int,
+    deduct_materials: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Start a manufacturing order and optionally deduct materials from inventory.
+    
+    This endpoint:
+    - Changes MO status to 'in_progress'
+    - Records actual start date
+    - Optionally deducts materials from inventory based on BOM
+    - Creates material issue transactions
+    """
+    # Get the manufacturing order
+    stmt = select(ManufacturingOrder).where(
+        ManufacturingOrder.id == order_id,
+        ManufacturingOrder.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    mo = result.scalar_one_or_none()
+    
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing order not found")
+    
+    if mo.production_status not in ["planned"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot start order in {mo.production_status} status"
+        )
+    
+    # Check material availability
+    is_available, shortages = await MRPService.check_material_availability_for_mo(
+        db, current_user.organization_id, order_id
+    )
+    
+    if not is_available:
+        logger.warning(f"Starting MO {mo.voucher_number} with material shortages")
+    
+    # Update MO status
+    mo.production_status = "in_progress"
+    mo.actual_start_date = datetime.now()
+    
+    material_deductions = []
+    
+    # Deduct materials if requested
+    if deduct_materials:
+        from app.api.v1.inventory import InventoryService
+        from app.schemas.inventory import TransactionType
+        
+        # Get BOM components
+        stmt = select(BOMComponent).where(
+            BOMComponent.bom_id == mo.bom_id,
+            BOMComponent.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        components = result.scalars().all()
+        
+        # Get BOM for output quantity
+        stmt = select(BillOfMaterials).where(BillOfMaterials.id == mo.bom_id)
+        result = await db.execute(stmt)
+        bom = result.scalar_one_or_none()
+        
+        multiplier = mo.planned_quantity / bom.output_quantity
+        
+        for component in components:
+            # Calculate required quantity with wastage
+            wastage_factor = 1 + (component.wastage_percentage / 100)
+            required_qty = component.quantity_required * multiplier * wastage_factor
+            
+            # Get current stock
+            from app.models.product_models import Stock
+            stmt = select(Stock).where(
+                Stock.organization_id == current_user.organization_id,
+                Stock.product_id == component.component_item_id
+            )
+            result = await db.execute(stmt)
+            stock = result.scalar_one_or_none()
+            
+            current_stock = stock.quantity if stock else 0.0
+            
+            # Deduct stock (but don't go negative - log warning instead)
+            actual_deduction = min(required_qty, current_stock)
+            new_stock = max(0, current_stock - actual_deduction)
+            
+            if actual_deduction < required_qty:
+                logger.warning(
+                    f"Insufficient stock for component {component.component_item_id}. "
+                    f"Required: {required_qty}, Available: {current_stock}"
+                )
+            
+            # Update stock
+            await InventoryService.update_stock_level(
+                db,
+                current_user.organization_id,
+                component.component_item_id,
+                new_stock
+            )
+            
+            # Create transaction
+            from app.models.enhanced_inventory_models import InventoryTransaction
+            transaction = InventoryTransaction(
+                organization_id=current_user.organization_id,
+                product_id=component.component_item_id,
+                transaction_type=TransactionType.ISSUE,
+                quantity=-actual_deduction,
+                unit=component.unit,
+                reference_type="manufacturing_order",
+                reference_id=mo.id,
+                reference_number=mo.voucher_number,
+                notes=f"Material issue for MO {mo.voucher_number}",
+                stock_before=current_stock,
+                stock_after=new_stock,
+                transaction_date=datetime.now(),
+                created_by_id=current_user.id
+            )
+            db.add(transaction)
+            
+            material_deductions.append({
+                'product_id': component.component_item_id,
+                'product_name': component.component_item.product_name if component.component_item else "Unknown",
+                'required_quantity': required_qty,
+                'deducted_quantity': actual_deduction,
+                'stock_before': current_stock,
+                'stock_after': new_stock,
+                'shortage': required_qty - actual_deduction if actual_deduction < required_qty else 0
+            })
+    
+    await db.commit()
+    await db.refresh(mo)
+    
+    return {
+        'id': mo.id,
+        'voucher_number': mo.voucher_number,
+        'production_status': mo.production_status,
+        'actual_start_date': mo.actual_start_date,
+        'material_availability': {
+            'is_available': is_available,
+            'shortages': shortages
+        },
+        'material_deductions': material_deductions,
+        'message': f"Manufacturing order {mo.voucher_number} started successfully"
+    }
 
 # Material Issue Endpoints
 @router.get("/material-issues")
@@ -859,3 +1158,94 @@ async def create_stock_journal(
     await db.commit()
     await db.refresh(db_journal)
     return db_journal
+
+# MRP (Material Requirements Planning) Endpoints
+@router.post("/mrp/analyze")
+async def run_mrp_analysis(
+    create_alerts: bool = True,
+    generate_pr_data: bool = False,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Run Material Requirements Planning analysis for all active manufacturing orders.
+    
+    This endpoint:
+    - Calculates material requirements from BOMs and manufacturing orders
+    - Identifies material shortages
+    - Optionally creates shortage alerts
+    - Optionally generates purchase requisition data
+    """
+    result = await MRPService.run_mrp_analysis(
+        db,
+        current_user.organization_id,
+        create_alerts=create_alerts,
+        generate_pr_data=generate_pr_data
+    )
+    return result
+
+@router.get("/mrp/material-requirements")
+async def get_material_requirements(
+    manufacturing_order_ids: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Get material requirements for manufacturing orders.
+    
+    Query parameters:
+    - manufacturing_order_ids: Comma-separated list of MO IDs (optional)
+    - start_date: Filter by MO planned start date (optional)
+    - end_date: Filter by MO planned end date (optional)
+    """
+    mo_ids = None
+    if manufacturing_order_ids:
+        mo_ids = [int(id.strip()) for id in manufacturing_order_ids.split(',')]
+    
+    requirements = await MRPService.calculate_material_requirements(
+        db,
+        current_user.organization_id,
+        manufacturing_order_ids=mo_ids,
+        start_date=start_date,
+        end_date=end_date
+    )
+    
+    return [
+        {
+            'product_id': r.product_id,
+            'product_name': r.product_name,
+            'required_quantity': r.required_quantity,
+            'available_quantity': r.available_quantity,
+            'shortage_quantity': r.shortage_quantity,
+            'unit': r.unit,
+            'manufacturing_orders': r.manufacturing_orders
+        }
+        for r in requirements
+    ]
+
+@router.get("/mrp/check-availability/{order_id}")
+async def check_material_availability(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Check material availability for a specific manufacturing order.
+    
+    Returns:
+    - is_available: Boolean indicating if all materials are available
+    - shortages: List of materials with shortages (if any)
+    """
+    is_available, shortages = await MRPService.check_material_availability_for_mo(
+        db,
+        current_user.organization_id,
+        order_id
+    )
+    
+    return {
+        'manufacturing_order_id': order_id,
+        'is_available': is_available,
+        'shortages': shortages
+    }
