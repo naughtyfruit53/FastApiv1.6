@@ -2,6 +2,10 @@
 
 This comprehensive guide explains the manufacturing voucher system in FastAPI v1.6, covering stock management, production workflows, alerts, and best practices.
 
+> **📚 Additional Resources:**
+> - For advanced manufacturing features (Quality Management, Asset Maintenance, Advanced Planning, etc.), see [ADVANCED_MANUFACTURING_FEATURES.md](./ADVANCED_MANUFACTURING_FEATURES.md)
+> - For implementation details and technical architecture, see [MANUFACTURING_MODULE_COMPLETE.md](./MANUFACTURING_MODULE_COMPLETE.md)
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -219,7 +223,14 @@ Cost Per Unit = Total Production Cost / Quantity Produced
 
 ### Real-Time Shortage Detection
 
-The system automatically monitors material availability for production.
+The system automatically monitors material availability for production with intelligent tracking of purchase order status.
+
+**Enhanced Shortage Detection Features:**
+- ✅ Real-time material availability checking before MO creation/start
+- ✅ Purchase order tracking for shortage items
+- ✅ Color-coded severity levels based on procurement status
+- ✅ Interactive shortage confirmation dialogs in UI
+- ✅ Detailed shortage reports with recommendations
 
 **Alert Triggers:**
 
@@ -233,15 +244,82 @@ The system automatically monitors material availability for production.
    - Triggered when: Stock < Minimum Stock Level
    - Action: Urgent procurement needed
 
-3. **Insufficient for MO**
-   - Alert: 🔴 Red critical
-   - Triggered when: Available stock < MO requirement
-   - Action: Cannot start production, procure immediately
+3. **Insufficient for MO with PO Placed**
+   - Alert: 🟡 Yellow warning
+   - Triggered when: Available stock < MO requirement AND purchase order exists
+   - Status: Purchase order placed, awaiting delivery
+   - Action: Monitor delivery dates, coordinate with procurement
 
-4. **Out of Stock**
+4. **Insufficient for MO without PO**
+   - Alert: 🔴 Red critical
+   - Triggered when: Available stock < MO requirement AND no purchase order
+   - Status: No purchase order placed
+   - Action: Immediately place purchase order before proceeding
+
+5. **Out of Stock**
    - Alert: 🔴 Red critical
    - Triggered when: Stock = 0
    - Action: Production blocked, emergency procurement
+
+### Enhanced Shortage Check API
+
+Check material shortages with detailed PO status:
+
+**Endpoint:** `GET /api/v1/manufacturing-orders/{order_id}/check-shortages`
+
+**Response includes:**
+```json
+{
+  "is_material_available": false,
+  "total_shortage_items": 3,
+  "critical_items": 1,
+  "warning_items": 2,
+  "shortages": [
+    {
+      "product_name": "Steel Rod 10mm",
+      "required": 500,
+      "available": 100,
+      "shortage": 400,
+      "severity": "warning",
+      "purchase_order_status": {
+        "has_order": true,
+        "on_order_quantity": 1000,
+        "orders": [
+          {
+            "po_number": "PO/2526/00123",
+            "quantity": 1000,
+            "status": "approved",
+            "delivery_date": "2025-10-15"
+          }
+        ]
+      }
+    }
+  ],
+  "recommendations": [
+    {
+      "type": "warning",
+      "message": "2 items have purchase orders placed",
+      "action": "Verify delivery dates and coordinate with procurement"
+    }
+  ]
+}
+```
+
+### Color-Coded Severity Levels
+
+**🔴 Critical (Red):**
+- No purchase order placed for shortage item
+- Immediate action required
+- User must acknowledge before proceeding
+
+**🟡 Warning (Yellow):**
+- Purchase order placed but not yet received
+- Material expected based on PO delivery date
+- User can proceed with caution
+
+**🟢 Available (Green):**
+- All materials in stock
+- Can proceed without issues
 
 ### Viewing Shortage Alerts
 
