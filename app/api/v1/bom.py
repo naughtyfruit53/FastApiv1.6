@@ -16,6 +16,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.models.vouchers import BillOfMaterials, BOMComponent
+from app.models.vouchers.purchase import PurchaseOrderItem
 from app.models import Product
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -113,7 +114,10 @@ async def get_boms(
     current_user = Depends(get_current_active_user)
 ):
     """Get all BOMs for the organization"""
-    stmt = select(BillOfMaterials).where(
+    stmt = select(BillOfMaterials).options(
+        joinedload(BillOfMaterials.output_item),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+    ).where(
         BillOfMaterials.organization_id == current_user.organization_id
     )
     
@@ -130,7 +134,7 @@ async def get_boms(
     
     stmt = stmt.offset(skip).limit(limit)
     result = await db.execute(stmt)
-    boms = result.scalars().all()
+    boms = result.unique().scalars().all()
     return boms
 
 
@@ -141,12 +145,15 @@ async def get_bom(
     current_user = Depends(get_current_active_user)
 ):
     """Get a specific BOM by ID"""
-    stmt = select(BillOfMaterials).where(
+    stmt = select(BillOfMaterials).options(
+        joinedload(BillOfMaterials.output_item),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+    ).where(
         BillOfMaterials.id == bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
     )
     result = await db.execute(stmt)
-    bom = result.scalar_one_or_none()
+    bom = result.unique().scalar_one_or_none()
     
     if not bom:
         raise HTTPException(
@@ -270,7 +277,14 @@ async def create_bom(
     output_item.is_manufactured = True
     
     await db.commit()
-    await db.refresh(db_bom)
+    
+    # Refresh BOM with relationships loaded
+    stmt = select(BillOfMaterials).options(
+        joinedload(BillOfMaterials.output_item),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+    ).where(BillOfMaterials.id == db_bom.id)
+    result = await db.execute(stmt)
+    db_bom = result.unique().scalar_one()
     
     return db_bom
 
@@ -375,7 +389,14 @@ async def update_bom(
         db_bom.total_cost = material_cost + db_bom.labor_cost + db_bom.overhead_cost
     
     await db.commit()
-    await db.refresh(db_bom)
+    
+    # Refresh BOM with relationships loaded
+    stmt = select(BillOfMaterials).options(
+        joinedload(BillOfMaterials.output_item),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+    ).where(BillOfMaterials.id == db_bom.id)
+    result = await db.execute(stmt)
+    db_bom = result.unique().scalar_one()
     
     return db_bom
 

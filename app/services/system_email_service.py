@@ -316,6 +316,10 @@ class SystemEmailService:
             with open(template_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
             
+            # Inject frontend_url from settings if not provided
+            if 'frontend_url' not in kwargs:
+                kwargs['frontend_url'] = settings.FRONTEND_URL
+            
             # Simple template variable replacement
             for key, value in kwargs.items():
                 placeholder = f"{{{{{key}}}}}"
@@ -537,13 +541,17 @@ class SystemEmailService:
                                  user_name: str,
                                  temp_password: str,
                                  organization_name: str,
-                                 login_url: str = "https://fast-apiv1-6.vercel.app/",
+                                 login_url: Optional[str] = None,
                                  organization_id: Optional[int] = None,
                                  user_id: Optional[int] = None,
                                  db: Optional[AsyncSession] = None) -> tuple[bool, Optional[str]]:
         """Send user creation welcome email with enhanced audit logging"""
         try:
             logger.debug(f"Preparing user creation email for {user_email}")
+            # Use frontend_url from settings if login_url not provided
+            if not login_url:
+                login_url = settings.FRONTEND_URL
+            
             template_vars = {
                 'user_name': user_name,
                 'user_email': user_email,
