@@ -16,7 +16,6 @@ from app.api import management_reports
 from app.api.v1 import stock as v1_stock
 from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
 from app.api.routes import admin
-import logging
 import app.models  # Import all models to register them with Base.metadata
 from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
 # Added missing v1 imports (removed v1_login as merged into auth)
@@ -502,9 +501,6 @@ logger.info("External Integrations router included successfully at prefix: /api/
 
 app.include_router(v1_reporting_hub.router, prefix="/api/v1/reports", tags=["reporting-hub"])
 logger.info("Reporting Hub router included successfully at prefix: /api/v1/reports")
-
-# Import OAuth router
-from app.api.v1 import oauth as v1_oauth
 
 # Ledger API
 app.include_router(v1_ledger.router, prefix="/api/v1", tags=["ledger"])
