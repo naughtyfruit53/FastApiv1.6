@@ -39,17 +39,17 @@ is_session_mode = port == 5432
 
 # Database engine configuration based on mode
 if is_session_mode:
-    # Session mode: small pool but increased to handle leaks
+    # Session mode: Increased pool_size to handle more concurrent requests (check Supabase dashboard limits)
     engine_kwargs = {
         "pool_pre_ping": True,  # Test connections before use
         "pool_recycle": 300,  # Recycle connections after 5 min idle
         "echo": settings.DEBUG,
-        "pool_size": 5,  # Lowered to 5 to avoid hitting limits
-        "max_overflow": 10,  # Reduced overflow
-        "pool_timeout": 120,
+        "pool_size": 20,  # Increased from 5 to 20 to avoid exhaustion (adjust based on Supabase plan)
+        "max_overflow": 10,  # Allow temporary overflow
+        "pool_timeout": 300,  # Increased timeout to 5 minutes
         "pool_reset_on_return": "rollback",  # Reset on return to avoid leaks
     }
-    logger.info("Using Supabase session mode (port 5432) - pool_size=5, max_overflow=10")
+    logger.info("Using Supabase session mode (port 5432) - pool_size=20, max_overflow=10, timeout=300s")
 else:
     # Transaction mode: Use NullPool to disable client-side pooling; let Supavisor handle it
     engine_kwargs = {
@@ -62,9 +62,9 @@ else:
 
 # Common connect_args for async (asyncpg)
 connect_args = {
-    "timeout": 120,  # Connection timeout
-    "command_timeout": 60,  # Query timeout
-    "server_settings": {"statement_timeout": "60s", "tcp_keepalives_idle": "60"}  # DB-level statement timeout and keepalive
+    "timeout": 300,  # Increased connection timeout to 5 minutes
+    "command_timeout": 120,  # Increased query timeout to 2 minutes
+    "server_settings": {"statement_timeout": "120s", "tcp_keepalives_idle": "60"}  # DB-level statement timeout and keepalive
 }
 
 # Execution options
@@ -98,9 +98,9 @@ sync_driver = driver.replace('asyncpg', 'psycopg')
 sync_database_url = url_obj.set(drivername=sync_driver).render_as_string(hide_password=False)
 
 sync_connect_args = {
-    "connect_timeout": 120,
+    "connect_timeout": 300,  # Increased to 5 minutes
     "keepalives_idle": 60,
-    "options": "-c statement_timeout=60s",
+    "options": "-c statement_timeout=120s",
     "sslmode": "require"  # Ensure SSL is required for Supabase
 }
 if not is_session_mode:

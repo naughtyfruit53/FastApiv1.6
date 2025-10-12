@@ -1,10 +1,11 @@
 # app/schemas/base.py
 
 from pydantic import BaseModel, EmailStr, validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union  # Added Union here
 from datetime import datetime
 from enum import Enum
 from pydantic import ConfigDict
+from app.models import Product  # Added import for Product model
 
 class BaseSchema(BaseModel):
     id: Optional[int] = None
@@ -124,7 +125,7 @@ class OrganizationLicenseCreate(BaseModel):
     
     @validator('pin_code')
     def validate_pin_code(cls, v):
-        if v is not None and (not v.isdigit() or len(v) != 6):
+        if v and (not v.isdigit() or len(v) != 6):
             raise ValueError('Pin code must be exactly 6 digits')
         return v
     
@@ -412,11 +413,43 @@ class ProductResponse(BaseModel):
     files: List[ProductFileResponse] = []
     
     @classmethod
-    def from_product(cls, product):
-        """Create ProductResponse from Product model"""
+    def from_product(cls, product: Union[Product, Dict[str, Any]]) -> "ProductResponse":
+        """Create ProductResponse from Product model or dict"""
+        if isinstance(product, dict):
+            # Handle if product is already a dict
+            files = product.get('files', [])
+            files_response = [
+                ProductFileResponse(**f) if isinstance(f, dict) else ProductFileResponse.from_orm(f)
+                for f in files
+            ]
+            return cls(
+                id=product['id'],
+                product_name=product['product_name'],
+                hsn_code=product.get('hsn_code'),
+                part_number=product.get('part_number'),
+                unit=product['unit'],
+                unit_price=product['unit_price'],
+                gst_rate=product.get('gst_rate', 0.0),
+                is_gst_inclusive=product.get('is_gst_inclusive', False),
+                reorder_level=product.get('reorder_level', 0),
+                description=product.get('description'),
+                is_manufactured=product.get('is_manufactured', False),
+                organization_id=product['organization_id'],
+                is_active=product.get('is_active', True),
+                created_at=product['created_at'],
+                updated_at=product.get('updated_at'),
+                files=files_response
+            )
+        
+        # Handle SQLAlchemy model
+        files = getattr(product, 'files', [])
+        files_response = [
+            ProductFileResponse.from_orm(f) for f in files
+        ]
+        
         return cls(
             id=product.id,
-            product_name=product.product_name,  # Use product_name field for frontend consistency
+            product_name=product.product_name,
             hsn_code=product.hsn_code,
             part_number=product.part_number,
             unit=product.unit,
@@ -430,17 +463,7 @@ class ProductResponse(BaseModel):
             is_active=product.is_active,
             created_at=product.created_at,
             updated_at=product.updated_at,
-            files=[
-                ProductFileResponse(
-                    id=f.id,
-                    filename=f.filename,
-                    original_filename=f.original_filename,
-                    file_size=f.file_size,
-                    content_type=f.content_type,
-                    product_id=f.product_id,
-                    created_at=f.created_at
-                ) for f in getattr(product, 'files', [])
-            ]
+            files=files_response
         )
     
     model_config = ConfigDict(from_attributes = True)

@@ -97,8 +97,8 @@ class CategoryList(BaseModel):
     items: List[CategoryResponse]
     total: int
     page: int
-    size: int
-    pages: int
+    per_page: int
+    total_pages: int
 
 
 class CategoryFilter(BaseModel):
@@ -157,8 +157,8 @@ class UnitList(BaseModel):
     items: List[UnitResponse]
     total: int
     page: int
-    size: int
-    pages: int
+    per_page: int
+    total_pages: int
 
 
 class UnitFilter(BaseModel):
@@ -228,8 +228,8 @@ class TaxCodeList(BaseModel):
     items: List[TaxCodeResponse]
     total: int
     page: int
-    size: int
-    pages: int
+    per_page: int
+    total_pages: int
 
 
 class TaxCodeFilter(BaseModel):
@@ -321,8 +321,8 @@ class PaymentTermsExtendedList(BaseModel):
     items: List[PaymentTermsExtendedResponse]
     total: int
     page: int
-    size: int
-    pages: int
+    per_page: int
+    total_pages: int
 
 
 class PaymentTermsExtendedFilter(BaseModel):

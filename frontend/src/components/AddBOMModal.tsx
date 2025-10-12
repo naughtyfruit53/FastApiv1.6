@@ -125,7 +125,8 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
     queryKey: ["products"],
     queryFn: getProducts,
   });
-  const productOptions = productList || [];
+  const allProducts = productList || [];
+  const manufacturedProducts = allProducts.filter((product: any) => product.is_manufactured);
   // Mutation for create/edit
   const mutation = useMutation({
     mutationFn: (bomData: BOM) => {
@@ -262,7 +263,8 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                 Basic Information
               </Typography>
             </Grid>
-            <Grid size={6}>
+            {/* Row 1: BOM Name, Version, Output Quantity, Active Toggle */}
+            <Grid size={3}>
               <TextField
                 {...control.register("bom_name", {
                   required: "BOM name is required",
@@ -298,15 +300,27 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                 InputProps={{ inputProps: { step: 0.01 } }}
               />
             </Grid>
+            <Grid size={3} display="flex" alignItems="center">
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={watch("is_active")}
+                    onChange={(e) => setValue("is_active", e.target.checked)}
+                  />
+                }
+                label="Active"
+              />
+            </Grid>
+            {/* Row 2: Output Item, Validity Start, Validity End */}
             <Grid size={6}>
               <Autocomplete
                 options={[
                   { id: -1, product_name: "➕ Add Output Item" },
-                  ...productOptions,
+                  ...manufacturedProducts,
                 ]}
                 getOptionLabel={(option) => option.product_name || ""}
                 value={
-                  productOptions.find(
+                  manufacturedProducts.find(
                     (p: any) => p.id === watch("output_item_id"),
                   ) || null
                 }
@@ -332,18 +346,7 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                 )}
               />
             </Grid>
-            <Grid size={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={watch("is_active")}
-                    onChange={(e) => setValue("is_active", e.target.checked)}
-                  />
-                }
-                label="Active"
-              />
-            </Grid>
-            <Grid size={6}>
+            <Grid size={3}>
               <TextField
                 {...control.register("validity_start")}
                 label="Validity Start"
@@ -352,7 +355,7 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid size={6}>
+            <Grid size={3}>
               <TextField
                 {...control.register("validity_end")}
                 label="Validity End"
@@ -361,22 +364,26 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid size={12}>
+            {/* Row for Description and Add Notes Checkbox */}
+            <Grid size={9}>
               <TextField
                 {...control.register("description")}
                 label="Description"
                 fullWidth
                 multiline
-                rows={2}
+                rows={1}  // Reduced to single row
               />
             </Grid>
-            <Grid size={12}>
-              <TextField
-                {...control.register("notes")}
-                label="Notes"
-                fullWidth
-                multiline
-                rows={2}
+            <Grid size={3} display="flex" alignItems="center">
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={showNotes}
+                    onChange={(e) => setShowNotes(e.target.checked)}
+                    size="small"
+                  />
+                }
+                label="Add Notes"
               />
             </Grid>
             {/* Components */}
@@ -386,21 +393,10 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  mt: 3,
-                  mb: 2,
+                  mt: 1,  // Reduced margin top from 3 to 1
+                  mb: 1,  // Reduced margin bottom from 2 to 1
                 }}
               >
-                <Typography variant="h6">Components</Typography>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={showNotes}
-                      onChange={(e) => setShowNotes(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Add Notes"
-                />
               </Box>
             </Grid>
             <Grid size={12}>
@@ -424,11 +420,11 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
                             <Autocomplete
                               options={[
                                 { id: -1, product_name: "➕ Add Component Item" },
-                                ...productOptions,
+                                ...allProducts,
                               ]}
                               getOptionLabel={(option) => option.product_name || ""}
                               value={
-                                productOptions.find(
+                                allProducts.find(
                                   (p: any) =>
                                     p.id ===
                                     watch(`components.${index}.component_item_id`),

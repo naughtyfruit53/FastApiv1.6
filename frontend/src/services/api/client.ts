@@ -26,7 +26,7 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config) => {
         // Get token from localStorage or context
-        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -46,7 +46,7 @@ class ApiClient {
         if (error.response?.status === 401) {
           // Handle unauthorized - redirect to login
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token');
+            localStorage.removeItem('token');
             window.location.href = '/login';
           }
         }

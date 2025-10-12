@@ -1,34 +1,27 @@
-// src/services/masterService.ts
-import api from "../lib/api";
-import { loadGstData } from "../data/gstRates";
-import { fuzzyMatch } from "../utils/stringUtils";  // Assume a utility for fuzzy matching; implement if needed
+// frontend/src/services/masterService.ts
 
-interface QueryFunctionContext {
-  queryKey: any[];
-  signal?: AbortSignal;
-}
+import { apiClient as api } from "./api/client";
 
-// Fetch all vendors
 export const getVendors = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional to prevent destructuring undefined
-  const response = await api.get("/vendors", { signal: context?.signal });
+  const response = await api.get("/api/v1/vendors", { signal: context?.signal });
   return response.data;
 };
 
 // Fetch all customers
 export const getCustomers = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
-  const response = await api.get("/customers", { signal: context?.signal });
+  const response = await api.get("/api/v1/customers", { signal: context?.signal });
   return response.data;
 };
 
 // Fetch all products
 export const getProducts = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
-  const response = await api.get("/products", { params: { active_only: false }, signal: context?.signal });
+  const response = await api.get("/api/v1/products", { params: { active_only: false }, signal: context?.signal });
   return response.data;
 };
 
 // Fetch all employees
 export const getEmployees = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
-  const response = await api.get("/hr/employees", { signal: context?.signal });
+  const response = await api.get("/api/v1/hr/employees", { signal: context?.signal });
   return response.data;
 };
 
@@ -38,7 +31,7 @@ export const searchCustomers = async ({
   signal,
 }: QueryFunctionContext): Promise<any> => {
   const [, searchTerm, limit] = queryKey;
-  const response = await api.get("/customers", {
+  const response = await api.get("/api/v1/customers", {
     params: {
       search: searchTerm,
       limit: limit || 10,
@@ -55,7 +48,7 @@ export const searchProducts = async ({
   signal,
 }: QueryFunctionContext): Promise<any> => {
   const [, searchTerm, limit] = queryKey;
-  const response = await api.get("/products", {
+  const response = await api.get("/api/v1/products", {
     params: {
       search: searchTerm,
       limit: limit || 10,
@@ -80,7 +73,7 @@ export const createCustomer = async (customerData: {
   gst_number?: string;
   pan_number?: string;
 }): Promise<any> => {
-  const response = await api.post("/customers", customerData);
+  const response = await api.post("/api/v1/customers", customerData);
   return response.data;
 };
 
@@ -98,7 +91,7 @@ export const createVendor = async (vendorData: {
   gst_number?: string;
   pan_number?: string;
 }): Promise<any> => {
-  const response = await api.post("/vendors", vendorData);
+  const response = await api.post("/api/v1/vendors", vendorData);
   return response.data;
 };
 
@@ -116,13 +109,13 @@ export const updateVendor = async (id: number, vendorData: {
   gst_number?: string;
   pan_number?: string;
 }): Promise<any> => {
-  const response = await api.put(`/vendors/${id}`, vendorData);
+  const response = await api.put(`/api/v1/vendors/${id}`, vendorData);
   return response.data;
 };
 
 // Delete vendor (added to support deletion in vendors.tsx)
 export const deleteVendor = async (id: number): Promise<any> => {
-  const response = await api.delete(`/vendors/${id}`);
+  const response = await api.delete(`/api/v1/vendors/${id}`);
   return response.data;
 };
 
@@ -139,7 +132,7 @@ export const createProduct = async (productData: {
   description?: string;
   is_manufactured?: boolean;
 }): Promise<any> => {
-  const response = await api.post("/products", productData);
+  const response = await api.post("/api/v1/products", productData);
   return response.data;
 };
 
@@ -157,27 +150,27 @@ export const createEmployee = async (employeeData: {
   designation?: string;
   salary?: number;
 }): Promise<any> => {
-  const response = await api.post("/hr/employees", employeeData);
+  const response = await api.post("/api/v1/hr/employees", employeeData);
   return response.data;
 };
 
 export const bulkImportVendors = async (data: any[]): Promise<any> => {
-  const response = await api.post("/vendors/bulk", data);
+  const response = await api.post("/api/v1/vendors/bulk", data);
   return response.data;
 };
 
 export const bulkImportCustomers = async (data: any[]): Promise<any> => {
-  const response = await api.post("/customers/bulk", data);
+  const response = await api.post("/api/v1/customers/bulk", data);
   return response.data;
 };
 
 export const bulkImportProducts = async (data: any[]): Promise<any> => {
-  const response = await api.post("/products/bulk", data);
+  const response = await api.post("/api/v1/products/bulk", data);
   return response.data;
 };
 
 export const bulkImportStock = async (data: any[]): Promise<any> => {
-  const response = await api.post("/stock/bulk", data);
+  const response = await api.post("/api/v1/stock/bulk", data);
   return response.data;
 };
 
@@ -195,7 +188,7 @@ export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Prom
   if (productId && !isNaN(Number(productId)) && productId !== "") {
     params.product_id = Number(productId);
   }
-  const response = await api.get("/stock", { params, signal });
+  const response = await api.get("/api/v1/stock", { params, signal });
   return response.data;
 };
 
@@ -227,7 +220,7 @@ export const hsnSearch = async ({ queryKey }: QueryFunctionContext): Promise<any
 
 // New function: Get next account code for a type
 export const getNextAccountCode = async (accountType: string): Promise<string> => {
-  const response = await api.get("/chart-of-accounts/get-next-code", {
+  const response = await api.get("/api/v1/chart-of-accounts/get-next-code", {
     params: { type: accountType },
   });
   return response.data.next_code;

@@ -6,6 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
+import logging
+import os
+import uuid
+import shutil
+
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user
 from app.core.tenant import TenantQueryMixin, require_current_organization_id
@@ -14,10 +19,6 @@ from app.core.org_restrictions import require_organization_access, ensure_organi
 from app.models import User, Product, Stock, ProductFile, Organization, Company
 from app.schemas.base import ProductCreate, ProductUpdate, ProductInDB, ProductResponse, BulkImportResponse, ProductFileResponse
 from app.services.excel_service import ProductExcelService, ExcelService
-import logging
-import os
-import uuid
-import shutil
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -58,7 +59,11 @@ async def get_products(
     
     result = await db.execute(stmt.offset(skip).limit(limit))
     products = result.scalars().all()
-    return [ProductResponse.from_product(product) for product in products]
+    
+    # Use list comprehension with sync from_product
+    response_products = [ProductResponse.from_product(product) for product in products]
+    
+    return response_products
 
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
@@ -80,7 +85,7 @@ async def get_product(
     if not current_user.is_super_admin is True:
         TenantQueryMixin.ensure_tenant_access(product, getattr(product, "organization_id", None))
     
-    return ProductResponse.from_product(product)
+    return ProductResponse.from_product(product)  # Sync call
 
 @router.post("", response_model=ProductResponse)
 async def create_product(
@@ -119,8 +124,13 @@ async def create_product(
     await db.commit()
     await db.refresh(db_product)
     
+    # Re-query with eager loading
+    stmt = select(Product).options(selectinload(Product.files)).where(Product.id == db_product.id)
+    result = await db.execute(stmt)
+    db_product = result.scalar_one()
+    
     logger.info(f"Product {product.product_name} created in org {org_id} by {current_user.email}")
-    return ProductResponse.from_product(db_product)
+    return ProductResponse.from_product(db_product)  # Sync call
 
 @router.put("/{product_id}", response_model=ProductResponse)
 async def update_product(
@@ -173,7 +183,7 @@ async def update_product(
     product = result.scalar_one()
     
     logger.info(f"Product {product.product_name} updated by {current_user.email}")
-    return ProductResponse.from_product(product)
+    return ProductResponse.from_product(product)  # Sync call
 
 @router.delete("/{product_id}")
 async def delete_product(
