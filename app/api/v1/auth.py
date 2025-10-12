@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from app.core.database import get_db
+from app.core.database import get_db, execute_with_retry
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -32,6 +32,14 @@ class EmailLogin(BaseModel):
     email: EmailStr
     password: str
 
+async def fetch_user(db: AsyncSession, email: str):
+    result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
+    return result.scalars().first()
+
+async def fetch_platform_user(db: AsyncSession, email: str):
+    result = await db.execute(select(PlatformUser).filter_by(email=email))
+    return result.scalars().first()
+
 @router.post("/login", response_model=LoginResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -42,12 +50,10 @@ async def login(
     email = form_data.username  # OAuth2 uses 'username', but treat as email
     password = form_data.password
 
-    # Preload organization relationship to avoid sync IO
-    result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
-    user: Union[User, PlatformUser, None] = result.scalars().first()
+    # Use retry for database queries to handle transient failures
+    user: Union[User, PlatformUser, None] = await execute_with_retry(fetch_user, email=email)
     if not user:
-        result = await db.execute(select(PlatformUser).filter_by(email=email))
-        user = result.scalars().first()
+        user = await execute_with_retry(fetch_platform_user, email=email)
 
     if not user or not verify_password(password, user.hashed_password):
         logger.info(f"[LOGIN:FAILED] Email: {email}")
@@ -158,11 +164,9 @@ async def refresh_token(
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     if user_type == "platform":
-        result = await db.execute(select(PlatformUser).filter_by(email=email))
-        user = result.scalars().first()
+        user = await execute_with_retry(fetch_platform_user, email=email)
     else:
-        result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
-        user = result.scalars().first()
+        user = await execute_with_retry(fetch_user, email=email)
 
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
@@ -194,8 +198,7 @@ async def logout(
     request: Request = None
 ):
     email, organization_id, user_role, user_type = verify_token(token)
-    result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
-    user = result.scalars().first()
+    user = await execute_with_retry(fetch_user, email=email)
     if user:
         await create_audit_log(
             db=db,
@@ -257,8 +260,7 @@ async def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Asy
     email: str = payload.get("sub")
     if email is None:
         raise credentials_exception
-    result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
-    user = result.scalars().first()
+    user = await execute_with_retry(fetch_user, email=email)
     if user is None:
         raise credentials_exception
     return user

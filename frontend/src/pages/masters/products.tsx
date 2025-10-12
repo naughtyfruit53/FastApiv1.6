@@ -158,12 +158,12 @@ const ProductsPage: React.FC = () => {
     setItemDialog(true);
   }, []);
 
-  const handleAddProduct = async (data: any) => {
-    if (selectedItem) {
-      updateItemMutation.mutate({ id: selectedItem.id, ...data });
-    } else {
-      createItemMutation.mutate(data);
-    }
+  const handleAdd = async (data: any) => {
+    createItemMutation.mutate(data);
+  };
+
+  const handleUpdate = async (data: any) => {
+    updateItemMutation.mutate(data);
   };
 
   // Auto-open add dialog if action=add in URL
@@ -317,7 +317,8 @@ const ProductsPage: React.FC = () => {
         <AddProductModal
           open={itemDialog}
           onClose={() => setItemDialog(false)}
-          onAdd={handleAddProduct}
+          onAdd={handleAdd}
+          onUpdate={handleUpdate}
           loading={createItemMutation.isPending || updateItemMutation.isPending}
           initialName={selectedItem ? selectedItem.product_name : ""}
           initialData={selectedItem}

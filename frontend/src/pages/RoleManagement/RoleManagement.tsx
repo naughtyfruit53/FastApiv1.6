@@ -26,6 +26,7 @@ import {
 import { Add, Edit, Delete, Save } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { rbacService } from "../../services/rbacService"; // Assuming rbacService exists; implement if not
+import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 
 interface Role {
@@ -55,24 +56,34 @@ const RoleManagement: React.FC = () => {
     description: "",
     permissions: [] as string[],
   });
-  const currentOrgId = user?.organization_id;
+
+  const { data: currentOrg } = useQuery({
+    queryKey: ["currentOrganization"],
+    queryFn: organizationService.getCurrentOrganization,
+    enabled: !!user,
+  });
+  const currentOrgId = currentOrg?.id || user?.organization_id;
+
+  if (!currentOrgId) {
+    return <Alert severity="error">No organization context available for role management.</Alert>;
+  }
 
   // Fetch roles
   const { data: roles, isLoading: rolesLoading, error: rolesError } = useQuery<Role[]>({
     queryKey: ["roles", currentOrgId],
-    queryFn: () => rbacService.getOrganizationRoles(currentOrgId!),
-    enabled: !!currentOrgId,
+    queryFn: () => rbacService.getOrganizationRoles(currentOrgId),
+    enabled: !!user && !!currentOrgId,
   });
 
   // Fetch all permissions
   const { data: permissions, isLoading: permissionsLoading, error: permissionsError } = useQuery<Permission[]>({
     queryKey: ["permissions", currentOrgId],
     queryFn: () => rbacService.getPermissions(),
-    enabled: !!currentOrgId,
+    enabled: !!user,
   });
 
   const createRoleMutation = useMutation({
-    mutationFn: (roleData: any) => rbacService.createRole(currentOrgId!, roleData),
+    mutationFn: (roleData: any) => rbacService.createRole(currentOrgId, roleData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["roles", currentOrgId] });
       setCreateDialogOpen(false);

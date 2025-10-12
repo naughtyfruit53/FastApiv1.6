@@ -70,7 +70,7 @@ const RBACManagementPage: NextPage = () => {
         </Typography>
       </Box>
 
-      <RoleManagement organizationId={organizationId} />
+      <RoleManagement />
     </Container>
   );
 };

@@ -258,8 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       hasRefresh: !!loginResponse.refresh_token,
       userRole: loginResponse.user_role,
       isSuperAdmin: loginResponse.user?.is_super_admin,
-      hasOrgId: !!loginResponse.organization_id,
-      mustChangePassword: loginResponse.must_change_password,
+      hasOrgId: !!loginResponse.user.organization_id,
+      mustChangePassword: loginResponse.user.must_change_password,
       timestamp: new Date().toISOString(),
     });
     localStorage.setItem("token", loginResponse.access_token);
@@ -285,7 +285,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     // Defensive: never store org_id in localStorage
     const userData = loginResponse.user;
     // Validate org context for regular users
-    if (!userData.is_super_admin && !loginResponse.organization_id) {
+    if (!userData.is_super_admin && !userData.organization_id) {
       console.error(
         "[AuthProvider] Organization context validation failed for regular user",
       );
@@ -298,8 +298,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       email: userData.email,
       role: userData.role,
       is_super_admin: userData.is_super_admin,
-      organization_id: loginResponse.organization_id,
-      must_change_password: loginResponse.must_change_password,
+      organization_id: userData.organization_id,
+      must_change_password: userData.must_change_password,
     };
     setUser(newUser);
     console.log("[AuthProvider] User state set from login response");

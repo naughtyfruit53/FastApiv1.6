@@ -228,7 +228,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       );
       cleanData.gst_rate = normalizedGst;
       if (mode === 'edit') {
-        await onUpdate!({ ...cleanData, id: formData.id });
+        if (typeof onUpdate === 'function') {
+          await onUpdate({ ...cleanData, id: formData.id });
+        } else {
+          console.error('onUpdate is not provided or not a function');
+          toast.error('Unable to update product - configuration error');
+          return;
+        }
       } else {
         await onAdd(cleanData);
       }

@@ -56,6 +56,9 @@ export const rbacService = {
     organizationId: number,
     isActive?: boolean,
   ): Promise<ServiceRole[]> => {
+    if (!organizationId) {
+      throw new Error("Valid organization ID required");
+    }
     try {
       const params = isActive !== undefined ? { is_active: isActive } : {};
       const response = await api.get(

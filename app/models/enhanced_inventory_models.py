@@ -530,9 +530,9 @@ class InventoryAlert(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Relationships
-    organization = relationship("Organization")
-    product = relationship("Product")
+    # Relationships with overlaps to silence warnings
+    organization = relationship("Organization", overlaps="organization")
+    product = relationship("Product", overlaps="product")
 
     # Constraints
     __table_args__ = (
