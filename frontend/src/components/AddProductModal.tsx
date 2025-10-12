@@ -34,10 +34,11 @@ interface AddProductModalProps {
   onUpdate?: (_data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
-  productData?: any;
+  initialData?: any;
   mode?: 'add' | 'edit';
 }
 interface ProductFormData {
+  id?: number;
   product_name: string;
   hsn_code: string;
   part_number: string;
@@ -68,7 +69,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   onUpdate,
   loading = false,
   initialName = "",
-  productData,
+  initialData,
   mode = 'add',
 }) => {
   const {
@@ -80,6 +81,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     formState: { errors },
   } = useForm<ProductFormData>({
     defaultValues: {
+      id: undefined,
       product_name: initialName,
       hsn_code: "",
       part_number: "",
@@ -154,21 +156,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [hsnApiSuggestions, setHsnApiSuggestions] = React.useState<HsnResult[]>([]);
   React.useEffect(() => {
     if (open) {
-      if (mode === 'edit' && productData) {
+      if (mode === 'edit' && initialData) {
+        const normalizedGst = initialData.gst_rate > 1 ? initialData.gst_rate : (initialData.gst_rate * 100) || 18;
         reset({
-          product_name: productData.product_name,
-          hsn_code: productData.product_hsn_code || "",
-          part_number: productData.product_part_number || "",
-          unit: productData.unit,
-          unit_price: productData.unit_price,
-          gst_rate: productData.gst_rate,
-          is_gst_inclusive: productData.is_gst_inclusive || false,
-          reorder_level: productData.reorder_level || 0,
-          description: productData.description || "",
-          is_manufactured: productData.is_manufactured || false,
+          id: initialData.id,
+          product_name: initialData.product_name || initialData.name || "",
+          hsn_code: initialData.hsn_code || initialData.product_hsn_code || "",
+          part_number: initialData.part_number || initialData.product_part_number || "",
+          unit: initialData.unit || "PCS",
+          unit_price: initialData.unit_price || 0,
+          gst_rate: normalizedGst,
+          is_gst_inclusive: initialData.is_gst_inclusive || false,
+          reorder_level: initialData.reorder_level || 0,
+          description: initialData.description || "",
+          is_manufactured: initialData.is_manufactured || false,
         });
       } else {
         reset({
+          id: undefined,
           product_name: initialName,
           hsn_code: "",
           part_number: "",
@@ -182,9 +187,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         });
       }
     }
-  }, [open, initialName, reset, mode, productData]);
-  const onSubmit = async (productData: ProductFormData) => {
+  }, [open, initialName, reset, mode, initialData]);
+  const onSubmit = async (formData: ProductFormData) => {
     try {
+      // Add safety check for edit mode
+      if (mode === 'edit' && !formData.id) {
+        toast.error("Invalid product selection - no ID found. Please try again.");
+        return;
+      }
+      // Normalize GST back to decimal for backend
+      const normalizedGst = formData.gst_rate > 1 ? (formData.gst_rate / 100) : formData.gst_rate;
       // Remove empty fields to match backend schema
       const allowedFields = [
         "product_name",
@@ -199,7 +211,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         "is_manufactured",
       ];
       const cleanData = Object.fromEntries(
-        Object.entries(productData).filter(([key, value]) => {
+        Object.entries(formData).filter(([key, value]) => {
           if (
             key === "unit_price" ||
             key === "gst_rate" ||
@@ -214,8 +226,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           );
         }),
       );
+      cleanData.gst_rate = normalizedGst;
       if (mode === 'edit') {
-        await onUpdate!({ ...cleanData, id: productData.id });
+        await onUpdate!({ ...cleanData, id: formData.id });
       } else {
         await onAdd(cleanData);
       }

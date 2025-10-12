@@ -320,6 +320,8 @@ const ProductsPage: React.FC = () => {
           onAdd={handleAddProduct}
           loading={createItemMutation.isPending || updateItemMutation.isPending}
           initialName={selectedItem ? selectedItem.product_name : ""}
+          initialData={selectedItem}
+          mode={selectedItem ? 'edit' : 'add'}
         />
       </Box>
     </Container>

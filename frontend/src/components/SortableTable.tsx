@@ -1,3 +1,4 @@
+// frontend/src/components/SortableTable.tsx
 // SortableTable component for requirement #3 - Table Sorting on Header Click
 import React, { useState, useMemo } from "react";
 import {
@@ -120,7 +121,7 @@ function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
         {headCells.map((headCell) => (
           <TableCell
             key={String(headCell.id)}
-            align={headCell.align || (headCell.numeric ? "right" : "left")}
+            align={headCell.align || "center"}
             padding={headCell.disablePadding ? "none" : "normal"}
             sortDirection={orderBy === headCell.id ? order : false}
             sx={{
@@ -250,7 +251,7 @@ function SortableTable<T>({
                     <TableCell
                       key={String(headCell.id)}
                       align={
-                        headCell.align || (headCell.numeric ? "right" : "left")
+                        headCell.align || "center"
                       }
                       padding={headCell.disablePadding ? "none" : "normal"}
                     >

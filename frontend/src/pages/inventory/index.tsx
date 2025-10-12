@@ -1,11 +1,9 @@
 // pages/inventory/index.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
   Typography,
-  Tab,
-  Tabs,
   Paper,
   Chip,
   IconButton,
@@ -48,6 +46,7 @@ import {
   ArrowDownward as ArrowDownwardIcon,
   Edit as EditIcon,
   Tune as AdjustIcon,
+  ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { masterDataService } from "../../services/authService"; // Keep for other calls if needed
@@ -75,31 +74,11 @@ declare module "jspdf" {
   }
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`inventory-tabpanel-${index}`}
-      aria-labelledby={`inventory-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
 const InventoryManagement: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [tabValue, setTabValue] = useState(0);
   const [searchText, setSearchText] = useState("");
   const [hideZero, setHideZero] = useState(false);
   const [adjustmentDialog, setAdjustmentDialog] = useState(false);
@@ -123,10 +102,9 @@ const InventoryManagement: React.FC = () => {
   const [editFormData, setEditFormData] = useState({ quantity: 0 });
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [selectedProductForEdit, setSelectedProductForEdit] = useState<any>(null);
+  const [valueDialogOpen, setValueDialogOpen] = useState(false);
+  const [filterType, setFilterType] = useState<'none' | 'low_stock' | 'out_of_stock'>('none');
   
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
   // Fetch data from APIs
   const {
     data: stock,
@@ -137,10 +115,25 @@ const InventoryManagement: React.FC = () => {
     queryFn: getStock, // CHANGED: Use new getStock from stockService
     refetchInterval: 30000, // Refresh every 30 seconds
   });
+  // NEW: Separate query for unfiltered total count
+  const {
+    data: totalStock,
+    isLoading: totalStockLoading,
+  } = useQuery({
+    queryKey: ["totalStock"],
+    queryFn: () => getStock({ queryKey: ["stock", {search: "", show_zero: true}] }), // No filters
+  });
+  const totalValue = React.useMemo(() => {
+    if (!totalStock) return 0;
+    return totalStock.reduce(
+      (sum: number, item: any) =>
+        sum + (item.total_value || item.quantity * (item.unit_price || 0)),
+      0,
+    );
+  }, [totalStock]);
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
     queryKey: ["lowStock"],
     queryFn: masterDataService.getLowStock,
-    enabled: tabValue === 1,
   });
   const { data: products } = useQuery({
     queryKey: ["products"],
@@ -228,12 +221,21 @@ const InventoryManagement: React.FC = () => {
     if (!stockItems || stockItems.length === 0) {
       return <Typography>No stock data available.</Typography>;
     }
-    let filteredItems = showLowStockOnly
-      ? stockItems.filter(
-          (item) =>
-            item.is_low_stock || item.quantity <= (item.reorder_level || 0),
-        )
-      : stockItems;
+    let filteredItems = stockItems;
+    if (filterType === 'low_stock') {
+      filteredItems = stockItems.filter(
+        (item) => item.quantity > 0 && item.quantity <= (item.reorder_level || 0),
+      );
+    } else if (filterType === 'out_of_stock') {
+      filteredItems = stockItems.filter(
+        (item) => item.quantity === 0,
+      );
+    } else if (showLowStockOnly) {
+      filteredItems = stockItems.filter(
+        (item) =>
+          item.is_low_stock || item.quantity <= (item.reorder_level || 0),
+      );
+    }
 
     const headCells: HeadCell<any>[] = [
       { 
@@ -282,7 +284,7 @@ const InventoryManagement: React.FC = () => {
     ];
 
     return (
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ width: '100%', '& .MuiTableCell-root': { textAlign: 'center' } }}>
         <SortableTable
           data={filteredItems}
           headCells={headCells}
@@ -311,19 +313,14 @@ const InventoryManagement: React.FC = () => {
     );
   };
   const renderSummaryCards = () => {
-    if (stockLoading || !stock) {
+    if (stockLoading || !stock || totalStockLoading || !totalStock) {
       return <Typography>Loading inventory summary...</Typography>;
     }
-    const totalItems = stock.length;
-    const totalValue = stock.reduce(
-      (sum: number, item: any) =>
-        sum + (item.total_value || item.quantity * (item.unit_price || 0)),
-      0,
-    );
-    const lowStockItems = stock.filter(
+    const totalItems = totalStock.length; // Use unfiltered total
+    const lowStockItems = totalStock.filter(
       (item: any) => item.quantity <= (item.reorder_level || 0),
     ).length;
-    const outOfStockItems = stock.filter(
+    const outOfStockItems = totalStock.filter(
       (item: any) => item.quantity === 0,
     ).length;
     const cards = [
@@ -332,31 +329,35 @@ const InventoryManagement: React.FC = () => {
         value: totalItems,
         color: "#1976D2",
         icon: <Inventory />,
+        onClick: () => toast.info(`Total Items: ${totalItems}`),
       },
       {
         title: "Total Value",
         value: `₹${totalValue.toLocaleString()}`,
         color: "#2E7D32",
         icon: <TrendingUp />,
+        onClick: () => setValueDialogOpen(true),
       },
       {
         title: "Low Stock Items",
         value: lowStockItems,
         color: "#F57C00",
         icon: <Warning />,
+        onClick: () => setFilterType('low_stock'),
       },
       {
         title: "Out of Stock",
         value: outOfStockItems,
         color: "#D32F2F",
         icon: <TrendingDown />,
+        onClick: () => setFilterType('out_of_stock'),
       },
     ];
     return (
       <Grid container spacing={3}>
         {cards.map((card, index) => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-            <Card>
+            <Card sx={{ cursor: card.onClick ? 'pointer' : 'default' }} onClick={card.onClick}>
               <CardContent>
                 <Box
                   sx={{
@@ -382,6 +383,18 @@ const InventoryManagement: React.FC = () => {
       </Grid>
     );
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && filterType !== 'none') {
+        setFilterType('none');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [filterType]);
 
   const handleEditStock = (stock: any) => {
     setSelectedStock(stock);
@@ -539,7 +552,8 @@ const InventoryManagement: React.FC = () => {
   };
 
   const handleEditProduct = (item: any) => {
-    setSelectedProductForEdit(item);
+    // Fix: Use product_id as the id for editing the product (not stock id)
+    setSelectedProductForEdit({ ...item, id: item.product_id });
     setProductModalOpen(true);
   };
 
@@ -594,12 +608,21 @@ const InventoryManagement: React.FC = () => {
     if (!stockItems || stockItems.length === 0) {
       return <Typography>No stock data available.</Typography>;
     }
-    let filteredItems = showLowStockOnly
-      ? stockItems.filter(
-          (item) =>
-            item.is_low_stock || item.quantity <= (item.reorder_level || 0),
-        )
-      : stockItems;
+    let filteredItems = stockItems;
+    if (filterType === 'low_stock') {
+      filteredItems = stockItems.filter(
+        (item) => item.quantity > 0 && item.quantity <= (item.reorder_level || 0),
+      );
+    } else if (filterType === 'out_of_stock') {
+      filteredItems = stockItems.filter(
+        (item) => item.quantity === 0,
+      );
+    } else if (showLowStockOnly) {
+      filteredItems = stockItems.filter(
+        (item) =>
+          item.is_low_stock || item.quantity <= (item.reorder_level || 0),
+      );
+    }
 
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -621,7 +644,7 @@ const InventoryManagement: React.FC = () => {
                 borderRadius: 2
               }}
             >
-              <CardContent sx={{ p: 2 }}>
+              <CardContent sx={{ p: 2, textAlign: 'center' }}>
                 <Typography 
                   variant="subtitle1" 
                   fontWeight="bold" 
@@ -666,7 +689,7 @@ const InventoryManagement: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
         <Box
           sx={{
             display: "flex",
@@ -676,35 +699,16 @@ const InventoryManagement: React.FC = () => {
           }}
         >
           <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Inventory Management
-            </Typography>
-            <Typography variant="body1" color="textSecondary">
-              Real-time stock monitoring and inventory control
+            <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'center' }}>
+              Current Stock
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<Refresh />}
-            onClick={() => refetchStock()}
-          >
-            Refresh Stock
-          </Button>
         </Box>
         {/* Summary Cards */}
         <Box sx={{ mb: 4 }}>{renderSummaryCards()}</Box>
-        {/* Inventory Tabs */}
+        {/* Inventory Content */}
         <Paper sx={{ mb: 4 }}>
-          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              aria-label="inventory tabs"
-            >
-              <Tab label="Current Stock" />
-            </Tabs>
-          </Box>
-          <TabPanel value={tabValue} index={0}>
+          <Box sx={{ p: 3 }}>
             <Box
               sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}
             >
@@ -772,10 +776,21 @@ const InventoryManagement: React.FC = () => {
                 >
                   Print Stock
                 </Button>
+                <IconButton onClick={() => refetchStock()}>
+                  <Refresh />
+                </IconButton>
               </Box>
             </Box>
+            {filterType !== 'none' && (
+              <IconButton
+                onClick={() => setFilterType('none')}
+                sx={{ mb: 2 }}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+            )}
             {isMobile ? renderMobileCards(stock || []) : renderDesktopTable(stock || [])}
-          </TabPanel>
+          </Box>
         </Paper>
       </Container>
       {/* Stock Adjustment Dialog */}
@@ -911,7 +926,7 @@ const InventoryManagement: React.FC = () => {
             <Select
               value={manualFormData.product_id}
               onChange={(e) => {
-                const product = products.find(
+                const product = products?.find(
                   (p: any) => p.id === e.target.value,
                 );
                 setManualFormData({
@@ -1030,9 +1045,19 @@ const InventoryManagement: React.FC = () => {
         onClose={handleProductModalClose}
         onAdd={() => {}} // Not used for edit
         onUpdate={handleProductUpdate}
-        productData={selectedProductForEdit}
+        initialData={selectedProductForEdit}
         mode="edit"
       />
+      {/* Value Dialog */}
+      <Dialog open={valueDialogOpen} onClose={() => setValueDialogOpen(false)}>
+        <DialogTitle>Total Stock Value</DialogTitle>
+        <DialogContent>
+          <Typography>Total Stock Value: ₹{(totalValue || 0).toLocaleString()}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setValueDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
