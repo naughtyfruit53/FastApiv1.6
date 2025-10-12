@@ -122,6 +122,9 @@ class Settings:
     # SnappyMail URL (for backend reference, e.g., API endpoints)
     SNAPPYMAIL_URL: str = os.getenv("SNAPPYMAIL_URL", "http://localhost:8888")
     
+    # Frontend URL for email templates and links
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://naughtyfruit.in")
+    
     @property
     def jwt_secret(self) -> str:
         """
