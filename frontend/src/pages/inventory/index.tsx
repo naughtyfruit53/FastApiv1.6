@@ -916,33 +916,51 @@ const InventoryManagement: React.FC = () => {
         open={manualDialogOpen}
         onClose={() => setManualDialogOpen(false)}
         fullWidth
-        maxWidth="xs"
+        maxWidth="sm"
         fullScreen={isMobile}
       >
-        <DialogTitle>Manual Stock Entry</DialogTitle>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Manual Stock Entry
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => {
+                setManualDialogOpen(false);
+                setProductModalOpen(true);
+              }}
+              size="small"
+            >
+              Add Product
+            </Button>
+          </Box>
+        </DialogTitle>
         <DialogContent>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Product</InputLabel>
-            <Select
-              value={manualFormData.product_id}
-              onChange={(e) => {
-                const product = products?.find(
-                  (p: any) => p.id === e.target.value,
-                );
+          <Autocomplete
+            options={products || []}
+            getOptionLabel={(option: any) => option.product_name || ''}
+            value={products?.find((p: any) => p.id === manualFormData.product_id) || null}
+            onChange={(_, newValue) => {
+              if (newValue) {
                 setManualFormData({
                   ...manualFormData,
-                  product_id: product.id,
-                  unit: product.unit,
+                  product_id: newValue.id,
+                  unit: newValue.unit,
                 });
-              }}
-            >
-              {products?.map((p: any) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.product_name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Product"
+                placeholder="Search products..."
+                fullWidth
+                sx={{ mb: 2, mt: 2 }}
+              />
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            fullWidth
+          />
           <TextField
             label="Quantity"
             type="number"
@@ -1043,10 +1061,24 @@ const InventoryManagement: React.FC = () => {
       <AddProductModal
         open={productModalOpen}
         onClose={handleProductModalClose}
-        onAdd={() => {}} // Not used for edit
+        onAdd={async (newProduct: any) => {
+          try {
+            await masterDataService.createProduct(newProduct);
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+            queryClient.invalidateQueries({ queryKey: ["stock"] });
+            toast.success("Product created successfully");
+            handleProductModalClose();
+            // Reopen manual dialog after product creation
+            setManualDialogOpen(true);
+          } catch (err: any) {
+            const errorMessage = err?.response?.data?.detail || err?.message || "Failed to create product";
+            toast.error(`Error creating product: ${errorMessage}`);
+            console.error("Product creation error:", err);
+          }
+        }}
         onUpdate={handleProductUpdate}
         initialData={selectedProductForEdit}
-        mode="edit"
+        mode={selectedProductForEdit ? "edit" : "add"}
       />
       {/* Value Dialog */}
       <Dialog open={valueDialogOpen} onClose={() => setValueDialogOpen(false)}>

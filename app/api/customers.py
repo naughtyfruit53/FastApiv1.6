@@ -24,7 +24,7 @@ router = APIRouter()
 @router.get("", response_model=List[CustomerInDB])
 async def get_customers(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000000,
     search: Optional[str] = None,
     active_only: bool = True,
     company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),

@@ -34,7 +34,7 @@ export const searchCustomers = async ({
   const response = await api.get("/api/v1/customers", {
     params: {
       search: searchTerm,
-      limit: limit || 10,
+      limit: limit || 1000000,
       active_only: false,
     },
     signal,
@@ -51,7 +51,7 @@ export const searchProducts = async ({
   const response = await api.get("/api/v1/products", {
     params: {
       search: searchTerm,
-      limit: limit || 10,
+      limit: limit || 1000000,
       active_only: false,
     },
     signal,
@@ -179,7 +179,7 @@ export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Prom
   const [, rawParams = {}] = queryKey;
   const params: any = {
     skip: rawParams.skip || 0,
-    limit: rawParams.limit || 100,
+    limit: rawParams.limit || 1000000,
     low_stock_only: rawParams.low_stock_only || false,
     search: rawParams.search || "",
     show_zero: rawParams.show_zero || false,
