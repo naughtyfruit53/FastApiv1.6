@@ -121,7 +121,7 @@ class BOMResponse(BaseModel):
 @router.get("/", response_model=List[BOMResponse])
 async def get_boms(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000000,
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
     output_item_id: Optional[int] = None,
@@ -402,6 +402,20 @@ async def update_bom(
         # Update material cost
         db_bom.material_cost = material_cost
         db_bom.total_cost = material_cost + db_bom.labor_cost + db_bom.overhead_cost
+    
+    # Update output item: sync BOM cost as unit price to product
+    stmt = select(Product).where(
+        Product.id == db_bom.output_item_id,
+        Product.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    output_item = result.scalar_one_or_none()
+    
+    if output_item:
+        # Calculate unit price from total cost
+        unit_price = db_bom.total_cost / db_bom.output_quantity if db_bom.output_quantity > 0 else db_bom.total_cost
+        output_item.unit_price = unit_price
+        output_item.is_manufactured = True
     
     await db.commit()
     

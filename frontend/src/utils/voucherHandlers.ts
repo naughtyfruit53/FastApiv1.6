@@ -22,66 +22,96 @@ export const handleFinalSubmit = async (
   config: any,
   additionalCharges?: any
 ) => {
-  const entityIdField = config.entityType === 'purchase' ? 'vendor_id' : 'customer_id';
-  const entityName = config.entityType === 'purchase' ? 'vendor' : 'customer';
+  try {
+    const entityIdField = config.entityType === 'purchase' ? 'vendor_id' : 'customer_id';
+    const entityName = config.entityType === 'purchase' ? 'vendor' : 'customer';
 
-  if (!data[entityIdField]) {
-    toast.error(`Please select a ${entityName}`);
-    return;
-  }
-
-  const validItems = data.items.filter((item: any) => item.product_id && item.quantity > 0);
-  if (validItems.length === 0) {
-    toast.error("Please add at least one valid product with quantity");
-    return;
-  }
-
-  data.items = validItems;
-
-  if (config.hasItems !== false) {
-    data.line_discount_type = lineDiscountEnabled ? lineDiscountType : null;
-    data.total_discount_type = totalDiscountEnabled ? totalDiscountType : null;
-    data.total_discount = watch('total_discount') || 0;
-    data.items = computedItems.map((item: any) => ({
-      ...item,
-      cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-      sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-      igst_rate: isIntrastate ? 0 : item.gst_rate,
-    }));
-    data.total_amount = totalAmount;
-    data.is_intrastate = isIntrastate;
-    data.round_off = totalRoundOff;
-    if (additionalCharges) {
-      data.additional_charges = additionalCharges;
+    if (!data[entityIdField]) {
+      toast.error(`Please select a ${entityName}`);
+      return;
     }
-  }
 
-  const itemsToUpdate = data.items.filter(
-    (item: any) => item.unit_price !== item.original_unit_price && item.product_id
-  );
-  if (itemsToUpdate.length > 0) {
-    if (confirm(`Some items have updated prices. Update master product prices for ${itemsToUpdate.length} items?`)) {
-      await Promise.all(
-        itemsToUpdate.map((item: any) =>
-          api.put(`/products/${item.product_id}`, { unit_price: item.unit_price })
-        )
-      );
-      refreshMasterData();
+    const validItems = data.items.filter((item: any) => item.product_id && item.quantity > 0);
+    if (validItems.length === 0) {
+      toast.error("Please add at least one valid product with quantity");
+      return;
     }
-  }
 
-  data.items = data.items.map(({ original_unit_price, ...item }: any) => item);
+    data.items = validItems;
 
-  let response;
-  if (mode === "create" || mode === "revise") {
-    response = await createMutation.mutateAsync(data);
-    if (confirm(`${mode === "revise" ? "Revision" : "Voucher"} created successfully. Generate PDF?`)) {
-      handleGeneratePDF(response);
+    if (config.hasItems !== false) {
+      data.line_discount_type = lineDiscountEnabled ? lineDiscountType : null;
+      data.total_discount_type = totalDiscountEnabled ? totalDiscountType : null;
+      data.total_discount = watch('total_discount') || 0;
+      data.items = computedItems.map((item: any) => ({
+        ...item,
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
+      }));
+      data.total_amount = totalAmount;
+      data.is_intrastate = isIntrastate;
+      data.round_off = totalRoundOff;
+      if (additionalCharges) {
+        data.additional_charges = additionalCharges;
+      }
     }
-  } else if (mode === "edit") {
-    response = await updateMutation.mutateAsync(data);
-    if (confirm("Voucher updated successfully. Generate PDF?")) {
-      handleGeneratePDF(response);
+
+    const itemsToUpdate = data.items.filter(
+      (item: any) => item.unit_price !== item.original_unit_price && item.product_id
+    );
+    if (itemsToUpdate.length > 0) {
+      if (confirm(`Some items have updated prices. Update master product prices for ${itemsToUpdate.length} items?`)) {
+        try {
+          await Promise.all(
+            itemsToUpdate.map((item: any) =>
+              api.put(`/products/${item.product_id}`, { unit_price: item.unit_price })
+            )
+          );
+          refreshMasterData();
+        } catch (priceUpdateError: any) {
+          console.error('Error updating product prices:', priceUpdateError);
+          toast.warning('Product prices update failed, but continuing with voucher creation');
+        }
+      }
+    }
+
+    data.items = data.items.map(({ original_unit_price, ...item }: any) => item);
+
+    let response;
+    if (mode === "create" || mode === "revise") {
+      try {
+        response = await createMutation.mutateAsync(data);
+        toast.success(`${mode === "revise" ? "Revision" : "Voucher"} created successfully`);
+        if (confirm(`${mode === "revise" ? "Revision" : "Voucher"} created successfully. Generate PDF?`)) {
+          handleGeneratePDF(response);
+        }
+      } catch (createError: any) {
+        console.error('Error creating voucher:', createError);
+        const errorMessage = createError?.response?.data?.detail || createError?.message || 'Failed to create voucher';
+        toast.error(`Error creating voucher: ${errorMessage}`);
+        throw createError; // Re-throw to prevent silent failures
+      }
+    } else if (mode === "edit") {
+      try {
+        response = await updateMutation.mutateAsync(data);
+        toast.success('Voucher updated successfully');
+        if (confirm("Voucher updated successfully. Generate PDF?")) {
+          handleGeneratePDF(response);
+        }
+      } catch (updateError: any) {
+        console.error('Error updating voucher:', updateError);
+        const errorMessage = updateError?.response?.data?.detail || updateError?.message || 'Failed to update voucher';
+        toast.error(`Error updating voucher: ${errorMessage}`);
+        throw updateError; // Re-throw to prevent silent failures
+      }
+    }
+  } catch (error: any) {
+    // Catch any unexpected errors
+    console.error('Unexpected error in handleFinalSubmit:', error);
+    if (!error?.response) {
+      // Only show generic error if we haven't already shown a specific error
+      toast.error('An unexpected error occurred. Please try again.');
     }
   }
 };

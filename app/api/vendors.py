@@ -27,7 +27,7 @@ router = APIRouter()
 @router.get("", response_model=List[VendorInDB])
 async def get_vendors(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000000,
     search: Optional[str] = None,
     active_only: bool = True,
     db: AsyncSession = Depends(get_db),
