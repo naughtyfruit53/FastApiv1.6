@@ -1,5 +1,3 @@
-# app/api/v1/gst_search.py
-
 """
 GST Number Search API endpoint
 Searches for GST details using external GST APIs or databases
@@ -10,7 +8,6 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 import httpx
-import uuid
 from app.core.config import settings
 
 from app.api.v1.auth import get_current_active_user
@@ -32,6 +29,30 @@ class GSTDetails(BaseModel):
     state_code: Optional[str] = None
 
 
+def validate_gstin_checksum(gstin: str) -> bool:
+    """Validate GSTIN checksum."""
+    if len(gstin) != 15:
+        return False
+    
+    def char_to_num(c: str) -> int:
+        if c.isdigit():
+            return int(c)
+        else:
+            return 10 + ord(c.upper()) - ord('A')
+    
+    total = 0
+    for i in range(14):
+        num = char_to_num(gstin[i])
+        factor = 1 if (i % 2 == 0) else 2  # Corrected: Start with 1 for first position (i=0)
+        product = num * factor
+        total += (product // 36) + (product % 36)  # Corrected: Use base 36 instead of 10
+    
+    checksum = (36 - (total % 36)) % 36
+    check_char = str(checksum) if checksum < 10 else chr(checksum - 10 + ord('A'))
+    
+    return gstin[14] == check_char
+
+
 @router.get("/search/{gst_number}", response_model=GSTDetails)
 async def search_gst_number(
     gst_number: str,
@@ -40,10 +61,10 @@ async def search_gst_number(
     """
     Search for GST details by GST number.
     
-    This endpoint uses the idfy GST Verification API via RapidAPI to fetch GST details.
-    Requires RAPIDAPI_KEY in .env (sign up at https://rapidapi.com/idfy-idfy-default/api/gst-verification).
-    Retries up to 3 times on failure.
-    Falls back to basic extracted info if API fails.
+    This endpoint uses the GST Insights API via RapidAPI to fetch GST details.
+    Requires RAPIDAPI_KEY in .env (sign up at https://rapidapi.com/amiteshgupta/api/gst-insights-api).
+    Validates checksum before API call. Handles 400 as invalid GSTIN without retry. Retries other errors up to 3 times.
+    Falls back to basic extracted info if API fails or key is missing.
     """
     
     # Validate GST format
@@ -55,13 +76,19 @@ async def search_gst_number(
             detail="Invalid GST number format"
         )
     
+    # Validate checksum
+    if not validate_gstin_checksum(gst_number):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid GSTIN checksum. Please verify the number."
+        )
+    
     logger.info(f"Searching GST details for: {gst_number}")
     
     if not settings.RAPIDAPI_KEY:
         logger.warning("RAPIDAPI_KEY not set, using mock response")
         # Fall back to mock if no key
         state_code = gst_number[:2]
-        pan_number = gst_number[2:12]
         state_map = {
             '01': 'Jammu and Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab',
             '04': 'Chandigarh', '05': 'Uttarakhand', '06': 'Haryana',
@@ -81,54 +108,57 @@ async def search_gst_number(
             gst_number=gst_number,
             state=state_name,
             state_code=state_code,
-            pan_number=pan_number,
+            pan_number=gst_number[2:12],
             address1="",
             city="",
             pin_code=""
         )
     
     try:
-        url = "https://gst-verification.p.rapidapi.com/v3/tasks/sync/verify_with_source/ind_gst_certificate"
+        url = f"https://gst-insights-api.p.rapidapi.com/getGSTDetailsUsingGST/{gst_number}"
         headers = {
             "X-RapidAPI-Key": settings.RAPIDAPI_KEY,
-            "X-RapidAPI-Host": "gst-verification.p.rapidapi.com",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "task_id": str(uuid.uuid4()),
-            "group_id": str(uuid.uuid4()),
-            "data": {
-                "gstin": gst_number
-            }
+            "X-RapidAPI-Host": "gst-insights-api.p.rapidapi.com"
         }
         
         async with httpx.AsyncClient() as client:
-            for attempt in range(1, 4):  # 3 attempts
-                response = await client.post(url, headers=headers, json=payload)
+            for attempt in range(1, 4):  # 3 attempts max
+                response = await client.get(url, headers=headers)
                 if response.status_code == 200:
                     data = response.json()
-                    result = data.get("result", {})
-                    address = result.get("principal_place_of_business", {})
+                    if not data.get('success', False):
+                        raise Exception(data.get('message', 'API success false'))
+                    result = data.get('data', {})
+                    address = result.get('pradr', {})  # Assuming 'pradr' for principal address
+                    name = result.get('lgnm', result.get('tradeNam', 'Unknown'))  # Use 'lgnm' for legal name, fallback to 'tradeNam'
                     return GSTDetails(
-                        name=result.get("legal_name", "Unknown"),
-                        gst_number=gst_number,
-                        address1=address.get("address_line_1", ""),
-                        city=address.get("city", ""),
-                        state=address.get("state", ""),
-                        pin_code=address.get("pincode", ""),
-                        pan_number=result.get("pan", ""),
-                        state_code=result.get("state_code", gst_number[:2])
+                        name=name,
+                        gst_number=result.get('gstin', gst_number),
+                        address1=address.get('addr', {}).get('bno', "") + " " + address.get('addr', {}).get('st', ""),  # Combine building no and street
+                        city=address.get('addr', {}).get('city', ""),
+                        state=address.get('addr', {}).get('stcd', ""),
+                        pin_code=address.get('addr', {}).get('pncd', ""),
+                        pan_number=result.get('pan', ""),
+                        state_code=result.get('stjCd', gst_number[:2])
+                    )
+                elif response.status_code == 400:
+                    logger.warning(f"RapidAPI returned 400 for GSTIN {gst_number}: {response.text}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Invalid GSTIN. Please check the number and try again."
                     )
                 else:
                     logger.warning(f"RapidAPI attempt {attempt} failed: {response.status_code} - {response.text}")
         
         raise Exception("Failed after 3 attempts")
     
+    except HTTPException as he:
+        raise he  # Re-raise if already handled
     except Exception as e:
         logger.error(f"Error searching GST details: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"GST search failed: {str(e)}"
+            detail=f"GST search failed after retries: {str(e)}. Please try again later."
         )
 
 
@@ -153,10 +183,19 @@ async def verify_gst_number(
             "message": "Invalid GST number format"
         }
     
+    # Add checksum validation
+    is_valid_checksum = validate_gstin_checksum(gst_number)
+    
+    if not is_valid_checksum:
+        return {
+            "valid": False,
+            "message": "Invalid GSTIN checksum"
+        }
+    
     # TODO: Integrate with GST verification API
-    # For now, just validate format
+    # For now, just validate format and checksum
     return {
         "valid": True,
-        "message": "GST number format is valid",
+        "message": "GST number format and checksum are valid",
         "gst_number": gst_number
     }

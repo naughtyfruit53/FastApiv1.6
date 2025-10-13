@@ -210,10 +210,14 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         }
       });
     } catch (error: any) {
-      setGstUploadError(
-        error.response?.data?.detail ||
-          "Failed to fetch GST details. Please check GSTIN.",
-      );
+      console.error("GST search error:", error);  // Added for debugging
+      let errorMessage = "Failed to fetch GST details. Please check GSTIN.";
+      if (error.response?.status === 400) {
+        errorMessage = error.response.data.detail || "Invalid GSTIN - please verify the number.";
+      } else if (error.response?.status === 500) {
+        errorMessage = error.response.data.detail || "Server error during GST search - try again later.";
+      }
+      setGstUploadError(errorMessage);
     } finally {
       setGstSearchLoading(false);
     }
@@ -520,7 +524,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            {/* PIN Code moved to be first after address after address lines */}
+            {/* PIN Code moved to be first after address lines */}
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
