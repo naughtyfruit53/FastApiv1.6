@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy import select, delete
 from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import logging
 import pandas as pd
 import io
@@ -20,6 +20,7 @@ from app.models.vouchers.purchase import PurchaseOrderItem
 from app.models import Product
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from app.schemas.base import ProductResponse  # Added import for ProductResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,7 +42,7 @@ class BOMComponentResponse(BOMComponentCreate):
     bom_id: int
     organization_id: int
     total_cost: float
-    component_item: Optional[dict] = None
+    component_item: Optional[ProductResponse] = None  # Changed from dict to ProductResponse
 
     class Config:
         from_attributes = True
@@ -61,6 +62,13 @@ class BOMCreate(BaseModel):
     overhead_cost: Optional[float] = 0.0
     components: List[BOMComponentCreate] = []
 
+    @field_validator('validity_start', 'validity_end', mode='before')
+    @classmethod
+    def handle_empty_datetime(cls, v):
+        if isinstance(v, str) and v.strip() == '':
+            return None
+        return v
+
 
 class BOMUpdate(BaseModel):
     bom_name: Optional[str] = None
@@ -76,6 +84,13 @@ class BOMUpdate(BaseModel):
     overhead_cost: Optional[float] = None
     is_active: Optional[bool] = None
     components: Optional[List[BOMComponentCreate]] = None
+
+    @field_validator('validity_start', 'validity_end', mode='before')
+    @classmethod
+    def handle_empty_datetime(cls, v):
+        if isinstance(v, str) and v.strip() == '':
+            return None
+        return v
 
 
 class BOMResponse(BaseModel):
@@ -96,7 +111,7 @@ class BOMResponse(BaseModel):
     total_cost: float
     created_at: datetime
     updated_at: Optional[datetime] = None
-    output_item: Optional[dict] = None
+    output_item: Optional[ProductResponse] = None  # Changed from dict to ProductResponse
     components: List[BOMComponentResponse] = []
 
     class Config:
@@ -115,8 +130,8 @@ async def get_boms(
 ):
     """Get all BOMs for the organization"""
     stmt = select(BillOfMaterials).options(
-        joinedload(BillOfMaterials.output_item),
-        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+        joinedload(BillOfMaterials.output_item).joinedload(Product.files),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item).joinedload(Product.files)
     ).where(
         BillOfMaterials.organization_id == current_user.organization_id
     )
@@ -146,8 +161,8 @@ async def get_bom(
 ):
     """Get a specific BOM by ID"""
     stmt = select(BillOfMaterials).options(
-        joinedload(BillOfMaterials.output_item),
-        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+        joinedload(BillOfMaterials.output_item).joinedload(Product.files),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item).joinedload(Product.files)
     ).where(
         BillOfMaterials.id == bom_id,
         BillOfMaterials.organization_id == current_user.organization_id
@@ -248,7 +263,7 @@ async def create_bom(
         # Use discounted price if available
         stmt_discount = select(PurchaseOrderItem.discounted_price).where(
             PurchaseOrderItem.product_id == comp_data.component_item_id
-        ).order_by(PurchaseOrderItem.created_at.desc()).limit(1)
+        ).order_by(PurchaseOrderItem.id.desc()).limit(1)
         result_discount = await db.execute(stmt_discount)
         discounted_price = result_discount.scalar_one_or_none()
         
@@ -280,8 +295,8 @@ async def create_bom(
     
     # Refresh BOM with relationships loaded
     stmt = select(BillOfMaterials).options(
-        joinedload(BillOfMaterials.output_item),
-        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+        joinedload(BillOfMaterials.output_item).joinedload(Product.files),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item).joinedload(Product.files)
     ).where(BillOfMaterials.id == db_bom.id)
     result = await db.execute(stmt)
     db_bom = result.unique().scalar_one()
@@ -360,7 +375,7 @@ async def update_bom(
             # Use discounted price if available
             stmt_discount = select(PurchaseOrderItem.discounted_price).where(
                 PurchaseOrderItem.product_id == comp_data.component_item_id
-            ).order_by(PurchaseOrderItem.created_at.desc()).limit(1)
+            ).order_by(PurchaseOrderItem.id.desc()).limit(1)
             result_discount = await db.execute(stmt_discount)
             discounted_price = result_discount.scalar_one_or_none()
             
@@ -392,8 +407,8 @@ async def update_bom(
     
     # Refresh BOM with relationships loaded
     stmt = select(BillOfMaterials).options(
-        joinedload(BillOfMaterials.output_item),
-        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item)
+        joinedload(BillOfMaterials.output_item).joinedload(Product.files),
+        joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item).joinedload(Product.files)
     ).where(BillOfMaterials.id == db_bom.id)
     result = await db.execute(stmt)
     db_bom = result.unique().scalar_one()
