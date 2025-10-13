@@ -25,6 +25,8 @@ import {
   TableHead,
   TableRow,
   Fab,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -105,6 +107,8 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
   const [addingItemType, setAddingItemType] = useState<"component" | "output" | null>(null);
   const [addingComponentIndex, setAddingComponentIndex] = useState<number | null>(null);
   const [showNotes, setShowNotes] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
   
   const {
     control,
@@ -163,6 +167,8 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
       onAdd(data);
       onClose();
       reset(defaultBOM);
+      setSnackbarMessage("BOM saved successfully. Unit price updated for the manufactured product.");
+      setSnackbarOpen(true);
     },
     onError: (error: any) => {
       console.error("Error saving BOM:", error);
@@ -646,6 +652,22 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
         onAdd={handleAddProduct}
       />
     )}
+    
+    {/* Snackbar for Notifications */}
+    <Snackbar
+      open={snackbarOpen}
+      autoHideDuration={6000}
+      onClose={() => setSnackbarOpen(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert
+        onClose={() => setSnackbarOpen(false)}
+        severity="success"
+        sx={{ width: '100%' }}
+      >
+        {snackbarMessage}
+      </Alert>
+    </Snackbar>
     </>
   );
 };

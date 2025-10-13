@@ -125,6 +125,9 @@ class Settings:
     # Frontend URL for email templates and links
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://naughtyfruit.in")
     
+    # RapidAPI Key for GST Search (add to .env)
+    RAPIDAPI_KEY: Optional[str] = os.getenv("RAPIDAPI_KEY")
+    
     @property
     def jwt_secret(self) -> str:
         """

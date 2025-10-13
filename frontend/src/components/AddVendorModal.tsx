@@ -1,4 +1,3 @@
-// frontend/src/components/AddVendorModal.tsx
 import React, { useEffect, useState, useRef } from "react";
 import {
   Dialog,
@@ -28,6 +27,7 @@ import {
 import { useForm } from "react-hook-form";
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
 import api from "../lib/api";
+
 interface AddVendorModalProps {
   open: boolean;
   onClose: () => void;
@@ -35,6 +35,7 @@ interface AddVendorModalProps {
   loading?: boolean;
   initialData?: any;
 }
+
 interface VendorFormData {
   name: string;
   contact_number: string;
@@ -48,6 +49,7 @@ interface VendorFormData {
   pan_number: string;
   state_code: string;
 }
+
 const AddVendorModal: React.FC<AddVendorModalProps> = ({
   open,
   onClose,
@@ -340,6 +342,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           onClick={handleGstSearch}
                           disabled={!watchedGstNumber || gstSearchLoading}
                           aria-label="Search GST"
+                          color="primary"  // Added to highlight the button
                         >
                           <Search />
                         </IconButton>
@@ -517,7 +520,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
-            {/* PIN Code moved to be first after address lines */}
+            {/* PIN Code moved to be first after address after address lines */}
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -631,4 +634,5 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     </Dialog>
   );
 };
+
 export default AddVendorModal;

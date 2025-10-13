@@ -360,7 +360,7 @@ async def update_bom(
         for idx, comp_data in enumerate(components_data):
             # Verify component item exists
             stmt = select(Product).where(
-                Product.id == comp_data.component_item_id,
+                Product.id == comp_data['component_item_id'],
                 Product.organization_id == current_user.organization_id
             )
             result = await db.execute(stmt)
@@ -369,33 +369,33 @@ async def update_bom(
             if not component_item:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Component item ID {comp_data.component_item_id} not found"
+                    detail=f"Component item ID {comp_data['component_item_id']} not found"
                 )
             
             # Use discounted price if available
             stmt_discount = select(PurchaseOrderItem.discounted_price).where(
-                PurchaseOrderItem.product_id == comp_data.component_item_id
+                PurchaseOrderItem.product_id == comp_data['component_item_id']
             ).order_by(PurchaseOrderItem.id.desc()).limit(1)
             result_discount = await db.execute(stmt_discount)
             discounted_price = result_discount.scalar_one_or_none()
             
-            unit_cost = discounted_price if discounted_price else comp_data.unit_cost
+            unit_cost = discounted_price if discounted_price else comp_data['unit_cost']
             
-            total_comp_cost = comp_data.quantity_required * unit_cost * (1 + comp_data.wastage_percentage / 100)
+            total_comp_cost = comp_data['quantity_required'] * unit_cost * (1 + comp_data['wastage_percentage'] / 100)
             material_cost += total_comp_cost
             
             component = BOMComponent(
                 organization_id=current_user.organization_id,
                 bom_id=db_bom.id,
-                component_item_id=comp_data.component_item_id,
-                quantity_required=comp_data.quantity_required,
-                unit=comp_data.unit,
+                component_item_id=comp_data['component_item_id'],
+                quantity_required=comp_data['quantity_required'],
+                unit=comp_data['unit'],
                 unit_cost=unit_cost,
                 total_cost=total_comp_cost,
-                wastage_percentage=comp_data.wastage_percentage,
-                is_optional=comp_data.is_optional,
-                sequence=comp_data.sequence or idx,
-                notes=comp_data.notes
+                wastage_percentage=comp_data['wastage_percentage'],
+                is_optional=comp_data['is_optional'],
+                sequence=comp_data['sequence'] or idx,
+                notes=comp_data['notes']
             )
             db.add(component)
         

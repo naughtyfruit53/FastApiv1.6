@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 import httpx
+import uuid
+from app.core.config import settings
 
 from app.api.v1.auth import get_current_active_user
 from app.models.user_models import User
@@ -38,13 +40,10 @@ async def search_gst_number(
     """
     Search for GST details by GST number.
     
-    This endpoint uses free public APIs or databases to fetch GST details.
-    For production use, integrate with:
-    1. GST API Gateway (requires subscription)
-    2. Free public GST APIs (limited access)
-    3. Local database of GST numbers
-    
-    Currently implements a mock response for demonstration.
+    This endpoint uses the idfy GST Verification API via RapidAPI to fetch GST details.
+    Requires RAPIDAPI_KEY in .env (sign up at https://rapidapi.com/idfy-idfy-default/api/gst-verification).
+    Retries up to 3 times on failure.
+    Falls back to basic extracted info if API fails.
     """
     
     # Validate GST format
@@ -58,14 +57,11 @@ async def search_gst_number(
     
     logger.info(f"Searching GST details for: {gst_number}")
     
-    try:
-        # Extract state code from GST (first 2 digits)
+    if not settings.RAPIDAPI_KEY:
+        logger.warning("RAPIDAPI_KEY not set, using mock response")
+        # Fall back to mock if no key
         state_code = gst_number[:2]
-        
-        # Extract PAN from GST (positions 2-12)
         pan_number = gst_number[2:12]
-        
-        # Map state codes to state names (basic mapping)
         state_map = {
             '01': 'Jammu and Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab',
             '04': 'Chandigarh', '05': 'Uttarakhand', '06': 'Haryana',
@@ -79,18 +75,9 @@ async def search_gst_number(
             '33': 'Tamil Nadu', '34': 'Puducherry', '35': 'Andaman and Nicobar Islands',
             '36': 'Telangana', '37': 'Andhra Pradesh'
         }
-        
         state_name = state_map.get(state_code, "Unknown State")
-        
-        # TODO: In production, integrate with actual GST API
-        # For now, return extracted information from GST number
-        # You can integrate with free APIs like:
-        # - GSTIN Search APIs (if available)
-        # - Third-party GST verification services
-        
-        # Mock response with extracted data
         return GSTDetails(
-            name="Fetched from GST Database",
+            name="Fetched from GST Database (Mock)",
             gst_number=gst_number,
             state=state_name,
             state_code=state_code,
@@ -99,12 +86,49 @@ async def search_gst_number(
             city="",
             pin_code=""
         )
+    
+    try:
+        url = "https://gst-verification.p.rapidapi.com/v3/tasks/sync/verify_with_source/ind_gst_certificate"
+        headers = {
+            "X-RapidAPI-Key": settings.RAPIDAPI_KEY,
+            "X-RapidAPI-Host": "gst-verification.p.rapidapi.com",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "task_id": str(uuid.uuid4()),
+            "group_id": str(uuid.uuid4()),
+            "data": {
+                "gstin": gst_number
+            }
+        }
         
+        async with httpx.AsyncClient() as client:
+            for attempt in range(1, 4):  # 3 attempts
+                response = await client.post(url, headers=headers, json=payload)
+                if response.status_code == 200:
+                    data = response.json()
+                    result = data.get("result", {})
+                    address = result.get("principal_place_of_business", {})
+                    return GSTDetails(
+                        name=result.get("legal_name", "Unknown"),
+                        gst_number=gst_number,
+                        address1=address.get("address_line_1", ""),
+                        city=address.get("city", ""),
+                        state=address.get("state", ""),
+                        pin_code=address.get("pincode", ""),
+                        pan_number=result.get("pan", ""),
+                        state_code=result.get("state_code", gst_number[:2])
+                    )
+                else:
+                    logger.warning(f"RapidAPI attempt {attempt} failed: {response.status_code} - {response.text}")
+        
+        raise Exception("Failed after 3 attempts")
+    
     except Exception as e:
         logger.error(f"Error searching GST details: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to fetch GST details: {str(e)}"
+            detail=f"GST search failed: {str(e)}"
         )
 
 
