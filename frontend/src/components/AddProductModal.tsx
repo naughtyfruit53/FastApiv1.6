@@ -195,8 +195,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         toast.error("Invalid product selection - no ID found. Please try again.");
         return;
       }
-      // Normalize GST back to decimal for backend
-      const normalizedGst = formData.gst_rate > 1 ? (formData.gst_rate / 100) : formData.gst_rate;
+      // Keep GST rate as percentage (e.g., 18 for 18%) - backend expects percentage, not decimal
+      const gstRate = formData.gst_rate;
       // Remove empty fields to match backend schema
       const allowedFields = [
         "product_name",
@@ -226,7 +226,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           );
         }),
       );
-      cleanData.gst_rate = normalizedGst;
+      cleanData.gst_rate = gstRate; // Use percentage as-is (18 means 18%)
       if (mode === 'edit') {
         if (typeof onUpdate === 'function') {
           await onUpdate({ ...cleanData, id: formData.id });
