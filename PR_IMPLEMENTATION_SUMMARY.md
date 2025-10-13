@@ -9,16 +9,43 @@ This PR delivers comprehensive enhancements across voucher creation, manufacturi
 
 **Problem**: Page reset when selecting interstate vendors during voucher creation, causing loss of form data and preventing proper voucher creation.
 
+**Root Cause Analysis**:
+- The `isIntrastate` memo had `voucherData` in its dependency array, causing unnecessary recalculations
+- The voucher data loading effect (line 786-864) had `isIntrastate` in its dependencies
+- When switching between interstate/intrastate vendors, `isIntrastate` changed → effect re-ran → `reset()` called → form blanked
+- This created a cycle: entity change → isIntrastate change → form reset → voucher number lost
+
 **Solution**:
-- Fixed `watch()` dependency issues in `useVoucherPage.ts`
-- Separated watched values (`watchedCustomerId`, `watchedVendorId`) from watch function
-- Added proper dependency array for `isIntrastate` memo
-- Added logging for interstate/intrastate transaction detection
+- **Fixed `isIntrastate` memo dependencies** (line 251-302):
+  - Removed `voucherData` from dependency array - not needed for state detection
+  - Removed fallback to `voucherData?.vendor` - unnecessary as vendorList is already checked
+  - State detection now purely based on selected entity from form state and lists
+- **Fixed voucher data loading effect dependencies** (line 786-861):
+  - Removed `isIntrastate` from dependency array to prevent form reset on entity change
+  - CGST/SGST/IGST rates are now computed dynamically in the `computedItems` memo (line 306-346)
+  - Rates update reactively based on current `isIntrastate` without resetting the form
+- **Preserved existing defensive code**:
+  - Verified all Autocomplete components have defensive label handling with `option?.name || ""`
+  - Ensured voucher number effect remains intact and independent
 
 **Files Changed**:
 - `frontend/src/hooks/useVoucherPage.ts`
+  - Line 251-302: Cleaned up `isIntrastate` memo dependencies
+  - Line 786-861: Removed `isIntrastate` from effect dependencies
+  - Line 830-846: Simplified item loading to not set CGST/SGST/IGST (computed dynamically)
 
-**Impact**: Voucher creation now works seamlessly for both interstate (IGST) and intrastate (CGST+SGST) transactions without page resets.
+**Technical Details**:
+- The fix leverages React's memoization to separate concerns:
+  - `isIntrastate` memo: Pure state detection based on entity location
+  - `computedItems` memo: Dynamic tax rate calculation
+  - Voucher loading effect: Data initialization only, no tax logic
+- This separation prevents cascading re-renders and maintains form stability
+
+**Impact**: 
+- Voucher creation now works seamlessly for both interstate (IGST) and intrastate (CGST+SGST) transactions
+- Form data and voucher number persist when switching vendors/customers
+- No page resets or blanking during entity selection
+- Tax rates update correctly and reactively based on entity state code
 
 ---
 
