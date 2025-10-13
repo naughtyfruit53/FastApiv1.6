@@ -17,10 +17,16 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
-import { ExpandMore, Email, Security, Settings } from "@mui/icons-material";
+import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions } from "@mui/icons-material";
 import { organizationService } from "../services/organizationService";
 import { useAuth } from "../context/AuthContext";
+import api from "../lib/api";
 
 interface OrganizationSettingsData {
   id?: number;
@@ -32,6 +38,15 @@ interface OrganizationSettingsData {
   updated_at?: string;
 }
 
+interface TallyConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  company_name: string;
+  sync_frequency: string;
+  last_sync?: string;
+}
+
 const OrganizationSettings: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -39,6 +54,18 @@ const OrganizationSettings: React.FC = () => {
   const [settings, setSettings] = useState<OrganizationSettingsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Tally integration state
+  const [tallyConfig, setTallyConfig] = useState<TallyConfig>({
+    enabled: false,
+    host: "localhost",
+    port: 9000,
+    company_name: "",
+    sync_frequency: "manual",
+  });
+  const [tallyDialogOpen, setTallyDialogOpen] = useState(false);
+  const [tallyTesting, setTallyTesting] = useState(false);
+  const [tallySyncing, setTallySyncing] = useState(false);
 
   // Load organization settings on component mount
   useEffect(() => {
@@ -94,6 +121,85 @@ const OrganizationSettings: React.FC = () => {
     const enabled = event.target.checked;
     updateSettings({ auto_send_notifications: enabled });
   };
+
+  // Tally Integration Handlers
+  const loadTallyConfig = async () => {
+    try {
+      const response = await api.get("/tally/configuration");
+      if (response.data) {
+        setTallyConfig(response.data);
+      }
+    } catch (err: any) {
+      // If no config exists, use defaults
+      console.log("No Tally config found, using defaults");
+    }
+  };
+
+  const saveTallyConfig = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      const response = await api.post("/tally/configuration", tallyConfig);
+      setTallyConfig(response.data);
+      setSuccess("Tally configuration saved successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+      setTallyDialogOpen(false);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to save Tally configuration");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testTallyConnection = async () => {
+    try {
+      setTallyTesting(true);
+      setError(null);
+      const response = await api.post("/tally/test-connection", {
+        host: tallyConfig.host,
+        port: tallyConfig.port,
+        company_name: tallyConfig.company_name,
+      });
+      
+      if (response.data.success) {
+        setSuccess("Tally connection successful!");
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(response.data.message || "Connection test failed");
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to connect to Tally");
+    } finally {
+      setTallyTesting(false);
+    }
+  };
+
+  const syncWithTally = async () => {
+    try {
+      setTallySyncing(true);
+      setError(null);
+      const response = await api.post("/tally/sync", {
+        sync_type: "full",
+      });
+      
+      setSuccess(`Tally sync completed! Synced ${response.data.items_synced || 0} items.`);
+      setTimeout(() => setSuccess(null), 5000);
+      
+      // Reload config to get updated last_sync time
+      await loadTallyConfig();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to sync with Tally");
+    } finally {
+      setTallySyncing(false);
+    }
+  };
+
+  // Load Tally config on mount
+  useEffect(() => {
+    if (user?.is_super_admin) {
+      loadTallyConfig();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -196,6 +302,74 @@ const OrganizationSettings: React.FC = () => {
             />
           </AccordionDetails>
         </Accordion>
+
+        {/* Tally Integration Section - Only for App Super Admin */}
+        {user?.is_super_admin && (
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+                <IntegrationInstructions sx={{ mr: 1 }} />
+                <Typography variant="subtitle1">Tally Integration</Typography>
+                <Box sx={{ ml: "auto", mr: 2 }}>
+                  {tallyConfig.enabled && (
+                    <Chip label="Enabled" color="success" size="small" />
+                  )}
+                </Box>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={tallyConfig.enabled}
+                      onChange={(e) => setTallyConfig({ ...tallyConfig, enabled: e.target.checked })}
+                      disabled={saving}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1">Enable Tally Sync</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Integrate with Tally for real-time data synchronization
+                      </Typography>
+                    </Box>
+                  }
+                />
+
+                {tallyConfig.enabled && (
+                  <>
+                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Settings />}
+                        onClick={() => setTallyDialogOpen(true)}
+                        size="small"
+                      >
+                        Configure
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Sync />}
+                        onClick={syncWithTally}
+                        disabled={tallySyncing || !tallyConfig.company_name}
+                        size="small"
+                      >
+                        {tallySyncing ? "Syncing..." : "Sync Now"}
+                      </Button>
+                    </Box>
+
+                    {tallyConfig.last_sync && (
+                      <Typography variant="caption" color="text.secondary">
+                        Last synced: {new Date(tallyConfig.last_sync).toLocaleString()}
+                      </Typography>
+                    )}
+                  </>
+                )}
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        )}
       </FormGroup>
 
       {saving && (
@@ -220,6 +394,62 @@ const OrganizationSettings: React.FC = () => {
           Refresh
         </Button>
       </Box>
+
+      {/* Tally Configuration Dialog */}
+      <Dialog open={tallyDialogOpen} onClose={() => setTallyDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Tally Configuration</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
+            <TextField
+              label="Tally Server Host"
+              value={tallyConfig.host}
+              onChange={(e) => setTallyConfig({ ...tallyConfig, host: e.target.value })}
+              fullWidth
+              helperText="e.g., localhost or IP address"
+            />
+            <TextField
+              label="Port"
+              type="number"
+              value={tallyConfig.port}
+              onChange={(e) => setTallyConfig({ ...tallyConfig, port: parseInt(e.target.value) })}
+              fullWidth
+              helperText="Default Tally port is 9000"
+            />
+            <TextField
+              label="Company Name"
+              value={tallyConfig.company_name}
+              onChange={(e) => setTallyConfig({ ...tallyConfig, company_name: e.target.value })}
+              fullWidth
+              helperText="Exact company name as configured in Tally"
+            />
+            <FormControl fullWidth>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Sync Frequency
+              </Typography>
+              <Button
+                variant={tallyConfig.sync_frequency === "manual" ? "contained" : "outlined"}
+                onClick={() => setTallyConfig({ ...tallyConfig, sync_frequency: "manual" })}
+                fullWidth
+              >
+                Manual
+              </Button>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTallyDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={testTallyConnection}
+            disabled={tallyTesting}
+            variant="outlined"
+          >
+            {tallyTesting ? "Testing..." : "Test Connection"}
+          </Button>
+          <Button onClick={saveTallyConfig} disabled={saving} variant="contained">
+            {saving ? "Saving..." : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
