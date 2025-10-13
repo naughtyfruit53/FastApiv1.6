@@ -1,5 +1,5 @@
 // frontend/src/components/AddBOMModal.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
   Dialog,
@@ -114,7 +114,7 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
     watch,
     formState: { errors },
   } = useForm<BOM>({
-    defaultValues: initialData || defaultBOM,
+    defaultValues: defaultBOM,
   });
   const { fields, append, remove } = useFieldArray({
     control,
@@ -166,7 +166,7 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
     },
     onError: (error: any) => {
       console.error("Error saving BOM:", error);
-    },
+    }
   });
   const onSubmit = (data: BOM) => {
     // Validations
@@ -246,6 +246,29 @@ const AddBOMModal: React.FC<AddBOMModalProps> = ({
       setValue(`components.${index}.component_item_id`, 0);
     }
   };
+  
+  useEffect(() => {
+    if (initialData) {
+      const formattedData = {
+        ...initialData,
+        validity_start: initialData.validity_start ? new Date(initialData.validity_start).toISOString().slice(0,10) : '',
+        validity_end: initialData.validity_end ? new Date(initialData.validity_end).toISOString().slice(0,10) : '',
+        components: initialData.components.map(comp => ({
+          component_item_id: comp.component_item_id,
+          quantity_required: comp.quantity_required,
+          unit: comp.unit,
+          unit_cost: comp.unit_cost,
+          wastage_percentage: comp.wastage_percentage,
+          is_optional: comp.is_optional,
+          sequence: comp.sequence,
+          notes: comp.notes || '',
+        }))
+      };
+      reset(formattedData);
+    } else {
+      reset(defaultBOM);
+    }
+  }, [initialData, reset]);
   
   if (isLoadingProducts) {
     return <CircularProgress />;
