@@ -15,7 +15,7 @@ export const getCustomers = async (context?: QueryFunctionContext): Promise<any>
 
 // Fetch all products
 export const getProducts = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
-  const response = await api.get("/api/v1/products", { params: { active_only: false }, signal: context?.signal });
+  const response = await api.get("/api/v1/products", { params: { active_only: false, limit: 1000000 }, signal: context?.signal });
   return response.data;
 };
 

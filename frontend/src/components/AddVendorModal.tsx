@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
+// frontend/src/components/AddVendorModal.tsx
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -22,6 +23,7 @@ import {
   CloudUpload,
   Description,
   CheckCircle,
+  Check,
   Search,
 } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
@@ -94,31 +96,65 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   } = usePincodeLookup();
   const watchedPincode = watch("pin_code");
   const watchedGstNumber = watch("gst_number");
+  const isMounted = useRef(true);
+  const hasSetPincode = useRef(false); // New ref to track if pincode data has been set
+
+  useEffect(() => {
+    isMounted.current = true;
+    hasSetPincode.current = false;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // Reset form with initialData when it changes (for edit mode)
   useEffect(() => {
     reset(initialData);
-  }, [initialData, reset]);
-  // Auto-populate form fields when pincode data is available
+    hasSetPincode.current = false;
+  }, [initialData, reset, open]); // Added open to reset on reopen
+
+  // Auto-populate form fields when pincode data is available, only if different
   useEffect(() => {
-    if (pincodeData) {
-      setValue("city", pincodeData.city);
-      setValue("state", pincodeData.state);
-      setValue("state_code", pincodeData.state_code);
+    if (pincodeData && isMounted.current && !hasSetPincode.current) {
+      hasSetPincode.current = true;
+      const currentValues = watch();
+      const updates: Partial<VendorFormData> = {};
+      if (currentValues.city !== pincodeData.city) {
+        updates.city = pincodeData.city;
+      }
+      if (currentValues.state !== pincodeData.state) {
+        updates.state = pincodeData.state;
+      }
+      if (currentValues.state_code !== pincodeData.state_code) {
+        updates.state_code = pincodeData.state_code;
+      }
+      if (Object.keys(updates).length > 0) {
+        reset({ ...currentValues, ...updates }); // Batch update with reset
+      }
     }
-  }, [pincodeData]); // Dependency on pincodeData only
+  }, [pincodeData, reset, watch]);
+
   // Handle pincode change with debouncing
+  const handleClearData = useCallback(() => {
+    clearData();
+    hasSetPincode.current = false;
+  }, [clearData]);
+
   useEffect(() => {
+    if (!isMounted.current) return;
+
     if (watchedPincode && /^\d{6}$/.test(watchedPincode)) {
       const timeoutId = setTimeout(() => {
         lookupPincode(watchedPincode);
       }, 500); // 500ms debounce
       return () => clearTimeout(timeoutId);
     } else {
-      clearData();
+      handleClearData();
     }
-  }, [watchedPincode, lookupPincode, clearData]);
+  }, [watchedPincode, lookupPincode, handleClearData]);
+
   // Handle GST certificate upload with actual API call
-  const handleGstFileUpload = async (file: File) => {
+  const handleGstFileUpload = useCallback(async (file: File) => {
     setGstUploadLoading(true);
     setGstUploadError(null);
     try {
@@ -135,14 +171,19 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
           },
         },
       );
-      if (response.data.success) {
+      if (response.data.success && isMounted.current) {
         const extractedData = response.data.extracted_data;
-        // Auto-populate form fields with processed extracted data
+        // Batch populate with reset
+        const currentValues = watch();
+        const updates: Partial<VendorFormData> = {};
         Object.entries(extractedData).forEach(([key, value]) => {
-          if (value) {
-            setValue(key as keyof VendorFormData, value as string);
+          if (value && currentValues[key as keyof VendorFormData] !== value) {
+            updates[key as keyof VendorFormData] = value as string;
           }
         });
+        if (Object.keys(updates).length > 0) {
+          reset({ ...currentValues, ...updates });
+        }
         setGstExtractedData(extractedData);
         setGstFile(file);
       } else {
@@ -152,15 +193,20 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       }
     } catch (error: any) {
       console.error("Error processing GST certificate:", error);
-      setGstUploadError(
-        error.response?.data?.detail ||
-          "Failed to process GST certificate. Please try again.",
-      );
+      if (isMounted.current) {
+        setGstUploadError(
+          error.response?.data?.detail ||
+            "Failed to process GST certificate. Please try again.",
+        );
+      }
     } finally {
-      setGstUploadLoading(false);
+      if (isMounted.current) {
+        setGstUploadLoading(false);
+      }
     }
-  };
-  const handleFileInputChange = (
+  }, [reset, watch]);
+
+  const handleFileInputChange = useCallback((
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
@@ -176,10 +222,12 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       }
       handleGstFileUpload(file);
     }
-  };
+  }, [handleGstFileUpload]);
+
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
   };
+
   const removeGstFile = () => {
     setGstFile(null);
     setGstExtractedData(null);
@@ -188,7 +236,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       fileInputRef.current.value = "";
     }
   };
-  const handleGstSearch = async () => {
+
+  const handleGstSearch = useCallback(async () => {
     if (
       !watchedGstNumber ||
       !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
@@ -203,25 +252,34 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     try {
       const response = await api.get(`/gst/search/${watchedGstNumber}`);
       const data = response.data;
-      // Auto-populate fields from API response
+      // Batch populate with reset
+      const currentValues = watch();
+      const updates: Partial<VendorFormData> = {};
       Object.entries(data).forEach(([key, value]) => {
-        if (value) {
-          setValue(key as keyof VendorFormData, value as string);
+        if (value && currentValues[key as keyof VendorFormData] !== value) {
+          updates[key as keyof VendorFormData] = value as string;
         }
       });
+      if (Object.keys(updates).length > 0 && isMounted.current) {
+        reset({ ...currentValues, ...updates });
+      }
     } catch (error: any) {
-      console.error("GST search error:", error);  // Added for debugging
       let errorMessage = "Failed to fetch GST details. Please check GSTIN.";
       if (error.response?.status === 400) {
         errorMessage = error.response.data.detail || "Invalid GSTIN - please verify the number.";
       } else if (error.response?.status === 500) {
         errorMessage = error.response.data.detail || "Server error during GST search - try again later.";
       }
-      setGstUploadError(errorMessage);
+      if (isMounted.current) {
+        setGstUploadError(errorMessage);
+      }
     } finally {
-      setGstSearchLoading(false);
+      if (isMounted.current) {
+        setGstSearchLoading(false);
+      }
     }
-  };
+  }, [watchedGstNumber, reset, watch]);
+
   const onSubmit = async (vendorData: VendorFormData) => {
     try {
       // Remove empty fields to match backend schema
@@ -249,6 +307,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       // Call onSave with the cleaned data (handles create or update in parent)
       if (typeof onSave === "function") {
         await onSave(cleanData);
+      } else {
+        console.error('onSave is not provided or not a function');
       }
       reset();
       onClose(); // Close modal on success
@@ -271,12 +331,14 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setGstUploadError(errorMessage);
     }
   };
+
   const handleClose = () => {
     reset();
     clearData();
     removeGstFile();
     onClose();
   };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -446,7 +508,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           {gstFile.name}
                         </Typography>
                         <Chip
-                          icon={<CheckCircle />}
+                          icon={<Check />}
                           label="Processed"
                           size="small"
                           color="success"

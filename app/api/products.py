@@ -124,6 +124,17 @@ async def create_product(
     await db.commit()
     await db.refresh(db_product)
     
+    # Create initial stock entry with quantity 0
+    new_stock = Stock(
+        organization_id=org_id,
+        product_id=db_product.id,
+        quantity=0.0,
+        unit=db_product.unit,
+        location="Default"
+    )
+    db.add(new_stock)
+    await db.commit()
+    
     # Re-query with eager loading
     stmt = select(Product).options(selectinload(Product.files)).where(Product.id == db_product.id)
     result = await db.execute(stmt)

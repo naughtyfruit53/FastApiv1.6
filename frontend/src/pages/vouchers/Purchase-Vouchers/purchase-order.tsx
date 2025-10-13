@@ -208,7 +208,7 @@ const PurchaseOrderPage: React.FC = () => {
       const productId = watch(`items.${index}.product_id`);
       return productList?.find((p: any) => p.id === productId) || null;
     });
-  }, [fields, productList, watch]); // Removed fields.length and spread map as deps - use fields ref
+  }, [fields.length, productList, watch]); // Changed to fields.length for stability
 
   const productIds = useWatch({
     control,
@@ -264,7 +264,22 @@ const PurchaseOrderPage: React.FC = () => {
         }
       }
     });
-  }, [productIds, fields, stockLoading, setValue, watch]);
+  }, [productIds, fields.length, setValue, watch]); // Removed stockLoading from deps to prevent loops
+
+  // New: Update item GST rates when isIntrastate changes (fixes totals "reset" on vendor switch)
+  useEffect(() => {
+    const currentFormValues = watch();
+    const updatedItems = (currentFormValues.items || []).map((item: any) => {
+      const gst_rate = item.gst_rate || 18;
+      return {
+        ...item,
+        cgst_rate: isIntrastate ? gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : gst_rate,
+      };
+    });
+    reset({ ...currentFormValues, items: updatedItems }); // Batch update in one reset
+  }, [isIntrastate, reset, watch]);
 
   useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {
@@ -313,6 +328,15 @@ const PurchaseOrderPage: React.FC = () => {
       }
     }
   }, [mode, vendorId, vendorList, setValue]);
+
+  const handleVendorAdded = (newVendor: any) => {
+    setValue("vendor_id", newVendor.id);
+    // Optimistic update to vendor list
+    queryClient.setQueryData(["vendors"], (old: any[]) => {
+      return old ? [...old, newVendor] : [newVendor];
+    });
+    refreshMasterData();
+  };
 
   const handleVoucherClick = (voucher: any) => {
     // Use the voucher from list (assumes full data from backend joins)
@@ -425,7 +449,7 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [voucherData, mode, reset, append, remove, isIntrastate]);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     if (totalRoundOff !== 0) {
       setSubmitData(data);
       setRoundOffConfirmOpen(true);
@@ -855,7 +879,7 @@ const PurchaseOrderPage: React.FC = () => {
           />
         }
       />
-      <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onAdd={(newVendor) => { setValue("vendor_id", newVendor.id); refreshMasterData(); }} loading={addVendorLoading} setLoading={setAddVendorLoading} />
+      <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onSave={handleVendorAdded} loading={addVendorLoading} setLoading={setAddVendorLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, normalizeGstRate(newProduct.gst_rate ?? 18)); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : normalizeGstRate(newProduct.gst_rate ?? 18)); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
       <VoucherContextMenu 

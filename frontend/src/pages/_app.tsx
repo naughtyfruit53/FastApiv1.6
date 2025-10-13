@@ -162,20 +162,18 @@ const queryClient = new QueryClient({
   },
 });
 
-function MyApp({ Component, pageProps }: AppProps): any {
-  const [mounted, setMounted] = useState(false); // Added mounted state to ensure client-only rendering
-
+const ClientOnly = ({ children }: { children: React.ReactNode }) => {
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
+  return mounted ? <>{children}</> : null;
+};
 
-  if (!mounted) {
-    return null; // Render nothing on server-side to avoid hook issues
-  }
-
-  const router = useRouter(); // Now safe, as this only runs on client
+function MyApp({ Component, pageProps }: AppProps): any {
   const LayoutWrapper = () => {
     const { user, logout } = useAuth();
+    const router = useRouter();
     const showMegaMenu =
       !!user && router.pathname !== "/login" && router.pathname !== "/";
     const showChatbot = !!user && router.pathname !== "/login" && router.pathname !== "/";
@@ -197,22 +195,24 @@ function MyApp({ Component, pageProps }: AppProps): any {
       </Head>
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
-          <CompanyProvider> {/* Add CompanyProvider here */}
-            <EmailProvider> {/* Added EmailProvider wrapper here */}
+          <CompanyProvider>
+            <EmailProvider>
               <ThemeProvider theme={theme}>
                 <CssBaseline />
-                <LayoutWrapper />
-                <ToastContainer
-                  position="top-right"
-                  autoClose={5000}
-                  hideProgressBar={false}
-                  newestOnTop={false}
-                  closeOnClick
-                  rtl={false}
-                  pauseOnFocusLoss
-                  draggable
-                  pauseOnHover
-                />
+                <ClientOnly>
+                  <LayoutWrapper />
+                  <ToastContainer
+                    position="top-right"
+                    autoClose={5000}
+                    hideProgressBar={false}
+                    newestOnTop={false}
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                  />
+                </ClientOnly>
               </ThemeProvider>
             </EmailProvider>
           </CompanyProvider>
