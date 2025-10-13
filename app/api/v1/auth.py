@@ -55,6 +55,10 @@ async def login(
     if not user:
         user = await execute_with_retry(fetch_platform_user, email=email)
 
+    # Merge the user into the current session to attach it properly
+    if user:
+        user = await db.merge(user)
+
     if not user or not verify_password(password, user.hashed_password):
         logger.info(f"[LOGIN:FAILED] Email: {email}")
         await create_audit_log(
