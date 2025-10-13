@@ -267,7 +267,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         vendorList && 
         selectedEntityId
       ) {
-        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId) || voucherData?.vendor;
+        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
       }
       if (selectedEntity) {
         const companyStateCode = company?.state_code;
@@ -299,8 +299,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     config.entityType,
     customerList,
     vendorList,
-    company?.state_code,
-    voucherData
+    company?.state_code
   ]);
   // Enhanced computed values using the extracted isIntrastate
   const {
@@ -828,6 +827,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         Array.isArray(voucherData.items)
       ) {
         // Use replace instead of remove/append loop for efficiency
+        // Note: CGST/SGST/IGST rates are computed dynamically based on isIntrastate
+        // and don't need to be stored in the items during loading
         const newItems = voucherData.items.map((item: any) => ({
           ...item,
           product_id: item.product_id,
@@ -837,9 +838,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           discount_percentage: item.discount_percentage || 0,
           discount_amount: item.discount_amount || 0,
           gst_rate: item.gst_rate ?? 18,
-          cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-          sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-          igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
           unit: item.unit || item.product?.unit || "",
           current_stock: item.current_stock || 0,
           reorder_level: item.reorder_level || 0,
@@ -861,7 +859,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     remove,
     append,
     replace,
-    isIntrastate,
   ]);
   useEffect(() => {
     if (nextVoucherNumber && mode === "create") {
