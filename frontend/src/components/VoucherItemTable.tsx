@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
 import ProductAutocomplete from './ProductAutocomplete'; // Assuming this exists; adjust if needed
-import { GST_SLABS } from '../utils/voucherUtils'; // Adjust path if needed
+import { GST_SLABS, normalizeGstRate } from '../utils/voucherUtils'; // Adjust path if needed, added normalizeGstRate
 import { getStock } from '../services/masterService';
 
 interface VoucherItemTableProps {
@@ -106,10 +106,11 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
     setValue(`items.${index}.product_name`, product?.product_name || "");
     setValue(`items.${index}.unit_price`, product?.unit_price || 0);
     setValue(`items.${index}.original_unit_price`, product?.unit_price || 0);
-    setValue(`items.${index}.gst_rate`, product?.gst_rate ?? 18);
-    setValue(`items.${index}.cgst_rate`, isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0);
-    setValue(`items.${index}.sgst_rate`, isIntrastate ? (product?.gst_rate ?? 18) / 2 : 0);
-    setValue(`items.${index}.igst_rate`, isIntrastate ? 0 : product?.gst_rate ?? 18);
+    const normalizedGst = normalizeGstRate(product?.gst_rate ?? 18);
+    setValue(`items.${index}.gst_rate`, normalizedGst);
+    setValue(`items.${index}.cgst_rate`, isIntrastate ? normalizedGst / 2 : 0);
+    setValue(`items.${index}.sgst_rate`, isIntrastate ? normalizedGst / 2 : 0);
+    setValue(`items.${index}.igst_rate`, isIntrastate ? 0 : normalizedGst);
     setValue(`items.${index}.unit`, product?.unit || "");
     setValue(`items.${index}.reorder_level`, product?.reorder_level || 0);
 

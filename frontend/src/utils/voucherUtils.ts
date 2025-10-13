@@ -1,4 +1,3 @@
-// frontend/src/utils/voucherUtils.ts
 import { UI_CONSTANTS } from "../constants/ui";
 
 // Type definitions for voucher calculations
@@ -182,6 +181,14 @@ export const numberToWords = (num: number): string => {
  */
 export const getAmountInWords = (amount: number): string => {
   return numberToWords(Math.round(amount));
+};
+/**
+ * Normalize GST rate from backend fraction to frontend percentage
+ * @param rate GST rate from backend (0.18 or 18)
+ * @returns Normalized percentage (18)
+ */
+export const normalizeGstRate = (rate: number): number => {
+  return rate > 1 ? rate : rate * 100;
 };
 /**
  * Enhanced GST calculation utilities with state-based split logic
@@ -424,7 +431,7 @@ export const formatRateField = (value: number | string): string => {
   return isNaN(numValue) ? "0.00" : numValue.toFixed(2);
 };
 /**
- * Parse rate field input to ensure 2 decimal places max
+ * Parse rate field input to number with 2 decimal places
  */
 export const parseRateField = (value: string): number => {
   const parsed = parseFloat(value);
