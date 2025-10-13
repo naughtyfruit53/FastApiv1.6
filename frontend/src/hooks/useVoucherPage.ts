@@ -21,6 +21,8 @@ import {
   VOUCHER_PAGINATION_DEFAULTS,
   getAmountInWords,  // Added import for getAmountInWords
 } from "../utils/voucherUtils";
+import { showErrorToast, showSuccessToast, handleVoucherError } from "../utils/errorHandling";
+import { SUCCESS_MESSAGES, CONFIRM_MESSAGES, getDynamicMessage } from "../constants/messages";
 import {
   generateVoucherPDF,
   getVoucherPdfConfig,
@@ -247,10 +249,14 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     staleTime: mode === "view" ? Infinity : 300000, // Infinite stale for view mode (static), 5 min for edit
   });
   // Extract isIntrastate as separate memo for UI usage
+  // Watch both customer_id and vendor_id separately to get stable values
+  const watchedCustomerId = watch("customer_id");
+  const watchedVendorId = watch("vendor_id");
+  
   const isIntrastate = useMemo(() => {
     let isIntra = true;
     try {
-      const selectedEntityId = watch("customer_id") || watch("vendor_id");
+      const selectedEntityId = watchedCustomerId || watchedVendorId;
       let selectedEntity = null;
       if (config.entityType === "sales" && customerList && selectedEntityId) {
         selectedEntity = customerList.find(
@@ -276,6 +282,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           return true; // Assume intrastate to prevent crash
         }
         isIntra = entityStateCode === companyStateCode;
+        console.log(`[useVoucherPage] Transaction is ${isIntra ? 'intrastate' : 'interstate'}`, {
+          companyStateCode,
+          entityStateCode,
+          entity: selectedEntity.name
+        });
       }
     } catch (error) {
       console.error("Error determining transaction state:", error);
@@ -283,8 +294,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
     return isIntra;
   }, [
-    watch("customer_id"),
-    watch("vendor_id"),
+    watchedCustomerId,
+    watchedVendorId,
     config.entityType,
     customerList,
     vendorList,
@@ -433,7 +444,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     },
     onError: (error: any) => {
       console.error("[useVoucherPage] Error creating voucher:", error);
-      alert(error.response?.data?.detail || "Failed to create voucher");
+      handleVoucherError(error, "create");
     },
   });
   const updateMutation = useMutation({
@@ -453,7 +464,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     },
     onError: (error: any) => {
       console.error("[useVoucherPage] Error updating voucher:", error);
-      alert(error.response?.data?.detail || "Failed to update voucher");
+      handleVoucherError(error, "update");
     },
   });
   // Enhanced event handlers
@@ -637,7 +648,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     async (voucher: any) => {
       if (
         window.confirm(
-          `Are you sure you want to delete voucher ${voucher.voucher_number}?`,
+          getDynamicMessage.confirmDelete("voucher", voucher.voucher_number),
         )
       ) {
         try {
@@ -647,10 +658,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           );
           queryClient.invalidateQueries({ queryKey: [config.voucherType] });
           refetchVoucherList(); // Explicit refetch after deletion
-          console.log("Voucher deleted successfully");
+          showSuccessToast(getDynamicMessage.voucherDeleted(voucher.voucher_number));
         } catch (error: any) {
           console.error("Error deleting voucher:", error);
-          alert(error.response?.data?.detail || "Failed to delete voucher");
+          handleVoucherError(error, "delete");
         }
       }
     },
@@ -685,19 +696,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           setValue("customer_id", newCustomer.id);
         }
         setShowAddCustomerModal(false);
-        alert("Customer added successfully!");
+        showSuccessToast(SUCCESS_MESSAGES.CUSTOMER_ADDED);
       } catch (error: any) {
         console.error("Error adding customer:", error);
-        let errorMsg = "Error adding customer";
-        if (error.response?.data?.detail) {
-          const detail = error.response.data.detail;
-          if (Array.isArray(detail)) {
-            errorMsg = detail.map((err: any) => err.msg || err).join(", ");
-          } else if (typeof detail === "string") {
-            errorMsg = detail;
-          }
-        }
-        alert(errorMsg);
+        showErrorToast(error, "Failed to add customer");
       } finally {
         setAddCustomerLoading(false);
       }
@@ -727,19 +729,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           setValue("vendor_id", newVendor.id);
         }
         setShowAddVendorModal(false);
-        alert("Vendor added successfully!");
+        showSuccessToast(SUCCESS_MESSAGES.VENDOR_ADDED);
       } catch (error: any) {
         console.error("Error adding vendor:", error);
-        let errorMsg = "Error adding vendor";
-        if (error.response?.data?.detail) {
-          const detail = error.response.data.detail;
-          if (Array.isArray(detail)) {
-            errorMsg = detail.map((err: any) => err.msg || err).join(", ");
-          } else if (typeof detail === "string") {
-            errorMsg = detail;
-          }
-        }
-        alert(errorMsg);
+        showErrorToast(error, "Failed to add vendor");
       } finally {
         setAddVendorLoading(false);
       }
@@ -765,10 +758,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         );
         queryClient.invalidateQueries({ queryKey: ["products"] });
         setShowAddProductModal(false);
-        alert("Product added successfully!");
+        showSuccessToast(SUCCESS_MESSAGES.PRODUCT_ADDED);
       } catch (error: any) {
         console.error("Error adding product:", error);
-        alert(error.response?.data?.detail || "Error adding product");
+        showErrorToast(error, "Failed to add product");
       } finally {
         setAddProductLoading(false);
       }

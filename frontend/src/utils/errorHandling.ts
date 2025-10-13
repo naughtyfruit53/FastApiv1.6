@@ -75,3 +75,112 @@ export const showCompanySetupRequiredMessage = (): any => {
     },
   );
 };
+
+/**
+ * Extract error message from various error formats
+ * Handles FastAPI validation errors, string messages, and nested objects
+ */
+export const extractErrorMessage = (error: any): string => {
+  if (!error) {
+    return "An unknown error occurred";
+  }
+
+  // Check for response data detail (FastAPI format)
+  if (error.response?.data?.detail) {
+    const detail = error.response.data.detail;
+    
+    // Handle array of error objects (validation errors)
+    if (Array.isArray(detail)) {
+      return detail.map((err: any) => err.msg || err.message || String(err)).join(", ");
+    }
+    
+    // Handle string detail
+    if (typeof detail === "string") {
+      return detail;
+    }
+    
+    // Handle object detail
+    if (typeof detail === "object" && detail.message) {
+      return detail.message;
+    }
+  }
+
+  // Check for response data message
+  if (error.response?.data?.message) {
+    return error.response.data.message;
+  }
+
+  // Check for error message property
+  if (error.message) {
+    return error.message;
+  }
+
+  // Check for response status text
+  if (error.response?.statusText) {
+    return error.response.statusText;
+  }
+
+  // Fallback
+  return "An error occurred while processing your request";
+};
+
+/**
+ * Show error toast with extracted message
+ */
+export const showErrorToast = (error: any, defaultMessage?: string): void => {
+  const message = defaultMessage || extractErrorMessage(error);
+  toast.error(message);
+};
+
+/**
+ * Show success toast
+ */
+export const showSuccessToast = (message: string): void => {
+  toast.success(message);
+};
+
+/**
+ * Show info toast
+ */
+export const showInfoToast = (message: string): void => {
+  toast.info(message);
+};
+
+/**
+ * Show warning toast
+ */
+export const showWarningToast = (message: string): void => {
+  toast.warning(message);
+};
+
+/**
+ * Handle async operation with error handling
+ * Wraps an async function with try-catch and shows error toast on failure
+ */
+export const handleAsyncOperation = async <T>(
+  operation: () => Promise<T>,
+  errorMessage?: string
+): Promise<T | null> => {
+  try {
+    return await operation();
+  } catch (error) {
+    showErrorToast(error, errorMessage);
+    return null;
+  }
+};
+
+/**
+ * Standard error handler for master data operations
+ */
+export const handleMasterDataError = (error: any, entityName: string): void => {
+  console.error(`Error with ${entityName}:`, error);
+  showErrorToast(error, `Failed to save ${entityName}`);
+};
+
+/**
+ * Standard error handler for voucher operations
+ */
+export const handleVoucherError = (error: any, operation: string): void => {
+  console.error(`Voucher ${operation} error:`, error);
+  showErrorToast(error, `Failed to ${operation} voucher`);
+};
