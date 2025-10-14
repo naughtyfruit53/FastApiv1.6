@@ -581,7 +581,8 @@ class VoucherPDFGenerator:
                 # Add terms_conditions to template data
                 template_data['terms_conditions'] = terms_conditions or ''
             
-            # Apply format template configuration if available
+            # Determine base template style based on format template configuration
+            base_template_name = 'base_voucher.html'  # Default
             if org_settings and org_settings.voucher_format_template_id:
                 stmt_template = select(VoucherFormatTemplate).where(
                     VoucherFormatTemplate.id == org_settings.voucher_format_template_id,
@@ -594,6 +595,15 @@ class VoucherPDFGenerator:
                     # Apply template configuration to template_data
                     template_data['format_config'] = format_template.template_config
                     logger.info(f"Using format template: {format_template.name} for voucher")
+                    
+                    # Select base template based on layout style
+                    layout_style = format_template.template_config.get('layout', 'standard')
+                    if layout_style == 'modern':
+                        base_template_name = 'base_voucher_modern.html'
+                    elif layout_style == 'classic':
+                        base_template_name = 'base_voucher_classic.html'
+                    elif layout_style == 'minimal':
+                        base_template_name = 'base_voucher_minimal.html'
             
             # Get template for voucher type
             if voucher_type in ['purchase', 'purchase-vouchers']:
@@ -622,9 +632,9 @@ class VoucherPDFGenerator:
             try:
                 template = self.jinja_env.get_template(template_name)
             except Exception:
-                # Fallback to base template
-                template = self.jinja_env.get_template('base_voucher.html')
-                logger.warning(f"Template {template_name} not found at {template.filename}, using base template")
+                # Fallback to selected base template
+                template = self.jinja_env.get_template(base_template_name)
+                logger.warning(f"Template {template_name} not found, using base template: {base_template_name}")
             
             # Render HTML
             html_content = template.render(**template_data)

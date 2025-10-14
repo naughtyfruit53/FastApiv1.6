@@ -107,8 +107,17 @@ const CostCenters: React.FC = () => {
 
   const handleCreateCostCenter = async () => {
     try {
+      // Auto-generate code if not provided
+      let finalCode = createData.cost_center_code;
+      if (!finalCode) {
+        finalCode = generateCostCenterCode();
+      }
+
       const token = localStorage.getItem("token");
-      await axios.post("/api/v1/erp/cost-centers", createData, {
+      await axios.post("/api/v1/erp/cost-centers", {
+        ...createData,
+        cost_center_code: finalCode
+      }, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCreateDialogOpen(false);
@@ -118,10 +127,35 @@ const CostCenters: React.FC = () => {
         budget_amount: 0,
         description: "",
       });
+      setShowStandardNames(false);
       fetchCostCenters();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to create cost center");
     }
+  };
+
+  const generateCostCenterCode = () => {
+    // Generate code based on name or use sequential number
+    const count = costCenters.length + 1;
+    if (createData.cost_center_name) {
+      // Extract first 3-4 letters from name
+      const prefix = createData.cost_center_name
+        .replace(/[^a-zA-Z]/g, '')
+        .substring(0, 4)
+        .toUpperCase();
+      return `${prefix}${count.toString().padStart(3, '0')}`;
+    }
+    return `CC${count.toString().padStart(4, '0')}`;
+  };
+
+  const selectStandardCostCenter = (standard: typeof standardCostCenters[0]) => {
+    setCreateData({
+      ...createData,
+      cost_center_code: standard.code,
+      cost_center_name: standard.name,
+      description: standard.description
+    });
+    setShowStandardNames(false);
   };
 
   // Stub for edit - implement API call as needed
@@ -486,19 +520,66 @@ const CostCenters: React.FC = () => {
         <DialogTitle>Create Cost Center</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
+            <Grid item xs={12}>
+              <Button
+                variant="outlined"
                 fullWidth
-                label="Cost Center Code"
-                value={createData.cost_center_code}
-                onChange={(e) =>
-                  setCreateData((prev) => ({
-                    ...prev,
-                    cost_center_code: e.target.value,
-                  }))
-                }
-                required
-              />
+                onClick={() => setShowStandardNames(!showStandardNames)}
+              >
+                {showStandardNames ? "Hide Standard Names" : "Choose from Standard Names"}
+              </Button>
+            </Grid>
+            
+            {showStandardNames && (
+              <Grid item xs={12}>
+                <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, maxHeight: 200, overflow: 'auto' }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom display="block">
+                    Quick Selection:
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {standardCostCenters.map((standard) => (
+                      <Grid item xs={6} sm={4} key={standard.code}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          onClick={() => selectStandardCostCenter(standard)}
+                          sx={{ textAlign: 'left', justifyContent: 'flex-start' }}
+                        >
+                          {standard.name}
+                        </Button>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              </Grid>
+            )}
+
+            <Grid item xs={12} sm={6}>
+              <Box display="flex" gap={1}>
+                <TextField
+                  fullWidth
+                  label="Cost Center Code"
+                  value={createData.cost_center_code}
+                  onChange={(e) =>
+                    setCreateData((prev) => ({
+                      ...prev,
+                      cost_center_code: e.target.value.toUpperCase(),
+                    }))
+                  }
+                  helperText="Leave empty to auto-generate"
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    const code = generateCostCenterCode();
+                    setCreateData({ ...createData, cost_center_code: code });
+                  }}
+                  sx={{ minWidth: 100 }}
+                >
+                  Auto
+                </Button>
+              </Box>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

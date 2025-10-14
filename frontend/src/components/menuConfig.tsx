@@ -691,8 +691,8 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         // Note: Dashboard top-level removed by user request
         { title: 'Master Data', subSections: menuItems.masterData.sections },
         { title: 'Inventory', subSections: menuItems.inventory.sections },
-        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },
-        { title: 'Vouchers', subSections: menuItems.vouchers.sections },
+        { title: 'Vouchers', subSections: menuItems.vouchers.sections },  // Moved up - higher priority
+        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },  // Moved down - swapped with vouchers
         // Merge Finance & Accounting into single section
         { 
           title: 'Finance & Accounting', 

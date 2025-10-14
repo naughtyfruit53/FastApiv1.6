@@ -23,7 +23,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions, Description } from "@mui/icons-material";
+import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions, Description, Download, Upload } from "@mui/icons-material";
 import { organizationService } from "../services/organizationService";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
@@ -448,6 +448,10 @@ const OrganizationSettings: React.FC = () => {
 
                 {tallyConfig.enabled && (
                   <>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      Connect to Tally ERP 9 running on your local network. Ensure Tally is configured to accept external connections (F12 → Configure → Enable ODBC Server).
+                    </Alert>
+
                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                       <Button
                         variant="outlined"
@@ -455,7 +459,7 @@ const OrganizationSettings: React.FC = () => {
                         onClick={() => setTallyDialogOpen(true)}
                         size="small"
                       >
-                        Configure
+                        Configure Connection
                       </Button>
                       <Button
                         variant="outlined"
@@ -463,8 +467,43 @@ const OrganizationSettings: React.FC = () => {
                         onClick={syncWithTally}
                         disabled={tallySyncing || !tallyConfig.company_name}
                         size="small"
+                        color="primary"
                       >
                         {tallySyncing ? "Syncing..." : "Sync Now"}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Download />}
+                        onClick={async () => {
+                          try {
+                            await api.post('/tally/import');
+                            alert('Import from Tally initiated. This may take a few minutes.');
+                          } catch (error) {
+                            alert('Failed to import from Tally');
+                          }
+                        }}
+                        disabled={!tallyConfig.company_name}
+                        size="small"
+                        color="success"
+                      >
+                        Import from Tally
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Upload />}
+                        onClick={async () => {
+                          try {
+                            await api.post('/tally/export');
+                            alert('Export to Tally initiated.');
+                          } catch (error) {
+                            alert('Failed to export to Tally');
+                          }
+                        }}
+                        disabled={!tallyConfig.company_name}
+                        size="small"
+                        color="warning"
+                      >
+                        Export to Tally
                       </Button>
                     </Box>
 
@@ -473,6 +512,19 @@ const OrganizationSettings: React.FC = () => {
                         Last synced: {new Date(tallyConfig.last_sync).toLocaleString()}
                       </Typography>
                     )}
+
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Tally Integration Features:
+                      </Typography>
+                      <Box component="ul" sx={{ mt: 1, pl: 2, mb: 0 }}>
+                        <li><Typography variant="body2">✓ Two-way sync with Tally ERP 9</Typography></li>
+                        <li><Typography variant="body2">✓ Import ledgers, vouchers, and items</Typography></li>
+                        <li><Typography variant="body2">✓ Export sales and purchase data</Typography></li>
+                        <li><Typography variant="body2">✓ Real-time inventory synchronization</Typography></li>
+                        <li><Typography variant="body2">✓ Automatic data mapping and validation</Typography></li>
+                      </Box>
+                    </Box>
                   </>
                 )}
               </Box>

@@ -315,48 +315,69 @@ const VoucherSettingsPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Voucher Format Template
+                  Voucher PDF Template Style
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Select a template for voucher PDF and email formatting
+                  Choose a professional template style for all your voucher PDFs. Each template includes bank details and terms & conditions.
                 </Typography>
 
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel>Template</InputLabel>
-                  <Select
-                    value={settings.voucher_format_template_id || ''}
-                    onChange={(e) => setSettings({ 
-                      ...settings, 
-                      voucher_format_template_id: e.target.value ? Number(e.target.value) : null
-                    })}
-                    label="Template"
-                  >
-                    <MenuItem value="">
-                      <em>Default Template</em>
-                    </MenuItem>
-                    {templates.map((template) => (
-                      <MenuItem key={template.id} value={template.id}>
-                        {template.name}
-                        {template.is_system_template && (
-                          <Chip 
-                            label="System" 
-                            size="small" 
-                            sx={{ ml: 1 }} 
-                          />
-                        )}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  {templates.map((template) => (
+                    <Grid item xs={12} sm={6} md={3} key={template.id}>
+                      <Card 
+                        sx={{ 
+                          cursor: 'pointer',
+                          border: settings.voucher_format_template_id === template.id ? 3 : 1,
+                          borderColor: settings.voucher_format_template_id === template.id ? 'primary.main' : 'grey.300',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            boxShadow: 4,
+                            transform: 'translateY(-4px)'
+                          }
+                        }}
+                        onClick={() => setSettings({ 
+                          ...settings, 
+                          voucher_format_template_id: template.id 
+                        })}
+                      >
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="h6" component="div">
+                              {template.name}
+                            </Typography>
+                            {settings.voucher_format_template_id === template.id && (
+                              <Chip 
+                                label="Selected" 
+                                color="primary" 
+                                size="small" 
+                              />
+                            )}
+                          </Box>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 80 }}>
+                            {template.description}
+                          </Typography>
+                          <Button
+                            startIcon={<PreviewIcon />}
+                            variant="outlined"
+                            size="small"
+                            fullWidth
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/voucher-format-templates/${template.id}/preview`, '_blank');
+                            }}
+                          >
+                            Preview PDF
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
 
-                {settings.voucher_format_template_id && (
-                  <Button
-                    startIcon={<PreviewIcon />}
-                    variant="outlined"
-                    size="small"
-                  >
-                    Preview Template
-                  </Button>
+                {!settings.voucher_format_template_id && templates.length > 0 && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    No template selected. The default "Standard" template will be used for all vouchers.
+                  </Alert>
                 )}
               </CardContent>
             </Card>
