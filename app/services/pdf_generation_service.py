@@ -558,6 +558,29 @@ class VoucherPDFGenerator:
             result_settings = await db.execute(stmt_settings)
             org_settings = result_settings.scalars().first()
             
+            # Load terms and conditions based on voucher type
+            terms_conditions = None
+            if org_settings:
+                if voucher_type in ['purchase', 'purchase-vouchers']:
+                    terms_conditions = org_settings.purchase_voucher_terms
+                elif voucher_type in ['purchase_orders', 'purchase-orders']:
+                    terms_conditions = org_settings.purchase_order_terms
+                elif voucher_type in ['sales', 'sales-vouchers']:
+                    terms_conditions = org_settings.sales_voucher_terms
+                elif voucher_type in ['sales_order', 'sales-orders']:
+                    terms_conditions = org_settings.sales_order_terms
+                elif voucher_type == 'quotation':
+                    terms_conditions = org_settings.quotation_terms
+                elif voucher_type == 'proforma_invoice':
+                    terms_conditions = org_settings.proforma_invoice_terms
+                elif voucher_type == 'delivery-challan':
+                    terms_conditions = org_settings.delivery_challan_terms
+                elif voucher_type == 'grn':
+                    terms_conditions = org_settings.grn_terms
+                
+                # Add terms_conditions to template data
+                template_data['terms_conditions'] = terms_conditions or ''
+            
             # Apply format template configuration if available
             if org_settings and org_settings.voucher_format_template_id:
                 stmt_template = select(VoucherFormatTemplate).where(
