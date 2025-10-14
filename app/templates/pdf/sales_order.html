@@ -15,15 +15,9 @@
         <span class="info-value">{{ voucher.date|format_date }}</span>
     </div>
     <div class="info-row">
-        <span class="info-label">Expected Delivery:</span>
-        <span class="info-value">{{ voucher.expected_delivery|format_date|default('To be confirmed') }}</span>
+        <span class="info-label">Required By Date:</span>
+        <span class="info-value">{{ voucher.delivery_date|format_date|default('To be confirmed') }}</span>
     </div>
-    {% if voucher.reference_number %}
-    <div class="info-row">
-        <span class="info-label">Reference:</span>
-        <span class="info-value">{{ voucher.reference_number }}</span>
-    </div>
-    {% endif %}
     <div class="info-row">
         <span class="info-label">Status:</span>
         <span class="info-value">
@@ -33,23 +27,28 @@
 </div>
 {% endblock %}
 
-{% block terms_block %}
-<div class="terms">
-    <table>
-        <tbody>
-            {% if voucher.terms_conditions %}
-            {% for term in voucher.terms_conditions.split('\n')|slice(4) %}
-            <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
-            {% endfor %}
-            {% else %}
-            <tr><td>1. Order confirmation subject to stock.</td></tr>
-            <tr><td>2. Delivery within 7-10 days.</td></tr>
-            <tr><td>3. Full payment on delivery.</td></tr>
-            <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
-            {% endif %}
-        </tbody>
-    </table>
+{% block totals_left %}
+<div style="font-weight:700;">Payment Terms</div>
+{% if voucher.payment_terms %}
+<div style="display: flex; flex-wrap: wrap;">
+    <div style="width: 50%; padding-right: 4px;">{{ voucher.payment_terms }}</div>
 </div>
+{% endif %}
+<div style="font-weight:700; margin-top: 10px;">Terms and Conditions</div>
+{% if terms_conditions %}
+<table>
+    <tbody>
+        {% for term in terms_conditions.split('\n') %}
+        {% if term|trim %}
+        <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}
+
+{% block terms_block %}
 {% endblock %}
 
 {% block voucher_specific_footer %}
@@ -70,20 +69,6 @@
     </div>
 </div>
 {% endif %}
-
-<div style="margin-top: 15px;">
-    <div class="section-title">Bank Details for Payment</div>
-    <div style="font-size: 10px;">
-        {% if company.bank_details %}
-        A/c Holder’s Name: {{ company.bank_details.holder_name }}<br>
-        Bank Name: {{ company.bank_details.bank_name }}<br>
-        A/c No.: {{ company.bank_details.account_number }}<br>
-        Branch & IFS Code: {{ company.bank_details.branch }} & {{ company.bank_details.ifsc }}
-        {% else %}
-        No bank details available.
-        {% endif %}
-    </div>
-</div>
 
 <div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
     <strong>Important Notes:</strong><br>
