@@ -39,16 +39,29 @@ interface CreateBankAccountData {
   ifsc_code?: string;
 }
 
+interface BankAccount extends CreateBankAccountData {
+  id: number;
+  current_balance: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  swift_code?: string;
+}
+
 interface BankAccountModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  account?: BankAccount | null;
+  mode: 'add' | 'edit' | 'view';
 }
 
 const BankAccountModal: React.FC<BankAccountModalProps> = ({
   open,
   onClose,
   onSuccess,
+  account,
+  mode,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,39 +135,58 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
   useEffect(() => {
     if (open) {
       fetchChartAccounts();
+      if (account) {
+        setCreateData({
+          chart_account_id: account.chart_account_id,
+          bank_name: account.bank_name,
+          account_number: account.account_number,
+          account_type: account.account_type,
+          currency: account.currency,
+          opening_balance: account.opening_balance,
+          is_default: account.is_default,
+          auto_reconcile: account.auto_reconcile,
+          branch_name: account.branch_name || "",
+          ifsc_code: account.ifsc_code || "",
+        });
+      } else {
+        setCreateData({
+          chart_account_id: 0,
+          bank_name: "",
+          account_number: "",
+          account_type: "Savings",
+          currency: "INR",
+          opening_balance: 0,
+          is_default: false,
+          auto_reconcile: false,
+          branch_name: "",
+          ifsc_code: "",
+        });
+      }
     }
-  }, [open]);
+  }, [open, account]);
 
-  const handleCreateBankAccount = async () => {
+  const handleCreateOrUpdateBankAccount = async () => {
     try {
       setLoading(true);
       setError(null);
       
       const token = localStorage.getItem("token");
-      await axios.post("/api/v1/erp/bank-accounts", createData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      // Reset form
-      setCreateData({
-        chart_account_id: 0,
-        bank_name: "",
-        account_number: "",
-        account_type: "Savings",
-        currency: "INR",
-        opening_balance: 0,
-        is_default: false,
-        auto_reconcile: false,
-        branch_name: "",
-        ifsc_code: "",
-      });
+      if (mode === 'add') {
+        await axios.post("/api/v1/erp/bank-accounts", createData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else if (mode === 'edit' && account) {
+        await axios.put(`/api/v1/erp/bank-accounts/${account.id}`, createData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
       
       if (onSuccess) {
         onSuccess();
       }
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to create bank account");
+      setError(err.response?.data?.detail || `Failed to ${mode === 'add' ? 'create' : 'update'} bank account`);
     } finally {
       setLoading(false);
     }
@@ -216,13 +248,16 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       alert("Chart Account, Bank Name, and Account Number are required.");
       return;
     }
-    handleCreateBankAccount();
+    handleCreateOrUpdateBankAccount();
   };
+
+  const title = mode === 'add' ? 'Add Bank Account' : mode === 'edit' ? 'Edit Bank Account' : 'View Bank Account';
+  const isViewMode = mode === 'view';
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth={false} PaperProps={{ sx: { width: '360px' } }}>
       <DialogTitle sx={{ textAlign: 'center' }}>
-        Add Bank Account
+        {title}
       </DialogTitle>
       <DialogContent>
         {error && (
@@ -235,6 +270,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             <FormControl fullWidth required>
               <InputLabel>Chart Account *</InputLabel>
               <Select
+                disabled={isViewMode}
                 value={createData.chart_account_id}
                 onChange={(e) =>
                   setCreateData({
@@ -252,9 +288,11 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
                     {account.account_code} - {account.account_name}
                   </MenuItem>
                 ))}
-                <MenuItem onClick={handleOpenChartModal}>
-                  Create New Chart Account
-                </MenuItem>
+                {!isViewMode && (
+                  <MenuItem onClick={handleOpenChartModal}>
+                    Create New Chart Account
+                  </MenuItem>
+                )}
               </Select>
             </FormControl>
             {chartAccounts.length === 0 && (
@@ -266,6 +304,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           
           <Grid item sx={{ width: '315px' }}>
             <TextField
+              disabled={isViewMode}
               fullWidth
               required
               label="Bank Name *"
@@ -280,6 +319,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           
           <Grid item sx={{ width: '315px' }}>
             <TextField
+              disabled={isViewMode}
               fullWidth
               label="Branch Name"
               value={createData.branch_name}
@@ -291,6 +331,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           
           <Grid item sx={{ width: '315px' }}>
             <TextField
+              disabled={isViewMode}
               fullWidth
               required
               label="Account Number *"
@@ -305,6 +346,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           
           <Grid item sx={{ width: '315px' }}>
             <TextField
+              disabled={isViewMode}
               fullWidth
               label="IFSC Code"
               value={createData.ifsc_code}
@@ -318,6 +360,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             <FormControl fullWidth required>
               <InputLabel>Account Type *</InputLabel>
               <Select
+                disabled={isViewMode}
                 value={createData.account_type}
                 onChange={(e) =>
                   setCreateData({ ...createData, account_type: e.target.value })
@@ -337,6 +380,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             <FormControl fullWidth>
               <InputLabel>Currency</InputLabel>
               <Select
+                disabled={isViewMode}
                 value={createData.currency}
                 onChange={(e) =>
                   setCreateData({ ...createData, currency: e.target.value })
@@ -354,6 +398,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           
           <Grid item sx={{ width: '315px' }}>
             <TextField
+              disabled={isViewMode}
               fullWidth
               label="Opening Balance"
               type="number"
@@ -371,6 +416,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             <FormControlLabel
               control={
                 <Switch
+                  disabled={isViewMode}
                   checked={createData.is_default}
                   onChange={(e) =>
                     setCreateData({ ...createData, is_default: e.target.checked })
@@ -385,6 +431,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             <FormControlLabel
               control={
                 <Switch
+                  disabled={isViewMode}
                   checked={createData.auto_reconcile}
                   onChange={(e) =>
                     setCreateData({
@@ -399,19 +446,27 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           </Grid>
         </Grid>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: 'center' }}>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancel
-        </Button>
-        <Button
-          onClick={onSubmit}
-          variant="contained"
-          disabled={loading || !isFormValid()}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
-        >
-          Add Bank Account
-        </Button>
-      </DialogActions>
+      {isViewMode ? (
+        <DialogActions sx={{ justifyContent: 'center' }}>
+          <Button onClick={handleClose}>
+            Close
+          </Button>
+        </DialogActions>
+      ) : (
+        <DialogActions sx={{ justifyContent: 'center' }}>
+          <Button onClick={handleClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={onSubmit}
+            variant="contained"
+            disabled={loading || !isFormValid()}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
+          >
+            {mode === 'add' ? 'Add Bank Account' : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      )}
       <AddEditAccountModal 
         open={openChartModal} 
         onClose={() => setOpenChartModal(false)} 

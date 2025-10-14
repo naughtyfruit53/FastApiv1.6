@@ -726,6 +726,41 @@ async def create_bank_account(
     
     return db_bank_account
 
+@router.put("/bank-accounts/{bank_account_id}", response_model=BankAccountResponse)
+async def update_bank_account(
+    bank_account_id: int,
+    bank_account_data: BankAccountUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Update an existing bank account"""
+    stmt = select(BankAccount).where(
+        BankAccount.id == bank_account_id,
+        BankAccount.organization_id == organization_id
+    )
+    result = await db.execute(stmt)
+    bank_account = result.scalar_one_or_none()
+    
+    if not bank_account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bank account not found"
+        )
+    
+    update_data = bank_account_data.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(bank_account, field, value)
+    
+    bank_account.updated_by = current_user.id
+    bank_account.updated_at = datetime.utcnow()
+    
+    await db.commit()
+    await db.refresh(bank_account)
+    
+    return bank_account
+
 
 # Financial KPI Endpoints
 @router.get("/financial-kpis", response_model=List[FinancialKPIResponse])

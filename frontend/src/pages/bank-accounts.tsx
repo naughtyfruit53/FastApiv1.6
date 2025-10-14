@@ -63,6 +63,9 @@ const BankAccounts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
 
   const fetchBankAccounts = async () => {
     try {
@@ -325,7 +328,13 @@ const BankAccounts: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Tooltip title="View Details">
-                        <IconButton size="small">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setSelectedAccount(account);
+                            setViewDialogOpen(true);
+                          }}
+                        >
                           <Visibility />
                         </IconButton>
                       </Tooltip>
@@ -333,9 +342,7 @@ const BankAccounts: React.FC = () => {
                         <IconButton
                           size="small"
                           onClick={() => {
-                            // TODO: Define or import setSelectedAccount
                             setSelectedAccount(account);
-                            // TODO: Define or import setEditDialogOpen
                             setEditDialogOpen(true);
                           }}
                         >
@@ -360,6 +367,22 @@ const BankAccounts: React.FC = () => {
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
         onSuccess={fetchBankAccounts}
+        mode="add"
+      />
+      {/* Edit Bank Account Dialog */}
+      <BankAccountModal 
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        onSuccess={fetchBankAccounts}
+        account={selectedAccount}
+        mode="edit"
+      />
+      {/* View Bank Account Dialog */}
+      <BankAccountModal 
+        open={viewDialogOpen}
+        onClose={() => setViewDialogOpen(false)}
+        account={selectedAccount}
+        mode="view"
       />
     </Box>
   );

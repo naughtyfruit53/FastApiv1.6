@@ -15,6 +15,9 @@ from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
 import logging
+from datetime import timezone  # Added import for timezone
+import re  # Added for sanitizing filename
+from fastapi.responses import StreamingResponse  # Ensure imported
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["purchase-orders"])
@@ -125,6 +128,12 @@ async def create_purchase_order(
         invoice_data = invoice.dict(exclude={'items'})
         invoice_data['created_by'] = current_user.id
         invoice_data['organization_id'] = current_user.organization_id
+        
+        # Force UTC timezone on datetime fields to prevent offset shifts
+        if 'date' in invoice_data and invoice_data['date']:
+            invoice_data['date'] = invoice_data['date'].replace(tzinfo=timezone.utc)
+        if 'delivery_date' in invoice_data and invoice_data['delivery_date']:
+            invoice_data['delivery_date'] = invoice_data['delivery_date'].replace(tzinfo=timezone.utc)
         
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
@@ -287,15 +296,18 @@ async def generate_purchase_order_pdf(
             raise HTTPException(status_code=404, detail="Purchase order not found")
         
         pdf_content = await pdf_generator.generate_voucher_pdf(
-            voucher_type="purchase_order",
+            voucher_type="purchase_orders",
             voucher_data=voucher.__dict__,
             db=db,
             organization_id=current_user.organization_id,
             current_user=current_user
         )
         
+        # Sanitize voucher_number for filename (replace /, :, etc. with -)
+        safe_filename = re.sub(r'[/\\:?"<>|]', '-', voucher.voucher_number) + '.pdf'
+        
         headers = {
-            'Content-Disposition': f'attachment; filename="purchase_order_{voucher.voucher_number}.pdf"'
+            'Content-Disposition': f'attachment; filename="{safe_filename}"'
         }
         
         return StreamingResponse(pdf_content, media_type='application/pdf', headers=headers)
@@ -325,6 +337,13 @@ async def update_purchase_order(
             )
         
         update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
+        
+        # Force UTC timezone on datetime fields to prevent offset shifts
+        if 'date' in update_data and update_data['date']:
+            update_data['date'] = update_data['date'].replace(tzinfo=timezone.utc)
+        if 'delivery_date' in update_data and update_data['delivery_date']:
+            update_data['delivery_date'] = update_data['delivery_date'].replace(tzinfo=timezone.utc)
+        
         for field, value in update_data.items():
             setattr(invoice, field, value)
         

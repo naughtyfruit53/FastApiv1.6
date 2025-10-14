@@ -1,13 +1,11 @@
-# app/templates/pdf/purchase_order.html
-
 {% extends "base_voucher.html" %}
 
 {% block voucher_meta %}
-<tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date(format_str=org.date_format or '%d/%m/%Y') }}</td></tr>
+<tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date(format_str='%d/%m/%Y')|default(datetime.now()|format_date(format_str='%d/%m/%Y')) }}</td></tr>
 <tr><td class="label">PO Number</td><td class="value">{{ voucher.voucher_number|default('N/A') }}</td></tr>
 {% if voucher.reference_number %}<tr><td class="label">Ref Number</td><td class="value">{{ voucher.reference_number }}</td></tr>{% endif %}
-<tr><td class="label">Required By Date</td><td class="value">{{ voucher.required_by_date|format_date(format_str=org.date_format or '%d/%m/%Y')|default('Immediate') }}</td></tr>
-<tr><td class="label">Payment Terms</td><td class="value">{{ voucher.payment_terms|default('As per agreement') }}</td></tr>
+<tr><td class="label">Required By Date</td><td class="value">{{ voucher.delivery_date|format_date(format_str='%d/%m/%Y')|default('') }}</td></tr>
+<tr><td class="label">Payment Terms</td><td class="value">{{ voucher.payment_terms|default('') }}</td></tr>
 {% endblock %}
 
 {% block terms_block %}

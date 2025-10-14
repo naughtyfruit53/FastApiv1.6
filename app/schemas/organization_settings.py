@@ -22,6 +22,16 @@ class OrganizationSettingsBase(BaseModel):
     voucher_counter_reset_period: VoucherCounterResetPeriod = VoucherCounterResetPeriod.ANNUALLY
     voucher_format_template_id: Optional[int] = None
     custom_settings: Optional[Dict] = None
+    # Terms & Conditions for different voucher types
+    purchase_order_terms: Optional[str] = Field(None, max_length=2000)
+    purchase_voucher_terms: Optional[str] = Field(None, max_length=2000)
+    sales_order_terms: Optional[str] = Field(None, max_length=2000)
+    sales_voucher_terms: Optional[str] = Field(None, max_length=2000)
+    quotation_terms: Optional[str] = Field(None, max_length=2000)
+    proforma_invoice_terms: Optional[str] = Field(None, max_length=2000)
+    delivery_challan_terms: Optional[str] = Field(None, max_length=2000)
+    grn_terms: Optional[str] = Field(None, max_length=2000)
+    manufacturing_terms: Optional[str] = Field(None, max_length=2000)
 
 
 class OrganizationSettingsCreate(OrganizationSettingsBase):
@@ -36,6 +46,16 @@ class OrganizationSettingsUpdate(BaseModel):
     voucher_counter_reset_period: Optional[VoucherCounterResetPeriod] = None
     voucher_format_template_id: Optional[int] = None
     custom_settings: Optional[Dict] = None
+    # Terms & Conditions for different voucher types
+    purchase_order_terms: Optional[str] = Field(None, max_length=2000)
+    purchase_voucher_terms: Optional[str] = Field(None, max_length=2000)
+    sales_order_terms: Optional[str] = Field(None, max_length=2000)
+    sales_voucher_terms: Optional[str] = Field(None, max_length=2000)
+    quotation_terms: Optional[str] = Field(None, max_length=2000)
+    proforma_invoice_terms: Optional[str] = Field(None, max_length=2000)
+    delivery_challan_terms: Optional[str] = Field(None, max_length=2000)
+    grn_terms: Optional[str] = Field(None, max_length=2000)
+    manufacturing_terms: Optional[str] = Field(None, max_length=2000)
 
 
 class OrganizationSettingsInDB(OrganizationSettingsBase):

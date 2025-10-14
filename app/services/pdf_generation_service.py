@@ -18,6 +18,7 @@ import logging
 import base64
 import re  # Added for sanitizing filenames
 import json  # Added for parsing JSON strings
+import traceback  # Added for better error logging
 
 # Import settings for dynamic wkhtmltopdf path
 from app.core.config import settings
@@ -551,7 +552,7 @@ class VoucherPDFGenerator:
             
             # Load format template configuration from organization settings
             from app.models.organization_settings import OrganizationSettings, VoucherFormatTemplate
-            stmt_settings = select(OrganizationSettings).filter(
+            stmt_settings = select(OrganizationSettings).where(
                 OrganizationSettings.organization_id == organization_id
             )
             result_settings = await db.execute(stmt_settings)
@@ -559,7 +560,7 @@ class VoucherPDFGenerator:
             
             # Apply format template configuration if available
             if org_settings and org_settings.voucher_format_template_id:
-                stmt_template = select(VoucherFormatTemplate).filter(
+                stmt_template = select(VoucherFormatTemplate).where(
                     VoucherFormatTemplate.id == org_settings.voucher_format_template_id,
                     VoucherFormatTemplate.is_active == True
                 )
@@ -574,7 +575,7 @@ class VoucherPDFGenerator:
             # Get template for voucher type
             if voucher_type in ['purchase', 'purchase-vouchers']:
                 template_name = 'purchase_voucher.html'
-            elif voucher_type == 'purchase-orders':
+            elif voucher_type == 'purchase_orders':
                 template_name = 'purchase_order.html'
             elif voucher_type == 'sales':
                 template_name = 'sales_voucher.html'
@@ -600,7 +601,7 @@ class VoucherPDFGenerator:
             except Exception:
                 # Fallback to base template
                 template = self.jinja_env.get_template('base_voucher.html')
-                logger.warning(f"Template {template_name} not found at at {template.filename}, using base template")
+                logger.warning(f"Template {template_name} not found at {template.filename}, using base template")
             
             # Render HTML
             html_content = template.render(**template_data)
@@ -615,7 +616,10 @@ class VoucherPDFGenerator:
                 'encoding': 'UTF-8',
                 'disable-smart-shrinking': '',
                 'zoom': '1.0',
-                'dpi': '96'
+                'dpi': '96',
+                'header-spacing': '0',
+                'footer-spacing': '0',
+                'print-media-type': ''
             }
             pdf_bytes = pdfkit.from_string(html_content, False, configuration=self.pdfkit_config, options=pdf_options)
             
@@ -625,7 +629,7 @@ class VoucherPDFGenerator:
             return pdf_io
             
         except Exception as e:
-            logger.error(f"Error generating PDF for {voucher_type}: {e}")
+            logger.error(traceback.format_exc())  # Log full traceback
             raise Exception(f"PDF generation failed: {str(e)}")
     
     async def generate_purchase_voucher_pdf(self, voucher_data: Dict[str, Any],

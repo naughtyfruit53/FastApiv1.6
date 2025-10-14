@@ -344,6 +344,7 @@ const PurchaseOrderPage: React.FC = () => {
     reset({
       ...voucher,
       date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
+      delivery_date: voucher.delivery_date ? voucher.delivery_date.split('T')[0] : '', // Extract YYYY-MM-DD for delivery_date
       items: voucher.items.map((item: any) => ({
         ...item,
         cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
@@ -366,6 +367,7 @@ const PurchaseOrderPage: React.FC = () => {
     reset({
       ...voucher,
       date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
+      delivery_date: voucher.delivery_date ? voucher.delivery_date.split('T')[0] : '', // Extract YYYY-MM-DD for delivery_date
       items: voucher.items.map((item: any) => ({
         ...item,
         cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
@@ -390,6 +392,7 @@ const PurchaseOrderPage: React.FC = () => {
     reset({
       ...voucher,
       date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
+      delivery_date: voucher.delivery_date ? voucher.delivery_date.split('T')[0] : '', // Extract YYYY-MM-DD for delivery_date
       items: voucher.items.map((item: any) => ({
         ...item,
         cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
@@ -411,9 +414,11 @@ const PurchaseOrderPage: React.FC = () => {
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
       const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : ''; // Extract YYYY-MM-DD
+      const formattedDeliveryDate = voucherData.delivery_date ? voucherData.delivery_date.split('T')[0] : ''; // Extract YYYY-MM-DD for delivery_date
       const formattedData = {
         ...voucherData,
         date: formattedDate,
+        delivery_date: formattedDeliveryDate,
       };
       reset(formattedData);
       if (voucherData.additional_charges) {
@@ -653,7 +658,7 @@ const PurchaseOrderPage: React.FC = () => {
               fullWidth 
               label="Required by Date" 
               type="date" 
-              {...control.register("required_by_date")} 
+              {...control.register("delivery_date")} 
               disabled={mode === "view"} 
               sx={{ 
                 ...voucherFormStyles.field, 

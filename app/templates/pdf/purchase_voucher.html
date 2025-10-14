@@ -1,5 +1,3 @@
-# app/templates/pdf/purchase_voucher.html
-
 {% extends "base_voucher.html" %}
 
 {% block voucher_meta %}
@@ -10,23 +8,22 @@
 <tr><td class="label">Payment Terms</td><td class="value">{{ voucher.payment_terms|default('As per agreement') }}</td></tr>
 {% endblock %}
 
+{% block totals_left %}
+<div style="font-weight:700;">Terms and Conditions</div>
+{% if terms_conditions %}
+<table>
+    <tbody>
+        {% for term in terms_conditions.split('\n') %}
+        {% if term|trim %}
+        <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}
+
 {% block terms_block %}
-<div class="terms">
-    <table>
-        <tbody>
-            {% if voucher.terms_conditions %}
-            {% for term in voucher.terms_conditions.split('\n')|slice(4) %}
-            <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
-            {% endfor %}
-            {% else %}
-            <tr><td>1. PURCHASE VOUCHER TERMS - NO RETURN WITHOUT APPROVAL.</td></tr>
-            <tr><td>2. Late payments subject to 18% interest.</td></tr>
-            <tr><td>3. Goods inspected before acceptance.</td></tr>
-            <tr><td>4. SUBJECT TO PANVEL JURISDICTION.</td></tr>
-            {% endif %}
-        </tbody>
-    </table>
-</div>
 {% endblock %}
 
 {% block voucher_specific_footer %}

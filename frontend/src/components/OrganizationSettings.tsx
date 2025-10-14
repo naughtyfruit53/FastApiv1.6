@@ -23,7 +23,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions } from "@mui/icons-material";
+import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions, Description } from "@mui/icons-material";
 import { organizationService } from "../services/organizationService";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
@@ -36,6 +36,15 @@ interface OrganizationSettingsData {
   custom_settings?: any;
   created_at?: string;
   updated_at?: string;
+  purchase_order_terms?: string;
+  purchase_voucher_terms?: string;
+  sales_order_terms?: string;
+  sales_voucher_terms?: string;
+  quotation_terms?: string;
+  proforma_invoice_terms?: string;
+  delivery_challan_terms?: string;
+  grn_terms?: string;
+  manufacturing_terms?: string;
 }
 
 interface TallyConfig {
@@ -120,6 +129,11 @@ const OrganizationSettings: React.FC = () => {
   const handleAutoNotificationsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const enabled = event.target.checked;
     updateSettings({ auto_send_notifications: enabled });
+  };
+
+  const handleTermsChange = (field: keyof OrganizationSettingsData) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    updateSettings({ [field]: value });
   };
 
   // Tally Integration Handlers
@@ -300,6 +314,101 @@ const OrganizationSettings: React.FC = () => {
                 </Box>
               }
             />
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Voucher Terms & Conditions Section */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Description sx={{ mr: 1 }} />
+              <Typography variant="subtitle1">Voucher Terms & Conditions</Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <TextField
+                label="Purchase Order Terms"
+                value={settings?.purchase_order_terms || ""}
+                onChange={handleTermsChange("purchase_order_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for purchase orders (up to 2000 characters)"
+              />
+              <TextField
+                label="Purchase Voucher Terms"
+                value={settings?.purchase_voucher_terms || ""}
+                onChange={handleTermsChange("purchase_voucher_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for purchase vouchers (up to 2000 characters)"
+              />
+              <TextField
+                label="Sales Order Terms"
+                value={settings?.sales_order_terms || ""}
+                onChange={handleTermsChange("sales_order_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for sales orders (up to 2000 characters)"
+              />
+              <TextField
+                label="Sales Voucher Terms"
+                value={settings?.sales_voucher_terms || ""}
+                onChange={handleTermsChange("sales_voucher_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for sales vouchers (up to 2000 characters)"
+              />
+              <TextField
+                label="Quotation Terms"
+                value={settings?.quotation_terms || ""}
+                onChange={handleTermsChange("quotation_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for quotations (up to 2000 characters)"
+              />
+              <TextField
+                label="Proforma Invoice Terms"
+                value={settings?.proforma_invoice_terms || ""}
+                onChange={handleTermsChange("proforma_invoice_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for proforma invoices (up to 2000 characters)"
+              />
+              <TextField
+                label="Delivery Challan Terms"
+                value={settings?.delivery_challan_terms || ""}
+                onChange={handleTermsChange("delivery_challan_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for delivery challans (up to 2000 characters)"
+              />
+              <TextField
+                label="Goods Receipt Note Terms"
+                value={settings?.grn_terms || ""}
+                onChange={handleTermsChange("grn_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for GRNs (up to 2000 characters)"
+              />
+              <TextField
+                label="Manufacturing Terms"
+                value={settings?.manufacturing_terms || ""}
+                onChange={handleTermsChange("manufacturing_terms")}
+                multiline
+                rows={4}
+                fullWidth
+                helperText="Terms for manufacturing vouchers (up to 2000 characters)"
+              />
+            </Box>
           </AccordionDetails>
         </Accordion>
 
