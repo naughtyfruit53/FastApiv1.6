@@ -268,12 +268,14 @@ const OrgDashboard: React.FC = () => {
               />
             )}
           </Box>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-            Storage Used: {statistics.storage_used_gb ?? 0} GB
-          </Typography>
+          {statistics.subscription_start && (
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+              <strong>Started:</strong> {new Date(statistics.subscription_start).toLocaleDateString()}
+            </Typography>
+          )}
           {statistics.plan_expiry && (
             <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              Expires: {new Date(statistics.plan_expiry).toLocaleDateString()}
+              <strong>Valid Up To:</strong> {new Date(statistics.plan_expiry).toLocaleDateString()}
             </Typography>
           )}
           {statistics.subscription_validity_days !== undefined && (

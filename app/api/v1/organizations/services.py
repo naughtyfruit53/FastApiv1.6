@@ -106,6 +106,10 @@ class OrganizationService:
     @staticmethod
     async def get_org_statistics(db: AsyncSession, organization_id: int) -> Dict:
         """Get organization-specific statistics"""
+        # Get organization details including license info
+        result = await db.execute(select(Organization).filter_by(id=organization_id))
+        org = result.scalars().first()
+        
         result = await db.execute(select(func.count(User.id)).where(
             User.organization_id == organization_id,
             User.is_active == True
@@ -132,6 +136,14 @@ class OrganizationService:
         ))
         total_stock_items = result.scalar_one()
         
+        # Calculate license validity
+        plan_expiry = None
+        subscription_validity_days = None
+        if org and org.license_expiry_date:
+            plan_expiry = org.license_expiry_date.isoformat()
+            delta = org.license_expiry_date.date() - datetime.utcnow().date()
+            subscription_validity_days = delta.days
+        
         return {
             "organization_id": organization_id,
             "total_users": total_users,
@@ -139,6 +151,11 @@ class OrganizationService:
             "total_vendors": total_vendors,
             "total_products": total_products,
             "total_stock_items": total_stock_items,
+            "plan_type": org.license_type if org else "N/A",
+            "plan_status": org.status if org else "N/A",
+            "plan_expiry": plan_expiry,
+            "subscription_validity_days": subscription_validity_days,
+            "subscription_start": org.license_issued_date.isoformat() if org and org.license_issued_date else None,
             "generated_at": datetime.utcnow().isoformat()
         }
 
