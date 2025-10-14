@@ -1,5 +1,3 @@
-# app/api/v1/vouchers/goods_receipt_note.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -61,7 +59,7 @@ async def get_next_goods_receipt_note_number(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available goods receipt note number"""
-    return await VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number_async(
         db, "GRN", current_user.organization_id, GoodsReceiptNote
     )
 
@@ -83,7 +81,7 @@ async def create_goods_receipt_note(
         
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "GRN", current_user.organization_id, GoodsReceiptNote
             )
         else:
@@ -94,7 +92,7 @@ async def create_goods_receipt_note(
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
-                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "GRN", current_user.organization_id, GoodsReceiptNote
                 )
         

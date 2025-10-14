@@ -1,5 +1,7 @@
 # app/schemas/vouchers/purchase.py
 
+# app/schemas/vouchers/purchase.py
+
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr
 from datetime import date, datetime
@@ -111,6 +113,7 @@ class PurchaseOrderUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
     items: Optional[List[PurchaseOrderItemCreate]] = None
+    date: Optional[datetime] = None  # Added to allow updating the main voucher date
 
 class PurchaseOrderInDB(VoucherInDBBase):
     vendor_id: int

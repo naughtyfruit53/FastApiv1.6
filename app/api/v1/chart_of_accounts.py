@@ -434,3 +434,24 @@ async def chart_accounts_lookup(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error performing account lookup"
         )
+
+# Add alias route for /expense-accounts (maps to chart-of-accounts with filter)
+@router.get("/expense-accounts", response_model=ChartOfAccountsList)
+async def get_expense_accounts(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=1000),
+    search: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Alias for expense accounts (filter chart-of-accounts by expense type)"""
+    coa_filter = ChartOfAccountsFilter(account_type="EXPENSE", search=search)
+    return await get_chart_of_accounts(
+        page=page,
+        per_page=per_page,
+        coa_filter=coa_filter,
+        current_user=current_user,
+        db=db,
+        organization_id=organization_id
+    )

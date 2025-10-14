@@ -343,7 +343,7 @@ const PurchaseOrderPage: React.FC = () => {
     setMode("view");
     reset({
       ...voucher,
-      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
       items: voucher.items.map((item: any) => ({
         ...item,
         cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
@@ -365,7 +365,7 @@ const PurchaseOrderPage: React.FC = () => {
     handleEdit(voucher.id);
     reset({
       ...voucher,
-      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
       items: voucher.items.map((item: any) => ({
         ...item,
         cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
@@ -389,7 +389,7 @@ const PurchaseOrderPage: React.FC = () => {
     handleView(voucher.id);
     reset({
       ...voucher,
-      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
       items: voucher.items.map((item: any) => ({
         ...item,
         cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
@@ -410,7 +410,7 @@ const PurchaseOrderPage: React.FC = () => {
 
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
-      const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
+      const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : ''; // Extract YYYY-MM-DD
       const formattedData = {
         ...voucherData,
         date: formattedDate,
@@ -559,6 +559,8 @@ const PurchaseOrderPage: React.FC = () => {
             latestVouchers.slice(0, 7).map((voucher: any) => {
               const colorStatus = getPOColorStatus(voucher);
               const colorCode = getColorCode(colorStatus);
+              const dateStr = voucher.date ? voucher.date.split('T')[0] : ''; // Extract YYYY-MM-DD
+              const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A'; // Extract YYYY-MM-DD
               return (
               <TableRow 
                 key={voucher.id} 
@@ -570,7 +572,7 @@ const PurchaseOrderPage: React.FC = () => {
                 }}
               >
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{voucher.date ? new Date(voucher.date).toLocaleDateString() : "N/A"}</TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || "0"}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>

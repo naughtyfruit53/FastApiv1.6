@@ -1,10 +1,12 @@
+# app/templates/pdf/purchase_voucher.html
+
 {% extends "base_voucher.html" %}
 
 {% block voucher_meta %}
-<tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date }}</td></tr>
+<tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date(format_str=org.date_format or '%d/%m/%Y') }}</td></tr>
 <tr><td class="label">Voucher Number</td><td class="value">{{ voucher.voucher_number|default('N/A') }}</td></tr>
 {% if voucher.reference_number %}<tr><td class="label">Ref Number</td><td class="value">{{ voucher.reference_number }}</td></tr>{% endif %}
-{% if voucher.due_date %}<tr><td class="label">Due Date</td><td class="value">{{ voucher.due_date|format_date|default('Immediate') }}</td></tr>{% endif %}
+{% if voucher.due_date %}<tr><td class="label">Due Date</td><td class="value">{{ voucher.due_date|format_date(format_str=org.date_format or '%d/%m/%Y')|default('Immediate') }}</td></tr>{% endif %}
 <tr><td class="label">Payment Terms</td><td class="value">{{ voucher.payment_terms|default('As per agreement') }}</td></tr>
 {% endblock %}
 
@@ -45,20 +47,6 @@
     </div>
 </div>
 {% endif %}
-
-<div style="margin-top: 15px;">
-    <div class="section-title">Bank Details for Payment</div>
-    <div style="font-size: 10px;">
-        {% if company.bank_details %}
-        A/c Holder's Name: {{ company.bank_details.holder_name }}<br>
-        A/c No.: {{ company.bank_details.account_number }}<br>
-        IFS Code: {{ company.bank_details.ifsc }}<br>
-        Bank Name & Branch : {{ company.bank_details.bank_name }} & {{ company.bank_details.branch }}
-        {% else %}
-        No bank details available.
-        {% endif %}
-    </div>
-</div>
 
 {% if voucher.notes %}
 <div style="margin-top: 15px;">

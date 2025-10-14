@@ -1,5 +1,3 @@
-# app/api/v1/vouchers/purchase_return.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,7 +61,7 @@ async def get_next_purchase_return_number(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available purchase return number"""
-    return await VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number_async(
         db, "PR", current_user.organization_id, PurchaseReturn
     )
 
@@ -85,7 +83,7 @@ async def create_purchase_return(
         
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "PR", current_user.organization_id, PurchaseReturn
             )
         else:
@@ -96,7 +94,7 @@ async def create_purchase_return(
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
-                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "PR", current_user.organization_id, PurchaseReturn
                 )
         

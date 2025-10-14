@@ -63,7 +63,7 @@ async def get_next_sales_return_number(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available sales return number"""
-    return await VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number_async(
         db, "SR", current_user.organization_id, SalesReturn
     )
 
@@ -85,7 +85,7 @@ async def create_sales_return(
         
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "SR", current_user.organization_id, SalesReturn
             )
         else:
@@ -96,7 +96,7 @@ async def create_sales_return(
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
-                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "SR", current_user.organization_id, SalesReturn
                 )
         

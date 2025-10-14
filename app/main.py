@@ -88,6 +88,12 @@ from app.api.v1 import voucher_format_templates as v1_voucher_format_templates
 # Import chatbot router
 from app.api.v1 import chatbot as v1_chatbot
 
+# Import HR router
+from app.api.v1 import hr as v1_hr
+
+# Import Journal Voucher router
+from app.api.v1.vouchers import journal_voucher as v1_journal_voucher
+
 logger = logging.getLogger(__name__)
 
 # Log imports with try/except for error handling
@@ -533,6 +539,14 @@ logger.info("BOM router included successfully at prefix: /api/v1/bom")
 # Add Manufacturing router inclusion (added to fix 404 errors)
 app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])
 logger.info("Manufacturing router included successfully at prefix: /api/v1")
+
+# Include HR router
+app.include_router(v1_hr.router, prefix="/api/v1/hr", tags=["hr"])
+logger.info("HR router included successfully at prefix: /api/v1/hr")
+
+# Include Journal Voucher router
+app.include_router(v1_journal_voucher.router, prefix="/api/v1/journal-vouchers", tags=["journal-vouchers"])
+logger.info("Journal Voucher router included successfully at prefix: /api/v1/journal-vouchers")
 
 @app.get("/routes")
 def get_routes():

@@ -62,7 +62,7 @@ async def get_next_quotation_number(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available quotation number"""
-    return await VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number_async(
         db, "QT", current_user.organization_id, Quotation
     )
 
@@ -104,7 +104,7 @@ async def create_quotation(
         else:
             # Generate unique voucher number if not provided or blank
             if not quotation_data.get('voucher_number') or quotation_data['voucher_number'] == '':
-                quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+                quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "QT", current_user.organization_id, Quotation
                 )
             else:
@@ -115,7 +115,7 @@ async def create_quotation(
                 result = await db.execute(stmt)
                 existing = result.scalar_one_or_none()
                 if existing:
-                    quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+                    quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                         db, "QT", current_user.organization_id, Quotation
                     )
         

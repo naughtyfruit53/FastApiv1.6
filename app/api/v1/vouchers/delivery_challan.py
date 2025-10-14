@@ -60,7 +60,7 @@ async def get_next_delivery_challan_number(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available delivery challan number"""
-    return await VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number_async(
         db, "DC", current_user.organization_id, DeliveryChallan
     )
 
@@ -82,7 +82,7 @@ async def create_delivery_challan(
         
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "DC", current_user.organization_id, DeliveryChallan
             )
         else:
@@ -93,7 +93,7 @@ async def create_delivery_challan(
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
-                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "DC", current_user.organization_id, DeliveryChallan
                 )
         

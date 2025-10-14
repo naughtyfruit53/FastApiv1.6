@@ -1,5 +1,3 @@
-# app/services/pdf_generation_service.py
-
 """
 Comprehensive PDF generation service for vouchers with Indian formatting
 """
@@ -14,7 +12,7 @@ from io import BytesIO
 from num2words import num2words
 from sqlalchemy.ext.asyncio import AsyncSession  # Changed to AsyncSession
 from sqlalchemy import select  # Added for select
-from app.models import Company, User, Vendor  # Added Vendor import
+from app.models import Company, User, Vendor, Organization  # Added Vendor import and Organization
 from app.models.erp_models import BankAccount  # Added for bank details in PDFs
 import logging
 import base64
@@ -246,8 +244,8 @@ class VoucherPDFGenerator:
                     bank_details = {
                         'holder_name': company.name,  # Use company name as account holder
                         'bank_name': bank_account.bank_name,
-                        'account_number': bank_account.account_number,
                         'branch': bank_account.branch_name or '',
+                        'account_number': bank_account.account_number,
                         'ifsc': bank_account.ifsc_code or ''
                     }
                 
@@ -301,8 +299,14 @@ class VoucherPDFGenerator:
                                   db: AsyncSession, organization_id: int) -> Dict[str, Any]:  # Changed db to AsyncSession
         """Prepare voucher data for template rendering"""
         
+        # Prepare data for template
         # Get company branding - await since now async
         company = await self._get_company_branding(db, organization_id)  # Await since now async
+        
+        # Get organization for date_format
+        stmt_org = select(Organization).where(Organization.id == organization_id)
+        result_org = await db.execute(stmt_org)
+        org = result_org.scalars().first()
         
         # Get vendor/party details and determine interstate
         is_interstate = False
@@ -519,7 +523,8 @@ class VoucherPDFGenerator:
             'amount_in_words': IndianNumberFormatter.amount_to_words(grand_total),
             'generated_at': datetime.now(),
             'page_count': 1,  # Will be updated for multi-page
-            'party': party
+            'party': party,
+            'org': org.__dict__ if org else {}  # Added organization data for date_format
         }
         
         return template_data
