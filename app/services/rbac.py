@@ -147,7 +147,7 @@ class RBACService:
         """Get role with its permissions loaded"""
         result = await self.db.execute(
             select(ServiceRole).options(
-                joinedload(ServiceRole.role_permissions).joinedload(ServiceRolePermission.permission)
+                joinedload(ServiceRole.permissions).joinedload(ServiceRolePermission.permission)
             ).filter_by(id=role_id)
         )
         return result.scalars().first()
@@ -366,7 +366,7 @@ class RBACService:
             select(ServicePermission.name)
             .select_from(UserServiceRole)
             .join(UserServiceRole.role)
-            .join(ServiceRole.role_permissions)
+            .join(ServiceRole.permissions)  # Fixed: was ServiceRole.role_permissions
             .join(ServiceRolePermission.permission)
             .where(
                 UserServiceRole.user_id == user_id,

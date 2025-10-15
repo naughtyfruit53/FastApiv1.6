@@ -1,13 +1,10 @@
 # app/api/v1/organizations/services.py
 
-"""
-Organization services - Business logic for organization management
-"""
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
-from sqlalchemy import select, desc  # Added desc import
-from sqlalchemy.orm import joinedload  # Added joinedload import for eager loading
+from sqlalchemy import select, desc
+from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
@@ -17,17 +14,16 @@ import re
 
 from app.models import Organization, User, Product, Customer, Vendor, Stock, ServiceRole, AuditLog
 from app.schemas.user import UserRole
-from app.schemas import (
+from app.schemas.organization import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
     OrganizationLicenseCreate, OrganizationLicenseResponse,
-    UserCreate, UserInDB
+    RecentActivity, RecentActivityResponse
 )
 from app.core.security import get_password_hash
 from app.core.logging import log_license_creation, log_email_operation
 from app.services.rbac import RBACService
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
 from app.services.system_email_service import system_email_service
-from app.schemas.organization import RecentActivity, RecentActivityResponse
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +36,7 @@ def generate_subdomain(name: str) -> str:
     if len(subdomain) < 3:
         subdomain = f"{subdomain}-{secrets.choice(string.ascii_lowercase + string.digits) * (3 - len(subdomain))}"
     return subdomain
+
 
 class OrganizationService:
     """Business logic for organization management"""
@@ -106,7 +103,6 @@ class OrganizationService:
     @staticmethod
     async def get_org_statistics(db: AsyncSession, organization_id: int) -> Dict:
         """Get organization-specific statistics"""
-        # Get organization details including license info
         result = await db.execute(select(Organization).filter_by(id=organization_id))
         org = result.scalars().first()
         
@@ -136,7 +132,6 @@ class OrganizationService:
         ))
         total_stock_items = result.scalar_one()
         
-        # Calculate license validity
         plan_expiry = None
         subscription_validity_days = None
         if org and org.license_expiry_date:
@@ -165,46 +160,33 @@ class OrganizationService:
         result = await db.execute(
             select(AuditLog)
             .filter_by(organization_id=organization_id)
-            .options(joinedload(AuditLog.user))  # Eager load user to avoid lazy load in async context
-            .order_by(desc(AuditLog.timestamp))
+            .options(joinedload(AuditLog.user))
+            .order_by(desc(AuditLog.created_at))
             .limit(limit)
         )
         logs = result.scalars().all()
         
-        activities = []
-        for log in logs:
-            # Simple mapping of audit log to activity
-            activity_type = {
-                'CREATE': 'created',
-                'UPDATE': 'updated',
-                'DELETE': 'deleted'
-            }.get(log.action, 'modified')
-            
-            title = f"{log.table_name} {activity_type}"
-            description = f"{log.user.full_name if log.user else 'System'} {activity_type} a record in {log.table_name}"
-            if log.changes:
-                description += f" (changes: {len(log.changes)} fields)"
-            
-            activities.append(RecentActivity(
-                id=str(log.id),
-                type=log.table_name.lower(),
-                title=title,
-                description=description,
-                timestamp=log.timestamp.isoformat(),
+        activities = [
+            RecentActivity(
+                id=log.id,
+                action=log.action,
+                entity_type=log.table_name,
+                entity_id=log.record_id,
+                user_id=log.user_id,
+                organization_id=log.organization_id,
+                description=log.changes.get('description') if log.changes else None,
+                created_at=log.created_at,
                 user_name=log.user.full_name if log.user else None
-            ))
+            )
+            for log in logs
+        ]
         
-        return RecentActivityResponse(
-            activities=activities,
-            total_count=len(activities),
-            generated_at=datetime.utcnow().isoformat()
-        )
+        return RecentActivityResponse(activities=activities)
 
     @staticmethod
-    async def create_license(db: AsyncSession, license_data: OrganizationLicenseCreate, current_user: User) -> Dict:
+    async def create_license(db: AsyncSession, license_data: OrganizationLicenseCreate, current_user: User) -> OrganizationLicenseResponse:
         """Create new organization license"""
         try:
-            # Check if email already exists in our database
             result = await db.execute(select(User).filter_by(email=license_data.superadmin_email))
             existing_user = result.scalars().first()
             if existing_user:
@@ -213,8 +195,8 @@ class OrganizationService:
             subdomain = license_data.subdomain or generate_subdomain(license_data.organization_name)
             result = await db.execute(select(Organization).filter_by(subdomain=subdomain))
             if result.scalars().first():
-                raise ValueError(f"Subdomain '{subdomain}' is already in use")
-
+                raise HTTPException(status_code=400, detail=f"Subdomain '{subdomain}' is already in use")
+            
             organization = Organization(
                 name=license_data.organization_name,
                 subdomain=subdomain,
@@ -228,18 +210,17 @@ class OrganizationService:
                 max_users=license_data.max_users,
                 status="trial",
                 plan_type="basic",
-                enabled_modules=license_data.enabled_modules or {k: True for k in OrganizationService.get_available_modules()["available_modules"]},
-                license_type="trial",
+                enabled_modules=license_data.enabled_modules or OrganizationService.get_available_modules(),
+                license_type=license_data.license_type,
                 license_issued_date=datetime.utcnow(),
-                license_expiry_date=datetime.utcnow() + timedelta(days=30),
-                license_duration_months=1
+                license_expiry_date=datetime.utcnow() + timedelta(days=30) if license_data.license_duration_months else None,
+                license_duration_months=license_data.license_duration_months
             )
             db.add(organization)
             await db.flush()
-
+            
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
             
-            # Check for orphan Supabase user and clean up if exists
             supabase_existing = supabase_auth_service.get_user_by_email(license_data.superadmin_email)
             if supabase_existing:
                 logger.warning(f"Found orphan Supabase user for {license_data.superadmin_email} - deleting")
@@ -254,7 +235,7 @@ class OrganizationService:
                     "organization_id": organization.id
                 }
             )
-
+            
             super_admin_user = User(
                 organization_id=organization.id,
                 email=license_data.superadmin_email,
@@ -267,7 +248,7 @@ class OrganizationService:
             )
             db.add(super_admin_user)
             await db.flush()
-
+            
             rbac_service = RBACService(db)
             logger.info(f"Initializing RBAC for organization {organization.id}")
             permissions = await rbac_service.initialize_default_permissions()
@@ -275,7 +256,7 @@ class OrganizationService:
             
             roles = await rbac_service.initialize_default_roles(organization.id)
             logger.info(f"Initialized {len(roles)} roles for organization {organization.id}")
-
+            
             result = await db.execute(select(ServiceRole).filter_by(
                 organization_id=organization.id,
                 name='admin'
@@ -286,12 +267,12 @@ class OrganizationService:
                 logger.info(f"Successfully assigned admin role to user {super_admin_user.email}")
             else:
                 logger.error(f"Admin role not found after initialization for org {organization.id}")
-                raise ValueError("Failed to initialize RBAC roles properly")
-
+                raise HTTPException(status_code=500, detail="Failed to initialize RBAC roles properly")
+            
             await db.commit()
-
+            
             log_license_creation(organization.name, license_data.superadmin_email, current_user.email)
-
+            
             success, error = await system_email_service.send_license_creation_email(
                 org_admin_email=license_data.superadmin_email,
                 org_admin_name="Organization Admin",
@@ -302,21 +283,17 @@ class OrganizationService:
                 created_by=current_user.email,
                 notify_creator=True
             )
-
+            
             if not success:
                 logger.warning(f"Failed to send license creation email: {error}")
-
-            return {
-                "organization_name": organization.name,
-                "subdomain": organization.subdomain,
-                "superadmin_email": super_admin_user.email,
-                "temp_password": temp_password,
-                "organization_id": organization.id,
-                "message": "Organization license created successfully. Admin must change password on first login."
-            }
-        except ValueError as e:
-            await db.rollback()
-            raise HTTPException(status_code=400, detail=str(e))
+            
+            return OrganizationLicenseResponse(
+                license_type=organization.license_type,
+                license_issued_date=organization.license_issued_date,
+                license_expiry_date=organization.license_expiry_date
+            )
+        except HTTPException:
+            raise
         except SupabaseAuthError as e:
             await db.rollback()
             if "already been registered" in str(e):
@@ -331,54 +308,15 @@ class OrganizationService:
     def get_available_modules() -> Dict:
         """Get available modules in the application"""
         available_modules = {
-            "CRM": {
-                "name": "CRM",
-                "description": "Customer Relationship Management",
-                "endpoints": ["/api/v1/customers"],
-                "enabled": True
-            },
-            "ERP": {
-                "name": "ERP", 
-                "description": "Enterprise Resource Planning",
-                "endpoints": ["/api/v1/companies", "/api/v1/users"],
-                "enabled": True
-            },
-            "HR": {
-                "name": "HR",
-                "description": "Human Resources Management", 
-                "endpoints": ["/api/v1/users"],
-                "enabled": True
-            },
-            "Inventory": {
-                "name": "Inventory",
-                "description": "Inventory Management",
-                "endpoints": ["/api/v1/stock", "/api/v1/products", "/api/v1/inventory"],
-                "enabled": True
-            },
-            "Service": {
-                "name": "Service",
-                "description": "Service Management",
-                "endpoints": ["/api/v1/service-analytics", "/api/v1/sla", "/api/v1/dispatch", "/api/v1/feedback"],
-                "enabled": True
-            },
-            "Analytics": {
-                "name": "Analytics", 
-                "description": "Reports and Analytics",
-                "endpoints": ["/api/v1/analytics", "/api/v1/service-analytics"],
-                "enabled": True
-            },
-            "Finance": {
-                "name": "Finance",
-                "description": "Financial Management",
-                "endpoints": ["/api/v1/vendors", "/api/v1", "/api/v1/gst"],
-                "enabled": True
-            }
+            "CRM": True,
+            "ERP": True,
+            "HR": True,
+            "Inventory": True,
+            "Service": True,
+            "Analytics": True,
+            "Finance": True
         }
-        
-        return {
-            "available_modules": available_modules,
-            "default_enabled": list(available_modules.keys())
-        }
+        return available_modules
 
     @staticmethod
     async def get_organization_modules(db: AsyncSession, organization_id: int) -> Dict:
@@ -386,7 +324,7 @@ class OrganizationService:
         result = await db.execute(select(Organization).filter_by(id=organization_id))
         org = result.scalars().first()
         if not org:
-            return None
+            raise HTTPException(status_code=404, detail="Organization not found")
         
         enabled_modules = org.enabled_modules or {
             "CRM": True,
@@ -410,10 +348,10 @@ class OrganizationService:
         result = await db.execute(select(Organization).filter_by(id=organization_id))
         org = result.scalars().first()
         if not org:
-            return None
+            raise HTTPException(status_code=404, detail="Organization not found")
         
         if not isinstance(enabled_modules, dict):
-            raise ValueError("enabled_modules must be a dictionary")
+            raise HTTPException(status_code=400, detail="enabled_modules must be a dictionary")
         
         org.enabled_modules = enabled_modules
         await db.commit()

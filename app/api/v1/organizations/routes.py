@@ -2,19 +2,17 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
 from sqlalchemy import select, or_
+from typing import List, Any
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission, require_platform_permission
 from app.models import Organization, User, Product, Customer, Vendor, Stock, AuditLog
 from app.schemas.user import UserRole, UserInDB  # Added UserInDB import
-from app.schemas import (
+from app.schemas.organization import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
-    OrganizationLicenseCreate, OrganizationLicenseResponse,
-    UserCreate
+    OrganizationLicenseCreate, OrganizationLicenseResponse
 )
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user

@@ -9,12 +9,30 @@ import {
   Button, 
   Grid, 
   Divider,
-  Alert
+  Alert,
+  FormControlLabel,
+  Switch,
+  FormGroup,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl
 } from '@mui/material';
-import { Business, Save } from '@mui/icons-material';
+import { Business, Save, Sync } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
 
 const CompanyProfilePage: React.FC = () => {
+  const [tallyEnabled, setTallyEnabled] = React.useState(false);
+  const [syncFrequency, setSyncFrequency] = React.useState('manual');
+
+  const handleTallyToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setTallyEnabled(event.target.checked);
+  };
+
+  const handleSyncFrequencyChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setSyncFrequency(event.target.value as string);
+  };
+
   return (
     <DashboardLayout
       title="Company Profile"
@@ -73,7 +91,7 @@ const CompanyProfilePage: React.FC = () => {
                     fullWidth
                     label="Company Address"
                     multiline
-                    rows={3}
+                    rows=3
                     placeholder="Enter complete address"
                     variant="outlined"
                   />
@@ -112,6 +130,81 @@ const CompanyProfilePage: React.FC = () => {
                   />
                 </Grid>
               </Grid>
+              
+              <Divider sx={{ my: 3 }} />
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Sync sx={{ mr: 2, color: 'primary.main' }} />
+                <Typography variant="h6">Tally Sync Integration</Typography>
+              </Box>
+              
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={tallyEnabled}
+                      onChange={handleTallyToggle}
+                      name="tallyEnabled"
+                    />
+                  }
+                  label="Enable Tally Sync"
+                />
+              </FormGroup>
+              
+              {tallyEnabled && (
+                <Grid container spacing={3} sx={{ mt: 2 }}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Tally Host"
+                      placeholder="e.g., localhost or tally.company.com"
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Tally Port"
+                      type="number"
+                      defaultValue={9000}
+                      variant="outlined"
+                      inputProps={{ min: 1, max: 65535 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Tally Company Name"
+                      placeholder="Enter the company name in Tally"
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel id="sync-frequency-label">Sync Frequency</InputLabel>
+                      <Select
+                        labelId="sync-frequency-label"
+                        value={syncFrequency}
+                        label="Sync Frequency"
+                        onChange={handleSyncFrequencyChange}
+                      >
+                        <MenuItem value="manual">Manual</MenuItem>
+                        <MenuItem value="daily">Daily</MenuItem>
+                        <MenuItem value="hourly">Hourly</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Last Sync"
+                      disabled
+                      variant="outlined"
+                      value="Not synced yet"
+                    />
+                  </Grid>
+                </Grid>
+              )}
               
               <Divider sx={{ my: 3 }} />
               
