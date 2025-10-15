@@ -221,34 +221,8 @@ class VoucherPDFGenerator:
                 
                 logger.info(f"Company Company GST: {company.gst_number}, state_code (final): {state_code}")
                 
-                # Get bank account details (default bank account or first active one)
+                # Removed bank fetching - set to None to remove from PDFs
                 bank_details = None
-                stmt_bank = select(BankAccount).filter(  # Changed to select
-                    BankAccount.organization_id == organization_id,
-                    BankAccount.is_active == True
-                ).filter(
-                    (BankAccount.is_default == True)  # Prefer default account
-                )
-                result_bank = await db.execute(stmt_bank)  # Await
-                bank_account = result_bank.scalars().first()
-                
-                # If no default, get any active bank account
-                if not bank_account:
-                    stmt_any = select(BankAccount).filter(
-                        BankAccount.organization_id == organization_id,
-                        BankAccount.is_active == True
-                    )
-                    result_any = await db.execute(stmt_any)  # Await
-                    bank_account = result_any.scalars().first()
-                
-                if bank_account:
-                    bank_details = {
-                        'holder_name': company.name,  # Use company name as account holder
-                        'bank_name': bank_account.bank_name,
-                        'branch': bank_account.branch_name or '',
-                        'account_number': bank_account.account_number,
-                        'ifsc': bank_account.ifsc_code or ''
-                    }
                 
                 return {
                     'name': company.name,
@@ -264,7 +238,7 @@ class VoucherPDFGenerator:
                     'email': company.email or '',
                     'website': company.website or '',
                     'logo_url': logo_url,
-                    'bank_details': bank_details
+                    'bank_details': bank_details  # Set to None
                 }
             else:
                 # Fallback company data
@@ -578,8 +552,8 @@ class VoucherPDFGenerator:
                 elif voucher_type == 'grn':
                     terms_conditions = org_settings.grn_terms
                 
-                # Add terms_conditions to template data
-                template_data['terms_conditions'] = terms_conditions or ''
+                # Add terms_conditions to template data as list for table rendering
+                template_data['terms_conditions'] = (terms_conditions or '').split('\n') if terms_conditions else []
             
             # Determine base template style based on format template configuration
             base_template_name = 'base_voucher.html'  # Default

@@ -134,8 +134,6 @@ class NotificationService:
             
         for field, value in update_data.items():
             if hasattr(template, field) and value is not None:
-                if field in ['variables', 'trigger_conditions'] and isinstance(value, (list, dict)):
-                    value = json.dumps(value)
                 setattr(template, field, value)
         
         db.commit()
@@ -809,7 +807,7 @@ class NotificationService:
         
         for template in templates:
             # Get recipients for this trigger
-            recipients = self._get_trigger_recipients(db, trigger_event, context_data, organization_id)
+            recipients = self._get_trigger_recipient(db, trigger_event, context_data, organization_id)
             
             for recipient in recipients:
                 # Check user preferences
@@ -841,3 +839,5 @@ class NotificationService:
         db.commit()
         logger.info(f"Triggered {len(notification_logs)} automated notifications for event {trigger_event}")
         return notification_logs
+
+notification_service = NotificationService()

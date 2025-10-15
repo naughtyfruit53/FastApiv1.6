@@ -6,7 +6,8 @@ System-level reset service for factory default operations
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, select, text  # Added for raw SQL execution
 from typing import Dict, Any
-from app.models.user_models import Organization, User, ServiceRole, UserServiceRole, ServiceRolePermission
+from app.models.user_models import Organization, User
+from app.models.rbac_models import ServiceRole, UserServiceRole, ServiceRolePermission
 from app.models.system_models import Company, EmailNotification, PaymentTerm, OTPVerification, AuditLog
 from app.models.customer_models import Customer, Vendor
 from app.models.product_models import Product, Stock

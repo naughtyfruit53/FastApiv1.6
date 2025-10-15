@@ -2,9 +2,13 @@
 
 # Import all models from the new modular structure for backward compatibility
 from .user_models import (
-    PlatformUser, Organization, User, ServiceRole, ServicePermission, 
-    ServiceRolePermission, UserServiceRole, OrganizationRole, RoleModuleAssignment,
+    PlatformUser, Organization, User, 
+    OrganizationRole, RoleModuleAssignment,
     UserOrganizationRole, OrganizationApprovalSettings, VoucherApproval
+)
+from .rbac_models import (  # Moved RBAC models here
+    ServiceRole, ServicePermission, 
+    ServiceRolePermission, UserServiceRole
 )
 from .customer_models import (
     Vendor, Customer, CustomerFile, CustomerInteraction, 
@@ -17,9 +21,6 @@ from .system_models import (
     Company, AuditLog, EmailNotification, NotificationTemplate, NotificationLog, 
     NotificationPreference, PaymentTerm, OTPVerification, EmailSend, EmailProvider, 
     EmailStatus, EmailType
-)
-from .analytics_models import (
-    ServiceAnalyticsEvent, ReportConfiguration, AnalyticsSummary
 )
 # Import service models from service_models.py
 from .service_models import (
@@ -180,9 +181,13 @@ from .organization_settings import (
 
 __all__ = [
     # User and organization models
-    "PlatformUser", "Organization", "User", "ServiceRole", "ServicePermission",
-    "ServiceRolePermission", "UserServiceRole", "OrganizationRole", "RoleModuleAssignment",
+    "PlatformUser", "Organization", "User", 
+    "OrganizationRole", "RoleModuleAssignment",
     "UserOrganizationRole", "OrganizationApprovalSettings", "VoucherApproval",
+    
+    # RBAC models
+    "ServiceRole", "ServicePermission", 
+    "ServiceRolePermission", "UserServiceRole",
     
     # Customer and business entity models
     "Company", "Vendor", "Customer", "CustomerFile", "CustomerInteraction",

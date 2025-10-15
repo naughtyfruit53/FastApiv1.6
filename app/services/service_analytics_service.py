@@ -1,5 +1,3 @@
-# app/services/service_analytics_service.py
-
 """
 Service Analytics Service
 
@@ -17,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_, or_, case, extract
 from app.models import (
     InstallationJob, InstallationTask, CompletionRecord, CustomerFeedback,
-    ServiceClosure, ServiceAnalyticsEvent, AnalyticsSummary, User, Customer,
+    ServiceClosure, User, Customer,
     Ticket, SLAPolicy, SLATracking
 )
 from app.schemas.service_analytics import (

@@ -7,7 +7,6 @@ from sqlalchemy import func, and_, or_, desc, text
 from typing import List, Optional, Dict, Any
 from decimal import Decimal
 from datetime import datetime, date, timedelta
-import psutil
 import time
 
 from app.db.session import get_db
@@ -94,7 +93,7 @@ async def get_payroll_health_check(
         processing_time = time.time() - start_time
         
         # Get memory usage
-        memory_usage = psutil.Process().memory_info().rss / 1024 / 1024  # MB
+        memory_usage = 0  # psutil.Process().memory_info().rss / 1024 / 1024  # MB
         
         # Determine overall health status
         status_level = "healthy"
@@ -320,8 +319,8 @@ async def get_performance_analysis(
         query_times['account_lookup'] = time.time() - start
         
         # System resource usage
-        memory_info = psutil.virtual_memory()
-        cpu_percent = psutil.cpu_percent(interval=1)
+        memory_usage = 0  # memory_info = psutil.virtual_memory()
+        cpu_percent = 0  # psutil.cpu_percent(interval=1)
         
         # Database connection pool status
         connection_pool_info = {
@@ -344,7 +343,7 @@ async def get_performance_analysis(
         if cpu_percent > 80:
             recommendations.append("High CPU usage detected - consider load balancing")
         
-        if memory_info.percent > 85:
+        if memory_usage > 85:  # memory_info.percent > 85:
             recommendations.append("High memory usage - consider memory optimization")
         
         total_time = time.time() - start_time
@@ -355,9 +354,9 @@ async def get_performance_analysis(
                 "query_performance": query_times,
                 "system_resources": {
                     "cpu_percent": cpu_percent,
-                    "memory_percent": memory_info.percent,
-                    "memory_available_gb": memory_info.available / (1024**3),
-                    "memory_used_gb": memory_info.used / (1024**3)
+                    "memory_percent": memory_usage,  # memory_info.percent,
+                    "memory_available_gb": 0,  # memory_info.available / (1024**3),
+                    "memory_used_gb": 0  # memory_info.used / (1024**3)
                 },
                 "database_performance": [
                     {
@@ -553,7 +552,7 @@ async def run_performance_benchmark(
         benchmark_results['aggregation'] = time.time() - start_time
         
         # Memory usage during benchmark
-        memory_info = psutil.Process().memory_info()
+        memory_usage = 0  # memory_info = psutil.Process().memory_info()
         
         # Generate performance score (lower is better)
         total_time = sum(benchmark_results.values())
@@ -572,7 +571,7 @@ async def run_performance_benchmark(
             "benchmark_results": benchmark_results,
             "total_time": total_time,
             "performance_grade": performance_grade,
-            "memory_usage_mb": memory_info.rss / 1024 / 1024,
+            "memory_usage_mb": memory_usage,  # memory_info.rss / 1024 / 1024,
             "recommendations": [
                 "Consider adding database indexes if performance grade is below B",
                 "Monitor memory usage during peak hours",

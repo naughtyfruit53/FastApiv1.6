@@ -36,15 +36,7 @@ interface OrganizationSettingsData {
   custom_settings?: any;
   created_at?: string;
   updated_at?: string;
-  purchase_order_terms?: string;
-  purchase_voucher_terms?: string;
-  sales_order_terms?: string;
-  sales_voucher_terms?: string;
-  quotation_terms?: string;
-  proforma_invoice_terms?: string;
-  delivery_challan_terms?: string;
-  grn_terms?: string;
-  manufacturing_terms?: string;
+  // Removed terms fields - consolidated to voucher-settings.tsx
 }
 
 interface TallyConfig {
@@ -131,10 +123,7 @@ const OrganizationSettings: React.FC = () => {
     updateSettings({ auto_send_notifications: enabled });
   };
 
-  const handleTermsChange = (field: keyof OrganizationSettingsData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    updateSettings({ [field]: value });
-  };
+  // Removed handleTermsChange - moved to voucher-settings.tsx
 
   // Tally Integration Handlers
   const loadTallyConfig = async () => {
@@ -210,7 +199,7 @@ const OrganizationSettings: React.FC = () => {
 
   // Load Tally config on mount
   useEffect(() => {
-    if (user?.is_super_admin) {
+    if (user?.role === 'org_admin') {  // Changed to 'org_admin' as per your logs
       loadTallyConfig();
     }
   }, [user]);
@@ -317,103 +306,10 @@ const OrganizationSettings: React.FC = () => {
           </AccordionDetails>
         </Accordion>
 
-        {/* Voucher Terms & Conditions Section */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <Description sx={{ mr: 1 }} />
-              <Typography variant="subtitle1">Voucher Terms & Conditions</Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <TextField
-                label="Purchase Order Terms"
-                value={settings?.purchase_order_terms || ""}
-                onChange={handleTermsChange("purchase_order_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for purchase orders (up to 2000 characters)"
-              />
-              <TextField
-                label="Purchase Voucher Terms"
-                value={settings?.purchase_voucher_terms || ""}
-                onChange={handleTermsChange("purchase_voucher_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for purchase vouchers (up to 2000 characters)"
-              />
-              <TextField
-                label="Sales Order Terms"
-                value={settings?.sales_order_terms || ""}
-                onChange={handleTermsChange("sales_order_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for sales orders (up to 2000 characters)"
-              />
-              <TextField
-                label="Sales Voucher Terms"
-                value={settings?.sales_voucher_terms || ""}
-                onChange={handleTermsChange("sales_voucher_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for sales vouchers (up to 2000 characters)"
-              />
-              <TextField
-                label="Quotation Terms"
-                value={settings?.quotation_terms || ""}
-                onChange={handleTermsChange("quotation_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for quotations (up to 2000 characters)"
-              />
-              <TextField
-                label="Proforma Invoice Terms"
-                value={settings?.proforma_invoice_terms || ""}
-                onChange={handleTermsChange("proforma_invoice_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for proforma invoices (up to 2000 characters)"
-              />
-              <TextField
-                label="Delivery Challan Terms"
-                value={settings?.delivery_challan_terms || ""}
-                onChange={handleTermsChange("delivery_challan_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for delivery challans (up to 2000 characters)"
-              />
-              <TextField
-                label="Goods Receipt Note Terms"
-                value={settings?.grn_terms || ""}
-                onChange={handleTermsChange("grn_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for GRNs (up to 2000 characters)"
-              />
-              <TextField
-                label="Manufacturing Terms"
-                value={settings?.manufacturing_terms || ""}
-                onChange={handleTermsChange("manufacturing_terms")}
-                multiline
-                rows={4}
-                fullWidth
-                helperText="Terms for manufacturing vouchers (up to 2000 characters)"
-              />
-            </Box>
-          </AccordionDetails>
-        </Accordion>
+        {/* Removed Voucher Terms & Conditions Section - moved to voucher-settings.tsx */}
 
-        {/* Tally Integration Section - Only for App Super Admin */}
-        {user?.is_super_admin && (
+        {/* Tally Integration Section - Now for Org Super Admin */}
+        {user?.role === 'org_admin' && (  // Changed to 'org_admin' as per your logs
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMore />}>
               <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
@@ -449,7 +345,12 @@ const OrganizationSettings: React.FC = () => {
                 {tallyConfig.enabled && (
                   <>
                     <Alert severity="info" sx={{ mb: 2 }}>
-                      Connect to Tally ERP 9 running on your local network. Ensure Tally is configured to accept external connections (F12 → Configure → Enable ODBC Server).
+                      Connect to Tally ERP 9 running on your local network. To enable external connections:
+                      <br/>1. Run Tally as Administrator.
+                      <br/>2. Go to Gateway of Tally > F12: Configure > Advanced Configuration.
+                      <br/>3. Set 'Tally Act as' to 'Both', Enable ODBC Server: Yes, Port: 9000.
+                      <br/>4. Press Ctrl+A to save and restart Tally.
+                      <br/>Security: Use secure channels; limit access with user permissions in Tally. No advanced auth—rely on network security.
                     </Alert>
 
                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>

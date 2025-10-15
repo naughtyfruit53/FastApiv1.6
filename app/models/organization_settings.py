@@ -28,7 +28,7 @@ class OrganizationSettings(Base):
     # Email Settings
     mail_1_level_up_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
-    # Future extensibility for other organization-wide settings
+    # Future extensibility for organization-wide settings
     auto_send_notifications: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     # Voucher Settings (Requirement 5)
@@ -58,6 +58,14 @@ class OrganizationSettings(Base):
     
     # Custom settings (JSON for flexibility)
     custom_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    
+    # Added Tally config fields for org-level storage
+    tally_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    tally_host: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    tally_port: Mapped[Optional[int]] = mapped_column(Integer, default=9000, nullable=True)
+    tally_company_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    tally_sync_frequency: Mapped[Optional[str]] = mapped_column(String(50), default="manual", nullable=True)
+    tally_last_sync: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

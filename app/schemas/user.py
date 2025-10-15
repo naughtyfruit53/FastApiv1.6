@@ -114,7 +114,7 @@ class UserInDB(UserBase):
     reporting_manager_id: Optional[int] = None  # For executives
     sub_module_permissions: Optional[Dict[str, List[str]]] = None  # For executives
     
-    model_config = ConfigDict(from_attributes = True, use_enum_values=True)  # Added use_enum_values=True
+    model_config = ConfigDict(from_attributes = True, use_enum_values=True)  # Changed orm_mode to from_attributes
 
 
 class UserLogin(BaseModel):
@@ -451,8 +451,8 @@ class UserResponse(BaseModel):
     reporting_manager_id: Optional[int] = None  # For executives
     sub_module_permissions: Optional[Dict[str, List[str]]] = None  # For executives
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
+
 
 class LoginResponse(BaseModel):
     access_token: str

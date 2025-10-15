@@ -14,7 +14,7 @@ from app.schemas.user import UserRole
 from app.schemas import OrganizationUpdate, OrganizationInDB
 import logging
 from app.utils.supabase_auth import supabase_auth_service
-from app.models.user_models import UserServiceRole, ServiceRolePermission, ServiceRole
+from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole  # Changed to absolute from rbac_models
 
 logger = logging.getLogger(__name__)
 

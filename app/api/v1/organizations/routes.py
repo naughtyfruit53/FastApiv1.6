@@ -10,11 +10,11 @@ from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission, require_platform_permission
 from app.models import Organization, User, Product, Customer, Vendor, Stock, AuditLog
-from app.schemas.user import UserRole
+from app.schemas.user import UserRole, UserInDB  # Added UserInDB import
 from app.schemas import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
     OrganizationLicenseCreate, OrganizationLicenseResponse,
-    UserCreate, UserInDB
+    UserCreate
 )
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
@@ -28,6 +28,9 @@ from .license_routes import license_router
 from .settings_routes import router as settings_router
 from app.services.otp_service import OTPService
 from app.schemas.reset import OTPRequest, OTPVerify
+
+# Import RBAC models from rbac_models
+from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole
 
 # Import the seeding function
 from app.scripts.seed_finance_data import create_standard_chart_of_accounts

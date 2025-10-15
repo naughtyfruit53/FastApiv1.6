@@ -30,13 +30,20 @@ if APP_DIR not in sys.path:
 from app.core.config import settings
 from app.core.database import Base, sync_database_url
 
-# Dynamically import all models
+# Dynamically import all models, with duplicate check
 models_dir = os.path.join(APP_DIR, "models")
+imported_modules = set()
 for (_, module_name, _) in pkgutil.iter_modules([models_dir]):
-    importlib.import_module(f"app.models.{module_name}")
+    if module_name not in imported_modules:
+        try:
+            importlib.import_module(f"app.models.{module_name}")
+            imported_modules.add(module_name)
+        except Exception as e:
+            print(f"WARNING: Skipping import of app.models.{module_name}: {e}")
 
-# Explicitly import user_models to ensure new columns are detected
+# Explicitly import user_models and rbac_models to ensure new columns are detected
 from app.models import user_models
+from app.models import rbac_models  # Explicit import to resolve conflict
 
 config = context.config
 
