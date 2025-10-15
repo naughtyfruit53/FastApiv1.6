@@ -248,16 +248,19 @@ app.include_router(inter_department_voucher_router, prefix="/api/v1/vouchers/int
 app.include_router(goods_receipt_note_router, prefix="/api/v1/vouchers/goods_receipt_note", tags=["vouchers-goods-receipt-note"])
 # Non-sales credit note module doesn't exist
 # app.include_router(non_sales_credit_note_router, prefix="/api/v1/vouchers/non_sales_credit_note", tags=["vouchers-non-sales-credit-note"])
-app.include_router(manufacturing_orders_router, prefix="/api/v1/manufacturing/manufacturing_orders", tags=["manufacturing-orders"])
-app.include_router(material_issue_router, prefix="/api/v1/manufacturing/material_issue", tags=["material-issue"])
-app.include_router(manufacturing_journals_router, prefix="/api/v1/manufacturing/manufacturing_journals", tags=["manufacturing-journals"])
-app.include_router(material_receipt_router, prefix="/api/v1/manufacturing/material_receipt", tags=["material-receipt"])
-app.include_router(job_cards_router, prefix="/api/v1/manufacturing/job_cards", tags=["job-cards"])
-app.include_router(stock_journals_router, prefix="/api/v1/manufacturing/stock_journals", tags=["stock-journals"])
-app.include_router(bom_manufacturing_router, prefix="/api/v1/manufacturing/bom", tags=["bom"])
-app.include_router(mrp_router, prefix="/api/v1/manufacturing/mrp", tags=["mrp"])
-app.include_router(production_planning_router, prefix="/api/v1/manufacturing/production_planning", tags=["production-planning"])
-app.include_router(shop_floor_router, prefix="/api/v1/manufacturing/shop_floor", tags=["shop-floor"])
+# Commenting out incomplete manufacturing folder routers - full implementation is in manufacturing.py
+# These stub routers would create duplicate/conflicting routes with manufacturing.py
+# TODO: Complete the module split and uncomment these, or remove the folder stubs
+# app.include_router(manufacturing_orders_router, prefix="/api/v1/manufacturing/manufacturing_orders", tags=["manufacturing-orders"])
+# app.include_router(material_issue_router, prefix="/api/v1/manufacturing/material_issue", tags=["material-issue"])
+# app.include_router(manufacturing_journals_router, prefix="/api/v1/manufacturing/manufacturing_journals", tags=["manufacturing-journals"])
+# app.include_router(material_receipt_router, prefix="/api/v1/manufacturing/material_receipt", tags=["material-receipt"])
+# app.include_router(job_cards_router, prefix="/api/v1/manufacturing/job_cards", tags=["job-cards"])
+# app.include_router(stock_journals_router, prefix="/api/v1/manufacturing/stock_journals", tags=["stock-journals"])
+# app.include_router(bom_manufacturing_router, prefix="/api/v1/manufacturing/bom", tags=["bom"])
+# app.include_router(mrp_router, prefix="/api/v1/manufacturing/mrp", tags=["mrp"])
+# app.include_router(production_planning_router, prefix="/api/v1/manufacturing/production_planning", tags=["production-planning"])
+# app.include_router(shop_floor_router, prefix="/api/v1/manufacturing/shop_floor", tags=["shop-floor"])
 app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
 # Commenting out non-existent voucher routers
 # app.include_router(base_voucher_router, prefix="/api/v1/vouchers/base", tags=["vouchers-base"])
