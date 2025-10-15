@@ -18,9 +18,10 @@ from app.models.rbac_models import UserServiceRole, ServiceRolePermission, Servi
 
 logger = logging.getLogger(__name__)
 
-module_router = APIRouter()
+router = APIRouter()
+module_router = router  # Alias for backward compatibility
 
-@module_router.get("/{organization_id:int}/modules")
+@router.get("/{organization_id:int}/modules")
 async def get_organization_modules(
     organization_id: int,
     db: Session = Depends(get_db),
@@ -52,7 +53,7 @@ async def get_organization_modules(
   
     return {"enabled_modules": enabled_modules}
 
-@module_router.put("/{organization_id:int}/modules")
+@router.put("/{organization_id:int}/modules")
 async def update_organization_modules(
     organization_id: int,
     modules_data: dict,
@@ -96,7 +97,7 @@ async def update_organization_modules(
             detail="Failed to update organization modules"
         )
 
-@module_router.get("/{organization_id:int}", response_model=OrganizationInDB)
+@router.get("/{organization_id:int}", response_model=OrganizationInDB)
 async def get_organization(
     organization_id: int,
     db: Session = Depends(get_db),
@@ -118,7 +119,7 @@ async def get_organization(
   
     return org
 
-@module_router.put("/{organization_id:int}", response_model=OrganizationInDB)
+@router.put("/{organization_id:int}", response_model=OrganizationInDB)
 async def update_organization(
     organization_id: int,
     org_update: OrganizationUpdate,
@@ -168,7 +169,7 @@ async def update_organization(
             detail="Error updating organization"
         )
 
-@module_router.delete("/{organization_id:int}")
+@router.delete("/{organization_id:int}")
 async def delete_organization(
     organization_id: int,
     db: Session = Depends(get_db),
@@ -241,7 +242,7 @@ async def delete_organization(
             detail="Error deleting organization and related data"
         )
 
-@module_router.get("/{organization_id:int}/users/{user_id:int}/modules")
+@router.get("/{organization_id:int}/users/{user_id:int}/modules")
 async def get_user_modules(
     organization_id: int,
     user_id: int,
@@ -285,7 +286,7 @@ async def get_user_modules(
   
     return {"assigned_modules": assigned_modules}
 
-@module_router.put("/{organization_id:int}/users/{user_id:int}/modules")
+@router.put("/{organization_id:int}/users/{user_id:int}/modules")
 async def update_user_modules(
     organization_id: int,
     user_id: int,

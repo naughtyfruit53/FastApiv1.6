@@ -22,9 +22,10 @@ from app.services.otp_service import OTPService  # Import OTP service class
 
 logger = logging.getLogger(__name__)
 
-user_router = APIRouter()
+router = APIRouter()
+user_router = router  # Alias for backward compatibility
 
-@user_router.get("/{organization_id:int}/users", response_model=List[UserInDB])
+@router.get("/{organization_id:int}/users", response_model=List[UserInDB])
 async def list_organization_users(
     organization_id: int,
     skip: int = 0,
@@ -65,7 +66,7 @@ async def list_organization_users(
             detail="Failed to list users"
         )
 
-@user_router.post("/{organization_id:int}/users", response_model=UserInDB)
+@router.post("/{organization_id:int}/users", response_model=UserInDB)
 async def create_user_in_organization(
     organization_id: int,
     user_data: UserCreate,
@@ -307,7 +308,7 @@ async def create_user_in_organization(
             detail="Failed to create user"
         )
 
-@user_router.put("/{organization_id:int}/users/{user_id:int}", response_model=UserInDB)
+@router.put("/{organization_id:int}/users/{user_id:int}", response_model=UserInDB)
 async def update_user_in_organization(
     organization_id: int,
     user_id: int,
@@ -453,7 +454,7 @@ async def update_user_in_organization(
             detail="Failed to update user in organization"
         )
 
-@user_router.delete("/{organization_id:int}/users/{user_id:int}")
+@router.delete("/{organization_id:int}/users/{user_id:int}")
 async def delete_user_from_organization(
     organization_id: int,
     user_id: int,
@@ -531,7 +532,7 @@ async def delete_user_from_organization(
             detail="Failed to delete user from organization"
         )
 
-@user_router.post("/{organization_id:int}/users/{user_id:int}/reset-password")
+@router.post("/{organization_id:int}/users/{user_id:int}/reset-password")
 async def reset_user_password(
     organization_id: int,
     user_id: int,
