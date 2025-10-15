@@ -76,7 +76,7 @@ from app.api.v1.voucher_format_templates import router as voucher_format_templat
 from app.api.v1.warehouse import router as warehouse_router
 from app.api.v1.workflow_approval import router as workflow_approval_router
 from app.api.v1.organizations.routes import router as organizations_router
-from app.api.v1.organizations.invitation_routes import router as invitation_router
+from app.api.v1.organizations.invitation_routes import invitation_router
 from app.api.v1.organizations.license_routes import router as license_router
 from app.api.v1.organizations.module_routes import router as module_router
 from app.api.v1.organizations.user_routes import router as org_user_router
