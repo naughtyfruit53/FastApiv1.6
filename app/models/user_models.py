@@ -78,7 +78,7 @@ class Organization(Base):
     # Subscription details
     plan_type: Mapped[str] = mapped_column(String, default="trial") # trial, basic, premium, enterprise
     max_users: Mapped[int] = mapped_column(Integer, default=5)
-    max_companies: Mapped[int] = mapped_column(Integer, default=1) # Maximum companies allowed for this this organization
+    max_companies: Mapped[int] = mapped_column(Integer, default=1) # Maximum companies allowed for this organization
     storage_limit_gb: Mapped[int] = mapped_column(Integer, default=1)
     features: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # Feature flags
     
@@ -364,7 +364,7 @@ class Organization(Base):
         back_populates="organization"
     )
     
-    # New role hierarchy relationships
+    # New organization role assignments
     organization_roles: Mapped[List["OrganizationRole"]] = relationship(
         "OrganizationRole",
         back_populates="organization"
@@ -382,6 +382,12 @@ class Organization(Base):
         "app.models.organization_settings.OrganizationSettings",
         back_populates="organization",
         uselist=False
+    )
+
+    # RBAC relationships
+    service_roles: Mapped[List["app.models.rbac_models.ServiceRole"]] = relationship(
+        "app.models.rbac_models.ServiceRole",
+        back_populates="organization"
     )
 
     __table_args__ = (
@@ -402,7 +408,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
 
-    # Supabase Auth Auth integration
+    # Supabase Auth integration
     supabase_uuid: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True) # Supabase user UUID for auth integration
 
     # User details
@@ -571,6 +577,13 @@ class User(Base):
         uselist=False
     )
 
+    # RBAC relationships
+    service_roles: Mapped[List["app.models.rbac_models.UserServiceRole"]] = relationship(
+        "app.models.rbac_models.UserServiceRole",
+        foreign_keys="app.models.rbac_models.UserServiceRole.user_id",
+        back_populates="user"
+    )
+
     __table_args__ = (
         # Unique email per organization
         UniqueConstraint('organization_id', 'email', name='uq_user_org_email'),
@@ -579,8 +592,6 @@ class User(Base):
         Index('idx_user_reporting_manager', 'reporting_manager_id'),
         {'extend_existing': True}
     )
-
-# Removed ServiceRole, ServicePermission, etc. - moved to rbac_models.py
 
 # UserCompany many-to-many relationship for multi-company support
 class UserCompany(Base):
@@ -657,7 +668,7 @@ class OrganizationRole(Base):
     created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_org_role_created_by_id"), nullable=True)
     
     # Relationships
-    organization: Mapped["Organization"] = relationship("Organization")
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="organization_roles")
     created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
     user_assignments: Mapped[List["UserOrganizationRole"]] = relationship("UserOrganizationRole", back_populates="role")
     module_assignments: Mapped[List["RoleModuleAssignment"]] = relationship("RoleModuleAssignment", back_populates="role")
@@ -728,7 +739,7 @@ class UserOrganizationRole(Base):
     
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization")
-    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id], back_populates="organization_role_assignments")
     role: Mapped["OrganizationRole"] = relationship("OrganizationRole", back_populates="user_assignments")
     assigned_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_by_id])
     
@@ -768,7 +779,7 @@ class OrganizationApprovalSettings(Base):
     updated_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_approval_settings_updated_by_id"), nullable=True)
     
     # Relationships
-    organization: Mapped["Organization"] = relationship("Organization")
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="approval_settings")
     updated_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[updated_by_id])
     voucher_approvals: Mapped[List["VoucherApproval"]] = relationship("VoucherApproval", back_populates="approval_settings")
     
@@ -823,7 +834,7 @@ class VoucherApproval(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    organization: Mapped["Organization"] = relationship("Organization")
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="voucher_approvals")
     approval_settings: Mapped["OrganizationApprovalSettings"] = relationship("OrganizationApprovalSettings", back_populates="voucher_approvals")
     submitted_by: Mapped["User"] = relationship("User", foreign_keys=[submitted_by_id])
     current_approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[current_approver_id])

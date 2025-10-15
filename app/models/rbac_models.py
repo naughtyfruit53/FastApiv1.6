@@ -81,7 +81,7 @@ class UserServiceRole(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
-    user = relationship("User", back_populates="service_roles")
+    user = relationship("User", foreign_keys=[user_id], back_populates="service_roles")
     role = relationship("ServiceRole", back_populates="users")
     assigned_by = relationship("User", foreign_keys=[assigned_by_id])
 
