@@ -84,7 +84,7 @@ from app.api.v1.organizations.settings_routes import router as org_settings_rout
 from app.api.v1.vouchers.purchase_order import router as purchase_order_router
 from app.api.v1.vouchers.purchase_voucher import router as purchase_voucher_router
 from app.api.v1.vouchers.purchase_return import router as purchase_return_router
-from app.api.v1.vouchers.grn import router as grn_router
+# GRN is imported as goods_receipt_note_router below
 from app.api.v1.vouchers.sales_voucher import router as sales_voucher_router
 from app.api.v1.vouchers.sales_return import router as sales_return_router
 from app.api.v1.vouchers.delivery_challan import router as delivery_challan_router
@@ -110,7 +110,8 @@ from app.api.v1.manufacturing.mrp import router as mrp_router
 from app.api.v1.manufacturing.production_planning import router as production_planning_router
 from app.api.v1.manufacturing.shop_floor import router as shop_floor_router
 from app.api.v1.organizations.settings_routes import router as settings_router
-from app.api.v1.vouchers.non_sales_credit_note import router as non_sales_credit_note_router
+# Non-sales credit note module doesn't exist - commenting out
+# from app.api.v1.vouchers.non_sales_credit_note import router as non_sales_credit_note_router
 from app.api.v1.vouchers.journal_voucher import router as journal_voucher_router  # Duplicate, but kept as per structure
 from app.api.v1.vouchers.credit_note import router as credit_note_router  # Duplicate, but kept as per structure
 from app.api.v1.vouchers.debit_note import router as debit_note_router  # Duplicate, but kept as per structure
@@ -125,21 +126,23 @@ from app.api.v1.vouchers.quotation import router as quotation_router  # Duplicat
 from app.api.v1.vouchers.delivery_challan import router as delivery_challan_router  # Duplicate, but kept as per structure
 from app.api.v1.vouchers.sales_return import router as sales_return_router  # Duplicate, but kept as per structure
 from app.api.v1.vouchers.sales_voucher import router as sales_voucher_router  # Duplicate, but kept as per structure
-from app.api.v1.vouchers.grn import router as grn_router  # Duplicate, but kept as per structure
+# GRN is imported as goods_receipt_note_router above
+# from app.api.v1.vouchers.grn import router as grn_router  # Duplicate, but kept as per structure
 from app.api.v1.vouchers.purchase_return import router as purchase_return_router  # Duplicate, but kept as per structure
 from app.api.v1.vouchers.purchase_voucher import router as purchase_voucher_router  # Duplicate, but kept as per structure
 from app.api.v1.vouchers.purchase_order import router as purchase_order_router  # Duplicate, but kept as per structure
-from app.api.v1.vouchers.base import router as base_voucher_router  # Added if exists
-from app.api.v1.vouchers.financial import router as financial_voucher_router  # Added if exists
-from app.api.v1.vouchers.presales import router as presales_voucher_router  # Added if exists
-from app.api.v1.vouchers.purchase import router as purchase_voucher_router_full  # Duplicate, but kept
-from app.api.v1.vouchers.sales import router as sales_voucher_router_full  # Duplicate, but kept
+# Commenting out non-existent modules
+# from app.api.v1.vouchers.base import router as base_voucher_router  # Added if exists
+# from app.api.v1.vouchers.financial import router as financial_voucher_router  # Added if exists
+# from app.api.v1.vouchers.presales import router as presales_voucher_router  # Added if exists
+# from app.api.v1.vouchers.purchase import router as purchase_voucher_router_full  # Duplicate, but kept
+# from app.api.v1.vouchers.sales import router as sales_voucher_router_full  # Duplicate, but kept
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -227,7 +230,8 @@ app.include_router(org_settings_router, prefix="/api/v1/organizations/settings",
 app.include_router(purchase_order_router, prefix="/api/v1/vouchers/purchase_order", tags=["vouchers-purchase-order"])
 app.include_router(purchase_voucher_router, prefix="/api/v1/vouchers/purchase_voucher", tags=["vouchers-purchase-voucher"])
 app.include_router(purchase_return_router, prefix="/api/v1/vouchers/purchase_return", tags=["vouchers-purchase-return"])
-app.include_router(grn_router, prefix="/api/v1/vouchers/grn", tags=["vouchers-grn"])
+# GRN router is included as goods_receipt_note_router below
+# app.include_router(grn_router, prefix="/api/v1/vouchers/grn", tags=["vouchers-grn"])
 app.include_router(sales_voucher_router, prefix="/api/v1/vouchers/sales_voucher", tags=["vouchers-sales-voucher"])
 app.include_router(sales_return_router, prefix="/api/v1/vouchers/sales_return", tags=["vouchers-sales-return"])
 app.include_router(delivery_challan_router, prefix="/api/v1/vouchers/delivery_challan", tags=["vouchers-delivery-challan"])
@@ -242,23 +246,28 @@ app.include_router(debit_note_router, prefix="/api/v1/vouchers/debit_note", tags
 app.include_router(contra_voucher_router, prefix="/api/v1/vouchers/contra_voucher", tags=["vouchers-contra-voucher"])
 app.include_router(inter_department_voucher_router, prefix="/api/v1/vouchers/inter_department_voucher", tags=["vouchers-inter-department-voucher"])
 app.include_router(goods_receipt_note_router, prefix="/api/v1/vouchers/goods_receipt_note", tags=["vouchers-goods-receipt-note"])
-app.include_router(non_sales_credit_note_router, prefix="/api/v1/vouchers/non_sales_credit_note", tags=["vouchers-non-sales-credit-note"])
-app.include_router(manufacturing_orders_router, prefix="/api/v1/manufacturing/manufacturing_orders", tags=["manufacturing-orders"])
-app.include_router(material_issue_router, prefix="/api/v1/manufacturing/material_issue", tags=["material-issue"])
-app.include_router(manufacturing_journals_router, prefix="/api/v1/manufacturing/manufacturing_journals", tags=["manufacturing-journals"])
-app.include_router(material_receipt_router, prefix="/api/v1/manufacturing/material_receipt", tags=["material-receipt"])
-app.include_router(job_cards_router, prefix="/api/v1/manufacturing/job_cards", tags=["job-cards"])
-app.include_router(stock_journals_router, prefix="/api/v1/manufacturing/stock_journals", tags=["stock-journals"])
-app.include_router(bom_manufacturing_router, prefix="/api/v1/manufacturing/bom", tags=["bom"])
-app.include_router(mrp_router, prefix="/api/v1/manufacturing/mrp", tags=["mrp"])
-app.include_router(production_planning_router, prefix="/api/v1/manufacturing/production_planning", tags=["production-planning"])
-app.include_router(shop_floor_router, prefix="/api/v1/manufacturing/shop_floor", tags=["shop-floor"])
+# Non-sales credit note module doesn't exist
+# app.include_router(non_sales_credit_note_router, prefix="/api/v1/vouchers/non_sales_credit_note", tags=["vouchers-non-sales-credit-note"])
+# Commenting out incomplete manufacturing folder routers - full implementation is in manufacturing.py
+# These stub routers would create duplicate/conflicting routes with manufacturing.py
+# TODO: Complete the module split and uncomment these, or remove the folder stubs
+# app.include_router(manufacturing_orders_router, prefix="/api/v1/manufacturing/manufacturing_orders", tags=["manufacturing-orders"])
+# app.include_router(material_issue_router, prefix="/api/v1/manufacturing/material_issue", tags=["material-issue"])
+# app.include_router(manufacturing_journals_router, prefix="/api/v1/manufacturing/manufacturing_journals", tags=["manufacturing-journals"])
+# app.include_router(material_receipt_router, prefix="/api/v1/manufacturing/material_receipt", tags=["material-receipt"])
+# app.include_router(job_cards_router, prefix="/api/v1/manufacturing/job_cards", tags=["job-cards"])
+# app.include_router(stock_journals_router, prefix="/api/v1/manufacturing/stock_journals", tags=["stock-journals"])
+# app.include_router(bom_manufacturing_router, prefix="/api/v1/manufacturing/bom", tags=["bom"])
+# app.include_router(mrp_router, prefix="/api/v1/manufacturing/mrp", tags=["mrp"])
+# app.include_router(production_planning_router, prefix="/api/v1/manufacturing/production_planning", tags=["production-planning"])
+# app.include_router(shop_floor_router, prefix="/api/v1/manufacturing/shop_floor", tags=["shop-floor"])
 app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
-app.include_router(base_voucher_router, prefix="/api/v1/vouchers/base", tags=["vouchers-base"])
-app.include_router(financial_voucher_router, prefix="/api/v1/vouchers/financial", tags=["vouchers-financial"])
-app.include_router(presales_voucher_router, prefix="/api/v1/vouchers/presales", tags=["vouchers-presales"])
-app.include_router(purchase_voucher_router_full, prefix="/api/v1/vouchers/purchase", tags=["vouchers-purchase"])
-app.include_router(sales_voucher_router_full, prefix="/api/v1/vouchers/sales", tags=["vouchers-sales"])
+# Commenting out non-existent voucher routers
+# app.include_router(base_voucher_router, prefix="/api/v1/vouchers/base", tags=["vouchers-base"])
+# app.include_router(financial_voucher_router, prefix="/api/v1/vouchers/financial", tags=["vouchers-financial"])
+# app.include_router(presales_voucher_router, prefix="/api/v1/vouchers/presales", tags=["vouchers-presales"])
+# app.include_router(purchase_voucher_router_full, prefix="/api/v1/vouchers/purchase", tags=["vouchers-purchase"])
+# app.include_router(sales_voucher_router_full, prefix="/api/v1/vouchers/sales", tags=["vouchers-sales"])
 # Include any other routers as per your structure
 
 @app.on_event("startup")

@@ -16,9 +16,10 @@ from .services import OrganizationService
 
 logger = logging.getLogger(__name__)
 
-license_router = APIRouter()
+router = APIRouter()
+license_router = router  # Alias for backward compatibility
 
-@license_router.put("/{organization_id:int}/license")
+@router.put("/{organization_id:int}/license")
 async def update_organization_license(
     organization_id: int,
     license_data: dict,
@@ -77,7 +78,7 @@ async def update_organization_license(
         "license_duration_months": org.license_duration_months
     }
 
-@license_router.get("/{organization_id:int}/license")
+@router.get("/{organization_id:int}/license")
 async def get_organization_license(
     organization_id: int,
     db: Session = Depends(get_db),
@@ -112,7 +113,7 @@ async def get_organization_license(
         "plan_type": org.plan_type
     }
 
-@license_router.post("/create", response_model=OrganizationLicenseResponse)
+@router.post("/create", response_model=OrganizationLicenseResponse)
 async def create_organization_license(
     license_data: OrganizationLicenseCreate,
     db: Session = Depends(get_db),
