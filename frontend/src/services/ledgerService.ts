@@ -1,5 +1,5 @@
 // frontend/src/services/ledgerService.ts
-import api from '../lib/api';
+import api from '../utils/api';
 
 export const getEntityBalance = async (entityType: string, entityId: string): Promise<number> => {
   if (!entityType || !entityId) {
@@ -8,11 +8,26 @@ export const getEntityBalance = async (entityType: string, entityId: string): Pr
   }
   try {
     console.log(`Fetching entity balance for ${entityType}/${entityId}`);
-    const response = await api.get(`/balances/${entityType.toLowerCase()}/${entityId}`);
+    const response = await api.get('/ledger/outstanding', {
+      params: {
+        account_type: entityType.toLowerCase(),
+        account_id: entityId,
+      },
+    });
     console.log('Entity balance response:', response.data);
-    return response.data.balance || 0;
-  } catch (error) {
-    console.error('Error fetching entity balance:', error);
+    const balance = response.data.outstanding_balances.find(
+      (b: any) => b.account_type === entityType.toLowerCase() && b.account_id === parseInt(entityId)
+    );
+    if (!balance) {
+      console.warn(`No balance found for ${entityType}/${entityId}`);
+      return 0;
+    }
+    return balance.outstanding_amount;
+  } catch (error: any) {
+    console.error(`Error fetching entity balance for ${entityType}/${entityId}:`, {
+      status: error.response?.status,
+      message: error.response?.data?.detail || error.message,
+    });
     return 0;
   }
 };

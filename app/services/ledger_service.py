@@ -1,7 +1,8 @@
 # app/services/ledger_service.py
 
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc
+from sqlalchemy import and_, or_, desc, asc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, date
 from decimal import Decimal
@@ -27,8 +28,8 @@ class LedgerService:
     """Service for generating ledger reports"""
     
     @staticmethod
-    def get_complete_ledger(
-        db: Session,
+    async def get_complete_ledger(
+        db: AsyncSession,
         organization_id: int,
         filters: LedgerFilters
     ) -> CompleteLedgerResponse:
@@ -36,7 +37,7 @@ class LedgerService:
         Generate complete ledger showing all debit/credit transactions
         
         Args:
-            db: Database session
+            db: Async database session
             organization_id: Organization ID for tenant filtering
             filters: Ledger filters
             
@@ -45,7 +46,7 @@ class LedgerService:
         """
         try:
             # Get all relevant transactions
-            transactions = LedgerService._get_all_transactions(db, organization_id, filters)
+            transactions = await LedgerService._get_all_transactions(db, organization_id, filters)
             
             # Calculate running balances
             transactions_with_balance = LedgerService._calculate_running_balances(transactions)
@@ -76,8 +77,8 @@ class LedgerService:
             raise
     
     @staticmethod
-    def get_outstanding_ledger(
-        db: Session,
+    async def get_outstanding_ledger(
+        db: AsyncSession,
         organization_id: int,
         filters: LedgerFilters
     ) -> OutstandingLedgerResponse:
@@ -85,7 +86,7 @@ class LedgerService:
         Generate outstanding ledger showing open balances by account
         
         Args:
-            db: Database session
+            db: Async database session
             organization_id: Organization ID for tenant filtering
             filters: Ledger filters
             
@@ -94,7 +95,7 @@ class LedgerService:
         """
         try:
             # Get outstanding balances
-            outstanding_balances = LedgerService._calculate_outstanding_balances(
+            outstanding_balances = await LedgerService._calculate_outstanding_balances(
                 db, organization_id, filters
             )
             
@@ -131,8 +132,8 @@ class LedgerService:
             raise
     
     @staticmethod
-    def _get_all_transactions(
-        db: Session,
+    async def _get_all_transactions(
+        db: AsyncSession,
         organization_id: int,
         filters: LedgerFilters
     ) -> List[LedgerTransaction]:
@@ -196,7 +197,7 @@ class LedgerService:
             if filters.voucher_type != "all" and filters.voucher_type != config["type"]:
                 continue
                 
-            voucher_transactions = LedgerService._get_voucher_transactions(
+            voucher_transactions = await LedgerService._get_voucher_transactions(
                 db, organization_id, config, filters
             )
             transactions.extend(voucher_transactions)
@@ -207,8 +208,8 @@ class LedgerService:
         return transactions
     
     @staticmethod
-    def _get_voucher_transactions(
-        db: Session,
+    async def _get_voucher_transactions(
+        db: AsyncSession,
         organization_id: int,
         config: Dict[str, Any],
         filters: LedgerFilters
@@ -218,7 +219,7 @@ class LedgerService:
         
         # Build base query with tenant filtering
         query = TenantQueryFilter.apply_organization_filter(
-            db.query(model), model, organization_id
+            select(model), model, organization_id
         )
         
         # Apply date filters
@@ -259,12 +260,13 @@ class LedgerService:
                     account_field = getattr(model, config["account_field"])
                     query = query.filter(account_field == filters.account_id)
         
-        vouchers = query.all()
+        result = await db.execute(query)
+        vouchers = result.scalars().all()
         transactions = []
         
         for voucher in vouchers:
             # Determine account info
-            account_type, account_id, account_name = LedgerService._get_account_info(
+            account_type, account_id, account_name = await LedgerService._get_account_info(
                 voucher, config, db
             )
             
@@ -306,7 +308,7 @@ class LedgerService:
         return transactions
     
     @staticmethod
-    def _get_account_info(voucher, config: Dict[str, Any], db: Session) -> Tuple[str, int, str]:
+    async def _get_account_info(voucher, config: Dict[str, Any], db: AsyncSession) -> Tuple[str, int, str]:
         """Get account type, ID and name from voucher"""
         account_type = None
         account_id = None
@@ -329,13 +331,16 @@ class LedgerService:
                 account_type = voucher.entity_type.lower()
                 account_id = voucher.entity_id
                 if account_type == "vendor":
-                    vendor = db.query(Vendor).filter(Vendor.id == account_id).first()
+                    result = await db.execute(select(Vendor).filter(Vendor.id == account_id))
+                    vendor = result.scalars().first()
                     account_name = vendor.name if vendor else "Unknown Vendor"
                 elif account_type == "customer":
-                    customer = db.query(Customer).filter(Customer.id == account_id).first()
+                    result = await db.execute(select(Customer).filter(Customer.id == account_id))
+                    customer = result.scalars().first()
                     account_name = customer.name if customer else "Unknown Customer"
                 elif account_type == "employee":
-                    employee = db.query(EmployeeProfile).filter(EmployeeProfile.id == account_id).first()
+                    result = await db.execute(select(EmployeeProfile).filter(EmployeeProfile.id == account_id))
+                    employee = result.scalars().first()
                     account_name = employee.user.full_name if employee and employee.user else "Unknown Employee"
         else:
             # Regular vouchers
@@ -377,14 +382,14 @@ class LedgerService:
         return transactions
     
     @staticmethod
-    def _calculate_outstanding_balances(
-        db: Session,
+    async def _calculate_outstanding_balances(
+        db: AsyncSession,
         organization_id: int,
         filters: LedgerFilters
     ) -> List[OutstandingBalance]:
         """Calculate outstanding balances for all accounts"""
         # Get all transactions to calculate balances
-        all_transactions = LedgerService._get_all_transactions(db, organization_id, filters)
+        all_transactions = await LedgerService._get_all_transactions(db, organization_id, filters)
         
         # Group by account and calculate final balances
         account_data = {}
@@ -420,24 +425,33 @@ class LedgerService:
         for account_key, data in account_data.items():
             account_type, account_id = account_key
             if account_type == "vendor":
-                vendor = db.query(Vendor).filter(
-                    Vendor.id == account_id,
-                    Vendor.organization_id == organization_id
-                ).first()
+                result = await db.execute(
+                    select(Vendor).filter(
+                        Vendor.id == account_id,
+                        Vendor.organization_id == organization_id
+                    )
+                )
+                vendor = result.scalars().first()
                 if vendor:
                     data["contact_info"] = vendor.contact_number
             elif account_type == "customer":
-                customer = db.query(Customer).filter(
-                    Customer.id == account_id,
-                    Customer.organization_id == organization_id
-                ).first()
+                result = await db.execute(
+                    select(Customer).filter(
+                        Customer.id == account_id,
+                        Customer.organization_id == organization_id
+                    )
+                )
+                customer = result.scalars().first()
                 if customer:
                     data["contact_info"] = customer.contact_number
             elif account_type == "employee":
-                employee = db.query(EmployeeProfile).filter(
-                    EmployeeProfile.id == account_id,
-                    EmployeeProfile.organization_id == organization_id
-                ).first()
+                result = await db.execute(
+                    select(EmployeeProfile).filter(
+                        EmployeeProfile.id == account_id,
+                        EmployeeProfile.organization_id == organization_id
+                    )
+                )
+                employee = result.scalars().first()
                 if employee:
                     data["contact_info"] = employee.personal_phone
         
@@ -481,7 +495,7 @@ class LedgerService:
         }
 
     @staticmethod
-    def generate_account_code(db: Session, organization_id: int, account_type: str) -> str:
+    async def generate_account_code(db: AsyncSession, organization_id: int, account_type: str) -> str:
         """Generate next account code based on type"""
         account_type = account_type.upper()
         min_codes = {
@@ -496,10 +510,13 @@ class LedgerService:
         
         min_code = min_codes.get(account_type, 9000)
         
-        type_accounts = db.query(ChartOfAccounts).filter(
-            ChartOfAccounts.organization_id == organization_id,
-            ChartOfAccounts.account_type == account_type
-        ).all()
+        result = await db.execute(
+            select(ChartOfAccounts).filter(
+                ChartOfAccounts.organization_id == organization_id,
+                ChartOfAccounts.account_type == account_type
+            )
+        )
+        type_accounts = result.scalars().all()
         
         max_code = 0
         for acc in type_accounts:
@@ -518,7 +535,7 @@ class LedgerService:
         return f"{next_code:04d}"
 
     @staticmethod
-    def create_standard_chart_of_accounts(db: Session, organization_id: int):
+    async def create_standard_chart_of_accounts(db: AsyncSession, organization_id: int):
         """Create a standard chart of accounts structure without balances"""
         accounts = [
             # ASSETS (1000-1999)
@@ -557,7 +574,7 @@ class LedgerService:
                 is_reconcilable=acc_data.get("reconcilable", False)
             )
             db.add(account)
-            db.flush()  # Get the ID
+            await db.flush()  # Get the ID
             created_accounts[acc_data["code"]] = account
         
         # Second pass: Set parent relationships
@@ -565,11 +582,38 @@ class LedgerService:
             if acc_data["parent"]:
                 created_accounts[acc_data["code"]].parent_account_id = created_accounts[acc_data["parent"]].id
         
-        db.commit()
+        await db.commit()
         return created_accounts
+
+    @staticmethod
+    async def get_chart_of_accounts(db: AsyncSession, organization_id: int) -> List[Dict[str, Any]]:
+        """Get chart of accounts"""
+        result = await db.execute(
+            select(ChartOfAccounts).filter(
+                ChartOfAccounts.organization_id == organization_id
+            ).order_by(ChartOfAccounts.account_code)
+        )
+        accounts = result.scalars().all()
+        return [
+            {
+                "id": acc.id,
+                "account_code": acc.account_code,
+                "account_name": acc.account_name,
+                "account_type": acc.account_type,
+                "opening_balance": float(acc.opening_balance),
+                "current_balance": float(acc.current_balance),
+                "is_group": acc.is_group,
+                "parent_account_id": acc.parent_account_id
+            }
+            for acc in accounts
+        ]
 
 def main():
     """Main function to seed standard chart of accounts for all organizations"""
+    # Note: This is synchronous; for async usage, wrap in asyncio.run()
+    import asyncio
+    from app.core.database import SessionLocal
+    from app.models.system_models import Organization
     db = SessionLocal()
     
     try:
@@ -590,7 +634,7 @@ def main():
             print(f"Seeding standard chart of accounts for organization: {org.name} (ID: {org.id})")
             
             # Create standard chart of accounts
-            chart_accounts = create_standard_chart_of_accounts(db, org.id)
+            chart_accounts = LedgerService.create_standard_chart_of_accounts(db, org.id)
             total_created += len(chart_accounts)
             print(f"Created {len(chart_accounts)} chart of accounts for {org.name}")
         

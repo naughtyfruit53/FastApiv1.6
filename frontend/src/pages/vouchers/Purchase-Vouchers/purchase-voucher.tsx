@@ -133,6 +133,21 @@ const PurchaseVoucherPage: React.FC = () => {
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
   const selectedVendorId = watch("vendor_id");
   
+  // Local state for selected vendor object to prevent display clearing
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  
+  // Sync selectedVendor with vendorList and selectedVendorId
+  useEffect(() => {
+    if (selectedVendorId && vendorList) {
+      const foundVendor = vendorList.find((v: any) => v.id === selectedVendorId);
+      if (foundVendor && foundVendor.id !== selectedVendor?.id) {
+        setSelectedVendor(foundVendor);
+      }
+    } else if (!selectedVendorId) {
+      setSelectedVendor(null);
+    }
+  }, [selectedVendorId, vendorList]);
+
   // Fetch vendor balance
   const { balance: vendorBalance, loading: vendorBalanceLoading } = useEntityBalance('vendor', selectedVendorId);
 
@@ -527,16 +542,20 @@ const PurchaseVoucherPage: React.FC = () => {
           </Grid>
           <Grid size={3}>
             <Autocomplete 
+              key={selectedVendorId || 'vendor-autocomplete'} // Key to stabilize re-renders
               size="small" 
               options={enhancedVendorOptions} 
               getOptionLabel={(option: any) => {
                 if (typeof option === 'number') return '';
                 return option?.name || "";
               }} 
-              value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null} 
+              value={selectedVendor || (vendorList?.find((v: any) => v.id === selectedVendorId) || null)} // Use local state first, fallback to find()
               onChange={(_, newValue) => { 
                 if (newValue?.id === null) setShowAddVendorModal(true); 
-                else setValue("vendor_id", newValue?.id || null); 
+                else {
+                  setValue("vendor_id", newValue?.id || null); 
+                  setSelectedVendor(newValue); // Store full object locally
+                } 
               }} 
               renderInput={(params) => 
                 <TextField 
@@ -740,7 +759,7 @@ const PurchaseVoucherPage: React.FC = () => {
           />
         }
       />
-      <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onAdd={(newVendor) => { setValue("vendor_id", newVendor.id); refreshMasterData(); }} loading={addVendorLoading} setLoading={setAddVendorLoading} />
+      <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onAdd={(newVendor) => { setValue("vendor_id", newVendor.id); setSelectedVendor(newVendor); refreshMasterData(); }} loading={addVendorLoading} setLoading={setAddVendorLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
       <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Purchase Voucher" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Voucher")} />

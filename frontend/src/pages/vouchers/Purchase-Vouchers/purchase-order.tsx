@@ -19,6 +19,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Autocomplete,
 } from "@mui/material";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
@@ -38,13 +39,13 @@ import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
 import { useCompany } from "../../../context/CompanyContext";
 import { useRouter } from "next/router";
-import { useGstValidation } from "../../../hooks/useGstValidation"; // New GST hook
-import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New discounts hook
-import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers"; // New utils
-import voucherFormStyles from "../../../styles/voucherFormStyles"; // New common styles import
-import { useQueryClient } from "@tanstack/react-query"; // Added for setQueryData
-import { useWatch } from "react-hook-form"; // Added missing import for useWatch
-import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for vendor balance display
+import { useGstValidation } from "../../../hooks/useGstValidation";
+import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
+import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
+import voucherFormStyles from "../../../styles/voucherFormStyles";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWatch } from "react-hook-form";
+import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
 
 const PurchaseOrderPage: React.FC = () => {
   console.count('Render: PurchaseOrderPage');
@@ -137,6 +138,21 @@ const PurchaseOrderPage: React.FC = () => {
   const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
   const selectedVendorId = watch("vendor_id");
+  
+  // Local state for selected vendor object to prevent display clearing
+  const [selectedVendor, setSelectedVendor] = useState(null as any);
+  
+  // Sync selectedVendor with vendorList and selectedVendorId
+  useEffect(() => {
+    if (selectedVendorId && vendorList) {
+      const foundVendor = vendorList.find((v: any) => v.id === selectedVendorId);
+      if (foundVendor && foundVendor.id !== selectedVendor?.id) {
+        setSelectedVendor(foundVendor);
+      }
+    } else if (!selectedVendorId) {
+      setSelectedVendor(null);
+    }
+  }, [selectedVendorId, vendorList]);
   
   // Fetch vendor balance
   const { balance: vendorBalance, loading: vendorBalanceLoading } = useEntityBalance('vendor', selectedVendorId);
@@ -278,20 +294,6 @@ const PurchaseOrderPage: React.FC = () => {
   }, [productIds, fields.length, setValue, watch, company?.organization_id]);
 
   useEffect(() => {
-    const currentFormValues = watch();
-    const updatedItems = (currentFormValues.items || []).map((item: any) => {
-      const gst_rate = parseFloat(item.gst_rate || 18);
-      return {
-        ...item,
-        cgst_rate: isIntrastate ? gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : gst_rate,
-      };
-    });
-    reset({ ...currentFormValues, items: updatedItems });
-  }, [isIntrastate, reset, watch]);
-
-  useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
         .then((number) => setValue("voucher_number", number))
@@ -329,14 +331,17 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [mode, productId, productList, append, isIntrastate, fields.length, watch, remove]);
 
+  // Fixed: Only set vendor_id if form is pristine to avoid overwriting
   useEffect(() => {
-    if (mode === "create" && vendorId && vendorList) {
+    if (mode === "create" && vendorId && vendorList && !watch("vendor_id")) {
       const vendor = vendorList.find((v) => v.id === Number(vendorId));
       if (vendor) {
         setValue("vendor_id", vendor.id);
+        setSelectedVendor(vendor);
+        console.log("Set initial vendor from query:", vendor.id);
       }
     }
-  }, [mode, vendorId, vendorList, setValue]);
+  }, [mode, vendorId, vendorList, setValue, watch]);
 
   useEffect(() => {
     console.log("Vendor list in purchase-order:", vendorList);
@@ -345,6 +350,7 @@ const PurchaseOrderPage: React.FC = () => {
   const handleVendorAdded = (newVendor: any) => {
     if (newVendor?.id) {
       setValue("vendor_id", newVendor.id);
+      setSelectedVendor(newVendor);
       console.log("Vendor added, updating vendor_id:", newVendor.id);
       queryClient.setQueryData(["vendors", "", company?.organization_id], (old: any[]) => {
         const updatedList = old ? [...old, newVendor] : [newVendor];
@@ -426,6 +432,7 @@ const PurchaseOrderPage: React.FC = () => {
     queryClient.setQueryData(['purchase-order', voucher.id], voucher);
   };
 
+  // Fixed: Memoize reset to prevent unnecessary calls
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
       const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : '';
@@ -451,6 +458,7 @@ const PurchaseOrderPage: React.FC = () => {
           quantity: parseFloat(item.quantity || 0),
         })) || [],
       };
+      console.log("[PurchaseOrderPage] Resetting form with voucherData:", formattedData);
       reset(formattedData);
       if (voucherData.additional_charges) {
         setAdditionalCharges(voucherData.additional_charges);
@@ -677,16 +685,20 @@ const PurchaseOrderPage: React.FC = () => {
           </Grid>
           <Grid size={3}>
             <Autocomplete 
+              key={selectedVendorId || 'vendor-autocomplete'} 
               size="small" 
               options={enhancedVendorOptions} 
               getOptionLabel={(option: any) => {
                 if (typeof option === 'number') return '';
                 return option?.name || "";
               }} 
-              value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null} 
+              value={selectedVendor || (vendorList?.find((v: any) => v.id === selectedVendorId) || null)} 
               onChange={(_, newValue) => { 
                 if (newValue?.id === null) setShowAddVendorModal(true); 
-                else setValue("vendor_id", newValue?.id || null); 
+                else {
+                  setValue("vendor_id", newValue?.id || null); 
+                  setSelectedVendor(newValue);
+                } 
               }} 
               renderInput={(params) => 
                 <TextField 
