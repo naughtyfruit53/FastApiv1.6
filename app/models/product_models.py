@@ -1,3 +1,4 @@
+# app/models/product_models.py
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -5,7 +6,9 @@ from sqlalchemy.sql import func
 from app.core.database import Base
 from typing import List, Optional
 from datetime import datetime, date
+from pydantic import BaseModel  # Add Pydantic import
 
+# SQLAlchemy Models
 class Product(Base):
     __tablename__ = "products"
   
@@ -13,7 +16,7 @@ class Product(Base):
   
     # Multi-tenant field
     organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_product_organization_id"), nullable=False, index=True)
-    company_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("companies.id", name="fk_product_company_id"), nullable=True, index=True)  # Added for multi-company support
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("companies.id", name="fk_product_company_id"), nullable=True, index=True)
   
     # Product details
     product_name: Mapped[str] = mapped_column("name", String, nullable=False, index=True)
@@ -34,7 +37,7 @@ class Product(Base):
   
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization", back_populates="products")
-    company: Mapped[Optional["Company"]] = relationship("Company", back_populates="products")  # Added for multi-company support
+    company: Mapped[Optional["Company"]] = relationship("Company", back_populates="products")
     files: Mapped[List["ProductFile"]] = relationship("ProductFile", back_populates="product", cascade="all, delete-orphan")
     
     # Enhanced inventory relationships
@@ -52,9 +55,7 @@ class Product(Base):
     )
   
     __table_args__ = (
-        # Unique product name per organization
         UniqueConstraint('organization_id', 'name', name='uq_product_org_name'),
-        # Unique part number per organization (if provided)
         UniqueConstraint('organization_id', 'part_number', name='uq_product_org_part_number'),
         Index('idx_product_org_name', 'organization_id', 'name'),
         Index('idx_product_org_active', 'organization_id', 'is_active'),
@@ -109,17 +110,12 @@ class Stock(Base):
     product: Mapped["Product"] = relationship("Product", backref="stock_entries")
   
     __table_args__ = (
-        # Unique stock entry per product per organization per location
         UniqueConstraint('organization_id', 'product_id', 'location', name='uq_stock_org_product_location'),
         Index('idx_stock_org_product', 'organization_id', 'product_id'),
         Index('idx_stock_org_location', 'organization_id', 'location'),
     )
 
 class InventoryTransaction(Base):
-    """
-    Model for tracking all inventory transactions (in/out/adjustments).
-    Provides audit trail for all inventory movements.
-    """
     __tablename__ = "inventory_transactions"
   
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -129,15 +125,15 @@ class InventoryTransaction(Base):
   
     # Transaction details
     product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id", name="fk_inventory_transaction_product_id"), nullable=False)
-    transaction_type: Mapped[str] = mapped_column(String, nullable=False) # 'receipt', 'issue', 'adjustment', 'transfer'
-    quantity: Mapped[float] = mapped_column(Float, nullable=False) # Positive for receipts, negative for issues
+    transaction_type: Mapped[str] = mapped_column(String, nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String, nullable=False)
     location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
   
     # Reference information
-    reference_type: Mapped[Optional[str]] = mapped_column(String, nullable=True) # 'job', 'purchase', 'manual', 'transfer'
-    reference_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # ID of job, purchase order, etc.
-    reference_number: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Human-readable reference
+    reference_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    reference_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    reference_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
   
     # Transaction metadata
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -169,10 +165,6 @@ class InventoryTransaction(Base):
     )
 
 class JobParts(Base):
-    """
-    Model for tracking parts/materials used in installation jobs.
-    Links job completion with inventory consumption.
-    """
     __tablename__ = "job_parts"
   
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -190,7 +182,7 @@ class JobParts(Base):
     unit: Mapped[str] = mapped_column(String, nullable=False)
   
     # Status tracking
-    status: Mapped[str] = mapped_column(String, nullable=False, default="planned") # 'planned', 'allocated', 'used', 'returned'
+    status: Mapped[str] = mapped_column(String, nullable=False, default="planned")
   
     # Usage details
     location_used: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -225,10 +217,6 @@ class JobParts(Base):
     )
 
 class InventoryAlert(Base):
-    """
-    Model for tracking inventory alerts and notifications.
-    Manages low stock alerts and reorder notifications.
-    """
     __tablename__ = "inventory_alerts"
   
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -238,14 +226,14 @@ class InventoryAlert(Base):
   
     # Alert details
     product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id", name="fk_inventory_alert_product_id"), nullable=False)
-    alert_type: Mapped[str] = mapped_column(String, nullable=False) # 'low_stock', 'out_of_stock', 'reorder'
+    alert_type: Mapped[str] = mapped_column(String, nullable=False)
     current_stock: Mapped[float] = mapped_column(Float, nullable=False)
     reorder_level: Mapped[float] = mapped_column(Float, nullable=False)
     location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
   
     # Alert status
-    status: Mapped[str] = mapped_column(String, nullable=False, default="active") # 'active', 'acknowledged', 'resolved'
-    priority: Mapped[str] = mapped_column(String, nullable=False, default="medium") # 'low', 'medium', 'high', 'critical'
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
+    priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")
   
     # Response tracking
     acknowledged_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_inventory_alert_acknowledged_by_id"), nullable=True)
@@ -272,3 +260,24 @@ class InventoryAlert(Base):
         Index('idx_inventory_alert_type', 'alert_type'),
         Index('idx_inventory_alert_created_at', 'created_at'),
     )
+
+# Pydantic Schemas
+class StockWithProduct(BaseModel):
+    id: Optional[int] = None
+    organization_id: Optional[int] = None
+    product_id: Optional[int] = None
+    quantity: float = 0.0
+    unit: Optional[str] = None
+    location: Optional[str] = None
+    last_updated: Optional[datetime] = None  # Make optional to handle None values
+    product_name: str
+    product_hsn_code: Optional[str] = None
+    product_part_number: Optional[str] = None
+    unit_price: float
+    reorder_level: int
+    gst_rate: float
+    is_active: bool
+    total_value: float
+
+    class Config:
+        orm_mode = True

@@ -7,7 +7,6 @@ import {
   Grid,
   CircularProgress,
   Container,
-  Autocomplete,
   Alert,
   Button,
   Dialog,
@@ -24,14 +23,14 @@ import {
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
-import VoucherContextMenu from "../../../components/VoucherContextMenu"; // Updated to merged component
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import TrackingDetailsDialog from "../../../components/TrackingDetailsDialog";
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
-import VoucherItemTable from "../../../components/VoucherItemTable"; // New common table
+import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
-import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges'; // New common totals
+import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
@@ -39,12 +38,13 @@ import { voucherService } from "../../../services/vouchersService";
 import api from "../../../lib/api";
 import { useCompany } from "../../../context/CompanyContext";
 import { useRouter } from "next/router";
-import { useGstValidation } from "../../../hooks/useGstValidation"; // New GST hook
-import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New discounts hook
-import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers"; // New utils
-import voucherFormStyles from "../../../styles/voucherFormStyles"; // New common styles import
-import { useQueryClient } from "@tanstack/react-query"; // Added for setQueryData
-import { useWatch } from "react-hook-form"; // Added missing import for useWatch
+import { useGstValidation } from "../../../hooks/useGstValidation";
+import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
+import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
+import voucherFormStyles from "../../../styles/voucherFormStyles";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWatch } from "react-hook-form";
+import VendorAutocomplete from "../../../components/VendorAutocomplete";
 
 const PurchaseOrderPage: React.FC = () => {
   console.count('Render: PurchaseOrderPage');
@@ -53,7 +53,7 @@ const PurchaseOrderPage: React.FC = () => {
   const { productId, vendorId } = router.query;
   const config = getVoucherConfig("purchase-order");
   const voucherStyles = getVoucherStyles();
-  const queryClient = useQueryClient(); // Added for cache setting
+  const queryClient = useQueryClient();
   const processedRef = useRef<Set<number>>(new Set());
 
   const {
@@ -138,7 +138,6 @@ const PurchaseOrderPage: React.FC = () => {
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
   const selectedVendorId = watch("vendor_id");
 
-  // Use new hooks
   const { gstError } = useGstValidation(selectedVendorId, vendorList);
   const {
     lineDiscountEnabled,
@@ -206,22 +205,20 @@ const PurchaseOrderPage: React.FC = () => {
   const selectedProducts = useMemo(() => {
     return fields.map((_, index) => {
       const productId = watch(`items.${index}.product_id`);
-      return productList?.find((p: any) => p.id === productId) || null;
+      return productList?.find((p: any) => p.id === productId) || { id: watch(`items.${index}.product_id`), product_name: watch(`items.${index}.product_name`) };
     });
-  }, [fields.length, productList, watch]); // Changed to fields.length for stability
+  }, [fields.length, productList, watch]);
 
   const productIds = useWatch({
     control,
     name: fields.map((_, i) => `items.${i}.product_id`),
   });
 
-  // Use useWatch for items and total_discount to ensure reactivity
   const items = useWatch({ control, name: "items" }) || [];
   const totalDiscountValue = useWatch({ control, name: "total_discount" }) || 0;
 
-  // Override totals with additional charges
   const totalsWithAdditionalCharges = useMemo(() => {
-    console.log('Calculating totals with items:', items); // Debug log to check if items are updating correctly
+    console.log('Calculating totals with items:', items);
     return calculateVoucherTotals(
       items,
       isIntrastate,
@@ -232,27 +229,25 @@ const PurchaseOrderPage: React.FC = () => {
     );
   }, [items, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, totalDiscountValue, additionalCharges]);
 
-  const localComputedItems = totalsWithAdditionalCharges.computedItems; // Use the fully calculated items for table display
-
+  const localComputedItems = totalsWithAdditionalCharges.computedItems;
   const finalTotalAmount = totalsWithAdditionalCharges.totalAmount;
   const finalTotalAdditionalCharges = totalsWithAdditionalCharges.totalAdditionalCharges;
 
-  // Reset processed when fields length changes
   useEffect(() => {
     processedRef.current = new Set();
   }, [fields.length]);
 
-  // Fetch stock when productIds change or on load
   useEffect(() => {
     productIds.forEach((productId: number, index: number) => {
       if (productId && !processedRef.current.has(index) && !stockLoading[index]) {
         const currentStock = watch(`items.${index}.current_stock`);
         if (currentStock === 0 || currentStock === undefined) {
           setStockLoading(prev => ({ ...prev, [index]: true }));
-          getStock({ queryKey: ["", { product_id: productId }] })
+          getStock({ queryKey: ["", { product_id: productId, organization_id: company?.organization_id }] })
             .then(res => {
+              console.log("Stock fetch response for product", productId, ":", res);
               const stockData = res[0] || { quantity: 0 };
-              setValue(`items.${index}.current_stock`, stockData.quantity);
+              setValue(`items.${index}.current_stock`, parseFloat(stockData.quantity || 0));
             })
             .catch(err => console.error("Failed to fetch stock:", err))
             .finally(() => {
@@ -264,13 +259,12 @@ const PurchaseOrderPage: React.FC = () => {
         }
       }
     });
-  }, [productIds, fields.length, setValue, watch]); // Removed stockLoading from deps to prevent loops
+  }, [productIds, fields.length, setValue, watch, company?.organization_id]);
 
-  // New: Update item GST rates when isIntrastate changes (fixes totals "reset" on vendor switch)
   useEffect(() => {
     const currentFormValues = watch();
     const updatedItems = (currentFormValues.items || []).map((item: any) => {
-      const gst_rate = item.gst_rate || 18;
+      const gst_rate = parseFloat(item.gst_rate || 18);
       return {
         ...item,
         cgst_rate: isIntrastate ? gst_rate / 2 : 0,
@@ -278,7 +272,7 @@ const PurchaseOrderPage: React.FC = () => {
         igst_rate: isIntrastate ? 0 : gst_rate,
       };
     });
-    reset({ ...currentFormValues, items: updatedItems }); // Batch update in one reset
+    reset({ ...currentFormValues, items: updatedItems });
   }, [isIntrastate, reset, watch]);
 
   useEffect(() => {
@@ -294,16 +288,15 @@ const PurchaseOrderPage: React.FC = () => {
       const product = productList.find((p) => p.id === Number(productId));
       if (product) {
         const gst_rate = normalizeGstRate(product.gst_rate ?? 18);
-        // NEW: Check if first row is empty (product_id null/undefined) and remove it before appending
         if (fields.length === 1 && !watch(`items.0.product_id`)) {
           remove(0);
         }
         append({
           product_id: product.id,
           product_name: product.product_name || product.name,
-          quantity: 1,
-          unit_price: product.unit_price || 0,
-          original_unit_price: product.unit_price || 0,
+          quantity: 0.0,
+          unit_price: parseFloat(product.unit_price || 0),
+          original_unit_price: parseFloat(product.unit_price || 0),
           discount_percentage: 0,
           discount_amount: 0,
           gst_rate: gst_rate,
@@ -313,12 +306,12 @@ const PurchaseOrderPage: React.FC = () => {
           amount: 0,
           unit: product.unit,
           current_stock: 0,
-          reorder_level: product.reorder_level || 0,
+          reorder_level: parseFloat(product.reorder_level || 0),
           description: '',
         });
       }
     }
-  }, [mode, productId, productList, append, isIntrastate, fields.length, watch, remove]); // NEW: Added fields.length, watch, remove
+  }, [mode, productId, productList, append, isIntrastate, fields.length, watch, remove]);
 
   useEffect(() => {
     if (mode === "create" && vendorId && vendorList) {
@@ -329,27 +322,37 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [mode, vendorId, vendorList, setValue]);
 
+  useEffect(() => {
+    console.log("Vendor list in purchase-order:", vendorList);
+  }, [vendorList]);
+
   const handleVendorAdded = (newVendor: any) => {
-    setValue("vendor_id", newVendor.id);
-    // Optimistic update to vendor list
-    queryClient.setQueryData(["vendors"], (old: any[]) => {
-      return old ? [...old, newVendor] : [newVendor];
-    });
-    refreshMasterData();
+    if (newVendor?.id) {
+      setValue("vendor_id", newVendor.id);
+      console.log("Vendor added, updating vendor_id:", newVendor.id);
+      queryClient.setQueryData(["vendors", "", company?.organization_id], (old: any[]) => {
+        const updatedList = old ? [...old, newVendor] : [newVendor];
+        console.log("Updated vendor list:", updatedList);
+        return updatedList;
+      });
+      queryClient.invalidateQueries(["vendors"]);
+      setShowAddVendorModal(false);
+      refreshMasterData();
+    } else {
+      console.error("New vendor ID is missing:", newVendor);
+    }
   };
 
   const handleVoucherClick = (voucher: any) => {
-    // Use the voucher from list (assumes full data from backend joins)
     setMode("view");
     reset({
       ...voucher,
-      date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
-      delivery_date: voucher.delivery_date ? voucher.delivery_date.split('T')[0] : '', // Extract YYYY-MM-DD for delivery_date
+      date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : item.gst_rate,
+        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
       })),
     });
     if (voucher.additional_charges) {
@@ -366,13 +369,12 @@ const PurchaseOrderPage: React.FC = () => {
     handleEdit(voucher.id);
     reset({
       ...voucher,
-      date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
-      delivery_date: voucher.delivery_date ? voucher.delivery_date.split('T')[0] : '', // Extract YYYY-MM-DD for delivery_date
+      date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : item.gst_rate,
+        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
       })),
     });
     if (voucher.additional_charges) {
@@ -382,7 +384,6 @@ const PurchaseOrderPage: React.FC = () => {
       setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
       setAdditionalChargesEnabled(false);
     }
-    // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['purchase-order', voucher.id], voucher);
   };
 
@@ -391,13 +392,12 @@ const PurchaseOrderPage: React.FC = () => {
     handleView(voucher.id);
     reset({
       ...voucher,
-      date: voucher.date ? voucher.date.split('T')[0] : '', // Extract YYYY-MM-DD
-      delivery_date: voucher.delivery_date ? voucher.delivery_date.split('T')[0] : '', // Extract YYYY-MM-DD for delivery_date
+      date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : item.gst_rate,
+        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
       })),
     });
     if (voucher.additional_charges) {
@@ -407,18 +407,33 @@ const PurchaseOrderPage: React.FC = () => {
       setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
       setAdditionalChargesEnabled(false);
     }
-    // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['purchase-order', voucher.id], voucher);
   };
 
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
-      const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : ''; // Extract YYYY-MM-DD
-      const formattedDeliveryDate = voucherData.delivery_date ? voucherData.delivery_date.split('T')[0] : ''; // Extract YYYY-MM-DD for delivery_date
+      const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : '';
       const formattedData = {
         ...voucherData,
         date: formattedDate,
-        delivery_date: formattedDeliveryDate,
+        items: voucherData.items?.map((item: any) => ({
+          ...item,
+          product_id: item.product_id,
+          product_name: item.product?.product_name || item.product_name || "",
+          unit_price: parseFloat(item.unit_price || 0),
+          original_unit_price: parseFloat(item.product?.unit_price || item.unit_price || 0),
+          discount_percentage: parseFloat(item.discount_percentage || 0),
+          discount_amount: parseFloat(item.discount_amount || 0),
+          gst_rate: normalizeGstRate(item.gst_rate ?? 18),
+          cgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : normalizeGstRate(item.gst_rate ?? 18),
+          unit: item.unit || item.product?.unit || "",
+          current_stock: parseFloat(item.current_stock || 0),
+          reorder_level: parseFloat(item.reorder_level || 0),
+          description: item.description || '',
+          quantity: parseFloat(item.quantity || 0),
+        })) || [],
       };
       reset(formattedData);
       if (voucherData.additional_charges) {
@@ -428,31 +443,8 @@ const PurchaseOrderPage: React.FC = () => {
         setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
         setAdditionalChargesEnabled(false);
       }
-
-      if (voucherData.items && voucherData.items.length > 0) {
-        remove();
-        voucherData.items.forEach((item: any) => {
-          append({
-            ...item,
-            product_id: item.product_id,
-            product_name: item.product?.product_name || item.product_name || "",
-            unit_price: item.unit_price,
-            original_unit_price: item.product?.unit_price || item.unit_price || 0,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            gst_rate: item.gst_rate ?? 18,
-            cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
-            unit: item.unit,
-            current_stock: item.current_stock || 0,
-            reorder_level: item.reorder_level || 0,
-            description: item.description || '',
-          });
-        });
-      }
     }
-  }, [voucherData, mode, reset, append, remove, isIntrastate]);
+  }, [voucherData, mode, reset, setValue, isIntrastate]);
 
   const onSubmit = async (data: any) => {
     if (totalRoundOff !== 0) {
@@ -463,7 +455,7 @@ const PurchaseOrderPage: React.FC = () => {
     handleFinalSubmit(
       data,
       watch,
-      localComputedItems, // Use localComputedItems for consistency
+      localComputedItems,
       isIntrastate,
       finalTotalAmount,
       totalRoundOff,
@@ -486,7 +478,6 @@ const PurchaseOrderPage: React.FC = () => {
     if (voucherData) reset(voucherData);
   };
 
-  // State for tracking dialog
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
   const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
 
@@ -498,37 +489,28 @@ const PurchaseOrderPage: React.FC = () => {
   const handleTrackingDialogClose = () => {
     setTrackingDialogOpen(false);
     setSelectedVoucherForTracking(null);
-    // Refresh the voucher list to show updated tracking
     refreshMasterData();
   };
 
   const handleCreateGRN = (voucher: any) => {
-    // Navigate to GRN page with PO data pre-filled
     router.push({
       pathname: '/vouchers/Purchase-Vouchers/grn',
       query: { po_id: voucher.id }
     });
   };
 
-  const enhancedVendorOptions = [...(vendorList || []), { id: null, name: "Add New Vendor..." }];
-
-  // Helper function to determine PO color status
-  // Red: no tracking; Yellow: tracking present, GRN pending; Green: GRN complete
   const getPOColorStatus = (voucher: any) => {
     const hasTracking = !!(voucher.tracking_number || voucher.transporter_name);
     const grnStatus = voucher.grn_status || 'pending';
     
-    // Green: GRN complete (all items received)
     if (grnStatus === 'complete') {
       return 'green';
     }
     
-    // Yellow: Tracking present, GRN pending or partial
     if (hasTracking) {
       return 'yellow';
     }
     
-    // Red: No tracking
     return 'red';
   };
 
@@ -564,39 +546,39 @@ const PurchaseOrderPage: React.FC = () => {
             latestVouchers.slice(0, 7).map((voucher: any) => {
               const colorStatus = getPOColorStatus(voucher);
               const colorCode = getColorCode(colorStatus);
-              const dateStr = voucher.date ? voucher.date.split('T')[0] : ''; // Extract YYYY-MM-DD
-              const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A'; // Extract YYYY-MM-DD
+              const dateStr = voucher.date ? voucher.date.split('T')[0] : '';
+              const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
               return (
-              <TableRow 
-                key={voucher.id} 
-                hover 
-                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} 
-                sx={{ 
-                  cursor: "pointer",
-                  borderLeft: `4px solid ${colorCode}`
-                }}
-              >
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || "0"}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
-                  <VoucherContextMenu
-                    voucher={voucher}
-                    voucherType="Purchase Order"
-                    onView={handleViewWithData}
-                    onEdit={handleEditWithData}
-                    onDelete={handleDelete}
-                    onPrint={handleGeneratePDF}
-                    onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
-                    onCreateGRN={handleCreateGRN}
-                    onEditTracking={handleEditTracking}
-                    showKebab={true}
-                    onClose={() => {}}
-                  />
-                </TableCell>
-              </TableRow>
-            );
+                <TableRow 
+                  key={voucher.id} 
+                  hover 
+                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} 
+                  sx={{ 
+                    cursor: "pointer",
+                    borderLeft: `4px solid ${colorCode}`
+                  }}
+                >
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{Math.round(voucher.total_amount).toLocaleString()}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
+                    <VoucherContextMenu
+                      voucher={voucher}
+                      voucherType="Purchase Order"
+                      onView={handleViewWithData}
+                      onEdit={handleEditWithData}
+                      onDelete={handleDelete}
+                      onPrint={handleGeneratePDF}
+                      onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
+                      onCreateGRN={handleCreateGRN}
+                      onEditTracking={handleEditTracking}
+                      showKebab={true}
+                      onClose={() => {}}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
             })
           )}
         </TableBody>
@@ -658,7 +640,7 @@ const PurchaseOrderPage: React.FC = () => {
               fullWidth 
               label="Required by Date" 
               type="date" 
-              {...control.register("delivery_date")} 
+              {...control.register("required_by_date")} 
               disabled={mode === "view"} 
               sx={{ 
                 ...voucherFormStyles.field, 
@@ -678,29 +660,14 @@ const PurchaseOrderPage: React.FC = () => {
             />
           </Grid>
           <Grid size={4}>
-            <Autocomplete 
-              size="small" 
-              options={enhancedVendorOptions} 
-              getOptionLabel={(option: any) => {
-                if (typeof option === 'number') return '';
-                return option?.name || "";
-              }} 
-              value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null} 
-              onChange={(_, newValue) => { 
-                if (newValue?.id === null) setShowAddVendorModal(true); 
-                else setValue("vendor_id", newValue?.id || null); 
-              }} 
-              renderInput={(params) => 
-                <TextField 
-                  {...params} 
-                  label="Vendor" 
-                  error={!!errors.vendor_id} 
-                  helperText={errors.vendor_id ? "Required" : ""} 
-                  sx={voucherFormStyles.field} 
-                  InputLabelProps={{ shrink: true }} 
-                />
-              } 
-              disabled={mode === "view"} 
+            <VendorAutocomplete
+              value={vendorList?.find((v: any) => v.id === watch("vendor_id")) || null}
+              onChange={(newValue) => {
+                console.log("Vendor selected:", newValue);
+                setValue("vendor_id", newValue?.id || null);
+              }}
+              label="Vendor"
+              vendorList={vendorList}
             />
           </Grid>
           <Grid size={4}>
@@ -738,7 +705,7 @@ const PurchaseOrderPage: React.FC = () => {
               append={append}
               mode={mode}
               isIntrastate={isIntrastate}
-              computedItems={localComputedItems} // Use fully calculated items for accurate line totals
+              computedItems={localComputedItems}
               lineDiscountEnabled={lineDiscountEnabled}
               lineDiscountType={lineDiscountType}
               totalDiscountEnabled={totalDiscountEnabled}
@@ -775,7 +742,7 @@ const PurchaseOrderPage: React.FC = () => {
               totalAmount={totalsWithAdditionalCharges.totalAmount}
               totalRoundOff={totalsWithAdditionalCharges.totalRoundOff}
               totalAdditionalCharges={totalsWithAdditionalCharges.totalAdditionalCharges}
-              additionalCharges={additionalCharges} // Added passing detailed charges
+              additionalCharges={additionalCharges}
               isIntrastate={isIntrastate}
               totalDiscountEnabled={totalDiscountEnabled}
               totalDiscountType={totalDiscountType}
@@ -815,8 +782,7 @@ const PurchaseOrderPage: React.FC = () => {
         <DialogContent><Typography>Round off amount is {totalRoundOff.toFixed(2)}. Proceed with save?</Typography></DialogContent>
         <DialogActions>
           <Button onClick={() => setRoundOffConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, localComputedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config,
-      additionalCharges); }} variant="contained">Confirm</Button>
+          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, localComputedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config, additionalCharges); }} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
       <Dialog
@@ -886,9 +852,39 @@ const PurchaseOrderPage: React.FC = () => {
           />
         }
       />
-      <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onSave={handleVendorAdded} loading={addVendorLoading} setLoading={setAddVendorLoading} />
-      <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, normalizeGstRate(newProduct.gst_rate ?? 18)); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : normalizeGstRate(newProduct.gst_rate ?? 18)); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
-      <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
+      <AddVendorModal 
+        open={showAddVendorModal} 
+        onClose={() => setShowAddVendorModal(false)} 
+        onSave={handleVendorAdded} 
+        loading={addVendorLoading} 
+        setLoading={setAddVendorLoading} 
+        organization_id={company?.organization_id}
+      />
+      <AddProductModal 
+        open={showAddProductModal} 
+        onClose={() => setShowAddProductModal(false)} 
+        onAdd={(newProduct) => { 
+          setValue(`items.${addingItemIndex}.product_id`, newProduct.id); 
+          setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); 
+          setValue(`items.${addingItemIndex}.unit_price`, parseFloat(newProduct.unit_price || 0)); 
+          setValue(`items.${addingItemIndex}.original_unit_price`, parseFloat(newProduct.unit_price || 0)); 
+          setValue(`items.${addingItemIndex}.gst_rate`, normalizeGstRate(newProduct.gst_rate ?? 18)); 
+          setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
+          setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
+          setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : normalizeGstRate(newProduct.gst_rate ?? 18)); 
+          setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); 
+          setValue(`items.${addingItemIndex}.reorder_level`, parseFloat(newProduct.reorder_level || 0)); 
+          refreshMasterData(); 
+        }} 
+        loading={addProductLoading} 
+        setLoading={setAddProductLoading} 
+      />
+      <AddShippingAddressModal 
+        open={showShippingModal} 
+        onClose={() => setShowShippingModal(false)} 
+        loading={addShippingLoading} 
+        setLoading={setAddShippingLoading} 
+      />
       <VoucherContextMenu 
         contextMenu={contextMenu} 
         voucher={null} 

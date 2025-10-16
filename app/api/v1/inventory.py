@@ -1,5 +1,3 @@
-# app/api/v1/inventory.py
-
 """
 Inventory & Parts Management API endpoints
 """
@@ -734,7 +732,12 @@ async def get_inventory_value(
     result = await db.execute(stmt)
     total_value = result.scalar() or 0.0
     
-    return TotalInventoryValue(total_value=total_value)
+    # Fetch the organization's currency
+    stmt_org = select(Organization.currency).where(Organization.id == organization_id)
+    result_org = await db.execute(stmt_org)
+    currency = result_org.scalar() or 'INR'  # Default to 'INR' if not set (change if needed)
+    
+    return TotalInventoryValue(total_value=total_value, currency=currency)
 
 
 @router.get("/reports/low-stock", response_model=List[LowStockReport])

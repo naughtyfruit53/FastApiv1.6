@@ -1,7 +1,6 @@
 # app/api/v1/stock.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from typing import List, Optional, Dict, Any
@@ -28,7 +27,7 @@ router = APIRouter()
 async def get_stock(
     skip: int = 0,
     limit: Optional[int] = Query(None),
-    product_id: Optional[int] = None,  # Make product_id Optional to allow empty or missing
+    product_id: Optional[int] = None,
     low_stock_only: bool = False,
     search: str = Query("", description="Search term for stock items"),
     show_zero: bool = Query(True, description="Show items with zero quantity"),
@@ -86,7 +85,7 @@ async def get_stock(
         
         if low_stock_only:
             logger.info("Filtering for low stock items only")
-            stmt = stmt.where(or_(Stock.quantity <= Product.reorder_level, Stock.quantity.is_(None)))
+            stmt = stmt.where(or_(Stock.quantity <= Product.reorder_level, Stock.id.is_(None)))
         
         if search:
             logger.info(f"Searching for products with term: {search}")
@@ -111,7 +110,12 @@ async def get_stock(
                 effective_quantity = stock.quantity if stock else 0.0
                 effective_unit = stock.unit if stock else product.unit
                 effective_location = stock.location if stock else ""
-                effective_last_updated = stock.last_updated if stock else product.updated_at
+                effective_last_updated = (
+                    stock.last_updated if stock else
+                    product.updated_at if product.updated_at else
+                    product.created_at if product.created_at else
+                    datetime.utcnow()
+                )
                 effective_id = stock.id if stock else 0
                 effective_org_id = stock.organization_id if stock else product.organization_id
                 
@@ -184,7 +188,7 @@ async def get_low_stock(
     else:
         # For non-super-admin users, use their organization_id directly  
         org_id = current_user.organization_id
-        if org_id is None:
+        if not org_id:
             logger.error(f"User {current_user.email} has no organization_id set")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -209,7 +213,12 @@ async def get_low_stock(
         try:
             effective_quantity = stock.quantity if stock else 0.0
             effective_location = stock.location if stock else ""
-            effective_last_updated = stock.last_updated if stock else product.created_at
+            effective_last_updated = (
+                stock.last_updated if stock else
+                product.updated_at if product.updated_at else
+                product.created_at if product.created_at else
+                datetime.utcnow()
+            )
             unit_price = product.unit_price or 0.0
             total_value = effective_quantity * unit_price
             
@@ -248,7 +257,6 @@ async def get_stock_movements(
     """Get stock movement history (inventory transactions)"""
     logger.info(f"Stock movements endpoint accessed by user {current_user.email}")
     
-    # Check stock module access for standard users
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
         logger.warning(f"Standard user {current_user.email} denied access to stock movements - no stock module access")
         raise HTTPException(
@@ -265,7 +273,7 @@ async def get_stock_movements(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User is not associated with any organization"
             )
-        stmt = TenantQueryMixin.filter_by_tenant(stmt, InventoryTransaction, org_id)
+        stmt = stmt.where(InventoryTransaction.organization_id == org_id)
     
     if recent:
         thirty_days_ago = datetime.now(pytz.utc) - timedelta(days=30)
@@ -310,7 +318,6 @@ async def get_last_vendor_for_product(
     """Get the last vendor who supplied this product"""
     logger.info(f"Last vendor endpoint accessed by user {current_user.email} for product {product_id}")
     
-    # Check stock module access for standard users
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
         logger.warning(f"Standard user {current_user.email} denied access to last vendor - no stock module access")
         raise HTTPException(
@@ -318,7 +325,6 @@ async def get_last_vendor_for_product(
             detail="Access denied. You do not have permission to view purchase information."
         )
     
-    # Find the most recent purchase voucher containing this product
     from app.models.vouchers.purchase import PurchaseVoucherItem  # Assuming this is the model
     stmt = select(PurchaseVoucher).join(PurchaseVoucherItem).where(
         PurchaseVoucherItem.product_id == product_id
@@ -389,7 +395,7 @@ async def get_product_stock(
             quantity=0.0,
             unit=product.unit,
             location="",
-            last_updated=product.created_at
+            last_updated=product.created_at or datetime.utcnow()
         )
     
     # Ensure tenant access for non-super-admin users
@@ -447,7 +453,8 @@ async def create_stock_entry(
     # Create new stock entry
     db_stock = Stock(
         organization_id=org_id,
-        **stock.dict()
+        **stock.dict(),
+        last_updated=datetime.utcnow()
     )
     db.add(db_stock)
     await db.commit()
@@ -491,21 +498,20 @@ async def update_stock(
                 detail="Product not found"
             )
         
-        previous_quantity = 0.0
-        new_quantity = max(0, adjustment.quantity_change)
-        
         stock = Stock(
             organization_id=org_id,
             product_id=product_id,
             quantity=stock_update.quantity or 0.0,
             unit=stock_update.unit or product.unit,
-            location=stock_update.location or ""
+            location=stock_update.location or "",
+            last_updated=datetime.utcnow()
         )
         db.add(stock)
     else:
         # Update existing stock
         for field, value in stock_update.dict(exclude_unset=True).items():
             setattr(stock, field, value)
+        stock.last_updated = datetime.utcnow()
     
     await db.commit()
     await db.refresh(stock)
@@ -523,7 +529,6 @@ async def adjust_stock(
     """Enhanced stock quantity adjustment with detailed response"""
     logger.info(f"Adjust stock endpoint accessed by user {current_user.email} for product {product_id}")
     
-    # Check stock module access for standard users
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
         logger.warning(f"Standard user {current_user.email} denied access to adjust stock - no stock module access")
         raise HTTPException(
@@ -555,11 +560,11 @@ async def adjust_stock(
             product_id=product_id,
             quantity=new_quantity,
             unit=product.unit,
-            location=""
+            location="",
+            last_updated=datetime.utcnow()
         )
         db.add(stock)
     else:
-        # Adjust existing stock
         previous_quantity = stock.quantity
         new_quantity = stock.quantity + adjustment.quantity_change
         
@@ -569,6 +574,7 @@ async def adjust_stock(
                 detail=f"Insufficient stock for this adjustment. Current: {previous_quantity}, Requested change: {adjustment.quantity_change}"
             )
         stock.quantity = new_quantity
+        stock.last_updated = datetime.utcnow()
     
     try:
         await db.commit()
@@ -594,7 +600,7 @@ async def adjust_stock(
 @router.post("/bulk", response_model=BulkImportResponse)
 async def bulk_import_stock(
     file: UploadFile = File(...),
-    mode: str = "replace",  # New parameter: 'add' or 'replace'
+    mode: str = "replace",
     organization_id: Optional[int] = Query(None, description="Organization ID (only for super admins)"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -832,7 +838,8 @@ async def bulk_import_stock(
                         product_id=product.id,
                         quantity=quantity,
                         unit=unit.upper(),
-                        location=location
+                        location=location,
+                        last_updated=datetime.utcnow()
                     )
                     db.add(new_stock)
                     created_stocks += 1
@@ -848,6 +855,7 @@ async def bulk_import_stock(
                     stock.quantity = new_quantity
                     stock.unit = unit.upper()
                     stock.location = location
+                    stock.last_updated = datetime.utcnow()
                     updated_stocks += 1
                     
                     if old_quantity != new_quantity:
@@ -945,14 +953,12 @@ async def export_stock_excel(
     current_user: User = Depends(get_current_active_user)
 ):
     """Export stock to Excel"""
-    
     org_id = require_current_organization_id(current_user)
     
     # Get stock using the same logic as the list endpoint
     stmt = select(Stock).join(Product)
     
-    # Apply tenant filtering
-    stmt = TenantQueryMixin.filter_by_tenant(stmt, Stock, org_id)
+    stmt = stmt.where(Stock.organization_id == org_id)
     
     if product_id:
         stmt = stmt.where(Stock.product_id == product_id)
@@ -999,13 +1005,15 @@ async def update_stock_from_po(po_id: int, db: AsyncSession):
                 product_id=item.product_id,
                 quantity=item.quantity,
                 unit=item.unit,
-                location=""  # Default or from config
+                location="",
+                last_updated=datetime.utcnow()
             )
             db.add(stock)
             await db.flush()
         
         # Update quantity (add received quantity; assume full for simplicity, adjust for partial GRN)
         stock.quantity += item.quantity
+        stock.last_updated = datetime.utcnow()
         
         # Update valuation - use simple average for now (can change to weighted)
         current_value = stock.quantity * item.product.unit_price  # Old value

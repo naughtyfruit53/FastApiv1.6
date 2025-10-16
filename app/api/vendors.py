@@ -35,7 +35,6 @@ async def get_vendors(
 ):
     """Get all vendors for the organization"""
     
-    # Restrict app super admins from accessing organization data  
     target_org_id = ensure_organization_context(current_user)
     
     stmt = TenantQueryFilter.apply_organization_filter(
@@ -53,6 +52,7 @@ async def get_vendors(
         stmt = stmt.where(search_filter)
     result = await db.execute(stmt.offset(skip).limit(limit))
     vendors = result.scalars().all()
+    logger.info(f"Fetched {len(vendors)} vendors for organization {target_org_id}")
     return vendors
 
 @router.post("", response_model=VendorInDB)
@@ -62,25 +62,37 @@ async def create_vendor(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new vendor"""
-    vendor_data = vendor.dict()
-    vendor_data = TenantQueryFilter.validate_organization_data(vendor_data, current_user)
-    # Check for duplicate vendor name in organization
-    stmt = TenantQueryFilter.apply_organization_filter(
-        select(Vendor), Vendor, vendor_data['organization_id'], current_user
-    ).where(Vendor.name == vendor_data['name'])
-    result = await db.execute(stmt)
-    existing_vendor = result.scalar_one_or_none()
-    if existing_vendor:
+    try:
+        vendor_data = vendor.dict()
+        vendor_data = TenantQueryFilter.validate_organization_data(vendor_data, current_user)
+        logger.info(f"Creating vendor with data: {vendor_data}")
+        
+        # Check for duplicate vendor name in organization
+        stmt = TenantQueryFilter.apply_organization_filter(
+            select(Vendor), Vendor, vendor_data['organization_id'], current_user
+        ).where(Vendor.name == vendor_data['name'])
+        result = await db.execute(stmt)
+        existing_vendor = result.scalar_one_or_none()
+        if existing_vendor:
+            logger.warning(f"Vendor creation failed: Vendor with name '{vendor_data['name']}' already exists in organization {vendor_data['organization_id']}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Vendor with name '{vendor_data['name']}' already exists in this organization"
+            )
+        
+        db_vendor = Vendor(**vendor_data)
+        db.add(db_vendor)
+        await db.commit()
+        await db.refresh(db_vendor)
+        logger.info(f"Successfully created vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")
+        return db_vendor
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating vendor: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Vendor with name '{vendor_data['name']}' already exists in this organization"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create vendor: {str(e)}"
         )
-    db_vendor = Vendor(**vendor_data)
-    db.add(db_vendor)
-    await db.commit()
-    await db.refresh(db_vendor)
-    logger.info(f"Created vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")
-    return db_vendor
 
 @router.get("/{vendor_id}", response_model=VendorInDB)
 async def get_vendor(
@@ -102,6 +114,7 @@ async def get_vendor(
     result = await db.execute(stmt)
     vendor = result.scalar_one_or_none()
     if not vendor:
+        logger.warning(f"Vendor {vendor_id} not found in organization {target_org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Vendor {vendor_id} not found in organization {target_org_id}"
@@ -123,6 +136,7 @@ async def update_vendor(
     result = await db.execute(stmt)
     db_vendor = result.scalar_one_or_none()
     if not db_vendor:
+        logger.warning(f"Vendor {vendor_id} not found in organization {target_org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Vendor {vendor_id} not found in organization {target_org_id}"
@@ -138,6 +152,7 @@ async def update_vendor(
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
         if existing:
+            logger.warning(f"Vendor update failed: Vendor with name '{update_data['name']}' already exists in organization {target_org_id}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Vendor with name '{update_data['name']}' already exists in this organization"
@@ -163,11 +178,11 @@ async def delete_vendor(
     result = await db.execute(stmt)
     db_vendor = result.scalar_one_or_none()
     if not db_vendor:
+        logger.warning(f"Vendor {vendor_id} not found in organization {target_org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Vendor {vendor_id} not found in organization {target_org_id}"
         )
-    # Soft delete (recommended): mark as inactive
     db_vendor.is_active = False
     await db.commit()
     logger.info(f"Deleted vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")
@@ -192,6 +207,7 @@ async def search_vendors_for_dropdown(
     ).limit(limit)
     result = await db.execute(stmt)
     vendors = result.scalars().all()
+    logger.info(f"Searched vendors for dropdown: {len(vendors)} found for term '{search_term}' in organization {target_org_id}")
     return vendors
 
 # --- Excel Import/Export/Template endpoints ---
@@ -256,16 +272,16 @@ async def import_vendors_excel(
 ):
     """Import vendors from Excel file"""
     org_id = require_current_organization_id(current_user)
-    # Validate file type
     if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
+        logger.warning(f"Invalid file format for vendor import: {file.filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only Excel files (.xlsx, .xls) are allowed"
         )
-    # Parse Excel file
     records = await ExcelService.parse_excel_file(file, VendorExcelService.REQUIRED_COLUMNS, "Vendor Import Template")
     
     if not records:
+        logger.warning("No data found in Excel file for vendor import")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No data found in Excel file"
@@ -290,7 +306,6 @@ async def import_vendors_excel(
                 "gst_number": record.get("gst_number", "").strip() or None,
                 "pan_number": record.get("pan_number", "").strip() or None,
             }
-            # Validate required fields
             required_fields = ["name", "contact_number", "address1", "city", "state", "pin_code", "state_code"]
             for field in required_fields:
                 if not vendor_data[field]:
@@ -298,7 +313,6 @@ async def import_vendors_excel(
                     break
             if errors and errors[-1].startswith(f"Row {i}:"):
                 continue
-            # Check if vendor already exists
             stmt = select(Vendor).where(
                 Vendor.name == vendor_data["name"],
                 Vendor.organization_id == org_id
@@ -349,7 +363,6 @@ async def upload_vendor_file(
     
     org_id = ensure_organization_context(current_user)
     
-    # Verify vendor exists and belongs to current organization
     stmt = select(Vendor).where(
         Vendor.id == vendor_id,
         Vendor.organization_id == org_id
@@ -358,12 +371,12 @@ async def upload_vendor_file(
     vendor = result.scalar_one_or_none()
     
     if not vendor:
+        logger.warning(f"Vendor {vendor_id} not found for file upload in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vendor not found"
         )
     
-    # Check file count limit (max 10 files per vendor)
     stmt = select(VendorFile).where(
         VendorFile.vendor_id == vendor_id,
         VendorFile.organization_id == org_id
@@ -372,36 +385,34 @@ async def upload_vendor_file(
     existing_files_count = len(result.scalars().all())
     
     if existing_files_count >= 10:
+        logger.warning(f"Maximum file limit reached for vendor {vendor_id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Maximum 10 files allowed per vendor"
         )
     
-    # Validate file size (max 10MB)
     if file.size and file.size > 10 * 1024 * 1024:
+        logger.warning(f"File size too large for vendor {vendor_id}: {file.size} bytes")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File size must be less than 10MB"
         )
     
-    # For GST certificates, validate PDF format
     if file_type == "gst_certificate":
         if not file.filename or not file.filename.lower().endswith('.pdf'):
+            logger.warning(f"Invalid file format for GST certificate upload for vendor {vendor_id}: {file.filename}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="GST certificate must be a PDF file"
             )
     
-    # Generate unique filename
     file_extension = os.path.splitext(file.filename or "")[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
     
-    # Save file to disk
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # Create database record
     db_file = VendorFile(
         vendor_id=vendor_id,
         organization_id=org_id,
@@ -440,7 +451,6 @@ async def get_vendor_files(
     
     org_id = ensure_organization_context(current_user)
     
-    # Verify vendor exists and belongs to current organization
     stmt = select(Vendor).where(
         Vendor.id == vendor_id,
         Vendor.organization_id == org_id
@@ -449,6 +459,7 @@ async def get_vendor_files(
     vendor = result.scalar_one_or_none()
     
     if not vendor:
+        logger.warning(f"Vendor {vendor_id} not found for file retrieval in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vendor not found"
@@ -489,7 +500,6 @@ async def download_vendor_file(
     
     org_id = ensure_organization_context(current_user)
     
-    # Get file record
     stmt = select(VendorFile).where(
         VendorFile.id == file_id,
         VendorFile.vendor_id == vendor_id,
@@ -499,13 +509,14 @@ async def download_vendor_file(
     file_record = result.scalar_one_or_none()
     
     if not file_record:
+        logger.warning(f"File {file_id} not found for vendor {vendor_id} in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
     
-    # Check if file exists on disk
     if not os.path.exists(file_record.file_path):
+        logger.error(f"File {file_record.file_path} not found on disk for vendor {vendor_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found on disk"
@@ -528,7 +539,6 @@ async def delete_vendor_file(
     
     org_id = ensure_organization_context(current_user)
     
-    # Get file record
     stmt = select(VendorFile).where(
         VendorFile.id == file_id,
         VendorFile.vendor_id == vendor_id,
@@ -538,17 +548,17 @@ async def delete_vendor_file(
     file_record = result.scalar_one_or_none()
     
     if not file_record:
+        logger.warning(f"File {file_id} not found for vendor {vendor_id} in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
     
-    # Remove file from disk
     if os.path.exists(file_record.file_path):
         os.remove(file_record.file_path)
     
-    # Remove database record
     await db.delete(file_record)
     await db.commit()
     
+    logger.info(f"Deleted file {file_id} for vendor {vendor_id} in organization {org_id}")
     return {"message": "File deleted successfully"}

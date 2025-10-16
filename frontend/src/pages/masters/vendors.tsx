@@ -71,7 +71,7 @@ const VendorsPage: React.FC = () => {
         if (sortOrder === "asc") {
           return nameA.localeCompare(nameB);
         } else {
-          return nameB.localeCompare(nameA);
+          return nameB.localeCompare(nameB);
         }
       });
     }
@@ -85,7 +85,19 @@ const VendorsPage: React.FC = () => {
   const handleVendorAdd = async (vendorData: any) => {
     setAddVendorLoading(true);
     try {
-      const response = await masterDataService.createVendor(vendorData);
+      // Validate required fields
+      const requiredFields = ['name', 'contact_number', 'address1', 'city', 'state', 'pin_code', 'state_code'];
+      for (const field of requiredFields) {
+        if (!vendorData[field] || String(vendorData[field]).trim() === '') {
+          throw new Error(`${field.replace('_', ' ')} is required`);
+        }
+      }
+      // Add organization_id from company context
+      const vendorDataWithOrg = {
+        ...vendorData,
+        organization_id: company?.organization_id,
+      };
+      const response = await masterDataService.createVendor(vendorDataWithOrg);
       const newVendor = response;
       queryClient.setQueryData(["vendors"], (old: any) =>
         old ? [...old, newVendor] : [newVendor],
@@ -99,10 +111,14 @@ const VendorsPage: React.FC = () => {
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          errorMsg = detail.map((err: any) => err.msg || err).join(", ");
+          errorMsg = detail.map((err: any) => `${err.loc ? err.loc.join(' -> ') + ': ' : ''}${err.msg || err}`).join(", ");
         } else if (typeof detail === "string") {
           errorMsg = detail;
+        } else {
+          errorMsg = JSON.stringify(detail);
         }
+      } else if (error.message) {
+        errorMsg = error.message;
       }
       setErrorMessage(errorMsg);
     } finally {
@@ -114,7 +130,19 @@ const VendorsPage: React.FC = () => {
     if (!editVendor?.id) return;
     setAddVendorLoading(true);
     try {
-      const response = await masterDataService.updateVendor(editVendor.id, vendorData);
+      // Validate required fields
+      const requiredFields = ['name', 'contact_number', 'address1', 'city', 'state', 'pin_code', 'state_code'];
+      for (const field of requiredFields) {
+        if (!vendorData[field] || String(vendorData[field]).trim() === '') {
+          throw new Error(`${field.replace('_', ' ')} is required`);
+        }
+      }
+      // Add organization_id from company context
+      const vendorDataWithOrg = {
+        ...vendorData,
+        organization_id: company?.organization_id,
+      };
+      const response = await masterDataService.updateVendor(editVendor.id, vendorDataWithOrg);
       queryClient.setQueryData(["vendors"], (old: any) =>
         old ? old.map((v: any) => (v.id === editVendor.id ? response : v)) : [response],
       );
@@ -128,10 +156,14 @@ const VendorsPage: React.FC = () => {
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          errorMsg = detail.map((err: any) => err.msg || err).join(", ");
+          errorMsg = detail.map((err: any) => `${err.loc ? err.loc.join(' -> ') + ': ' : ''}${err.msg || err}`).join(", ");
         } else if (typeof detail === "string") {
           errorMsg = detail;
+        } else {
+          errorMsg = JSON.stringify(detail);
         }
+      } else if (error.message) {
+        errorMsg = error.message;
       }
       setErrorMessage(errorMsg);
     } finally {
@@ -223,6 +255,11 @@ const VendorsPage: React.FC = () => {
             Add Vendor
           </Button>
         </Box>
+        {errorMessage && (
+          <Box sx={{ mb: 2 }}>
+            <Alert severity="error">{errorMessage}</Alert>
+          </Box>
+        )}
         <Paper sx={{ p: 3 }}>
           <Box
             sx={{

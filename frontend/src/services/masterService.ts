@@ -1,27 +1,81 @@
 // frontend/src/services/masterService.ts
-
 import { apiClient as api } from "./api/client";
+import { QueryFunctionContext } from "@tanstack/react-query";
 
-export const getVendors = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional to prevent destructuring undefined
-  const response = await api.get("/api/v1/vendors", { signal: context?.signal });
+// Interface for stock response
+interface StockResponse {
+  id: number;
+  organization_id: number;
+  product_id: number;
+  quantity: number;
+  unit: string;
+  location: string;
+  last_updated: string;
+  product_name: string;
+  product_hsn_code?: string;
+  product_part_number?: string;
+  unit_price: number;
+  reorder_level: number;
+  gst_rate: number;
+  is_active: boolean;
+  total_value: number;
+}
+
+// Fetch all vendors
+export const getVendors = async (context?: QueryFunctionContext): Promise<any> => {
+  const params = context?.queryKey?.[3] ? { organization_id: context.queryKey[3] } : {};
+  console.log("[getVendors] Request params:", params);
+  const response = await api.get("/api/v1/vendors", { params, signal: context?.signal });
+  console.log("[getVendors] Response data:", response.data);
   return response.data;
 };
 
+// Search vendors for autocomplete/dropdown
+export const searchVendors = async ({
+  queryKey,
+  signal,
+}: QueryFunctionContext): Promise<any> => {
+  const [, searchTerm, limit, organization_id] = queryKey;
+  const params: any = {
+    search: searchTerm || "",
+    limit: limit || 1000000,
+    active_only: false,
+  };
+  if (organization_id) {
+    params.organization_id = organization_id;
+  }
+  console.log("[searchVendors] Request params:", params);
+  try {
+    const response = await api.get("/api/v1/vendors", { params, signal });
+    console.log("[searchVendors] Response data:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("[searchVendors] Error:", error);
+    throw error;
+  }
+};
+
 // Fetch all customers
-export const getCustomers = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
+export const getCustomers = async (context?: QueryFunctionContext): Promise<any> => {
   const response = await api.get("/api/v1/customers", { signal: context?.signal });
+  console.log("[getCustomers] Response data:", response.data);
   return response.data;
 };
 
 // Fetch all products
-export const getProducts = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
-  const response = await api.get("/api/v1/products", { params: { active_only: false, limit: 1000000 }, signal: context?.signal });
+export const getProducts = async (context?: QueryFunctionContext): Promise<any> => {
+  const response = await api.get("/api/v1/products", { 
+    params: { active_only: false, limit: 1000000 }, 
+    signal: context?.signal 
+  });
+  console.log("[getProducts] Response data:", response.data);
   return response.data;
 };
 
 // Fetch all employees
-export const getEmployees = async (context?: QueryFunctionContext): Promise<any> => { // Made context optional
+export const getEmployees = async (context?: QueryFunctionContext): Promise<any> => {
   const response = await api.get("/api/v1/hr/employees", { signal: context?.signal });
+  console.log("[getEmployees] Response data:", response.data);
   return response.data;
 };
 
@@ -39,6 +93,7 @@ export const searchCustomers = async ({
     },
     signal,
   });
+  console.log("[searchCustomers] Response data:", response.data);
   return response.data;
 };
 
@@ -56,6 +111,7 @@ export const searchProducts = async ({
     },
     signal,
   });
+  console.log("[searchProducts] Response data:", response.data);
   return response.data;
 };
 
@@ -72,8 +128,10 @@ export const createCustomer = async (customerData: {
   state_code: string;
   gst_number?: string;
   pan_number?: string;
+  organization_id?: number;
 }): Promise<any> => {
   const response = await api.post("/api/v1/customers", customerData);
+  console.log("[createCustomer] Response data:", response.data);
   return response.data;
 };
 
@@ -90,8 +148,17 @@ export const createVendor = async (vendorData: {
   state_code: string;
   gst_number?: string;
   pan_number?: string;
+  organization_id?: number;
 }): Promise<any> => {
+  const requiredFields = ['name', 'contact_number', 'address1', 'city', 'state', 'pin_code', 'state_code'];
+  for (const field of requiredFields) {
+    if (!vendorData[field] || String(vendorData[field]).trim() === '') {
+      throw new Error(`${field.replace('_', ' ')} is required`);
+    }
+  }
+  console.log("[createVendor] Request data:", vendorData);
   const response = await api.post("/api/v1/vendors", vendorData);
+  console.log("[createVendor] Response data:", response.data);
   return response.data;
 };
 
@@ -108,14 +175,23 @@ export const updateVendor = async (id: number, vendorData: {
   state_code: string;
   gst_number?: string;
   pan_number?: string;
+  organization_id?: number;
 }): Promise<any> => {
+  const requiredFields = ['name', 'contact_number', 'address1', 'city', 'state', 'pin_code', 'state_code'];
+  for (const field of requiredFields) {
+    if (!vendorData[field] || String(vendorData[field]).trim() === '') {
+      throw new Error(`${field.replace('_', ' ')} is required`);
+    }
+  }
   const response = await api.put(`/api/v1/vendors/${id}`, vendorData);
+  console.log("[updateVendor] Response data:", response.data);
   return response.data;
 };
 
-// Delete vendor (added to support deletion in vendors.tsx)
+// Delete vendor
 export const deleteVendor = async (id: number): Promise<any> => {
   const response = await api.delete(`/api/v1/vendors/${id}`);
+  console.log("[deleteVendor] Response data:", response.data);
   return response.data;
 };
 
@@ -133,6 +209,7 @@ export const createProduct = async (productData: {
   is_manufactured?: boolean;
 }): Promise<any> => {
   const response = await api.post("/api/v1/products", productData);
+  console.log("[createProduct] Response data:", response.data);
   return response.data;
 };
 
@@ -151,31 +228,36 @@ export const createEmployee = async (employeeData: {
   salary?: number;
 }): Promise<any> => {
   const response = await api.post("/api/v1/hr/employees", employeeData);
+  console.log("[createEmployee] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportVendors = async (data: any[]): Promise<any> => {
   const response = await api.post("/api/v1/vendors/bulk", data);
+  console.log("[bulkImportVendors] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportCustomers = async (data: any[]): Promise<any> => {
   const response = await api.post("/api/v1/customers/bulk", data);
+  console.log("[bulkImportCustomers] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportProducts = async (data: any[]): Promise<any> => {
   const response = await api.post("/api/v1/products/bulk", data);
+  console.log("[bulkImportProducts] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportStock = async (data: any[]): Promise<any> => {
   const response = await api.post("/api/v1/stock/bulk", data);
+  console.log("[bulkImportStock] Response data:", response.data);
   return response.data;
 };
 
-// Fetch stock with parameter cleaning to avoid 422 errors
-export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {
+// Fetch stock with parameter cleaning and type checking
+export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<StockResponse[]> => {
   const [, rawParams = {}] = queryKey;
   const params: any = {
     skip: rawParams.skip || 0,
@@ -188,8 +270,23 @@ export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Prom
   if (productId && !isNaN(Number(productId)) && productId !== "") {
     params.product_id = Number(productId);
   }
-  const response = await api.get("/api/v1/stock", { params, signal });
-  return response.data;
+  console.log("[getStock] Request params:", params);
+  try {
+    const response = await api.get("/api/v1/stock", { params, signal });
+    console.log("[getStock] Response data:", {
+      response: response.data,
+      type: typeof response.data,
+      isArray: Array.isArray(response.data),
+    });
+    if (!Array.isArray(response.data)) {
+      console.warn("[getStock] Response is not an array:", response.data);
+      return [{ quantity: 0, product_id: params.product_id || 0 } as StockResponse];
+    }
+    return response.data as StockResponse[];
+  } catch (error) {
+    console.error("[getStock] Error fetching stock:", error);
+    return [{ quantity: 0, product_id: params.product_id || 0 } as StockResponse];
+  }
 };
 
 // HSN search for GST rate auto-population - now local from CSV
@@ -197,31 +294,30 @@ export const hsnSearch = async ({ queryKey }: QueryFunctionContext): Promise<any
   const [, query, limit] = queryKey;
   try {
     const data = await loadGstData();
-    
     // Fuzzy search on HSN code or description
     const results = data
       .filter((item: HsnResult) => 
         fuzzyMatch(query, item.hsn_code) || fuzzyMatch(query, item.description)
       )
       .sort((a: HsnResult, b: HsnResult) => {
-        // Prioritize exact HSN matches
         if (a.hsn_code.startsWith(query)) return -1;
         if (b.hsn_code.startsWith(query)) return 1;
         return 0;
       })
       .slice(0, limit || 10);
-    
+    console.log("[hsnSearch] Response data:", results);
     return results;
   } catch (error) {
-    console.error('HSN Search Error:', error);
+    console.error("[hsnSearch] Error:", error);
     return [];
   }
 };
 
-// New function: Get next account code for a type
+// Get next account code for a type
 export const getNextAccountCode = async (accountType: string): Promise<string> => {
   const response = await api.get("/api/v1/chart-of-accounts/get-next-code", {
     params: { type: accountType },
   });
+  console.log("[getNextAccountCode] Response data:", response.data);
   return response.data.next_code;
 };

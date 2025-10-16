@@ -1,6 +1,5 @@
 // frontend/src/components/VoucherItemTable.tsx
-// Reusable component for voucher items table, handling append/remove, toggles, stock, and rows.
-import React from 'react';
+import React from "react";
 import {
   Table,
   TableBody,
@@ -17,13 +16,13 @@ import {
   Fab,
   InputAdornment,
   Box,
-  Checkbox, // Added import for Checkbox
-  FormControlLabel, // Added import for FormControlLabel
-} from '@mui/material';
-import { Add, Remove } from '@mui/icons-material';
-import ProductAutocomplete from './ProductAutocomplete'; // Assuming this exists; adjust if needed
-import { GST_SLABS, normalizeGstRate } from '../utils/voucherUtils'; // Adjust path if needed, added normalizeGstRate
-import { getStock } from '../services/masterService';
+  Checkbox,
+  FormControlLabel,
+} from "@mui/material";
+import { Add, Remove } from "@mui/icons-material";
+import ProductAutocomplete from "./ProductAutocomplete";
+import { GST_SLABS, normalizeGstRate } from "../utils/voucherUtils";
+import { getStock } from "../services/masterService";
 
 interface VoucherItemTableProps {
   fields: any[];
@@ -47,9 +46,9 @@ interface VoucherItemTableProps {
   stockLoading: { [key: number]: boolean };
   getStockColor: (stock: number, reorder: number) => string;
   selectedProducts: any[];
-  showLineDiscountCheckbox?: boolean; // New prop
-  showTotalDiscountCheckbox?: boolean; // New prop
-  showDescriptionCheckbox?: boolean; // New prop
+  showLineDiscountCheckbox?: boolean;
+  showTotalDiscountCheckbox?: boolean;
+  showDescriptionCheckbox?: boolean;
   showAdditionalChargesCheckbox?: boolean;
 }
 
@@ -84,7 +83,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
     append({
       product_id: null,
       product_name: "",
-      quantity: 1,
+      quantity: 0.0,
       unit_price: 0,
       original_unit_price: 0,
       discount_percentage: 0,
@@ -97,11 +96,12 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
       unit: "",
       current_stock: 0,
       reorder_level: 0,
-      description: '',
+      description: "",
     });
   };
 
   const handleProductChange = async (index: number, product: any) => {
+    console.log("[VoucherItemTable] handleProductChange called:", { index, product });
     setValue(`items.${index}.product_id`, product?.id || null);
     setValue(`items.${index}.product_name`, product?.product_name || "");
     setValue(`items.${index}.unit_price`, product?.unit_price || 0);
@@ -113,89 +113,152 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
     setValue(`items.${index}.igst_rate`, isIntrastate ? 0 : normalizedGst);
     setValue(`items.${index}.unit`, product?.unit || "");
     setValue(`items.${index}.reorder_level`, product?.reorder_level || 0);
+    setValue(`items.${index}.current_stock`, 0);
 
     if (product?.id) {
       stockLoading[index] = true;
       try {
-        const res = await getStock({ queryKey: ["", { product_id: product.id }] });
+        const res = await getStock({
+          queryKey: ["", { product_id: product.id }],
+        });
+        console.log(`[VoucherItemTable] Stock fetch for product ${product.id}:`, {
+          response: res,
+          responseType: typeof res,
+          isArray: Array.isArray(res),
+          productId: product.id,
+          stockData: res[0],
+        });
+        if (!Array.isArray(res) || res.length === 0) {
+          console.warn(`[VoucherItemTable] Invalid stock response for product ${product.id}:`, res);
+          setValue(`items.${index}.current_stock`, 0);
+          return;
+        }
         const stockData = res[0] || { quantity: 0 };
-        setValue(`items.${index}.current_stock`, stockData.quantity);
+        const stockQuantity = parseFloat(stockData.quantity || 0);
+        console.log(`[VoucherItemTable] Setting current_stock for index ${index}:`, {
+          stockQuantity,
+          productId: product.id,
+        });
+        setValue(`items.${index}.current_stock`, stockQuantity);
       } catch (err) {
-        console.error("Failed to fetch stock:", err);
+        console.error(`[VoucherItemTable] Failed to fetch stock for product ${product.id}:`, err);
+        setValue(`items.${index}.current_stock`, 0);
       } finally {
         stockLoading[index] = false;
       }
-    } else {
-      setValue(`items.${index}.current_stock`, 0);
     }
   };
 
   return (
     <>
-      {mode !== "view" && (showLineDiscountCheckbox || showTotalDiscountCheckbox || showDescriptionCheckbox || showAdditionalChargesCheckbox) && (
-        <Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'flex-start' }}>
-          {showLineDiscountCheckbox && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={lineDiscountEnabled}
-                  onChange={(e) => handleToggleLineDiscount(e.target.checked)}
-                />
-              }
-              label="Enable Line Discount"
-            />
-          )}
-          {showTotalDiscountCheckbox && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={totalDiscountEnabled}
-                  onChange={(e) => handleToggleTotalDiscount(e.target.checked)}
-                />
-              }
-              label="Enable Total Discount"
-            />
-          )}
-          {showDescriptionCheckbox && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={descriptionEnabled}
-                  onChange={(e) => handleToggleDescription(e.target.checked)}
-                />
-              }
-              label="Enable Description"
-            />
-          )}
-          {showAdditionalChargesCheckbox && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={additionalChargesEnabled}
-                  onChange={(e) => handleToggleAdditionalCharges(e.target.checked)}
-                />
-              }
-              label="Enable Additional Charges"
-            />
-          )}
-        </Box>
-      )}
+      {mode !== "view" &&
+        (showLineDiscountCheckbox ||
+          showTotalDiscountCheckbox ||
+          showDescriptionCheckbox ||
+          showAdditionalChargesCheckbox) && (
+          <Box sx={{ display: "flex", gap: 2, mb: 2, justifyContent: "flex-start" }}>
+            {showLineDiscountCheckbox && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={lineDiscountEnabled}
+                    onChange={(e) => handleToggleLineDiscount(e.target.checked)}
+                  />
+                }
+                label="Enable Line Discount"
+              />
+            )}
+            {showTotalDiscountCheckbox && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={totalDiscountEnabled}
+                    onChange={(e) => handleToggleTotalDiscount(e.target.checked)}
+                  />
+                }
+                label="Enable Total Discount"
+              />
+            )}
+            {showDescriptionCheckbox && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={descriptionEnabled}
+                    onChange={(e) => handleToggleDescription(e.target.checked)}
+                  />
+                }
+                label="Enable Description"
+              />
+            )}
+            {showAdditionalChargesCheckbox && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={additionalChargesEnabled}
+                    onChange={(e) => handleToggleAdditionalCharges(e.target.checked)}
+                  />
+                }
+                label="Enable Additional Charges"
+              />
+            )}
+          </Box>
+        )}
       <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "30%" }}>Product</TableCell>
-              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "100px" }}></TableCell>
-              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}>Qty</TableCell>
-              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}>Rate</TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "30%" }}
+              >
+                Product
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "100px" }}
+              >
+                Stock
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+              >
+                Qty
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+              >
+                Rate
+              </TableCell>
               {lineDiscountEnabled && (
-                <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>
-                  {lineDiscountType === 'percentage' ? 'Disc%' : 'Disc ₹'}
+                <TableCell
+                  align="center"
+                  sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+                >
+                  {lineDiscountType === "percentage" ? "Disc%" : "Disc ₹"}
                 </TableCell>
               )}
-              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>GST%</TableCell>
-              <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Line Total</TableCell>
-              {mode !== "view" && <TableCell align="center" sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}>Action</TableCell>}
+              <TableCell
+                align="center"
+                sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+              >
+                GST%
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+              >
+                Line Total
+              </TableCell>
+              {mode !== "view" && (
+                <TableCell
+                  align="center"
+                  sx={{ fontSize: 12, fontWeight: "bold", p: 1 }}
+                >
+                  Action
+                </TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -204,7 +267,12 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                 <TableRow>
                   <TableCell sx={{ p: 1 }}>
                     <ProductAutocomplete
-                      value={selectedProducts[index]}
+                      value={
+                        selectedProducts[index] || {
+                          id: watch(`items.${index}.product_id`),
+                          product_name: watch(`items.${index}.product_name`) || "",
+                        }
+                      }
                       onChange={(product) => handleProductChange(index, product)}
                       disabled={mode === "view"}
                       size="small"
@@ -214,28 +282,43 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                     {stockLoading[index] ? (
                       <CircularProgress size={12} />
                     ) : watch(`items.${index}.product_id`) ? (
-                      <Typography variant="caption" color={getStockColor(watch(`items.${index}.current_stock`), watch(`items.${index}.reorder_level`))}>
-                        {watch(`items.${index}.current_stock`)} {watch(`items.${index}.unit`)}
+                      <Typography
+                        variant="caption"
+                        color={getStockColor(
+                          watch(`items.${index}.current_stock`) || 0,
+                          watch(`items.${index}.reorder_level`) || 0,
+                        )}
+                      >
+                        {(watch(`items.${index}.current_stock`) || 0).toFixed(2)}{" "}
+                        {watch(`items.${index}.unit`) || ""}
                       </Typography>
                     ) : null}
                   </TableCell>
                   <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
                     <TextField
                       type="number"
-                      {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                      {...control.register(`items.${index}.quantity`, {
+                        valueAsNumber: true,
+                      })}
                       disabled={mode === "view"}
                       size="small"
                       sx={{ width: 120 }}
                       InputProps={{
-                        inputProps: { min: 0, step: 1 },
-                        endAdornment: <InputAdornment position="end">{watch(`items.${index}.unit`) || ''}</InputAdornment>,
+                        inputProps: { min: 0, step: 0.01 },
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            {watch(`items.${index}.unit`) || ""}
+                          </InputAdornment>
+                        ),
                       }}
                     />
                   </TableCell>
                   <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
                     <TextField
                       type="number"
-                      {...control.register(`items.${index}.unit_price`, { valueAsNumber: true })}
+                      {...control.register(`items.${index}.unit_price`, {
+                        valueAsNumber: true,
+                      })}
                       disabled={mode === "view"}
                       size="small"
                       sx={{ width: 80 }}
@@ -246,11 +329,23 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                     <TableCell align="center" sx={{ p: 1 }}>
                       <TextField
                         type="number"
-                        {...control.register(`items.${index}.${lineDiscountType === 'percentage' ? 'discount_percentage' : 'discount_amount'}`, { valueAsNumber: true })}
+                        {...control.register(
+                          `items.${index}.${
+                            lineDiscountType === "percentage"
+                              ? "discount_percentage"
+                              : "discount_amount"
+                          }`,
+                          { valueAsNumber: true },
+                        )}
                         disabled={mode === "view"}
                         size="small"
                         sx={{ width: 60 }}
-                        InputProps={{ inputProps: { min: 0, step: lineDiscountType === 'percentage' ? 0.01 : 1 } }}
+                        InputProps={{
+                          inputProps: {
+                            min: 0,
+                            step: lineDiscountType === "percentage" ? 0.01 : 1,
+                          },
+                        }}
                       />
                     </TableCell>
                   )}
@@ -261,11 +356,22 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       value={watch(`items.${index}.gst_rate`) ?? 18}
                       onChange={(_, value) => {
                         setValue(`items.${index}.gst_rate`, value ?? 18);
-                        setValue(`items.${index}.cgst_rate`, isIntrastate ? (value ?? 18) / 2 : 0);
-                        setValue(`items.${index}.sgst_rate`, isIntrastate ? (value ?? 18) / 2 : 0);
-                        setValue(`items.${index}.igst_rate`, isIntrastate ? 0 : value ?? 18);
+                        setValue(
+                          `items.${index}.cgst_rate`,
+                          isIntrastate ? (value ?? 18) / 2 : 0,
+                        );
+                        setValue(
+                          `items.${index}.sgst_rate`,
+                          isIntrastate ? (value ?? 18) / 2 : 0,
+                        );
+                        setValue(
+                          `items.${index}.igst_rate`,
+                          isIntrastate ? 0 : value ?? 18,
+                        );
                       }}
-                      renderInput={(params) => <TextField {...params} size="small" sx={{ width: 60 }} />}
+                      renderInput={(params) => (
+                        <TextField {...params} size="small" sx={{ width: 60 }} />
+                      )}
                       disabled={mode === "view"}
                     />
                   </TableCell>
@@ -274,7 +380,11 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                   </TableCell>
                   {mode !== "view" && (
                     <TableCell align="center" sx={{ p: 1 }}>
-                      <IconButton size="small" onClick={() => remove(index)} color="error">
+                      <IconButton
+                        size="small"
+                        onClick={() => remove(index)}
+                        color="error"
+                      >
                         <Remove />
                       </IconButton>
                     </TableCell>
@@ -282,7 +392,10 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                 </TableRow>
                 {descriptionEnabled && (
                   <TableRow>
-                    <TableCell colSpan={mode !== "view" ? 8 : 7} sx={{ p: 1 }}>
+                    <TableCell
+                      colSpan={mode !== "view" ? 8 : 7}
+                      sx={{ p: 1 }}
+                    >
                       <TextField
                         multiline
                         rows={1}

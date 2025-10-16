@@ -1,5 +1,4 @@
 // frontend/src/hooks/useVoucherPage.ts
-// Enhanced comprehensive hook for voucher page logic with comprehensive overhaul features
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
@@ -19,7 +18,7 @@ import {
   voucherListUtils,
   enhancedRateUtils,
   VOUCHER_PAGINATION_DEFAULTS,
-  getAmountInWords,  // Added import for getAmountInWords
+  getAmountInWords,
 } from "../utils/voucherUtils";
 import { showErrorToast, showSuccessToast, handleVoucherError } from "../utils/errorHandling";
 import { SUCCESS_MESSAGES, CONFIRM_MESSAGES, getDynamicMessage } from "../constants/messages";
@@ -28,13 +27,13 @@ import {
   getVoucherPdfConfig,
 } from "../utils/pdfUtils";
 import { VoucherPageConfig } from "../types/voucher.types";
-import api from "../lib/api"; // Direct import for list fetch
+import api from "../lib/api";
 
 export const useVoucherPage = (config: VoucherPageConfig) => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
-  const { isOrgContextReady } = useAuth(); // Get isOrgContextReady from AuthContext
-  const { company } = useCompany(); // Get company from CompanyContext
+  const { isOrgContextReady } = useAuth();
+  const { company } = useCompany();
   const queryClient = useQueryClient();
   console.log(
     "[useVoucherPage] Enhanced hook initialized for:",
@@ -48,33 +47,29 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const [selectedId, setSelectedId] = useState<number | null>(
     id ? Number(id) : null,
   );
-  // Modal states
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showShippingModal, setShowShippingModal] = useState(false);
   const [showFullModal, setShowFullModal] = useState(false);
-  // Loading states
   const [addVendorLoading, setAddVendorLoading] = useState(false);
   const [addCustomerLoading, setAddCustomerLoading] = useState(false);
   const [addProductLoading, setAddProductLoading] = useState(false);
   const [addShippingLoading, setAddShippingLoading] = useState(false);
   const [addingItemIndex, setAddingItemIndex] = useState(-1);
-  // UI states
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
     mouseY: number;
     voucher: any;
   } | null>(null);
   const [useDifferentShipping, setUseDifferentShipping] = useState(false);
-  // Enhanced pagination and filtering states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(VOUCHER_PAGINATION_DEFAULTS.pageSize);
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [filteredVouchers, setFilteredVouchers] = useState<any[]>([]);
-  // Reference document states
   const [selectedReferenceType, setSelectedReferenceType] = useState<
     string | null
   >(null);
@@ -82,59 +77,68 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     null,
   );
   const [referenceDocument, setReferenceDocument] = useState<any>(null);
-  // Discount states (common across vouchers)
   const [lineDiscountEnabled, setLineDiscountEnabled] = useState(false);
-  const [lineDiscountType, setLineDiscountType] = useState<'percentage' | 'amount' | null>(null);
+  const [lineDiscountType, setLineDiscountType] = useState<
+    "percentage" | "amount" | null
+  >(null);
   const [totalDiscountEnabled, setTotalDiscountEnabled] = useState(false);
-  const [totalDiscountType, setTotalDiscountType] = useState<'percentage' | 'amount' | null>(null);
-  // Discount dialog states
+  const [totalDiscountType, setTotalDiscountType] = useState<
+    "percentage" | "amount" | null
+  >(null);
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
-  const [discountDialogFor, setDiscountDialogFor] = useState<'line' | 'total' | null>(null);
-  // Load saved discount types from localStorage
+  const [discountDialogFor, setDiscountDialogFor] = useState<
+    "line" | "total" | null
+  >(null);
+
   useEffect(() => {
-    const savedLineType = localStorage.getItem('voucherLineDiscountType');
-    if (savedLineType) setLineDiscountType(savedLineType as 'percentage' | 'amount');
-    const savedTotalType = localStorage.getItem('voucherTotalDiscountType');
-    if (savedTotalType) setTotalDiscountType(savedTotalType as 'percentage' | 'amount');
+    const savedLineType = localStorage.getItem("voucherLineDiscountType");
+    if (savedLineType)
+      setLineDiscountType(savedLineType as "percentage" | "amount");
+    const savedTotalType = localStorage.getItem("voucherTotalDiscountType");
+    if (savedTotalType)
+      setTotalDiscountType(savedTotalType as "percentage" | "amount");
   }, []);
-  // Save discount types to localStorage
+
   useEffect(() => {
-    if (lineDiscountType) localStorage.setItem('voucherLineDiscountType', lineDiscountType);
+    if (lineDiscountType)
+      localStorage.setItem("voucherLineDiscountType", lineDiscountType);
   }, [lineDiscountType]);
+
   useEffect(() => {
-    if (totalDiscountType) localStorage.setItem('voucherTotalDiscountType', totalDiscountType);
+    if (totalDiscountType)
+      localStorage.setItem("voucherTotalDiscountType", totalDiscountType);
   }, [totalDiscountType]);
-  // Handlers for toggling discounts
+
   const handleToggleLineDiscount = (enabled: boolean) => {
     if (enabled) {
       if (!lineDiscountType) {
-        setDiscountDialogFor('line');
+        setDiscountDialogFor("line");
         setDiscountDialogOpen(true);
         return;
       }
     } else {
-      // Reset when unchecked
       setLineDiscountType(null);
-      localStorage.removeItem('voucherLineDiscountType');
+      localStorage.removeItem("voucherLineDiscountType");
     }
     setLineDiscountEnabled(enabled);
   };
+
   const handleToggleTotalDiscount = (enabled: boolean) => {
     if (enabled) {
       if (!totalDiscountType) {
-        setDiscountDialogFor('total');
+        setDiscountDialogFor("total");
         setDiscountDialogOpen(true);
         return;
       }
     } else {
-      // Reset when unchecked
       setTotalDiscountType(null);
-      localStorage.removeItem('voucherTotalDiscountType');
+      localStorage.removeItem("voucherTotalDiscountType");
     }
     setTotalDiscountEnabled(enabled);
   };
-  const handleDiscountTypeSelect = (type: 'percentage' | 'amount') => {
-    if (discountDialogFor === 'line') {
+
+  const handleDiscountTypeSelect = (type: "percentage" | "amount") => {
+    if (discountDialogFor === "line") {
       setLineDiscountType(type);
       setLineDiscountEnabled(true);
     } else {
@@ -144,24 +148,23 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     setDiscountDialogOpen(false);
     setDiscountDialogFor(null);
   };
+
   const handleDiscountDialogClose = () => {
     setDiscountDialogOpen(false);
     setDiscountDialogFor(null);
-    // If canceled, uncheck the checkbox if needed
-    if (discountDialogFor === 'line') {
+    if (discountDialogFor === "line") {
       setLineDiscountEnabled(false);
-    } else if (discountDialogFor === 'total') {
+    } else if (discountDialogFor === "total") {
       setTotalDiscountEnabled(false);
     }
   };
-  // Enhanced form management with reference support
+
   const defaultValues = useMemo(() => {
     const baseValues = {
       voucher_number: "Loading...",
       date: new Date().toISOString().slice(0, 10),
       reference: "",
       notes: "",
-      // Reference document fields
       reference_type: "",
       reference_id: null as number | null,
       reference_number: "",
@@ -170,7 +173,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       revision_number: 0,
     };
     if (config.hasItems === false) {
-      // Financial vouchers - use financial defaults
       return {
         ...baseValues,
         total_amount: 0,
@@ -182,7 +184,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         name_type: "" as "Vendor" | "Customer",
       };
     } else {
-      // Vouchers with items - use standard defaults with enhanced rate formatting
       const itemDefaults = getDefaultVoucherValues(
         config.entityType === "purchase" ? "purchase" : "sales",
       );
@@ -193,15 +194,19 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         items: [
           {
             ...itemDefaults.items[0],
-            unit_price: 0.0, // Ensure 2 decimal places
+            unit_price: 0.0,
             original_unit_price: 0.0,
             discount_percentage: 0,
             discount_amount: 0.0,
+            quantity: 0.0,
+            current_stock: 0,
+            product_name: "",
           },
         ],
       };
     }
   }, [config.entityType, config.hasItems]);
+
   const {
     control,
     handleSubmit,
@@ -212,31 +217,34 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   } = useForm<any>({
     defaultValues,
   });
-  // Always create field array and watch, but use conditionally
+
   const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "items",
   });
-  // Combined useWatch for items and total_discount to avoid multiple calls
+
   const watchedFields = useWatch({ control, name: ["items", "total_discount"] });
-  const itemsWatch = watchedFields[0] || [];  // Default to empty array
-  const totalDiscountWatch = watchedFields[1] || 0;  // Default to 0
+  const itemsWatch = watchedFields[0] || [];
+  const totalDiscountWatch = watchedFields[1] || 0;
+
   const { data: vendorList } = useQuery({
     queryKey: ["vendors"],
     queryFn: getVendors,
     enabled:
       isOrgContextReady &&
       (config.entityType === "purchase" || config.entityType === "financial"),
-    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
+    staleTime: 300000,
   });
+
   const { data: customerList } = useQuery({
     queryKey: ["customers"],
     queryFn: getCustomers,
     enabled:
       isOrgContextReady &&
       (config.entityType === "sales" || config.entityType === "financial"),
-    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
+    staleTime: 300000,
   });
+
   const { data: voucherData, isLoading: isFetching } = useQuery({
     queryKey: [config.voucherType, selectedId],
     queryFn: () =>
@@ -245,14 +253,34 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         selectedId!,
       ),
     enabled:
-      !!selectedId && isOrgContextReady && (mode === "view" || mode === "edit" || mode === "revise"),
-    staleTime: mode === "view" ? Infinity : 300000, // Infinite stale for view mode (static), 5 min for edit
+      !!selectedId &&
+      isOrgContextReady &&
+      (mode === "view" || mode === "edit" || mode === "revise"),
+    staleTime: mode === "view" ? Infinity : 300000,
   });
-  // Extract isIntrastate as separate memo for UI usage
-  // Watch both customer_id and vendor_id separately to get stable values
+
+  const { data: productList } = useQuery({
+    queryKey: ["products"],
+    queryFn: getProducts,
+    enabled: isOrgContextReady && config.hasItems !== false,
+    staleTime: 300000,
+  });
+
+  const {
+    data: nextVoucherNumber,
+    isLoading: isNextNumberLoading,
+    refetch: refetchNextNumber,
+  } = useQuery({
+    queryKey: [`next${config.voucherType}Number`],
+    queryFn: () =>
+      voucherService.getNextVoucherNumber(config.nextNumberEndpoint),
+    enabled: mode === "create" && isOrgContextReady,
+    staleTime: 300000,
+  });
+
   const watchedCustomerId = watch("customer_id");
   const watchedVendorId = watch("vendor_id");
-  
+
   const isIntrastate = useMemo(() => {
     let isIntra = true;
     try {
@@ -263,9 +291,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           (c: any) => c.id === selectedEntityId,
         );
       } else if (
-        config.entityType === "purchase" && 
-        vendorList && 
-        selectedEntityId
+        config.entityType === "purchase" && vendorList && selectedEntityId
       ) {
         selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
       }
@@ -273,24 +299,29 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         const companyStateCode = company?.state_code;
         if (!companyStateCode) {
           console.error("Company state code is not available.");
-          return true; // Assume intrastate to prevent crash
+          return true;
         }
         const entityStateCode =
           selectedEntity.state_code || selectedEntity.gst_number?.slice(0, 2);
         if (!entityStateCode) {
           console.error("Entity state code or GST number is not available.");
-          return true; // Assume intrastate to prevent crash
+          return true;
         }
         isIntra = entityStateCode === companyStateCode;
-        console.log(`[useVoucherPage] Transaction is ${isIntra ? 'intrastate' : 'interstate'}`, {
-          companyStateCode,
-          entityStateCode,
-          entity: selectedEntity.name
-        });
+        console.log(
+          `[useVoucherPage] Transaction is ${
+            isIntra ? "intrastate" : "interstate"
+          }`,
+          {
+            companyStateCode,
+            entityStateCode,
+            entity: selectedEntity.name,
+          },
+        );
       }
     } catch (error) {
       console.error("Error determining transaction state:", error);
-      return true; // Assume intrastate to prevent crash
+      return true;
     }
     return isIntra;
   }, [
@@ -299,9 +330,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     config.entityType,
     customerList,
     vendorList,
-    company?.state_code
+    company?.state_code,
   ]);
-  // Enhanced computed values using the extracted isIntrastate
+
   const {
     computedItems,
     totalAmount,
@@ -330,20 +361,31 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         totalRoundOff: 0,
       };
     }
-    // Ensure all rates are properly formatted
     const formattedItems = itemsWatch.map((item: any) => ({
       ...item,
       unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0)),
+      quantity: parseFloat(item.quantity || 0),
+      product_name: item.product_name || "",
     }));
     return calculateVoucherTotals(
-      formattedItems, 
+      formattedItems,
       isIntrastate,
       lineDiscountEnabled ? lineDiscountType : null,
       totalDiscountEnabled ? totalDiscountType : null,
-      totalDiscountWatch
+      totalDiscountWatch,
     );
-  }, [itemsWatch, config.hasItems, watch, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, totalDiscountWatch]);  // Keep totalDiscountWatch in deps
-  // Enhanced queries with pagination and sorting
+  }, [
+    itemsWatch,
+    config.hasItems,
+    watch,
+    isIntrastate,
+    lineDiscountEnabled,
+    lineDiscountType,
+    totalDiscountEnabled,
+    totalDiscountType,
+    totalDiscountWatch,
+  ]);
+
   const {
     data: voucherList,
     isLoading: isLoadingList,
@@ -358,51 +400,28 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         sortBy: "created_at",
       }),
     enabled: isOrgContextReady,
-    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
+    staleTime: 300000,
+    select: (data) =>
+      data.map((voucher: any) => ({
+        ...voucher,
+        total_amount: calculateVoucherTotals(
+          voucher.items || [],
+          isIntrastate,
+          voucher.line_discount_type,
+          voucher.total_discount_type,
+          voucher.total_discount || 0,
+          voucher.additional_charges || {},
+        ).totalAmount,
+      })),
   });
-  // Handle data sorting when vouchers data changes
-  useEffect(() => {
-    if (voucherList && Array.isArray(voucherList)) {
-      console.log(
-        `[useVoucherPage] Successfully fetched vouchers for ${config.voucherType}:`,
-        voucherList,
-      );
-      const sorted = voucherListUtils.sortLatestFirst(voucherList);
-      setFilteredVouchers(sorted);
-    }
-  }, [voucherList, config.voucherType]);
-  // Handle error logging
-  useEffect(() => {
-    if (isLoadingList === false && !voucherList) {
-      console.error(
-        `[useVoucherPage] Error fetching vouchers for ${config.voucherType}`,
-      );
-    }
-  }, [isLoadingList, voucherList, config.voucherType]);
+
   const { data: employeeList } = useQuery({
     queryKey: ["employees"],
     queryFn: getEmployees,
     enabled: isOrgContextReady && config.entityType === "financial",
-    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
+    staleTime: 300000,
   });
-  const { data: productList } = useQuery({
-    queryKey: ["products"],
-    queryFn: getProducts,
-    enabled: isOrgContextReady && config.hasItems !== false,
-    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
-  });
-  const {
-    data: nextVoucherNumber,
-    isLoading: isNextNumberLoading,
-    refetch: refetchNextNumber,
-  } = useQuery({
-    queryKey: [`next${config.voucherType}Number`],
-    queryFn: () =>
-      voucherService.getNextVoucherNumber(config.nextNumberEndpoint),
-    enabled: mode === "create" && isOrgContextReady,
-    staleTime: 300000, // Added: 5 minutes stale time to reduce refetches
-  });
-  // Enhanced mutations with auto-refresh and pagination support
+
   const createMutation = useMutation({
     mutationFn: (data: any) =>
       voucherService.createVoucher(
@@ -411,7 +430,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       ),
     onSuccess: async (newVoucher) => {
       console.log("[useVoucherPage] Voucher created successfully:", newVoucher);
-      // Mark reference as used if selected
       if (newVoucher.reference_id && newVoucher.reference_type) {
         try {
           const referenceConfig = getVoucherConfig(newVoucher.reference_type as any);
@@ -421,7 +439,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           console.error("Error marking reference as used:", error);
         }
       }
-      // Optimistically update the voucher list by prepending the new voucher
       queryClient.setQueryData(
         [config.voucherType, currentPage, pageSize],
         (oldData: any) => {
@@ -432,13 +449,14 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         },
       );
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
-      await refetchVoucherList(); // Explicit refetch after invalidation
+      await refetchVoucherList();
       router.push({ query: { mode: "create" } }, undefined, { shallow: true });
       setMode("create");
+      setSelectedProducts([]);
       const { data: newNextNumber } = await refetchNextNumber();
       reset({
         ...defaultValues,
-        voucher_number: newNextNumber
+        voucher_number: newNextNumber,
       });
     },
     onError: (error: any) => {
@@ -446,6 +464,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       handleVoucherError(error, "create");
     },
   });
+
   const updateMutation = useMutation({
     mutationFn: (data: any) =>
       voucherService.updateVoucher(
@@ -459,21 +478,23 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       queryClient.invalidateQueries({
         queryKey: [config.voucherType, selectedId],
       });
-      refetchVoucherList(); // Explicit refetch after invalidation
+      refetchVoucherList();
     },
     onError: (error: any) => {
       console.error("[useVoucherPage] Error updating voucher:", error);
       handleVoucherError(error, "update");
     },
   });
-  // Enhanced event handlers
+
   const handleCreate = () => {
-    setReferenceDocument(null); // Clear reference
+    setReferenceDocument(null);
     router.push({ query: { mode: "create" } }, undefined, { shallow: true });
     setMode("create");
     setSelectedId(null);
+    setSelectedProducts([]);
     reset(defaultValues);
   };
+
   const handleEdit = (voucherId: number) => {
     router.push({ query: { id: voucherId, mode: "edit" } }, undefined, {
       shallow: true,
@@ -481,6 +502,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     setMode("edit");
     setSelectedId(voucherId);
   };
+
   const handleRevise = (voucherId: number) => {
     router.push({ query: { id: voucherId, mode: "revise" } }, undefined, {
       shallow: true,
@@ -488,6 +510,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     setMode("revise");
     setSelectedId(voucherId);
   };
+
   const handleView = (voucherId: number) => {
     router.push({ query: { id: voucherId, mode: "view" } }, undefined, {
       shallow: true,
@@ -495,31 +518,27 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     setMode("view");
     setSelectedId(voucherId);
   };
+
   const handleSubmitForm = (data: any) => {
-    // Enhanced data preparation with reference support
     if (config.hasItems === false) {
-      // Transform entity to vendor_id for payment voucher
-      if (data.entity?.type === 'Vendor') {
+      if (data.entity?.type === "Vendor") {
         data.vendor_id = data.entity.id;
-      } else if (data.entity?.type === 'Customer') {
-        data.customer_id = data.entity.id;  // If model supports, else adjust
-      } else if (data.entity?.type === 'Employee') {
-        data.employee_id = data.entity.id;  // If applicable
+      } else if (data.entity?.type === "Customer") {
+        data.customer_id = data.entity.id;
+      } else if (data.entity?.type === "Employee") {
+        data.employee_id = data.entity.id;
       }
-      // Remove entity object
       delete data.entity;
     } else {
       data.items = computedItems;
       data.total_amount = totalAmount;
     }
-    // Add reference document data if selected
     if (referenceDocument) {
       data.reference_type = selectedReferenceType;
       data.reference_id = selectedReferenceId;
       data.reference_number =
         referenceDocument.voucher_number || referenceDocument.number;
     }
-    // Add discount types if enabled
     if (lineDiscountEnabled && lineDiscountType) {
       data.line_discount_type = lineDiscountType;
     }
@@ -532,6 +551,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       updateMutation.mutate(data);
     }
   };
+
   const handleContextMenu = (event: React.MouseEvent, voucher: any) => {
     event.preventDefault();
     setContextMenu({
@@ -540,31 +560,34 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       voucher,
     });
   };
+
   const handleCloseContextMenu = () => {
     setContextMenu(null);
   };
-  // Enhanced pagination handlers
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
-  // Enhanced reference document handling
+
   const handleReferenceSelected = (referenceData: any) => {
     setReferenceDocument(referenceData);
     setSelectedReferenceType(referenceData.type);
     setSelectedReferenceId(referenceData.id);
-    // Auto-populate fields from reference document if applicable
     if (referenceData.items && config.hasItems) {
-      // Auto-populate items from reference document
       const referenceItems = referenceData.items.map((item: any) => ({
         ...item,
         quantity: item.quantity || 0,
         unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0)),
+        current_stock: item.current_stock || 0,
+        product_name: item.product?.product_name || item.product_name || "",
       }));
-      // Clear existing items and add reference items
       fields.forEach((_, index) => remove(index));
+      setSelectedProducts(referenceItems.map((item: any) => ({
+        id: item.product_id,
+        product_name: item.product_name,
+      })));
       referenceItems.forEach((item: any) => append(item));
     }
-    // Auto-populate customer/vendor if applicable
     if (referenceData.customer_id && config.entityType === "sales") {
       setValue("customer_id", referenceData.customer_id);
     }
@@ -572,7 +595,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       setValue("vendor_id", referenceData.vendor_id);
     }
   };
-  // Enhanced search and filter functionality with pagination
+
   const sortedVouchers = useMemo(() => {
     if (!voucherList || !Array.isArray(voucherList)) {
       console.warn(
@@ -583,15 +606,17 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
     return voucherListUtils.sortLatestFirst(voucherList);
   }, [voucherList]);
+
   const latestVouchers = useMemo(
     () => voucherListUtils.getLatestVouchers(sortedVouchers, 7),
     [sortedVouchers],
   );
-  // Enhanced pagination data
+
   const paginationData = useMemo(() => {
     const totalVouchers = sortedVouchers.length;
     return voucherListUtils.paginate(sortedVouchers, currentPage, pageSize);
   }, [sortedVouchers, currentPage, pageSize]);
+
   const handleSearch = () => {
     if (fromDate && toDate && new Date(toDate) < new Date(fromDate)) {
       alert("To date cannot be earlier than from date");
@@ -599,9 +624,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
     const filtered = sortedVouchers.filter((v) => {
       const lowerSearch = searchTerm.toLowerCase();
-      // Search in voucher number
       let matchesSearch = v.voucher_number.toLowerCase().includes(lowerSearch);
-      // Search in entity name based on voucher type
       if (config.entityType === "purchase" && v.vendor?.name) {
         matchesSearch =
           matchesSearch || v.vendor.name.toLowerCase().includes(lowerSearch);
@@ -609,7 +632,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         matchesSearch =
           matchesSearch || v.customer.name.toLowerCase().includes(lowerSearch);
       }
-      // Date filtering
       let matchesDate = true;
       if (fromDate) {
         matchesDate = matchesDate && new Date(v.date) >= new Date(fromDate);
@@ -620,16 +642,17 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       return (!searchTerm || matchesSearch) && matchesDate;
     });
     setFilteredVouchers(filtered);
-    setCurrentPage(1); // Reset to first page when filtering
+    setCurrentPage(1);
   };
-  // Modal handlers (missing from original)
+
   const handleModalOpen = useCallback(() => {
     setShowFullModal(true);
   }, []);
+
   const handleModalClose = useCallback(() => {
     setShowFullModal(false);
   }, []);
-  // Enhanced PDF generation with proper config
+
   const handleGeneratePDF = useCallback(
     async (voucher?: any) => {
       const pdfConfig = getVoucherPdfConfig(config.voucherType);
@@ -642,7 +665,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     },
     [config.voucherType, voucherData],
   );
-  // Delete functionality
+
   const handleDelete = useCallback(
     async (voucher: any) => {
       if (
@@ -656,8 +679,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
             voucher.id,
           );
           queryClient.invalidateQueries({ queryKey: [config.voucherType] });
-          refetchVoucherList(); // Explicit refetch after deletion
-          showSuccessToast(getDynamicMessage.voucherDeleted(voucher.voucher_number));
+          refetchVoucherList();
+          showSuccessToast(
+            getDynamicMessage.voucherDeleted(voucher.voucher_number),
+          );
         } catch (error: any) {
           console.error("Error deleting voucher:", error);
           handleVoucherError(error, "delete");
@@ -666,31 +691,29 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     },
     [config.voucherType, config.apiEndpoint, queryClient, refetchVoucherList],
   );
-  // Master data refresh functionality
+
   const refreshMasterData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["vendors"] });
     queryClient.invalidateQueries({ queryKey: ["customers"] });
     queryClient.invalidateQueries({ queryKey: ["products"] });
   }, [queryClient]);
-  // Import missing service (should be added to imports at top of file)
+
   const masterDataService = {
-    createCustomer: (data: any) => api.post("/customers", data),
-    createVendor: (data: any) => api.post("/vendors", data),
-    createProduct: (data: any) => api.post("/products", data),
+    createCustomer: (data: any) => api.post("/api/v1/customers", data),
+    createVendor: (data: any) => api.post("/api/v1/vendors", data),
+    createProduct: (data: any) => api.post("/api/v1/products", data),
   };
-  // Customer add handler with auto-selection
+
   const handleAddCustomer = useCallback(
     async (customerData: any) => {
       setAddCustomerLoading(true);
       try {
         const response = await masterDataService.createCustomer(customerData);
         const newCustomer = response.data;
-        // Update query data immediately
         queryClient.setQueryData(["customers"], (old: any) =>
           old ? old.concat(newCustomer) : [newCustomer],
         );
         queryClient.invalidateQueries({ queryKey: ["customers"] });
-        // Auto-select the new customer (conditional on entity type)
         if (config.entityType === "sales") {
           setValue("customer_id", newCustomer.id);
         }
@@ -711,19 +734,17 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       config.entityType,
     ],
   );
-  // Vendor add handler with auto-selection
+
   const handleAddVendor = useCallback(
     async (vendorData: any) => {
       setAddVendorLoading(true);
       try {
         const response = await masterDataService.createVendor(vendorData);
         const newVendor = response.data;
-        // Update query data immediately
         queryClient.setQueryData(["vendors"], (old: any) =>
           old ? old.concat(newVendor) : [newVendor],
         );
         queryClient.invalidateQueries({ queryKey: ["vendors"] });
-        // Auto-select the new vendor (conditional on entity type)
         if (config.entityType === "purchase") {
           setValue("vendor_id", newVendor.id);
         }
@@ -744,14 +765,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       config.entityType,
     ],
   );
-  // Product add handler
+
   const handleAddProduct = useCallback(
     async (productData: any) => {
       setAddProductLoading(true);
       try {
         const response = await masterDataService.createProduct(productData);
         const newProduct = response.data;
-        // Update query data immediately
         queryClient.setQueryData(["products"], (old: any) =>
           old ? old.concat(newProduct) : [newProduct],
         );
@@ -767,86 +787,108 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     },
     [queryClient, setAddProductLoading, setShowAddProductModal],
   );
-  // Shipping address add handler
-  const handleAddShipping = useCallback(async () => {
-    setAddShippingLoading(true);
-    try {
-      // Add shipping logic here
-      setShowShippingModal(false);
-      alert("Shipping address added successfully!");
-    } catch (error: any) {
-      console.error("Error adding shipping address:", error);
-      alert("Error adding shipping address");
-    } finally {
-      setAddShippingLoading(false);
-    }
-  }, [setAddShippingLoading, setShowShippingModal]);
-  // Effects - Enhanced data loading to fix bug where vouchers don't load saved data properly
+
+  const handleAddShipping = useCallback(
+    async () => {
+      setAddShippingLoading(true);
+      try {
+        setShowShippingModal(false);
+        alert("Shipping address added successfully!");
+      } catch (error: any) {
+        console.error("Error adding shipping address:", error);
+        alert("Error adding shipping address");
+      } finally {
+        setAddShippingLoading(false);
+      }
+    },
+    [setAddShippingLoading, setShowShippingModal],
+  );
+
   useEffect(() => {
-    if (voucherData && (mode === "view" || mode === "edit" || mode === "revise")) {
+    if (
+      voucherData &&
+      (mode === "view" || mode === "edit" || mode === "revise")
+    ) {
       console.log("[useVoucherPage] Loading voucher data:", voucherData);
-      // Reset with voucher data
-      const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
+      const formattedDate = voucherData.date
+        ? new Date(voucherData.date).toISOString().split("T")[0]
+        : "";
+      const formattedItems = voucherData.items?.map((item: any) => {
+        console.log("[useVoucherPage] Processing item:", item);
+        const productName = item.product?.name || item.product_name || "";
+        if (!productName) {
+          console.warn("[useVoucherPage] Item missing product_name:", item);
+        }
+        return {
+          ...item,
+          product_id: item.product_id,
+          product_name: productName,
+          unit_price: parseFloat(item.unit_price || 0),
+          original_unit_price: parseFloat(
+            item.product?.unit_price || item.unit_price || 0,
+          ),
+          discount_percentage: parseFloat(item.discount_percentage || 0),
+          discount_amount: parseFloat(item.discount_amount || 0),
+          gst_rate: parseFloat(item.gst_rate || 18),
+          cgst_rate: isIntrastate ? parseFloat(item.gst_rate || 18) / 2 : 0,
+          sgst_rate: isIntrastate ? parseFloat(item.gst_rate || 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : parseFloat(item.gst_rate || 18),
+          unit: item.unit || item.product?.unit || "",
+          current_stock: parseFloat(item.current_stock || 0),
+          reorder_level: parseFloat(item.reorder_level || 0),
+          quantity: parseFloat(item.quantity || 0),
+          description: item.description || "",
+        };
+      }) || [];
+      setSelectedProducts(formattedItems.map((item: any) => ({
+        id: item.product_id,
+        product_name: item.product_name,
+      })));
       let formattedData: any = {
         ...voucherData,
         date: formattedDate,
+        items: formattedItems,
       };
       if (mode === "revise") {
         formattedData = {
           ...formattedData,
-          date: new Date().toISOString().split('T')[0],
-          voucher_number: `${voucherData.voucher_number} -rev ${(voucherData.revision_number || 0) + 1}`,
+          date: new Date().toISOString().split("T")[0],
+          voucher_number: `${voucherData.voucher_number} -rev ${
+            (voucherData.revision_number || 0) + 1
+          }`,
           parent_id: voucherData.id,
           revision_number: (voucherData.revision_number || 0) + 1,
-          id: undefined, // New ID for revision
+          id: undefined,
         };
       }
+      console.log("[useVoucherPage] Formatted data:", formattedData);
       reset(formattedData);
-      // Reconstruct and set 'entity' for financial vouchers
       if (config.hasItems === false && voucherData.entity_id && voucherData.entity_type) {
-        setValue('entity', {
+        setValue("entity", {
           id: voucherData.entity_id,
           type: voucherData.entity_type,
-          name: voucherData.entity?.name || '',
+          name: voucherData.entity?.name || "",
           value: voucherData.entity_id,
-          label: voucherData.entity?.name || '',
+          label: voucherData.entity?.name || "",
         });
       }
-      // Set discount states from loaded data
       if (config.hasItems !== false) {
         setLineDiscountEnabled(!!voucherData.line_discount_type);
         setLineDiscountType(voucherData.line_discount_type || null);
         setTotalDiscountEnabled(!!voucherData.total_discount_type);
         setTotalDiscountType(voucherData.total_discount_type || null);
-        setValue('total_discount', voucherData.total_discount || 0);
+        setValue("total_discount", parseFloat(voucherData.total_discount || 0));
       }
-      // Ensure items array is properly loaded for vouchers with items
       if (
         config.hasItems !== false &&
         voucherData.items &&
         Array.isArray(voucherData.items)
       ) {
-        // Use replace instead of remove/append loop for efficiency
-        // Note: CGST/SGST/IGST rates are computed dynamically based on isIntrastate
-        // and don't need to be stored in the items during loading
-        const newItems = voucherData.items.map((item: any) => ({
-          ...item,
-          product_id: item.product_id,
-          product_name: item.product_name || item.product?.product_name || "",
-          unit_price: item.unit_price,
-          original_unit_price: item.product?.unit_price || item.unit_price || 0,
-          discount_percentage: item.discount_percentage || 0,
-          discount_amount: item.discount_amount || 0,
-          gst_rate: item.gst_rate ?? 18,
-          unit: item.unit || item.product?.unit || "",
-          current_stock: item.current_stock || 0,
-          reorder_level: item.reorder_level || 0,
-          description: item.description || '',
-        }));
-        replace(newItems);
-        console.log("[useVoucherPage] Loaded items:", voucherData.items.length);
+        replace(formattedItems);
+        console.log("[useVoucherPage] Loaded items:", formattedItems.length);
       }
     } else if (mode === "create") {
+      setSelectedProducts([]);
       reset(defaultValues);
     }
   }, [
@@ -856,15 +898,35 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     setValue,
     defaultValues,
     config.hasItems,
-    remove,
-    append,
     replace,
+    isIntrastate,
   ]);
+
+  useEffect(() => {
+    if (voucherList && Array.isArray(voucherList)) {
+      console.log(
+        `[useVoucherPage] Successfully fetched vouchers for ${config.voucherType}:`,
+        voucherList,
+      );
+      const sorted = voucherListUtils.sortLatestFirst(voucherList);
+      setFilteredVouchers(sorted);
+    }
+  }, [voucherList, config.voucherType]);
+
+  useEffect(() => {
+    if (isLoadingList === false && !voucherList) {
+      console.error(
+        `[useVoucherPage] Error fetching vouchers for ${config.voucherType}`,
+      );
+    }
+  }, [isLoadingList, voucherList, config.voucherType]);
+
   useEffect(() => {
     if (nextVoucherNumber && mode === "create") {
       setValue("voucher_number", nextVoucherNumber);
     }
   }, [nextVoucherNumber, mode, setValue]);
+
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "refreshMasterData") {
@@ -875,20 +937,27 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [refreshMasterData]);
+
   useEffect(() => {
     if (mode === "create" && isOrgContextReady) {
       refetchNextNumber();
     }
   }, [mode, isOrgContextReady, refetchNextNumber]);
+
   useEffect(() => {
     console.log("Next Voucher Number:", nextVoucherNumber);
     console.log("Is Next Number Loading:", isNextNumberLoading);
     console.log("Is Org Context Ready:", isOrgContextReady);
     console.log("Mode:", mode);
   }, [nextVoucherNumber, isNextNumberLoading, isOrgContextReady, mode]);
-  // Loading state
-  const isLoading = isLoadingList || isFetching || !isOrgContextReady || createMutation.isPending || updateMutation.isPending;
-  // Refetch voucher list when org context becomes ready
+
+  const isLoading =
+    isLoadingList ||
+    isFetching ||
+    !isOrgContextReady ||
+    createMutation.isPending ||
+    updateMutation.isPending;
+
   useEffect(() => {
     if (isOrgContextReady) {
       console.log(
@@ -897,14 +966,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       refetchVoucherList();
     }
   }, [isOrgContextReady, refetchVoucherList]);
-  // Refetch list after create/update - Enhanced for immediate refresh
+
   useEffect(() => {
     if (createMutation.isSuccess || updateMutation.isSuccess) {
-      // Immediate invalidation and refetch
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
-      // Force immediate refetch
       refetchVoucherList();
-      // Additional immediate refresh after short delay to ensure backend has processed
       setTimeout(() => {
         refetchVoucherList();
       }, 500);
@@ -916,15 +982,20 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     config.voucherType,
     refetchVoucherList,
   ]);
-  // Sync state with query params for shallow routing
+
   useEffect(() => {
-    const newMode = (router.query.mode as "create" | "edit" | "view" | "revise") || "create";
+    const newMode = (router.query.mode as
+      | "create"
+      | "edit"
+      | "view"
+      | "revise") || "create";
     const newId = router.query.id ? Number(router.query.id) : null;
     setMode(newMode);
     setSelectedId(newId);
+    setSelectedProducts([]);
   }, [router.query.mode, router.query.id]);
+
   return {
-    // Enhanced state
     mode,
     setMode,
     selectedId,
@@ -962,15 +1033,12 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     toDate,
     setToDate,
     filteredVouchers,
-    // Enhanced pagination
     currentPage,
     pageSize,
     paginationData,
     handlePageChange,
-    // Reference document handling
     referenceDocument,
     handleReferenceSelected,
-    // Form
     control,
     handleSubmit,
     reset,
@@ -980,7 +1048,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     fields,
     append,
     remove,
-    // Data
     voucherList,
     vendorList,
     customerList,
@@ -990,7 +1057,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-    // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
@@ -1003,10 +1069,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     gstBreakdown,
     isIntrastate,
     totalRoundOff,
-    // Mutations
     createMutation,
     updateMutation,
-    // Event handlers
     handleCreate,
     handleEdit,
     handleRevise,
@@ -1024,11 +1088,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     handleAddProduct,
     handleAddShipping,
     refreshMasterData,
-    getAmountInWords,  // Now imported from utils
-    // Enhanced utilities
+    getAmountInWords,
     isViewMode: mode === "view",
     enhancedRateUtils,
-    // Discount handlers and states
     lineDiscountEnabled,
     lineDiscountType,
     totalDiscountEnabled,
@@ -1039,5 +1101,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     handleDiscountDialogClose,
     handleDiscountTypeSelect,
     discountDialogFor,
+    selectedProducts,
+    setSelectedProducts,
   };
 };

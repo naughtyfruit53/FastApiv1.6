@@ -1,4 +1,4 @@
-// src/components/ProductAutocomplete.tsx
+// frontend/src/components/ProductAutocomplete.tsx
 import React, { useState } from "react";
 import {
   Autocomplete,
@@ -11,9 +11,10 @@ import { Add as AddIcon } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProducts, createProduct } from "../services/masterService";
 import AddProductModal from "./AddProductModal";
+
 interface Product {
   id: number;
-  product_name: string; // Updated to match API response format
+  product_name: string;
   hsn_code?: string;
   part_number?: string;
   unit: string;
@@ -24,9 +25,10 @@ interface Product {
   description?: string;
   is_manufactured?: boolean;
 }
+
 interface ProductAutocompleteProps {
   value: Product | null;
-  onChange: (_product: Product | null) => void;
+  onChange: (product: Product | null) => void;
   error?: boolean;
   helperText?: string;
   disabled?: boolean;
@@ -34,6 +36,7 @@ interface ProductAutocompleteProps {
   placeholder?: string;
   size?: "small" | "medium";
 }
+
 const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   value,
   onChange,
@@ -47,56 +50,61 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   const [inputValue, setInputValue] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const queryClient = useQueryClient();
-  // Fetch all products
+
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
     enabled: true,
-    staleTime: Infinity, // Cache indefinitely since it's all data
+    staleTime: Infinity,
   });
-  // Create product mutation
+
   const createProductMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: (newProduct) => {
-      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      // Auto-select the newly created product
       onChange(newProduct);
       setAddModalOpen(false);
     },
     onError: (err: any) => {
-      console.error("Failed to create product:", err);
+      console.error("[ProductAutocomplete] Failed to create product:", err);
     },
   });
-  // Filtered options based on input
+
   const filteredOptions = React.useMemo(() => {
     const lowerInput = inputValue.toLowerCase();
     return allProducts.filter(
       (product: any) =>
-        product.product_name.toLowerCase().includes(lowerInput) ||
+        (product.product_name || "").toLowerCase().includes(lowerInput) ||
         (product.hsn_code || "").toLowerCase().includes(lowerInput) ||
         (product.part_number || "").toLowerCase().includes(lowerInput),
     );
   }, [allProducts, inputValue]);
-  // Create options array with "Add Product" option
+
   const options = React.useMemo(() => {
+    let opts = [...filteredOptions];
+    if (value && value.id && !opts.find((opt) => opt.id === value.id)) {
+      opts = [{ ...value, product_name: value.product_name || "" }, ...opts];
+    }
     const addOption = {
       id: -1,
       product_name: "➕ Add Product",
       isAddOption: true,
     };
-    return [addOption, ...filteredOptions];
-  }, [filteredOptions]);
+    return [addOption, ...opts];
+  }, [filteredOptions, value]);
+
   const handleSelectionChange = (_: any, newValue: any) => {
     if (newValue?.isAddOption) {
       setAddModalOpen(true);
       return;
     }
-    onChange(newValue);
+    onChange(newValue ? { ...newValue, product_name: newValue.product_name || "" } : null);
   };
+
   const handleAddProduct = async (productData: any) => {
     await createProductMutation.mutateAsync(productData);
   };
+
   return (
     <>
       <Autocomplete
@@ -105,12 +113,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
         inputValue={inputValue}
         onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         options={options}
-        getOptionLabel={(option) => {
-          if (option.isAddOption) {
-            return option.product_name;
-          }
-          return option.product_name;
-        }}
+        getOptionLabel={(option) => option.product_name || ""}
         isOptionEqualToValue={(option, selectedValue) =>
           option.id === selectedValue?.id
         }
@@ -157,7 +160,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
           return (
             <Box component="li" {...props}>
               <Typography variant="body1" sx={{ fontWeight: "medium" }}>
-                {option.product_name}
+                {option.product_name || ""}
               </Typography>
             </Box>
           );
@@ -178,4 +181,5 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
     </>
   );
 };
+
 export default ProductAutocomplete;
