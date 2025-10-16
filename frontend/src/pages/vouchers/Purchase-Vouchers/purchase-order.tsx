@@ -727,7 +727,7 @@ const PurchaseOrderPage: React.FC = () => {
               />
             )}
           </Grid>
-          <Grid size={8}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Payment Terms" 
