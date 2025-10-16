@@ -46,6 +46,7 @@ import voucherFormStyles from "../../../styles/voucherFormStyles";
 import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form"; // Added missing import for useWatch
+import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for customer balance display
 
 const SalesVoucherPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
@@ -132,6 +133,9 @@ const SalesVoucherPage: React.FC = () => {
   const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
   const selectedCustomerId = watch("customer_id");
+  
+  // Fetch customer balance
+  const { balance: customerBalance, loading: customerBalanceLoading } = useEntityBalance('customer', selectedCustomerId);
 
   // Use new hooks
   const { gstError } = useGstValidation(selectedCustomerId, customerList);
@@ -517,7 +521,7 @@ const SalesVoucherPage: React.FC = () => {
               onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
-          <Grid size={4}>
+          <Grid size={3}>
             <Autocomplete 
               size="small" 
               options={enhancedCustomerOptions} 
@@ -543,7 +547,27 @@ const SalesVoucherPage: React.FC = () => {
               disabled={mode === "view"} 
             />
           </Grid>
-          <Grid size={4}>
+          <Grid size={1}>
+            {selectedCustomerId && (
+              <TextField
+                fullWidth
+                label="Balance"
+                value={customerBalanceLoading ? "..." : getBalanceDisplayText(customerBalance)}
+                disabled
+                size="small"
+                sx={{ 
+                  ...voucherFormStyles.field,
+                  '& .MuiInputBase-input': { 
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    color: customerBalance > 0 ? '#d32f2f' : customerBalance < 0 ? '#2e7d32' : '#666'
+                  }
+                }}
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+          </Grid>
+          <Grid size={8}>
             <TextField 
               fullWidth 
               label="Payment Terms" 
