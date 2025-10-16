@@ -201,17 +201,23 @@ const PurchaseVoucherPage: React.FC = () => {
     setAdditionalChargesModalOpen(false);
   };
 
-  const selectedProducts = useMemo(() => {
-    return fields.map((_, index) => {
-      const productId = watch(`items.${index}.product_id`);
-      return productList?.find((p: any) => p.id === productId) || null;
-    });
-  }, [fields, productList, watch]); // Removed fields.length and spread map as deps - use fields ref
-
   const productIds = useWatch({
     control,
     name: fields.map((_, i) => `items.${i}.product_id`),
   });
+
+  const productNames = useWatch({
+    control,
+    name: fields.map((_, i) => `items.${i}.product_name`),
+  });
+
+  const selectedProducts = useMemo(() => {
+    return fields.map((_, index) => {
+      const productId = productIds[index];
+      const productName = productNames[index];
+      return productList?.find((p: any) => p.id === productId) || { id: productId, product_name: productName || "" };
+    });
+  }, [fields.length, productList, productIds, productNames]);
 
   // Use useWatch for items and total_discount to ensure reactivity
   const items = useWatch({ control, name: "items" }) || [];
@@ -547,22 +553,19 @@ const PurchaseVoucherPage: React.FC = () => {
           </Grid>
           <Grid size={1}>
             {selectedVendorId && (
-              <TextField
-                fullWidth
-                label="Balance"
-                value={vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
-                disabled
-                size="small"
-                sx={{ 
-                  ...voucherFormStyles.field,
-                  '& .MuiInputBase-input': { 
+              <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
                     textAlign: 'right',
                     fontWeight: 'bold',
+                    fontSize: '0.875rem',
                     color: vendorBalance > 0 ? '#d32f2f' : vendorBalance < 0 ? '#2e7d32' : '#666'
-                  }
-                }}
-                InputLabelProps={{ shrink: true }}
-              />
+                  }}
+                >
+                  {vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
+                </Typography>
+              </Box>
             )}
           </Grid>
           <Grid size={4}>

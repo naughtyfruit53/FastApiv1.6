@@ -517,21 +517,19 @@ const GoodsReceiptNotePage: React.FC = () => {
           </Grid>
           <Grid size={1}>
             {selectedVendorId && (
-              <TextField
-                fullWidth
-                label="Balance"
-                value={vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
-                disabled
-                size="small"
-                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                inputProps={{ style: { fontSize: 14, textAlign: 'right', fontWeight: 'bold' } }}
-                sx={{ 
-                  '& .MuiInputBase-root': { height: 27 },
-                  '& .MuiInputBase-input': { 
+              <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    fontSize: '0.875rem',
                     color: vendorBalance > 0 ? '#d32f2f' : vendorBalance < 0 ? '#2e7d32' : '#666'
-                  }
-                }}
-              />
+                  }}
+                >
+                  {vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
+                </Typography>
+              </Box>
             )}
           </Grid>
           <Grid size={12}>

@@ -217,7 +217,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                 align="center"
                 sx={{ fontSize: 12, fontWeight: "bold", p: 1, width: "100px" }}
               >
-                Stock
+                {/* Stock header removed as per requirements, stock values still shown in cells */}
               </TableCell>
               <TableCell
                 align="center"

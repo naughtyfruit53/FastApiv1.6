@@ -244,8 +244,11 @@ async def generate_purchase_return_pdf(
             current_user=current_user
         )
         
+        # Sanitize voucher_number for filename (replace /, :, etc. with -)
+        safe_filename = re.sub(r'[/\\:?"<>|]', '-', voucher.voucher_number) + '.pdf'
+        
         headers = {
-            'Content-Disposition': f'attachment; filename="purchase_return_{voucher.voucher_number}.pdf"'
+            'Content-Disposition': f'attachment; filename="{safe_filename}"'
         }
         
         return StreamingResponse(pdf_content, media_type='application/pdf', headers=headers)
