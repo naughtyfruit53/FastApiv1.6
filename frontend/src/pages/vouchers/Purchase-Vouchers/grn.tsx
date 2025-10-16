@@ -15,6 +15,7 @@ import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
 import { useAuth } from '../../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import { useEntityBalance, getBalanceDisplayText } from '../../../hooks/useEntityBalance'; // Added for vendor balance display
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const config = getVoucherConfig('grn');
@@ -108,6 +109,9 @@ const GoodsReceiptNotePage: React.FC = () => {
   const vendorValue = useMemo(() => {
     return selectedVendor || null;
   }, [selectedVendor]);
+  
+  // Fetch vendor balance
+  const { balance: vendorBalance, loading: vendorBalanceLoading } = useEntityBalance('vendor', selectedVendorId);
   // Enhanced vendor options with "Add New"
   const enhancedVendorOptions = [
     ...(vendorList || []),
@@ -470,7 +474,7 @@ const GoodsReceiptNotePage: React.FC = () => {
             )}
           </Grid>
           {/* Vendor - Switch to TextField when voucher selected for auto-populate */}
-          <Grid size={6}>
+          <Grid size={5}>
             {!!selectedVoucherId ? (
               <TextField
                 fullWidth
@@ -508,6 +512,25 @@ const GoodsReceiptNotePage: React.FC = () => {
                   />
                 )}
                 disabled={mode === 'view'}
+              />
+            )}
+          </Grid>
+          <Grid size={1}>
+            {selectedVendorId && (
+              <TextField
+                fullWidth
+                label="Balance"
+                value={vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
+                disabled
+                size="small"
+                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                inputProps={{ style: { fontSize: 14, textAlign: 'right', fontWeight: 'bold' } }}
+                sx={{ 
+                  '& .MuiInputBase-root': { height: 27 },
+                  '& .MuiInputBase-input': { 
+                    color: vendorBalance > 0 ? '#d32f2f' : vendorBalance < 0 ? '#2e7d32' : '#666'
+                  }
+                }}
               />
             )}
           </Grid>

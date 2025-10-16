@@ -45,6 +45,7 @@ import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../util
 import voucherFormStyles from "../../../styles/voucherFormStyles";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form"; // Added missing import for useWatch
+import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for vendor balance display
 
 const PurchaseReturnPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
@@ -124,6 +125,9 @@ const PurchaseReturnPage: React.FC = () => {
   const [roundOffConfirmOpen, setRoundOffConfirmOpen] = useState(false);
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
   const selectedVendorId = watch("vendor_id");
+  
+  // Fetch vendor balance
+  const { balance: vendorBalance, loading: vendorBalanceLoading } = useEntityBalance('vendor', selectedVendorId);
 
   // Use new hooks
   const { gstError } = useGstValidation(selectedVendorId, vendorList);
@@ -508,7 +512,7 @@ const PurchaseReturnPage: React.FC = () => {
               onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
-          <Grid size={4}>
+          <Grid size={3}>
             <Autocomplete 
               size="small" 
               options={enhancedVendorOptions} 
@@ -533,6 +537,26 @@ const PurchaseReturnPage: React.FC = () => {
               } 
               disabled={mode === "view"} 
             />
+          </Grid>
+          <Grid size={1}>
+            {selectedVendorId && (
+              <TextField
+                fullWidth
+                label="Balance"
+                value={vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
+                disabled
+                size="small"
+                sx={{ 
+                  ...voucherFormStyles.field,
+                  '& .MuiInputBase-input': { 
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    color: vendorBalance > 0 ? '#d32f2f' : vendorBalance < 0 ? '#2e7d32' : '#666'
+                  }
+                }}
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
           </Grid>
           <Grid size={4}>
             <TextField 
