@@ -4,27 +4,24 @@ Comprehensive PDF generation service for vouchers with Indian formatting
 
 import os
 import uuid
-from datetime import datetime, date  # Added date import for type checking
+from datetime import datetime, date
 from typing import Dict, Any, Optional, List
-from jinja2 import Environment, FileSystemLoader, Template
-import pdfkit  # Replaced xhtml2pdf with pdfkit
+from jinja2 import Environment, FileSystemLoader
+import pdfkit
 from io import BytesIO
 from num2words import num2words
-from sqlalchemy.ext.asyncio import AsyncSession  # Changed to AsyncSession
-from sqlalchemy import select  # Added for select
-from app.models import Company, User, Vendor, Organization  # Added Vendor import and Organization
-from app.models.erp_models import BankAccount  # Added for bank details in PDFs
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models import Company, User, Vendor, Organization
+from app.models.erp_models import BankAccount
 import logging
 import base64
-import re  # Added for sanitizing filenames
-import json  # Added for parsing JSON strings
-import traceback  # Added for better error logging
+import re
+import json
+import traceback
 
-# Import settings for dynamic wkhtmltopdf path
 from app.core.config import settings
-
-# Import voucher PDF configs for titles
-from app.utils.pdf_utils import VOUCHER_PDF_CONFIGS, get_voucher_pdf_config  # Corrected import to pdf_utils
+from app.utils.pdf_utils import VOUCHER_PDF_CONFIGS, get_voucher_pdf_config
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +32,6 @@ class IndianNumberFormatter:
     def amount_to_words(amount: float) -> str:
         """Convert amount to Indian words format"""
         try:
-            # Convert to integer for words (paise handling)
             rupees = int(amount)
             paise = int((amount - rupees) * 100)
             
@@ -65,25 +61,19 @@ class IndianNumberFormatter:
     
     @staticmethod
     def format_indian_currency(amount: float, show_symbol: bool = True) -> str:
-        """Format amount in Indian currency format format (₹1,23,456.78)"""
+        """Format amount in Indian currency format (₹1,23,456.78)"""
         try:
-            # Handle negative amounts
             is_negative = amount < 0
             amount = abs(amount)
             
-            # Split into rupees and paise
             rupees = int(amount)
             paise = int((amount - rupees) * 100)
             
-            # Convert to string and add commas in Indian format
             rupees_str = str(rupees)
             if len(rupees_str) > 3:
-                # Last 3 digits
                 last_three = rupees_str[-3:]
-                # Remaining digits in groups of 2
                 remaining = rupees_str[:-3]
                 
-                # Add commas every 2 digits from right
                 formatted_remaining = ""
                 for i, digit in enumerate(reversed(remaining)):
                     if i > 0 and i % 2 == 0:
@@ -94,11 +84,9 @@ class IndianNumberFormatter:
             else:
                 formatted_amount = rupees_str
             
-            # Add paise if non-zero
             if paise > 0:
                 formatted_amount += f".{paise:02d}"
             
-            # Add currency symbol and negative sign if needed
             result = f"{formatted_amount}"
             if show_symbol:
                 result = f"₹ {result}"
@@ -112,7 +100,7 @@ class IndianNumberFormatter:
             return f"₹ {amount:.2f}"
 
 class TaxCalculator:
-    """GST GST calculation utilities"""
+    """GST calculation utilities"""
     
     @staticmethod
     def calculate_gst(taxable_amount: float, gst_rate: float, 
@@ -153,23 +141,19 @@ class VoucherPDFGenerator:
     def __init__(self):
         self.templates_dir = os.path.join(os.path.dirname(__file__), '../templates/pdf')
         self.static_dir = os.path.join(os.path.dirname(__file__), '../static')
-        self.output_dir = './uploads/voucher_pdfs'
+        self.output_dir = './Uploads/voucher_pdfs'
         
-        # Ensure directories exist
         os.makedirs(self.templates_dir, exist_ok=True)
         os.makedirs(self.static_dir, exist_ok=True)
         os.makedirs(self.output_dir, exist_ok=True)
         
-        # Initialize Jinja2 environment
         self.jinja_env = Environment(
             loader=FileSystemLoader(self.templates_dir),
             autoescape=True
         )
         
-        # Add custom filters
         self._add_custom_filters()
         
-        # pdfkit config using dynamic wkhtmltopdf path from settings (works for Windows local and Linux deploy)
         wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
         if not os.path.exists(wkhtmltopdf_path):
             raise FileNotFoundError(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Please install it and set WKHTMLTOPDF_PATH in .env.")
@@ -198,18 +182,18 @@ class VoucherPDFGenerator:
         """Format percentage value"""
         return f"{value:.2f}"
     
-    async def _get_company_branding(self, db: AsyncSession, organization_id: int) -> Dict[str, Any]:  # Changed to async and AsyncSession
+    async def _get_company_branding(self, db: AsyncSession, organization_id: int) -> Dict[str, Any]:
         """Get company branding information"""
         try:
-            stmt = select(Company).filter(  # Changed to select
+            stmt = select(Company).filter(
                 Company.organization_id == organization_id
             )
-            result = await db.execute(stmt)  # Await execute
-            company = result.scalars().first()  # scalars().first()
+            result = await db.execute(stmt)
+            company = result.scalars().first()
             
             if company:
                 logo_url = None
-                logo_path = os.path.join('uploads/company_logos', f"{organization_id}.png")
+                logo_path = os.path.join('Uploads/company_logos', f"{organization_id}.png")
                 if os.path.exists(logo_path):
                     with open(logo_path, 'rb') as f:
                         logo_data = base64.b64encode(f.read()).decode('utf-8')
@@ -217,11 +201,10 @@ class VoucherPDFGenerator:
                 
                 state_code = company.state_code
                 if not state_code and company.gst_number:
-                    state_code = company.gst_number[:2]  # Fallback to GST prefix
+                    state_code = company.gst_number[:2]
                 
-                logger.info(f"Company Company GST: {company.gst_number}, state_code (final): {state_code}")
+                logger.info(f"Company GST: {company.gst_number}, state_code (final): {state_code}")
                 
-                # Removed bank fetching - set to None to remove from PDFs
                 bank_details = None
                 
                 return {
@@ -238,10 +221,9 @@ class VoucherPDFGenerator:
                     'email': company.email or '',
                     'website': company.website or '',
                     'logo_url': logo_url,
-                    'bank_details': bank_details  # Set to None
+                    'bank_details': bank_details
                 }
             else:
-                # Fallback company data
                 return {
                     'name': 'Your Company Name',
                     'address1': 'Company Address Line 1',
@@ -271,42 +253,34 @@ class VoucherPDFGenerator:
             }
     
     async def _prepare_voucher_data(self, voucher_type: str, voucher_data: Dict[str, Any], 
-                                  db: AsyncSession, organization_id: int) -> Dict[str, Any]:  # Changed db to AsyncSession
+                                  db: AsyncSession, organization_id: int) -> Dict[str, Any]:
         """Prepare voucher data for template rendering"""
         
-        # Prepare data for template
-        # Get company branding - await since now async
-        company = await self._get_company_branding(db, organization_id)  # Await since now async
+        company = await self._get_company_branding(db, organization_id)
         
-        # Get organization for date_format
         stmt_org = select(Organization).where(Organization.id == organization_id)
         result_org = await db.execute(stmt_org)
         org = result_org.scalars().first()
         
-        # Get vendor/party details and determine interstate
         is_interstate = False
         vendor = voucher_data.get('vendor')
         customer = voucher_data.get('customer')
         employee = voucher_data.get('employee')
         party = vendor or customer or employee
         
-        # Merge address lines for party if it exists
         if party and isinstance(party, dict):
             address1 = party.get('address1', '') or party.get('address', '') or ''
             address2 = party.get('address2', '') or ''
             
-            # Merge address lines with comma separation if both exist
             merged_address = address1
             if address1 and address2:
                 merged_address = f"{address1}, {address2}"
-            elif address2:  # Only address2 exists
+            elif address2:
                 merged_address = address2
             
-            # Update party data with merged address
-            party = dict(party)  # Create a copy to avoid modifying original
+            party = dict(party)
             party['address'] = merged_address
             
-            # Update the specific party type in voucher_data for template
             if vendor:
                 voucher_data = dict(voucher_data)
                 voucher_data['vendor'] = party
@@ -317,20 +291,17 @@ class VoucherPDFGenerator:
                 voucher_data = dict(voucher_data)
                 voucher_data['employee'] = party
         
-        # Merge address lines for shipping address if it exists
         shipping_address = voucher_data.get('shipping_address')
         if shipping_address and isinstance(shipping_address, dict):
             shipping_addr1 = shipping_address.get('address1', '') or shipping_address.get('address', '') or ''
             shipping_addr2 = shipping_address.get('address2', '') or ''
             
-            # Merge shipping address lines
             merged_shipping_address = shipping_addr1
             if shipping_addr1 and shipping_addr2:
                 merged_shipping_address = f"{shipping_addr1}, {shipping_addr2}"
-            elif shipping_addr2:  # Only address2 exists
+            elif shipping_addr2:
                 merged_shipping_address = shipping_addr2
             
-            # Update shipping address data
             voucher_data = dict(voucher_data)
             shipping_address = dict(shipping_address)
             shipping_address['address'] = merged_shipping_address
@@ -347,23 +318,38 @@ class VoucherPDFGenerator:
         
         logger.info(f"Company state_code: {company['state_code']}, Party state_code: {party_state_code if party_state_code else 'None'}, is_interstate: {is_interstate}")
         
-        # Calculate totals and taxes for items
         items = voucher_data.get('items', [])
         processed_items = []
         
         subtotal = 0.0
-        total_discount = voucher_data.get('total_discount', 0.0)
+        total_discount = 0.0
         total_taxable = 0.0
         total_cgst = 0.0
         total_sgst = 0.0
         total_igst = 0.0
-        total_quantity = 0.0  # Added for totals row
+        total_quantity = 0.0
+        grand_total = 0.0
+        round_off = 0.0
         
-        if items:
+        if voucher_type == 'grn':
+            # For GRN, include only quantity-related fields
             for item in items:
-                # Calculate item totals
+                processed_item = {
+                    **item,
+                    'product_name': item.get('product_name', item.get('product', {}).get('product_name', '')),
+                    'ordered_quantity': float(item.get('ordered_quantity', 0)),
+                    'received_quantity': float(item.get('received_quantity', 0)),
+                    'accepted_quantity': float(item.get('accepted_quantity', 0)),
+                    'rejected_quantity': float(item.get('rejected_quantity', 0)),
+                    'unit': item.get('unit', '')
+                }
+                processed_items.append(processed_item)
+                total_quantity += processed_item['ordered_quantity']
+        else:
+            # Financial vouchers processing
+            for item in items:
                 quantity = float(item.get('quantity', 0))
-                unit_price = float(item.get('unit_price', 0) or 0)  # Handle None
+                unit_price = float(item.get('unit_price', 0) or 0)
                 discount_percentage = float(item.get('discount_percentage', 0) or 0)
                 discount_amount = float(item.get('discount_amount', 0) or 0)
                 gst_rate = float(item.get('gst_rate', 0) or 0)
@@ -371,16 +357,15 @@ class VoucherPDFGenerator:
                 
                 item_subtotal = quantity * unit_price
                 if discount_percentage > 0:
-                  discount_amount = item_subtotal * (discount_percentage / 100)
+                    discount_amount = item_subtotal * (discount_percentage / 100)
                 taxable_amount = item_subtotal - discount_amount
                 
-                # Calculate GST with updated interstate check
                 gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
                 
                 item_total = taxable_amount + gst_calc['total_gst']
                 
                 processed_item = {
-                    **item,  # Unpack original item dict to include all its fields
+                    **item,
                     'subtotal': item_subtotal,
                     'discount_percentage': discount_percentage,
                     'discount_amount': discount_amount,
@@ -403,82 +388,76 @@ class VoucherPDFGenerator:
                 total_cgst += gst_calc['cgst_amount']
                 total_sgst += gst_calc['sgst_amount']
                 total_igst += gst_calc['igst_amount']
-                total_quantity += quantity  # Accumulate quantity
+                total_quantity += quantity
             
-        # Process additional charges and append as special items
-        additional_charges = voucher_data.get('additional_charges', {})
-        if isinstance(additional_charges, str):
-            try:
-                additional_charges = json.loads(additional_charges)
-            except json.JSONDecodeError:
-                additional_charges = {}
-                logger.warning(f"Invalid JSON in additional_charges for voucher {voucher_data.get('id')}")
-        if isinstance(additional_charges, dict):
-            for name, amount in additional_charges.items():
-                if amount > 0:
-                    gst_rate = 18.0  # Default GST rate for charges; adjust if needed
-                    item_subtotal = float(amount)
-                    discount_amount = 0
-                    taxable_amount = item_subtotal - discount_amount
-                    
-                    gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
-                    
-                    item_total = taxable_amount + gst_calc['total_gst']
-                    
-                    processed_item = {
-                        'product_name': name.capitalize() + ' Charge',
-                        'description': '',
-                        'hsn_code': '',
-                        'quantity': 0,
-                        'unit': '',
-                        'unit_price': amount,
-                        'discount_percentage': 0,
-                        'discount_amount': 0,
-                        'gst_rate': gst_rate,
-                        'subtotal': item_subtotal,
-                        'taxable_amount': taxable_amount,
-                        'cgst_rate': gst_calc['cgst_rate'],
-                        'sgst_rate': gst_calc['sgst_rate'],
-                        'igst_rate': gst_calc['igst_rate'],
-                        'cgst_amount': gst_calc['cgst_amount'],
-                        'sgst_amount': gst_calc['sgst_amount'],
-                        'igst_amount': gst_calc['igst_amount'],
-                        'total_amount': item_total,
-                        'is_charge': True  # Flag for template if needed
-                    }
-                    
-                    processed_items.append(processed_item)
-                    
-                    subtotal += item_subtotal
-                    total_taxable += taxable_amount
-                    total_cgst += gst_calc['cgst_amount']
-                    total_sgst += gst_calc['sgst_amount']
-                    total_igst += gst_calc['igst_amount']
-                    # Do not add to total_quantity for charges
-
-        if processed_items:
-            grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
+            additional_charges = voucher_data.get('additional_charges', {})
+            if isinstance(additional_charges, str):
+                try:
+                    additional_charges = json.loads(additional_charges)
+                except json.JSONDecodeError:
+                    additional_charges = {}
+                    logger.warning(f"Invalid JSON in additional_charges for voucher {voucher_data.get('id')}")
+            if isinstance(additional_charges, dict):
+                for name, amount in additional_charges.items():
+                    if amount > 0:
+                        gst_rate = 18.0
+                        item_subtotal = float(amount)
+                        discount_amount = 0
+                        taxable_amount = item_subtotal - discount_amount
+                        
+                        gst_calc = TaxCalculator.calculate_gst(taxable_amount, gst_rate, is_interstate)
+                        
+                        item_total = taxable_amount + gst_calc['total_gst']
+                        
+                        processed_item = {
+                            'product_name': name.capitalize() + ' Charge',
+                            'description': '',
+                            'hsn_code': '',
+                            'quantity': 0,
+                            'unit': '',
+                            'unit_price': amount,
+                            'discount_percentage': 0,
+                            'discount_amount': 0,
+                            'gst_rate': gst_rate,
+                            'subtotal': item_subtotal,
+                            'taxable_amount': taxable_amount,
+                            'cgst_rate': gst_calc['cgst_rate'],
+                            'sgst_rate': gst_calc['sgst_rate'],
+                            'igst_rate': gst_calc['igst_rate'],
+                            'cgst_amount': gst_calc['cgst_amount'],
+                            'sgst_amount': gst_calc['sgst_amount'],
+                            'igst_amount': gst_calc['igst_amount'],
+                            'total_amount': item_total,
+                            'is_charge': True
+                        }
+                        
+                        processed_items.append(processed_item)
+                        
+                        subtotal += item_subtotal
+                        total_taxable += taxable_amount
+                        total_cgst += gst_calc['cgst_amount']
+                        total_sgst += gst_calc['sgst_amount']
+                        total_igst += gst_calc['igst_amount']
             
-            # Calculate round off
-            decimal_part = grand_total - int(grand_total)
-            round_off = 0.0
-            if decimal_part < 0.5:
-                round_off = -decimal_part
+            if processed_items:
+                grand_total = subtotal - total_discount + total_cgst + total_sgst + total_igst
+                decimal_part = grand_total - int(grand_total)
+                round_off = 0.0
+                if decimal_part < 0.5:
+                    round_off = -decimal_part
+                else:
+                    round_off = 1 - decimal_part
+                grand_total += round_off
             else:
-                round_off = 1 - decimal_part
-            grand_total += round_off
-        else:
-            # For non-item vouchers like payments
-            subtotal = float(voucher_data.get('total_amount', 0.0))
-            total_discount = float(voucher_data.get('total_discount', 0.0))
-            total_taxable = subtotal - total_discount
-            total_cgst = 0.0
-            total_sgst = 0.0
-            total_igst = 0.0
-            round_off = float(voucher_data.get('round_off', 0.0))
-            grand_total = total_taxable + round_off  # No taxes for financial vouchers
+                subtotal = float(voucher_data.get('total_amount', 0.0))
+                total_discount = float(voucher_data.get('total_discount', 0.0))
+                total_taxable = subtotal - total_discount
+                total_cgst = 0.0
+                total_sgst = 0.0
+                total_igst = 0.0
+                round_off = float(voucher_data.get('round_off', 0.0))
+                grand_total = total_taxable + round_off
         
-        # Prepare template data
         template_data = {
             'company': company,
             'voucher': voucher_data,
@@ -491,40 +470,28 @@ class VoucherPDFGenerator:
             'total_igst': total_igst,
             'round_off': round_off,
             'grand_total': grand_total,
-            'total_quantity': total_quantity,  # Added for items table totals
+            'total_quantity': total_quantity,
             'is_interstate': is_interstate,
-            'line_discount_enabled': voucher_data.get('line_discount_type') is not None,  # Flag for line discount
-            'total_discount_enabled': voucher_data.get('total_discount_type') is not None,  # Flag for total discount
+            'line_discount_enabled': voucher_data.get('line_discount_type') is not None,
+            'total_discount_enabled': voucher_data.get('total_discount_type') is not None,
             'amount_in_words': IndianNumberFormatter.amount_to_words(grand_total),
             'generated_at': datetime.now(),
-            'page_count': 1,  # Will be updated for multi-page
+            'page_count': 1,
             'party': party,
-            'org': org.__dict__ if org else {}  # Added organization data for date_format
+            'org': org.__dict__ if org else {}
         }
         
         return template_data
     
     async def generate_voucher_pdf(self, voucher_type: str, voucher_data: Dict[str, Any],
                                  db: AsyncSession, organization_id: int, 
-                                 current_user: User) -> BytesIO:  # Changed return to BytesIO for in-memory PDF
+                                 current_user: User) -> BytesIO:
         """
         Generate PDF for any voucher type
-        
-        Args:
-            voucher_type: Type of voucher (purchase, sales, pre_sales)
-            voucher_data: Voucher data including items
-            db: Database session
-            organization_id: Organization ID for tenant isolation
-            current_user: Current user for audit logging
-            
-        Returns:
-            BytesIO of generated PDF content
         """
         try:
-            # Prepare data for template
-            template_data = await self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)  # Await since now async
+            template_data = await self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)
             
-            # Load format template configuration from organization settings
             from app.models.organization_settings import OrganizationSettings, VoucherFormatTemplate
             stmt_settings = select(OrganizationSettings).where(
                 OrganizationSettings.organization_id == organization_id
@@ -532,7 +499,6 @@ class VoucherPDFGenerator:
             result_settings = await db.execute(stmt_settings)
             org_settings = result_settings.scalars().first()
             
-            # Load terms and conditions based on voucher type
             terms_conditions = None
             if org_settings:
                 if voucher_type in ['purchase', 'purchase-vouchers']:
@@ -552,11 +518,9 @@ class VoucherPDFGenerator:
                 elif voucher_type == 'grn':
                     terms_conditions = org_settings.grn_terms
                 
-                # Add terms_conditions to template data as list for table rendering
                 template_data['terms_conditions'] = (terms_conditions or '').split('\n') if terms_conditions else []
             
-            # Determine base template style based on format template configuration
-            base_template_name = 'base_voucher.html'  # Default
+            base_template_name = 'base_voucher.html'
             if org_settings and org_settings.voucher_format_template_id:
                 stmt_template = select(VoucherFormatTemplate).where(
                     VoucherFormatTemplate.id == org_settings.voucher_format_template_id,
@@ -566,11 +530,9 @@ class VoucherPDFGenerator:
                 format_template = result_template.scalars().first()
                 
                 if format_template and format_template.template_config:
-                    # Apply template configuration to template_data
                     template_data['format_config'] = format_template.template_config
                     logger.info(f"Using format template: {format_template.name} for voucher")
                     
-                    # Select base template based on layout style
                     layout_style = format_template.template_config.get('layout', 'standard')
                     if layout_style == 'modern':
                         base_template_name = 'base_voucher_modern.html'
@@ -579,7 +541,6 @@ class VoucherPDFGenerator:
                     elif layout_style == 'minimal':
                         base_template_name = 'base_voucher_minimal.html'
             
-            # Get template for voucher type
             if voucher_type in ['purchase', 'purchase-vouchers']:
                 template_name = 'purchase_voucher.html'
             elif voucher_type == 'purchase_orders':
@@ -606,14 +567,11 @@ class VoucherPDFGenerator:
             try:
                 template = self.jinja_env.get_template(template_name)
             except Exception:
-                # Fallback to selected base template
                 template = self.jinja_env.get_template(base_template_name)
                 logger.warning(f"Template {template_name} not found, using base template: {base_template_name}")
             
-            # Render HTML
             html_content = template.render(**template_data)
             
-            # Convert to PDF using pdfkit (replaced pisa)
             pdf_options = {
                 'page-size': 'A4',
                 'margin-top': '0mm',
@@ -636,26 +594,25 @@ class VoucherPDFGenerator:
             return pdf_io
             
         except Exception as e:
-            logger.error(traceback.format_exc())  # Log full traceback
+            logger.error(traceback.format_exc())
             raise Exception(f"PDF generation failed: {str(e)}")
     
     async def generate_purchase_voucher_pdf(self, voucher_data: Dict[str, Any],
                                           db: AsyncSession, organization_id: int,
-                                          current_user: User) -> BytesIO:  # Changed to BytesIO
+                                          current_user: User) -> BytesIO:
         """Generate Purchase Voucher PDF"""
-        return await self.generate_voucher_pdf('purchase', voucher_data, db, organization_id, current_user)  # Await
+        return await self.generate_voucher_pdf('purchase', voucher_data, db, organization_id, current_user)
     
     async def generate_sales_voucher_pdf(self, voucher_data: Dict[str, Any],
                                        db: AsyncSession, organization_id: int,
-                                       current_user: User) -> BytesIO:  # Changed to BytesIO
+                                       current_user: User) -> BytesIO:
         """Generate Sales Voucher PDF"""
-        return await self.generate_voucher_pdf('sales', voucher_data, db, organization_id, current_user)  # Await
+        return await self.generate_voucher_pdf('sales', voucher_data, db, organization_id, current_user)
     
     async def generate_presales_voucher_pdf(self, voucher_data: Dict[str, Any],
                                           db: AsyncSession, organization_id: int,
-                                          current_user: User) -> BytesIO:  # Changed to BytesIO
+                                          current_user: User) -> BytesIO:
         """Generate Pre-Sales Voucher PDF"""
-        return await self.generate_voucher_pdf('presales', voucher_data, db, organization_id, current_user)  # Await
+        return await self.generate_voucher_pdf('presales', voucher_data, db, organization_id, current_user)
 
-# Create singleton instance
 pdf_generator = VoucherPDFGenerator()

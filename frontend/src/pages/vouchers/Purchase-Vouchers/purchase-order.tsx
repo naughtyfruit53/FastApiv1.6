@@ -524,30 +524,39 @@ const PurchaseOrderPage: React.FC = () => {
   };
 
   const getPOColorStatus = (voucher: any) => {
-    const hasTracking = !!(voucher.tracking_number || voucher.transporter_name);
     const grnStatus = voucher.grn_status || 'pending';
+    const totalOrdered = voucher.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+    const totalReceived = voucher.items.reduce((sum: number, item: any) => sum + ((item.quantity - item.pending_quantity) || 0), 0);
+    const remaining = totalOrdered - totalReceived;
+    
+    console.log(`PO ${voucher.voucher_number} grn_status: ${grnStatus}, `
+                + `ordered: ${totalOrdered}, received: ${totalReceived}, remaining: ${remaining}, `
+                + `items:`, voucher.items.map((item: any) => ({
+                  product_id: item.product_id,
+                  quantity: item.quantity,
+                  delivered_quantity: item.delivered_quantity,
+                  pending_quantity: item.pending_quantity
+                })));
     
     if (grnStatus === 'complete') {
       return 'green';
-    }
-    
-    if (hasTracking) {
+    } else if (grnStatus === 'partial') {
       return 'yellow';
+    } else {
+      return 'white';
     }
-    
-    return 'red';
   };
 
   const getColorCode = (status: string) => {
     switch (status) {
-      case 'red':
-        return '#f44336';
-      case 'yellow':
-        return '#ff9800';
       case 'green':
         return '#4caf50';
+      case 'yellow':
+        return '#ff9800';
+      case 'white':
+        return '#ffffff';
       default:
-        return '#9e9e9e';
+        return '#ffffff';
     }
   };
 
@@ -579,7 +588,7 @@ const PurchaseOrderPage: React.FC = () => {
                   onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} 
                   sx={{ 
                     cursor: "pointer",
-                    borderLeft: `4px solid ${colorCode}`
+                    backgroundColor: colorCode
                   }}
                 >
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>

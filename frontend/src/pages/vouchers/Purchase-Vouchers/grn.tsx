@@ -1,7 +1,27 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/grn.tsx
-// Goods Receipt Note Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
-import {Box, TextField, Typography, Grid, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete} from '@mui/material';
+import {
+  Box,
+  TextField,
+  Typography,
+  Grid,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Autocomplete,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from '@mui/material';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -10,18 +30,21 @@ import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import {getVoucherConfig, getVoucherStyles} from '../../../utils/voucherUtils';
+import { getVoucherConfig, getVoucherStyles } from '../../../utils/voucherUtils';
 import { voucherService } from '../../../services/vouchersService';
-import api from '../../../lib/api';  // Import api for direct call
+import api from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { useEntityBalance, getBalanceDisplayText } from '../../../hooks/useEntityBalance'; // Added for vendor balance display
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
+  const router = useRouter();
+  const { po_id } = router.query;
   const config = getVoucherConfig('grn');
   const voucherStyles = getVoucherStyles();
   const {
-    // State
     mode,
     setMode,
     isLoading,
@@ -50,15 +73,12 @@ const GoodsReceiptNotePage: React.FC = () => {
     toDate,
     setToDate,
     filteredVouchers,
-    // Enhanced pagination
     currentPage,
     pageSize,
     paginationData,
     handlePageChange,
-    // Reference document handling
     referenceDocument,
     handleReferenceSelected,
-    // Form
     control,
     handleSubmit,
     watch,
@@ -68,7 +88,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     append,
     remove,
     reset,
-    // Data
     voucherList,
     vendorList,
     productList,
@@ -76,19 +95,16 @@ const GoodsReceiptNotePage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-    // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
     totalGst,
-    // Mutations
     createMutation,
     updateMutation,
-    // Event handlers
     handleCreate,
     handleEdit,
     handleView,
-    handleSubmitForm: _handleSubmitForm, // Rename to avoid conflict
+    handleSubmitForm: _handleSubmitForm,
     handleContextMenu,
     handleCloseContextMenu,
     handleSearch,
@@ -98,53 +114,81 @@ const GoodsReceiptNotePage: React.FC = () => {
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-    // Utilities
     isViewMode,
   } = useVoucherPage(config);
-  // Additional state for voucher list modal
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
-  // Goods Receipt Note specific state
   const selectedVendorId = watch('vendor_id');
   const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
   const vendorValue = useMemo(() => {
     return selectedVendor || null;
   }, [selectedVendor]);
   
-  // Fetch vendor balance
-  const { balance: vendorBalance, loading: vendorBalanceLoading } = useEntityBalance('vendor', selectedVendorId);
-  // Enhanced vendor options with "Add New"
   const enhancedVendorOptions = [
     ...(vendorList || []),
     { id: null, name: 'Add New Vendor...' }
   ];
-  // GRN specific states
   const [selectedVoucherType, setSelectedVoucherType] = useState<'purchase-voucher' | 'purchase-order' | null>(null);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
-  // Fetch purchase orders
+  const [grnCompleteDialogOpen, setGrnCompleteDialogOpen] = useState(false);
+  const [existingGrnId, setExistingGrnId] = useState<number | null>(null);
+
+  // Fetch PO status and GRN ID when po_id is provided
+  const { data: poData } = useQuery({
+    queryKey: ['purchase-order', po_id],
+    queryFn: () => {
+      if (!po_id) return null;
+      return api.get(`/purchase-orders/${po_id}`).then(res => res.data);
+    },
+    enabled: !!po_id && isOrgContextReady,
+  });
+
+  // Fetch existing GRN for the PO
+  const { data: existingGrnData } = useQuery({
+    queryKey: ['grn-for-po', po_id],
+    queryFn: () => {
+      if (!po_id) return null;
+      return api.get(`/goods-receipt-notes/for-po/${po_id}`).then(res => res.data);
+    },
+    enabled: !!po_id && isOrgContextReady,
+  });
+
+  // Set selectedVoucherType and selectedVoucherId when po_id is present
+  useEffect(() => {
+    if (po_id && !selectedVoucherId) {
+      setSelectedVoucherType('purchase-order');
+      setSelectedVoucherId(Number(po_id));
+      setMode('create');
+    }
+  }, [po_id, setSelectedVoucherType, setSelectedVoucherId, setMode]);
+
+  // Check if GRN is complete and show dialog
+  useEffect(() => {
+    if (poData && poData.grn_status === 'complete' && existingGrnData) {
+      setGrnCompleteDialogOpen(true);
+      setExistingGrnId(existingGrnData.id);
+    }
+  }, [poData, existingGrnData]);
+
   const { data: purchaseOrdersData, refetch: refetchOrders } = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: () => api.get('/purchase-orders').then(res => res.data),
     enabled: isOrgContextReady,
   });
-  // Fetch purchase vouchers
   const { data: purchaseVouchersData, refetch: refetchVouchers } = useQuery({
     queryKey: ['purchase-vouchers'],
     queryFn: () => api.get('/purchase-vouchers').then(res => res.data),
     enabled: isOrgContextReady,
   });
-  // Fetch all GRNs to get used PO/PV IDs
   const { data: grns } = useQuery({
     queryKey: ['goods-receipt-notes'],
     queryFn: () => api.get('/goods-receipt-notes').then(res => res.data),
     enabled: isOrgContextReady,
   });
-  // Compute used voucher IDs, excluding current GRN in edit mode
   const currentGrnId = mode === 'edit' ? voucherData?.id : null;
   const usedVoucherIds = useMemo(() => {
     if (!grns) {return new Set();}
     return new Set(grns.filter(grn => grn.id !== currentGrnId).map(grn => grn.purchase_order_id));
   }, [grns, currentGrnId]);
-  // Filter voucher options to exclude used ones
   const voucherOptions = useMemo(() => {
     let options = [];
     if (selectedVoucherType === 'purchase-order') {
@@ -154,7 +198,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     }
     return options.filter(option => !usedVoucherIds.has(option.id));
   }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, usedVoucherIds]);
-  // Fetch selected voucher details
   const { data: selectedVoucherData } = useQuery({
     queryKey: [selectedVoucherType, selectedVoucherId],
     queryFn: () => {
@@ -162,48 +205,59 @@ const GoodsReceiptNotePage: React.FC = () => {
       const endpoint = selectedVoucherType === 'purchase-order' ? '/purchase-orders' : '/purchase-vouchers';
       return api.get(`${endpoint}/${selectedVoucherId}`).then(res => res.data);
     },
-    enabled: !!selectedVoucherType && !!selectedVoucherId,
+    enabled: !!selectedVoucherType && !!selectedVoucherId && !grnCompleteDialogOpen,
   });
-  // Populate form with selected voucher data
   useEffect(() => {
-    if (selectedVoucherData) {
+    if (selectedVoucherData && !grnCompleteDialogOpen && fields.length === 0) {
       setValue('vendor_id', selectedVoucherData.vendor_id);
-      // Clear existing items
       remove();
-      // Append items from selected voucher
       selectedVoucherData.items.forEach((item: any) => {
         append({
           product_id: item.product_id,
-          product_name: item.product?.product_name || item.product_name || '', 
+          product_name: item.product?.product_name || item.product_name || '',
           ordered_quantity: item.quantity,
-          received_quantity: item.pending_quantity || item.quantity,
-          accepted_quantity: item.pending_quantity || item.quantity,
+          received_quantity: 0, // Initialize to 0 to allow user input
+          accepted_quantity: 0, // Initialize to 0 to allow user input
           rejected_quantity: 0,
-          unit_price: item.unit_price, // Keep hidden
+          unit_price: item.unit_price,
           unit: item.unit,
+          po_item_id: item.id,
         });
       });
+      setValue('reference_voucher_number', selectedVoucherData.voucher_number);
     }
-  }, [selectedVoucherData, setValue, append, remove]);
-  // Goods Receipt Note specific handlers
+  }, [selectedVoucherData, setValue, append, remove, grnCompleteDialogOpen, fields.length]);
   const handleAddItem = () => {
     // No add item for GRN, as items come from voucher
   };
   const handleCancel = () => {
     setMode('view');
-    // Optionally refresh or reset form to original voucherData
     if (voucherData) {
       reset(voucherData);
     }
   };
-  // Custom submit handler to prompt for PDF after save
   const onSubmit = async (data: any) => {
     try {
+      console.log('Submitting GRN with data:', {
+        vendor_id: data.vendor_id,
+        items: data.items.map((item: any) => ({
+          product_id: item.product_id,
+          ordered_quantity: item.ordered_quantity,
+          received_quantity: item.received_quantity,
+          accepted_quantity: item.accepted_quantity,
+          rejected_quantity: item.rejected_quantity,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          po_item_id: item.po_item_id,
+        })),
+        purchase_order_id: data.purchase_order_id,
+        voucher_number: data.voucher_number,
+      });
       if (config.hasItems !== false) {
-        // Calculate totals if needed, but since no price shown, perhaps adjust
         data.total_amount = fields.reduce((sum: number, field: any) => sum + (field.accepted_quantity * field.unit_price), 0);
         data.items = fields.map((field: any) => ({
           product_id: field.product_id,
+          po_item_id: field.po_item_id,
           ordered_quantity: field.ordered_quantity,
           received_quantity: field.received_quantity,
           accepted_quantity: field.accepted_quantity,
@@ -232,7 +286,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       alert('Failed to save goods receipt note. Please try again.');
     }
   };
-  // Validation for quantities
   const validateQuantities = () => {
     let valid = true;
     fields.forEach((field, index) => {
@@ -246,13 +299,11 @@ const GoodsReceiptNotePage: React.FC = () => {
     });
     return valid;
   };
-  // Wrap submit to include validation
   const handleFormSubmit = (data: any) => {
     if (validateQuantities()) {
       _handleSubmitForm(data);
     }
   };
-  // Manual fetch for voucher number if not loaded
   useEffect(() => {
     if (mode === 'create' && !nextVoucherNumber && !isLoading) {
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
@@ -260,11 +311,9 @@ const GoodsReceiptNotePage: React.FC = () => {
         .catch(err => console.error('Failed to fetch voucher number:', err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
-  // Handle voucher click for modal
   const handleVoucherClick = async (voucher: any) => {
     handleView(voucher.id);
   };
-  // Use hook's handleEdit and handleView, mapping handled in effect below
   useEffect(() => {
     if (voucherData && (mode === 'view' || mode === 'edit')) {
       const mappedData = {
@@ -277,6 +326,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           accepted_quantity: item.accepted_quantity,
           rejected_quantity: item.rejected_quantity,
           product_name: item.product?.product_name,
+          po_item_id: item.po_item_id,
         })),
         reference_voucher_type: 'purchase-order',
         reference_voucher_number: voucherData.purchase_order?.voucher_number || voucherData.purchase_order_id
@@ -296,6 +346,7 @@ const GoodsReceiptNotePage: React.FC = () => {
             rejected_quantity: item.rejected_quantity,
             unit_price: item.unit_price,
             unit: item.unit,
+            po_item_id: item.po_item_id,
           });
         });
       }
@@ -303,7 +354,6 @@ const GoodsReceiptNotePage: React.FC = () => {
   }, [voucherData, mode, reset, setValue, append, remove]);
   const indexContent = (
     <>
-      {/* Voucher list table */}
       <TableContainer sx={{ maxHeight: 400 }}>
         <Table stickyHeader size="small">
           <TableHead>
@@ -356,7 +406,6 @@ const GoodsReceiptNotePage: React.FC = () => {
   );
   const formContent = (
     <Box>
-      {/* Header Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold', textAlign: 'left', flex: 1, pl: 1 }}>
           {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
@@ -373,7 +422,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       </Box>
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={0.5}>
-          {/* Voucher Number */}
           <Grid size={6}>
             <TextField
               fullWidth
@@ -386,7 +434,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-          {/* Date */}
           <Grid size={6}>
             <TextField
               fullWidth
@@ -400,7 +447,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-          {/* Voucher Type */}
           <Grid size={3}>
             {mode === 'view' ? (
               <TextField
@@ -433,11 +479,10 @@ const GoodsReceiptNotePage: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 )}
-                disabled={mode === 'view'}
+                disabled={mode === 'view' || !!po_id}
               />
             )}
           </Grid>
-          {/* Voucher Number */}
           <Grid size={3}>
             {mode === 'view' ? (
               <TextField
@@ -469,12 +514,11 @@ const GoodsReceiptNotePage: React.FC = () => {
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
                   />
                 )}
-                disabled={mode === 'view' || !selectedVoucherType}
+                disabled={mode === 'view' || !selectedVoucherType || !!po_id}
               />
             )}
           </Grid>
-          {/* Vendor - Switch to TextField when voucher selected for auto-populate */}
-          <Grid size={5}>
+          <Grid size={6}>
             {!!selectedVoucherId ? (
               <TextField
                 fullWidth
@@ -515,23 +559,6 @@ const GoodsReceiptNotePage: React.FC = () => {
               />
             )}
           </Grid>
-          <Grid size={1}>
-            {selectedVendorId && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    textAlign: 'right',
-                    fontWeight: 'bold',
-                    fontSize: '0.875rem',
-                    color: vendorBalance > 0 ? '#d32f2f' : vendorBalance < 0 ? '#2e7d32' : '#666'
-                  }}
-                >
-                  {vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
-                </Typography>
-              </Box>
-            )}
-          </Grid>
           <Grid size={12}>
             <TextField
               fullWidth
@@ -545,11 +572,9 @@ const GoodsReceiptNotePage: React.FC = () => {
               size="small"
             />
           </Grid>
-          {/* Items section */}
           <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 27 }}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Items</Typography>
           </Grid>
-          {/* Items Table */}
           <Grid size={12}>
             <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable, ...voucherStyles.optimizedTableContainer }}>
               <Table stickyHeader size="small">
@@ -644,16 +669,35 @@ const GoodsReceiptNotePage: React.FC = () => {
                           />
                         </TableCell>
                       </TableRow>
-                      {/* Hide stock display below the row for GRN */}
                     </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
           </Grid>
-          {/* GRN does not have totals section - removed as per requirements */}
         </Grid>
       </form>
+      <Dialog open={grnCompleteDialogOpen} onClose={() => {
+        setGrnCompleteDialogOpen(false);
+        router.push('/vouchers/Purchase-Vouchers/grn');
+      }}>
+        <DialogTitle>GRN Already Complete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            The GRN for this Purchase Order is already complete.{' '}
+            <Link href={`/vouchers/Purchase-Vouchers/grn?grn_id=${existingGrnId}`} passHref>
+              View the existing GRN
+            </Link>
+            .
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setGrnCompleteDialogOpen(false);
+            router.push('/vouchers/Purchase-Vouchers/grn');
+          }}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
   if (isLoading) {
@@ -673,12 +717,6 @@ const GoodsReceiptNotePage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
-        // pagination={paginationData ? {
-        //   currentPage: currentPage,
-        //   totalPages: paginationData.totalPages,
-        //   onPageChange: handlePageChange,
-        //   totalItems: paginationData.totalItems
-        // } : undefined)
         centerAligned={true}
         modalContent={
           <VoucherListModal
@@ -695,7 +733,6 @@ const GoodsReceiptNotePage: React.FC = () => {
           />
         }
       />
-      {/* Modals */}
       <AddVendorModal 
         open={showAddVendorModal}
         onClose={() => setShowAddVendorModal(false)}

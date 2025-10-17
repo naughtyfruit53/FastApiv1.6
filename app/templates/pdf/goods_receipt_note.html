@@ -11,12 +11,41 @@
 {% if voucher.purchase_order %}<tr><td class="label">PO Number</td><td class="value">{{ voucher.purchase_order.voucher_number|default('') }}</td></tr>{% endif %}
 {% endblock %}
 
+{% block items_table %}
+<table class="items-table">
+    <thead>
+        <tr>
+            <th style="width: 5%;">S.No</th>
+            <th style="width: 25%;">Product</th>
+            <th style="width: 15%;">HSN Code</th>
+            <th style="width: 10%;">Ordered Qty</th>
+            <th style="width: 15%;">Received Qty</th>
+            <th style="width: 15%;">Accepted Qty</th>
+            <th style="width: 15%;">Rejected Qty</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ item.product_name|default(item.product.product_name|default('N/A')) }}</td>
+            <td>{{ item.hsn_code|default('N/A') }}</td>
+            <td>{{ item.ordered_quantity|floatformat(2) }} {{ item.unit }}</td>
+            <td>{{ item.received_quantity|floatformat(2) }} {{ item.unit }}</td>
+            <td>{{ item.accepted_quantity|floatformat(2) }} {{ item.unit }}</td>
+            <td>{{ item.rejected_quantity|floatformat(2) }} {{ item.unit }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
 {% block totals_left %}
 <div style="font-weight:700;">Terms and Conditions</div>
 {% if terms_conditions %}
 <table>
     <tbody>
-        {% for term in terms_conditions.split('\n') %}
+        {% for term in terms_conditions %}
         {% if term|trim %}
         <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
         {% endif %}
@@ -24,6 +53,10 @@
     </tbody>
 </table>
 {% endif %}
+{% endblock %}
+
+{% block totals_right %}
+<!-- Remove totals table for GRN -->
 {% endblock %}
 
 {% block terms_block %}
@@ -38,14 +71,6 @@
     </div>
 </div>
 {% endif %}
-
-<div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
-    <strong>Important Notes:</strong><br>
-    • Quality inspection completed upon receipt of goods.<br>
-    • Accepted quantities added to inventory.<br>
-    • Rejected quantities to be returned to vendor.<br>
-    • All disputes subject to our jurisdiction.
-</div>
 
 <div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
     Goods receipt confirmed.

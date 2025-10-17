@@ -2,27 +2,27 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem
+from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem, GoodsReceiptNote, GoodsReceiptNoteItem
 from app.schemas.vouchers.purchase import PurchaseOrderCreate, PurchaseOrderInDB, PurchaseOrderUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
 import logging
-from datetime import timezone  # Added import for timezone
-import re  # Added for sanitizing filename
-from fastapi.responses import StreamingResponse  # Ensure imported
+from datetime import timezone
+import re
+from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["purchase-orders"])
 
-@router.get("", response_model=List[PurchaseOrderInDB])  # Added to handle without trailing /
+@router.get("", response_model=List[PurchaseOrderInDB])
 @router.get("/", response_model=List[PurchaseOrderInDB])
 async def get_purchase_orders(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
@@ -34,8 +34,6 @@ async def get_purchase_orders(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all purchase orders with GRN completion status for color coding"""
-    from app.models.vouchers.purchase import GoodsReceiptNote
-    
     stmt = select(PurchaseOrder).options(
         joinedload(PurchaseOrder.vendor),
         joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
@@ -60,46 +58,54 @@ async def get_purchase_orders(
     result = await db.execute(stmt.offset(skip).limit(limit))
     purchase_orders = result.unique().scalars().all()
     
-    # Add GRN completion status and color coding to each PO
+    # Add GRN completion status to each PO
     for po in purchase_orders:
-        # Check if any GRN exists for this PO
+        # Fetch associated GRNs
         grn_stmt = select(GoodsReceiptNote).where(
-            GoodsReceiptNote.purchase_order_id == po.id
+            GoodsReceiptNote.purchase_order_id == po.id,
+            GoodsReceiptNote.organization_id == current_user.organization_id
         )
         grn_result = await db.execute(grn_stmt)
         grns = grn_result.scalars().all()
         
-        # Compute GRN status based on pending quantities
-        # Check if all items are fully received
-        all_items_received = True
-        has_pending_items = False
+        # Calculate quantities
+        total_ordered_quantity = 0.0
+        total_pending_quantity = 0.0
+        total_received_quantity = 0.0
+        
         if po.items:
             for item in po.items:
-                if item.pending_quantity > 0:
-                    all_items_received = False
-                    has_pending_items = True
-                    break
+                total_ordered_quantity += item.quantity
+                total_pending_quantity += item.pending_quantity
         
-        # Set grn_status attribute (not persisted, just for API response)
-        if all_items_received and grns:
+        if grns:
+            grn_items_stmt = select(GoodsReceiptNoteItem).where(
+                GoodsReceiptNoteItem.grn_id.in_([grn.id for grn in grns])
+            )
+            grn_items_result = await db.execute(grn_items_stmt)
+            grn_items = grn_items_result.scalars().all()
+            total_received_quantity = sum(item.accepted_quantity for item in grn_items)
+        
+        # Calculate remaining quantity
+        remaining_quantity = total_ordered_quantity - total_received_quantity
+        
+        # Log details for debugging
+        logger.debug(f"PO {po.voucher_number}: "
+                    f"ordered={total_ordered_quantity}, "
+                    f"received={total_received_quantity}, "
+                    f"pending={total_pending_quantity}, "
+                    f"remaining={remaining_quantity}, "
+                    f"grns_exist={bool(grns)}")
+        
+        # Set grn_status based on remaining quantity
+        if grns and remaining_quantity <= 0:
             po.grn_status = "complete"
         elif grns:
             po.grn_status = "partial"
         else:
             po.grn_status = "pending"
         
-        # Set color_status for UI highlighting
-        # Red: no tracking details and GRN pending
-        # Yellow: has tracking but GRN still pending
-        # Green: GRN complete (all items received)
-        has_tracking = bool(po.tracking_number or po.transporter_name)
-        
-        if all_items_received:
-            po.color_status = "green"
-        elif has_tracking:
-            po.color_status = "yellow"
-        else:
-            po.color_status = "red"
+        logger.debug(f"PO {po.voucher_number} assigned grn_status: {po.grn_status}")
     
     return purchase_orders
 
@@ -113,7 +119,6 @@ async def get_next_purchase_order_number(
         db, "PO", current_user.organization_id, PurchaseOrder
     )
 
-# Register both "" and "/" for POST to support both /api/v1/purchase-orders and /api/v1/purchase-orders/
 @router.post("", response_model=PurchaseOrderInDB, include_in_schema=False)
 @router.post("/", response_model=PurchaseOrderInDB)
 async def create_purchase_order(
@@ -274,6 +279,50 @@ async def get_purchase_order(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Purchase order not found"
         )
+    
+    # Calculate grn_status for single PO
+    grn_stmt = select(GoodsReceiptNote).where(
+        GoodsReceiptNote.purchase_order_id == invoice.id,
+        GoodsReceiptNote.organization_id == current_user.organization_id
+    )
+    grn_result = await db.execute(grn_stmt)
+    grns = grn_result.scalars().all()
+    
+    total_ordered_quantity = 0.0
+    total_pending_quantity = 0.0
+    total_received_quantity = 0.0
+    
+    if invoice.items:
+        for item in invoice.items:
+            total_ordered_quantity += item.quantity
+            total_pending_quantity += item.pending_quantity
+    
+    if grns:
+        grn_items_stmt = select(GoodsReceiptNoteItem).where(
+            GoodsReceiptNoteItem.grn_id.in_([grn.id for grn in grns])
+        )
+        grn_items_result = await db.execute(grn_items_stmt)
+        grn_items = grn_items_result.scalars().all()
+        total_received_quantity = sum(item.accepted_quantity for item in grn_items)
+    
+    remaining_quantity = total_ordered_quantity - total_received_quantity
+    
+    logger.debug(f"PO {invoice.voucher_number}: "
+                f"ordered={total_ordered_quantity}, "
+                f"received={total_received_quantity}, "
+                f"pending={total_pending_quantity}, "
+                f"remaining={remaining_quantity}, "
+                f"grns_exist={bool(grns)}")
+    
+    if grns and remaining_quantity <= 0:
+        invoice.grn_status = "complete"
+    elif grns:
+        invoice.grn_status = "partial"
+    else:
+        invoice.grn_status = "pending"
+    
+    logger.debug(f"PO {invoice.voucher_number} assigned grn_status: {invoice.grn_status}")
+    
     return invoice
 
 @router.get("/{invoice_id}/pdf")

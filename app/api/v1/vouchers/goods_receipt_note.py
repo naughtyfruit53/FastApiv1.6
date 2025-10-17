@@ -1,3 +1,5 @@
+# app/api/v1/vouchers/goods_receipt_note.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["goods-receipt-notes"])
 
-@router.get("", response_model=List[GRNInDB])  # Added to handle without trailing /
+@router.get("", response_model=List[GRNInDB])
 @router.get("/", response_model=List[GRNInDB])
 async def get_goods_receipt_notes(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
@@ -38,7 +40,6 @@ async def get_goods_receipt_notes(
     if status:
         stmt = stmt.where(GoodsReceiptNote.status == status)
     
-    # Enhanced sorting - latest first by default
     if hasattr(GoodsReceiptNote, sortBy):
         sort_attr = getattr(GoodsReceiptNote, sortBy)
         if sort.lower() == "asc":
@@ -46,7 +47,6 @@ async def get_goods_receipt_notes(
         else:
             stmt = stmt.order_by(sort_attr.desc())
     else:
-        # Default to created_at desc if invalid sortBy field
         stmt = stmt.order_by(GoodsReceiptNote.created_at.desc())
     
     result = await db.execute(stmt.offset(skip).limit(limit))
@@ -63,7 +63,30 @@ async def get_next_goods_receipt_note_number(
         db, "GRN", current_user.organization_id, GoodsReceiptNote
     )
 
-# Register both "" and "/" for POST to support both /api/v1/goods-receipt-notes and /api/v1/goods-receipt-notes/
+@router.get("/for-po/{po_id}", response_model=GRNInDB)
+async def get_grn_for_purchase_order(
+    po_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get the GRN associated with a specific Purchase Order"""
+    stmt = select(GoodsReceiptNote).options(
+        joinedload(GoodsReceiptNote.vendor),
+        joinedload(GoodsReceiptNote.purchase_order),
+        joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
+    ).where(
+        GoodsReceiptNote.purchase_order_id == po_id,
+        GoodsReceiptNote.organization_id == current_user.organization_id
+    )
+    result = await db.execute(stmt)
+    grn = result.unique().scalar_one_or_none()
+    if not grn:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No GRN found for this Purchase Order"
+        )
+    return grn
+
 @router.post("", response_model=GRNInDB, include_in_schema=False)
 @router.post("/", response_model=GRNInDB)
 async def create_goods_receipt_note(
@@ -79,7 +102,6 @@ async def create_goods_receipt_note(
         invoice_data['created_by'] = current_user.id
         invoice_data['organization_id'] = current_user.organization_id
         
-        # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
             invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "GRN", current_user.organization_id, GoodsReceiptNote
@@ -105,12 +127,27 @@ async def create_goods_receipt_note(
         for item_data in invoice.items:
             item_dict = item_data.dict()
             
-            # Validate quantities
             if item_dict['accepted_quantity'] + item_dict['rejected_quantity'] > item_dict['received_quantity']:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Accepted + Rejected quantities cannot exceed Received quantity for product {item_dict.get('product_id')}"
                 )
+            if item_dict['received_quantity'] > item_dict['ordered_quantity']:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Received quantity cannot exceed Ordered quantity for product {item_dict.get('product_id')}"
+                )
+            if item_dict['accepted_quantity'] > item_dict['received_quantity']:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Accepted quantity cannot exceed Received quantity for product {item_dict.get('product_id')}"
+                )
+            
+            logger.debug(f"Saving GRN item: product_id={item_dict['product_id']}, "
+                        f"ordered_quantity={item_dict['ordered_quantity']}, "
+                        f"received_quantity={item_dict['received_quantity']}, "
+                        f"accepted_quantity={item_dict['accepted_quantity']}, "
+                        f"rejected_quantity={item_dict['rejected_quantity']}")
             
             item = GoodsReceiptNoteItem(
                 grn_id=db_invoice.id,
@@ -120,7 +157,6 @@ async def create_goods_receipt_note(
             
             total_amount += item.accepted_quantity * item.unit_price
             
-            # Update stock
             stmt = select(Stock).where(
                 Stock.product_id == item.product_id,
                 Stock.organization_id == current_user.organization_id
@@ -137,7 +173,6 @@ async def create_goods_receipt_note(
                 db.add(stock)
             stock.quantity += item.accepted_quantity
             
-            # Update PO item if po_item_id provided
             if item.po_item_id:
                 stmt = select(PurchaseOrderItem).where(
                     PurchaseOrderItem.id == item.po_item_id
@@ -146,14 +181,13 @@ async def create_goods_receipt_note(
                 po_item = result.scalar_one_or_none()
                 if po_item:
                     po_item.delivered_quantity += item.accepted_quantity
-                    po_item.pending_quantity = max(0, po_item.pending_quantity - item.accepted_quantity)
+                    po_item.pending_quantity = max(0, po_item.quantity - item.accepted_quantity)
                     db.add(po_item)
         
         db_invoice.total_amount = total_amount
         
         await db.commit()
         
-        # Re-query with joins to load relationships
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),
             joinedload(GoodsReceiptNote.purchase_order),
@@ -188,6 +222,7 @@ async def get_goods_receipt_note(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Get a specific goods receipt note"""
     stmt = select(GoodsReceiptNote).options(
         joinedload(GoodsReceiptNote.vendor),
         joinedload(GoodsReceiptNote.purchase_order),
@@ -212,6 +247,7 @@ async def update_goods_receipt_note(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Update a goods receipt note"""
     try:
         stmt = select(GoodsReceiptNote).where(
             GoodsReceiptNote.id == invoice_id,
@@ -230,7 +266,6 @@ async def update_goods_receipt_note(
             setattr(invoice, field, value)
         
         if invoice_update.items is not None:
-            # Fetch old items to revert stock and PO updates
             stmt = select(GoodsReceiptNoteItem).where(
                 GoodsReceiptNoteItem.grn_id == invoice_id
             )
@@ -238,7 +273,6 @@ async def update_goods_receipt_note(
             old_items = result.scalars().all()
             
             for old_item in old_items:
-                # Revert stock
                 stmt = select(Stock).where(
                     Stock.product_id == old_item.product_id,
                     Stock.organization_id == current_user.organization_id
@@ -248,7 +282,6 @@ async def update_goods_receipt_note(
                 if stock:
                     stock.quantity -= old_item.accepted_quantity
                 
-                # Revert PO item if po_item_id
                 if old_item.po_item_id:
                     stmt = select(PurchaseOrderItem).where(
                         PurchaseOrderItem.id == old_item.po_item_id
@@ -263,19 +296,34 @@ async def update_goods_receipt_note(
             from sqlalchemy import delete
             stmt_delete = delete(GoodsReceiptNoteItem).where(GoodsReceiptNoteItem.grn_id == invoice_id)
             await db.execute(stmt_delete)
-            await db.flush()  # Flush deletes before adding new items
+            await db.flush()
             
             total_amount = 0.0
             
             for item_data in invoice_update.items:
                 item_dict = item_data.dict()
                 
-                # Validate quantities
                 if item_dict['accepted_quantity'] + item_dict['rejected_quantity'] > item_dict['received_quantity']:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Accepted + Rejected quantities cannot exceed Received quantity for product {item_dict.get('product_id')}"
                     )
+                if item_dict['received_quantity'] > item_dict['ordered_quantity']:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Received quantity cannot exceed Ordered quantity for product {item_dict.get('product_id')}"
+                    )
+                if item_dict['accepted_quantity'] > item_dict['received_quantity']:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Accepted quantity cannot exceed Received quantity for product {item_dict.get('product_id')}"
+                    )
+                
+                logger.debug(f"Updating GRN item: product_id={item_dict['product_id']}, "
+                            f"ordered_quantity={item_dict['ordered_quantity']}, "
+                            f"received_quantity={item_dict['received_quantity']}, "
+                            f"accepted_quantity={item_dict['accepted_quantity']}, "
+                            f"rejected_quantity={item_dict['rejected_quantity']}")
                 
                 item = GoodsReceiptNoteItem(
                     grn_id=invoice_id,
@@ -285,7 +333,6 @@ async def update_goods_receipt_note(
                 
                 total_amount += item.accepted_quantity * item.unit_price
                 
-                # Update stock
                 stmt = select(Stock).where(
                     Stock.product_id == item.product_id,
                     Stock.organization_id == current_user.organization_id
@@ -302,7 +349,6 @@ async def update_goods_receipt_note(
                     db.add(stock)
                 stock.quantity += item.accepted_quantity
                 
-                # Update PO item if po_item_id
                 if item.po_item_id:
                     stmt = select(PurchaseOrderItem).where(
                         PurchaseOrderItem.id == item.po_item_id
@@ -311,10 +357,10 @@ async def update_goods_receipt_note(
                     po_item = result.scalar_one_or_none()
                     if po_item:
                         po_item.delivered_quantity += item.accepted_quantity
-                        po_item.pending_quantity = max(0, po_item.pending_quantity - item.accepted_quantity)
+                        po_item.pending_quantity = max(0, po_item.quantity - item.accepted_quantity)
                         db.add(po_item)
             
-            await db.flush()  # Flush adds before commit
+            await db.flush()
             
             invoice.total_amount = total_amount
         
@@ -322,7 +368,6 @@ async def update_goods_receipt_note(
         await db.commit()
         logger.debug(f"After commit for goods receipt note {invoice_id}")
         
-        # Re-query with joins to load relationships
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),
             joinedload(GoodsReceiptNote.purchase_order),
@@ -356,6 +401,7 @@ async def delete_goods_receipt_note(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Delete a goods receipt note"""
     try:
         stmt = select(GoodsReceiptNote).where(
             GoodsReceiptNote.id == invoice_id,
@@ -376,7 +422,6 @@ async def delete_goods_receipt_note(
         old_items = result.scalars().all()
         
         for old_item in old_items:
-            # Revert stock
             stmt = select(Stock).where(
                 Stock.product_id == old_item.product_id,
                 Stock.organization_id == current_user.organization_id
@@ -386,7 +431,6 @@ async def delete_goods_receipt_note(
             if stock:
                 stock.quantity -= old_item.accepted_quantity
             
-            # Revert PO item if po_item_id
             if old_item.po_item_id:
                 stmt = select(PurchaseOrderItem).where(
                     PurchaseOrderItem.id == old_item.po_item_id
