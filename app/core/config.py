@@ -69,22 +69,31 @@ class Settings:
     BREVO_FROM_EMAIL: Optional[str] = os.getenv("BREVO_FROM_EMAIL")
     BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "TRITIQ ERP")
     
-    WHATSAPP_PROVIDER: Optional[str] = os.getenv("WHATSAPP_PROVIDER", "brevo")
-    WHATSAPP_SENDER_NUMBER: Optional[str] = os.getenv("WHATSAPP_SENDER_NUMBER")
-    WHATSAPP_OTP_TEMPLATE_ID: Optional[str] = os.getenv("WHATSAPP_OTP_TEMPLATE_ID")
+    WHATSAPP_ENABLED: bool = os.getenv("WHATSAPP_ENABLED", "false").lower() == "true"
+    WHATSAPP_PROVIDER: Optional[str] = os.getenv("WHATSAPP_PROVIDER", "brevo") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else None
+    WHATSAPP_SENDER_NUMBER: Optional[str] = os.getenv("WHATSAPP_SENDER_NUMBER") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else None
+    WHATSAPP_OTP_TEMPLATE_ID: Optional[str] = os.getenv("WHATSAPP_OTP_TEMPLATE_ID") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else None
     
     @property
     def is_brevo_whatsapp_configured(self) -> bool:
+        if not self.WHATSAPP_ENABLED:
+            logger.debug("WhatsApp integration is disabled (WHATSAPP_ENABLED=false)")
+            return False
+        if self.WHATSAPP_PROVIDER != "brevo":
+            logger.debug(f"WhatsApp provider is set to {self.WHATSAPP_PROVIDER}, skipping Brevo configuration check")
+            return False
         configured = all([self.BREVO_API_KEY, self.WHATSAPP_SENDER_NUMBER, self.WHATSAPP_OTP_TEMPLATE_ID])
         if not configured:
-            logger.warning("Brevo WhatsApp configuration incomplete: Missing BREVO_API_KEY, WHATSAPP_SENDER_NUMBER, or WHATSAPP_OTP_TEMPLATE_ID")
-        return configured
+            logger.warning("Brevo WhatsApp configuration incomplete: Missing one or more of BREVO_API_KEY, WHATSAPP_SENDER_NUMBER, WHATSAPP_OTP_TEMPLATE_ID. WhatsApp features disabled.")
+            return False
+        logger.info("Brevo WhatsApp configuration validated successfully")
+        return True
     
-    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID") or ""
-    GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET") or ""
+    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET", "")
     
-    MICROSOFT_CLIENT_ID: Optional[str] = os.getenv("MICROSOFT_CLIENT_ID") or ""
-    MICROSOFT_CLIENT_SECRET: Optional[str] = os.getenv("MICROSOFT_CLIENT_SECRET") or ""
+    MICROSOFT_CLIENT_ID: Optional[str] = os.getenv("MICROSOFT_CLIENT_ID", "")
+    MICROSOFT_CLIENT_SECRET: Optional[str] = os.getenv("MICROSOFT_CLIENT_SECRET", "")
     MICROSOFT_TENANT_ID: Optional[str] = os.getenv("MICROSOFT_TENANT_ID", "common")
     
     OAUTH_REDIRECT_URI: str = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:3000/auth/callback")

@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6 \
     xvfb \
     xfonts-75dpi-transcoded \
+    libmupdf-dev \  # Added for PyMuPDF
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /wheels /wheels
