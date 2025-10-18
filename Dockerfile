@@ -1,3 +1,4 @@
+# ./Dockerfile
 FROM python:3.11-slim-bullseye
 
 WORKDIR /app
@@ -26,14 +27,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create uploads directory
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
 
 # Set non-root user for security
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Expose port (Cloud Run sets PORT env variable, default 8080)
-EXPOSE $PORT
+# Expose port (Render sets PORT env variable, default to 8080 if unset)
+EXPOSE 8080
 
-# Run the application with dynamic PORT
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+# Run the application with Uvicorn, using exec form for proper signal handling
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "$PORT"]
