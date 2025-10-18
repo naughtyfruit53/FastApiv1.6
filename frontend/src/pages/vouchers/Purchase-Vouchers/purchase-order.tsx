@@ -1,4 +1,5 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
+
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Box,
@@ -21,11 +22,12 @@ import {
   TableRow,
   Autocomplete,
 } from "@mui/material";
+import { toast } from "react-toastify";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
 import VoucherContextMenu from "../../../components/VoucherContextMenu";
-import TrackingDetailsDialog from "../../../components/TrackingDetailsDialog";
+import TrackingDetailsDialog from "../../../components/DispatchManagement/TrackingDetailsDialog";
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
@@ -139,10 +141,8 @@ const PurchaseOrderPage: React.FC = () => {
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
   const selectedVendorId = watch("vendor_id");
   
-  // Local state for selected vendor object to prevent display clearing
   const [selectedVendor, setSelectedVendor] = useState(null as any);
   
-  // Sync selectedVendor with vendorList and selectedVendorId
   useEffect(() => {
     if (selectedVendorId && vendorList) {
       const foundVendor = vendorList.find((v: any) => v.id === selectedVendorId);
@@ -154,10 +154,8 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [selectedVendorId, vendorList]);
   
-  // Fetch vendor balance
   const { balance: vendorBalance, loading: vendorBalanceLoading } = useEntityBalance('vendor', selectedVendorId);
 
-  // Use new hooks
   const { gstError } = useGstValidation(selectedVendorId, vendorList);
   const {
     lineDiscountEnabled,
@@ -185,7 +183,6 @@ const PurchaseOrderPage: React.FC = () => {
   });
   const [localAdditionalCharges, setLocalAdditionalCharges] = useState<AdditionalChargesData>(additionalCharges);
 
-  // Enhanced vendor options with "Add New" - always at top, sorted A-Z
   const enhancedVendorOptions = useMemo(() => {
     const sortedVendors = [...(vendorList || [])].sort((a, b) => 
       (a.name || '').localeCompare(b.name || '')
@@ -336,7 +333,6 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [mode, productId, productList, append, isIntrastate, fields.length, watch, remove]);
 
-  // Fixed: Only set vendor_id if form is pristine to avoid overwriting
   useEffect(() => {
     if (mode === "create" && vendorId && vendorList && !watch("vendor_id")) {
       const vendor = vendorList.find((v) => v.id === Number(vendorId));
@@ -437,7 +433,6 @@ const PurchaseOrderPage: React.FC = () => {
     queryClient.setQueryData(['purchase-order', voucher.id], voucher);
   };
 
-  // Fixed: Memoize reset to prevent unnecessary calls
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
       const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : '';
@@ -511,7 +506,8 @@ const PurchaseOrderPage: React.FC = () => {
   const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
 
   const handleEditTracking = (voucher: any) => {
-    setSelectedVoucherForTracking(voucher);
+    console.log('[PurchaseOrderPage] Opening tracking for PO:', voucher.id);
+    setSelectedVoucherForTracking({ id: voucher.id, voucher_number: voucher.voucher_number });
     setTrackingDialogOpen(true);
   };
 
@@ -977,7 +973,6 @@ const PurchaseOrderPage: React.FC = () => {
         <TrackingDetailsDialog
           open={trackingDialogOpen}
           onClose={handleTrackingDialogClose}
-          voucherType="purchase_order"
           voucherId={selectedVoucherForTracking.id}
           voucherNumber={selectedVoucherForTracking.voucher_number}
         />

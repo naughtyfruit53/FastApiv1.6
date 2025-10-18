@@ -1,6 +1,7 @@
+// frontend/src/pages/settings.tsx
 "use client";
 /**
- * Settings Page Page Component
+ * Settings Page Component
  *
  * This component provides the main settings interface for users with different roles.
  * It uses centralized role and permission functions from user.types.ts to ensure
@@ -31,10 +32,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
+  Alert as MuiAlert,
   CircularProgress,
   Divider,
   DialogContentText,
+  Snackbar,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
@@ -43,9 +45,10 @@ import {
   Security,
   Business,
   Add,
+  LocalShipping,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { apiClient } from "../services/api/client";
 import { useAuth } from "../context/AuthContext";
 import {
   getDisplayRole,
@@ -56,6 +59,8 @@ import {
   canShowFactoryResetOnly,
   canShowOrgDataResetOnly,
 } from "../types/user.types";
+import ExcelUploadComponent from "../components/ExcelUploadComponent";
+
 export default function Settings() {
   const router = useRouter();
   const { user } = useAuth();
@@ -63,11 +68,12 @@ export default function Settings() {
   const [factoryResetDialogOpen, setFactoryResetDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [factoryLoading, setFactoryLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  // Get token for API calls
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
+
   // Use centralized permission and role functions
   const displayRole = getDisplayRole(user?.role || "", user?.is_super_admin);
   const isSuperAdmin = isAppSuperAdmin(user);
@@ -76,6 +82,7 @@ export default function Settings() {
   const canAccessOrgSettings = canAccessOrganizationSettings(user);
   const showFactoryResetOnly = canShowFactoryResetOnly(user);
   const showOrgDataResetOnly = canShowOrgDataResetOnly(user);
+
   /**
    * @deprecated Organization name should come from React user context, not localStorage
    * Organization context is automatically managed by the backend session
@@ -83,24 +90,17 @@ export default function Settings() {
   const organizationName = user?.organization_id
     ? "Current Organization"
     : null;
+
   const handleResetData = async () => {
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setSnackbar({ open: false, message: "", severity: "success" });
     try {
-      const API_BASE_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await axios.post(
-        `${API_BASE_URL}/api/v1/organizations/reset-data`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      setSuccess(response.data.message);
+      const response = await apiClient.post("/organizations/reset-data", {});
+      setSnackbar({
+        open: true,
+        message: response.data.message,
+        severity: "success",
+      });
       setResetDialogOpen(false);
       // For organization admins, refresh the page to reflect changes
       if (!isSuperAdmin) {
@@ -109,42 +109,44 @@ export default function Settings() {
         }, 2000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to reset data");
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.detail || "Failed to reset data",
+        severity: "error",
+      });
       setResetDialogOpen(false);
     } finally {
       setLoading(false);
     }
   };
+
   const handleFactoryReset = async () => {
     setFactoryLoading(true);
-    setError(null);
-    setSuccess(null);
+    setSnackbar({ open: false, message: "", severity: "success" });
     try {
-      const API_BASE_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await axios.post(
-        `${API_BASE_URL}/api/v1/organizations/factory-default`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      setSuccess(response.data.message);
+      const response = await apiClient.post("/organizations/factory-default", {});
+      setSnackbar({
+        open: true,
+        message: response.data.message,
+        severity: "success",
+      });
       setFactoryResetDialogOpen(false);
       // Refresh the page to reflect changes
       setTimeout(() => {
         window.location.reload();
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to perform factory reset");
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.detail || "Failed to perform factory reset",
+        severity: "error",
+      });
       setFactoryResetDialogOpen(false);
     } finally {
       setFactoryLoading(false);
     }
   };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -165,16 +167,18 @@ export default function Settings() {
           </Typography>
         )}
       </Paper>
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <MuiAlert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
       <Grid container spacing={3}>
         {/* Admin Section - For App Admin User Creation */}
         {isSuperAdmin && (
@@ -194,12 +198,12 @@ export default function Settings() {
                 Admin Management
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <Alert severity="info" sx={{ mb: 2 }}>
+              <MuiAlert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
                   App admins can create organization licenses but cannot create
                   other app admin users.
                 </Typography>
-              </Alert>
+              </MuiAlert>
               <Button
                 variant="contained"
                 onClick={() => router.push("/admin/license-management")}
@@ -252,7 +256,7 @@ export default function Settings() {
               >
                 User Profile
               </Button>
-              {/* User Management for Organization Admins - Now in Settings */}
+              {/* User Management for Organization Admins */}
               {canManage && (
                 <>
                   <Button
@@ -274,6 +278,49 @@ export default function Settings() {
                   </Button>
                 </>
               )}
+            </Paper>
+          </Grid>
+        )}
+        {/* Courier Management - For Org Admins */}
+        {canManage && (
+          <Grid
+            size={{
+              xs: 12,
+              md: 6,
+            }}
+          >
+            <Paper sx={{ p: 3 }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center" }}
+              >
+                <LocalShipping sx={{ mr: 1 }} />
+                Courier Management
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Upload a CSV file to update the list of couriers available for dispatch orders.
+              </Typography>
+              <ExcelUploadComponent
+                endpoint="/transport/couriers/upload"
+                acceptedFileTypes=".csv"
+                maxFileSize={2}
+                onUploadSuccess={() =>
+                  setSnackbar({
+                    open: true,
+                    message: "Courier list updated successfully!",
+                    severity: "success",
+                  })
+                }
+                onUploadError={(error) =>
+                  setSnackbar({
+                    open: true,
+                    message: `Error: ${error}`,
+                    severity: "error",
+                  })
+                }
+              />
             </Paper>
           </Grid>
         )}
@@ -323,7 +370,7 @@ export default function Settings() {
                 Data Management
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <Alert severity="warning" sx={{ mb: 2 }}>
+              <MuiAlert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="body2">
                   <strong>Warning:</strong> Database reset will permanently
                   delete data
@@ -332,7 +379,7 @@ export default function Settings() {
                     : " for your organization"}
                   . This action cannot be undone.
                 </Typography>
-              </Alert>
+              </MuiAlert>
               {/* App Super Admin: Only Factory Reset */}
               {showFactoryResetOnly && (
                 <Button
@@ -425,12 +472,12 @@ export default function Settings() {
                 System Administration
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <Alert severity="warning" sx={{ mb: 2 }}>
+              <MuiAlert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="body2">
                   System-level controls for application management. Use with
                   caution.
                 </Typography>
-              </Alert>
+              </MuiAlert>
               <Button
                 variant="outlined"
                 onClick={() => router.push("/dashboard")}
