@@ -1,3 +1,4 @@
+// frontend/src/pages/vouchers/Purchase-Vouchers/grn.tsx
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   Box,
@@ -228,6 +229,13 @@ const GoodsReceiptNotePage: React.FC = () => {
   }, [isVoucherDataLoading]);
 
   useEffect(() => {
+    // Clear fields when no PO is selected
+    if (!selectedVoucherId || !selectedVoucherData) {
+      remove();
+      setErrorMessage(null);
+      return;
+    }
+
     if (selectedVoucherData && !grnCompleteDialogOpen) {
       console.log('[GoodsReceiptNotePage] selectedVoucherData:', JSON.stringify(selectedVoucherData, null, 2));
       setValue('vendor_id', selectedVoucherData.vendor_id || selectedVoucherData.vendor_id_1 || null);
@@ -239,7 +247,6 @@ const GoodsReceiptNotePage: React.FC = () => {
         let missingNameItems: string[] = [];
         selectedVoucherData.items.forEach((item: any, index: number) => {
           const productFromList = productList?.find((p: any) => p.id === (item.product_id || item.id_2));
-          // Prioritize name_1 from SQL query, then fallback to other sources
           const productName = item.name_1 || item.product?.product_name || item.product_name || productFromList?.name || null;
           console.log(`[GoodsReceiptNotePage] Item ${index}:`, JSON.stringify({
             product_id: item.product_id || item.id_2,
@@ -286,7 +293,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         setErrorMessage('No valid items found in the selected purchase order. Please select a valid purchase order.');
       }
     }
-  }, [selectedVoucherData, productValidationData, setValue, append, remove, grnCompleteDialogOpen, productList]);
+  }, [selectedVoucherData, productValidationData, setValue, append, remove, grnCompleteDialogOpen, productList, selectedVoucherId, selectedVoucherData]);
 
   const handleAddItem = () => {
     // No add item for GRN, as items come from voucher
@@ -317,7 +324,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       return;
     }
     try {
-      console.log('Submitting GRN with data:', {
+      console.log('Submitting GRN with data:', JSON.stringify({
         vendor_id: data.vendor_id,
         items: data.items.map((item: any) => ({
           product_id: item.product_id,
@@ -331,23 +338,23 @@ const GoodsReceiptNotePage: React.FC = () => {
         })),
         purchase_order_id: data.purchase_order_id,
         voucher_number: data.voucher_number,
-      });
+      }, null, 2));
       if (config.hasItems !== false) {
         if (data.items.some((item: any) => !item.product_name || item.product_name === 'Product Not Found')) {
           alert('Cannot submit GRN with missing or invalid product names.');
           return;
         }
-        data.total_amount = fields.reduce((sum: number, field: any) => sum + (field.accepted_quantity * field.unit_price), 0);
-        data.items = fields.map((field: any) => ({
-          product_id: field.product_id,
-          po_item_id: field.po_item_id,
-          ordered_quantity: field.ordered_quantity,
-          received_quantity: field.received_quantity,
-          accepted_quantity: field.accepted_quantity,
-          rejected_quantity: field.rejected_quantity,
-          unit: field.unit,
-          unit_price: field.unit_price,
-          total_cost: field.accepted_quantity * field.unit_price,
+        data.total_amount = data.items.reduce((sum: number, item: any) => sum + (item.accepted_quantity * item.unit_price), 0);
+        data.items = data.items.map((item: any) => ({
+          product_id: item.product_id,
+          po_item_id: item.po_item_id,
+          ordered_quantity: item.ordered_quantity,
+          received_quantity: Number(item.received_quantity) || 0,
+          accepted_quantity: Number(item.accepted_quantity) || 0,
+          rejected_quantity: Number(item.rejected_quantity) || 0,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          total_cost: Number(item.accepted_quantity) * item.unit_price,
         }));
       }
       data.purchase_order_id = selectedVoucherId;
@@ -679,6 +686,10 @@ const GoodsReceiptNotePage: React.FC = () => {
             {isItemsLoading ? (
               <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
                 <CircularProgress size={24} />
+              </Box>
+            ) : !selectedVoucherId ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
+                <Typography>Please select a Purchase Order to view items</Typography>
               </Box>
             ) : (
               <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable, ...voucherStyles.optimizedTableContainer }}>
