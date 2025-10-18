@@ -23,10 +23,12 @@ import {
   Autocomplete,
 } from "@mui/material";
 import { toast } from "react-toastify";
+import { toast } from "react-toastify";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
 import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import TrackingDetailsDialog from "../../../components/DispatchManagement/TrackingDetailsDialog";
 import TrackingDetailsDialog from "../../../components/DispatchManagement/TrackingDetailsDialog";
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
@@ -506,6 +508,8 @@ const PurchaseOrderPage: React.FC = () => {
   const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
 
   const handleEditTracking = (voucher: any) => {
+    console.log('[PurchaseOrderPage] Opening tracking for PO:', voucher.id);
+    setSelectedVoucherForTracking({ id: voucher.id, voucher_number: voucher.voucher_number });
     console.log('[PurchaseOrderPage] Opening tracking for PO:', voucher.id);
     setSelectedVoucherForTracking({ id: voucher.id, voucher_number: voucher.voucher_number });
     setTrackingDialogOpen(true);
