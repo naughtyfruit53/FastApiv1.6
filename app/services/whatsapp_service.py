@@ -13,14 +13,12 @@ from brevo_python.models.send_whatsapp_message import SendWhatsappMessage
 
 logger = logging.getLogger(__name__)
 
-
 class WhatsAppProvider:
     """Base class for WhatsApp providers"""
     
     def send_otp(self, phone_number: str, otp: str, purpose: str = "login") -> Tuple[bool, Optional[str]]:
         """Send OTP via WhatsApp. Returns (success, error_message)"""
         raise NotImplementedError
-
 
 class BrevoWhatsAppProvider(WhatsAppProvider):
     """Brevo (SendinBlue) WhatsApp provider"""
@@ -93,34 +91,44 @@ class BrevoWhatsAppProvider(WhatsAppProvider):
             logger.error(error_msg)
             return False, error_msg
 
-
 class WhatsAppService:
     """WhatsApp service with configurable providers"""
     
     def __init__(self):
+        if settings is None:
+            logger.error("Settings object is None, cannot initialize WhatsAppService")
+            self.provider = None
+            return
         self.provider = self._get_provider()
     
     def _get_provider(self) -> Optional[WhatsAppProvider]:
         """Get configured WhatsApp provider"""
-        provider_name = getattr(settings, 'WHATSAPP_PROVIDER', 'brevo').lower()
+        provider_name = getattr(settings, 'WHATSAPP_PROVIDER', 'none')
+        if provider_name is None:
+            logger.warning("WHATSAPP_PROVIDER is None, defaulting to 'none'")
+            provider_name = 'none'
         
-        if provider_name == 'brevo':
+        provider_name = provider_name.lower()
+        if provider_name == 'brevo' and settings.WHATSAPP_ENABLED:
             return BrevoWhatsAppProvider()
         else:
-            logger.warning(f"Unknown WhatsApp provider: {provider_name}")
+            logger.info(f"WhatsApp provider set to '{provider_name}' or disabled (WHATSAPP_ENABLED={settings.WHATSAPP_ENABLED})")
             return None
     
     def is_available(self) -> bool:
         """Check if WhatsApp service is available and configured"""
-        return self.provider is not None
+        return self.provider is not None and settings.WHATSAPP_ENABLED
     
     def send_otp(self, phone_number: str, otp: str, purpose: str = "login") -> Tuple[bool, Optional[str]]:
         """Send OTP via WhatsApp"""
-        if not self.provider:
-            return False, "WhatsApp provider not configured"
+        if not self.is_available():
+            return False, "WhatsApp service is disabled or not configured"
         
         return self.provider.send_otp(phone_number, otp, purpose)
 
-
 # Global instance
-whatsapp_service = WhatsAppService()
+try:
+    whatsapp_service = WhatsAppService()
+except Exception as e:
+    logger.error(f"Failed to initialize WhatsAppService: {str(e)}")
+    whatsapp_service = None
