@@ -181,7 +181,7 @@ async def create_goods_receipt_note(
                 po_item = result.scalar_one_or_none()
                 if po_item:
                     po_item.delivered_quantity += item.accepted_quantity
-                    po_item.pending_quantity = max(0, po_item.quantity - item.accepted_quantity)
+                    po_item.pending_quantity = max(0, po_item.quantity - po_item.delivered_quantity)
                     db.add(po_item)
         
         db_invoice.total_amount = total_amount
@@ -357,7 +357,7 @@ async def update_goods_receipt_note(
                     po_item = result.scalar_one_or_none()
                     if po_item:
                         po_item.delivered_quantity += item.accepted_quantity
-                        po_item.pending_quantity = max(0, po_item.quantity - item.accepted_quantity)
+                        po_item.pending_quantity = max(0, po_item.quantity - po_item.delivered_quantity)
                         db.add(po_item)
             
             await db.flush()

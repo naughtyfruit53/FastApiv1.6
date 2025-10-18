@@ -50,6 +50,7 @@ interface VoucherItemTableProps {
   showTotalDiscountCheckbox?: boolean;
   showDescriptionCheckbox?: boolean;
   showAdditionalChargesCheckbox?: boolean;
+  showDeliveryStatus?: boolean; // For PO: show delivered/pending quantities
 }
 
 const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
@@ -78,6 +79,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
   showTotalDiscountCheckbox = false,
   showDescriptionCheckbox = false,
   showAdditionalChargesCheckbox = false,
+  showDeliveryStatus = false,
 }) => {
   const handleAddItem = () => {
     append({
@@ -225,6 +227,22 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
               >
                 Qty
               </TableCell>
+              {showDeliveryStatus && (
+                <>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+                  >
+                    Delivered
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+                  >
+                    Pending
+                  </TableCell>
+                </>
+              )}
               <TableCell
                 align="center"
                 sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
@@ -313,6 +331,22 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       }}
                     />
                   </TableCell>
+                  {showDeliveryStatus && (
+                    <>
+                      <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
+                        <Typography variant="caption" sx={{ fontSize: 12 }}>
+                          {(watch(`items.${index}.delivered_quantity`) || 0).toFixed(2)}{" "}
+                          {watch(`items.${index}.unit`) || ""}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
+                        <Typography variant="caption" sx={{ fontSize: 12 }}>
+                          {(watch(`items.${index}.pending_quantity`) || 0).toFixed(2)}{" "}
+                          {watch(`items.${index}.unit`) || ""}
+                        </Typography>
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
                     <TextField
                       type="number"

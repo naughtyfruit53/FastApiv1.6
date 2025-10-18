@@ -185,11 +185,16 @@ const PurchaseOrderPage: React.FC = () => {
   });
   const [localAdditionalCharges, setLocalAdditionalCharges] = useState<AdditionalChargesData>(additionalCharges);
 
-  // Enhanced vendor options with "Add New"
-  const enhancedVendorOptions = [
-    ...(vendorList || []),
-    { id: null, name: 'Add New Vendor...' }
-  ];
+  // Enhanced vendor options with "Add New" - always at top, sorted A-Z
+  const enhancedVendorOptions = useMemo(() => {
+    const sortedVendors = [...(vendorList || [])].sort((a, b) => 
+      (a.name || '').localeCompare(b.name || '')
+    );
+    return [
+      { id: null, name: 'Add New Vendor...' },
+      ...sortedVendors
+    ];
+  }, [vendorList]);
 
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
@@ -791,6 +796,7 @@ const PurchaseOrderPage: React.FC = () => {
               showTotalDiscountCheckbox={mode !== "view"}
               showDescriptionCheckbox={mode !== "view"}
               showAdditionalChargesCheckbox={mode !== "view"}
+              showDeliveryStatus={mode === "view" || mode === "edit"}
             />
           </Grid>
           {additionalChargesEnabled && mode === 'view' && (

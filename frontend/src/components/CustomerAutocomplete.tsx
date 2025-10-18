@@ -78,17 +78,21 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       console.error("Failed to create customer:", createError);
     },
   });
-  // Create options array with "Add Customer" option
+  // Create options array with "Add Customer" option - always at top, sorted A-Z
   const options = React.useMemo(() => {
     const addOption = {
       id: -1,
       name: "➕ Add Customer",
       isAddOption: true,
     };
+    // Sort search results alphabetically
+    const sortedResults = [...searchResults].sort((a, b) => 
+      (a.name || '').localeCompare(b.name || '')
+    );
     return inputValue.length >= 2
-      ? [addOption, ...searchResults]
-      : searchResults.length > 0
-        ? [addOption, ...searchResults]
+      ? [addOption, ...sortedResults]
+      : sortedResults.length > 0
+        ? [addOption, ...sortedResults]
         : [addOption];
   }, [searchResults, inputValue]);
   const handleSelectionChange = (_: any, newValue: any) => {
