@@ -11,7 +11,6 @@ from app.core.database import get_db, AsyncSessionLocal
 from app.core.permissions import Permission
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_setup import router as admin_setup_router
-from app.api.v1.aftership import router as aftership_router
 from app.api.v1.ai_analytics import router as ai_analytics_router
 from app.api.v1.api_gateway import router as api_gateway_router
 from app.api.v1.app_users import router as app_users_router
@@ -157,7 +156,6 @@ app.add_middleware(
 # Include all routers
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(admin_setup_router, prefix="/api/v1/admin_setup", tags=["admin-setup"])
-app.include_router(aftership_router, prefix="/api/v1/aftership", tags=["aftership"])
 app.include_router(ai_analytics_router, prefix="/api/v1/ai_analytics", tags=["ai-analytics"])
 app.include_router(api_gateway_router, prefix="/api/v1/api_gateway", tags=["api-gateway"])
 app.include_router(app_users_router, prefix="/api/v1/app_users", tags=["app-users"])
