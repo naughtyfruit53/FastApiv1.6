@@ -796,6 +796,7 @@ const PurchaseOrderPage: React.FC = () => {
               showTotalDiscountCheckbox={mode !== "view"}
               showDescriptionCheckbox={mode !== "view"}
               showAdditionalChargesCheckbox={mode !== "view"}
+              showDeliveryStatus={mode === "view" || mode === "edit"}
             />
           </Grid>
           {additionalChargesEnabled && mode === 'view' && (
