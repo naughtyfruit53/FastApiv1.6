@@ -569,7 +569,7 @@ const PurchaseOrderPage: React.FC = () => {
             <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Voucher No.</TableCell>
             <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Date</TableCell>
             <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Vendor</TableCell>
-            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }>Total Amount</TableCell>
+            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Total Amount</TableCell>
             <TableCell align="right" sx={{ fontSize: 15, fontWeight: "bold", p: 0, width: 40 }}></TableCell>
           </TableRow>
         </TableHead>
@@ -607,6 +607,7 @@ const PurchaseOrderPage: React.FC = () => {
                       onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
                       onCreateGRN={handleCreateGRN}
                       onEditTracking={handleEditTracking}
+                      showKebab={true}
                       onClose={() => {}}
                     />
                   </TableCell>
@@ -734,7 +735,7 @@ const PurchaseOrderPage: React.FC = () => {
                     color: vendorBalance > 0 ? '#d32f2f' : vendorBalance < 0 ? '#2e7d32' : '#666'
                   }}
                 >
-                  {vendorBalanceLoading ? "..." : getBalanceDisplayText(voucherBalance)}
+                  {vendorBalanceLoading ? "..." : getBalanceDisplayText(vendorBalance)}
                 </Typography>
               </Box>
             )}
