@@ -39,6 +39,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { toast } from 'react-toastify';
 
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
@@ -128,10 +129,16 @@ const GoodsReceiptNotePage: React.FC = () => {
     return selectedVendor || null;
   }, [selectedVendor]);
   
-  const enhancedVendorOptions = [
-    ...(vendorList || []),
-    { id: null, name: 'Add New Vendor...' }
-  ];
+  const enhancedVendorOptions = useMemo(() => {
+    const sortedVendors = [...(vendorList || [])].sort((a, b) => 
+      (a.name || '').localeCompare(b.name || '')
+    );
+    // Always show "Add New Vendor..." at the top
+    return [
+      { id: null, name: 'Add New Vendor...' },
+      ...sortedVendors
+    ];
+  }, [vendorList]);
   const [selectedVoucherType, setSelectedVoucherType] = useState<'purchase-voucher' | 'purchase-order' | null>(null);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
   const [grnCompleteDialogOpen, setGrnCompleteDialogOpen] = useState(false);
@@ -196,19 +203,28 @@ const GoodsReceiptNotePage: React.FC = () => {
     enabled: isOrgContextReady,
   });
   const currentGrnId = mode === 'edit' ? voucherData?.id : null;
-  const usedVoucherIds = useMemo(() => {
-    if (!grns) {return new Set();}
-    return new Set(grns.filter(grn => grn.id !== currentGrnId).map(grn => grn.purchase_order_id));
-  }, [grns, currentGrnId]);
+  
+  // Filter out POs that are fully received (grn_status === 'complete')
+  const fullyReceivedPoIds = useMemo(() => {
+    if (!purchaseOrdersData) return new Set();
+    return new Set(
+      purchaseOrdersData
+        .filter((po: any) => po.grn_status === 'complete')
+        .map((po: any) => po.id)
+    );
+  }, [purchaseOrdersData]);
+  
   const voucherOptions = useMemo(() => {
     let options = [];
     if (selectedVoucherType === 'purchase-order') {
       options = purchaseOrdersData || [];
+      // Only filter out POs that are fully received, not those with partial GRNs
+      return options.filter((option: any) => !fullyReceivedPoIds.has(option.id));
     } else if (selectedVoucherType === 'purchase-voucher') {
       options = purchaseVouchersData || [];
     }
-    return options.filter(option => !usedVoucherIds.has(option.id));
-  }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, usedVoucherIds]);
+    return options;
+  }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, fullyReceivedPoIds]);
   const { data: selectedVoucherData, isLoading: isVoucherDataLoading } = useQuery({
     queryKey: [selectedVoucherType, selectedVoucherId],
     queryFn: () => {
@@ -362,11 +378,24 @@ const GoodsReceiptNotePage: React.FC = () => {
       let response;
       if (mode === 'create') {
         response = await createMutation.mutateAsync(data);
+        
+        // Show toast notification with link to the created GRN
+        toast.success(
+          <div>
+            GRN created successfully!{' '}
+            <Link href={`/vouchers/Purchase-Vouchers/grn?grn_id=${response.id}`}>
+              <a style={{ textDecoration: 'underline', color: 'white' }}>View GRN</a>
+            </Link>
+          </div>,
+          { autoClose: 5000 }
+        );
+        
         if (confirm('Voucher created successfully. Generate PDF?')) {
           handleGeneratePDF(response);
         }
       } else if (mode === 'edit') {
         response = await updateMutation.mutateAsync(data);
+        toast.success('GRN updated successfully!');
         if (confirm('Voucher updated successfully. Generate PDF?')) {
           handleGeneratePDF(response);
         }
@@ -793,13 +822,30 @@ const GoodsReceiptNotePage: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell sx={{ p: 1, textAlign: 'center' }}>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditProduct(field.product_id)}
-                              disabled={mode === 'view'}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
+                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEditProduct(field.product_id)}
+                                disabled={mode === 'view'}
+                                title="Edit Product"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                disabled={mode === 'view'}
+                                onClick={() => {
+                                  // TODO: Trigger Inward Material QC modal for this item
+                                  // This will be implemented in a future PR
+                                  alert('QC Modal will be implemented in a future PR');
+                                }}
+                                sx={{ fontSize: 10, minWidth: 40, px: 1 }}
+                                title="Quality Check (Coming Soon)"
+                              >
+                                QC
+                              </Button>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
