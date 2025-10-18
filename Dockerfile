@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wkhtmltopdf \
     fontconfig \
     libmupdf-dev \
+    procps \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -38,7 +39,7 @@ RUN mkdir -p /app/uploads \
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=10000 \
-    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=60 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload --worker-tmp-dir=/dev/shm --limit-request-line=4096 --limit-request-fields=50 --limit-request-field-size=8192"
+    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=60 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload --worker-tmp-dir=/dev/shm"
 
 USER appuser
 
