@@ -36,7 +36,6 @@ interface OrganizationSettingsData {
   custom_settings?: any;
   created_at?: string;
   updated_at?: string;
-  // Removed terms fields - consolidated to voucher-settings.tsx
 }
 
 interface TallyConfig {
@@ -123,8 +122,6 @@ const OrganizationSettings: React.FC = () => {
     updateSettings({ auto_send_notifications: enabled });
   };
 
-  // Removed handleTermsChange - moved to voucher-settings.tsx
-
   // Tally Integration Handlers
   const loadTallyConfig = async () => {
     try {
@@ -199,7 +196,7 @@ const OrganizationSettings: React.FC = () => {
 
   // Load Tally config on mount
   useEffect(() => {
-    if (user?.role === 'org_admin') {  // Changed to 'org_admin' as per your logs
+    if (user?.role === 'org_admin') {
       loadTallyConfig();
     }
   }, [user]);
@@ -306,10 +303,8 @@ const OrganizationSettings: React.FC = () => {
           </AccordionDetails>
         </Accordion>
 
-        {/* Removed Voucher Terms & Conditions Section - moved to voucher-settings.tsx */}
-
         {/* Tally Integration Section - Now for Org Super Admin */}
-        {user?.role === 'org_admin' && (  // Changed to 'org_admin' as per your logs
+        {user?.role === 'org_admin' && (
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMore />}>
               <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
@@ -347,7 +342,7 @@ const OrganizationSettings: React.FC = () => {
                     <Alert severity="info" sx={{ mb: 2 }}>
                       Connect to Tally ERP 9 running on your local network. To enable external connections:
                       <br/>1. Run Tally as Administrator.
-                      <br/>2. Go to Gateway of Tally > F12: Configure > Advanced Configuration.
+                      <br/>2. Go to Gateway of Tally &gt; F12: Configure &gt; Advanced Configuration.
                       <br/>3. Set 'Tally Act as' to 'Both', Enable ODBC Server: Yes, Port: 9000.
                       <br/>4. Press Ctrl+A to save and restart Tally.
                       <br/>Security: Use secure channels; limit access with user permissions in Tally. No advanced auth—rely on network security.

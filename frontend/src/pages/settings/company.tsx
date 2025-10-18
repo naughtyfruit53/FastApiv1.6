@@ -1,4 +1,5 @@
-// pages/settings/company.tsx
+// frontend/src/pages/settings/company.tsx
+
 import React from 'react';
 import { 
   Box, 
@@ -91,7 +92,7 @@ const CompanyProfilePage: React.FC = () => {
                     fullWidth
                     label="Company Address"
                     multiline
-                    rows=3
+                    rows="3"
                     placeholder="Enter complete address"
                     variant="outlined"
                   />
