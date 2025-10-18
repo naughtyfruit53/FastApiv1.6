@@ -1,13 +1,19 @@
 # app/api/v1/transport.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
+import pandas as pd
+import os
+import io
+import re
+from cachetools import TTLCache
+from pydantic import BaseModel, SkipValidation
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_active_admin
 from app.api.v1.auth import get_current_active_user
 from app.models.transport_models import (
     Carrier, CarrierType, Route, RouteStatus, FreightRate, FreightMode,
@@ -15,11 +21,18 @@ from app.models.transport_models import (
     VehicleType
 )
 from app.services.voucher_service import VoucherNumberService
-from pydantic import BaseModel
 from typing import Union
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Cache for courier list (1-hour TTL)
+cache = TTLCache(maxsize=1, ttl=3600)
+
+# Courier Schema
+class CourierResponse(BaseModel):
+    name: str
+    trackingLink: str
 
 # Carrier Schemas
 class CarrierCreate(BaseModel):
@@ -37,9 +50,9 @@ class CarrierCreate(BaseModel):
     postal_code: Optional[str] = None
     country: Optional[str] = None
     license_number: Optional[str] = None
-    license_expiry_date: Optional[datetime] = None
+    license_expiry_date: Optional[SkipValidation[datetime]] = None
     insurance_number: Optional[str] = None
-    insurance_expiry_date: Optional[datetime] = None
+    insurance_expiry_date: Optional[SkipValidation[datetime]] = None
     service_areas: Optional[List[str]] = []
     vehicle_types: Optional[List[str]] = []
     special_handling: Optional[List[str]] = []
@@ -130,8 +143,8 @@ class FreightRateCreate(BaseModel):
     rate_code: str
     carrier_id: int
     route_id: Optional[int] = None
-    effective_date: datetime
-    expiry_date: Optional[datetime] = None
+    effective_date: SkipValidation[datetime]
+    expiry_date: Optional[SkipValidation[datetime]] = None
     freight_mode: FreightMode
     service_type: Optional[str] = None
     rate_basis: str
@@ -212,10 +225,10 @@ class ShipmentCreate(BaseModel):
     is_hazardous: bool = False
     temperature_controlled: bool = False
     signature_required: bool = False
-    pickup_date: Optional[datetime] = None
+    pickup_date: Optional[SkipValidation[datetime]] = None
     pickup_time_from: Optional[str] = None
     pickup_time_to: Optional[str] = None
-    expected_delivery_date: Optional[datetime] = None
+    expected_delivery_date: Optional[SkipValidation[datetime]] = None
     payment_terms: Optional[str] = None
     cod_amount: Optional[float] = 0.0
     special_instructions: Optional[str] = None
@@ -800,3 +813,47 @@ async def get_transport_dashboard_summary(
         "pending_pickups": pending_pickups,
         "total_freight_cost_this_month": total_freight_cost
     }
+
+# Get courier list from CSV
+@router.get("/couriers", response_model=List[CourierResponse])
+async def get_couriers():
+    if "couriers" in cache:
+        return cache["couriers"]
+    try:
+        csv_path = os.path.join(os.path.dirname(__file__), "../../static/comprehensive_courier_list_india.csv")
+        if not os.path.exists(csv_path):
+            raise HTTPException(status_code=404, detail="Courier list CSV not found")
+        df = pd.read_csv(csv_path)
+        couriers = [
+            {"name": row["Name of Courier/Transporter"], "trackingLink": row["Consignment Tracking Link"]}
+            for row in df.to_dict(orient="records")
+        ]
+        cache["couriers"] = couriers
+        return couriers
+    except Exception as e:
+        logger.error(f"Error reading courier list: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error reading courier list: {str(e)}")
+
+# Upload new courier CSV
+@router.post("/couriers/upload")
+async def upload_courier_csv(file: UploadFile = File(...), current_user = Depends(get_current_active_admin)):
+    try:
+        content = await file.read()
+        df = pd.read_csv(io.BytesIO(content))
+        required_headers = ["Name of Courier/Transporter", "Consignment Tracking Link"]
+        if not all(header in df.columns for header in required_headers):
+            raise HTTPException(status_code=400, detail="Invalid CSV format: Missing required headers")
+        if df["Name of Courier/Transporter"].duplicated().any():
+            raise HTTPException(status_code=400, detail="Duplicate courier names found")
+        # Validate tracking links
+        url_pattern = re.compile(r'^https?://[^\s/$.?#].[^\s]*$')
+        invalid_urls = df[~df["Consignment Tracking Link"].str.match(url_pattern, na=False)]
+        if not invalid_urls.empty:
+            raise HTTPException(status_code=400, detail="Invalid tracking link URLs found")
+        csv_path = os.path.join(os.path.dirname(__file__), "../../static/comprehensive_courier_list_india.csv")
+        df.to_csv(csv_path, index=False)
+        cache.pop("couriers", None)
+        return {"message": "Courier list updated successfully"}
+    except Exception as e:
+        logger.error(f"Error uploading courier CSV: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error uploading CSV: {str(e)}")

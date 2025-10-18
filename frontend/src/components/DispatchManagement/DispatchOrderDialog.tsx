@@ -26,6 +26,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Snackbar,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -44,6 +45,12 @@ import {
   DISPATCH_ITEM_STATUSES,
   DispatchOrderStatus,
 } from "../../types/dispatch.types";
+import { apiClient } from "../../services/api/client";
+
+interface Courier {
+  name: string;
+  trackingLink: string;
+}
 
 interface DispatchOrderDialogProps {
   open: boolean;
@@ -83,8 +90,41 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
     },
   ]);
 
+  const [couriers, setCouriers] = useState<Courier[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchingCouriers, setFetchingCouriers] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
+
+  // Fetch courier list with retry logic
+  const fetchCouriers = async (retries = 3) => {
+    setFetchingCouriers(true);
+    try {
+      const response = await apiClient.get<Courier[]>("/transport/couriers");
+      setCouriers(response.data);
+      setSnackbar({ open: false, message: "", severity: "success" });
+    } catch (err) {
+      if (retries > 0) {
+        setTimeout(() => fetchCouriers(retries - 1), 2000);
+      } else {
+        console.error("Error fetching couriers:", err);
+        setSnackbar({
+          open: true,
+          message: "Failed to load courier list",
+          severity: "error",
+        });
+      }
+    } finally {
+      setFetchingCouriers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCouriers();
+  }, []);
 
   useEffect(() => {
     if (dispatchOrder && editMode) {
@@ -145,15 +185,23 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      setError(null);
+      setSnackbar({ open: false, message: "", severity: "success" });
 
       if (!formData.customer_id || !formData.delivery_address) {
-        setError("Customer and delivery address are required");
+        setSnackbar({
+          open: true,
+          message: "Customer and delivery address are required",
+          severity: "error",
+        });
         return;
       }
 
       if (items.length === 0 || items.some((item) => !item.product_id)) {
-        setError("At least one valid item is required");
+        setSnackbar({
+          open: true,
+          message: "At least one valid item is required",
+          severity: "error",
+        });
         return;
       }
 
@@ -190,11 +238,20 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
         await dispatchService.createDispatchOrder(createData);
       }
 
+      setSnackbar({
+        open: true,
+        message: editMode ? "Dispatch order updated successfully" : "Dispatch order created successfully",
+        severity: "success",
+      });
       onSave();
-      onClose();
+      setTimeout(onClose, 2000);
     } catch (err: any) {
       console.error("Error saving dispatch order:", err);
-      setError(err.message || "Failed to save dispatch order");
+      setSnackbar({
+        open: true,
+        message: err.message || "Failed to save dispatch order",
+        severity: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -212,11 +269,28 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
       </DialogTitle>
 
       <DialogContent dividers>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          <Alert
+            severity={snackbar.severity}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+          >
+            {snackbar.message}
+            {snackbar.message === "Failed to load courier list" && (
+              <Button
+                onClick={() => fetchCouriers()}
+                variant="outlined"
+                size="small"
+                sx={{ ml: 2 }}
+              >
+                Retry
+              </Button>
+            )}
           </Alert>
-        )}
+        </Snackbar>
 
         <Grid container spacing={3}>
           {/* @ts-expect-error Suppress MUI Grid type mismatch */}
@@ -329,14 +403,22 @@ const DispatchOrderDialog: React.FC<DispatchOrderDialogProps> = ({
 
           {/* @ts-expect-error Suppress MUI Grid type mismatch */}
           <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Courier Name"
-              value={formData.courier_name}
-              onChange={(e) =>
-                handleInputChange("courier_name", e.target.value)
-              }
-            />
+            <FormControl fullWidth>
+              <InputLabel>Courier Name</InputLabel>
+              <Select
+                value={formData.courier_name}
+                onChange={(e) => handleInputChange("courier_name", e.target.value)}
+                label="Courier Name"
+                disabled={loading || fetchingCouriers || couriers.length === 0}
+              >
+                {fetchingCouriers && <MenuItem disabled>Loading couriers...</MenuItem>}
+                {couriers.map((courier) => (
+                  <MenuItem key={courier.name} value={courier.name}>
+                    {courier.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
 
           {/* @ts-expect-error Suppress MUI Grid type mismatch */}
