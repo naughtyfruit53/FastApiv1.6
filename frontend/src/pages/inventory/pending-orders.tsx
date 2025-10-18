@@ -28,7 +28,7 @@ import {
   Edit as EditIcon
 } from '@mui/icons-material';
 import api from '../../lib/api';
-import TrackingDetailsDialog from '../../components/TrackingDetailsDialog';
+import TrackingDetailsDialog from '../../components/DispatchManagement/TrackingDetailsDialog';
 
 interface PendingOrder {
   id: number;
