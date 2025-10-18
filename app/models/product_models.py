@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 from app.core.database import Base
 from typing import List, Optional
 from datetime import datetime, date
-from pydantic import BaseModel  # Add Pydantic import
+from pydantic import BaseModel, ConfigDict
 
 # SQLAlchemy Models
 class Product(Base):
@@ -269,7 +269,7 @@ class StockWithProduct(BaseModel):
     quantity: float = 0.0
     unit: Optional[str] = None
     location: Optional[str] = None
-    last_updated: Optional[datetime] = None  # Make optional to handle None values
+    last_updated: Optional[datetime] = None
     product_name: str
     product_hsn_code: Optional[str] = None
     product_part_number: Optional[str] = None
@@ -279,5 +279,4 @@ class StockWithProduct(BaseModel):
     is_active: bool
     total_value: float
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

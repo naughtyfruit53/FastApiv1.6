@@ -1,215 +1,17 @@
 # app/main.py
 
 import logging
-from fastapi import FastAPI, Depends, Request
+import os
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
-from app.core.tenant import TenantMiddleware
 from app.core.seed_super_admin import seed_super_admin
-from app.api import companies, vendors, customers, products, reports, platform, settings, pincode, customer_analytics, notifications
-from app.api import management_reports
-from app.api.v1 import stock as v1_stock
-from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
-from app.api.routes import admin
-import app.models  # Import all models to register them with Base.metadata
-from app.api.v1 import auth as v1_auth, admin as v1_admin, reset as v1_reset, app_users as v1_app_users
-# Added missing v1 imports (removed v1_login as merged into auth)
-from app.api.v1 import admin_setup as v1_admin_setup, master_auth as v1_master_auth, otp as v1_otp, password as v1_password, user as v1_user
-from app.api.v1 import pdf_extraction as v1_pdf_extraction
-# Add import for PDF generation
-from app.api.v1 import pdf_generation as v1_pdf_generation
-# Organizations router (modular version)
-from app.api.v1.organizations import router as organizations_router
-
-# Add imports for BOM and Manufacturing
-from app.api.v1 import bom as v1_bom
-from app.api.v1 import manufacturing as v1_manufacturing
-
-# Add import for company branding
-from app.api.v1 import company_branding as v1_company_branding
-
-# Add import for SLA management
-from app.api.v1 import sla as v1_sla
-
-# Add import for dispatch management
-from app.api.v1 import dispatch as v1_dispatch
-
-# Add import for feedback and service closure workflow
-from app.api.v1 import feedback as v1_feedback
-
-# Add import for inventory management
-from app.api.v1 import inventory as v1_inventory
-
-# Add import for GST
-from app.api.v1 import gst as v1_gst
-from app.api.v1 import gst_search as v1_gst_search
-
-# Add imports for new ERP modules
-from app.api.v1 import erp as v1_erp
-from app.api.v1 import finance_analytics as v1_finance_analytics
-from app.api.v1 import procurement as v1_procurement
-from app.api.v1 import tally as v1_tally
-from app.api.v1 import warehouse as v1_warehouse
-
-# Add imports for Financial Modeling and Forecasting
-from app.api.v1 import financial_modeling as v1_financial_modeling
-from app.api.v1 import forecasting as v1_forecasting
-
-# Add import for RBAC
-from app.api.v1 import rbac as v1_rbac
-
-# Add import for service analytics
-from app.api.v1 import service_analytics as v1_service_analytics
-
-# Add import for new Asset Management and Transport modules
-from app.api.v1 import assets as v1_assets
-from app.api.v1 import transport as v1_transport
-
-# Import ledger router
-from app.api.v1 import ledger as v1_ledger
-
-# Import chart of accounts router
-from app.api.v1 import chart_of_accounts as v1_chart_of_accounts
-
-# Import email router
-from app.api.v1 import email as v1_email
-
-# Import voucher email templates router
-from app.api.v1 import voucher_email_templates as v1_voucher_email_templates
-
-# Import voucher format templates router
-from app.api.v1 import voucher_format_templates as v1_voucher_format_templates
-
-# Import chatbot router
-from app.api.v1 import chatbot as v1_chatbot
-
-# Import HR router
-from app.api.v1 import hr as v1_hr
-
-# Import Journal Voucher router
-from app.api.v1.vouchers import journal_voucher as v1_journal_voucher
 
 logger = logging.getLogger(__name__)
-
-# Log imports with try/except for error handling
-try:
-    from app.api import companies
-    logger.info("Successfully imported companies_router")
-except Exception as import_error:
-    logger.error(f"Failed to import companies_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api import products
-    logger.info("Successfully imported products_router")
-except Exception as import_error:
-    logger.error(f"Failed to import products_router: {str(import_error)}")
-    raise
-
-# Add import for new business module routers
-try:
-    from app.api.v1 import crm as v1_crm
-    logger.info("Successfully imported crm_router")
-except Exception as import_error:
-    logger.error(f"Failed to import crm_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import marketing as v1_marketing
-    logger.info("Successfully imported marketing_router")
-except Exception as import_error:
-    logger.error(f"Failed to import marketing_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import service_desk as v1_service_desk
-    logger.info("Successfully imported service_desk_router")
-except Exception as import_error:
-    logger.error(f"Failed to import service_desk_router: {str(import_error)}")
-    raise
-
-# Add new Task Management, Calendar, and Mail APIs
-try:
-    from app.api.v1 import tasks as v1_tasks
-    logger.info("Successfully imported tasks_router")
-except Exception as import_error:
-    logger.error(f"Failed to import tasks_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import calendar as v1_calendar
-    logger.info("Successfully imported calendar_router")
-except Exception as import_error:
-    logger.error(f"Failed to import calendar_router: {str(import_error)}")
-    raise
-
-# Mail router removed
-
-# Add Migration and Integration Settings
-try:
-    from app.api.v1 import migration as v1_migration
-    logger.info("Successfully imported migration_router")
-except Exception as import_error:
-    logger.error(f"Failed to import migration_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import integration_settings as v1_integration_settings
-    logger.info("Successfully imported integration_settings_router")
-except Exception as import_error:
-    logger.error(f"Failed to import integration_settings_router: {str(import_error)}")
-    raise
-
-# Add import for new business suite core modules
-try:
-    from app.api.v1 import master_data as v1_master_data
-    logger.info("Successfully imported master_data_router")
-except Exception as import_error:
-    logger.error(f"Failed to import master_data_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import project_management as v1_project_management
-    logger.info("Successfully imported project_management_router")
-except Exception as import_error:
-    logger.error(f"Failed to import project_management_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import workflow_approval as v1_workflow_approval
-    logger.info("Successfully imported workflow_approval_router")
-except Exception as import_error:
-    logger.error(f"Failed to import workflow_approval_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import api_gateway as v1_api_gateway
-    logger.info("Successfully imported api_gateway_router")
-except Exception as import_error:
-    logger.error(f"Failed to import api_gateway_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import external_integrations as v1_external_integrations
-    logger.info("Successfully imported external_integrations_router")
-except Exception as import_error:
-    logger.error(f"Failed to import external_integrations_router: {str(import_error)}")
-    raise
-
-try:
-    from app.api.v1 import reporting_hub as v1_reporting_hub
-    logger.info("Successfully imported reporting_hub_router")
-except Exception as import_error:
-    logger.error(f"Failed to import reporting_hub_router: {str(import_error)}")
-    raise
-
-# Import OAuth router
-from app.api.v1 import oauth as v1_oauth
 
 # Create FastAPI app
 app = FastAPI(
@@ -219,19 +21,14 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json"
 )
 
-# Removed app.router.redirect_slashes = False to enable default slash redirection
-
-# Temporarily disable TenantMiddleware to test if it's causing the 404 (re-enable after testing)
-# app.add_middleware(TenantMiddleware)
-
-# Set up CORS for frontend integration
+# Set up CORS
 logger.info(f"Configuring CORS with allowed origins: {config_settings.BACKEND_CORS_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config_settings.BACKEND_CORS_ORIGINS,  # Frontend URLs[](http://localhost:3000)
-    allow_credentials=True,                               # Required for authentication cookies/headers
-    allow_methods=["*"],                                  # Allow all HTTP methods (GET, POST, PUT, DELETE, OPTIONS, etc.)
-    allow_headers=["*"],                                  # Allow all headers (Content-Type, Authorization, etc.)
+    allow_origins=config_settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Debug CORS configuration on startup
@@ -246,324 +43,47 @@ async def log_cors_config():
     logger.info(f"  Allow Headers: ['*'] (all)")
     logger.info("=" * 50)
 
-# ------------------------------------------------------------------------------
-# ENHANCED V1 API ROUTERS
-# ------------------------------------------------------------------------------
-app.include_router(
-    v1_auth.router, 
-    prefix="/api/v1/auth", 
-    tags=["authentication-v1"]
-)
-logger.info("Auth router included successfully at prefix: /api/v1/auth")
-app.include_router(
-    v1_admin.router, 
-    prefix="/api/v1/admin", 
-    tags=["admin-v1"]
-)
-logger.info("Admin router included successfully at prefix: /api/v1/admin")
-app.include_router(
-    v1_reset.router, 
-    prefix="/api/v1/reset", 
-    tags=["reset-v1"]
-)
-logger.info("Reset router included successfully at prefix: /api/v1/reset")
-app.include_router(
-    v1_app_users.router,
-    prefix="/api/v1/app-users",
-    tags=["app-user-management"]
-)
-logger.info("App users router included successfully at prefix: /api/v1/app-users")
+# Minimal routers to reduce memory usage, controlled by environment variable
+def include_minimal_routers():
+    from app.api.v1 import auth as v1_auth
+    from app.api.v1 import health as v1_health
+    from app.api import companies, vendors, customers, products
 
-app.include_router(
-    v1_admin_setup.router,
-    prefix="/api/v1/admin-setup",
-    tags=["admin-setup"]
-)
-logger.info("Admin setup router included successfully at prefix: /api/v1/admin-setup")
-app.include_router(
-    v1_master_auth.router,
-    prefix="/api/v1/master-auth",
-    tags=["master-auth-v1"]
-)
-logger.info("Master auth router included successfully at prefix: /api/v1/master-auth")
-app.include_router(
-    v1_otp.router,
-    prefix="/api/v1/otp",
-    tags=["otp-v1"]
-)
-logger.info("OTP router included successfully at prefix: /api/v1/otp")
-app.include_router(
-    v1_password.router,
-    prefix="/api/v1/password",
-    tags=["password-v1"]
-)
-logger.info("Password router included successfully at prefix: /api/v1/password")
-app.include_router(
-    v1_user.router,
-    prefix="/api/v1/user",
-    tags=["v1-user"]
-)
-logger.info("User router included successfully at prefix: /api/v1/user")
+    routers = [
+        (v1_auth.router, "/api/v1/auth", ["authentication-v1"]),
+        (v1_health.router, "/api/v1", ["health"]),
+        (companies.router, "/api/v1/companies", ["companies"]),
+        (vendors.router, "/api/v1/vendors", ["vendors"]),
+        (customers.router, "/api/v1/customers", ["customers"]),
+        (products.router, "/api/v1/products", ["products"]),
+    ]
 
-# PDF Extraction API
-app.include_router(
-    v1_pdf_extraction.router,
-    prefix="/api/v1/pdf-extraction",
-    tags=["pdf-extraction"]
-)
-logger.info("PDF extraction router included successfully at prefix: /api/v1/pdf-extraction")
+    # Check environment variable for additional routers
+    if os.getenv("ENABLE_EXTENDED_ROUTERS", "false").lower() == "true":
+        from app.api.v1 import pdf_extraction as v1_pdf_extraction
+        from app.api.v1 import pdf_generation as v1_pdf_generation
+        from app.api.v1 import gst as v1_gst
+        routers.extend([
+            (v1_pdf_extraction.router, "/api/v1/pdf-extraction", ["pdf-extraction"]),
+            (v1_pdf_generation.router, "/api/v1/pdf-generation", ["pdf-generation"]),
+            (v1_gst.router, "/api/v1/gst", ["gst"]),
+        ])
 
-# PDF Generation API
-app.include_router(
-    v1_pdf_generation.router,
-    prefix="/api/v1/pdf-generation",
-    tags=["pdf-generation"]
-)
-logger.info("PDF generation router included successfully at prefix: /api/v1/pdf-generation")
+    for router, prefix, tags in routers:
+        try:
+            app.include_router(router, prefix=prefix, tags=tags)
+            logger.info(f"Router included successfully at prefix: {prefix}")
+        except Exception as e:
+            logger.error(f"Failed to include router at prefix {prefix}: {str(e)}")
+            raise
 
-# Service CRM RBAC API
-app.include_router(
-    v1_rbac.router,
-    prefix="/api/v1/rbac",
-    tags=["service-crm-rbac"]
-)
-logger.info("Service CRM RBAC router included successfully at prefix: /api/v1/rbac")
-
-# GST API
-app.include_router(
-    v1_gst.router,
-    prefix="/api/v1/gst",
-    tags=["gst"]
-)
-logger.info("GST router included successfully at prefix: /api/v1/gst")
-
-# GST Search API
-app.include_router(
-    v1_gst_search.router,
-    prefix="/api/v1",
-    tags=["gst-search"]
-)
-logger.info("GST Search router included successfully at prefix: /api/v1")
-
-# OAuth API
-app.include_router(
-    v1_oauth.router,
-    prefix="/api/v1/oauth",
-    tags=["oauth"]
-)
-logger.info("OAuth router included successfully at prefix: /api/v1/oauth")
-
-# Health API
-from app.api.v1 import health as v1_health
-app.include_router(
-    v1_health.router,
-    prefix="/api/v1",
-    tags=["health"]
-)
-logger.info("Health router included successfully at prefix: /api/v1/health")
-
-# ------------------------------------------------------------------------------
-# LEGACY API ROUTERS (business modules)
-# ------------------------------------------------------------------------------
-app.include_router(platform.router, prefix="/api/v1/platform", tags=["platform"])
-logger.info("Platform router included successfully at prefix: /api/v1/platform")
-app.include_router(organizations_router, prefix="/api/v1/organizations", tags=["organizations"])
-logger.info("Organizations router included successfully at prefix: /api/v1/organizations")
-app.include_router(v1_user.router, prefix="/api/v1/users", tags=["users"])
-logger.info("Users router included successfully at prefix: /api/v1/users")
-app.include_router(admin.router, prefix="/api/admin", tags=["admin-legacy"])
-logger.info("Admin legacy router included successfully at prefix: /api/admin")
-app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
-logger.info("Companies router included in at prefix: /api/v1/companies")
-app.include_router(vendors.router, prefix="/api/v1/vendors", tags=["vendors"])
-logger.info("Vendors router included successfully at prefix: /api/v1/vendors")
-app.include_router(customers.router, prefix="/api/v1/customers", tags=["customers"])
-logger.info("Customers router included successfully at prefix: /api/v1/customers")
-app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
-logger.info("Products router included successfully at prefix: /api/v1/products")
-
-# Company branding and PDF audit endpoints (static)
-app.include_router(
-    v1_company_branding.router, prefix="/api/v1/company", tags=["company-branding"])
-logger.info("Company branding router included successfully at prefix: /api/v1/company")
-app.include_router(v1_company_branding.router, prefix="/api/v1/audit", tags=["audit"])
-logger.info("Audit router included successfully at prefix: /api/v1/audit")
-
-app.include_router(v1_vouchers_router, prefix="/api/v1")  # Updated to v1 vouchers
-logger.info("Vouchers router included successfully at prefix: /api/v1")
-app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
-logger.info("Reports router included successfully at prefix: /api/v1/reports")
-app.include_router(management_reports.router, prefix="/api/v1/management-reports", tags=["management-reports"])
-logger.info("Management Reports router included successfully at prefix: /api/v1/management-reports")
-app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
-logger.info("Settings router included successfully at prefix: /api/v1/settings")
-app.include_router(pincode.router, prefix="/api/v1/pincode", tags=["pincode"])
-logger.info("Pincode router included successfully at prefix: /api/v1/pincode")
-
-# Customer Analytics API
-app.include_router(customer_analytics.router, prefix="/api/v1/analytics", tags=["customer-analytics"])
-logger.info("Customer Analytics router included successfully at prefix: /api/v1/analytics")
-
-# Notifications API for Service CRM
-app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
-logger.info("Notifications router included successfully at prefix: /api/v1/notifications")
-
-# Include static path routers BEFORE dynamic ones to prevent conflicts
-app.include_router(v1_stock.router, prefix="/api/v1/stock", tags=["stock"])  # Static /stock paths
-logger.info("Stock router included successfully at prefix: /api/v1/stock")
-
-# Include SLA router
-app.include_router(v1_sla.router, prefix="/api/v1/sla", tags=["sla"])
-logger.info("SLA router included successfully at prefix: /api/v1/sla")
-
-# Include dispatch router
-app.include_router(v1_dispatch.router, prefix="/api/v1/dispatch", tags=["dispatch"])
-logger.info("Dispatch router included successfully at prefix: /api/v1/dispatch")
-
-# Include feedback and service closure router
-app.include_router(v1_feedback.router, prefix="/api/v1/feedback", tags=["feedback-closure"])
-logger.info("Feedback and service closure router included successfully at prefix: /api/v1/feedback")
-
-# Include inventory management router
-app.include_router(v1_inventory.router, prefix="/api/v1/inventory", tags=["inventory-management"])
-logger.info("Inventory management router included successfully at prefix: /api/v1/inventory")
-
-# Include service analytics router
-app.include_router(v1_service_analytics.router, prefix="/api/v1/service-analytics", tags=["service-analytics"])
-logger.info("Service Analytics router included successfully at prefix: /api/v1/service-analytics")
-
-# Include new ERP module routers
-app.include_router(v1_erp.router, prefix="/api/v1/erp", tags=["erp-core"])
-logger.info("ERP Core router included successfully at prefix: /api/v1/erp")
-
-app.include_router(v1_finance_analytics.router, prefix="/api/v1/finance", tags=["finance-analytics"])
-logger.info("Finance Analytics router included successfully at prefix: /api/v1/finance")
-
-# Include Financial Modeling and Forecasting routers
-app.include_router(v1_financial_modeling.router, prefix="/api/v1/financial-modeling", tags=["financial-modeling"])
-logger.info("Financial Modeling router included successfully at prefix: /api/v1/financial-modeling")
-
-app.include_router(v1_forecasting.router, prefix="/api/v1/forecasting", tags=["forecasting"])
-logger.info("Forecasting router included successfully at prefix: /api/v1/forecasting")
-
-app.include_router(v1_procurement.router, prefix="/api/v1/procurement", tags=["procurement"])
-logger.info("Procurement router included successfully at prefix: /api/v1/procurement")
-
-app.include_router(v1_tally.router, prefix="/api/v1/tally", tags=["tally-integration"])
-logger.info("Tally Integration router included successfully at prefix: /api/v1/tally")
-
-app.include_router(v1_warehouse.router, prefix="/api/v1/warehouse", tags=["warehouse-management"])
-logger.info("Warehouse Management router included successfully at prefix: /api/v1/warehouse")
-
-# Include Asset Management router
-app.include_router(v1_assets.router, prefix="/api/v1/assets", tags=["asset-management"])
-logger.info("Asset Management router included successfully at prefix: /api/v1/assets")
-
-# Include Transport and Freight router
-app.include_router(v1_transport.router, prefix="/api/v1/transport", tags=["transport-freight"])
-logger.info("Transport and Freight router included successfully at prefix: /api/v1/transport")
-
-# Include new business module routers
-app.include_router(v1_crm.router, prefix="/api/v1", tags=["crm"])
-logger.info("CRM router included successfully at prefix: /api/v1/crm")
-
-app.include_router(v1_marketing.router, prefix="/api/v1", tags=["marketing"])
-logger.info("Marketing router included successfully at prefix: /api/v1/marketing")
-
-app.include_router(v1_service_desk.router, prefix="/api/v1", tags=["service-desk"])
-logger.info("Service Desk router included successfully at prefix: /api/v1/service-desk")
-
-# Include new Task Management, Calendar, and Mail routers
-app.include_router(v1_tasks.router, prefix="/api/v1/tasks", tags=["task-management"])
-logger.info("Task Management router included successfully at prefix: /api/v1/tasks")
-
-app.include_router(v1_calendar.router, prefix="/api/v1/calendar", tags=["calendar-scheduler"])
-logger.info("Calendar and Scheduler router included successfully at prefix: /api/v1/calendar")
-
-# Mail router removed
-
-# Include Migration and Integration Settings routers
-app.include_router(v1_migration.router, prefix="/api/v1/migration", tags=["migration-data-import"])
-logger.info("Migration and Data Import router included successfully at prefix: /api/v1/migration")
-
-app.include_router(v1_integration_settings.router, prefix="/api/v1/integrations", tags=["integration-settings"])
-logger.info("Integration Settings router included successfully at prefix: /api/v1/integrations")
-
-# Add import for new business suite core modules
-app.include_router(v1_master_data.router, prefix="/api/v1/master-data", tags=["master-data"])
-logger.info("Master Data router included successfully at prefix: /api/v1/master-data")
-
-app.include_router(v1_project_management.router, prefix="/api/v1/projects", tags=["project-management"])
-logger.info("Project Management router included successfully at prefix: /api/v1/projects")
-
-app.include_router(v1_workflow_approval.router, prefix="/api/v1/workflow", tags=["workflow-approval"])
-logger.info("Workflow Approval router included successfully at prefix: /api/v1/workflow")
-
-app.include_router(v1_api_gateway.router, prefix="/api/v1/gateway", tags=["api-gateway"])
-logger.info("API Gateway router included successfully at prefix: /api/v1/gateway")
-
-app.include_router(v1_external_integrations.router, prefix="/api/v1/external-integrations", tags=["external-integrations"])
-logger.info("External Integrations router included successfully at prefix: /api/v1/external-integrations")
-
-app.include_router(v1_reporting_hub.router, prefix="/api/v1/reports", tags=["reporting-hub"])
-logger.info("Reporting Hub router included successfully at prefix: /api/v1/reports")
-
-# Ledger API
-app.include_router(v1_ledger.router, prefix="/api/v1", tags=["ledger"])
-logger.info("Ledger router included successfully at prefix: /api/v1")
-
-# Chart of Accounts API
-app.include_router(v1_chart_of_accounts.router, prefix="/api/v1", tags=["chart-of-accounts"])
-logger.info("Chart of Accounts router included successfully at prefix: /api/v1")
-
-# Include email router
-app.include_router(v1_email.router, prefix="/api/v1", tags=["email"])
-logger.info("Email router included successfully at prefix: /api/v1")
-
-# Include voucher email templates router
-app.include_router(v1_voucher_email_templates.router, prefix="/api/v1/voucher-email-templates", tags=["voucher-email-templates"])
-logger.info("Voucher Email Templates router included successfully at prefix: /api/v1/voucher-email-templates")
-
-# Include voucher format templates router
-app.include_router(v1_voucher_format_templates.router, prefix="/api/v1/voucher-format-templates", tags=["voucher-format-templates"])
-logger.info("Voucher Format Templates router included successfully at prefix: /api/v1/voucher-format-templates")
-
-# Include chatbot router
-app.include_router(v1_chatbot.router, prefix="/api/v1/chatbot", tags=["chatbot"])
-logger.info("Chatbot router included successfully at prefix: /api/v1/chatbot")
-
-# Add BOM router inclusion (missing previously)
-app.include_router(v1_bom.router, prefix="/api/v1/bom", tags=["bom"])
-logger.info("BOM router included successfully at prefix: /api/v1/bom")
-
-# Add Manufacturing router inclusion (added to fix 404 errors)
-app.include_router(v1_manufacturing.router, prefix="/api/v1", tags=["manufacturing"])
-logger.info("Manufacturing router included successfully at prefix: /api/v1")
-
-# Include HR router
-app.include_router(v1_hr.router, prefix="/api/v1/hr", tags=["hr"])
-logger.info("HR router included successfully at prefix: /api/v1/hr")
-
-# Include Journal Voucher router
-app.include_router(v1_journal_voucher.router, prefix="/api/v1/journal-vouchers", tags=["journal-vouchers"])
-logger.info("Journal Voucher router included successfully at prefix: /api/v1/journal-vouchers")
-
-@app.get("/routes")
-def get_routes():
-    """Temporary endpoint to list all registered routes for debugging 404 issues"""
-    routes = []
-    for route in app.routes:
-        if isinstance(route, APIRoute):
-            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            routes.append(f"{methods} {route.path}")
-    return {"routes": sorted(routes)}
-
+# Include routers on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize application: log CORS config, setup database, and seed super admin"""
     logger.info("Starting up TritIQ Business Suite API...")
     try:
-        create_tables()
+        await create_tables()
         logger.info("Database tables created successfully")
         from app.core.seed_super_admin import check_database_schema_updated
         db = AsyncSessionLocal()
@@ -575,6 +95,7 @@ async def startup_event():
                 logger.warning("Database schema is not updated. Run 'alembic upgrade head' to enable super admin seeding.")
         finally:
             await db.close()
+        include_minimal_routers()
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         raise
@@ -584,8 +105,7 @@ async def startup_event():
     for route in app.routes:
         if isinstance(route, APIRoute):
             methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            methods_str = methods if isinstance(methods, str) else ', '.join(methods)
-            logger.info(f"{methods_str} {route.path}")
+            logger.info(f"{methods} {route.path}")
     logger.info("=" * 50)
 
 @app.on_event("shutdown")
@@ -604,13 +124,23 @@ async def root():
 async def health_check():
     return {"status": "healthy", "version": config_settings.VERSION}
 
+@app.get("/routes")
+def get_routes():
+    """Temporary endpoint to list all registered routes for debugging 404 issues"""
+    routes = []
+    for route in app.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            routes.append(f"{methods} {route.path}")
+    return {"routes": sorted(routes)}
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("app/static/favicon.ico")
 
-# Mount static files for PDF assets and uploads
+# Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory="Uploads"), name="uploads")
 
 if __name__ == "__main__":
     import uvicorn
