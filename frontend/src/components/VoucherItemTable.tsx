@@ -51,6 +51,7 @@ interface VoucherItemTableProps {
   showDescriptionCheckbox?: boolean;
   showAdditionalChargesCheckbox?: boolean;
   showDeliveryStatus?: boolean; // For PO: show delivered/pending quantities
+  voucherType?: string; // Added to identify GRN-specific rendering
 }
 
 const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
@@ -80,6 +81,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
   showDescriptionCheckbox = false,
   showAdditionalChargesCheckbox = false,
   showDeliveryStatus = false,
+  voucherType = '',
 }) => {
   const handleAddItem = () => {
     append({
@@ -99,6 +101,10 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
       current_stock: 0,
       reorder_level: 0,
       description: "",
+      ordered_quantity: 0, // Added for GRN
+      received_quantity: 0, // Added for GRN
+      accepted_quantity: 0, // Added for GRN
+      rejected_quantity: 0, // Added for GRN
     });
   };
 
@@ -221,12 +227,41 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
               >
                 {/* Stock header removed as per requirements, stock values still shown in cells */}
               </TableCell>
-              <TableCell
-                align="center"
-                sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
-              >
-                Qty
-              </TableCell>
+              {voucherType === 'goods-receipt-notes' ? (
+                <>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+                  >
+                    Ordered Qty
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+                  >
+                    Received Qty
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+                  >
+                    Accepted Qty
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+                  >
+                    Rejected Qty
+                  </TableCell>
+                </>
+              ) : (
+                <TableCell
+                  align="center"
+                  sx={{ fontSize: 12, fontWeight: "bold", p: 1, textAlign: "center" }}
+                >
+                  Qty
+                </TableCell>
+              )}
               {showDeliveryStatus && (
                 <>
                   <TableCell
@@ -292,7 +327,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                         }
                       }
                       onChange={(product) => handleProductChange(index, product)}
-                      disabled={mode === "view"}
+                      disabled={mode === "view" || voucherType === 'goods-receipt-notes'}
                       size="small"
                     />
                   </TableCell>
@@ -312,25 +347,104 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                       </Typography>
                     ) : null}
                   </TableCell>
-                  <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
-                    <TextField
-                      type="number"
-                      {...control.register(`items.${index}.quantity`, {
-                        valueAsNumber: true,
-                      })}
-                      disabled={mode === "view"}
-                      size="small"
-                      sx={{ width: 120 }}
-                      InputProps={{
-                        inputProps: { min: 0, step: 0.01 },
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            {watch(`items.${index}.unit`) || ""}
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </TableCell>
+                  {voucherType === 'goods-receipt-notes' ? (
+                    <>
+                      <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
+                        <TextField
+                          type="number"
+                          value={watch(`items.${index}.ordered_quantity`) || 0}
+                          disabled
+                          size="small"
+                          sx={{ width: 120 }}
+                          InputProps={{
+                            inputProps: { min: 0, step: 0.01 },
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                {watch(`items.${index}.unit`) || ""}
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
+                        <TextField
+                          type="number"
+                          {...control.register(`items.${index}.received_quantity`, {
+                            valueAsNumber: true,
+                          })}
+                          disabled={mode === "view"}
+                          size="small"
+                          sx={{ width: 120 }}
+                          InputProps={{
+                            inputProps: { min: 0, step: 0.01 },
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                {watch(`items.${index}.unit`) || ""}
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
+                        <TextField
+                          type="number"
+                          {...control.register(`items.${index}.accepted_quantity`, {
+                            valueAsNumber: true,
+                          })}
+                          disabled={mode === "view"}
+                          size="small"
+                          sx={{ width: 120 }}
+                          InputProps={{
+                            inputProps: { min: 0, step: 0.01 },
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                {watch(`items.${index}.unit`) || ""}
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
+                        <TextField
+                          type="number"
+                          {...control.register(`items.${index}.rejected_quantity`, {
+                            valueAsNumber: true,
+                          })}
+                          disabled={mode === "view"}
+                          size="small"
+                          sx={{ width: 120 }}
+                          InputProps={{
+                            inputProps: { min: 0, step: 0.01 },
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                {watch(`items.${index}.unit`) || ""}
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </TableCell>
+                    </>
+                  ) : (
+                    <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
+                      <TextField
+                        type="number"
+                        {...control.register(`items.${index}.quantity`, {
+                          valueAsNumber: true,
+                        })}
+                        disabled={mode === "view"}
+                        size="small"
+                        sx={{ width: 120 }}
+                        InputProps={{
+                          inputProps: { min: 0, step: 0.01 },
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              {watch(`items.${index}.unit`) || ""}
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </TableCell>
+                  )}
                   {showDeliveryStatus && (
                     <>
                       <TableCell align="center" sx={{ p: 1, textAlign: "center" }}>
@@ -447,7 +561,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
           </TableBody>
         </Table>
       </TableContainer>
-      {mode !== "view" && (
+      {mode !== "view" && voucherType !== 'goods-receipt-notes' && (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
           <Fab color="primary" size="small" onClick={handleAddItem}>
             <Add />

@@ -245,6 +245,7 @@ const GoodsReceiptNotePage: React.FC = () => {
   }, [isVoucherDataLoading]);
 
   useEffect(() => {
+    if (mode !== 'create') return;
     // Clear fields when no PO is selected
     if (!selectedVoucherId || !selectedVoucherData) {
       remove();
@@ -309,7 +310,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         setErrorMessage('No valid items found in the selected purchase order. Please select a valid purchase order.');
       }
     }
-  }, [selectedVoucherData, productValidationData, setValue, append, remove, grnCompleteDialogOpen, productList, selectedVoucherId, selectedVoucherData]);
+  }, [mode, selectedVoucherData, productValidationData, setValue, append, remove, grnCompleteDialogOpen, productList, selectedVoucherId, selectedVoucherData]);
 
   const handleAddItem = () => {
     // No add item for GRN, as items come from voucher
@@ -450,20 +451,25 @@ const GoodsReceiptNotePage: React.FC = () => {
         date: voucherData.grn_date ? voucherData.grn_date.split('T')[0] : '',
         items: voucherData.items.map(item => ({
           ...item,
-          ordered_quantity: item.ordered_quantity,
-          received_quantity: item.received_quantity,
-          accepted_quantity: item.accepted_quantity,
-          rejected_quantity: item.rejected_quantity,
+          product_id: item.product_id || null,
           product_name: item.name_1 || item.product?.product_name || item.product_name || 'Product Not Found',
-          po_item_id: item.po_item_id,
+          ordered_quantity: Number(item.ordered_quantity) || 0,
+          received_quantity: Number(item.received_quantity) || 0,
+          accepted_quantity: Number(item.accepted_quantity) || 0,
+          rejected_quantity: Number(item.rejected_quantity) || 0,
+          unit_price: Number(item.unit_price) || 0,
+          unit: item.unit || item.product?.unit || '',
+          po_item_id: item.po_item_id || null,
         })),
         reference_voucher_type: 'purchase-order',
         reference_voucher_number: voucherData.voucher_number_1 || voucherData.purchase_order?.voucher_number || voucherData.purchase_order_id
       };
+      console.log('[GoodsReceiptNotePage] Resetting form with mappedData:', JSON.stringify(mappedData, null, 2));
       reset(mappedData);
       setSelectedVoucherType('purchase-order');
       setSelectedVoucherId(voucherData.purchase_order_id);
       if (mode === 'edit') {
+        console.log('[GoodsReceiptNotePage] Appending items for edit mode');
         remove();
         mappedData.items.forEach((item) => {
           append({
