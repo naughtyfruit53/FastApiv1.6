@@ -1,5 +1,4 @@
 # app/api/v1/stock.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
@@ -25,10 +24,10 @@ router = APIRouter()
 
 @router.get("", response_model=List[StockWithProduct])
 async def get_stock(
-    skip: int = 0,
-    limit: Optional[int] = Query(None),
-    product_id: Optional[int] = None,
-    low_stock_only: bool = False,
+    skip: int = Query(0, description="Number of records to skip"),
+    limit: Optional[int] = Query(None, description="Maximum number of records to return"),
+    product_id: Optional[int] = Query(None, description="Specific product ID to fetch"),
+    low_stock_only: bool = Query(False, description="Filter to low stock items"),
     search: str = Query("", description="Search term for stock items"),
     show_zero: bool = Query(True, description="Show items with zero quantity"),
     db: AsyncSession = Depends(get_db),
@@ -48,6 +47,7 @@ async def get_stock(
     logger.info(f"User role: {current_user.role}, is_super_admin: {getattr(current_user, 'is_super_admin', False)}")
     logger.info(f"User organization_id: {getattr(current_user, 'organization_id', None)}")
     logger.info(f"User has_stock_access: {getattr(current_user, 'has_stock_access', True)}")
+    logger.info(f"Query parameters: skip={skip}, limit={limit}, product_id={product_id}, low_stock_only={low_stock_only}, search={search}, show_zero={show_zero}")
     
     try:
         # Check stock module access for standard users
@@ -133,8 +133,8 @@ async def get_stock(
                     product_name=product.product_name,
                     product_hsn_code=product.hsn_code,
                     product_part_number=product.part_number,
-                    unit_price=unit_price,  # Handle None values
-                    reorder_level=product.reorder_level or 0,  # Handle None values
+                    unit_price=unit_price,
+                    reorder_level=product.reorder_level or 0,
                     gst_rate=product.gst_rate or 0.0,
                     is_active=product.is_active,
                     total_value=total_value
@@ -144,7 +144,6 @@ async def get_stock(
                 logger.error(f"Error creating StockWithProduct for product ID {product.id}: {e}")
                 logger.error(f"Stock data: {stock.__dict__ if hasattr(stock, '__dict__') else 'No dict'}")
                 logger.error(f"Product data: {product.__dict__ if hasattr(product, '__dict__') else 'No dict'}")
-                # Continue processing other items instead of failing completely
                 continue
         
         logger.info(f"Successfully transformed {len(result_list)} stock items")
@@ -181,12 +180,11 @@ async def get_low_stock(
         stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id, isouter=True).where(
             or_(
                 Stock.quantity <= Product.reorder_level,
-                Stock.id.is_(None)  # Products without stock entries
+                Stock.id.is_(None)
             ),
-            Product.reorder_level > 0  # Exclude products with reorder_level = 0
+            Product.reorder_level > 0
         )
     else:
-        # For non-super-admin users, use their organization_id directly  
         org_id = current_user.organization_id
         if not org_id:
             logger.error(f"User {current_user.email} has no organization_id set")
@@ -198,16 +196,15 @@ async def get_low_stock(
         stmt = select(Product, Stock).join_from(Product, Stock, Product.id == Stock.product_id, isouter=True).where(
             or_(
                 Stock.quantity <= Product.reorder_level,
-                Stock.id.is_(None)  # Products without stock entries
+                Stock.id.is_(None)
             ),
-            Product.reorder_level > 0,  # Exclude products with reorder_level = 0
+            Product.reorder_level > 0,
             Product.organization_id == org_id
         )
     
     result = await db.execute(stmt)
     product_stock_pairs = result.all()
     
-    # Transform the results to include product information, handling missing stock
     result_list = []
     for product, stock in product_stock_pairs:
         try:
@@ -296,7 +293,6 @@ async def get_stock_movements(
     result = await db.execute(stmt)
     movements = result.scalars().all()
     
-    # Transform to response schema with product name
     result_list = []
     for movement in movements:
         stmt_product = select(Product).where(Product.id == movement.product_id)
@@ -325,7 +321,7 @@ async def get_last_vendor_for_product(
             detail="Access denied. You do not have permission to view purchase information."
         )
     
-    from app.models.vouchers.purchase import PurchaseVoucherItem  # Assuming this is the model
+    from app.models.vouchers.purchase import PurchaseVoucherItem
     stmt = select(PurchaseVoucher).join(PurchaseVoucherItem).where(
         PurchaseVoucherItem.product_id == product_id
     ).order_by(PurchaseVoucher.date.desc())
@@ -335,7 +331,6 @@ async def get_last_vendor_for_product(
     if not last_purchase:
         return None
     
-    # Ensure tenant access
     if not current_user.is_super_admin:
         TenantQueryMixin.ensure_tenant_access(last_purchase, current_user.organization_id)
     
@@ -361,7 +356,6 @@ async def get_product_stock(
     """Get stock for specific product"""
     logger.info(f"Product stock endpoint accessed by user {current_user.email} for product {product_id}")
     
-    # Check stock module access for standard users
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
         logger.warning(f"Standard user {current_user.email} denied access to product stock - no stock module access")
         raise HTTPException(
@@ -374,7 +368,6 @@ async def get_product_stock(
     stock = result.scalar_one_or_none()
     
     if not stock:
-        # Return zero stock if no record exists
         stmt_product = select(Product).where(Product.id == product_id)
         result_product = await db.execute(stmt_product)
         product = result_product.scalar_one_or_none()
@@ -384,7 +377,6 @@ async def get_product_stock(
                 detail="Product not found"
             )
         
-        # Ensure tenant access for non-super-admin users
         if not current_user.is_super_admin:
             TenantQueryMixin.ensure_tenant_access(product, current_user.organization_id)
         
@@ -398,7 +390,6 @@ async def get_product_stock(
             last_updated=product.created_at or datetime.utcnow()
         )
     
-    # Ensure tenant access for non-super-admin users
     if not current_user.is_super_admin:
         TenantQueryMixin.ensure_tenant_access(stock, current_user.organization_id)
     
@@ -411,9 +402,8 @@ async def create_stock_entry(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new stock entry"""
-    logger.info(f"Create stock endpoint accessed by user {current_user.email}")
+    logger.info(f"Create stock entry accessed by user {current_user.email}")
     
-    # Check stock module access for standard users
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
         logger.warning(f"Standard user {current_user.email} denied access to create stock - no stock module access")
         raise HTTPException(
@@ -423,7 +413,6 @@ async def create_stock_entry(
         
     org_id = require_current_organization_id(current_user)
     
-    # Check if product exists
     stmt = select(Product).where(Product.id == stock.product_id)
     result = await db.execute(stmt)
     product = result.scalar_one_or_none()
@@ -433,11 +422,9 @@ async def create_stock_entry(
             detail="Product not found"
         )
     
-    # Ensure tenant access for non-super-admin users
     if not current_user.is_super_admin:
         TenantQueryMixin.ensure_tenant_access(product, current_user.organization_id)
     
-    # Check if stock entry already exists
     stmt = select(Stock).where(
         Stock.product_id == stock.product_id,
         Stock.organization_id == org_id
@@ -450,7 +437,6 @@ async def create_stock_entry(
             detail="Stock entry already exists for this product. Use update endpoint."
         )
     
-    # Create new stock entry
     db_stock = Stock(
         organization_id=org_id,
         **stock.dict(),
@@ -473,7 +459,6 @@ async def update_stock(
     """Update stock for a product"""
     logger.info(f"Update stock endpoint accessed by user {current_user.email} for product {product_id}")
     
-    # Check stock module access for standard users
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
         logger.warning(f"Standard user {current_user.email} denied access to update stock - no stock module access")
         raise HTTPException(
@@ -488,7 +473,6 @@ async def update_stock(
     stock = result.scalar_one_or_none()
     
     if not stock:
-        # Create new stock entry if doesn't exist
         stmt_product = select(Product).where(Product.id == product_id)
         result_product = await db.execute(stmt_product)
         product = result_product.scalar_one_or_none()
@@ -508,7 +492,6 @@ async def update_stock(
         )
         db.add(stock)
     else:
-        # Update existing stock
         for field, value in stock_update.dict(exclude_unset=True).items():
             setattr(stock, field, value)
         stock.last_updated = datetime.utcnow()
@@ -583,7 +566,7 @@ async def adjust_stock(
         logger.info(f"Stock adjusted for product ID {product_id}: {adjustment.quantity_change:+.2f} - {adjustment.reason} by {current_user.email}")
         
         return StockAdjustmentResponse(
-            message=f"Stock adjusted successfully.{adjustment.reason}",
+            message=f"Stock adjusted successfully. {adjustment.reason}",
             previous_quantity=previous_quantity,
             quantity_change=adjustment.quantity_change,
             new_quantity=new_quantity
@@ -607,14 +590,11 @@ async def bulk_import_stock(
 ):
     """Enhanced bulk import stock entries from Excel file with comprehensive validation and mode selection"""
     
-    # Add logging at the start of import for user/org context
     logger.info(f"[bulk_import_stock] Starting import for user {current_user.id} ({current_user.email})")
     logger.info(f"[bulk_import_stock] User role: {current_user.role}, is_super_admin: {getattr(current_user, 'is_super_admin', False)}")
     logger.info(f"[bulk_import_stock] User organization_id: {getattr(current_user, 'organization_id', None)}")
     
-    # Determine org_id based on user type - strict enforcement
     if getattr(current_user, 'is_super_admin', False):
-        # Super admins can specify organization_id
         if organization_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -622,7 +602,6 @@ async def bulk_import_stock(
             )
         org_id = organization_id
         logger.info(f"[bulk_import_stock] Super admin importing for org_id: {org_id}")
-        # Validate organization exists
         stmt = select(Organization).where(Organization.id == org_id)
         result = await db.execute(stmt)
         org = result.scalar_one_or_none()
@@ -632,26 +611,22 @@ async def bulk_import_stock(
                 detail="Specified organization not found"
             )
     else:
-        # Non-super-admin users: use their organization_id only, ignore any frontend-supplied org_id
         if organization_id is not None and organization_id != current_user.organization_id:
             logger.warning(f"[bulk_import_stock] User {current_user.email} attempted to specify different org_id: {organization_id}, ignoring")
         
         org_id = require_current_organization_id(current_user)
         logger.info(f"[bulk_import_stock] Regular user importing for their org_id: {org_id}")
 
-    # Validate company setup is completed before allowing inventory operations
     await validate_company_setup(db, org_id)
 
     start_time = datetime.now(pytz.utc)
     
-    # Validate mode
     if mode not in ['add', 'replace']:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid mode. Must be 'add' or 'replace'."
         )
     
-    # Validate file type
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -659,7 +634,6 @@ async def bulk_import_stock(
         )
     
     try:
-        # Parse Excel file using existing service
         records = await ExcelService.parse_excel_file(file, StockExcelService.REQUIRED_COLUMNS, "Stock Import Template")
         
         if not records:
@@ -678,11 +652,9 @@ async def bulk_import_stock(
         
         for i, record in enumerate(records, 1):
             try:
-                # Extract product and stock data with enhanced validation
                 product_name = str(record.get("product_name", "")).strip()
                 unit = str(record.get("unit", "")).strip()
                 
-                # Enhanced validation for required fields
                 if not product_name:
                     detailed_errors.append(BulkImportError(
                         row=i,
@@ -707,7 +679,6 @@ async def bulk_import_stock(
                     skipped_records += 1
                     continue
                 
-                # Enhanced quantity validation
                 try:
                     quantity = float(record.get("quantity", 0))
                     if quantity < 0:
@@ -733,10 +704,8 @@ async def bulk_import_stock(
                     skipped_records += 1
                     continue
                 
-                # Log record details for debugging
                 logger.debug(f"Processing row {i}: product_name={product_name}, unit={unit}, quantity={quantity}")
                 
-                # Check if product exists by name
                 stmt = select(Product).where(
                     Product.product_name == product_name,
                     Product.organization_id == org_id
@@ -745,9 +714,7 @@ async def bulk_import_stock(
                 product = result.scalar_one_or_none()
                 
                 if not product:
-                    # Create new product if not exists with enhanced validation
                     try:
-                        # Validate and clean optional fields
                         def to_optional(value):
                             if value is None:
                                 return None
@@ -759,7 +726,6 @@ async def bulk_import_stock(
                         hsn_code = to_optional(record.get("hsn_code"))
                         part_number = to_optional(record.get("part_number"))
                         
-                        # Validate numeric fields
                         try:
                             unit_price = float(record.get("unit_price", 0))
                             if unit_price < 0:
@@ -803,7 +769,7 @@ async def bulk_import_stock(
                             **product_data
                         )
                         db.add(new_product)
-                        await db.flush()  # Get the new product ID
+                        await db.flush()
                         product = new_product
                         created_products += 1
                         logger.info(f"Created new product: {product_name}")
@@ -821,7 +787,6 @@ async def bulk_import_stock(
                         skipped_records += 1
                         continue
                 
-                # Handle stock with enhanced validation
                 stmt = select(Stock).where(
                     Stock.product_id == product.id,
                     Stock.organization_id == org_id
@@ -832,7 +797,6 @@ async def bulk_import_stock(
                 location = str(record.get("location", "")).strip() or ""
                 
                 if not stock:
-                    # Create new stock entry
                     new_stock = Stock(
                         organization_id=org_id,
                         product_id=product.id,
@@ -845,11 +809,10 @@ async def bulk_import_stock(
                     created_stocks += 1
                     logger.info(f"Created stock entry for: {product_name}")
                 else:
-                    # Update stock based on mode
                     old_quantity = stock.quantity
                     if mode == 'add':
                         new_quantity = old_quantity + quantity
-                    else:  # replace
+                    else:
                         new_quantity = quantity
                     
                     stock.quantity = new_quantity
@@ -874,7 +837,6 @@ async def bulk_import_stock(
                 skipped_records += 1
                 continue
         
-        # Commit all changes
         await db.commit()
         
         end_time = datetime.now(pytz.utc)
@@ -927,7 +889,7 @@ async def import_stock_excel(
     current_user: User = Depends(get_current_active_user)
 ):
     """Import stock entries from Excel file - alias for bulk import"""
-    return await bulk_import_stock(file, db, current_user)
+    return await bulk_import_stock(file, db=db, current_user=current_user)
 
 @router.get("/template/excel")
 async def download_stock_template():
@@ -955,7 +917,6 @@ async def export_stock_excel(
     """Export stock to Excel"""
     org_id = require_current_organization_id(current_user)
     
-    # Get stock using the same logic as the list endpoint
     stmt = select(Stock).join(Product)
     
     stmt = stmt.where(Stock.organization_id == org_id)
@@ -969,7 +930,6 @@ async def export_stock_excel(
     result = await db.execute(stmt.offset(skip).limit(limit))
     stock_items = result.scalars().all()
     
-    # Convert to dict format for Excel export
     stock_data = []
     for stock in stock_items:
         stock_data.append({
@@ -994,7 +954,6 @@ async def update_stock_from_po(po_id: int, db: AsyncSession):
     items = result.scalars().all()
     
     for item in items:
-        # Get or create stock
         stmt_stock = select(Stock).where(Stock.product_id == item.product_id)
         result_stock = await db.execute(stmt_stock)
         stock = result_stock.scalar_one_or_none()
@@ -1011,18 +970,15 @@ async def update_stock_from_po(po_id: int, db: AsyncSession):
             db.add(stock)
             await db.flush()
         
-        # Update quantity (add received quantity; assume full for simplicity, adjust for partial GRN)
         stock.quantity += item.quantity
         stock.last_updated = datetime.utcnow()
         
-        # Update valuation - use simple average for now (can change to weighted)
-        current_value = stock.quantity * item.product.unit_price  # Old value
+        current_value = stock.quantity * item.product.unit_price
         new_value = item.quantity * item.discounted_price
         total_quantity = stock.quantity + item.quantity
         new_avg_price = (current_value + new_value) / total_quantity if total_quantity > 0 else item.discounted_price
-        item.product.unit_price = new_avg_price  # Update product's effective price for future use
+        item.product.unit_price = new_avg_price
         
-        # Log transaction
         transaction = InventoryTransaction(
             organization_id=stock.organization_id,
             product_id=stock.product_id,

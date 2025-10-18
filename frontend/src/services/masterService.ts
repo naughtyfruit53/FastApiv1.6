@@ -259,16 +259,18 @@ export const bulkImportStock = async (data: any[]): Promise<any> => {
 // Fetch stock with parameter cleaning and type checking
 export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<StockResponse[]> => {
   const [, rawParams = {}] = queryKey;
-  const params: any = {
-    skip: rawParams.skip || 0,
-    limit: rawParams.limit || 1000000,
-    low_stock_only: rawParams.low_stock_only || false,
-    search: rawParams.search || "",
-    show_zero: rawParams.show_zero || false,
+  const defaultParams = {
+    skip: 0,
+    limit: 1000000,
+    low_stock_only: false,
+    search: "",
+    show_zero: true,
   };
-  const productId = rawParams.product_id;
-  if (productId && !isNaN(Number(productId)) && productId !== "") {
-    params.product_id = Number(productId);
+  const params: any = { ...defaultParams, ...rawParams };
+  if (params.product_id && !isNaN(Number(params.product_id)) && params.product_id !== "") {
+    params.product_id = Number(params.product_id);
+  } else {
+    delete params.product_id;
   }
   console.log("[getStock] Request params:", params);
   try {
@@ -282,6 +284,14 @@ export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Prom
       console.warn("[getStock] Response is not an array:", response.data);
       return [{ quantity: 0, product_id: params.product_id || 0 } as StockResponse];
     }
+    if (params.product_id) {
+      const stockItem = response.data.find((item: StockResponse) => item.product_id === params.product_id);
+      if (!stockItem) {
+        console.warn(`[getStock] No stock found for product_id ${params.product_id}`);
+        return [{ quantity: 0, product_id: params.product_id } as StockResponse];
+      }
+      return [stockItem];
+    }
     return response.data as StockResponse[];
   } catch (error) {
     console.error("[getStock] Error fetching stock:", error);
@@ -294,7 +304,6 @@ export const hsnSearch = async ({ queryKey }: QueryFunctionContext): Promise<any
   const [, query, limit] = queryKey;
   try {
     const data = await loadGstData();
-    // Fuzzy search on HSN code or description
     const results = data
       .filter((item: HsnResult) => 
         fuzzyMatch(query, item.hsn_code) || fuzzyMatch(query, item.description)
