@@ -1,3 +1,4 @@
+# requirements.txt
 aiosqlite==0.21.0
 alembic==1.13.1
 apscheduler==3.10.4
@@ -31,7 +32,7 @@ passlib[bcrypt]==1.7.4
 pdfkit==1.0.0
 psutil==6.1.0
 pydantic==2.11.7
-# pymupdf==1.26.4  # Commented: Remove if PDF processing unused
+pymupdf==1.26.4  # Uncommented: Required for fitz module
 pytesseract==0.3.13
 pytest-playwright==0.5.1
 python-dateutil==2.8.2

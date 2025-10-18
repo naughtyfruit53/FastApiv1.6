@@ -2,9 +2,17 @@
 
 set -e
 
-# Log memory usage
+# Log memory usage using /proc/meminfo
 log_memory_usage() {
-    echo "Memory usage ($1): $(free -m | awk 'NR==2{printf "Total: %sMB, Used: %sMB, Free: %sMB", $2, $3, $4}')"
+    echo "Memory usage ($1):"
+    if [ -f /proc/meminfo ]; then
+        mem_total=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+        mem_free=$(grep MemFree /proc/meminfo | awk '{print $2}')
+        mem_used=$((mem_total - mem_free))
+        echo "Total: $((mem_total / 1024))MB, Used: $((mem_used / 1024))MB, Free: $((mem_free / 1024))MB"
+    else
+        echo "Unable to retrieve memory usage: /proc/meminfo not available"
+    fi
 }
 
 # Run Alembic migrations only if needed
