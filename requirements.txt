@@ -21,13 +21,13 @@ gunicorn==22.0.0
 icalendar==6.0.1
 imaplib2==3.6
 jinja2==3.1.4
-# joblib==1.4.2  # Commented: Required for scikit-learn
+joblib==1.4.2  # Commented: Required for scikit-learn
 msal==1.31.0
 msgraph-sdk==1.4.0
 num2words==0.5.13
-# numpy==1.26.4  # Commented: Required for pandas/scikit-learn
+numpy==1.26.4  # Commented: Required for pandas/scikit-learn
 openpyxl==3.1.5
-# pandas==2.3.2  # Commented: Remove if analytics unused
+pandas==2.3.2  # Commented: Remove if analytics unused
 passlib[bcrypt]==1.7.4
 pdfkit==1.0.0
 psutil==6.1.0
@@ -42,8 +42,8 @@ python-multipart==0.0.6
 redis==5.0.8  # Added for fastapi-limiter
 reportlab==4.2.5
 requests==2.31.0
-# scikit-learn==1.5.2  # Commented: Remove if ML features unused
-# scipy==1.14.1  # Commented: Required for scikit-learn
+scikit-learn==1.5.2  # Commented: Remove if ML features unused
+scipy==1.14.1  # Commented: Required for scikit-learn
 sqlalchemy==2.0.43
 supabase==2.21.1
 uvicorn==0.24.0
