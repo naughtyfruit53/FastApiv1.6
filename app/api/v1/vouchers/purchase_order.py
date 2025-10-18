@@ -8,12 +8,11 @@ from typing import List, Optional
 from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.models import User
+from app.models import User, Product
 from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem, GoodsReceiptNote, GoodsReceiptNoteItem
 from app.schemas.vouchers.purchase import PurchaseOrderCreate, PurchaseOrderInDB, PurchaseOrderUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
-from app.services.pdf_generation_service import pdf_generator
 import logging
 from datetime import timezone
 import re
@@ -44,7 +43,6 @@ async def get_purchase_orders(
     if status:
         stmt = stmt.where(PurchaseOrder.status == status)
     
-    # Enhanced sorting - latest first by default
     if hasattr(PurchaseOrder, sortBy):
         sort_attr = getattr(PurchaseOrder, sortBy)
         if sort.lower() == "asc":
@@ -52,15 +50,12 @@ async def get_purchase_orders(
         else:
             stmt = stmt.order_by(sort_attr.desc())
     else:
-        # Default to created_at desc if invalid sortBy field
         stmt = stmt.order_by(PurchaseOrder.created_at.desc())
     
     result = await db.execute(stmt.offset(skip).limit(limit))
     purchase_orders = result.unique().scalars().all()
     
-    # Add GRN completion status to each PO
     for po in purchase_orders:
-        # Fetch associated GRNs
         grn_stmt = select(GoodsReceiptNote).where(
             GoodsReceiptNote.purchase_order_id == po.id,
             GoodsReceiptNote.organization_id == current_user.organization_id
@@ -68,7 +63,6 @@ async def get_purchase_orders(
         grn_result = await db.execute(grn_stmt)
         grns = grn_result.scalars().all()
         
-        # Calculate quantities
         total_ordered_quantity = 0.0
         total_pending_quantity = 0.0
         total_received_quantity = 0.0
@@ -86,10 +80,8 @@ async def get_purchase_orders(
             grn_items = grn_items_result.scalars().all()
             total_received_quantity = sum(item.accepted_quantity for item in grn_items)
         
-        # Calculate remaining quantity
         remaining_quantity = total_ordered_quantity - total_received_quantity
         
-        # Log details for debugging
         logger.debug(f"PO {po.voucher_number}: "
                     f"ordered={total_ordered_quantity}, "
                     f"received={total_received_quantity}, "
@@ -97,7 +89,6 @@ async def get_purchase_orders(
                     f"remaining={remaining_quantity}, "
                     f"grns_exist={bool(grns)}")
         
-        # Set grn_status based on remaining quantity
         if grns and remaining_quantity <= 0:
             po.grn_status = "complete"
         elif grns:
@@ -134,13 +125,11 @@ async def create_purchase_order(
         invoice_data['created_by'] = current_user.id
         invoice_data['organization_id'] = current_user.organization_id
         
-        # Force UTC timezone on datetime fields to prevent offset shifts
         if 'date' in invoice_data and invoice_data['date']:
             invoice_data['date'] = invoice_data['date'].replace(tzinfo=timezone.utc)
         if 'delivery_date' in invoice_data and invoice_data['delivery_date']:
             invoice_data['delivery_date'] = invoice_data['delivery_date'].replace(tzinfo=timezone.utc)
         
-        # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
             invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "PO", current_user.organization_id, PurchaseOrder
@@ -157,11 +146,27 @@ async def create_purchase_order(
                     db, "PO", current_user.organization_id, PurchaseOrder
                 )
         
+        product_ids = [item.product_id for item in invoice.items]
+        stmt = select(Product).where(
+            Product.id.in_(product_ids),
+            Product.organization_id == current_user.organization_id
+        )
+        result = await db.execute(stmt)
+        products = result.scalars().all()
+        product_dict = {p.id: p for p in products}
+        
+        for item in invoice.items:
+            product = product_dict.get(item.product_id)
+            if not product or not product.product_name or product.product_name.strip() == '':
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Product ID {item.product_id} has no valid name"
+                )
+        
         db_invoice = PurchaseOrder(**invoice_data)
         db.add(db_invoice)
         await db.flush()
         
-        # Initialize sums for header
         total_amount = 0.0
         total_cgst = 0.0
         total_sgst = 0.0
@@ -171,7 +176,6 @@ async def create_purchase_order(
         for item_data in invoice.items:
             item_dict = item_data.dict()
             
-            # Set defaults for missing optional fields to prevent None values
             item_dict.setdefault('discount_percentage', 0.0)
             item_dict.setdefault('discount_amount', 0.0)
             item_dict.setdefault('taxable_amount', 0.0)
@@ -181,14 +185,12 @@ async def create_purchase_order(
             item_dict.setdefault('igst_amount', 0.0)
             item_dict.setdefault('description', None)
             
-            # Recalculate taxable_amount if it's 0 or inconsistent
             if item_dict['taxable_amount'] == 0:
                 gross_amount = item_dict['quantity'] * item_dict['unit_price']
                 discount_amount = gross_amount * (item_dict['discount_percentage'] / 100) if item_dict['discount_percentage'] else item_dict['discount_amount']
                 item_dict['discount_amount'] = discount_amount
                 item_dict['taxable_amount'] = gross_amount - discount_amount
             
-            # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
             taxable = item_dict['taxable_amount']
             if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
                 half_rate = item_dict['gst_rate'] / 2 / 100
@@ -196,7 +198,6 @@ async def create_purchase_order(
                 item_dict['sgst_amount'] = taxable * half_rate
                 item_dict['igst_amount'] = 0.0
             
-            # Always calculate total_amount to ensure it's not None or incorrect
             item_dict['total_amount'] = (
                 item_dict['taxable_amount'] +
                 item_dict['cgst_amount'] +
@@ -204,25 +205,22 @@ async def create_purchase_order(
                 item_dict['igst_amount']
             )
             
-            # Calculate discounted_price
             item_dict['discounted_price'] = item_dict['unit_price'] - (item_dict['discount_amount'] / item_dict['quantity']) if item_dict['quantity'] > 0 else item_dict['unit_price']
             
             item = PurchaseOrderItem(
                 purchase_order_id=db_invoice.id,
                 delivered_quantity=0.0,
-                pending_quantity=item_dict['quantity'],  # Set pending_quantity to quantity
+                pending_quantity=item_dict['quantity'],
                 **item_dict
             )
             db.add(item)
             
-            # Accumulate sums for header
             total_amount += item_dict['total_amount']
             total_cgst += item_dict['cgst_amount']
             total_sgst += item_dict['sgst_amount']
             total_igst += item_dict['igst_amount']
             total_discount += item_dict['discount_amount']
         
-        # Override header totals with calculated sums for consistency
         db_invoice.total_amount = total_amount
         db_invoice.cgst_amount = total_cgst
         db_invoice.sgst_amount = total_sgst
@@ -231,7 +229,6 @@ async def create_purchase_order(
         
         await db.commit()
         
-        # Re-query with joins to load relationships
         stmt = select(PurchaseOrder).options(
             joinedload(PurchaseOrder.vendor),
             joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
@@ -280,7 +277,6 @@ async def get_purchase_order(
             detail="Purchase order not found"
         )
     
-    # Calculate grn_status for single PO
     grn_stmt = select(GoodsReceiptNote).where(
         GoodsReceiptNote.purchase_order_id == invoice.id,
         GoodsReceiptNote.organization_id == current_user.organization_id
@@ -312,7 +308,8 @@ async def get_purchase_order(
                 f"received={total_received_quantity}, "
                 f"pending={total_pending_quantity}, "
                 f"remaining={remaining_quantity}, "
-                f"grns_exist={bool(grns)}")
+                f"grns_exist={bool(grns)}, "
+                f"items={[{ 'id': item.id, 'product_id': item.product_id, 'product_name': item.product.product_name if item.product else None } for item in invoice.items]}")
     
     if grns and remaining_quantity <= 0:
         invoice.grn_status = "complete"
@@ -352,7 +349,6 @@ async def generate_purchase_order_pdf(
             current_user=current_user
         )
         
-        # Sanitize voucher_number for filename (replace /, :, etc. with -)
         safe_filename = re.sub(r'[/\\:?"<>|]', '-', voucher.voucher_number) + '.pdf'
         
         headers = {
@@ -387,7 +383,6 @@ async def update_purchase_order(
         
         update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
         
-        # Force UTC timezone on datetime fields to prevent offset shifts
         if 'date' in update_data and update_data['date']:
             update_data['date'] = update_data['date'].replace(tzinfo=timezone.utc)
         if 'delivery_date' in update_data and update_data['delivery_date']:
@@ -396,7 +391,6 @@ async def update_purchase_order(
         for field, value in update_data.items():
             setattr(invoice, field, value)
         
-        # Initialize sums for header if items are updated
         total_amount = 0.0
         total_cgst = 0.0
         total_sgst = 0.0
@@ -404,13 +398,29 @@ async def update_purchase_order(
         total_discount = 0.0
         
         if invoice_update.items is not None:
+            product_ids = [item.product_id for item in invoice_update.items]
+            stmt = select(Product).where(
+                Product.id.in_(product_ids),
+                Product.organization_id == current_user.organization_id
+            )
+            result = await db.execute(stmt)
+            products = result.scalars().all()
+            product_dict = {p.id: p for p in products}
+            
+            for item in invoice_update.items:
+                product = product_dict.get(item.product_id)
+                if not product or not product.product_name or product.product_name.strip() == '':
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Product ID {item.product_id} has no valid name"
+                    )
+            
             from sqlalchemy import delete
             stmt_delete = delete(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id == invoice_id)
             await db.execute(stmt_delete)
             for item_data in invoice_update.items:
                 item_dict = item_data.dict()
                 
-                # Set defaults for missing optional fields to prevent None values
                 item_dict.setdefault('discount_percentage', 0.0)
                 item_dict.setdefault('discount_amount', 0.0)
                 item_dict.setdefault('taxable_amount', 0.0)
@@ -420,14 +430,12 @@ async def update_purchase_order(
                 item_dict.setdefault('igst_amount', 0.0)
                 item_dict.setdefault('description', None)
                 
-                # Recalculate taxable_amount if it's 0 or inconsistent
                 if item_dict['taxable_amount'] == 0:
                     gross_amount = item_dict['quantity'] * item_dict['unit_price']
                     discount_amount = gross_amount * (item_dict['discount_percentage'] / 100) if item_dict['discount_percentage'] else item_dict['discount_amount']
                     item_dict['discount_amount'] = discount_amount
                     item_dict['taxable_amount'] = gross_amount - discount_amount
                 
-                # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
                 taxable = item_dict['taxable_amount']
                 if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
                     half_rate = item_dict['gst_rate'] / 2 / 100
@@ -435,7 +443,6 @@ async def update_purchase_order(
                     item_dict['sgst_amount'] = taxable * half_rate
                     item_dict['igst_amount'] = 0.0
                 
-                # Always calculate total_amount to ensure it's not None or incorrect
                 item_dict['total_amount'] = (
                     item_dict['taxable_amount'] +
                     item_dict['cgst_amount'] +
@@ -443,25 +450,22 @@ async def update_purchase_order(
                     item_dict['igst_amount']
                 )
                 
-                # Calculate discounted_price
                 item_dict['discounted_price'] = item_dict['unit_price'] - (item_dict['discount_amount'] / item_dict['quantity']) if item_dict['quantity'] > 0 else item_dict['unit_price']
                 
                 item = PurchaseOrderItem(
                     purchase_order_id=invoice_id,
                     delivered_quantity=0.0,
-                    pending_quantity=item_dict['quantity'],  # Set pending_quantity to quantity
+                    pending_quantity=item_dict['quantity'],
                     **item_dict
                 )
                 db.add(item)
                 
-                # Accumulate sums for header
                 total_amount += item_dict['total_amount']
                 total_cgst += item_dict['cgst_amount']
                 total_sgst += item_dict['sgst_amount']
                 total_igst += item_dict['igst_amount']
                 total_discount += item_dict['discount_amount']
             
-            # Override header totals with calculated sums for consistency
             invoice.total_amount = total_amount
             invoice.cgst_amount = total_cgst
             invoice.sgst_amount = total_sgst
@@ -470,7 +474,6 @@ async def update_purchase_order(
         
         await db.commit()
         
-        # Re-query with joins to load relationships
         stmt = select(PurchaseOrder).options(
             joinedload(PurchaseOrder.vendor),
             joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
@@ -543,7 +546,6 @@ async def update_purchase_order_tracking(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Update tracking details for a purchase order"""
     try:
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
@@ -558,7 +560,6 @@ async def update_purchase_order_tracking(
                 detail="Purchase order not found"
             )
         
-        # Update tracking fields
         if transporter_name is not None:
             po.transporter_name = transporter_name
         if tracking_number is not None:
@@ -593,7 +594,6 @@ async def get_purchase_order_tracking(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get tracking details for a purchase order"""
     try:
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
@@ -630,7 +630,6 @@ async def get_previous_discount(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get previous discount for a product (optionally for specific vendor)"""
     try:
         stmt = select(PurchaseOrderItem).join(PurchaseOrder).where(
             PurchaseOrderItem.product_id == product_id,

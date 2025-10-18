@@ -1,9 +1,5 @@
 # app/services/voucher_service.py
 
-"""
-Voucher service for auto-population and business logic
-"""
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, delete
 from typing import Type, Union, Any, Optional
@@ -11,6 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 import logging
 from app.models.organization_settings import OrganizationSettings, VoucherCounterResetPeriod
+from app.models.product_models import Product  # Added import for product validation
 
 logger = logging.getLogger(__name__)
 
@@ -35,31 +32,25 @@ class VoucherNumberService:
         """
         from sqlalchemy.orm import Session
         
-        # Check if this is a sync session
         is_sync = isinstance(db, Session)
         
         current_date = datetime.now()
         current_year = current_date.year
         current_month = current_date.month
         
-        # Get organization settings (sync version)
         if is_sync:
             org_settings = db.query(OrganizationSettings).filter(
                 OrganizationSettings.organization_id == organization_id
             ).first()
         else:
-            # This shouldn't happen, but handle it
             raise TypeError("Use generate_voucher_number_async for AsyncSession")
         
-        # Build prefix with org-level prefix if enabled
         full_prefix = prefix
         if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
             full_prefix = f"{org_settings.voucher_prefix}-{prefix}"
         
-        # Calculate fiscal year (assuming April start)
         fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
         
-        # Determine counter reset period and format accordingly
         reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
         
         period_segment = ""
@@ -73,7 +64,6 @@ class VoucherNumberService:
         elif reset_period == VoucherCounterResetPeriod.ANNUALLY:
             period_segment = ""
         
-        # Build pattern for search
         if period_segment:
             search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
             base_number = f"{full_prefix}/{fiscal_year}/{period_segment}"
@@ -81,7 +71,6 @@ class VoucherNumberService:
             search_pattern = f"{full_prefix}/{fiscal_year}/%"
             base_number = f"{full_prefix}/{fiscal_year}"
         
-        # Get the latest voucher number (sync version)
         latest_voucher = db.query(model).filter(
             model.organization_id == organization_id,
             model.voucher_number.like(search_pattern)
@@ -97,10 +86,8 @@ class VoucherNumberService:
         else:
             next_sequence = 1
         
-        # Generate new voucher number
         voucher_number = f"{base_number}/{next_sequence:05d}"
         
-        # Ensure uniqueness (in case of race conditions)
         while True:
             existing = db.query(model).filter(model.voucher_number == voucher_number).first()
             if not existing:
@@ -129,22 +116,18 @@ class VoucherNumberService:
         current_year = current_date.year
         current_month = current_date.month
         
-        # Get organization settings
         stmt = select(OrganizationSettings).where(
             OrganizationSettings.organization_id == organization_id
         )
         result = await db.execute(stmt)
         org_settings = result.scalar_one_or_none()
         
-        # Build prefix with org-level prefix if enabled
         full_prefix = prefix
         if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
             full_prefix = f"{org_settings.voucher_prefix}-{prefix}"
         
-        # Calculate fiscal year (assuming April start)
         fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
         
-        # Determine counter reset period and format accordingly
         reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
         
         period_segment = ""
@@ -158,7 +141,6 @@ class VoucherNumberService:
         elif reset_period == VoucherCounterResetPeriod.ANNUALLY:
             period_segment = ""
         
-        # Build pattern for search
         if period_segment:
             search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
             base_number = f"{full_prefix}/{fiscal_year}/{period_segment}"
@@ -166,7 +148,6 @@ class VoucherNumberService:
             search_pattern = f"{full_prefix}/{fiscal_year}/%"
             base_number = f"{full_prefix}/{fiscal_year}"
         
-        # Get the latest voucher number for this prefix, fiscal year, period and organization
         stmt = select(model).where(
             model.organization_id == organization_id,
             model.voucher_number.like(search_pattern)
@@ -184,10 +165,8 @@ class VoucherNumberService:
         else:
             next_sequence = 1
         
-        # Generate new voucher number
         voucher_number = f"{base_number}/{next_sequence:05d}"
         
-        # Ensure uniqueness (in case of race conditions)
         while True:
             stmt = select(model).where(model.voucher_number == voucher_number)
             result = await db.execute(stmt)
@@ -202,13 +181,27 @@ class VoucherValidationService:
     """Service for voucher validation logic"""
     
     @staticmethod
-    def validate_purchase_order_quantities(po_items: list) -> bool:
-        """Validate purchase order item quantities"""
+    async def validate_purchase_order_quantities(db: AsyncSession, po_items: list) -> bool:
+        """Validate purchase order item quantities and product names"""
+        product_ids = [item.product_id for item in po_items]
+        stmt = select(Product).where(
+            Product.id.in_(product_ids),
+            Product.is_active == True
+        )
+        result = await db.execute(stmt)
+        products = result.scalars().all()
+        product_dict = {p.id: p for p in products}
+        
         for item in po_items:
             if item.quantity <= 0:
                 raise ValueError(f"Quantity must be positive for product {item.product_id}")
             if item.unit_price < 0:
                 raise ValueError(f"Unit price cannot be negative for product {item.product_id}")
+            product = product_dict.get(item.product_id)
+            if not product:
+                raise ValueError(f"Product {item.product_id} does not exist or is inactive")
+            if not product.name or product.name.strip() == '':
+                raise ValueError(f"Product {item.product_id} has no valid name")
         return True
     
     @staticmethod
@@ -260,7 +253,6 @@ class VoucherAutoPopulationService:
         """Auto-populate GRN data from Purchase Order"""
         from app.models.vouchers.purchase import GoodsReceiptNote
         
-        # Get pending PO items
         stmt = select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id == purchase_order.id, PurchaseOrderItem.pending_quantity > 0)
         result = await db.execute(stmt)
         po_items = result.scalars().all()
@@ -268,12 +260,10 @@ class VoucherAutoPopulationService:
         if not po_items:
             raise ValueError("No pending items in Purchase Order")
         
-        # Generate GRN voucher number
-        grn_voucher_number = await VoucherNumberService.generate_voucher_number(
+        grn_voucher_number = await VoucherNumberService.generate_voucher_number_async(
             db, "GRN", purchase_order.organization_id, GoodsReceiptNote
         )
         
-        # Prepare GRN data
         grn_data = {
             "voucher_number": grn_voucher_number,
             "purchase_order_id": purchase_order.id,
@@ -306,7 +296,6 @@ class VoucherAutoPopulationService:
         """Auto-populate Purchase Voucher data from GRN"""
         from app.models.vouchers.purchase import PurchaseVoucher
         
-        # Get accepted GRN items
         stmt = select(GoodsReceiptNoteItem).where(GoodsReceiptNoteItem.grn_id == grn.id, GoodsReceiptNoteItem.accepted_quantity > 0)
         result = await db.execute(stmt)
         grn_items = result.scalars().all()
@@ -314,12 +303,10 @@ class VoucherAutoPopulationService:
         if not grn_items:
             raise ValueError("No accepted items in GRN")
         
-        # Generate voucher number
-        pv_voucher_number = await VoucherNumberService.generate_voucher_number(
+        pv_voucher_number = await VoucherNumberService.generate_voucher_number_async(
             db, "PV", grn.organization_id, PurchaseVoucher
         )
         
-        # Prepare voucher data
         pv_data = {
             "voucher_number": pv_voucher_number,
             "vendor_id": grn.vendor_id,
@@ -337,16 +324,11 @@ class VoucherAutoPopulationService:
         total_igst = 0.0
         
         for grn_item in grn_items:
-            # Calculate tax amounts
             taxable_amount = grn_item.accepted_quantity * grn_item.unit_price
             gst_amount = taxable_amount * (gst_rate / 100)
-            
-            # For intra-state: CGST + SGST, for inter-state: IGST
-            # For simplicity, using CGST + SGST
             cgst_amount = gst_amount / 2
             sgst_amount = gst_amount / 2
             igst_amount = 0.0
-            
             item_total = taxable_amount + gst_amount
             
             pv_item = {

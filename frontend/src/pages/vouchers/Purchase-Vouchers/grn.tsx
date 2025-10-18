@@ -1,4 +1,3 @@
-// frontend/src/pages/vouchers/Purchase-Vouchers/grn.tsx
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   Box,
@@ -21,7 +20,9 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  IconButton,
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -117,6 +118,9 @@ const GoodsReceiptNotePage: React.FC = () => {
     isViewMode,
   } = useVoucherPage(config);
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
+  const [isItemsLoading, setIsItemsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [editProductId, setEditProductId] = useState<number | null>(null);
   const selectedVendorId = watch('vendor_id');
   const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
   const vendorValue = useMemo(() => {
@@ -132,7 +136,6 @@ const GoodsReceiptNotePage: React.FC = () => {
   const [grnCompleteDialogOpen, setGrnCompleteDialogOpen] = useState(false);
   const [existingGrnId, setExistingGrnId] = useState<number | null>(null);
 
-  // Fetch PO status and GRN ID when po_id is provided
   const { data: poData } = useQuery({
     queryKey: ['purchase-order', po_id],
     queryFn: () => {
@@ -142,7 +145,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     enabled: !!po_id && isOrgContextReady,
   });
 
-  // Fetch existing GRN for the PO
   const { data: existingGrnData } = useQuery({
     queryKey: ['grn-for-po', po_id],
     queryFn: () => {
@@ -152,7 +154,16 @@ const GoodsReceiptNotePage: React.FC = () => {
     enabled: !!po_id && isOrgContextReady,
   });
 
-  // Set selectedVoucherType and selectedVoucherId when po_id is present
+  // Validate product IDs before processing
+  const { data: productValidationData } = useQuery({
+    queryKey: ['validate-products', selectedVoucherId],
+    queryFn: () => {
+      if (!selectedVoucherId || !selectedVoucherType) return { invalid_products: [] };
+      return api.post('/products/validate-product-ids', selectedVoucherData?.items?.map((item: any) => item.product_id || item.id_2) || []).then(res => res.data);
+    },
+    enabled: !!selectedVoucherId && !!selectedVoucherType && isOrgContextReady,
+  });
+
   useEffect(() => {
     if (po_id && !selectedVoucherId) {
       setSelectedVoucherType('purchase-order');
@@ -161,7 +172,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     }
   }, [po_id, setSelectedVoucherType, setSelectedVoucherId, setMode]);
 
-  // Check if GRN is complete and show dialog
   useEffect(() => {
     if (poData && poData.grn_status === 'complete' && existingGrnData) {
       setGrnCompleteDialogOpen(true);
@@ -198,7 +208,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     }
     return options.filter(option => !usedVoucherIds.has(option.id));
   }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, usedVoucherIds]);
-  const { data: selectedVoucherData } = useQuery({
+  const { data: selectedVoucherData, isLoading: isVoucherDataLoading } = useQuery({
     queryKey: [selectedVoucherType, selectedVoucherId],
     queryFn: () => {
       if (!selectedVoucherType || !selectedVoucherId) {return null;}
@@ -206,37 +216,106 @@ const GoodsReceiptNotePage: React.FC = () => {
       return api.get(`${endpoint}/${selectedVoucherId}`).then(res => res.data);
     },
     enabled: !!selectedVoucherType && !!selectedVoucherId && !grnCompleteDialogOpen,
+    cacheTime: 0, // Disable caching to avoid stale data
   });
+
   useEffect(() => {
-    if (selectedVoucherData && !grnCompleteDialogOpen && fields.length === 0) {
-      setValue('vendor_id', selectedVoucherData.vendor_id);
-      remove();
-      selectedVoucherData.items.forEach((item: any) => {
-        append({
-          product_id: item.product_id,
-          product_name: item.product?.product_name || item.product_name || '',
-          ordered_quantity: item.quantity,
-          received_quantity: 0, // Initialize to 0 to allow user input
-          accepted_quantity: 0, // Initialize to 0 to allow user input
-          rejected_quantity: 0,
-          unit_price: item.unit_price,
-          unit: item.unit,
-          po_item_id: item.id,
-        });
-      });
-      setValue('reference_voucher_number', selectedVoucherData.voucher_number);
+    if (isVoucherDataLoading) {
+      setIsItemsLoading(true);
+    } else {
+      setIsItemsLoading(false);
     }
-  }, [selectedVoucherData, setValue, append, remove, grnCompleteDialogOpen, fields.length]);
+  }, [isVoucherDataLoading]);
+
+  useEffect(() => {
+    if (selectedVoucherData && !grnCompleteDialogOpen) {
+      console.log('[GoodsReceiptNotePage] selectedVoucherData:', JSON.stringify(selectedVoucherData, null, 2));
+      setValue('vendor_id', selectedVoucherData.vendor_id || selectedVoucherData.vendor_id_1 || null);
+      setValue('reference_voucher_number', selectedVoucherData.voucher_number || selectedVoucherData.voucher_number_1 || '');
+      setValue('purchase_order_id', selectedVoucherId);
+      remove();
+      if (selectedVoucherData.items && Array.isArray(selectedVoucherData.items) && selectedVoucherData.items.length > 0) {
+        console.log('[GoodsReceiptNotePage] Processing items:', JSON.stringify(selectedVoucherData.items, null, 2));
+        let missingNameItems: string[] = [];
+        selectedVoucherData.items.forEach((item: any, index: number) => {
+          const productFromList = productList?.find((p: any) => p.id === (item.product_id || item.id_2));
+          // Prioritize name_1 from SQL query, then fallback to other sources
+          const productName = item.name_1 || item.product?.product_name || item.product_name || productFromList?.name || null;
+          console.log(`[GoodsReceiptNotePage] Item ${index}:`, JSON.stringify({
+            product_id: item.product_id || item.id_2,
+            name_1: item.name_1,
+            product_name: item.product_name,
+            product: item.product,
+            productFromList: productFromList,
+            productNameUsed: productName,
+            quantity: item.quantity,
+            unit_1: item.unit_1,
+            unit_price_1: item.unit_price_1,
+            po_item_id: item.id_3
+          }, null, 2));
+          if (!productName) {
+            console.error(`[GoodsReceiptNotePage] Item ${index} missing product name (product_id: ${item.product_id || item.id_2})`);
+            missingNameItems.push(`Item ${index + 1} (Product ID: ${item.product_id || item.id_2})`);
+          } else {
+            append({
+              product_id: item.product_id || item.id_2 || null,
+              product_name: productName,
+              ordered_quantity: item.quantity || item.ordered_quantity || 0,
+              received_quantity: 0,
+              accepted_quantity: 0,
+              rejected_quantity: 0,
+              unit_price: item.unit_price_1 || item.unit_price || 0,
+              unit: item.unit_1 || item.unit || item.product?.unit || productFromList?.unit || '',
+              po_item_id: item.id_3 || item.id || null,
+            });
+          }
+        });
+        if (missingNameItems.length > 0) {
+          const invalidProducts = productValidationData?.invalid_products || [];
+          const validationErrors = invalidProducts.map((p: any) => `Product ID ${p.id}: ${p.error}`).join(', ');
+          setErrorMessage(
+            `Some items are missing product names: ${missingNameItems.join(', ')}. ` +
+            (validationErrors ? `Validation errors: ${validationErrors}. ` : '') +
+            `Please edit the product records to add valid names.`
+          );
+        } else {
+          setErrorMessage(null);
+        }
+      } else {
+        console.warn('[GoodsReceiptNotePage] No valid items found in selectedVoucherData:', JSON.stringify(selectedVoucherData, null, 2));
+        setErrorMessage('No valid items found in the selected purchase order. Please select a valid purchase order.');
+      }
+    }
+  }, [selectedVoucherData, productValidationData, setValue, append, remove, grnCompleteDialogOpen, productList]);
+
   const handleAddItem = () => {
     // No add item for GRN, as items come from voucher
   };
+
   const handleCancel = () => {
     setMode('view');
     if (voucherData) {
       reset(voucherData);
     }
+    setErrorMessage(null);
   };
+
+  const handleEditProduct = (productId: number) => {
+    setEditProductId(productId);
+    setShowAddProductModal(true);
+  };
+
+  const handleProductModalClose = () => {
+    setShowAddProductModal(false);
+    setEditProductId(null);
+    refreshMasterData(); // Refresh product list after editing
+  };
+
   const onSubmit = async (data: any) => {
+    if (errorMessage) {
+      alert('Cannot submit GRN due to missing product names. Please resolve the errors by editing the product records.');
+      return;
+    }
     try {
       console.log('Submitting GRN with data:', {
         vendor_id: data.vendor_id,
@@ -254,6 +333,10 @@ const GoodsReceiptNotePage: React.FC = () => {
         voucher_number: data.voucher_number,
       });
       if (config.hasItems !== false) {
+        if (data.items.some((item: any) => !item.product_name || item.product_name === 'Product Not Found')) {
+          alert('Cannot submit GRN with missing or invalid product names.');
+          return;
+        }
         data.total_amount = fields.reduce((sum: number, field: any) => sum + (field.accepted_quantity * field.unit_price), 0);
         data.items = fields.map((field: any) => ({
           product_id: field.product_id,
@@ -286,6 +369,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       alert('Failed to save goods receipt note. Please try again.');
     }
   };
+
   const validateQuantities = () => {
     let valid = true;
     fields.forEach((field, index) => {
@@ -299,11 +383,17 @@ const GoodsReceiptNotePage: React.FC = () => {
     });
     return valid;
   };
+
   const handleFormSubmit = (data: any) => {
+    if (errorMessage) {
+      alert('Cannot submit GRN due to missing product names. Please resolve the errors by editing the product records.');
+      return;
+    }
     if (validateQuantities()) {
       _handleSubmitForm(data);
     }
   };
+
   useEffect(() => {
     if (mode === 'create' && !nextVoucherNumber && !isLoading) {
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
@@ -311,11 +401,14 @@ const GoodsReceiptNotePage: React.FC = () => {
         .catch(err => console.error('Failed to fetch voucher number:', err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
+
   const handleVoucherClick = async (voucher: any) => {
     handleView(voucher.id);
   };
+
   useEffect(() => {
     if (voucherData && (mode === 'view' || mode === 'edit')) {
+      console.log('[GoodsReceiptNotePage] voucherData for view/edit:', JSON.stringify(voucherData, null, 2));
       const mappedData = {
         ...voucherData,
         date: voucherData.grn_date ? voucherData.grn_date.split('T')[0] : '',
@@ -325,11 +418,11 @@ const GoodsReceiptNotePage: React.FC = () => {
           received_quantity: item.received_quantity,
           accepted_quantity: item.accepted_quantity,
           rejected_quantity: item.rejected_quantity,
-          product_name: item.product?.product_name,
+          product_name: item.name_1 || item.product?.product_name || item.product_name || 'Product Not Found',
           po_item_id: item.po_item_id,
         })),
         reference_voucher_type: 'purchase-order',
-        reference_voucher_number: voucherData.purchase_order?.voucher_number || voucherData.purchase_order_id
+        reference_voucher_number: voucherData.voucher_number_1 || voucherData.purchase_order?.voucher_number || voucherData.purchase_order_id
       };
       reset(mappedData);
       setSelectedVoucherType('purchase-order');
@@ -352,6 +445,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       }
     }
   }, [voucherData, mode, reset, setValue, append, remove]);
+
   const indexContent = (
     <>
       <TableContainer sx={{ maxHeight: 400 }}>
@@ -367,7 +461,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           <TableBody>
             {latestVouchers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">No goods receipt notes available</TableCell>
+                <TableCell colSpan="4" align="center">No goods receipt notes available</TableCell>
               </TableRow>
             ) : (
               latestVouchers.slice(0, 7).map((voucher: any) => (
@@ -404,6 +498,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       </TableContainer>
     </>
   );
+
   const formContent = (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -420,6 +515,11 @@ const GoodsReceiptNotePage: React.FC = () => {
           onCancel={handleCancel}
         />
       </Box>
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+      )}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={0.5}>
           <Grid size={6}>
@@ -576,104 +676,127 @@ const GoodsReceiptNotePage: React.FC = () => {
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Items</Typography>
           </Grid>
           <Grid size={12}>
-            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable, ...voucherStyles.optimizedTableContainer }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={voucherStyles.grnTableColumns.productName}>Product</TableCell>
-                    <TableCell sx={voucherStyles.grnTableColumns.orderQty}>Order Qty</TableCell>
-                    <TableCell sx={voucherStyles.grnTableColumns.receivedQty}>Received Qty</TableCell>
-                    <TableCell sx={voucherStyles.grnTableColumns.acceptedQty}>Accepted Qty</TableCell>
-                    <TableCell sx={voucherStyles.grnTableColumns.rejectedQty}>Rejected Qty</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {fields.map((field: any, index: number) => (
-                    <React.Fragment key={field.id}>
+            {isItemsLoading ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable, ...voucherStyles.optimizedTableContainer }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={voucherStyles.grnTableColumns.productName}>Product</TableCell>
+                      <TableCell sx={voucherStyles.grnTableColumns.orderQty}>Order Qty</TableCell>
+                      <TableCell sx={voucherStyles.grnTableColumns.receivedQty}>Received Qty</TableCell>
+                      <TableCell sx={voucherStyles.grnTableColumns.acceptedQty}>Accepted Qty</TableCell>
+                      <TableCell sx={voucherStyles.grnTableColumns.rejectedQty}>Rejected Qty</TableCell>
+                      <TableCell sx={{ width: 50 }}>Edit</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {fields.length === 0 ? (
                       <TableRow>
-                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
-                          <TextField
-                            fullWidth
-                            value={watch(`items.${index}.product_name`) || ''}
-                            disabled
-                            size="small"
-                            inputProps={{ style: { textAlign: 'center' } }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
-                          <TextField
-                            type="number"
-                            value={watch(`items.${index}.ordered_quantity`)}
-                            disabled
-                            size="small"
-                            sx={{ width: 100 }}
-                            inputProps={{ style: { textAlign: 'center' } }}
-                            InputProps={{
-                              endAdornment: watch(`items.${index}.unit`) && (
-                                <span style={{ fontSize: '12px', color: '#666' }}>
-                                  {watch(`items.${index}.unit`)}
-                                </span>
-                              )
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
-                          <TextField
-                            type="number"
-                            {...control.register(`items.${index}.received_quantity`, { valueAsNumber: true })}
-                            disabled={mode === 'view'}
-                            size="small"
-                            sx={{ width: 100 }}
-                            inputProps={{ style: { textAlign: 'center' } }}
-                            InputProps={{
-                              endAdornment: watch(`items.${index}.unit`) && (
-                                <span style={{ fontSize: '12px', color: '#666' }}>
-                                  {watch(`items.${index}.unit`)}
-                                </span>
-                              )
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
-                          <TextField
-                            type="number"
-                            {...control.register(`items.${index}.accepted_quantity`, { valueAsNumber: true })}
-                            disabled={mode === 'view'}
-                            size="small"
-                            sx={{ width: 100 }}
-                            inputProps={{ style: { textAlign: 'center' } }}
-                            InputProps={{
-                              endAdornment: watch(`items.${index}.unit`) && (
-                                <span style={{ fontSize: '12px', color: '#666' }}>
-                                  {watch(`items.${index}.unit`)}
-                                </span>
-                              )
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
-                          <TextField
-                            type="number"
-                            {...control.register(`items.${index}.rejected_quantity`, { valueAsNumber: true })}
-                            disabled={mode === 'view'}
-                            size="small"
-                            sx={{ width: 100 }}
-                            inputProps={{ style: { textAlign: 'center' } }}
-                            InputProps={{
-                              endAdornment: watch(`items.${index}.unit`) && (
-                                <span style={{ fontSize: '12px', color: '#666' }}>
-                                  {watch(`items.${index}.unit`)}
-                                </span>
-                              )
-                            }}
-                          />
+                        <TableCell colSpan="6" align="center">
+                          No items available
                         </TableCell>
                       </TableRow>
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    ) : (
+                      fields.map((field: any, index: number) => (
+                        <TableRow key={field.id}>
+                          <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                            <TextField
+                              fullWidth
+                              value={watch(`items.${index}.product_name`) || 'Product Not Found'}
+                              disabled
+                              size="small"
+                              inputProps={{ style: { textAlign: 'center' } }}
+                              error={!watch(`items.${index}.product_name`)}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                            <TextField
+                              type="number"
+                              value={watch(`items.${index}.ordered_quantity`) || 0}
+                              disabled
+                              size="small"
+                              sx={{ width: 100 }}
+                              inputProps={{ style: { textAlign: 'center' } }}
+                              InputProps={{
+                                endAdornment: watch(`items.${index}.unit`) && (
+                                  <span style={{ fontSize: '12px', color: '#666' }}>
+                                    {watch(`items.${index}.unit`)}
+                                  </span>
+                                )
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                            <TextField
+                              type="number"
+                              {...control.register(`items.${index}.received_quantity`, { valueAsNumber: true })}
+                              disabled={mode === 'view'}
+                              size="small"
+                              sx={{ width: 100 }}
+                              inputProps={{ style: { textAlign: 'center' } }}
+                              InputProps={{
+                                endAdornment: watch(`items.${index}.unit`) && (
+                                  <span style={{ fontSize: '12px', color: '#666' }}>
+                                    {watch(`items.${index}.unit`)}
+                                  </span>
+                                )
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                            <TextField
+                              type="number"
+                              {...control.register(`items.${index}.accepted_quantity`, { valueAsNumber: true })}
+                              disabled={mode === 'view'}
+                              size="small"
+                              sx={{ width: 100 }}
+                              inputProps={{ style: { textAlign: 'center' } }}
+                              InputProps={{
+                                endAdornment: watch(`items.${index}.unit`) && (
+                                  <span style={{ fontSize: '12px', color: '#666' }}>
+                                    {watch(`items.${index}.unit`)}
+                                  </span>
+                                )
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                            <TextField
+                              type="number"
+                              {...control.register(`items.${index}.rejected_quantity`, { valueAsNumber: true })}
+                              disabled={mode === 'view'}
+                              size="small"
+                              sx={{ width: 100 }}
+                              inputProps={{ style: { textAlign: 'center' } }}
+                              InputProps={{
+                                endAdornment: watch(`items.${index}.unit`) && (
+                                  <span style={{ fontSize: '12px', color: '#666' }}>
+                                    {watch(`items.${index}.unit`)}
+                                  </span>
+                                )
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditProduct(field.product_id)}
+                              disabled={mode === 'view'}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Grid>
         </Grid>
       </form>
@@ -700,6 +823,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       </Dialog>
     </Box>
   );
+
   if (isLoading) {
     return (
       <Container>
@@ -709,6 +833,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       </Container>
     );
   }
+
   return (
     <>
       <VoucherLayout
@@ -742,10 +867,11 @@ const GoodsReceiptNotePage: React.FC = () => {
       />
       <AddProductModal 
         open={showAddProductModal}
-        onClose={() => setShowAddProductModal(false)}
+        onClose={handleProductModalClose}
         onProductAdded={refreshMasterData}
         loading={addProductLoading}
         setLoading={setAddProductLoading}
+        productId={editProductId}
       />
       <AddShippingAddressModal 
         open={showShippingModal}
@@ -764,4 +890,5 @@ const GoodsReceiptNotePage: React.FC = () => {
     </>
   );
 };
+
 export default GoodsReceiptNotePage;

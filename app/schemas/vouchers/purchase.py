@@ -1,12 +1,9 @@
 # app/schemas/vouchers/purchase.py
 
-# app/schemas/vouchers/purchase.py
-
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import date, datetime
-from typing import Dict, Any
-from pydantic import field_validator, ConfigDict
+from pydantic import field_validator
 from .base import VoucherItemWithTax, VoucherBase, VoucherInDBBase, ProductMinimal, VendorMinimal, PurchaseOrderMinimal
 
 # Purchase Voucher
@@ -17,6 +14,7 @@ class PurchaseVoucherItemInDB(PurchaseVoucherItemCreate):
     id: int
     purchase_voucher_id: int
     product: Optional[ProductMinimal] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class PurchaseVoucherCreate(VoucherBase):
     vendor_id: int
@@ -67,6 +65,7 @@ class PurchaseVoucherInDB(VoucherInDBBase):
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseVoucherItemInDB]
     vendor: Optional[VendorMinimal] = None
+    model_config = ConfigDict(from_attributes=True)
 
 # Purchase Order
 class PurchaseOrderItemCreate(VoucherItemWithTax):
@@ -81,6 +80,9 @@ class PurchaseOrderItemInDB(VoucherItemWithTax):
     product: Optional[ProductMinimal] = None
     discount_amount: float = 0.0
     description: Optional[str] = None
+    name_1: Optional[str] = None  # Added to capture SQL alias products_1.name
+
+    model_config = ConfigDict(from_attributes=True)
 
     @field_validator('discount_amount', mode='before')
     @classmethod
@@ -133,6 +135,8 @@ class PurchaseOrderInDB(VoucherInDBBase):
     tracking_number: Optional[str] = None
     tracking_link: Optional[str] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
     @field_validator('round_off', mode='before')
     @classmethod
     def handle_none_round_off(cls, v):
@@ -163,6 +167,7 @@ class GRNItemInDB(GRNItemCreate):
     id: int
     grn_id: int
     product: Optional[ProductMinimal] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class GRNCreate(VoucherBase):
     purchase_order_id: int
@@ -204,6 +209,7 @@ class GRNInDB(VoucherInDBBase):
     items: List[GRNItemInDB]
     vendor: Optional[VendorMinimal] = None
     purchase_order: Optional[PurchaseOrderMinimal] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class GRNAutoPopulateResponse(BaseModel):
     vendor_id: int
@@ -222,6 +228,7 @@ class PurchaseReturnItemCreate(VoucherItemWithTax):
 class PurchaseReturnItemInDB(PurchaseReturnItemCreate):
     id: int
     purchase_return_id: int
+    model_config = ConfigDict(from_attributes=True)
 
 class PurchaseReturnCreate(VoucherBase):
     vendor_id: int
@@ -250,3 +257,4 @@ class PurchaseReturnInDB(VoucherInDBBase):
     reason: Optional[str]
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseReturnItemInDB]
+    model_config = ConfigDict(from_attributes=True)

@@ -1,5 +1,4 @@
 // frontend/src/hooks/useVoucherPage.ts
-// Enhanced comprehensive hook for voucher page logic with comprehensive overhaul features
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
@@ -570,10 +569,27 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   };
 
   const handleReferenceSelected = (referenceData: any) => {
+    console.log('[useVoucherPage] handleReferenceSelected called with:', referenceData);
     setReferenceDocument(referenceData);
     setSelectedReferenceType(referenceData.type);
     setSelectedReferenceId(referenceData.id);
-    if (referenceData.items && config.hasItems) {
+    if (referenceData.items && config.hasItems && config.voucherType === 'goods-receipt-notes') {
+      console.log('[useVoucherPage] Populating GRN items:', referenceData.items);
+      fields.forEach((_, index) => remove(index));
+      referenceData.items.forEach((item: any) => {
+        append({
+          product_id: item.product_id || null,
+          product_name: item.product?.name || item.product_name || 'Unknown Product',
+          ordered_quantity: item.quantity || 0,
+          received_quantity: 0,
+          accepted_quantity: 0,
+          rejected_quantity: 0,
+          unit_price: item.unit_price || 0,
+          unit: item.unit || item.product?.unit || '',
+          po_item_id: item.id || null,
+        });
+      });
+    } else if (referenceData.items && config.hasItems) {
       const referenceItems = referenceData.items.map((item: any) => ({
         ...item,
         quantity: item.quantity || 0,
@@ -852,7 +868,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         const newItems = voucherData.items.map((item: any) => ({
           ...item,
           product_id: item.product_id,
-          product_name: item.product_name || item.product?.product_name || "",
+          product_name: item.product?.name || item.product_name || "Unknown Product",
           unit_price: item.unit_price,
           original_unit_price:
             item.product?.unit_price || item.unit_price || 0,

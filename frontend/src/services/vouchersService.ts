@@ -1,13 +1,13 @@
-// src/services/vouchersService.ts
 // frontend/src/services/vouchersService.ts
 import api from "../lib/api";
+
 export const voucherService = {
   // Generic Voucher Methods
   getVouchers: async (
     type: string,
     params?: Record<string, any>,
   ): Promise<any> => {
-    const endpoint = `/${type}`; // Use type directly since it's already plural
+    const endpoint = `/${type}`;
     console.log(
       `[voucherService] Fetching vouchers from endpoint: ${endpoint}`,
     );
@@ -71,7 +71,12 @@ export const voucherService = {
   },
   // Purchase Orders
   getPurchaseOrderById: async (id: number): Promise<any> => {
+    console.log(`[voucherService] Fetching purchase order by ID: ${id}`);
     const response = await api.get(`/purchase-orders/${id}`);
+    console.log(`[voucherService] Purchase order data:`, response.data);
+    if (!response.data.items || !Array.isArray(response.data.items)) {
+      console.warn(`[voucherService] Purchase order ${id} has no valid items array`);
+    }
     return response.data;
   },
   createPurchaseOrder: async (
@@ -129,6 +134,11 @@ export const voucherService = {
     const response = await api.put(`/purchase-returns/${id}`, data);
     return response.data;
   },
+  // Receipt Voucher
+  getReceiptVoucherById: async (id: number): Promise<any> => {
+    const response = await api.get(`/receipt-vouchers/${id}`);
+    return response.data;
+  },
   // Enhanced service methods for voucher actions
   getEmailRecipient: (
     voucher: Record<string, any>,
@@ -182,7 +192,7 @@ export const voucherService = {
       canPrint: true,
       canEmail: Boolean(recipient?.email),
       emailRecipient: recipient,
-      canRevise: true,  // Always allow revise for now
+      canRevise: true,
     };
   },
 };

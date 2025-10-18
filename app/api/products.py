@@ -226,7 +226,40 @@ async def delete_product(
     logger.info(f"Product {product.product_name} deleted by {current_user.email}")
     return {"message": "Product deleted successfully"}
 
-# Excel Import/Export/Template endpoints
+@router.post("/validate-product-ids")
+async def validate_product_ids(
+    product_ids: List[int],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Validate product IDs and check for missing or invalid names"""
+    try:
+        stmt = select(Product).where(
+            Product.id.in_(product_ids),
+            Product.organization_id == current_user.organization_id,
+            Product.is_active == True
+        )
+        result = await db.execute(stmt)
+        products = result.scalars().all()
+        
+        product_dict = {p.id: p for p in products}
+        invalid_products = []
+        
+        for product_id in product_ids:
+            product = product_dict.get(product_id)
+            if not product:
+                invalid_products.append({"id": product_id, "error": "Product does not exist or is inactive"})
+            elif not product.product_name or product.product_name.strip() == '':
+                invalid_products.append({"id": product_id, "error": "Product has no valid name"})
+        
+        return {"invalid_products": invalid_products}
+        
+    except Exception as e:
+        logger.error(f"Error validating product IDs: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to validate product IDs"
+        )
 
 @router.get("/template/excel")
 async def download_products_template(
@@ -278,7 +311,7 @@ async def export_products_excel(
     products_data = []
     for product in products:
         products_data.append({
-            "product_name": product.product_name,  # Map name to product_name for consistency for import
+            "product_name": product.product_name,
             "hsn_code": product.hsn_code or "",
             "part_number": product.part_number or "",
             "unit": product.unit,
@@ -338,7 +371,7 @@ async def import_products_excel(
             try:
                 # Map Excel columns to model fields
                 product_data = {
-                    "product_name": str(record.get("product_name", "")).strip(),  # Map product_name to name for DB
+                    "product_name": str(record.get("product_name", "")).strip(),
                     "hsn_code": str(record.get("hsn_code", "")).strip(),
                     "part_number": str(record.get("part_number", "")).strip(),
                     "unit": str(record.get("unit", "")).strip(),
@@ -437,7 +470,7 @@ async def import_products_excel(
         # Commit all changes
         await db.commit()
         
-        logger.info(f"Products import completed completed by {current_user.email}: "
+        logger.info(f"Products import completed by {current_user.email}: "
                    f"{created_count} created, {updated_count} updated, "
                    f"{created_stocks} stock entries created, {updated_stocks} stock entries updated, "
                    f"{len(errors)} errors")
@@ -472,7 +505,7 @@ async def import_products_excel(
         )
 
 # File upload directory
-UPLOAD_DIR = "uploads/products"
+UPLOAD_DIR = "Uploads/products"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/{product_id}/files", response_model=ProductFileResponse)
@@ -713,7 +746,6 @@ async def delete_product_file(
             detail="Error deleting file"
         )
 
-
 @router.post("/check-consistency")
 async def check_products_stock_consistency(
     fix_issues: bool = False,
@@ -836,6 +868,3 @@ async def check_products_stock_consistency(
         await db.commit()
     
     return result
-
-
-logger.info("Products router loaded")
