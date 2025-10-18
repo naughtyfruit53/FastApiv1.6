@@ -25,7 +25,7 @@ import AddCustomerModal from '../../../components/AddCustomerModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import TrackingDetailsDialog from '../../../components/TrackingDetailsDialog';
+import TrackingDetailsDialog from '../../../components/DispatchManagement/TrackingDetailsDialog';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
