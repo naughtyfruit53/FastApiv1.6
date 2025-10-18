@@ -1,12 +1,12 @@
 aiosqlite==0.21.0
 alembic==1.13.1
-apscheduler==3.10.4  # Background task scheduling (remove if unused)
+apscheduler==3.10.4
 asyncpg==0.30.0
 authlib==1.3.2
-azure-identity==1.17.1  # For Microsoft Graph authentication
-bcrypt==4.0.1  # Pinned to 4.0.1 for passlib compatibility
-beautifulsoup4==4.12.2  # HTML parsing
-bleach==6.0.0  # HTML sanitization
+azure-identity==1.17.1
+bcrypt==4.0.1
+beautifulsoup4==4.12.2
+bleach==6.0.0
 brevo-python==1.2.0
 cryptography==45.0.7
 email-validator==2.1.0.post1
@@ -16,22 +16,22 @@ google-api-python-client==2.151.0
 google-auth==2.34.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.1
-gunicorn==22.0.0  # For production server
+gunicorn==22.0.0
 icalendar==6.0.1
 imaplib2==3.6
 jinja2==3.1.4
-joblib==1.4.2  # Required for scikit-learn (remove if scikit-learn unused)
+# joblib==1.4.2  # Commented: Required for scikit-learn
 msal==1.31.0
 msgraph-sdk==1.4.0
 num2words==0.5.13
-numpy==1.26.4  # Required for pandas/scikit-learn (remove if unused)
+# numpy==1.26.4  # Commented: Required for pandas/scikit-learn
 openpyxl==3.1.5
-pandas==2.3.2  # Consider removing if analytics unused
+# pandas==2.3.2  # Commented: Remove if analytics unused
 passlib[bcrypt]==1.7.4
 pdfkit==1.0.0
-psutil==6.1.0  # For memory monitoring
+psutil==6.1.0
 pydantic==2.11.7
-pymupdf==1.26.4  # Consider removing if PDF processing unused
+# pymupdf==1.26.4  # Commented: Remove if PDF processing unused
 pytesseract==0.3.13
 pytest-playwright==0.5.1
 python-dateutil==2.8.2
@@ -41,13 +41,11 @@ python-multipart==0.0.6
 redis==5.0.8  # Added for fastapi-limiter
 reportlab==4.2.5
 requests==2.31.0
-scikit-learn==1.5.2  # Consider removing if ML features unused
-scipy==1.14.1  # Required for scikit-learn (remove if unused)
+# scikit-learn==1.5.2  # Commented: Remove if ML features unused
+# scipy==1.14.1  # Commented: Required for scikit-learn
 sqlalchemy==2.0.43
 supabase==2.21.1
 uvicorn==0.24.0
 xlrd==2.0.2
-# UI Audit System Dependencies
 playwright==1.49.0
-# Add psycopg3 for synchronous PostgreSQL connections
 psycopg[binary]==3.2.2

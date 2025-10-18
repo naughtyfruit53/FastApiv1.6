@@ -3,12 +3,11 @@
 ERP Core Schemas - Chart of Accounts, AP/AR, GST, and Financial Management
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, SkipValidation
 from typing import Optional, List, Union
-from datetime import datetime, date
+from datetime import datetime, date  # Added date import
 from decimal import Decimal
 from enum import Enum
-
 
 class AccountTypeEnum(str, Enum):
     """Account types for Chart of Accounts"""
@@ -20,7 +19,6 @@ class AccountTypeEnum(str, Enum):
     BANK = "bank"
     CASH = "cash"
 
-
 class TaxTypeEnum(str, Enum):
     """Tax types for GST compliance"""
     CGST = "cgst"
@@ -29,7 +27,6 @@ class TaxTypeEnum(str, Enum):
     CESS = "cess"
     TCS = "tcs"
     TDS = "tds"
-
 
 # Chart of Accounts Schemas
 class ChartOfAccountsBase(BaseModel):
@@ -44,10 +41,8 @@ class ChartOfAccountsBase(BaseModel):
     description: Optional[str] = Field(None, description="Account description")
     notes: Optional[str] = Field(None, description="Additional notes")
 
-
 class ChartOfAccountsCreate(ChartOfAccountsBase):
     pass
-
 
 class ChartOfAccountsUpdate(BaseModel):
     account_name: Optional[str] = None
@@ -61,7 +56,6 @@ class ChartOfAccountsUpdate(BaseModel):
     notes: Optional[str] = None
     is_active: Optional[bool] = None
 
-
 class ChartOfAccountsResponse(ChartOfAccountsBase):
     id: int
     organization_id: int
@@ -71,19 +65,17 @@ class ChartOfAccountsResponse(ChartOfAccountsBase):
     created_at: datetime
     updated_at: Optional[datetime]
     
-    # Hierarchy information
     sub_accounts: List["ChartOfAccountsResponse"] = []
     
     class Config:
         from_attributes = True
-
 
 # GST Configuration Schemas
 class GSTConfigurationBase(BaseModel):
     gstin: str = Field(..., description="GST Identification Number")
     trade_name: str = Field(..., description="Trade name")
     legal_name: str = Field(..., description="Legal name")
-    registration_date: date = Field(..., description="GST registration date")
+    registration_date: SkipValidation[date] = Field(..., description="GST registration date")
     constitution: str = Field(..., description="Constitution type")
     business_type: str = Field(..., description="Business type")
     address_line1: str = Field(..., description="Address line 1")
@@ -94,15 +86,13 @@ class GSTConfigurationBase(BaseModel):
     is_composition_scheme: bool = Field(False, description="Is composition scheme dealer")
     composition_tax_rate: Optional[Decimal] = Field(None, description="Composition tax rate")
 
-
 class GSTConfigurationCreate(GSTConfigurationBase):
     pass
-
 
 class GSTConfigurationUpdate(BaseModel):
     trade_name: Optional[str] = None
     legal_name: Optional[str] = None
-    registration_date: Optional[date] = None
+    registration_date: Optional[SkipValidation[date]] = None
     constitution: Optional[str] = None
     business_type: Optional[str] = None
     address_line1: Optional[str] = None
@@ -114,7 +104,6 @@ class GSTConfigurationUpdate(BaseModel):
     composition_tax_rate: Optional[Decimal] = None
     is_active: Optional[bool] = None
 
-
 class GSTConfigurationResponse(GSTConfigurationBase):
     id: int
     organization_id: int
@@ -124,7 +113,6 @@ class GSTConfigurationResponse(GSTConfigurationBase):
     
     class Config:
         from_attributes = True
-
 
 # Tax Code Schemas
 class TaxCodeBase(BaseModel):
@@ -139,10 +127,8 @@ class TaxCodeBase(BaseModel):
     tax_payable_account_id: Optional[int] = Field(None, description="Tax payable account ID")
     tax_input_account_id: Optional[int] = Field(None, description="Tax input account ID")
 
-
 class TaxCodeCreate(TaxCodeBase):
     gst_configuration_id: Optional[int] = Field(None, description="GST configuration ID")
-
 
 class TaxCodeUpdate(BaseModel):
     tax_name: Optional[str] = None
@@ -156,7 +142,6 @@ class TaxCodeUpdate(BaseModel):
     tax_input_account_id: Optional[int] = None
     is_active: Optional[bool] = None
 
-
 class TaxCodeResponse(TaxCodeBase):
     id: int
     organization_id: int
@@ -168,12 +153,11 @@ class TaxCodeResponse(TaxCodeBase):
     class Config:
         from_attributes = True
 
-
 # Journal Entry Schemas
 class JournalEntryBase(BaseModel):
     account_id: int = Field(..., description="Account ID")
     entry_number: str = Field(..., description="Entry number")
-    entry_date: date = Field(..., description="Entry date")
+    entry_date: SkipValidation[date] = Field(..., description="Entry date")
     reference_type: Optional[str] = Field(None, description="Reference type")
     reference_id: Optional[int] = Field(None, description="Reference ID")
     reference_number: Optional[str] = Field(None, description="Reference number")
@@ -182,14 +166,12 @@ class JournalEntryBase(BaseModel):
     description: Optional[str] = Field(None, description="Description")
     notes: Optional[str] = Field(None, description="Notes")
 
-
 class JournalEntryCreate(JournalEntryBase):
     pass
 
-
 class JournalEntryUpdate(BaseModel):
     account_id: Optional[int] = None
-    entry_date: Optional[date] = None
+    entry_date: Optional[SkipValidation[date]] = None
     reference_type: Optional[str] = None
     reference_id: Optional[int] = None
     reference_number: Optional[str] = None
@@ -199,46 +181,41 @@ class JournalEntryUpdate(BaseModel):
     notes: Optional[str] = None
     is_reconciled: Optional[bool] = None
 
-
 class JournalEntryResponse(JournalEntryBase):
     id: int
     organization_id: int
     is_reconciled: bool
-    reconciled_date: Optional[date]
+    reconciled_date: Optional[SkipValidation[date]]
     created_at: datetime
     updated_at: datetime
     
     class Config:
         from_attributes = True
 
-
 # Accounts Payable Schemas
 class AccountsPayableBase(BaseModel):
     vendor_id: int = Field(..., description="Vendor ID")
     bill_number: str = Field(..., description="Bill number")
-    bill_date: date = Field(..., description="Bill date")
-    due_date: date = Field(..., description="Due date")
+    bill_date: SkipValidation[date] = Field(..., description="Bill date")
+    due_date: SkipValidation[date] = Field(..., description="Due date")
     bill_amount: Decimal = Field(..., description="Bill amount")
     tax_amount: Decimal = Field(0.00, description="Tax amount")
     reference_type: Optional[str] = Field(None, description="Reference type")
     reference_id: Optional[int] = Field(None, description="Reference ID")
     notes: Optional[str] = Field(None, description="Notes")
 
-
 class AccountsPayableCreate(AccountsPayableBase):
     pass
 
-
 class AccountsPayableUpdate(BaseModel):
-    bill_date: Optional[date] = None
-    due_date: Optional[date] = None
+    bill_date: Optional[SkipValidation[date]] = None
+    due_date: Optional[SkipValidation[date]] = None
     bill_amount: Optional[Decimal] = None
     tax_amount: Optional[Decimal] = None
     reference_type: Optional[str] = None
     reference_id: Optional[int] = None
     notes: Optional[str] = None
     payment_status: Optional[str] = None
-
 
 class AccountsPayableResponse(AccountsPayableBase):
     id: int
@@ -252,34 +229,30 @@ class AccountsPayableResponse(AccountsPayableBase):
     class Config:
         from_attributes = True
 
-
 # Accounts Receivable Schemas
 class AccountsReceivableBase(BaseModel):
     customer_id: int = Field(..., description="Customer ID")
     invoice_number: str = Field(..., description="Invoice number")
-    invoice_date: date = Field(..., description="Invoice date")
-    due_date: date = Field(..., description="Due date")
+    invoice_date: SkipValidation[date] = Field(..., description="Invoice date")
+    due_date: SkipValidation[date] = Field(..., description="Due date")
     invoice_amount: Decimal = Field(..., description="Invoice amount")
     tax_amount: Decimal = Field(0.00, description="Tax amount")
     reference_type: Optional[str] = Field(None, description="Reference type")
     reference_id: Optional[int] = Field(None, description="Reference ID")
     notes: Optional[str] = Field(None, description="Notes")
 
-
 class AccountsReceivableCreate(AccountsReceivableBase):
     pass
 
-
 class AccountsReceivableUpdate(BaseModel):
-    invoice_date: Optional[date] = None
-    due_date: Optional[date] = None
+    invoice_date: Optional[SkipValidation[date]] = None
+    due_date: Optional[SkipValidation[date]] = None
     invoice_amount: Optional[Decimal] = None
     tax_amount: Optional[Decimal] = None
     reference_type: Optional[str] = None
     reference_id: Optional[int] = None
     notes: Optional[str] = None
     payment_status: Optional[str] = None
-
 
 class AccountsReceivableResponse(AccountsReceivableBase):
     id: int
@@ -293,11 +266,10 @@ class AccountsReceivableResponse(AccountsReceivableBase):
     class Config:
         from_attributes = True
 
-
 # Payment Record Schemas
 class PaymentRecordBase(BaseModel):
     payment_number: str = Field(..., description="Payment number")
-    payment_date: date = Field(..., description="Payment date")
+    payment_date: SkipValidation[date] = Field(..., description="Payment date")
     payment_amount: Decimal = Field(..., description="Payment amount")
     payment_method: str = Field(..., description="Payment method")
     accounts_payable_id: Optional[int] = Field(None, description="Accounts payable ID")
@@ -307,20 +279,17 @@ class PaymentRecordBase(BaseModel):
     transaction_reference: Optional[str] = Field(None, description="Transaction reference")
     notes: Optional[str] = Field(None, description="Notes")
 
-
 class PaymentRecordCreate(PaymentRecordBase):
     pass
 
-
 class PaymentRecordUpdate(BaseModel):
-    payment_date: Optional[date] = None
+    payment_date: Optional[SkipValidation[date]] = None
     payment_amount: Optional[Decimal] = None
     payment_method: Optional[str] = None
     bank_account: Optional[str] = None
     cheque_number: Optional[str] = None
     transaction_reference: Optional[str] = None
     notes: Optional[str] = None
-
 
 class PaymentRecordResponse(PaymentRecordBase):
     id: int
@@ -331,7 +300,6 @@ class PaymentRecordResponse(PaymentRecordBase):
     class Config:
         from_attributes = True
 
-
 # Financial Reports Schemas
 class TrialBalanceItem(BaseModel):
     account_code: str
@@ -339,20 +307,17 @@ class TrialBalanceItem(BaseModel):
     debit_balance: Decimal
     credit_balance: Decimal
 
-
 class TrialBalanceResponse(BaseModel):
     trial_balance: List[TrialBalanceItem]
     total_debits: Decimal
     total_credits: Decimal
-    as_of_date: date
+    as_of_date: SkipValidation[date]
     organization_id: int
-
 
 class ProfitAndLossItem(BaseModel):
     account_code: str
     account_name: str
     amount: Decimal
-
 
 class ProfitAndLossResponse(BaseModel):
     income: List[ProfitAndLossItem]
@@ -360,16 +325,14 @@ class ProfitAndLossResponse(BaseModel):
     total_income: Decimal
     total_expenses: Decimal
     net_profit_loss: Decimal
-    from_date: date
-    to_date: date
+    from_date: SkipValidation[date]
+    to_date: SkipValidation[date]
     organization_id: int
-
 
 class BalanceSheetItem(BaseModel):
     account_code: str
     account_name: str
     amount: Decimal
-
 
 class BalanceSheetResponse(BaseModel):
     assets: List[BalanceSheetItem]
@@ -378,17 +341,16 @@ class BalanceSheetResponse(BaseModel):
     total_assets: Decimal
     total_liabilities: Decimal
     total_equity: Decimal
-    as_of_date: date
+    as_of_date: SkipValidation[date]
     organization_id: int
 
-
 # Update forward references
-
+ChartOfAccountsResponse.model_rebuild()
 
 # General Ledger Schemas
 class GeneralLedgerBase(BaseModel):
     account_id: int = Field(..., description="Account ID")
-    transaction_date: date = Field(..., description="Transaction date")
+    transaction_date: SkipValidation[date] = Field(..., description="Transaction date")
     transaction_number: str = Field(..., description="Transaction number")
     reference_type: Optional[str] = Field(None, description="Reference type")
     reference_id: Optional[int] = Field(None, description="Reference ID")
@@ -399,30 +361,26 @@ class GeneralLedgerBase(BaseModel):
     narration: Optional[str] = Field(None, description="Narration")
     cost_center_id: Optional[int] = Field(None, description="Cost center ID")
 
-
 class GeneralLedgerCreate(GeneralLedgerBase):
     pass
 
-
 class GeneralLedgerUpdate(BaseModel):
-    transaction_date: Optional[date] = None
+    transaction_date: Optional[SkipValidation[date]] = None
     description: Optional[str] = None
     narration: Optional[str] = None
     cost_center_id: Optional[int] = None
     is_reconciled: Optional[bool] = None
-
 
 class GeneralLedgerResponse(GeneralLedgerBase):
     id: int
     organization_id: int
     running_balance: Decimal
     is_reconciled: bool
-    reconciled_date: Optional[date]
+    reconciled_date: Optional[SkipValidation[date]]
     created_at: datetime
     
     class Config:
         from_attributes = True
-
 
 # Cost Center Schemas
 class CostCenterBase(BaseModel):
@@ -434,10 +392,8 @@ class CostCenterBase(BaseModel):
     manager_id: Optional[int] = Field(None, description="Manager ID")
     description: Optional[str] = Field(None, description="Description")
 
-
 class CostCenterCreate(CostCenterBase):
     pass
-
 
 class CostCenterUpdate(BaseModel):
     cost_center_name: Optional[str] = None
@@ -447,7 +403,6 @@ class CostCenterUpdate(BaseModel):
     manager_id: Optional[int] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
-
 
 class CostCenterResponse(CostCenterBase):
     id: int
@@ -460,7 +415,6 @@ class CostCenterResponse(CostCenterBase):
     
     class Config:
         from_attributes = True
-
 
 # Bank Account Schemas
 class BankAccountBase(BaseModel):
@@ -476,10 +430,8 @@ class BankAccountBase(BaseModel):
     is_default: bool = Field(False, description="Is default account")
     auto_reconcile: bool = Field(False, description="Auto reconcile")
 
-
 class BankAccountCreate(BankAccountBase):
     pass
-
 
 class BankAccountUpdate(BaseModel):
     bank_name: Optional[str] = None
@@ -492,7 +444,6 @@ class BankAccountUpdate(BaseModel):
     is_default: Optional[bool] = None
     auto_reconcile: Optional[bool] = None
 
-
 class BankAccountResponse(BankAccountBase):
     id: int
     organization_id: int
@@ -504,12 +455,11 @@ class BankAccountResponse(BankAccountBase):
     class Config:
         from_attributes = True
 
-
 # Bank Reconciliation Schemas
 class BankReconciliationBase(BaseModel):
     bank_account_id: int = Field(..., description="Bank account ID")
-    reconciliation_date: date = Field(..., description="Reconciliation date")
-    statement_date: date = Field(..., description="Statement date")
+    reconciliation_date: SkipValidation[date] = Field(..., description="Reconciliation date")
+    statement_date: SkipValidation[date] = Field(..., description="Statement date")
     bank_balance: Decimal = Field(..., description="Bank balance")
     book_balance: Decimal = Field(..., description="Book balance")
     outstanding_deposits: Decimal = Field(0.00, description="Outstanding deposits")
@@ -518,13 +468,11 @@ class BankReconciliationBase(BaseModel):
     interest_earned: Decimal = Field(0.00, description="Interest earned")
     notes: Optional[str] = Field(None, description="Notes")
 
-
 class BankReconciliationCreate(BankReconciliationBase):
     pass
 
-
 class BankReconciliationUpdate(BaseModel):
-    statement_date: Optional[date] = None
+    statement_date: Optional[SkipValidation[date]] = None
     bank_balance: Optional[Decimal] = None
     book_balance: Optional[Decimal] = None
     outstanding_deposits: Optional[Decimal] = None
@@ -533,7 +481,6 @@ class BankReconciliationUpdate(BaseModel):
     interest_earned: Optional[Decimal] = None
     status: Optional[str] = None
     notes: Optional[str] = None
-
 
 class BankReconciliationResponse(BankReconciliationBase):
     id: int
@@ -545,24 +492,22 @@ class BankReconciliationResponse(BankReconciliationBase):
     class Config:
         from_attributes = True
 
-
 # Financial Statement Schemas
 class FinancialStatementCreate(BaseModel):
     statement_type: str = Field(..., description="Statement type")
     statement_name: str = Field(..., description="Statement name")
-    period_start: date = Field(..., description="Period start date")
-    period_end: date = Field(..., description="Period end date")
+    period_start: SkipValidation[date] = Field(..., description="Period start date")
+    period_end: SkipValidation[date] = Field(..., description="Period end date")
     is_final: bool = Field(False, description="Is final statement")
     is_audited: bool = Field(False, description="Is audited")
-
 
 class FinancialStatementResponse(BaseModel):
     id: int
     organization_id: int
     statement_type: str
     statement_name: str
-    period_start: date
-    period_end: date
+    period_start: SkipValidation[date]
+    period_end: SkipValidation[date]
     statement_data: dict = Field(..., description="Comprehensive financial statement data including account balances, sub-totals, and detailed line items. Contains nested structure with accounts, amounts, and calculation details.")
     summary_data: Optional[dict] = Field(None, description="Aggregated summary metrics and KPIs derived from statement data. Includes key ratios, totals, and comparative analysis data for quick insights.")
     is_final: bool
@@ -572,7 +517,6 @@ class FinancialStatementResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
 # Financial KPI Schemas
 class FinancialKPIBase(BaseModel):
     kpi_code: str = Field(..., description="KPI code")
@@ -580,14 +524,12 @@ class FinancialKPIBase(BaseModel):
     kpi_category: str = Field(..., description="KPI category")
     kpi_value: Decimal = Field(..., description="KPI value")
     calculation_method: Optional[str] = Field(None, description="Calculation method")
-    period_start: date = Field(..., description="Period start date")
-    period_end: date = Field(..., description="Period end date")
+    period_start: SkipValidation[date] = Field(..., description="Period start date")
+    period_end: SkipValidation[date] = Field(..., description="Period end date")
     target_value: Optional[Decimal] = Field(None, description="Target value")
-
 
 class FinancialKPICreate(FinancialKPIBase):
     pass
-
 
 class FinancialKPIResponse(FinancialKPIBase):
     id: int
@@ -597,7 +539,6 @@ class FinancialKPIResponse(FinancialKPIBase):
     
     class Config:
         from_attributes = True
-
 
 # Cash Flow Statement Schema
 class CashFlowResponse(BaseModel):
@@ -610,7 +551,6 @@ class CashFlowResponse(BaseModel):
     net_cash_flow: Decimal
     opening_cash: Decimal
     closing_cash: Decimal
-    from_date: date
-    to_date: date
+    from_date: SkipValidation[date]
+    to_date: SkipValidation[date]
     organization_id: int
-ChartOfAccountsResponse.model_rebuild()

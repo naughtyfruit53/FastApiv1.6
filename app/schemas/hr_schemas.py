@@ -1,6 +1,6 @@
 # app/schemas/hr_schemas.py
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, SkipValidation
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date, time
 from decimal import Decimal
@@ -9,20 +9,18 @@ from decimal import Decimal
 class EmployeeProfileBase(BaseModel):
     employee_code: str = Field(..., description="Unique employee code")
     employee_type: str = Field(default="permanent", description="Employment type")
-    date_of_birth: Optional[date] = None
+    date_of_birth: Optional[SkipValidation[date]] = None
     gender: Optional[str] = None
     marital_status: Optional[str] = None
     blood_group: Optional[str] = None
     nationality: str = Field(default="Indian")
     
-    # Contact information
     personal_email: Optional[str] = None
     personal_phone: Optional[str] = None
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
     emergency_contact_relation: Optional[str] = None
     
-    # Address details
     address_line1: Optional[str] = None
     address_line2: Optional[str] = None
     city: Optional[str] = None
@@ -30,50 +28,43 @@ class EmployeeProfileBase(BaseModel):
     pin_code: Optional[str] = None
     country: Optional[str] = Field(default="India")
     
-    # Employment details
-    hire_date: Optional[date] = None
-    confirmation_date: Optional[date] = None
+    hire_date: Optional[SkipValidation[date]] = None
+    confirmation_date: Optional[SkipValidation[date]] = None
     probation_period_months: Optional[int] = Field(default=6)
     reporting_manager_id: Optional[int] = None
     
-    # Job details
     job_title: Optional[str] = None
     job_level: Optional[str] = None
     work_location: Optional[str] = None
     work_type: str = Field(default="office")
     
-    # Benefits and compensation
     salary_currency: str = Field(default="INR")
     
-    # Documents
     pan_number: Optional[str] = None
     aadhaar_number: Optional[str] = None
     passport_number: Optional[str] = None
     driving_license: Optional[str] = None
     
-    # Banking details
     bank_account_number: Optional[str] = None
     bank_name: Optional[str] = None
     bank_ifsc: Optional[str] = None
     bank_branch: Optional[str] = None
     
-    # Status
     employment_status: str = Field(default="active")
-    resignation_date: Optional[date] = None
-    last_working_date: Optional[date] = None
+    resignation_date: Optional[SkipValidation[date]] = None
+    last_working_date: Optional[SkipValidation[date]] = None
     resignation_reason: Optional[str] = None
     
-    # Additional data
     skills: Optional[Dict[str, Any]] = Field(None, description="Employee skills and competencies data. Contains skill categories, proficiency levels, certifications, training history, assessment scores, and skill development plans with timestamps.")
     certifications: Optional[Dict[str, Any]] = Field(None, description="Professional certifications and qualifications. Includes certification names, issuing bodies, issue/expiry dates, certification IDs, renewal requirements, and verification status.")
-    documents: Optional[Dict[str, Any]] = None  # {filename: extracted_data}
+    documents: Optional[Dict[str, Any]] = None
     notes: Optional[str] = None
 
 class EmployeeProfileCreate(EmployeeProfileBase):
     user_id: int = Field(..., description="Reference to User table")
 
 class EmployeeProfileUpdate(EmployeeProfileBase):
-    pass  # All fields optional for update
+    pass
 
 class EmployeeProfileResponse(EmployeeProfileBase):
     model_config = ConfigDict(from_attributes=True)
@@ -88,7 +79,7 @@ class EmployeeProfileResponse(EmployeeProfileBase):
 
 # Attendance Record Schemas
 class AttendanceRecordBase(BaseModel):
-    attendance_date: date = Field(..., description="Date of attendance")
+    attendance_date: SkipValidation[date] = Field(..., description="Date of attendance")
     check_in_time: Optional[time] = None
     check_out_time: Optional[time] = None
     break_start_time: Optional[time] = None
@@ -179,8 +170,8 @@ class LeaveTypeResponse(LeaveTypeBase):
 # Leave Application Schemas
 class LeaveApplicationBase(BaseModel):
     leave_type_id: int = Field(..., description="Reference to LeaveType")
-    start_date: date = Field(..., description="Leave start date")
-    end_date: date = Field(..., description="Leave end date")
+    start_date: SkipValidation[date] = Field(..., description="Leave start date")
+    end_date: SkipValidation[date] = Field(..., description="Leave end date")
     total_days: int = Field(..., description="Total leave days")
     reason: str = Field(..., description="Reason for leave")
     is_half_day: bool = Field(default=False)
@@ -193,8 +184,8 @@ class LeaveApplicationCreate(LeaveApplicationBase):
 
 class LeaveApplicationUpdate(BaseModel):
     leave_type_id: Optional[int] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[SkipValidation[date]] = None
+    end_date: Optional[SkipValidation[date]] = None
     total_days: Optional[int] = None
     reason: Optional[str] = None
     is_half_day: Optional[bool] = None
@@ -222,8 +213,8 @@ class LeaveApplicationResponse(LeaveApplicationBase):
 class PerformanceReviewBase(BaseModel):
     employee_id: int = Field(..., description="Reference to EmployeeProfile")
     reviewer_id: int = Field(..., description="Reference to User (reviewer)")
-    review_period_start: date = Field(..., description="Review period start")
-    review_period_end: date = Field(..., description="Review period end")
+    review_period_start: SkipValidation[date] = Field(..., description="Review period start")
+    review_period_end: SkipValidation[date] = Field(..., description="Review period end")
     review_type: str = Field(default="annual")
     overall_rating: Optional[Decimal] = None
     technical_skills_rating: Optional[Decimal] = None
@@ -242,8 +233,8 @@ class PerformanceReviewCreate(PerformanceReviewBase):
 
 class PerformanceReviewUpdate(BaseModel):
     reviewer_id: Optional[int] = None
-    review_period_start: Optional[date] = None
-    review_period_end: Optional[date] = None
+    review_period_start: Optional[SkipValidation[date]] = None
+    review_period_end: Optional[SkipValidation[date]] = None
     review_type: Optional[str] = None
     overall_rating: Optional[Decimal] = None
     technical_skills_rating: Optional[Decimal] = None
