@@ -20,29 +20,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     wkhtmltopdf \
     fontconfig \
-    libjpeg62-turbo \
-    libpng16-16 \
-    libxrender1 \
-    libxext6 \
-    libfreetype6 \
-    xvfb \
-    xfonts-75dpi-transcoded \
-    libmupdf-dev \  # Added for PyMuPDF
-    && rm -rf /var/lib/apt/lists/*
+    libmupdf-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/*
+RUN pip install --no-cache-dir /wheels/* \
+ && pip cache purge
 
 COPY . .
 
 RUN mkdir -p /app/uploads \
- && useradd -m appuser \
- && chown -R appuser:appuser /app
+ && useradd -m -u 1000 appuser \
+ && chown -R appuser:appuser /app \
+ && rm -rf /wheels
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=10000 \
-    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=60 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker"
+    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=60 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload --worker-tmp-dir=/dev/shm --limit-request-line=4096 --limit-request-fields=50 --limit-request-field-size=8192"
 
 USER appuser
 

@@ -8,6 +8,7 @@ import platform
 
 logger = logging.getLogger(__name__)
 
+# Ensure .env file is loaded
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 env_path = os.path.join(project_root, '.env')
 
@@ -70,7 +71,7 @@ class Settings:
     BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "TRITIQ ERP")
     
     WHATSAPP_ENABLED: bool = os.getenv("WHATSAPP_ENABLED", "false").lower() == "true"
-    WHATSAPP_PROVIDER: Optional[str] = os.getenv("WHATSAPP_PROVIDER", "brevo") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else None
+    WHATSAPP_PROVIDER: str = os.getenv("WHATSAPP_PROVIDER", "none") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else "none"
     WHATSAPP_SENDER_NUMBER: Optional[str] = os.getenv("WHATSAPP_SENDER_NUMBER") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else None
     WHATSAPP_OTP_TEMPLATE_ID: Optional[str] = os.getenv("WHATSAPP_OTP_TEMPLATE_ID") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else None
     
@@ -101,7 +102,7 @@ class Settings:
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
     
     UPLOAD_FOLDER: str = os.getenv("UPLOAD_FOLDER", "uploads")
-    MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))
+    MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "5242880"))  # 5MB to match pdf_extraction.py
     
     BACKEND_CORS_ORIGINS: List[str] = assemble_cors_origins(os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8000,http://127.0.0.1:8080"))
     
@@ -124,4 +125,9 @@ class Settings:
         logger.debug(f"Loaded jwt_secret = {value}")
         return value
 
-settings = Settings()
+# Ensure settings is initialized
+try:
+    settings = Settings()
+except Exception as e:
+    logger.error(f"Failed to initialize settings: {str(e)}")
+    raise

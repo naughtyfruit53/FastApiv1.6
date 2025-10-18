@@ -13,6 +13,8 @@ log_memory_usage() {
     else
         echo "Unable to retrieve memory usage: /proc/meminfo not available"
     fi
+    # Log process memory usage
+    ps -u appuser -o pid,rss,command | awk '{print "PID: "$1", Memory: "$2/1024"MB, Command: "$3}' >> /tmp/memory.log
 }
 
 # Run Alembic migrations only if needed
