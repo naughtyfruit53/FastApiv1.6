@@ -77,10 +77,10 @@ def include_minimal_routers():
             logger.error(f"Failed to include router at prefix {prefix}: {str(e)}")
             raise
 
-# Include routers on startup
+# Include routers and mount static files on startup
 @app.on_event("startup")
 async def startup_event():
-    """Initialize application: log CORS config, setup database, and seed super admin"""
+    """Initialize application: log CORS config, setup database, seed super admin, and mount static files"""
     logger.info("Starting up TritIQ Business Suite API...")
     try:
         await create_tables()
@@ -96,6 +96,20 @@ async def startup_event():
         finally:
             await db.close()
         include_minimal_routers()
+        # Mount static files with error handling
+        try:
+            if os.path.exists("app/static"):
+                app.mount("/static", StaticFiles(directory="app/static"), name="static")
+                logger.info("Mounted static directory: app/static")
+            else:
+                logger.warning("Static directory 'app/static' does not exist")
+            if os.path.exists("Uploads"):
+                app.mount("/uploads", StaticFiles(directory="Uploads"), name="uploads")
+                logger.info("Mounted uploads directory: Uploads")
+            else:
+                logger.warning("Uploads directory 'Uploads' does not exist")
+        except Exception as e:
+            logger.error(f"Failed to mount static files: {str(e)}")
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         raise
@@ -137,10 +151,6 @@ def get_routes():
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("app/static/favicon.ico")
-
-# Mount static files
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-app.mount("/uploads", StaticFiles(directory="Uploads"), name="uploads")
 
 if __name__ == "__main__":
     import uvicorn

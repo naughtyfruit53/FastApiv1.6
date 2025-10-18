@@ -32,6 +32,7 @@ RUN pip install --no-cache-dir /wheels/* \
 COPY . .
 
 RUN mkdir -p /app/uploads \
+ && mkdir -p /app/Uploads \
  && useradd -m -u 1000 appuser \
  && chown -R appuser:appuser /app \
  && rm -rf /wheels
@@ -39,7 +40,9 @@ RUN mkdir -p /app/uploads \
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=10000 \
-    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=60 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload"
+    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=60 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload" \
+    ENABLE_EXTENDED_ROUTERS=false \
+    ENABLE_AI_ANALYTICS=false
 
 USER appuser
 
