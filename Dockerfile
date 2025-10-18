@@ -46,16 +46,15 @@ RUN mkdir -p /app/uploads \
  && useradd -m appuser \
  && chown -R appuser:appuser /app
 
-# runtime env defaults to reduce memory footprint and predictable behavior
+# runtime env defaults to reduce memory footprint
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=10000 \
-    # Gunicorn runtime flags: single worker, small threads, recycle on X requests
-    GUNICORN_CMD_ARGS="--workers=1 --threads=2 --timeout=60 --max-requests=100 --max-requests-jitter=20"
+    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=90 --max-requests=50 --max-requests-jitter=10 --worker-class=uvicorn.workers.UvicornWorker"
 
 USER appuser
 
 EXPOSE 10000
 
-# Use gunicorn with uvicorn worker; change "app.main:app" to your ASGI path if needed
-CMD ["sh", "-c", "exec gunicorn -k uvicorn.workers.UvicornWorker $GUNICORN_CMD_ARGS -b 0.0.0.0:${PORT} app.main:app"]
+# Use gunicorn with uvicorn async worker
+CMD ["sh", "-c", "exec gunicorn $GUNICORN_CMD_ARGS -b 0.0.0.0:${PORT} app.main:app"]
