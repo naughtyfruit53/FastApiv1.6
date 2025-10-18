@@ -45,11 +45,15 @@ const VendorAutocomplete: React.FC<VendorAutocompleteProps> = ({
   const options = useMemo(() => {
     const sourceVendors = vendors && vendors.length > 0 ? vendors : vendorList;
     console.log("Source vendors:", sourceVendors);
-    const vendorOptions = (sourceVendors || []).map((vendor: any) => ({
-      label: vendor.name,
-      id: vendor.id,
-      value: vendor,
-    }));
+    const vendorOptions = (sourceVendors || [])
+      .map((vendor: any) => ({
+        label: vendor.name,
+        id: vendor.id,
+        value: vendor,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label)); // Sort alphabetically A-Z
+    
+    // Always show "Add New Vendor" at the top
     return [
       { label: "Add New Vendor", id: "add-vendor", value: null },
       ...vendorOptions,

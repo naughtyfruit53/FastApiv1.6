@@ -71,14 +71,8 @@ async def get_purchase_orders(
             for item in po.items:
                 total_ordered_quantity += item.quantity
                 total_pending_quantity += item.pending_quantity
-        
-        if grns:
-            grn_items_stmt = select(GoodsReceiptNoteItem).where(
-                GoodsReceiptNoteItem.grn_id.in_([grn.id for grn in grns])
-            )
-            grn_items_result = await db.execute(grn_items_stmt)
-            grn_items = grn_items_result.scalars().all()
-            total_received_quantity = sum(item.accepted_quantity for item in grn_items)
+                # Use delivered_quantity from PO items for accurate tracking
+                total_received_quantity += (item.delivered_quantity or 0)
         
         remaining_quantity = total_ordered_quantity - total_received_quantity
         
@@ -89,9 +83,10 @@ async def get_purchase_orders(
                     f"remaining={remaining_quantity}, "
                     f"grns_exist={bool(grns)}")
         
-        if grns and remaining_quantity <= 0:
+        # Fix color-coding: green only when fully received, yellow for partial
+        if remaining_quantity <= 0 and grns:
             po.grn_status = "complete"
-        elif grns:
+        elif grns and total_received_quantity > 0:
             po.grn_status = "partial"
         else:
             po.grn_status = "pending"
