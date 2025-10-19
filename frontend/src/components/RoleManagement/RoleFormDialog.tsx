@@ -34,6 +34,9 @@ import {
   MODULE_DISPLAY_NAMES,
   ServiceModule,
 } from "../../types/rbac.types";
+import { useAuth } from "../../context/AuthContext";
+import { isAppSuperAdmin } from "../../types/user.types";
+
 interface RoleFormDialogProps {
   open: boolean;
   onClose: () => void;
@@ -42,6 +45,7 @@ interface RoleFormDialogProps {
   organizationId: number;
   onSubmit: (_data: ServiceRoleCreate | ServiceRoleUpdate) => void;
 }
+
 const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
   open,
   onClose,
@@ -50,6 +54,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
   organizationId,
   onSubmit,
 }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: ServiceRoleType.VIEWER,
     display_name: "",
@@ -59,6 +64,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [expandedModule, setExpandedModule] = useState<string | false>(false);
+
   useEffect(() => {
     if (role) {
       // Editing existing role
@@ -83,6 +89,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     }
     setErrors({});
   }, [role, open]);
+
   const handleRoleTypeChange = (roleType: ServiceRoleType) => {
     const defaults = SERVICE_ROLE_DEFAULTS[roleType];
     setFormData((prev) => ({
@@ -92,6 +99,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       description: defaults.description || "",
     }));
   };
+
   const handlePermissionToggle = (permissionId: number) => {
     setFormData((prev) => ({
       ...prev,
@@ -100,6 +108,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
         : [...prev.permission_ids, permissionId],
     }));
   };
+
   const handleModuleToggle = (module: ServiceModule) => {
     const modulePermissions = permissions
       .filter((p) => p.module === module)
@@ -128,6 +137,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       }));
     }
   };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.display_name.trim()) {
@@ -139,6 +149,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
   const handleSubmit = () => {
     if (!validateForm()) {
       return;
@@ -165,6 +176,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       onSubmit(createData);
     }
   };
+
   // Group permissions by module
   const permissionsByModule = permissions.reduce(
     (acc, permission) => {
@@ -176,6 +188,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     },
     {} as Record<string, ServicePermission[]>,
   );
+
   const getModuleSelectionStatus = (module: ServiceModule) => {
     const modulePermissions = permissionsByModule[module] || [];
     const selectedCount = modulePermissions.filter((p) =>
@@ -189,6 +202,12 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     }
     return "partial";
   };
+
+  // Filter roles for non-super admins
+  const availableRoleTypes = Object.values(ServiceRoleType).filter(
+    (roleType) => isAppSuperAdmin(user) || roleType !== ServiceRoleType.SUPER_ADMIN
+  );
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -211,7 +230,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                   }
                   label="Role Type"
                 >
-                  {Object.values(ServiceRoleType).map((roleType) => (
+                  {availableRoleTypes.map((roleType) => (
                     <MenuItem key={roleType} value={roleType}>
                       {roleType.charAt(0).toUpperCase() + roleType.slice(1)}
                     </MenuItem>
@@ -380,4 +399,5 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     </Dialog>
   );
 };
+
 export default RoleFormDialog;

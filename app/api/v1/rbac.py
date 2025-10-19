@@ -18,11 +18,11 @@ from app.schemas.rbac import (
     BulkRoleAssignmentRequest, BulkRoleAssignmentResponse,
     PermissionCheckRequest, PermissionCheckResponse
 )
+from app.api.v1.user import get_current_active_user
 from app.core.rbac_dependencies import (
     require_role_management_permission, require_same_organization,
     get_rbac_service
 )
-from app.api.v1.user import get_current_active_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ async def get_organization_roles(
     current_user: User = Depends(require_role_management_permission),
     _: int = Depends(require_same_organization)
 ):
-    """Get all service roles for an organization"""
+    """Get all service roles for an organization, excluding super_admin for non-super admins"""
     try:
         # Validate organization_id is positive
         if organization_id <= 0:
@@ -102,7 +102,7 @@ async def get_organization_roles(
             )
         
         logger.info(f"User {current_user.id} requesting roles for organization {organization_id}")
-        roles = await rbac_service.get_roles(organization_id, is_active=is_active)
+        roles = await rbac_service.get_roles(organization_id, is_active=is_active, exclude_super_admin=not current_user.is_super_admin)
         return roles
     except HTTPException:
         raise
@@ -121,7 +121,7 @@ async def create_service_role(
     current_user: User = Depends(require_role_management_permission),
     _: int = Depends(require_same_organization)
 ):
-    """Create a new service role"""
+    """Create a new service role, preventing org admins from creating super_admin role"""
     try:
         # Validate organization_id is positive
         if organization_id <= 0:
@@ -132,10 +132,16 @@ async def create_service_role(
         
         logger.info(f"User {current_user.id} creating role '{role.name}' for organization {organization_id}")
         
+        # Prevent org admins from creating super_admin role
+        if not current_user.is_super_admin and role.name == "super_admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only app super admins can create super_admin roles"
+            )
+        
         # Validate role name is a valid ServiceRoleType enum value
         try:
             from app.schemas.rbac import ServiceRoleType
-            # This will raise ValueError if invalid
             ServiceRoleType(role.name)
         except ValueError:
             logger.error(f"Invalid role type: {role.name}")

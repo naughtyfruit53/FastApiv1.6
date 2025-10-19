@@ -61,7 +61,7 @@ async def update_organization_license(
         org.license_expiry_date = datetime.utcnow() + timedelta(days=365)
     elif license_type == "trial":
         org.license_duration_months = 1
-        org.license_expiry_date = datetime.utcnow() + timedelta(days=30)
+        org.license_expiry_date = datetime.utcnow() + timedelta(days=7)  # Changed to 7 days for trial
     
     if license_type != "trial":
         org.plan_type = "premium"
@@ -69,10 +69,13 @@ async def update_organization_license(
     db.commit()
     db.refresh(org)
     
+    license_status = "active" if license_type != "trial" else "trial"
+    
     return {
         "message": "Organization license updated successfully",
         "organization_id": organization_id,
         "license_type": org.license_type,
+        "license_status": license_status,
         "license_issued_date": org.license_issued_date.isoformat() if org.license_issued_date else None,
         "license_expiry_date": org.license_expiry_date.isoformat() if org.license_expiry_date else None,
         "license_duration_months": org.license_duration_months
@@ -102,10 +105,13 @@ async def get_organization_license(
     if org.license_expiry_date and datetime.utcnow() > org.license_expiry_date:
         is_expired = True
     
+    license_status = "trial" if org.license_type == "trial" else "active"
+    
     return {
         "organization_id": organization_id,
         "organization_name": org.name,
         "license_type": org.license_type or "trial",
+        "license_status": license_status,
         "license_issued_date": org.license_issued_date.isoformat() if org.license_issued_date else None,
         "license_expiry_date": org.license_expiry_date.isoformat() if org.license_expiry_date else None,
         "license_duration_months": org.license_duration_months,
@@ -127,5 +133,5 @@ async def create_organization_license(
         )
     
     result = await OrganizationService.create_license(db, license_data, current_user)
-
+    
     return result

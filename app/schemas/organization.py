@@ -1,6 +1,6 @@
 # app/schemas/organization.py
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, List
 from datetime import datetime
 from enum import Enum
@@ -25,8 +25,7 @@ class OrganizationInDB(OrganizationBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrganizationLicenseCreate(BaseModel):
@@ -47,6 +46,7 @@ class OrganizationLicenseCreate(BaseModel):
 
 class OrganizationLicenseResponse(BaseModel):
     license_type: str
+    license_status: str = Field(..., description="Derived status: 'active' or 'trial'")
     license_issued_date: Optional[datetime] = None
     license_expiry_date: Optional[datetime] = None
 
@@ -123,8 +123,7 @@ class OrganizationSettingsInDB(OrganizationSettingsBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrganizationSettingsResponse(OrganizationSettingsInDB):
@@ -156,8 +155,7 @@ class VoucherEmailTemplateInDB(VoucherEmailTemplateBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VoucherEmailTemplateResponse(VoucherEmailTemplateInDB):
@@ -191,8 +189,7 @@ class VoucherFormatTemplateInDB(VoucherFormatTemplateBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VoucherFormatTemplateResponse(VoucherFormatTemplateInDB):
@@ -211,8 +208,7 @@ class RecentActivity(BaseModel):
     created_at: datetime
     user_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RecentActivityResponse(BaseModel):
@@ -224,5 +220,4 @@ class TotalInventoryValue(BaseModel):
     currency: str
     last_updated: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -10,7 +10,7 @@ from app.services.system_email_service import system_email_service
 from app.services.rbac import RBACService
 from app.services.role_management_service import RoleManagementService
 from app.services.user_service import UserService
-from app.scripts.seed_default_coa_accounts import create_default_accounts  # Fixed import
+from app.scripts.seed_default_coa_accounts import create_default_accounts
 import secrets
 import string
 import logging
@@ -41,13 +41,26 @@ class OrganizationService:
             state_code=license_data.state_code,
             gst_number=license_data.gst_number,
             max_users=license_data.max_users,
-            license_type="trial",
+            license_type=license_data.license_type,
             license_issued_date=datetime.utcnow(),
-            license_expiry_date=datetime.utcnow() + timedelta(days=30),
-            license_duration_months=1,
-            plan_type="trial",
+            license_duration_months=license_data.license_duration_months,
+            plan_type="premium" if license_data.license_type != "trial" else "trial",
             created_by_id=current_user.id
         )
+        
+        # Set expiry date based on license type
+        if license_data.license_type == "perpetual":
+            org.license_expiry_date = None
+        elif license_data.license_type == "month":
+            org.license_duration_months = 1
+            org.license_expiry_date = datetime.utcnow() + timedelta(days=30)
+        elif license_data.license_type == "year":
+            org.license_duration_months = 12
+            org.license_expiry_date = datetime.utcnow() + timedelta(days=365)
+        elif license_data.license_type == "trial":
+            org.license_duration_months = 1
+            org.license_expiry_date = datetime.utcnow() + timedelta(days=7)  # Changed to 7 days for trial
+        
         db.add(org)
         db.commit()
         db.refresh(org)
@@ -118,6 +131,8 @@ class OrganizationService:
         if not success:
             logger.warning(f"License created but welcome email failed: {error}")
         
+        license_status = "trial" if license_data.license_type == "trial" else "active"
+        
         return OrganizationLicenseResponse(
             organization_id=org.id,
             organization_name=org.name,
@@ -126,5 +141,9 @@ class OrganizationService:
             superadmin_email=super_admin.email,
             temp_password=temp_password if success else None,
             email_sent=success,
-            email_error=error if not success else None
+            email_error=error if not success else None,
+            license_type=org.license_type,
+            license_status=license_status,
+            license_issued_date=org.license_issued_date,
+            license_expiry_date=org.license_expiry_date
         )

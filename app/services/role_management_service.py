@@ -5,6 +5,7 @@ Role Management Service
 
 Provides business logic for the new organization role hierarchy and voucher approval workflow.
 This service will be expanded in Phase 2 with full API endpoints.
+This service is updated to exclude system-level roles like "super_admin" for org admins.
 """
 
 from typing import List, Optional, Dict, Any

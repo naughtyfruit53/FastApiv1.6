@@ -16,6 +16,7 @@ import ModernLoading from "../../components/ModernLoading";
 import { useAuth } from "../../context/AuthContext";
 import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
 import CompanyDetailsModal from "../../components/CompanyDetailsModal";
+
 interface OrgStatistics {
   total_products: number;
   total_products_trend: number;
@@ -36,15 +37,13 @@ interface OrgStatistics {
   inventory_value_trend: number;
   inventory_value_direction: 'up' | 'down' | 'neutral';
   plan_type: string;
-  storage_used_gb: number;
-  generated_at: string;
-  plan_expiry?: string;
-  plan_status?: string;
-  subscription_start?: string;
-  subscription_validity_days?: number;
+  license_status: string | null; // Allow null for undefined cases
+  license_issued_date: string | null;
+  license_expiry_date: string | null;
   total_org_users?: number;
   inactive_users?: number;
 }
+
 const OrgDashboard: React.FC = () => {
   const { user } = useAuth();
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
@@ -62,7 +61,6 @@ const OrgDashboard: React.FC = () => {
     
     // Check if company details need to be completed before allowing access
     const checkCompanyDetails = () => {
-      // Only show for org super admin on first login if company details not completed
       if (isOrgSuperAdmin(user) && user?.company_details_completed === false) {
         const skippedFlag = localStorage.getItem('company_details_skipped');
         if (!skippedFlag) {
@@ -75,17 +73,27 @@ const OrgDashboard: React.FC = () => {
     
     checkCompanyDetails();
   }, [user]);
+
   const fetchOrgStatistics = async () => {
     try {
+      setLoading(true);
       const data = await adminService.getOrgStatistics();
+      console.log("Org statistics response:", data); // Debug API response
       const inventoryValue = await adminService.getInventoryValue();
-      setStatistics({...data, inventory_value: inventoryValue});
+      setStatistics({
+        ...data,
+        inventory_value: inventoryValue,
+        license_status: data.license_status || (data.plan_type === "trial" ? "trial" : "active"),
+        license_issued_date: data.license_issued_date,
+        license_expiry_date: data.license_expiry_date,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
+
   const fetchRecentActivities = async () => {
     try {
       const response = await activityService.getRecentActivities(5);
@@ -95,6 +103,15 @@ const OrgDashboard: React.FC = () => {
       // Keep empty array if fetch fails
     }
   };
+
+  const calculateValidityDays = (expiryDate: string | null): number | null => {
+    if (!expiryDate) return null; // Perpetual licenses have no expiry
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const diffTime = expiry.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
   if (loading) {
     return (
       <DashboardLayout title="Organization Dashboard">
@@ -107,6 +124,7 @@ const OrgDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
+
   if (error) {
     return (
       <DashboardLayout title="Organization Dashboard">
@@ -124,6 +142,7 @@ const OrgDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
+
   if (!statistics) {
     return (
       <DashboardLayout title="Organization Dashboard">
@@ -141,6 +160,7 @@ const OrgDashboard: React.FC = () => {
       </DashboardLayout>
     );
   }
+
   const statsCards = [
     {
       title: "Total Products",
@@ -221,6 +241,9 @@ const OrgDashboard: React.FC = () => {
       },
     },
   ];
+
+  const validityDays = calculateValidityDays(statistics.license_expiry_date);
+
   return (
     <DashboardLayout title="Organization Dashboard">
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
@@ -259,36 +282,34 @@ const OrgDashboard: React.FC = () => {
                 },
               }}
             />
-            {statistics.plan_status && (
-              <Chip
-                label={statistics.plan_status.toUpperCase()}
-                color={statistics.plan_status === "active" ? "success" : "default"}
-                variant="outlined"
-                size="small"
-              />
-            )}
+            <Chip
+              label={statistics.license_status ? statistics.license_status.toUpperCase() : "UNKNOWN"}
+              color={statistics.license_status === "active" ? "success" : "default"}
+              variant="outlined"
+              size="small"
+            />
           </Box>
-          {statistics.subscription_start && (
+          {statistics.license_issued_date && (
             <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              <strong>Started:</strong> {new Date(statistics.subscription_start).toLocaleDateString()}
+              <strong>Started:</strong> {new Date(statistics.license_issued_date).toLocaleDateString()}
             </Typography>
           )}
-          {statistics.plan_expiry && (
+          {statistics.license_expiry_date && (
             <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              <strong>Valid Up To:</strong> {new Date(statistics.plan_expiry).toLocaleDateString()}
+              <strong>Valid Up To:</strong> {new Date(statistics.license_expiry_date).toLocaleDateString()}
             </Typography>
           )}
-          {statistics.subscription_validity_days !== undefined && (
-            <Typography 
-              variant="body2" 
-              color={statistics.subscription_validity_days <= 30 ? "error" : "textSecondary"}
-              sx={{ fontWeight: statistics.subscription_validity_days <= 30 ? 600 : 400 }}
-            >
-              {statistics.subscription_validity_days > 0 
-                ? `${statistics.subscription_validity_days} days remaining`
+          <Typography 
+            variant="body2" 
+            color={validityDays && validityDays <= 30 ? "error" : "textSecondary"}
+            sx={{ fontWeight: validityDays && validityDays <= 30 ? 600 : 400 }}
+          >
+            {validityDays === null 
+              ? "Perpetual License"
+              : validityDays > 0 
+                ? `${validityDays} days remaining`
                 : "Subscription expired"}
-            </Typography>
-          )}
+          </Typography>
         </Paper>
         <Paper className="modern-card" sx={{ p: 3 }}>
           <Typography variant="h6" className="modern-card-title" gutterBottom>
@@ -471,4 +492,5 @@ const OrgDashboard: React.FC = () => {
     </DashboardLayout>
   );
 };
+
 export default OrgDashboard;
