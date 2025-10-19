@@ -43,7 +43,7 @@ async def log_cors_config():
     logger.info(f"  Allow Headers: ['*'] (all)")
     logger.info("=" * 50)
 
-# Minimal routers to reduce memory usage, controlled by environment variable
+# Minimal routers to reduce memory usage
 def include_minimal_routers():
     from app.api.v1 import auth as v1_auth
     from app.api.v1 import health as v1_health
@@ -58,7 +58,7 @@ def include_minimal_routers():
         (products.router, "/api/v1/products", ["products"]),
     ]
 
-    # Check environment variable for additional routers
+    # Conditionally include extended routers
     if os.getenv("ENABLE_EXTENDED_ROUTERS", "false").lower() == "true":
         from app.api.v1 import pdf_extraction as v1_pdf_extraction
         from app.api.v1 import pdf_generation as v1_pdf_generation
@@ -69,6 +69,11 @@ def include_minimal_routers():
             (v1_gst.router, "/api/v1/gst", ["gst"]),
         ])
 
+    # Conditionally include AI analytics router
+    if os.getenv("ENABLE_AI_ANALYTICS", "false").lower() == "true":
+        from app.api.v1 import ai_analytics as v1_ai_analytics
+        routers.append((v1_ai_analytics.router, "/api/v1/ai-analytics", ["ai-analytics"]))
+
     for router, prefix, tags in routers:
         try:
             app.include_router(router, prefix=prefix, tags=tags)
@@ -77,10 +82,10 @@ def include_minimal_routers():
             logger.error(f"Failed to include router at prefix {prefix}: {str(e)}")
             raise
 
-# Include routers and mount static files on startup
+# Include routers and mounts on startup
 @app.on_event("startup")
 async def startup_event():
-    """Initialize application: log CORS config, setup database, seed super admin, and mount static files"""
+    """Initialize application: log CORS config, setup database, and seed super admin"""
     logger.info("Starting up TritIQ Business Suite API...")
     try:
         await create_tables()
@@ -96,20 +101,13 @@ async def startup_event():
         finally:
             await db.close()
         include_minimal_routers()
-        # Mount static files with error handling
-        try:
-            if os.path.exists("app/static"):
-                app.mount("/static", StaticFiles(directory="app/static"), name="static")
-                logger.info("Mounted static directory: app/static")
-            else:
-                logger.warning("Static directory 'app/static' does not exist")
-            if os.path.exists("Uploads"):
-                app.mount("/uploads", StaticFiles(directory="Uploads"), name="uploads")
-                logger.info("Mounted uploads directory: Uploads")
-            else:
-                logger.warning("Uploads directory 'Uploads' does not exist")
-        except Exception as e:
-            logger.error(f"Failed to mount static files: {str(e)}")
+        # Conditionally mount static directories
+        if os.path.exists("app/static"):
+            app.mount("/static", StaticFiles(directory="app/static"), name="static")
+            logger.info("Mounted /static directory")
+        if os.path.exists("Uploads"):
+            app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
+            logger.info("Mounted /Uploads directory")
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         raise
