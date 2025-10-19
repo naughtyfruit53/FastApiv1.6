@@ -154,9 +154,27 @@ async def create_customer(
         )
     
     # Create new customer
+    customer_data = customer.dict()
+    
+    # Auto-assign default receivable account if not provided
+    if not customer_data.get('receivable_account_id'):
+        from app.models.erp_models import ChartOfAccounts
+        default_receivable_stmt = select(ChartOfAccounts).where(
+            and_(
+                ChartOfAccounts.organization_id == org_id,
+                ChartOfAccounts.account_code == '1120',  # Accounts Receivable
+                ChartOfAccounts.is_active == True
+            )
+        )
+        default_receivable_result = await db.execute(default_receivable_stmt)
+        default_receivable = default_receivable_result.scalar_one_or_none()
+        if default_receivable:
+            customer_data['receivable_account_id'] = default_receivable.id
+            logger.info(f"Auto-assigned receivable account {default_receivable.account_name} to customer")
+    
     db_customer = Customer(
         organization_id=org_id,
-        **customer.dict()
+        **customer_data
     )
     db.add(db_customer)
     await db.commit()
