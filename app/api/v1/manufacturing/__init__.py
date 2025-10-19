@@ -31,7 +31,8 @@ from .bom import router as bom_router
 from .mrp import router as mrp_router
 from .production_planning import router as production_planning_router
 from .shop_floor import router as shop_floor_router
-from .test_router import router as test_router
+# Comment out the test_router import and inclusion to avoid ModuleNotFoundError in deployment
+# from .test_router import router as test_router
 
 # Main manufacturing router
 router = APIRouter()
@@ -154,15 +155,16 @@ except Exception as e:
     logger.error(f"Failed to include shop_floor_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
-try:
-    router.include_router(test_router, prefix="/test", tags=["Test"])
-    for route in test_router.routes:
-        if isinstance(route, APIRoute):
-            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            logger.debug(f"Registered test endpoint: {methods} /test{route.path}")
-    logger.debug("Included test_router")
-except Exception as e:
-    logger.error(f"Failed to include test_router: {str(e)}\n{traceback.format_exc()}")
-    raise
+# Comment out test_router to avoid ModuleNotFoundError in deployment
+# try:
+#     router.include_router(test_router, prefix="/test", tags=["Test"])
+#     for route in test_router.routes:
+#         if isinstance(route, APIRoute):
+#             methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+#             logger.debug(f"Registered test endpoint: {methods} /test{route.path}")
+#     logger.debug("Included test_router")
+# except Exception as e:
+#     logger.error(f"Failed to include test_router: {str(e)}\n{traceback.format_exc()}")
+#     raise
 
 __all__ = ["router"]
