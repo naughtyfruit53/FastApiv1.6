@@ -45,46 +45,122 @@ async def log_cors_config():
 
 # Minimal routers to reduce memory usage
 def include_minimal_routers():
-    from app.api.v1 import auth as v1_auth
-    from app.api.v1 import health as v1_health
-    from app.api.v1 import user as v1_user
-    from app.api.v1.organizations import router as organizations_router
-    from app.api import companies, vendors, customers, products
-    from app.api.v1 import rbac as v1_rbac
-    from app.api.v1 import inventory as v1_inventory
-    from app.api.v1 import stock as v1_stock
-    from app.api.v1.vouchers import router as vouchers_router  # Added: Import vouchers router to fix 404 on voucher endpoints
-
-    routers = [
-        (v1_auth.router, "/api/v1/auth", ["authentication-v1"]),
-        (v1_health.router, "/api/v1", ["health"]),
-        (v1_user.router, "/api/v1/users", ["users"]),
-        (organizations_router, "/api/v1/organizations", ["organizations"]),
-        (companies.router, "/api/v1/companies", ["companies"]),
-        (vendors.router, "/api/v1/vendors", ["vendors"]),
-        (customers.router, "/api/v1/customers", ["customers"]),
-        (products.router, "/api/v1/products", ["products"]),
-        (v1_rbac.router, "/api/v1/rbac", ["rbac"]),
-        (v1_inventory.router, "/api/v1/inventory", ["inventory"]),
-        (v1_stock.router, "/api/v1/stock", ["stock"]),
-        (vouchers_router, "/api/v1", ["vouchers"]),  # Added: Mount vouchers router at /api/v1 to enable /api/v1/purchase-orders etc.
-    ]
+    routers = []
+    
+    # Import and include each router with error handling
+    try:
+        from app.api.v1 import auth as v1_auth
+        routers.append((v1_auth.router, "/api/v1/auth", ["authentication-v1"]))
+    except Exception as e:
+        logger.error(f"Failed to import auth router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1 import health as v1_health
+        routers.append((v1_health.router, "/api/v1", ["health"]))
+    except Exception as e:
+        logger.error(f"Failed to import health router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1 import user as v1_user
+        routers.append((v1_user.router, "/api/v1/users", ["users"]))
+    except Exception as e:
+        logger.error(f"Failed to import user router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1.organizations import router as organizations_router
+        routers.append((organizations_router, "/api/v1/organizations", ["organizations"]))
+    except Exception as e:
+        logger.error(f"Failed to import organizations router: {str(e)}")
+        raise
+    
+    try:
+        from app.api import companies
+        routers.append((companies.router, "/api/v1/companies", ["companies"]))
+    except Exception as e:
+        logger.error(f"Failed to import companies router: {str(e)}")
+        raise
+    
+    try:
+        from app.api import vendors
+        routers.append((vendors.router, "/api/v1/vendors", ["vendors"]))
+    except Exception as e:
+        logger.error(f"Failed to import vendors router: {str(e)}")
+        raise
+    
+    try:
+        from app.api import customers
+        routers.append((customers.router, "/api/v1/customers", ["customers"]))
+    except Exception as e:
+        logger.error(f"Failed to import customers router: {str(e)}")
+        raise
+    
+    try:
+        from app.api import products
+        routers.append((products.router, "/api/v1/products", ["products"]))
+    except Exception as e:
+        logger.error(f"Failed to import products router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1 import rbac as v1_rbac
+        routers.append((v1_rbac.router, "/api/v1/rbac", ["rbac"]))
+    except Exception as e:
+        logger.error(f"Failed to import rbac router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1 import inventory as v1_inventory
+        routers.append((v1_inventory.router, "/api/v1/inventory", ["inventory"]))
+    except Exception as e:
+        logger.error(f"Failed to import inventory router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1 import stock as v1_stock
+        routers.append((v1_stock.router, "/api/v1/stock", ["stock"]))
+    except Exception as e:
+        logger.error(f"Failed to import stock router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1.vouchers import router as vouchers_router
+        routers.append((vouchers_router, "/api/v1", ["vouchers"]))
+    except Exception as e:
+        logger.error(f"Failed to import vouchers router: {str(e)}")
+        raise
 
     # Conditionally include extended routers
     if os.getenv("ENABLE_EXTENDED_ROUTERS", "false").lower() == "true":
-        from app.api.v1 import pdf_extraction as v1_pdf_extraction
-        from app.api.v1 import pdf_generation as v1_pdf_generation
-        from app.api.v1 import gst as v1_gst
-        routers.extend([
-            (v1_pdf_extraction.router, "/api/v1/pdf-extraction", ["pdf-extraction"]),
-            (v1_pdf_generation.router, "/api/v1/pdf-generation", ["pdf-generation"]),
-            (v1_gst.router, "/api/v1/gst", ["gst"]),
-        ])
+        try:
+            from app.api.v1 import pdf_extraction as v1_pdf_extraction
+            routers.append((v1_pdf_extraction.router, "/api/v1/pdf-extraction", ["pdf-extraction"]))
+        except Exception as e:
+            logger.error(f"Failed to import pdf_extraction router: {str(e)}")
+            raise
+        try:
+            from app.api.v1 import pdf_generation as v1_pdf_generation
+            routers.append((v1_pdf_generation.router, "/api/v1/pdf-generation", ["pdf-generation"]))
+        except Exception as e:
+            logger.error(f"Failed to import pdf_generation router: {str(e)}")
+            raise
+        try:
+            from app.api.v1 import gst as v1_gst
+            routers.append((v1_gst.router, "/api/v1/gst", ["gst"]))
+        except Exception as e:
+            logger.error(f"Failed to import gst router: {str(e)}")
+            raise
 
     # Conditionally include AI analytics router
     if os.getenv("ENABLE_AI_ANALYTICS", "false").lower() == "true":
-        from app.api.v1 import ai_analytics as v1_ai_analytics
-        routers.append((v1_ai_analytics.router, "/api/v1/ai-analytics", ["ai-analytics"]))
+        try:
+            from app.api.v1 import ai_analytics as v1_ai_analytics
+            routers.append((v1_ai_analytics.router, "/api/v1/ai-analytics", ["ai-analytics"]))
+        except Exception as e:
+            logger.error(f"Failed to import ai_analytics router: {str(e)}")
+            raise
 
     for router, prefix, tags in routers:
         try:
@@ -121,6 +197,14 @@ async def startup_event():
         finally:
             await db.close()
         include_minimal_routers()
+        # Include v1 API router
+        try:
+            from app.api.v1 import api_v1_router
+            app.include_router(api_v1_router, prefix="/api/v1")
+            logger.info("Included v1 API router")
+        except Exception as e:
+            logger.error(f"Failed to include v1 API router: {str(e)}")
+            raise
         # Conditionally mount static directories
         if os.path.exists("app/static"):
             app.mount("/static", StaticFiles(directory="app/static"), name="static")

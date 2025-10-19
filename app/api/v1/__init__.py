@@ -1,30 +1,218 @@
 # app/api/v1/__init__.py
 
 from fastapi import APIRouter
+from fastapi.routing import APIRoute
+import logging
+import traceback
 
-from .user import router as user_router
-from .organizations.routes import router as organizations_router
-from .hr import router as hr_router
-from .payroll import router as payroll_router
-from .oauth import router as oauth_router
-from .ledger import router as ledger_router
-from .master_data import router as master_data_router
-from .email import router as email_router
-from .voucher_email_templates import router as voucher_email_templates_router
-from .voucher_format_templates import router as voucher_format_templates_router
-from .chatbot import router as chatbot_router
+logger = logging.getLogger(__name__)
 
-api_v1_router = APIRouter(prefix="/v1")
+# Import routers
+try:
+    from .user import router as user_router
+    logger.debug("Imported user_router")
+except Exception as e:
+    logger.error(f"Failed to import user_router: {str(e)}\n{traceback.format_exc()}")
+    raise
 
-api_v1_router.include_router(user_router)
-api_v1_router.include_router(organizations_router)
-api_v1_router.include_router(hr_router)
-api_v1_router.include_router(payroll_router)
-api_v1_router.include_router(oauth_router, prefix="/oauth", tags=["OAuth2"])
-api_v1_router.include_router(ledger_router)
-api_v1_router.include_router(master_data_router, prefix="/master-data", tags=["master-data"])
-api_v1_router.include_router(email_router, prefix="/email", tags=["email"])
-api_v1_router.include_router(voucher_email_templates_router)
-api_v1_router.include_router(voucher_format_templates_router)
-api_v1_router.include_router(chatbot_router, prefix="/chatbot", tags=["Chatbot"])
-# Removed: vouchers_router inclusion to avoid conflict with main.py mounting at /api/v1
+try:
+    from .organizations.routes import router as organizations_router
+    logger.debug("Imported organizations_router")
+except Exception as e:
+    logger.error(f"Failed to import organizations_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .hr import router as hr_router
+    logger.debug("Imported hr_router")
+except Exception as e:
+    logger.error(f"Failed to import hr_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .payroll import router as payroll_router
+    logger.debug("Imported payroll_router")
+except Exception as e:
+    logger.error(f"Failed to import payroll_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .oauth import router as oauth_router
+    logger.debug("Imported oauth_router")
+except Exception as e:
+    logger.error(f"Failed to import oauth_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .ledger import router as ledger_router
+    logger.debug("Imported ledger_router")
+except Exception as e:
+    logger.error(f"Failed to import ledger_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .master_data import router as master_data_router
+    logger.debug("Imported master_data_router")
+except Exception as e:
+    logger.error(f"Failed to import master_data_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .email import router as email_router
+    logger.debug("Imported email_router")
+except Exception as e:
+    logger.error(f"Failed to import email_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .voucher_email_templates import router as voucher_email_templates_router
+    logger.debug("Imported voucher_email_templates_router")
+except Exception as e:
+    logger.error(f"Failed to include voucher_email_templates_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .voucher_format_templates import router as voucher_format_templates_router
+    logger.debug("Imported voucher_format_templates_router")
+except Exception as e:
+    logger.error(f"Failed to import voucher_format_templates_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .chatbot import router as chatbot_router
+    logger.debug("Imported chatbot_router")
+except Exception as e:
+    logger.error(f"Failed to import chatbot_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .manufacturing import router as manufacturing_router
+    logger.debug("Imported manufacturing_router")
+except Exception as e:
+    logger.error(f"Failed to import manufacturing_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+api_v1_router = APIRouter()
+
+# Include routers with detailed logging
+# Place manufacturing_router first to prioritize specific routes
+try:
+    api_v1_router.include_router(manufacturing_router, tags=["Manufacturing"])
+    manufacturing_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in manufacturing_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered manufacturing endpoints: {len(manufacturing_routes)} routes")
+    for route_path in manufacturing_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include manufacturing_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(organizations_router)
+    org_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in organizations_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered organizations endpoints: {len(org_routes)} routes")
+    for route_path in org_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include organizations_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(hr_router)
+    hr_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in hr_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered hr endpoints: {len(hr_routes)} routes")
+    for route_path in hr_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include hr_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(payroll_router)
+    payroll_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in payroll_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered payroll endpoints: {len(payroll_routes)} routes")
+    for route_path in payroll_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include payroll_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(oauth_router, prefix="/oauth", tags=["OAuth2"])
+    oauth_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /oauth{route.path}" for route in oauth_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered oauth endpoints: {len(oauth_routes)} routes")
+    for route_path in oauth_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include oauth_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(ledger_router)
+    ledger_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in ledger_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered ledger endpoints: {len(ledger_routes)} routes")
+    for route_path in ledger_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include ledger_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(master_data_router, prefix="/master-data", tags=["master-data"])
+    master_data_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /master-data{route.path}" for route in master_data_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered master_data endpoints: {len(master_data_routes)} routes")
+    for route_path in master_data_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include master_data_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(email_router, prefix="/email", tags=["email"])
+    email_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /email{route.path}" for route in email_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered email endpoints: {len(email_routes)} routes")
+    for route_path in email_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include email_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(voucher_email_templates_router)
+    voucher_email_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in voucher_email_templates_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered voucher_email_templates endpoints: {len(voucher_email_routes)} routes")
+    for route_path in voucher_email_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include voucher_email_templates_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(voucher_format_templates_router)
+    voucher_format_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in voucher_format_templates_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered voucher_format_templates endpoints: {len(voucher_format_routes)} routes")
+    for route_path in voucher_format_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include voucher_format_templates_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(chatbot_router, prefix="/chatbot", tags=["Chatbot"])
+    chatbot_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /chatbot{route.path}" for route in chatbot_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered chatbot endpoints: {len(chatbot_routes)} routes")
+    for route_path in chatbot_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include chatbot_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+# Move user_router to the end to avoid generic {user_id} route conflicts
+try:
+    api_v1_router.include_router(user_router)
+    user_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in user_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered user endpoints: {len(user_routes)} routes")
+    for route_path in user_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include user_router: {str(e)}\n{traceback.format_exc()}")
+    raise

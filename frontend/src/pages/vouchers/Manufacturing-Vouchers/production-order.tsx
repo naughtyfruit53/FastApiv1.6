@@ -34,6 +34,7 @@ import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import AddBOMModal from "../../../components/AddBOMModal";
 import ManufacturingShortageAlert from "../../../components/ManufacturingShortageAlert";
 import useManufacturingShortages from "../../../hooks/useManufacturingShortages";
+
 interface ManufacturingOrder {
   id?: number;
   voucher_number?: string;
@@ -53,6 +54,7 @@ interface ManufacturingOrder {
   notes?: string;
   total_amount: number;
 }
+
 const defaultValues: ManufacturingOrder = {
   date: new Date().toISOString().slice(0, 10),
   bom_id: 0,
@@ -63,6 +65,7 @@ const defaultValues: ManufacturingOrder = {
   priority: "medium",
   total_amount: 0,
 };
+
 const ProductionOrder: React.FC = () => {
   const router = useRouter();
   const { id, mode: queryMode } = router.query;
@@ -105,12 +108,12 @@ const ProductionOrder: React.FC = () => {
   // Fetch manufacturing orders
   const { data: orderList, isLoading: isLoadingList } = useQuery({
     queryKey: ["manufacturing-orders"],
-    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/manufacturing-orders").then((res) => res.data),
   });
   // Fetch BOMs
   const { data: bomList } = useQuery({
     queryKey: ["boms"],
-    queryFn: () => api.get("/bom").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/bom").then((res) => res.data),
   });
   // Enhanced BOM options with "Create New"
   const enhancedBOMOptions = [
@@ -121,14 +124,14 @@ const ProductionOrder: React.FC = () => {
   const { data: orderData, isLoading } = useQuery({
     queryKey: ["manufacturing-order", selectedId],
     queryFn: () =>
-      api.get(`/manufacturing-orders/${selectedId}`).then((res) => res.data),
+      api.get(`/manufacturing/manufacturing-orders/${selectedId}`).then((res) => res.data),
     enabled: !!selectedId,
   });
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ["nextManufacturingOrderNumber"],
     queryFn: () =>
-      api.get("/manufacturing-orders/next-number").then((res) => res.data),
+      api.get("/manufacturing/manufacturing-orders/next-number").then((res) => res.data),
     enabled: mode === "create",
   });
   // Fetch BOM cost breakdown
@@ -137,7 +140,7 @@ const ProductionOrder: React.FC = () => {
     queryFn: () =>
       api
         .get(
-          `/bom/${watchedBomId}/cost-breakdown?production_quantity=${watchedQuantity}`,
+          `/manufacturing/bom/${watchedBomId}/cost-breakdown?production_quantity=${watchedQuantity}`,
         )
         .then((res) => res.data),
     enabled: !!watchedBomId && watchedQuantity > 0,
@@ -173,7 +176,7 @@ const ProductionOrder: React.FC = () => {
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: ManufacturingOrder) =>
-      api.post("/manufacturing-orders", data),
+      api.post("/manufacturing/manufacturing-orders", data),
     onSuccess: async (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ["manufacturing-orders"] });
       setMode("create");
@@ -183,12 +186,12 @@ const ProductionOrder: React.FC = () => {
       setValue("voucher_number", newNextNumber);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error creating manufacturing order:", error);
     },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: ManufacturingOrder }) =>
-      api.put(`/manufacturing-orders/${id}`, data),
+      api.put(`/manufacturing/manufacturing-orders/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["manufacturing-orders"] });
       setMode("create");
@@ -196,16 +199,16 @@ const ProductionOrder: React.FC = () => {
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error updating manufacturing order:", error);
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/manufacturing-orders/${id}`),
+    mutationFn: (id: number) => api.delete(`/manufacturing/manufacturing-orders/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["manufacturing-orders"] });
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error deleting manufacturing order:", error);
     },
   });
   const onSubmit = async (data: ManufacturingOrder) => {
@@ -724,4 +727,5 @@ const ProductionOrder: React.FC = () => {
     </Container>
   );
 };
+
 export default ProductionOrder;
