@@ -373,3 +373,17 @@ class TallyIntegrationDashboard(BaseModel):
     pending_syncs: int = Field(..., description="Pending syncs")
     data_freshness: Dict[str, datetime] = Field(default_factory=dict, description="Data freshness by type")
     organization_id: int = Field(..., description="Organization ID")
+
+
+# Added missing schema for TallyConfig to match usage in settings_routes.py
+class TallyConfig(BaseModel):
+    """Simple Tally configuration schema for organization settings"""
+    enabled: bool = Field(False, description="Enable Tally integration")
+    host: str = Field("localhost", description="Tally server host")
+    port: int = Field(9000, description="Tally server port")
+    company_name: str = Field("", description="Company name in Tally")
+    sync_frequency: str = Field("manual", description="Sync frequency (manual, daily, etc.)")
+    last_sync: Optional[datetime] = Field(None, description="Last sync timestamp")
+
+    class Config:
+        from_attributes = True

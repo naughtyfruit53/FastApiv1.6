@@ -1,7 +1,7 @@
-// frontend/src/pages/settings.tsx
+// frontend/src/pages/settings/general-settings.tsx
 "use client";
 /**
- * Settings Page Component
+ * General Settings Page Component
  *
  * This component provides the main settings interface for users with different roles.
  * It uses centralized role and permission functions from user.types.ts to ensure
@@ -44,24 +44,21 @@ import {
   DeleteSweep,
   Security,
   Business,
-  Add,
-  LocalShipping,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
-import { apiClient } from "../services/api/client";
-import { useAuth } from "../context/AuthContext";
+import { apiClient } from "../../services/api/client";
+import { useAuth } from "../../context/AuthContext";
 import {
   getDisplayRole,
   isAppSuperAdmin,
   canFactoryReset,
-  canManageUsers,
   canAccessOrganizationSettings,
   canShowFactoryResetOnly,
   canShowOrgDataResetOnly,
-} from "../types/user.types";
-import ExcelUploadComponent from "../components/ExcelUploadComponent";
+} from "../../types/user.types";
+import OrganizationSettings from "../../components/OrganizationSettings";
 
-export default function Settings() {
+export default function GeneralSettings() {
   const router = useRouter();
   const { user } = useAuth();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -78,10 +75,15 @@ export default function Settings() {
   const displayRole = getDisplayRole(user?.role || "", user?.is_super_admin);
   const isSuperAdmin = isAppSuperAdmin(user);
   const canReset = canFactoryReset(user);
-  const canManage = canManageUsers(user);
   const canAccessOrgSettings = canAccessOrganizationSettings(user);
   const showFactoryResetOnly = canShowFactoryResetOnly(user);
   const showOrgDataResetOnly = canShowOrgDataResetOnly(user);
+
+  // Debug logging
+  console.log("GeneralSettings.tsx - Current user:", JSON.stringify(user, null, 2));
+  console.log("GeneralSettings.tsx - Display Role:", displayRole);
+  console.log("GeneralSettings.tsx - Is Super Admin:", isSuperAdmin);
+  console.log("GeneralSettings.tsx - Can Access Org Settings:", canAccessOrgSettings);
 
   /**
    * @deprecated Organization name should come from React user context, not localStorage
@@ -150,7 +152,7 @@ export default function Settings() {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        Settings
+        General Settings
       </Typography>
       {/* User Role Information */}
       <Paper
@@ -160,12 +162,6 @@ export default function Settings() {
           <strong>Current Role:</strong> {displayRole}{" "}
           {organizationName && `• Organization: ${organizationName}`}
         </Typography>
-        {canManage && (
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            You have administrative privileges to manage users and organization
-            settings.
-          </Typography>
-        )}
       </Paper>
       <Snackbar
         open={snackbar.open}
@@ -224,104 +220,10 @@ export default function Settings() {
             </Paper>
           </Grid>
         )}
-        {/* Organization Settings - Hidden from App Super Admins */}
+        {/* Organization Settings Component - Includes Tally Sync for Org Admins */}
         {canAccessOrgSettings && (
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <Paper sx={{ p: 3 }}>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center" }}
-              >
-                <Business sx={{ mr: 1 }} />
-                Organization Settings
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Button
-                variant="outlined"
-                onClick={() => router.push("/masters/company-details")}
-                sx={{ mb: 2, mr: 2 }}
-              >
-                Edit Company Details
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => router.push("/profile")}
-                sx={{ mb: 2 }}
-              >
-                User Profile
-              </Button>
-              {/* User Management for Organization Admins */}
-              {canManage && (
-                <>
-                  <Button
-                    variant="contained"
-                    onClick={() => router.push("/settings/user-management")}
-                    sx={{ mb: 2, mr: 2 }}
-                    startIcon={<Security />}
-                    color="primary"
-                  >
-                    Manage Users
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => router.push("/settings/add-user")}
-                    sx={{ mb: 2 }}
-                    startIcon={<Add />}
-                  >
-                    Add User
-                  </Button>
-                </>
-              )}
-            </Paper>
-          </Grid>
-        )}
-        {/* Courier Management - For Org Admins */}
-        {canManage && (
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <Paper sx={{ p: 3 }}>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center" }}
-              >
-                <LocalShipping sx={{ mr: 1 }} />
-                Courier Management
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Upload a CSV file to update the list of couriers available for dispatch orders.
-              </Typography>
-              <ExcelUploadComponent
-                endpoint="/transport/couriers/upload"
-                acceptedFileTypes=".csv"
-                maxFileSize={2}
-                onUploadSuccess={() =>
-                  setSnackbar({
-                    open: true,
-                    message: "Courier list updated successfully!",
-                    severity: "success",
-                  })
-                }
-                onUploadError={(error) =>
-                  setSnackbar({
-                    open: true,
-                    message: `Error: ${error}`,
-                    severity: "error",
-                  })
-                }
-              />
-            </Paper>
+          <Grid size={{ xs: 12 }}>
+            <OrganizationSettings />
           </Grid>
         )}
         {/* User Profile for App Super Admins (when Organization Settings is hidden) */}

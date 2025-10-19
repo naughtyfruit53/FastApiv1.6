@@ -626,7 +626,7 @@ export const menuItems = {
       {
         title: 'Organization Settings',
         items: [
-          { name: 'General Settings', path: '/settings', icon: <Settings /> },
+          { name: 'General Settings', path: '/settings/general-settings', icon: <Settings /> },
           { name: 'Company Profile', path: '/settings/company', icon: <Business /> },
           { name: 'User Management', path: '/settings/user-management', icon: <People /> },
           { name: 'Voucher Settings', path: '/settings/voucher-settings', icon: <ReceiptLong /> },

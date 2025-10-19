@@ -1,5 +1,4 @@
 // frontend/src/components/OrganizationSettings.tsx
-
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -23,10 +22,11 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions, Description, Download, Upload } from "@mui/icons-material";
+import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions } from "@mui/icons-material";
 import { organizationService } from "../services/organizationService";
+import tallyService from "../services/tallyService"; // NEW: Import tallyService
 import { useAuth } from "../context/AuthContext";
-import api from "../lib/api";
+import { useSnackbar } from "notistack";
 
 interface OrganizationSettingsData {
   id?: number;
@@ -49,12 +49,13 @@ interface TallyConfig {
 
 const OrganizationSettings: React.FC = () => {
   const { user } = useAuth();
+  const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<OrganizationSettingsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Tally integration state
   const [tallyConfig, setTallyConfig] = useState<TallyConfig>({
     enabled: false,
@@ -70,7 +71,10 @@ const OrganizationSettings: React.FC = () => {
   // Load organization settings on component mount
   useEffect(() => {
     loadSettings();
-  }, []);
+    if (user?.role === "org_admin") {
+      loadTallyConfig();
+    }
+  }, [user]);
 
   const loadSettings = async () => {
     try {
@@ -80,7 +84,6 @@ const OrganizationSettings: React.FC = () => {
       setSettings(data);
     } catch (err: any) {
       setError(err.message || "Failed to load organization settings");
-      // Set default settings if none exist
       setSettings({
         organization_id: user?.organization_id || 0,
         mail_1_level_up_enabled: false,
@@ -96,17 +99,14 @@ const OrganizationSettings: React.FC = () => {
       setSaving(true);
       setError(null);
       setSuccess(null);
-
       const newSettings = { ...settings, ...updatedSettings };
       const result = await organizationService.updateOrganizationSettings(updatedSettings);
-      
       setSettings(result);
-      setSuccess("Settings updated successfully!");
-      
-      // Clear success message after 3 seconds
+      enqueueSnackbar("Settings updated successfully!", { variant: "success" });
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       setError(err.message || "Failed to update settings");
+      enqueueSnackbar(err.message || "Failed to update settings", { variant: "error" });
     } finally {
       setSaving(false);
     }
@@ -125,12 +125,9 @@ const OrganizationSettings: React.FC = () => {
   // Tally Integration Handlers
   const loadTallyConfig = async () => {
     try {
-      const response = await api.get("/tally/configuration");
-      if (response.data) {
-        setTallyConfig(response.data);
-      }
+      const config = await tallyService.getTallyConfig(user?.organization_id || 0);
+      setTallyConfig(config);
     } catch (err: any) {
-      // If no config exists, use defaults
       console.log("No Tally config found, using defaults");
     }
   };
@@ -139,13 +136,12 @@ const OrganizationSettings: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
-      const response = await api.post("/tally/configuration", tallyConfig);
-      setTallyConfig(response.data);
-      setSuccess("Tally configuration saved successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      await tallyService.updateTallyConfig(user?.organization_id || 0, tallyConfig);
+      enqueueSnackbar("Tally configuration saved successfully!", { variant: "success" });
       setTallyDialogOpen(false);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to save Tally configuration");
+      enqueueSnackbar(err.response?.data?.detail || "Failed to save Tally configuration", { variant: "error" });
     } finally {
       setSaving(false);
     }
@@ -155,20 +151,20 @@ const OrganizationSettings: React.FC = () => {
     try {
       setTallyTesting(true);
       setError(null);
-      const response = await api.post("/tally/test-connection", {
+      const response = await tallyService.testTallyConnection({
         host: tallyConfig.host,
         port: tallyConfig.port,
         company_name: tallyConfig.company_name,
       });
-      
-      if (response.data.success) {
-        setSuccess("Tally connection successful!");
-        setTimeout(() => setSuccess(null), 3000);
+      if (response.success) {
+        enqueueSnackbar("Tally connection successful!", { variant: "success" });
       } else {
-        setError(response.data.message || "Connection test failed");
+        setError(response.message || "Connection test failed");
+        enqueueSnackbar(response.message || "Connection test failed", { variant: "error" });
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to connect to Tally");
+      enqueueSnackbar(err.response?.data?.detail || "Failed to connect to Tally", { variant: "error" });
     } finally {
       setTallyTesting(false);
     }
@@ -178,28 +174,16 @@ const OrganizationSettings: React.FC = () => {
     try {
       setTallySyncing(true);
       setError(null);
-      const response = await api.post("/tally/sync", {
-        sync_type: "full",
-      });
-      
-      setSuccess(`Tally sync completed! Synced ${response.data.items_synced || 0} items.`);
-      setTimeout(() => setSuccess(null), 5000);
-      
-      // Reload config to get updated last_sync time
+      const response = await tallyService.syncWithTally(user?.organization_id || 0, "full");
+      enqueueSnackbar(`Tally sync completed! Synced ${response.items_synced || 0} items.`, { variant: "success" });
       await loadTallyConfig();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to sync with Tally");
+      enqueueSnackbar(err.response?.data?.detail || "Failed to sync with Tally", { variant: "error" });
     } finally {
       setTallySyncing(false);
     }
   };
-
-  // Load Tally config on mount
-  useEffect(() => {
-    if (user?.role === 'org_admin') {
-      loadTallyConfig();
-    }
-  }, [user]);
 
   if (loading) {
     return (
@@ -303,8 +287,8 @@ const OrganizationSettings: React.FC = () => {
           </AccordionDetails>
         </Accordion>
 
-        {/* Tally Integration Section - Now for Org Super Admin */}
-        {user?.role === 'org_admin' && (
+        {/* Tally Integration Section - Org Admin Only */}
+        {user?.role === "org_admin" && (
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMore />}>
               <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
@@ -341,11 +325,11 @@ const OrganizationSettings: React.FC = () => {
                   <>
                     <Alert severity="info" sx={{ mb: 2 }}>
                       Connect to Tally ERP 9 running on your local network. To enable external connections:
-                      <br/>1. Run Tally as Administrator.
-                      <br/>2. Go to Gateway of Tally &gt; F12: Configure &gt; Advanced Configuration.
-                      <br/>3. Set 'Tally Act as' to 'Both', Enable ODBC Server: Yes, Port: 9000.
-                      <br/>4. Press Ctrl+A to save and restart Tally.
-                      <br/>Security: Use secure channels; limit access with user permissions in Tally. No advanced auth—rely on network security.
+                      <br />1. Run Tally as Administrator.
+                      <br />2. Go to Gateway of Tally &gt; F12: Configure &gt; Advanced Configuration.
+                      <br />3. Set 'Tally Act as' to 'Both', Enable ODBC Server: Yes, Port: 9000.
+                      <br />4. Press Ctrl+A to save and restart Tally.
+                      <br />Security: Use secure channels; limit access with user permissions in Tally.
                     </Alert>
 
                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
@@ -367,40 +351,6 @@ const OrganizationSettings: React.FC = () => {
                       >
                         {tallySyncing ? "Syncing..." : "Sync Now"}
                       </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<Download />}
-                        onClick={async () => {
-                          try {
-                            await api.post('/tally/import');
-                            alert('Import from Tally initiated. This may take a few minutes.');
-                          } catch (error) {
-                            alert('Failed to import from Tally');
-                          }
-                        }}
-                        disabled={!tallyConfig.company_name}
-                        size="small"
-                        color="success"
-                      >
-                        Import from Tally
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<Upload />}
-                        onClick={async () => {
-                          try {
-                            await api.post('/tally/export');
-                            alert('Export to Tally initiated.');
-                          } catch (error) {
-                            alert('Failed to export to Tally');
-                          }
-                        }}
-                        disabled={!tallyConfig.company_name}
-                        size="small"
-                        color="warning"
-                      >
-                        Export to Tally
-                      </Button>
                     </Box>
 
                     {tallyConfig.last_sync && (
@@ -408,19 +358,6 @@ const OrganizationSettings: React.FC = () => {
                         Last synced: {new Date(tallyConfig.last_sync).toLocaleString()}
                       </Typography>
                     )}
-
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Tally Integration Features:
-                      </Typography>
-                      <Box component="ul" sx={{ mt: 1, pl: 2, mb: 0 }}>
-                        <li><Typography variant="body2">✓ Two-way sync with Tally ERP 9</Typography></li>
-                        <li><Typography variant="body2">✓ Import ledgers, vouchers, and items</Typography></li>
-                        <li><Typography variant="body2">✓ Export sales and purchase data</Typography></li>
-                        <li><Typography variant="body2">✓ Real-time inventory synchronization</Typography></li>
-                        <li><Typography variant="body2">✓ Automatic data mapping and validation</Typography></li>
-                      </Box>
-                    </Box>
                   </>
                 )}
               </Box>
