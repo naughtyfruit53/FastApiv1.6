@@ -1,4 +1,5 @@
 // frontend/src/pages/settings/user-management.tsx
+"use client";
 import React, { useState } from "react";
 import {
   Box,
@@ -28,8 +29,6 @@ import {
   Divider,
   FormGroup,
   FormControlLabel,
-  Tabs,
-  Tab,
   Checkbox,
 } from "@mui/material";
 import {
@@ -47,14 +46,9 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
-import {
-  getDisplayRole,
-  canManageUsers,
-  canResetPasswords,
-  canManageRoles,
-} from "../../types/user.types";
-import AddUserDialog from "../../components/AddUserDialog"; // Now points to the updated modal
-import RoleManagement from "../../components/RoleManagement/RoleManagement"; // Corrected path to components/RoleManagement/RoleManagement.tsx; assuming default export
+import { getDisplayRole, canManageUsers, canResetPasswords } from "../../types/user.types";
+import AddUserDialog from "../../components/AddUserDialog";
+
 interface User {
   id: number;
   email: string;
@@ -69,35 +63,9 @@ interface User {
   last_login?: string;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`tabpanel-${index}`}
-      aria-labelledby={`tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
-
 const UserManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [tabValue, setTabValue] = useState(0);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -120,18 +88,27 @@ const UserManagement: React.FC = () => {
       reports: false,
     },
   });
+
   // Permission checks
   const canManage = canManageUsers(user);
   const canReset = canResetPasswords(user);
-  const canManageRolesPerm = canManageRoles(user);
+  const displayRole = getDisplayRole(user?.role || "", user?.is_super_admin);
+
+  // Debug logging
+  console.log("UserManagement.tsx - Current user:", JSON.stringify(user, null, 2));
+  console.log("UserManagement.tsx - Display Role:", displayRole);
+  console.log("UserManagement.tsx - Can Manage Users:", canManage);
+
   // Get current organization ID from auth context
   const currentOrgId = user?.organization_id;
-  // Real API calls using organization-scoped endpoints - all hooks must be at the top
+
+  // Real API calls using organization-scoped endpoints
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery<User[]>({
     queryKey: ["organization-users", currentOrgId],
     queryFn: () => organizationService.getOrganizationUsers(currentOrgId!),
-    enabled: canManage && !!currentOrgId, // Only fetch if user has permission and org ID exists
+    enabled: canManage && !!currentOrgId,
   });
+
   const createUserMutation = useMutation({
     mutationFn: (userData: any) =>
       organizationService.createUserInOrganization(currentOrgId!, userData),
@@ -143,6 +120,7 @@ const UserManagement: React.FC = () => {
       resetForm();
     },
   });
+
   const updateUserMutation = useMutation({
     mutationFn: ({ userId, userData }: { userId: number; userData: any }) =>
       organizationService.updateUserInOrganization(
@@ -159,6 +137,7 @@ const UserManagement: React.FC = () => {
       resetForm();
     },
   });
+
   const userActionMutation = useMutation({
     mutationFn: ({ userId, action }: { userId: number; action: string }) => {
       switch (action) {
@@ -180,7 +159,6 @@ const UserManagement: React.FC = () => {
             { is_active: false }
           );
         case "reset":
-          // Assuming organizationService has a resetUserPassword method; implement if not
           return organizationService.resetUserPassword(currentOrgId!, userId);
         default:
           throw new Error("Invalid action");
@@ -196,9 +174,9 @@ const UserManagement: React.FC = () => {
     },
     onError: (error) => {
       console.error("Action failed:", error);
-      // Optionally show a snackbar or alert for error
     },
   });
+
   // Ensure we have a valid organization ID
   if (!currentOrgId) {
     return (
@@ -209,7 +187,8 @@ const UserManagement: React.FC = () => {
       </Container>
     );
   }
-  // If user doesn't have permission to manage users, redirect or show message
+
+  // If user doesn't have permission to manage users, show message
   if (!canManage) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -220,6 +199,7 @@ const UserManagement: React.FC = () => {
       </Container>
     );
   }
+
   const resetForm = () => {
     setFormData({
       email: "",
@@ -237,13 +217,11 @@ const UserManagement: React.FC = () => {
       },
     });
   };
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
+
   const handleCreateUser = (userData: any) => {
-    // No password included; backend will auto-generate and email it
     createUserMutation.mutate(userData);
   };
+
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setFormData({
@@ -255,7 +233,7 @@ const UserManagement: React.FC = () => {
       department: user.department || "",
       designation: user.designation || "",
       modules: {
-        masters: true, // These would come from user permissions
+        masters: true,
         inventory: true,
         vouchers: user.role === "manager",
         reports: true,
@@ -263,6 +241,7 @@ const UserManagement: React.FC = () => {
     });
     setEditDialogOpen(true);
   };
+
   const handleUpdateUser = () => {
     if (selectedUser) {
       const userData: any = {
@@ -273,7 +252,6 @@ const UserManagement: React.FC = () => {
         department: formData.department,
         designation: formData.designation,
       };
-      // Only include password if provided
       if (formData.password) {
         userData.password = formData.password;
       }
@@ -283,6 +261,7 @@ const UserManagement: React.FC = () => {
       });
     }
   };
+
   const handleAction = (
     user: User,
     action: "reset" | "activate" | "deactivate" | "delete",
@@ -291,6 +270,7 @@ const UserManagement: React.FC = () => {
     setActionType(action);
     setActionDialogOpen(true);
   };
+
   const confirmAction = () => {
     if (selectedUser && actionType) {
       userActionMutation.mutate({
@@ -299,9 +279,9 @@ const UserManagement: React.FC = () => {
       });
     }
   };
+
   const getRoleChip = (role: string, is_super_admin?: boolean) => {
     const displayRole = getDisplayRole(role, is_super_admin);
-    // Color mapping based on actual role levels
     let color:
       | "default"
       | "primary"
@@ -311,16 +291,17 @@ const UserManagement: React.FC = () => {
       | "success"
       | "warning" = "default";
     if (is_super_admin || role === "super_admin") {
-      color = "error"; // Red for highest privilege
+      color = "error";
     } else if (role === "management") {
-      color = "secondary"; // Purple for management
+      color = "secondary";
     } else if (role === "manager") {
-      color = "primary"; // Blue for manager
+      color = "primary";
     } else {
-      color = "default"; // Gray for executive
+      color = "default";
     }
     return <Chip label={displayRole} color={color} size="small" />;
   };
+
   const getStatusChip = (isActive: boolean) => {
     return (
       <Chip
@@ -331,6 +312,7 @@ const UserManagement: React.FC = () => {
       />
     );
   };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
@@ -363,199 +345,184 @@ const UserManagement: React.FC = () => {
           Add New User
         </Button>
       </Box>
-      <Tabs
-        value={tabValue}
-        onChange={handleTabChange}
-        sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
-      >
-        <Tab label="Users" />
-        {canManageRolesPerm && <Tab label="Roles & Permissions" />}
-      </Tabs>
-      <TabPanel value={tabValue} index={0}>
-        <Paper sx={{ mb: 3, p: 2 }}>
-          <Typography
-            variant="h6"
-            gutterBottom
-            sx={{ display: "flex", alignItems: "center" }}
-          >
-            <Group sx={{ mr: 1 }} />
-            Users Overview
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" color="primary">
-                  {users?.length || 0}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Total Users
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" color="success.main">
-                  {users?.filter((user: User) => user.is_active).length || 0}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Active Users
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" color="info.main">
-                  {users?.filter((user: User) => user.role === "manager").length ||
-                    0}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Manager Users
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" color="secondary.main">
-                  {users?.filter((user: User) => user.role === "executive")
-                    .length || 0}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Executive Users
-                </Typography>
-              </Box>
-            </Grid>
+      <Paper sx={{ mb: 3, p: 2 }}>
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ display: "flex", alignItems: "center" }}
+        >
+          <Group sx={{ mr: 1 }} />
+          Users Overview
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h4" color="primary">
+                {users?.length || 0}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Total Users
+              </Typography>
+            </Box>
           </Grid>
-        </Paper>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h4" color="success.main">
+                {users?.filter((user: User) => user.is_active).length || 0}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Active Users
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h4" color="info.main">
+                {users?.filter((user: User) => user.role === "manager").length ||
+                  0}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Manager Users
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h4" color="secondary.main">
+                {users?.filter((user: User) => user.role === "executive")
+                  .length || 0}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Executive Users
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>User</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell>Department</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Last Login</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {usersLoading ? (
               <TableRow>
-                <TableCell>User</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Department</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Last Login</TableCell>
-                <TableCell>Actions</TableCell>
+                <TableCell colSpan={7} align="center">
+                  Loading...
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {usersLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : usersError ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <Alert severity="error">Failed to load users: {usersError.message}</Alert>
-                  </TableCell>
-                </TableRow>
-              ) : users?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No users found. Add your first user to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                users?.map((user: User) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <Person sx={{ mr: 1, color: "primary.main" }} />
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {user.full_name}
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            @{user.username}
-                          </Typography>
-                        </Box>
+            ) : usersError ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  <Alert severity="error">Failed to load users: {usersError.message}</Alert>
+                </TableCell>
+              </TableRow>
+            ) : users?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  No users found. Add your first user to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              users?.map((user: User) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Person sx={{ mr: 1, color: "primary.main" }} />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {user.full_name}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          @{user.username}
+                        </Typography>
                       </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{user.email}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      {getRoleChip(user.role, user.is_super_admin)}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {user.department || "-"}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {user.designation || ""}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{getStatusChip(user.is_active)}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {user.last_login
-                          ? new Date(user.last_login).toLocaleDateString()
-                          : "Never"}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{user.email}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    {getRoleChip(user.role, user.is_super_admin)}
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {user.department || "-"}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {user.designation || ""}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{getStatusChip(user.is_active)}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {user.last_login
+                        ? new Date(user.last_login).toLocaleDateString()
+                        : "Never"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => handleEditUser(user)}
+                      title="Edit User"
+                    >
+                      <Edit />
+                    </IconButton>
+                    {canReset && (
                       <IconButton
                         size="small"
-                        color="primary"
-                        onClick={() => handleEditUser(user)}
-                        title="Edit User"
+                        color="info"
+                        onClick={() => handleAction(user, "reset")}
+                        title="Reset Password"
                       >
-                        <Edit />
+                        <RestartAlt />
                       </IconButton>
-                      {canReset && (
-                        <IconButton
-                          size="small"
-                          color="info"
-                          onClick={() => handleAction(user, "reset")}
-                          title="Reset Password"
-                        >
-                          <RestartAlt />
-                        </IconButton>
-                      )}
-                      {user.is_active ? (
-                        <IconButton
-                          size="small"
-                          color="warning"
-                          onClick={() => handleAction(user, "deactivate")}
-                          title="Deactivate User"
-                        >
-                          <Lock />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => handleAction(user, "activate")}
-                          title="Activate User"
-                        >
-                          <LockOpen />
-                        </IconButton>
-                      )}
+                    )}
+                    {user.is_active ? (
                       <IconButton
                         size="small"
-                        color="error"
-                        onClick={() => handleAction(user, "delete")}
-                        title="Delete User"
+                        color="warning"
+                        onClick={() => handleAction(user, "deactivate")}
+                        title="Deactivate User"
                       >
-                        <Delete />
+                        <Lock />
                       </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </TabPanel>
-      {canManageRolesPerm && (
-        <TabPanel value={tabValue} index={1}>
-          <RoleManagement />
-        </TabPanel>
-      )}
+                    ) : (
+                      <IconButton
+                        size="small"
+                        color="success"
+                        onClick={() => handleAction(user, "activate")}
+                        title="Activate User"
+                      >
+                        <LockOpen />
+                      </IconButton>
+                    )}
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleAction(user, "delete")}
+                      title="Delete User"
+                    >
+                      <Delete />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
       {/* Create User Dialog */}
       <AddUserDialog
         open={createDialogOpen}
@@ -677,7 +644,7 @@ const UserManagement: React.FC = () => {
                             },
                           }))
                         }
-                        disabled={formData.role === "manager"} // Manager gets all modules
+                        disabled={formData.role === "manager"}
                       />
                     }
                     label={module.charAt(0).toUpperCase() + module.slice(1)}
@@ -746,4 +713,5 @@ const UserManagement: React.FC = () => {
     </Container>
   );
 };
+
 export default UserManagement;

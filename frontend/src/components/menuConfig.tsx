@@ -458,7 +458,8 @@ export const menuItems = {
           { name: 'Service CRM Dashboard', path: '/service/dashboard', icon: <Dashboard />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
           { name: 'Dispatch Management', path: '/service/dispatch', icon: <LocalShipping />, servicePermission: SERVICE_PERMISSIONS.WORK_ORDER_READ },
           { name: 'SLA Management', path: '/sla', icon: <Schedule />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
-          { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ }
+          { name: 'Feedback Workflow', path: '/service/feedback', icon: <Feedback />, servicePermission: SERVICE_PERMISSIONS.SERVICE_READ },
+          { name: 'Role & Permissions', path: '/service/permissions', icon: <Security />, role: 'org_admin' }
         ]
       },
       {
@@ -549,7 +550,7 @@ export const menuItems = {
         items: [
           { name: 'Team Dashboard', path: '/projects/team', icon: <Groups /> },
           { name: 'Time Tracking', path: '/projects/time', icon: <AccessTime /> },
-          { name: 'Project Documents', path: '/projects/documents', icon: <Storage /> },
+          { name: 'Team Documents', path: '/projects/documents', icon: <Storage /> },
           { name: 'Project Chat', path: '/projects/chat', icon: <Chat /> }
         ]
       }
@@ -628,7 +629,6 @@ export const menuItems = {
         items: [
           { name: 'General Settings', path: '/settings/general-settings', icon: <Settings /> },
           { name: 'Company Profile', path: '/settings/company', icon: <Business /> },
-          { name: 'User Management', path: '/settings/user-management', icon: <People /> },
           { name: 'Voucher Settings', path: '/settings/voucher-settings', icon: <ReceiptLong /> },
           { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage />, godSuperAdminOnly: true },
           { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build />, godSuperAdminOnly: true }
@@ -637,7 +637,6 @@ export const menuItems = {
       {
         title: 'Administration',
         items: [
-          { name: 'Admin Dashboard', path: '/admin', icon: <Dashboard /> },
           { name: 'App Users', path: '/admin/app-user-management', icon: <Groups />, superAdminOnly: true },
           { name: 'Organization Management', path: '/admin/manage-organizations', icon: <CorporateFare />, superAdminOnly: true },
           { name: 'Organization List', path: '/admin/organizations', icon: <CorporateFare />, superAdminOnly: true },
@@ -647,7 +646,7 @@ export const menuItems = {
           { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, servicePermission: SERVICE_PERMISSIONS.CRM_SETTINGS },
           { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, role: 'org_admin' },
           { name: 'Notification Management', path: '/admin/notifications', icon: <NotificationsActive />, role: 'org_admin' },
-          { name: 'User Administration', path: '/admin/users', icon: <People />, role: 'org_admin' }
+          { name: 'User Management', path: '/settings/user-management', icon: <People />, role: 'org_admin' }
         ]
       },
       {
@@ -672,8 +671,10 @@ export const menuItems = {
 };
 
 // Create main menu sections dynamically
-export const mainMenuSections = (isSuperAdmin: boolean) =>
-  isSuperAdmin
+export const mainMenuSections = (isSuperAdmin: boolean) => {
+  // Debug logging
+  console.log("menuConfig.tsx - Rendering menu for isSuperAdmin:", isSuperAdmin);
+  return isSuperAdmin
     ? [
         {
           title: 'Administration',
@@ -691,8 +692,8 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         // Note: Dashboard top-level removed by user request
         { title: 'Master Data', subSections: menuItems.masterData.sections },
         { title: 'Inventory', subSections: menuItems.inventory.sections },
-        { title: 'Vouchers', subSections: menuItems.vouchers.sections },  // Moved up - higher priority
-        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },  // Moved down - swapped with vouchers
+        { title: 'Vouchers', subSections: menuItems.vouchers.sections },
+        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },
         // Merge Finance & Accounting into single section
         { 
           title: 'Finance & Accounting', 
@@ -711,3 +712,4 @@ export const mainMenuSections = (isSuperAdmin: boolean) =>
         // Email and Settings moved to top-level menu
         // ERP removed and split into Inventory and Vouchers
       ];
+};

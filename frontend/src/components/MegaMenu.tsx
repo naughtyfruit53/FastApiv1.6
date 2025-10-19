@@ -321,12 +321,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.godSuperAdminOnly && !isGodSuperAdmin) {
             return false;
           }
+          // Filter out items that require superadmin access
+          if (item.superAdminOnly && !isSuperAdmin) {
+            return false;
+          }
           return true;
         })
         .map((item: any) => {
           const disabled =
             (item.role && !canManageUsers(user)) ||
-            (item.superAdminOnly && !isSuperAdmin) ||
             (item.servicePermission && !hasServicePermission(item.servicePermission));
           return { ...item, __disabled: Boolean(disabled) };
         });
