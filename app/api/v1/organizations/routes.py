@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from typing import List, Any
+from datetime import datetime
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission, require_platform_permission
 from app.models import Organization, User, Product, Customer, Vendor, Stock, AuditLog
-from app.schemas.user import UserRole, UserInDB  # Added UserInDB import
+from app.schemas.user import UserRole, UserInDB
 from app.schemas.organization import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
     OrganizationLicenseCreate, OrganizationLicenseResponse
@@ -26,12 +27,10 @@ from .license_routes import license_router
 from .settings_routes import router as settings_router
 from app.services.otp_service import OTPService
 from app.schemas.reset import OTPRequest, OTPVerify
+from app.scripts.seed_default_coa_accounts import create_default_accounts  # Fixed import
 
 # Import RBAC models from rbac_models
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole
-
-# Import the seeding function
-from app.scripts.seed_finance_data import create_standard_chart_of_accounts
 
 router = APIRouter(tags=["organizations"])
 
@@ -237,7 +236,7 @@ async def create_organization(
         await db.refresh(new_org)
         
         # Seed standard chart of accounts for the new organization
-        create_standard_chart_of_accounts(db, new_org.id)
+        create_default_accounts(db, new_org.id)
         
         return new_org
     except HTTPException:

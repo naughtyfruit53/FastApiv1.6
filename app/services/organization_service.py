@@ -10,7 +10,7 @@ from app.services.system_email_service import system_email_service
 from app.services.rbac import RBACService
 from app.services.role_management_service import RoleManagementService
 from app.services.user_service import UserService
-from app.services.ledger_service import LedgerService
+from app.scripts.seed_default_coa_accounts import create_default_accounts  # Fixed import
 import secrets
 import string
 import logging
@@ -53,7 +53,7 @@ class OrganizationService:
         db.refresh(org)
         
         # Seed standard chart of accounts for the new organization
-        LedgerService.create_standard_chart_of_accounts(db, org.id)
+        create_default_accounts(db, org.id)
         
         # Generate temp password for org super admin
         alphabet = string.ascii_letters + string.digits + string.punctuation

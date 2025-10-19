@@ -52,7 +52,7 @@ def upgrade():
     
     # Get all organizations
     organizations = connection.execute(
-        sa.text("SELECT DISTINCT id FROM organizations WHERE is_active = true")
+        sa.text("SELECT DISTINCT id FROM organizations WHERE status = 'active'")
     ).fetchall()
     
     for org_row in organizations:
@@ -114,7 +114,7 @@ def upgrade():
                 freight_rates.update().where(
                     sa.and_(
                         freight_rates.c.organization_id == org_id,
-                        freight_rates.c.freight_expense_account_id == None
+                        freight_rates.c.freight_expense_account_id.is_(None)
                     )
                 ).values(freight_expense_account_id=freight_expense_account[0])
             )

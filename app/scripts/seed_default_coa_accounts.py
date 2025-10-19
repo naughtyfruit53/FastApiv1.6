@@ -13,7 +13,6 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 DEFAULT_COA_ACCOUNTS = [
     # ASSETS
     {
@@ -349,21 +348,27 @@ def create_default_accounts(db: Session, organization_id: int, user_id: int = No
     """
     logger.info(f"Creating default COA accounts for organization {organization_id}")
     
-    # Check if accounts already exist
-    existing_count = db.query(ChartOfAccounts).filter(
+    # Check existing accounts
+    existing_accounts = db.query(ChartOfAccounts).filter(
         ChartOfAccounts.organization_id == organization_id
-    ).count()
+    ).all()
+    existing_codes = {account.account_code for account in existing_accounts}
+    expected_count = len(DEFAULT_COA_ACCOUNTS)  # 35 accounts expected
     
-    if existing_count > 0:
-        logger.info(f"Organization {organization_id} already has {existing_count} accounts. Skipping.")
+    if len(existing_accounts) >= expected_count:
+        logger.info(f"Organization {organization_id} already has {len(existing_accounts)} accounts, expected {expected_count}. Skipping.")
         return False
     
     # Build parent lookup
     parent_lookup = {}
-    
-    # First pass: Create accounts without parent relationships
     created_accounts = {}
+    
+    # Create missing accounts
     for account_data in DEFAULT_COA_ACCOUNTS:
+        if account_data['account_code'] in existing_codes:
+            logger.info(f"Account {account_data['account_code']} already exists for organization {organization_id}. Skipping.")
+            continue
+        
         account_dict = account_data.copy()
         parent_code = account_dict.pop('parent_code', None)
         
@@ -379,15 +384,17 @@ def create_default_accounts(db: Session, organization_id: int, user_id: int = No
         if parent_code:
             parent_lookup[account.id] = parent_code
     
-    # Second pass: Set parent relationships
+    # Set parent relationships
     for account_id, parent_code in parent_lookup.items():
         account = db.query(ChartOfAccounts).filter(ChartOfAccounts.id == account_id).first()
-        parent_account = created_accounts.get(parent_code)
+        parent_account = created_accounts.get(parent_code) or next(
+            (acc for acc in existing_accounts if acc.account_code == parent_code), None
+        )
         if parent_account:
             account.parent_account_id = parent_account.id
     
     db.commit()
-    logger.info(f"Created {len(created_accounts)} default COA accounts for organization {organization_id}")
+    logger.info(f"Created {len(created_accounts)} new COA accounts for organization {organization_id}. Total accounts: {len(existing_accounts) + len(created_accounts)}")
     return True
 
 
@@ -397,9 +404,9 @@ def seed_all_organizations():
     """
     db = SessionLocal()
     try:
-        organizations = db.query(Organization).filter(Organization.is_active == True).all()
+        organizations = db.query(Organization).filter(Organization.status.in_(["active", "trial"])).all()
         
-        logger.info(f"Found {len(organizations)} active organizations")
+        logger.info(f"Found {len(organizations)} active or trial organizations")
         
         for org in organizations:
             try:
