@@ -897,4 +897,98 @@ async def get_financial_dashboard(
         "working_capital": float(total_assets - total_liabilities),
         "current_ratio": float(total_assets / total_liabilities) if total_liabilities > 0 else 0
     }
+
+
+# Chart of Accounts Entity Links Endpoint
+@router.get("/chart-of-accounts/{account_id}/entity-links")
+async def get_coa_entity_links(
+    account_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """
+    Get all entities (customers, vendors, freight rates) linked to a specific COA account
+    """
+    from app.models.customer_models import Customer, Vendor
+    from app.models.transport_models import FreightRate
+    from app.schemas.coa_relationships import COAEntityLink
+    
+    # Verify the account exists and belongs to the organization
+    stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.id == account_id,
+        ChartOfAccounts.organization_id == organization_id
+    )
+    result = await db.execute(stmt)
+    account = result.scalar_one_or_none()
+    
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chart of Accounts account not found"
+        )
+    
+    entity_links = []
+    
+    # Find customers using this account for receivables
+    customers_stmt = select(Customer).where(
+        Customer.receivable_account_id == account_id,
+        Customer.organization_id == organization_id,
+        Customer.is_active == True
+    )
+    customers_result = await db.execute(customers_stmt)
+    customers = customers_result.scalars().all()
+    
+    for customer in customers:
+        entity_links.append(COAEntityLink(
+            entity_type="Customer",
+            entity_id=customer.id,
+            entity_name=customer.name,
+            link_type="receivable"
+        ))
+    
+    # Find vendors using this account for payables
+    vendors_stmt = select(Vendor).where(
+        Vendor.payable_account_id == account_id,
+        Vendor.organization_id == organization_id,
+        Vendor.is_active == True
+    )
+    vendors_result = await db.execute(vendors_stmt)
+    vendors = vendors_result.scalars().all()
+    
+    for vendor in vendors:
+        entity_links.append(COAEntityLink(
+            entity_type="Vendor",
+            entity_id=vendor.id,
+            entity_name=vendor.name,
+            link_type="payable"
+        ))
+    
+    # Find freight rates using this account for expenses
+    freight_stmt = select(FreightRate).where(
+        FreightRate.freight_expense_account_id == account_id,
+        FreightRate.organization_id == organization_id,
+        FreightRate.is_active == True
+    )
+    freight_result = await db.execute(freight_stmt)
+    freight_rates = freight_result.scalars().all()
+    
+    for freight in freight_rates:
+        entity_links.append(COAEntityLink(
+            entity_type="FreightRate",
+            entity_id=freight.id,
+            entity_name=freight.rate_code,
+            link_type="expense"
+        ))
+    
+    return {
+        "account_id": account_id,
+        "account_code": account.account_code,
+        "account_name": account.account_name,
+        "account_type": account.account_type.value,
+        "entity_links": entity_links,
+        "total_links": len(entity_links)
+    }
+
+
 # Due to length constraints, I'll implement the key endpoints here and continue with other modules

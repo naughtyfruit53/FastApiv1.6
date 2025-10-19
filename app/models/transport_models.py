@@ -260,6 +260,9 @@ class FreightRate(Base):
     is_active = Column(Boolean, default=True)
     is_negotiated = Column(Boolean, default=False)
     
+    # Chart of Accounts Integration
+    freight_expense_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True, index=True)
+    
     # Notes
     notes = Column(Text)
     terms_conditions = Column(Text)
@@ -273,6 +276,7 @@ class FreightRate(Base):
     carrier = relationship("Carrier", back_populates="freight_rates")
     route = relationship("Route", back_populates="freight_rates")
     created_by_user = relationship("User")
+    freight_expense_account = relationship("ChartOfAccounts", foreign_keys=[freight_expense_account_id])
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'rate_code', name='uq_freight_rate_org_code'),

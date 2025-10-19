@@ -80,6 +80,22 @@ async def create_vendor(
                 detail=f"Vendor with name '{vendor_data['name']}' already exists in this organization"
             )
         
+        # Auto-assign default payable account if not provided
+        if not vendor_data.get('payable_account_id'):
+            from app.models.erp_models import ChartOfAccounts
+            default_payable_stmt = select(ChartOfAccounts).where(
+                and_(
+                    ChartOfAccounts.organization_id == vendor_data['organization_id'],
+                    ChartOfAccounts.account_code == '2110',  # Accounts Payable
+                    ChartOfAccounts.is_active == True
+                )
+            )
+            default_payable_result = await db.execute(default_payable_stmt)
+            default_payable = default_payable_result.scalar_one_or_none()
+            if default_payable:
+                vendor_data['payable_account_id'] = default_payable.id
+                logger.info(f"Auto-assigned payable account {default_payable.account_name} to vendor")
+        
         db_vendor = Vendor(**vendor_data)
         db.add(db_vendor)
         await db.commit()

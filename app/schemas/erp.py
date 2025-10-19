@@ -28,6 +28,17 @@ class TaxTypeEnum(str, Enum):
     TCS = "tcs"
     TDS = "tds"
 
+# Minimal COA Schema for relationships
+class ChartOfAccountMinimal(BaseModel):
+    """Minimal Chart of Accounts for inclusion in other schemas"""
+    id: int
+    account_code: str
+    account_name: str
+    account_type: AccountTypeEnum
+    
+    class Config:
+        from_attributes = True
+
 # Chart of Accounts Schemas
 class ChartOfAccountsBase(BaseModel):
     account_code: str = Field(..., description="Unique account code")
