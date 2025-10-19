@@ -99,6 +99,20 @@ except Exception as e:
     logger.error(f"Failed to import transport_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
+try:
+    from .chart_of_accounts import router as chart_of_accounts_router
+    logger.debug("Imported chart_of_accounts_router")
+except Exception as e:
+    logger.error(f"Failed to import chart_of_accounts_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .erp import router as erp_router
+    logger.debug("Imported erp_router")
+except Exception as e:
+    logger.error(f"Failed to import erp_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
 api_v1_router = APIRouter()
 
 # Include routers with detailed logging
@@ -221,6 +235,26 @@ try:
         logger.debug(f"  {route_path}")
 except Exception as e:
     logger.error(f"Failed to include chatbot_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(chart_of_accounts_router, tags=["Chart of Accounts"])
+    chart_of_accounts_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in chart_of_accounts_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered chart_of_accounts endpoints: {len(chart_of_accounts_routes)} routes")
+    for route_path in chart_of_accounts_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include chart_of_accounts_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(erp_router, prefix="/erp", tags=["ERP"])
+    erp_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /erp{route.path}" for route in erp_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered erp endpoints: {len(erp_routes)} routes")
+    for route_path in erp_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include erp_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
 # Move user_router to the end to avoid generic {user_id} route conflicts

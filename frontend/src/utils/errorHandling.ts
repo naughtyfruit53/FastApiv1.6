@@ -91,17 +91,23 @@ export const extractErrorMessage = (error: any): string => {
     
     // Handle array of error objects (validation errors)
     if (Array.isArray(detail)) {
-      return detail.map((err: any) => err.msg || err.message || String(err)).join(", ");
+      return detail.map((err: any) => {
+        const loc = err.loc ? err.loc.join(".") : '';
+        const msg = err.msg || err.message || String(err);
+        return loc ? `${loc}: ${msg}` : msg;
+      }).join("\n");
+    }
+    
+    // Handle single object detail (e.g., {type, loc, msg, input, url})
+    if (typeof detail === "object" && !Array.isArray(detail)) {
+      const loc = detail.loc ? detail.loc.join(".") : '';
+      const msg = detail.msg || detail.message || JSON.stringify(detail);
+      return loc ? `${loc}: ${msg}` : msg;
     }
     
     // Handle string detail
     if (typeof detail === "string") {
       return detail;
-    }
-    
-    // Handle object detail
-    if (typeof detail === "object" && detail.message) {
-      return detail.message;
     }
   }
 

@@ -322,11 +322,16 @@ export const hsnSearch = async ({ queryKey }: QueryFunctionContext): Promise<any
   }
 };
 
-// Get next account code for a type
+// Get next account code for a type - revised to use manual URL construction to avoid params serialization issues
 export const getNextAccountCode = async (accountType: string): Promise<string> => {
-  const response = await api.get("/api/v1/chart-of-accounts/get-next-code", {
-    params: { type: accountType },
-  });
-  console.log("[getNextAccountCode] Response data:", response.data);
-  return response.data.next_code;
+  try {
+    const params = new URLSearchParams({ type: accountType });
+    const url = `/api/v1/chart-of-accounts/get-next-code?${params}`;
+    const response = await api.get(url);
+    console.log("[getNextAccountCode] Response data:", response.data);
+    return response.data.next_code;
+  } catch (error) {
+    console.error("[getNextAccountCode] Error:", error);
+    throw error; // Rethrow to handle in caller
+  }
 };

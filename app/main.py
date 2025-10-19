@@ -162,6 +162,14 @@ def include_minimal_routers():
             logger.error(f"Failed to import ai_analytics router: {str(e)}")
             raise
 
+    # Include v1 API router (includes chart_of_accounts, erp, etc.)
+    try:
+        from app.api.v1 import api_v1_router
+        routers.append((api_v1_router, "/api/v1", ["v1-api"]))
+    except Exception as e:
+        logger.error(f"Failed to import v1 API router: {str(e)}")
+        raise
+
     for router, prefix, tags in routers:
         try:
             app.include_router(router, prefix=prefix, tags=tags)
@@ -197,14 +205,6 @@ async def startup_event():
         finally:
             await db.close()
         include_minimal_routers()
-        # Include v1 API router
-        try:
-            from app.api.v1 import api_v1_router
-            app.include_router(api_v1_router, prefix="/api/v1")
-            logger.info("Included v1 API router")
-        except Exception as e:
-            logger.error(f"Failed to include v1 API router: {str(e)}")
-            raise
         # Conditionally mount static directories
         if os.path.exists("app/static"):
             app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -218,10 +218,16 @@ async def startup_event():
 
     logger.info("=" * 50)
     logger.info("Registered Routes (for debugging):")
+    critical_routes = ["/api/v1/erp/bank-accounts", "/api/v1/chart-of-accounts"]
     for route in app.routes:
         if isinstance(route, APIRoute):
             methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            logger.info(f"{methods} {route.path}")
+            route_path = route.path
+            logger.info(f"{methods} {route_path}")
+            if route_path in critical_routes:
+                critical_routes.remove(route_path)
+    if critical_routes:
+        logger.warning(f"Critical routes not registered: {critical_routes}")
     logger.info("=" * 50)
 
 @app.on_event("shutdown")

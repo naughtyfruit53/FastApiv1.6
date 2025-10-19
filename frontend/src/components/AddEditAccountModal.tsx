@@ -14,7 +14,8 @@ import {
   FormControlLabel,
   Switch,
 } from "@mui/material";
-import { getNextAccountCode } from "../services/masterService"; // Import the new service function
+import { getNextAccountCode } from "../services/masterService";
+import { showErrorToast } from "../utils/errorHandling"; // Import error handling utility
 
 interface AddEditAccountModalProps {
   open: boolean;
@@ -50,7 +51,7 @@ const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
         setFormData((prev: any) => ({ ...prev, account_code: nextCode }));
       } catch (error) {
         console.error("Failed to fetch next account code:", error);
-        alert("Failed to generate account code. Using fallback method."); // Alert user for debugging
+        showErrorToast(error, "Failed to generate account code. Using fallback method."); // Improved error display
         // Fallback to client-side logic if API fails
         // Define minimum starting codes per type
         const minCodes: { [key: string]: number } = {
@@ -106,7 +107,7 @@ const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
 
   const onSubmit = () => {
     if (!isFormValid()) {
-      alert("Account code and name are required.");
+      showErrorToast(null, "Account code and name are required."); // Improved error display
       return;
     }
     handleSubmit();

@@ -23,7 +23,6 @@ from pydantic import ValidationError
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-
 @router.get("/chart-of-accounts", response_model=ChartOfAccountsList)
 async def get_chart_of_accounts(
     page: int = Query(1, ge=1),
@@ -96,7 +95,7 @@ async def create_chart_of_account(
         # Generate code if not provided or empty
         account_code = coa_data.account_code.strip() if coa_data.account_code else ""
         if not account_code:
-            account_code = LedgerService.generate_account_code(db, organization_id, coa_data.account_type.upper())
+            account_code = await LedgerService.generate_account_code(db, organization_id, coa_data.account_type.upper())
         
         # Check for duplicate code
         existing_stmt = select(ChartOfAccounts).where(
@@ -171,7 +170,9 @@ async def get_next_account_code(
 ):
     """Get next suggested account code for a type"""
     try:
-        next_code = LedgerService.generate_account_code(db, organization_id, account_type.upper())
+        logger.info(f"Generating next account code for type: {account_type}, org: {organization_id}")
+        next_code = await LedgerService.generate_account_code(db, organization_id, account_type.upper())
+        logger.info(f"Generated next code: {next_code}")
         return {"next_code": next_code}
     except Exception as e:
         logger.error(f"Error generating next account code: {str(e)}")

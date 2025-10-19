@@ -35,6 +35,7 @@ import {
 import api from "../../lib/api";  // Assuming corrected import from previous
 import AddEditAccountModal from "../../components/AddEditAccountModal";
 import ViewAccountModal from "../../components/ViewAccountModal";
+import { extractErrorMessage } from "../../utils/errorHandling";  // Import the utility for consistent error extraction
 
 const ChartOfAccountsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,7 +79,8 @@ const ChartOfAccountsPage: React.FC = () => {
       const response = await api.get("/chart-of-accounts");
       setAccounts(response.data.items);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to fetch chart of accounts");
+      console.error("Error fetching accounts:", err);  // Added logging for debugging
+      setError(extractErrorMessage(err) || "Failed to fetch chart of accounts");
     } finally {
       setLoading(false);
     }
@@ -159,20 +161,8 @@ const ChartOfAccountsPage: React.FC = () => {
       setAddDialog(false);
       setEditDialog(false);
     } catch (err: any) {
-      let errorMessage = "Failed to save account";
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        if (typeof detail === "string") {
-          errorMessage = detail;
-        } else if (Array.isArray(detail)) {
-          // Handle Pydantic validation errors (list of dicts)
-          errorMessage = detail.map((e: any) => `${e.loc.join(".")}: ${e.msg}`).join("\n");
-        } else if (typeof detail === "object") {
-          // Handle other object errors
-          errorMessage = JSON.stringify(detail);
-        }
-      }
-      setError(errorMessage);
+      console.error("Error saving account:", err);  // Added logging for debugging
+      setError(extractErrorMessage(err) || "Failed to save account");
     }
   };
 
@@ -192,7 +182,8 @@ const ChartOfAccountsPage: React.FC = () => {
       // Refresh accounts list
       fetchAccounts();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to delete account");
+      console.error("Error deleting account:", err);  // Added logging for debugging
+      setError(extractErrorMessage(err) || "Failed to delete account");
     }
   };
 
