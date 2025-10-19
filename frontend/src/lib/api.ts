@@ -1,8 +1,21 @@
 // frontend/src/lib/api.ts
 import axios from "axios";
 import { toast } from "react-toastify";
+import axiosRetry from 'axios-retry';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+// Configure axios-retry with exponential backoff
+axiosRetry(axios, {
+  retries: 3, // Retry up to 3 times
+  retryDelay: (retryCount) => {
+    return axiosRetry.exponentialDelay(retryCount); // Exponential backoff
+  },
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx server errors
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
+  },
+});
 
 const handleTokenExpiry = () => {
   console.log("[API] Handling token expiry - preserving application state");
@@ -122,12 +135,30 @@ const refreshAxios = axios.create({
   timeout: 15000,
 });
 
+// Apply retry logic to refreshAxios as well
+axiosRetry(refreshAxios, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
+  },
+});
+
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 15000,  // Global timeout: 15 seconds to prevent hangs
+});
+
+// Apply retry logic to api instance
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
+  },
 });
 
 api.interceptors.request.use(

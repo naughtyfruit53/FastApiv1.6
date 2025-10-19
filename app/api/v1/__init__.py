@@ -68,7 +68,7 @@ try:
     from .voucher_email_templates import router as voucher_email_templates_router
     logger.debug("Imported voucher_email_templates_router")
 except Exception as e:
-    logger.error(f"Failed to include voucher_email_templates_router: {str(e)}\n{traceback.format_exc()}")
+    logger.error(f"Failed to import voucher_email_templates_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
 try:
@@ -92,10 +92,17 @@ except Exception as e:
     logger.error(f"Failed to import manufacturing_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
+try:
+    from .transport import router as transport_router
+    logger.debug("Imported transport_router")
+except Exception as e:
+    logger.error(f"Failed to import transport_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
 api_v1_router = APIRouter()
 
 # Include routers with detailed logging
-# Place manufacturing_router first to prioritize specific routes
+# Place manufacturing_router and transport_router first to prioritize specific routes
 try:
     api_v1_router.include_router(manufacturing_router, tags=["Manufacturing"])
     manufacturing_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in manufacturing_router.routes if isinstance(route, APIRoute)]
@@ -104,6 +111,16 @@ try:
         logger.debug(f"  {route_path}")
 except Exception as e:
     logger.error(f"Failed to include manufacturing_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(transport_router, prefix="/transport", tags=["Transport"])
+    transport_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /transport{route.path}" for route in transport_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered transport endpoints: {len(transport_routes)} routes")
+    for route_path in transport_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include transport_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
 try:

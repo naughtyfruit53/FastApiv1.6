@@ -25,6 +25,7 @@
     "@types/papaparse": "^5.3.16",
     "antd": "^5.26.7",
     "axios": "^1.11.0",
+    "axios-retry": "^4.5.0",
     "chart.js": "^4.5.0",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
