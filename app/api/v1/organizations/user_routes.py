@@ -142,6 +142,12 @@ async def create_user_in_organization(
                 detail="Only super administrators or organization administrators can assign management role"
             )
       
+        if user_data.role in ["super_admin", "app_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot create app-level users in organization"
+            )
+      
         # Additional check for managers creating users
         if not is_platform_user and current_user.role == "manager":
             if user_data.role != "executive":
@@ -235,12 +241,13 @@ async def create_user_in_organization(
                 designation=user_data.designation,
                 employee_id=user_data.employee_id,
                 phone=user_data.phone,
-                is_active=user_data.is_active if user_data.is_active is not None else True,
+                is_active=True,
+                is_super_admin=False,
+                must_change_password=True,  # Force change on first login
                 supabase_uuid=supabase_uuid,
                 assigned_modules=user_data.assigned_modules,
                 reporting_manager_id=user_data.reporting_manager_id,
-                sub_module_permissions=user_data.sub_module_permissions,
-                must_change_password=True  # Force change on first login
+                sub_module_permissions=user_data.sub_module_permissions
             )
             
             db.add(new_user)

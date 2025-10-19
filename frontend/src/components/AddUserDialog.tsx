@@ -223,6 +223,37 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
     );
   }
 
+  const availableRoles = (() => {
+    if (isSuperAdmin) {
+      return [
+        { value: "super_admin", label: "Super Admin" },
+        { value: "org_admin", label: "Org Admin" },
+        { value: "management", label: "Management" },
+        { value: "manager", label: "Manager" },
+        { value: "executive", label: "Executive" },
+      ];
+    } else if (user?.role === "org_admin") {
+      return [
+        { value: "org_admin", label: "Org Admin" },
+        { value: "management", label: "Management" },
+        { value: "manager", label: "Manager" },
+        { value: "executive", label: "Executive" },
+      ];
+    } else if (user?.role === "management") {
+      return [
+        { value: "management", label: "Management" },
+        { value: "manager", label: "Manager" },
+        { value: "executive", label: "Executive" },
+      ];
+    } else if (user?.role === "manager") {
+      return [
+        { value: "executive", label: "Executive" },
+      ];
+    } else {
+      return [];
+    }
+  })();
+
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -299,11 +330,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
                     label="Role *"
                     onChange={handleInputChange("role")}
                   >
-                    <MenuItem value="super_admin">Super Admin</MenuItem>
-                    <MenuItem value="org_admin">Org Admin</MenuItem>
-                    <MenuItem value="management">Management</MenuItem>
-                    <MenuItem value="manager">Manager</MenuItem>
-                    <MenuItem value="executive">Executive</MenuItem>
+                    {availableRoles.map((role) => (
+                      <MenuItem key={role.value} value={role.value}>
+                        {role.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Box>
