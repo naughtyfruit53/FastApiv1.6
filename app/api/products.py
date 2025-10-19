@@ -1,4 +1,4 @@
-# app/api/products.py
+# Revised: app/api/products.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -15,7 +15,7 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user
 from app.core.tenant import TenantQueryMixin, require_current_organization_id
 from app.core.org_restrictions import validate_company_setup
-from app.core.org_restrictions import require_organization_access, ensure_organization_context
+from app.core.org_restrictions import require_organization_access, require_current_organization_id
 from app.models import User, Product, Stock, ProductFile, Organization, Company
 from app.schemas.base import ProductCreate, ProductUpdate, ProductInDB, ProductResponse, BulkImportResponse, ProductFileResponse
 from app.services.excel_service import ProductExcelService, ExcelService
@@ -35,7 +35,7 @@ async def get_products(
     """Get products in current organization"""
     
     # Check if user is app super admin
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     stmt = select(Product)
     stmt = TenantQueryMixin.filter_by_tenant(stmt, Product, org_id)

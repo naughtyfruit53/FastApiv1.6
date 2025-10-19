@@ -1,13 +1,13 @@
-# app/api/v1/exhibition.py
+# Revised: app/api/v1/exhibition.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import ensure_organization_context
+from app.core.org_restrictions import require_current_organization_id
 from app.models.user_models import User
 from app.schemas.exhibition import (
     ExhibitionEventCreate, ExhibitionEventUpdate, ExhibitionEventInDB,
@@ -28,12 +28,12 @@ router = APIRouter()
 @router.post("/events", response_model=ExhibitionEventInDB, status_code=status.HTTP_201_CREATED)
 async def create_exhibition_event(
     event_data: ExhibitionEventCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new exhibition event"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     event = await exhibition_service.create_exhibition_event(
         db=db,
@@ -51,14 +51,14 @@ async def get_exhibition_events(
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     skip: int = Query(0, ge=0, description="Number of events to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of events to return"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get exhibition events for the current organization"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    events = exhibition_service.get_exhibition_events(
+    events = await exhibition_service.get_exhibition_events(
         db=db,
         organization_id=org_id,
         status=status,
@@ -73,14 +73,14 @@ async def get_exhibition_events(
 @router.get("/events/{event_id}", response_model=ExhibitionEventInDB)
 async def get_exhibition_event(
     event_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific exhibition event"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    event = exhibition_service.get_exhibition_event(db, event_id, org_id)
+    event = await exhibition_service.get_exhibition_event(db, event_id, org_id)
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -94,12 +94,12 @@ async def get_exhibition_event(
 async def update_exhibition_event(
     event_id: int,
     event_data: ExhibitionEventUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update an exhibition event"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     event = await exhibition_service.update_exhibition_event(
         db=db,
@@ -120,14 +120,14 @@ async def update_exhibition_event(
 @router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exhibition_event(
     event_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete an exhibition event"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    success = exhibition_service.delete_exhibition_event(db, event_id, org_id)
+    success = await exhibition_service.delete_exhibition_event(db, event_id, org_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -141,12 +141,12 @@ async def delete_exhibition_event(
 async def scan_business_card(
     event_id: int,
     file: UploadFile = File(..., description="Business card image file"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Scan a business card for an exhibition event"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     try:
         scan = await exhibition_service.scan_business_card(
@@ -174,14 +174,14 @@ async def get_card_scans(
     processing_status: Optional[str] = Query(None, description="Filter by processing status"),
     skip: int = Query(0, ge=0, description="Number of scans to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of scans to return"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get business card scans for the current organization"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    scans = exhibition_service.get_card_scans(
+    scans = await exhibition_service.get_card_scans(
         db=db,
         organization_id=org_id,
         exhibition_event_id=event_id,
@@ -197,14 +197,14 @@ async def get_card_scans(
 @router.get("/card-scans/{scan_id}", response_model=BusinessCardScanInDB)
 async def get_card_scan(
     scan_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific business card scan"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    scan = exhibition_service.get_card_scan(db, scan_id, org_id)
+    scan = await exhibition_service.get_card_scan(db, scan_id, org_id)
     if not scan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -218,12 +218,12 @@ async def get_card_scan(
 async def update_card_scan(
     scan_id: int,
     scan_data: BusinessCardScanUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update a business card scan (validation, correction)"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     scan = await exhibition_service.update_card_scan(
         db=db,
@@ -247,12 +247,12 @@ async def update_card_scan(
 @router.post("/prospects", response_model=ExhibitionProspectInDB, status_code=status.HTTP_201_CREATED)
 async def create_prospect(
     prospect_data: ExhibitionProspectCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new exhibition prospect"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     prospect = await exhibition_service.create_prospect(
         db=db,
@@ -272,14 +272,14 @@ async def get_prospects(
     assigned_to_id: Optional[int] = Query(None, description="Filter by assigned user"),
     skip: int = Query(0, ge=0, description="Number of prospects to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of prospects to return"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get exhibition prospects for the current organization"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    prospects = exhibition_service.get_prospects(
+    prospects = await exhibition_service.get_prospects(
         db=db,
         organization_id=org_id,
         exhibition_event_id=event_id,
@@ -296,14 +296,14 @@ async def get_prospects(
 @router.get("/prospects/{prospect_id}", response_model=ExhibitionProspectInDB)
 async def get_prospect(
     prospect_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific exhibition prospect"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    prospect = exhibition_service.get_prospect(db, prospect_id, org_id)
+    prospect = await exhibition_service.get_prospect(db, prospect_id, org_id)
     if not prospect:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -317,12 +317,12 @@ async def get_prospect(
 async def update_prospect(
     prospect_id: int,
     prospect_data: ExhibitionProspectUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update an exhibition prospect"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     prospect = await exhibition_service.update_prospect(
         db=db,
@@ -343,12 +343,12 @@ async def update_prospect(
 @router.post("/prospects/{prospect_id}/convert-to-customer")
 async def convert_prospect_to_customer(
     prospect_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Convert an exhibition prospect to a CRM customer"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     customer = await exhibition_service.convert_prospect_to_customer(
         db=db,
@@ -373,28 +373,28 @@ async def convert_prospect_to_customer(
 
 @router.get("/analytics", response_model=ExhibitionAnalytics)
 async def get_exhibition_analytics(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get overall exhibition analytics for the organization"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    analytics = exhibition_service.get_exhibition_analytics(db, org_id)
+    analytics = await exhibition_service.get_exhibition_analytics(db, org_id)
     return analytics
 
 
 @router.get("/events/{event_id}/metrics", response_model=ExhibitionEventMetrics)
 async def get_event_metrics(
     event_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get detailed metrics for a specific exhibition event"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
-    metrics = exhibition_service.get_event_metrics(db, event_id, org_id)
+    metrics = await exhibition_service.get_event_metrics(db, event_id, org_id)
     if not metrics:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -410,12 +410,12 @@ async def get_event_metrics(
 async def bulk_scan_cards(
     event_id: int,
     files: List[UploadFile] = File(..., description="Multiple business card images"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Bulk scan multiple business cards for an exhibition event"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     results = {
         "successful_scans": 0,
@@ -456,15 +456,15 @@ async def bulk_scan_cards(
 async def export_event_data(
     event_id: int,
     format: str = Query("csv", description="Export format: csv, excel, json"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export exhibition event data"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     # Verify event exists
-    event = exhibition_service.get_exhibition_event(db, event_id, org_id)
+    event = await exhibition_service.get_exhibition_event(db, event_id, org_id)
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

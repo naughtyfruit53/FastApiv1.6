@@ -28,10 +28,6 @@ from pydantic import BaseModel, EmailStr
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-class EmailLogin(BaseModel):
-    email: EmailStr
-    password: str
-
 async def fetch_user(db: AsyncSession, email: str):
     result = await db.execute(select(User).options(joinedload(User.organization)).filter_by(email=email))
     return result.scalars().first()
@@ -42,13 +38,18 @@ async def fetch_platform_user(db: AsyncSession, email: str):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    email_login: Optional[EmailLogin] = Body(None),
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
     request: Request = None
 ):
-    # Handle both username and email login (assuming username can be email)
-    email = form_data.username  # OAuth2 uses 'username', but treat as email
-    password = form_data.password
+    # Handle JSON payload (EmailLogin) or FormData (OAuth2PasswordRequestForm)
+    if email_login:
+        email = email_login.email
+        password = email_login.password
+    else:
+        email = form_data.username  # OAuth2 uses 'username', but treat as email
+        password = form_data.password
 
     # Use retry for database queries to handle transient failures
     user: Union[User, PlatformUser, None] = await execute_with_retry(fetch_user, email=email)
@@ -222,6 +223,32 @@ async def logout(
             user_agent=request.headers.get("user-agent", "unknown") if request else "unknown"
         )
     return {"message": "Successfully logged out"}
+
+@router.get("/test-token", tags=["debug"], response_model=dict)
+async def test_token(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+):
+    """Debug endpoint to verify JWT token"""
+    email, organization_id, user_role, user_type = verify_token(token)
+    if not email:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = await execute_with_retry(fetch_user, email=email)
+    if not user:
+        user = await execute_with_retry(fetch_platform_user, email=email)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return {
+        "user": {
+            "email": user.email,
+            "organization_id": user.organization_id if hasattr(user, "organization_id") else None,
+            "role": user.role,
+            "type": user_type
+        },
+        "message": "Token is valid"
+    }
 
 async def get_current_active_user(current_user: UserInDB = Depends(core_get_current_user)):
     if not current_user.is_active:

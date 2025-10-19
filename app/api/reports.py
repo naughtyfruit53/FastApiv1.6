@@ -1,3 +1,5 @@
+# Revised: app/api/reports.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
@@ -11,7 +13,7 @@ from app.models.vouchers import (
 )
 from app.core.tenant import require_current_organization_id, TenantQueryMixin
 from app.core.permissions import PermissionChecker, Permission
-from app.core.org_restrictions import ensure_organization_context
+from app.core.org_restrictions import require_current_organization_id
 from app.schemas.ledger import (
     LedgerFilters, CompleteLedgerResponse, OutstandingLedgerResponse
 )
@@ -327,9 +329,6 @@ def _check_ledger_access(current_user: User) -> None:
     Check if user has access to ledger reports.
     Access is granted to: Super Admin, Admin, and Standard User (with access)
     """
-    # Block app super admins from accessing organization data
-    ensure_organization_context(current_user)
-    
     # Allow org-level super admins, admins, and standard users
     allowed_roles = ["super_admin", "org_admin", "admin", "standard_user"]
     if current_user.role not in allowed_roles:
@@ -368,7 +367,7 @@ async def get_complete_ledger(
         _check_ledger_access(current_user)
         
         # Get organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Prepare filters
         filters = LedgerFilters(
@@ -428,7 +427,7 @@ async def get_outstanding_ledger(
         _check_ledger_access(current_user)
         
         # Get organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Prepare filters
         filters = LedgerFilters(
@@ -763,7 +762,7 @@ async def export_complete_ledger_excel(
             )
         
         # Get organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Prepare filters
         filters = LedgerFilters(
@@ -813,7 +812,7 @@ async def export_outstanding_ledger_excel(
             )
         
         # Get organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Prepare filters
         filters = LedgerFilters(
@@ -839,14 +838,6 @@ async def export_outstanding_ledger_excel(
             detail="Failed to export outstanding ledger report"
         )
 
-
-def _check_ledger_access(current_user: User):
-    """Check if user has access to ledger reports"""
-    if not canAccessLedger(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. Ledger reports require Super Admin, Admin, or authorized Standard User permissions."
-        )
 
 @router.get("/pending-purchase-orders-with-grn-status")
 async def get_pending_purchase_orders_with_grn_status(

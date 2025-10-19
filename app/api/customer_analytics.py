@@ -1,4 +1,4 @@
-# app/api/customer_analytics.py
+# Revised: app/api/customer_analytics.py
 
 """
 Customer Analytics API endpoints
@@ -11,11 +11,11 @@ Provides REST API endpoints for customer analytics and insights including:
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import ensure_organization_context
+from app.core.org_restrictions import require_current_organization_id
 from app.models import User, Customer, CustomerSegment
 from app.services.customer_analytics_service import CustomerAnalyticsService
 from app.schemas.customer_analytics import (
@@ -40,7 +40,7 @@ async def get_customer_analytics(
     customer_id: int,
     include_recent_interactions: bool = Query(True, description="Include recent interactions in response"),
     recent_interactions_limit: int = Query(5, ge=1, le=20, description="Number of recent interactions to include"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -58,12 +58,12 @@ async def get_customer_analytics(
     """
     try:
         # Ensure organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Verify customer exists and belongs to organization
-        customer = TenantQueryMixin.filter_by_tenant(
-            db.query(Customer), Customer, org_id
-        ).filter(Customer.id == customer_id).first()
+        customer = await TenantQueryMixin.filter_by_tenant(
+            (await db.execute(select(Customer).filter_by(id=customer_id, organization_id=org_id))).scalars().first()
+        )
         
         if not customer:
             raise HTTPException(
@@ -75,7 +75,7 @@ async def get_customer_analytics(
         analytics_service = CustomerAnalyticsService(db, org_id)
         
         # Get customer analytics
-        analytics_data = analytics_service.get_customer_metrics(customer_id)
+        analytics_data = await analytics_service.get_customer_metrics(customer_id)
         
         if not analytics_data:
             raise HTTPException(
@@ -107,7 +107,7 @@ async def get_segment_analytics(
     segment_name: str,
     include_timeline: bool = Query(True, description="Include activity timeline"),
     timeline_days: int = Query(30, ge=7, le=365, description="Number of days for timeline"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -124,15 +124,12 @@ async def get_segment_analytics(
     """
     try:
         # Ensure organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Validate segment exists in organization
-        segment_exists = TenantQueryMixin.filter_by_tenant(
-            db.query(CustomerSegment), CustomerSegment, org_id
-        ).filter(
-            CustomerSegment.segment_name == segment_name,
-            CustomerSegment.is_active == True
-        ).first()
+        segment_exists = await TenantQueryMixin.filter_by_tenant(
+            (await db.execute(select(CustomerSegment).filter_by(segment_name=segment_name, is_active=True, organization_id=org_id))).scalars().first()
+        )
         
         if not segment_exists:
             raise HTTPException(
@@ -144,7 +141,7 @@ async def get_segment_analytics(
         analytics_service = CustomerAnalyticsService(db, org_id)
         
         # Get segment analytics
-        analytics_data = analytics_service.get_segment_analytics(segment_name)
+        analytics_data = await analytics_service.get_segment_analytics(segment_name)
         
         # Filter timeline if not requested
         if not include_timeline:
@@ -165,7 +162,7 @@ async def get_segment_analytics(
 
 @router.get("/organization/summary", response_model=OrganizationAnalyticsSummary)
 async def get_organization_analytics_summary(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -181,13 +178,13 @@ async def get_organization_analytics_summary(
     """
     try:
         # Ensure organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Initialize analytics service
         analytics_service = CustomerAnalyticsService(db, org_id)
         
         # Get organization summary
-        summary_data = analytics_service.get_organization_analytics_summary()
+        summary_data = await analytics_service.get_organization_analytics_summary()
         
         logger.info(f"Retrieved organization analytics summary for organization {org_id}")
         return OrganizationAnalyticsSummary(**summary_data)
@@ -204,7 +201,7 @@ async def get_organization_analytics_summary(
 
 @router.get("/dashboard/metrics", response_model=DashboardMetrics)
 async def get_dashboard_metrics(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -221,13 +218,13 @@ async def get_dashboard_metrics(
     """
     try:
         # Ensure organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Initialize analytics service
         analytics_service = CustomerAnalyticsService(db, org_id)
         
         # Get organization summary for base metrics
-        summary_data = analytics_service.get_organization_analytics_summary()
+        summary_data = await analytics_service.get_organization_analytics_summary()
         
         # Calculate additional dashboard-specific metrics
         from datetime import datetime, timedelta
@@ -239,25 +236,28 @@ async def get_dashboard_metrics(
         month_start = today - timedelta(days=30)
         
         # Interactions today
-        interactions_today = TenantQueryMixin.filter_by_tenant(
-            db.query(CustomerInteraction), CustomerInteraction, org_id
-        ).filter(
-            CustomerInteraction.interaction_date >= datetime.combine(today, datetime.min.time())
-        ).count()
+        interactions_today = len((await db.execute(
+            select(CustomerInteraction).filter(
+                CustomerInteraction.organization_id == org_id,
+                CustomerInteraction.interaction_date >= datetime.combine(today, datetime.min.time())
+            )
+        )).scalars().all())
         
         # Interactions this week
-        interactions_week = TenantQueryMixin.filter_by_tenant(
-            db.query(CustomerInteraction), CustomerInteraction, org_id
-        ).filter(
-            CustomerInteraction.interaction_date >= datetime.combine(week_start, datetime.min.time())
-        ).count()
+        interactions_week = len((await db.execute(
+            select(CustomerInteraction).filter(
+                CustomerInteraction.organization_id == org_id,
+                CustomerInteraction.interaction_date >= datetime.combine(week_start, datetime.min.time())
+            )
+        )).scalars().all())
         
         # Interactions this month
-        interactions_month = TenantQueryMixin.filter_by_tenant(
-            db.query(CustomerInteraction), CustomerInteraction, org_id
-        ).filter(
-            CustomerInteraction.interaction_date >= datetime.combine(month_start, datetime.min.time())
-        ).count()
+        interactions_month = len((await db.execute(
+            select(CustomerInteraction).filter(
+                CustomerInteraction.organization_id == org_id,
+                CustomerInteraction.interaction_date >= datetime.combine(month_start, datetime.min.time())
+            )
+        )).scalars().all())
         
         # Top segments (by customer count)
         top_segments = [
@@ -297,7 +297,7 @@ async def get_dashboard_metrics(
 
 @router.get("/segments", response_model=List[str])
 async def list_available_segments(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -308,16 +308,17 @@ async def list_available_segments(
     """
     try:
         # Ensure organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         
         # Get distinct segment names
-        segments = TenantQueryMixin.filter_by_tenant(
-            db.query(CustomerSegment), CustomerSegment, org_id
-        ).filter(CustomerSegment.is_active == True).with_entities(
-            CustomerSegment.segment_name
-        ).distinct().all()
+        segments = (await db.execute(
+            select(CustomerSegment.segment_name).filter(
+                CustomerSegment.organization_id == org_id,
+                CustomerSegment.is_active == True
+            ).distinct()
+        )).scalars().all()
         
-        segment_names = [segment[0] for segment in segments]
+        segment_names = [segment for segment in segments]
         
         logger.info(f"Retrieved {len(segment_names)} segments for organization {org_id}")
         return segment_names

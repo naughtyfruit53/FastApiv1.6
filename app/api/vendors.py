@@ -1,4 +1,4 @@
-# app/api/vendors.py
+# Revised: app/api/vendors.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -10,7 +10,7 @@ from app.api.v1.auth import (
     get_current_active_user, get_current_admin_user
 )
 from app.core.tenant import TenantQueryFilter
-from app.core.org_restrictions import require_current_organization_id, ensure_organization_context
+from app.core.org_restrictions import require_current_organization_id
 from app.models import User, Vendor, VendorFile
 from app.schemas.base import VendorCreate, VendorUpdate, VendorInDB, BulkImportResponse, VendorFileResponse
 from app.services.excel_service import VendorExcelService, ExcelService
@@ -35,7 +35,7 @@ async def get_vendors(
 ):
     """Get all vendors for the organization"""
     
-    target_org_id = ensure_organization_context(current_user)
+    target_org_id = require_current_organization_id(current_user)
     
     stmt = TenantQueryFilter.apply_organization_filter(
         select(Vendor), Vendor, target_org_id, current_user
@@ -361,7 +361,7 @@ async def upload_vendor_file(
 ):
     """Upload a file for a vendor (GST certificate, PAN card, etc.)"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     stmt = select(Vendor).where(
         Vendor.id == vendor_id,
@@ -449,7 +449,7 @@ async def get_vendor_files(
 ):
     """Get all files for a vendor, optionally filtered by file type"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     stmt = select(Vendor).where(
         Vendor.id == vendor_id,
@@ -498,7 +498,7 @@ async def download_vendor_file(
 ):
     """Download a vendor file"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     stmt = select(VendorFile).where(
         VendorFile.id == file_id,
@@ -537,7 +537,7 @@ async def delete_vendor_file(
 ):
     """Delete a vendor file"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     stmt = select(VendorFile).where(
         VendorFile.id == file_id,

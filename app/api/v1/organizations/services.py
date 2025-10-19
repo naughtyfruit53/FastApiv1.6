@@ -161,7 +161,7 @@ class OrganizationService:
             select(AuditLog)
             .filter_by(organization_id=organization_id)
             .options(joinedload(AuditLog.user))
-            .order_by(desc(AuditLog.created_at))
+            .order_by(desc(AuditLog.timestamp))
             .limit(limit)
         )
         logs = result.scalars().all()
@@ -175,7 +175,7 @@ class OrganizationService:
                 user_id=log.user_id,
                 organization_id=log.organization_id,
                 description=log.changes.get('description') if log.changes else None,
-                created_at=log.created_at,
+                created_at=log.timestamp,
                 user_name=log.user.full_name if log.user else None
             )
             for log in logs

@@ -9,7 +9,7 @@ from datetime import datetime
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user, get_current_org_admin_user
 from app.core.tenant import TenantQueryMixin, TenantQueryFilter, require_current_organization_id
-from app.core.org_restrictions import require_organization_access, ensure_organization_context
+from app.core.org_restrictions import require_organization_access, require_current_organization_id
 from app.models import User, Company, Organization
 from app.models.user_models import UserCompany
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyInDB, CompanyResponse, CompanyErrorResponse, UserCompanyAssignmentCreate, UserCompanyAssignmentUpdate, UserCompanyAssignmentInDB
@@ -35,7 +35,7 @@ async def get_companies(
     """Get companies in current organization"""
     
     # Restrict app super admins from accessing organization data
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     stmt = select(Company)
     stmt = TenantQueryMixin.filter_by_tenant(stmt, Company, org_id)
@@ -83,7 +83,7 @@ async def get_current_company(
             )
         
         # For organization users, ensure organization context
-        org_id = ensure_organization_context(current_user)
+        org_id = require_current_organization_id(current_user)
         logger.info(f"[/companies/current] Organization context established: org_id={org_id}")
         
         stmt = select(Company).where(Company.organization_id == org_id)
@@ -294,7 +294,7 @@ async def export_companies_excel(
     limit = min(1000, max(1, limit))  # Limit between 1 and 1000
     
     # Get companies using the same logic as the list endpoint
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     stmt = select(Company).offset(skip).limit(limit)
     stmt = TenantQueryMixin.filter_by_tenant(stmt, Company, org_id)
     

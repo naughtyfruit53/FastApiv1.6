@@ -6,7 +6,6 @@ import logging
 import uuid
 import json
 import numpy as np
-import pandas as pd
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -24,7 +23,6 @@ from app.schemas.ai_analytics import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class AIAnalyticsService:
     """Service for AI-powered analytics and machine learning operations"""
@@ -566,6 +564,7 @@ class AIAnalyticsService:
     
     def _simulate_prediction(self, model: AIModel, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Simulate prediction output (placeholder for actual ML prediction)"""
+        # Minimize numpy usage to reduce memory footprint
         if model.model_type == PredictionType.CLASSIFICATION:
             return {
                 "prediction": "positive",
@@ -580,8 +579,9 @@ class AIAnalyticsService:
                 "prediction_interval": [1100.50, 1401.00]
             }
         elif model.model_type == PredictionType.FORECASTING:
+            # Use list comprehension instead of numpy to reduce memory
             forecast_periods = 7  # 7-day forecast
-            forecast_values = [1200 + i * 50 + np.random.normal(0, 20) for i in range(forecast_periods)]
+            forecast_values = [1200 + i * 50 for i in range(forecast_periods)]
             return {
                 "forecast": forecast_values,
                 "confidence": 0.75,

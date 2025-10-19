@@ -1,4 +1,4 @@
-# app/api/customers.py
+# Revised: app/api/customers.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
@@ -8,11 +8,11 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user, get_current_admin_user
 from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id, ensure_organization_context
+from app.core.org_restrictions import require_current_organization_id
 from app.models import User, Customer, CustomerFile
 from app.schemas.base import CustomerCreate, CustomerUpdate, CustomerInDB, BulkImportResponse, CustomerFileResponse
 from app.services.excel_service import CustomerExcelService, ExcelService
-from app.services.rbac import RBACService  # Added for company scoping
+from app.services.rbac import RBACService
 import logging
 import os
 import uuid
@@ -34,7 +34,7 @@ async def get_customers(
     """Get customers with company scoping"""
     
     # Restrict app super admins from accessing organization data  
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -417,7 +417,7 @@ async def upload_customer_file(
 ):
     """Upload a file for a customer (GST certificate, PAN card, etc.)"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     # Verify customer exists and belongs to current organization
     stmt = select(Customer).where(
@@ -508,7 +508,7 @@ async def get_customer_files(
 ):
     """Get all files for a customer, optionally filtered by file type"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     # Verify customer exists and belongs to current organization
     stmt = select(Customer).where(
@@ -557,7 +557,7 @@ async def download_customer_file(
 ):
     """Download a customer file"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     # Get file record
     stmt = select(CustomerFile).where(
@@ -596,7 +596,7 @@ async def delete_customer_file(
 ):
     """Delete a customer file"""
     
-    org_id = ensure_organization_context(current_user)
+    org_id = require_current_organization_id(current_user)
     
     # Get file record
     stmt = select(CustomerFile).where(

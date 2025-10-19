@@ -1,6 +1,5 @@
-"""
-Inventory & Parts Management API endpoints
-"""
+# Revised: app/api/v1/inventory.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc, asc, func
@@ -27,7 +26,8 @@ from app.schemas.inventory import (
     InventoryFilter, InventoryListResponse, TransactionType, JobPartsStatus,
     AlertType, AlertStatus, AlertPriority
 )
-from app.schemas.organization import TotalInventoryValue  # Add this import
+from app.schemas.organization import TotalInventoryValue
+from app.schemas.base import StockResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -184,6 +184,142 @@ class InventoryService:
             existing_alert.status = AlertStatus.RESOLVED
             existing_alert.resolved_at = datetime.utcnow()
 
+
+# Stock Endpoints
+@router.get("/stock", response_model=List[StockResponse])
+async def get_stock(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    low_stock_only: bool = Query(False, description="Filter for low stock items only"),
+    search: Optional[str] = Query(None, description="Search by product name or HSN code"),
+    show_zero: bool = Query(True, description="Include items with zero stock"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get stock inventory for the organization"""
+    
+    organization_id = require_current_organization_id(current_user)
+    
+    # Check permissions
+    check_service_permission(
+        user=current_user,
+        module="inventory",
+        action="read",
+        db=db
+    )
+    
+    try:
+        query = select(Stock).join(Product).filter(
+            Stock.organization_id == organization_id,
+            Product.is_active == True
+        )
+        
+        if low_stock_only:
+            query = query.filter(Stock.quantity <= Product.reorder_level)
+        
+        if not show_zero:
+            query = query.filter(Stock.quantity > 0)
+        
+        if search:
+            search_filter = or_(
+                Product.product_name.ilike(f"%{search}%"),
+                Product.hsn_code.ilike(f"%{search}%")
+            )
+            query = query.filter(search_filter)
+        
+        query = query.options(joinedload(Stock.product)).order_by(Product.product_name.asc())
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        stock_items = result.scalars().all()
+        
+        response = [
+            StockResponse(
+                id=item.id,
+                product_id=item.product_id,
+                product_name=item.product.product_name if item.product else "Unknown",
+                quantity=item.quantity,
+                unit=item.unit,
+                location=item.location,
+                last_updated=item.last_updated,
+                product_hsn_code=item.product.hsn_code if item.product else None,
+                product_part_number=item.product.part_number if item.product else None,
+                unit_price=float(item.product.unit_price if item.product else 0.0),
+                reorder_level=item.product.reorder_level if item.product else 0,
+                gst_rate=float(item.product.gst_rate if item.product else 0.0),
+                is_active=item.product.is_active if item.product else False,
+                total_value=float(item.quantity * (item.product.unit_price if item.product else 0.0))
+            ) for item in stock_items
+        ]
+        
+        logger.info(f"Retrieved {len(response)} stock items for org {organization_id}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error retrieving stock: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve stock inventory"
+        )
+
+@router.get("/stock/low-stock", response_model=List[StockResponse])
+async def get_low_stock(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get low stock items for the organization"""
+    
+    organization_id = require_current_organization_id(current_user)
+    
+    # Check permissions
+    check_service_permission(
+        user=current_user,
+        module="inventory",
+        action="read",
+        db=db
+    )
+    
+    try:
+        query = select(Stock).join(Product).filter(
+            Stock.organization_id == organization_id,
+            Product.is_active == True,
+            Stock.quantity <= Product.reorder_level
+        )
+        
+        query = query.options(joinedload(Stock.product)).order_by(Product.product_name.asc())
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        stock_items = result.scalars().all()
+        
+        response = [
+            StockResponse(
+                id=item.id,
+                product_id=item.product_id,
+                product_name=item.product.product_name if item.product else "Unknown",
+                quantity=item.quantity,
+                unit=item.unit,
+                location=item.location,
+                last_updated=item.last_updated,
+                product_hsn_code=item.product.hsn_code if item.product else None,
+                product_part_number=item.product.part_number if item.product else None,
+                unit_price=float(item.product.unit_price if item.product else 0.0),
+                reorder_level=item.product.reorder_level if item.product else 0,
+                gst_rate=float(item.product.gst_rate if item.product else 0.0),
+                is_active=item.product.is_active if item.product else False,
+                total_value=float(item.quantity * (item.product.unit_price if item.product else 0.0))
+            ) for item in stock_items
+        ]
+        
+        logger.info(f"Retrieved {len(response)} low stock items for org {organization_id}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error retrieving low stock: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve low stock inventory"
+        )
 
 # Inventory Transactions Endpoints
 @router.get("/transactions", response_model=List[InventoryTransactionResponse])
@@ -516,7 +652,7 @@ async def update_job_parts(
 @router.get("/alerts", response_model=List[InventoryAlertResponse])
 async def get_inventory_alerts(
     skip: int = 0,
-    limit: int = 100000,  # Increased limit
+    limit: int = 100000,
     status: Optional[AlertStatus] = None,
     priority: Optional[AlertPriority] = None,
     alert_type: Optional[AlertType] = None,
@@ -735,7 +871,7 @@ async def get_inventory_value(
     # Fetch the organization's currency
     stmt_org = select(Organization.currency).where(Organization.id == organization_id)
     result_org = await db.execute(stmt_org)
-    currency = result_org.scalar() or 'INR'  # Default to 'INR' if not set (change if needed)
+    currency = result_org.scalar() or 'INR'  # Default to 'INR' if not set
     
     return TotalInventoryValue(total_value=total_value, currency=currency)
 

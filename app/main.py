@@ -47,15 +47,27 @@ async def log_cors_config():
 def include_minimal_routers():
     from app.api.v1 import auth as v1_auth
     from app.api.v1 import health as v1_health
+    from app.api.v1 import user as v1_user
+    from app.api.v1.organizations import router as organizations_router
     from app.api import companies, vendors, customers, products
+    from app.api.v1 import rbac as v1_rbac
+    from app.api.v1 import inventory as v1_inventory
+    from app.api.v1 import stock as v1_stock
+    from app.api.v1.vouchers import router as vouchers_router  # Added: Import vouchers router to fix 404 on voucher endpoints
 
     routers = [
         (v1_auth.router, "/api/v1/auth", ["authentication-v1"]),
         (v1_health.router, "/api/v1", ["health"]),
+        (v1_user.router, "/api/v1/users", ["users"]),
+        (organizations_router, "/api/v1/organizations", ["organizations"]),
         (companies.router, "/api/v1/companies", ["companies"]),
         (vendors.router, "/api/v1/vendors", ["vendors"]),
         (customers.router, "/api/v1/customers", ["customers"]),
         (products.router, "/api/v1/products", ["products"]),
+        (v1_rbac.router, "/api/v1/rbac", ["rbac"]),
+        (v1_inventory.router, "/api/v1/inventory", ["inventory"]),
+        (v1_stock.router, "/api/v1/stock", ["stock"]),
+        (vouchers_router, "/api/v1", ["vouchers"]),  # Added: Mount vouchers router at /api/v1 to enable /api/v1/purchase-orders etc.
     ]
 
     # Conditionally include extended routers
@@ -81,6 +93,14 @@ def include_minimal_routers():
         except Exception as e:
             logger.error(f"Failed to include router at prefix {prefix}: {str(e)}")
             raise
+
+# Debug middleware for logging request headers
+@app.middleware("http")
+async def log_request_headers(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    response = await call_next(request)
+    return response
 
 # Include routers and mounts on startup
 @app.on_event("startup")

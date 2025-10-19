@@ -1,11 +1,11 @@
-# app/schemas/base.py
+# Revised: app/schemas/base.py
 
 from pydantic import BaseModel, EmailStr, validator
-from typing import Optional, List, Dict, Any, Union  # Added Union here
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
 from pydantic import ConfigDict
-from app.models import Product  # Added import for Product model
+from app.models import Product
 
 class BaseSchema(BaseModel):
     id: Optional[int] = None
@@ -112,10 +112,9 @@ class OrganizationLicenseCreate(BaseModel):
     pin_code: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
-    state_code: Optional[str] = None  # Auto-filled from pincode lookup
-    gst_number: Optional[str] = None  # Optional as per requirements
-    max_users: Optional[int] = 5  # Maximum users allowed for this organization
-    admin_password: Optional[str] = None  # Optional - if not provided, system generates one
+    state_code: Optional[str] = None
+    gst_number: Optional[str] = None
+    max_users: Optional[int] = 5
     
     @validator('organization_name')
     def validate_organization_name(cls, v):
@@ -159,7 +158,7 @@ class OrganizationLicenseResponse(BaseModel):
     org_code: Optional[str] = None
     email_sent: bool = False
     email_error: Optional[str] = None
-    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again. It will not be displayed again."
+    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again."
 
 # Password change and reset schemas
 class PasswordChangeRequest(BaseModel):
@@ -181,16 +180,16 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetResponse(BaseModel):
     message: str
     user_email: str
-    new_password: str  # Displayed to super admin
+    new_password: str
     email_sent: bool
     email_error: Optional[str] = None
     must_change_password: bool = True
-    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again. It will not be displayed again."
+    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again."
 
 class PasswordChangeResponse(BaseModel):
     message: str
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Vendor schemas
 class VendorBase(BaseModel):
@@ -230,9 +229,9 @@ class VendorInDB(VendorBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
-# Customer schemas (same structure as Vendor)
+# Customer schemas
 class CustomerBase(BaseModel):
     name: str
     contact_number: str
@@ -247,7 +246,7 @@ class CustomerBase(BaseModel):
     pan_number: Optional[str] = None
 
 class CustomerCreate(CustomerBase):
-    company_id: Optional[int] = None  # Added for multi-company support
+    company_id: Optional[int] = None
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
@@ -266,12 +265,12 @@ class CustomerUpdate(BaseModel):
 class CustomerInDB(CustomerBase):
     id: int
     organization_id: int
-    company_id: Optional[int] = None  # Added for multi-company support
+    company_id: Optional[int] = None
     is_active: bool = True
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Product schemas
 class ProductBase(BaseModel):
@@ -319,14 +318,14 @@ class ProductFileInDB(ProductFileBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 class ProductFileResponse(ProductFileBase):
     id: int
     product_id: int
     created_at: datetime
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Customer File Schemas
 class CustomerFileBase(BaseModel):
@@ -347,14 +346,14 @@ class CustomerFileInDB(CustomerFileBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 class CustomerFileResponse(CustomerFileBase):
     id: int
     customer_id: int
     created_at: datetime
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Vendor File Schemas
 class VendorFileBase(BaseModel):
@@ -375,100 +374,34 @@ class VendorFileInDB(VendorFileBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 class VendorFileResponse(VendorFileBase):
     id: int
     vendor_id: int
     created_at: datetime
     
-    model_config = ConfigDict(from_attributes = True)
-
-class ProductInDB(ProductBase):
-    id: int
-    organization_id: int
-    is_active: bool = True
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    
-    model_config = ConfigDict(from_attributes = True)
-
-# Product response schema using product_name field for frontend consistency
-class ProductResponse(BaseModel):
-    id: int
-    product_name: str  # Use product_name field for frontend consistency as per requirements
-    hsn_code: Optional[str] = None
-    part_number: Optional[str] = None
-    unit: str
-    unit_price: float
-    gst_rate: float = 0.0
-    is_gst_inclusive: bool = False
-    reorder_level: int = 0
-    description: Optional[str] = None
-    is_manufactured: bool = False
-    organization_id: int
-    is_active: bool = True
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    files: List[ProductFileResponse] = []
-    
-    @classmethod
-    def from_product(cls, product: Union[Product, Dict[str, Any]]) -> "ProductResponse":
-        """Create ProductResponse from Product model or dict"""
-        if isinstance(product, dict):
-            # Handle if product is already a dict
-            files = product.get('files', [])
-            files_response = [
-                ProductFileResponse(**f) if isinstance(f, dict) else ProductFileResponse.from_orm(f)
-                for f in files
-            ]
-            return cls(
-                id=product['id'],
-                product_name=product['product_name'],
-                hsn_code=product.get('hsn_code'),
-                part_number=product.get('part_number'),
-                unit=product['unit'],
-                unit_price=product['unit_price'],
-                gst_rate=product.get('gst_rate', 0.0),
-                is_gst_inclusive=product.get('is_gst_inclusive', False),
-                reorder_level=product.get('reorder_level', 0),
-                description=product.get('description'),
-                is_manufactured=product.get('is_manufactured', False),
-                organization_id=product['organization_id'],
-                is_active=product.get('is_active', True),
-                created_at=product['created_at'],
-                updated_at=product.get('updated_at'),
-                files=files_response
-            )
-        
-        # Handle SQLAlchemy model
-        files = getattr(product, 'files', [])
-        files_response = [
-            ProductFileResponse.from_orm(f) for f in files
-        ]
-        
-        return cls(
-            id=product.id,
-            product_name=product.product_name,
-            hsn_code=product.hsn_code,
-            part_number=product.part_number,
-            unit=product.unit,
-            unit_price=product.unit_price,
-            gst_rate=product.gst_rate,
-            is_gst_inclusive=product.is_gst_inclusive,
-            reorder_level=product.reorder_level,
-            description=product.description,
-            is_manufactured=product.is_manufactured,
-            organization_id=product.organization_id,
-            is_active=product.is_active,
-            created_at=product.created_at,
-            updated_at=product.updated_at,
-            files=files_response
-        )
-    
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Stock schemas
+class StockResponse(BaseModel):
+    id: int
+    product_id: int
+    product_name: str
+    quantity: float
+    unit: str
+    location: Optional[str] = None
+    last_updated: datetime
+    product_hsn_code: Optional[str] = None
+    product_part_number: Optional[str] = None
+    unit_price: float
+    reorder_level: int
+    gst_rate: float
+    is_active: bool
+    total_value: float
+    
+    model_config = ConfigDict(from_attributes=True)
+
 class StockBase(BaseModel):
     product_id: int
     quantity: float
@@ -488,7 +421,7 @@ class StockInDB(StockBase):
     organization_id: int
     last_updated: datetime
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 class BulkStockRequest(BaseModel):
     items: List[Dict[str, Any]]
@@ -512,7 +445,7 @@ class EmailNotificationInDB(EmailNotificationBase):
     error_message: Optional[str] = None
     created_at: datetime
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Payment term schemas
 class PaymentTermBase(BaseModel):
@@ -534,7 +467,7 @@ class PaymentTermInDB(PaymentTermBase):
     organization_id: int
     is_active: bool = True
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Enhanced bulk import/export response schemas
 class BulkImportResponse(BaseModel):
@@ -551,8 +484,8 @@ class BulkImportError(BaseModel):
     field: Optional[str] = None
     value: Optional[str] = None
     error: str
-    error_type: str = "validation_error"  # validation_error, business_rule, data_type, etc.
-    suggestion: Optional[str] = None  # Helpful suggestion to fix the error
+    error_type: str = "validation_error"
+    suggestion: Optional[str] = None
     
 class BulkImportWarning(BaseModel):
     row: int
@@ -569,23 +502,22 @@ class DetailedBulkImportResponse(BaseModel):
     errors: List[BulkImportError] = []
     warnings: List[BulkImportWarning] = []
     processing_time_ms: Optional[int] = None
-    summary: Optional[Dict[str, Any]] = None  # Additional summary information
+    summary: Optional[Dict[str, Any]] = None
     
 class ExcelImportValidationResponse(BaseModel):
-    """Response for Excel file validation before processing"""
     valid: bool
     file_info: Dict[str, Any]
     validation_errors: List[str] = []
     validation_warnings: List[str] = []
-    preview_data: List[Dict[str, Any]] = []  # First few rows for preview
+    preview_data: List[Dict[str, Any]] = []
     total_rows: int = 0
 
 # Notification Schemas for Service CRM
 class NotificationTemplateBase(BaseModel):
     name: str
     description: Optional[str] = None
-    template_type: str  # appointment_reminder, service_completion, follow_up, marketing
-    channel: str  # email, sms, push, in_app
+    template_type: str
+    channel: str
     subject: Optional[str] = None
     body: str
     html_body: Optional[str] = None
@@ -617,13 +549,13 @@ class NotificationTemplateInDB(NotificationTemplateBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 class NotificationLogBase(BaseModel):
-    recipient_type: str  # customer, user, segment
+    recipient_type: str
     recipient_id: Optional[int] = None
-    recipient_identifier: str  # email, phone, device_token
-    channel: str  # email, sms, push, in_app
+    recipient_identifier: str
+    channel: str
     subject: Optional[str] = None
     content: str
     trigger_event: Optional[str] = None
@@ -636,7 +568,7 @@ class NotificationLogInDB(NotificationLogBase):
     id: int
     organization_id: int
     template_id: Optional[int] = None
-    status: str = "pending"  # pending, sent, delivered, failed, bounced
+    status: str = "pending"
     sent_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
     opened_at: Optional[datetime] = None
@@ -648,13 +580,13 @@ class NotificationLogInDB(NotificationLogBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 class NotificationPreferenceBase(BaseModel):
-    subject_type: str  # user, customer
+    subject_type: str
     subject_id: int
-    notification_type: str  # appointment_reminder, service_completion, marketing, etc.
-    channel: str  # email, sms, push, in_app
+    notification_type: str
+    channel: str
     is_enabled: bool = True
     settings: Optional[Dict[str, Any]] = None
 
@@ -673,7 +605,7 @@ class NotificationPreferenceInDB(NotificationPreferenceBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Bulk notification request schemas
 class BulkNotificationRequest(BaseModel):
@@ -681,14 +613,14 @@ class BulkNotificationRequest(BaseModel):
     subject: Optional[str] = None
     content: str
     channel: str
-    recipient_type: str  # customers, segment, users
-    recipient_ids: Optional[List[int]] = None  # specific customer/user IDs
-    segment_name: Optional[str] = None  # for segment-based notifications
-    variables: Optional[Dict[str, Any]] = None  # template variables
+    recipient_type: str
+    recipient_ids: Optional[List[int]] = None
+    segment_name: Optional[str] = None
+    variables: Optional[Dict[str, Any]] = None
     
 class NotificationSendRequest(BaseModel):
     template_id: Optional[int] = None
-    recipient_type: str  # customer, user
+    recipient_type: str
     recipient_id: int
     channel: str
     variables: Optional[Dict[str, Any]] = None
@@ -706,3 +638,84 @@ class BulkNotificationResponse(BaseModel):
     failed_sends: int
     notification_ids: List[int]
     errors: List[str] = []
+
+# Product response schema
+class ProductInDB(ProductBase):
+    id: int
+    organization_id: int
+    is_active: bool = True
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class ProductResponse(BaseModel):
+    id: int
+    product_name: str
+    hsn_code: Optional[str] = None
+    part_number: Optional[str] = None
+    unit: str
+    unit_price: float
+    gst_rate: float = 0.0
+    is_gst_inclusive: bool = False
+    reorder_level: int = 0
+    description: Optional[str] = None
+    is_manufactured: bool = False
+    organization_id: int
+    is_active: bool = True
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    files: List[ProductFileResponse] = []
+    
+    @classmethod
+    def from_product(cls, product: Union[Product, Dict[str, Any]]) -> "ProductResponse":
+        if isinstance(product, dict):
+            files = product.get('files', [])
+            files_response = [
+                ProductFileResponse(**f) if isinstance(f, dict) else ProductFileResponse.from_orm(f)
+                for f in files
+            ]
+            return cls(
+                id=product['id'],
+                product_name=product['product_name'],
+                hsn_code=product.get('hsn_code'),
+                part_number=product.get('part_number'),
+                unit=product['unit'],
+                unit_price=product['unit_price'],
+                gst_rate=product.get('gst_rate', 0.0),
+                is_gst_inclusive=product.get('is_gst_inclusive', False),
+                reorder_level=product.get('reorder_level', 0),
+                description=product.get('description'),
+                is_manufactured=product.get('is_manufactured', False),
+                organization_id=product['organization_id'],
+                is_active=product.get('is_active', True),
+                created_at=product['created_at'],
+                updated_at=product.get('updated_at'),
+                files=files_response
+            )
+        
+        files = getattr(product, 'files', [])
+        files_response = [
+            ProductFileResponse.from_orm(f) for f in files
+        ]
+        
+        return cls(
+            id=product.id,
+            product_name=product.product_name,
+            hsn_code=product.hsn_code,
+            part_number=product.part_number,
+            unit=product.unit,
+            unit_price=product.unit_price,
+            gst_rate=product.gst_rate,
+            is_gst_inclusive=product.is_gst_inclusive,
+            reorder_level=product.reorder_level,
+            description=product.description,
+            is_manufactured=product.is_manufactured,
+            organization_id=product.organization_id,
+            is_active=product.is_active,
+            created_at=product.created_at,
+            updated_at=product.updated_at,
+            files=files_response
+        )
+    
+    model_config = ConfigDict(from_attributes=True)
