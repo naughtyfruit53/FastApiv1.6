@@ -206,7 +206,8 @@ class VendorBase(BaseModel):
     pan_number: Optional[str] = None
 
 class VendorCreate(VendorBase):
-    pass
+    payable_account_id: Optional[int] = None
+
 
 class VendorUpdate(BaseModel):
     name: Optional[str] = None
@@ -221,11 +222,13 @@ class VendorUpdate(BaseModel):
     gst_number: Optional[str] = None
     pan_number: Optional[str] = None
     is_active: Optional[bool] = None
+    payable_account_id: Optional[int] = None
 
 class VendorInDB(VendorBase):
     id: int
     organization_id: int
     is_active: bool = True
+    payable_account_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -247,6 +250,7 @@ class CustomerBase(BaseModel):
 
 class CustomerCreate(CustomerBase):
     company_id: Optional[int] = None
+    receivable_account_id: Optional[int] = None
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
@@ -261,12 +265,14 @@ class CustomerUpdate(BaseModel):
     gst_number: Optional[str] = None
     pan_number: Optional[str] = None
     is_active: Optional[bool] = None
+    receivable_account_id: Optional[int] = None
 
 class CustomerInDB(CustomerBase):
     id: int
     organization_id: int
     company_id: Optional[int] = None
     is_active: bool = True
+    receivable_account_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     

@@ -48,6 +48,12 @@ class Vendor(Base):
         back_populates="vendor"
     )
     
+    # Chart of Accounts relationship
+    payable_account: Mapped[Optional["app.models.erp_models.ChartOfAccounts"]] = relationship(
+        "app.models.erp_models.ChartOfAccounts",
+        foreign_keys=[payable_account_id]
+    )
+    
     # ERP relationships
     accounts_payable: Mapped[List["app.models.erp_models.AccountsPayable"]] = relationship(
         "app.models.erp_models.AccountsPayable",
@@ -109,6 +115,9 @@ class Customer(Base):
     pan_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
   
+    # Chart of Accounts Integration
+    receivable_account_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True, index=True)
+  
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
@@ -133,6 +142,12 @@ class Customer(Base):
     segments: Mapped[List["app.models.customer_models.CustomerSegment"]] = relationship(
         "app.models.customer_models.CustomerSegment", 
         back_populates="customer"
+    )
+    
+    # Chart of Accounts relationship
+    receivable_account: Mapped[Optional["app.models.erp_models.ChartOfAccounts"]] = relationship(
+        "app.models.erp_models.ChartOfAccounts",
+        foreign_keys=[receivable_account_id]
     )
     
     # ERP relationships
