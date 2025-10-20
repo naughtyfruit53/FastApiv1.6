@@ -162,6 +162,7 @@ class InventoryTransaction(Base):
         Index('idx_inventory_transaction_org_date', 'organization_id', 'transaction_date'),
         Index('idx_inventory_transaction_reference', 'reference_type', 'reference_id'),
         Index('idx_inventory_transaction_created_at', 'created_at'),
+        {'extend_existing': True}
     )
 
 class JobParts(Base):
@@ -256,9 +257,7 @@ class InventoryAlert(Base):
     __table_args__ = (
         Index('idx_inventory_alert_org_product', 'organization_id', 'product_id'),
         Index('idx_inventory_alert_org_status', 'organization_id', 'status'),
-        Index('idx_inventory_alert_org_priority', 'organization_id', 'priority'),
-        Index('idx_inventory_alert_type', 'alert_type'),
-        Index('idx_inventory_alert_created_at', 'created_at'),
+        {'extend_existing': True}
     )
 
 # Pydantic Schemas

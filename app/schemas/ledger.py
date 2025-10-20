@@ -1,6 +1,6 @@
 # app/schemas/ledger.py
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, validator
 from typing import Optional, List, Literal
 from datetime import datetime, date
 from decimal import Decimal
@@ -18,6 +18,13 @@ class LedgerFilters(BaseModel):
         "purchase_voucher", "sales_voucher", "payment_voucher", 
         "receipt_voucher", "debit_note", "credit_note", "all"
     ]] = Field("all", description="Type of voucher to filter by")
+
+    @validator("account_id", pre=True)
+    def handle_empty_account_id(cls, v):
+        """Convert empty string to None for account_id"""
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
 
 
 class LedgerTransaction(BaseModel):

@@ -20,7 +20,7 @@ from app.services.excel_service import ExcelService, ReportsExcelService
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/management-reports", tags=["management-reports"])
 
 @router.get("/executive-dashboard")
 async def get_executive_dashboard(

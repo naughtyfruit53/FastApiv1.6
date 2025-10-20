@@ -131,6 +131,13 @@ def include_minimal_routers():
     except Exception as e:
         logger.error(f"Failed to import vouchers router: {str(e)}")
         raise
+    
+    try:
+        from app.api.v1 import reports as v1_reports
+        routers.append((v1_reports.router, "/api/v1", ["reports"]))
+    except Exception as e:
+        logger.error(f"Failed to import reports router: {str(e)}")
+        raise
 
     # Conditionally include extended routers
     if os.getenv("ENABLE_EXTENDED_ROUTERS", "false").lower() == "true":
@@ -218,7 +225,7 @@ async def startup_event():
 
     logger.info("=" * 50)
     logger.info("Registered Routes (for debugging):")
-    critical_routes = ["/api/v1/erp/bank-accounts", "/api/v1/chart-of-accounts"]
+    critical_routes = ["/api/v1/erp/bank-accounts", "/api/v1/chart-of-accounts", "/api/v1/reports/sales-report", "/api/v1/reports/dashboard-stats"]
     for route in app.routes:
         if isinstance(route, APIRoute):
             methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'

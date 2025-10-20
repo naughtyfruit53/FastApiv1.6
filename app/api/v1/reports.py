@@ -1,7 +1,9 @@
-# Revised: app/api/reports.py
+# app/api/v1/reports.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 from app.core.database import get_db
@@ -22,47 +24,52 @@ from app.services.excel_service import ExcelService, ReportsExcelService
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/reports", tags=["reports"])
 
 @router.get("/dashboard-stats")
 async def get_dashboard_statistics(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get dashboard statistics"""
     try:
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
-        # Count masters
-        vendors_count = TenantQueryMixin.filter_by_tenant(
-            db.query(Vendor), Vendor, org_id
-        ).filter(Vendor.is_active == True).count()
+        # Count masters with eager loading
+        vendors_query = select(Vendor).where(Vendor.is_active == True)
+        vendors_query = TenantQueryMixin.filter_by_tenant(vendors_query, Vendor, org_id)
+        vendors_result = await db.execute(vendors_query)
+        vendors_count = len(vendors_result.scalars().all())
         
-        customers_count = TenantQueryMixin.filter_by_tenant(
-            db.query(Customer), Customer, org_id
-        ).filter(Customer.is_active == True).count()
+        customers_query = select(Customer).where(Customer.is_active == True)
+        customers_query = TenantQueryMixin.filter_by_tenant(customers_query, Customer, org_id)
+        customers_result = await db.execute(customers_query)
+        customers_count = len(customers_result.scalars().all())
         
-        products_count = TenantQueryMixin.filter_by_tenant(
-            db.query(Product), Product, org_id
-        ).filter(Product.is_active == True).count()
+        products_query = select(Product).where(Product.is_active == True)
+        products_query = TenantQueryMixin.filter_by_tenant(products_query, Product, org_id)
+        products_result = await db.execute(products_query)
+        products_count = len(products_result.scalars().all())
         
         # Count vouchers
-        purchase_vouchers_count = TenantQueryMixin.filter_by_tenant(
-            db.query(PurchaseVoucher), PurchaseVoucher, org_id
-        ).count()
+        purchase_vouchers_query = select(PurchaseVoucher)
+        purchase_vouchers_query = TenantQueryMixin.filter_by_tenant(purchase_vouchers_query, PurchaseVoucher, org_id)
+        purchase_vouchers_result = await db.execute(purchase_vouchers_query)
+        purchase_vouchers_count = len(purchase_vouchers_result.scalars().all())
         
-        sales_vouchers_count = TenantQueryMixin.filter_by_tenant(
-            db.query(SalesVoucher), SalesVoucher, org_id
-        ).count()
+        sales_vouchers_query = select(SalesVoucher)
+        sales_vouchers_query = TenantQueryMixin.filter_by_tenant(sales_vouchers_query, SalesVoucher, org_id)
+        sales_vouchers_result = await db.execute(sales_vouchers_query)
+        sales_vouchers_count = len(sales_vouchers_result.scalars().all())
         
-        # Low stock items
-        low_stock_query = TenantQueryMixin.filter_by_tenant(
-            db.query(Stock), Stock, org_id
-        ).join(Product).filter(
+        # Low stock items with eager loading
+        low_stock_query = select(Stock).join(Product).where(
             Stock.quantity <= Product.reorder_level,
             Product.is_active == True
-        )
-        low_stock_count = low_stock_query.count()
+        ).options(selectinload(Stock.product))
+        low_stock_query = TenantQueryMixin.filter_by_tenant(low_stock_query, Stock, org_id)
+        low_stock_result = await db.execute(low_stock_query)
+        low_stock_count = len(low_stock_result.scalars().all())
         
         return {
             "masters": {
@@ -91,16 +98,15 @@ async def get_sales_report(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     customer_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get sales report"""
     try:
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
-        query = TenantQueryMixin.filter_by_tenant(
-            db.query(SalesVoucher), SalesVoucher, org_id
-        ).join(Customer)
+        query = select(SalesVoucher).join(Customer).options(selectinload(SalesVoucher.customer))
+        query = TenantQueryMixin.filter_by_tenant(query, SalesVoucher, org_id)
         
         if start_date:
             query = query.filter(SalesVoucher.date >= start_date)
@@ -109,7 +115,8 @@ async def get_sales_report(
         if customer_id:
             query = query.filter(SalesVoucher.customer_id == customer_id)
         
-        sales_vouchers = query.all()
+        result = await db.execute(query)
+        sales_vouchers = result.scalars().all()
         
         total_sales = sum(voucher.total_amount for voucher in sales_vouchers)
         total_gst = sum(
@@ -123,7 +130,7 @@ async def get_sales_report(
                     "id": voucher.id,
                     "voucher_number": voucher.voucher_number,
                     "date": voucher.date,
-                    "customer_name": voucher.customer.name,
+                    "customer_name": voucher.customer.name if voucher.customer else "Unknown",
                     "total_amount": voucher.total_amount,
                     "gst_amount": voucher.cgst_amount + voucher.sgst_amount + voucher.igst_amount,
                     "status": voucher.status
@@ -149,16 +156,15 @@ async def get_purchase_report(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     vendor_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get purchase report"""
     try:
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
-        query = TenantQueryMixin.filter_by_tenant(
-            db.query(PurchaseVoucher), PurchaseVoucher, org_id
-        ).join(Vendor)
+        query = select(PurchaseVoucher).join(Vendor).options(selectinload(PurchaseVoucher.vendor))
+        query = TenantQueryMixin.filter_by_tenant(query, PurchaseVoucher, org_id)
         
         if start_date:
             query = query.filter(PurchaseVoucher.date >= start_date)
@@ -167,7 +173,8 @@ async def get_purchase_report(
         if vendor_id:
             query = query.filter(PurchaseVoucher.vendor_id == vendor_id)
         
-        purchase_vouchers = query.all()
+        result = await db.execute(query)
+        purchase_vouchers = result.scalars().all()
         
         total_purchases = sum(voucher.total_amount for voucher in purchase_vouchers)
         total_gst = sum(
@@ -181,7 +188,7 @@ async def get_purchase_report(
                     "id": voucher.id,
                     "voucher_number": voucher.voucher_number,
                     "date": voucher.date,
-                    "vendor_name": voucher.vendor.name,
+                    "vendor_name": voucher.vendor.name if voucher.vendor else "Unknown",
                     "total_amount": voucher.total_amount,
                     "gst_amount": voucher.cgst_amount + voucher.sgst_amount + voucher.igst_amount,
                     "status": voucher.status
@@ -205,21 +212,21 @@ async def get_purchase_report(
 @router.get("/inventory-report")
 async def get_inventory_report(
     low_stock_only: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get inventory report"""
     try:
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
-        query = TenantQueryMixin.filter_by_tenant(
-            db.query(Stock), Stock, org_id
-        ).join(Product).filter(Product.is_active == True)
+        query = select(Stock).join(Product).filter(Product.is_active == True).options(selectinload(Stock.product))
+        query = TenantQueryMixin.filter_by_tenant(query, Stock, org_id)
         
         if low_stock_only:
             query = query.filter(Stock.quantity <= Product.reorder_level)
         
-        stock_items = query.all()
+        result = await db.execute(query)
+        stock_items = result.scalars().all()
         
         total_value = sum(
             item.quantity * item.product.unit_price 
@@ -230,7 +237,7 @@ async def get_inventory_report(
             "items": [
                 {
                     "product_id": item.product_id,
-                    "product_name": item.product.name if item.product else "Unknown",
+                    "product_name": item.product.product_name if item.product else "Unknown",
                     "quantity": item.quantity,
                     "unit": item.unit,
                     "unit_price": item.product.unit_price if item.product else 0,
@@ -260,19 +267,22 @@ async def get_inventory_report(
 @router.get("/pending-orders")
 async def get_pending_orders(
     order_type: str = "all",  # all, purchase, sales
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get pending orders report"""
     try:
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
         pending_orders = []
         
         if order_type in ["all", "purchase"]:
-            purchase_orders = TenantQueryMixin.filter_by_tenant(
-                db.query(PurchaseOrder), PurchaseOrder, org_id
-            ).filter(PurchaseOrder.status.in_(["draft", "pending"])).all()
+            purchase_orders_query = select(PurchaseOrder).filter(
+                PurchaseOrder.status.in_(["draft", "pending"])
+            ).options(selectinload(PurchaseOrder.vendor))
+            purchase_orders_query = TenantQueryMixin.filter_by_tenant(purchase_orders_query, PurchaseOrder, org_id)
+            purchase_orders_result = await db.execute(purchase_orders_query)
+            purchase_orders = purchase_orders_result.scalars().all()
             
             for order in purchase_orders:
                 pending_orders.append({
@@ -286,9 +296,12 @@ async def get_pending_orders(
                 })
         
         if order_type in ["all", "sales"]:
-            sales_orders = TenantQueryMixin.filter_by_tenant(
-                db.query(SalesOrder), SalesOrder, org_id
-            ).filter(SalesOrder.status.in_(["draft", "pending"])).all()
+            sales_orders_query = select(SalesOrder).filter(
+                SalesOrder.status.in_(["draft", "pending"])
+            ).options(selectinload(SalesOrder.customer))
+            sales_orders_query = TenantQueryMixin.filter_by_tenant(sales_orders_query, SalesOrder, org_id)
+            sales_orders_result = await db.execute(sales_orders_query)
+            sales_orders = sales_orders_result.scalars().all()
             
             for order in sales_orders:
                 pending_orders.append({
@@ -319,11 +332,6 @@ async def get_pending_orders(
             detail="Failed to get pending orders"
         )
 
-
-# =============================================
-# LEDGER ENDPOINTS
-# =============================================
-
 def _check_ledger_access(current_user: User) -> None:
     """
     Check if user has access to ledger reports.
@@ -337,15 +345,14 @@ def _check_ledger_access(current_user: User) -> None:
             detail="Insufficient permissions to access ledger reports"
         )
 
-
 @router.get("/complete-ledger", response_model=CompleteLedgerResponse)
 async def get_complete_ledger(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     account_type: Optional[str] = "all",
-    account_id: Optional[int] = None,
+    account_id: Optional[str] = None,  # Changed to string to handle raw input
     voucher_type: Optional[str] = "all",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -369,17 +376,20 @@ async def get_complete_ledger(
         # Get organization context
         org_id = require_current_organization_id(current_user)
         
-        # Prepare filters
+        # Prepare filters, manually converting account_id
         filters = LedgerFilters(
             start_date=start_date,
             end_date=end_date,
             account_type=account_type,
-            account_id=account_id,
+            account_id=account_id,  # Pass raw string to validator
             voucher_type=voucher_type
         )
         
+        # Log filter values for debugging
+        logger.debug(f"Ledger filters: {filters.dict()}")
+        
         # Generate complete ledger
-        ledger_response = LedgerService.get_complete_ledger(db, org_id, filters)
+        ledger_response = await LedgerService.get_complete_ledger(db, org_id, filters)
         
         logger.info(f"Complete ledger generated for user {current_user.email}, org {org_id}")
         return ledger_response
@@ -393,15 +403,14 @@ async def get_complete_ledger(
             detail="Failed to generate complete ledger report"
         )
 
-
 @router.get("/outstanding-ledger", response_model=OutstandingLedgerResponse)
 async def get_outstanding_ledger(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     account_type: Optional[str] = "all",
-    account_id: Optional[int] = None,
+    account_id: Optional[str] = None,  # Changed to string to handle raw input
     voucher_type: Optional[str] = "all",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -429,17 +438,20 @@ async def get_outstanding_ledger(
         # Get organization context
         org_id = require_current_organization_id(current_user)
         
-        # Prepare filters
+        # Prepare filters, manually converting account_id
         filters = LedgerFilters(
             start_date=start_date,
             end_date=end_date,
             account_type=account_type,
-            account_id=account_id,
+            account_id=account_id,  # Pass raw string to validator
             voucher_type=voucher_type
         )
         
+        # Log filter values for debugging
+        logger.debug(f"Ledger filters: {filters.dict()}")
+        
         # Generate outstanding ledger
-        ledger_response = LedgerService.get_outstanding_ledger(db, org_id, filters)
+        ledger_response = await LedgerService.get_outstanding_ledger(db, org_id, filters)
         
         logger.info(f"Outstanding ledger generated for user {current_user.email}, org {org_id}")
         return ledger_response
@@ -453,14 +465,12 @@ async def get_outstanding_ledger(
             detail="Failed to generate outstanding ledger report"
         )
 
-
-# Export endpoints
 @router.get("/sales-report/export/excel")
 async def export_sales_report_excel(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     customer_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export sales report to Excel"""
@@ -472,12 +482,11 @@ async def export_sales_report_excel(
                 detail="Not enough permissions to export reports"
             )
         
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
         # Get sales data using the same logic as the sales report endpoint
-        query = TenantQueryMixin.filter_by_tenant(
-            db.query(SalesVoucher), SalesVoucher, org_id
-        ).join(Customer)
+        query = select(SalesVoucher).join(Customer).options(selectinload(SalesVoucher.customer))
+        query = TenantQueryMixin.filter_by_tenant(query, SalesVoucher, org_id)
         
         if start_date:
             query = query.filter(SalesVoucher.date >= start_date)
@@ -486,7 +495,8 @@ async def export_sales_report_excel(
         if customer_id:
             query = query.filter(SalesVoucher.customer_id == customer_id)
         
-        sales_vouchers = query.all()
+        result = await db.execute(query)
+        sales_vouchers = result.scalars().all()
         
         total_sales = sum(voucher.total_amount for voucher in sales_vouchers)
         total_gst = sum(
@@ -499,7 +509,7 @@ async def export_sales_report_excel(
                 {
                     "voucher_number": voucher.voucher_number,
                     "date": voucher.date,
-                    "customer_name": voucher.customer.name,
+                    "customer_name": voucher.customer.name if voucher.customer else "Unknown",
                     "total_amount": voucher.total_amount,
                     "gst_amount": voucher.cgst_amount + voucher.sgst_amount + voucher.igst_amount,
                     "status": voucher.status
@@ -525,13 +535,12 @@ async def export_sales_report_excel(
             detail="Failed to export sales report"
         )
 
-
 @router.get("/purchase-report/export/excel")
 async def export_purchase_report_excel(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     vendor_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export purchase report to Excel"""
@@ -543,12 +552,11 @@ async def export_purchase_report_excel(
                 detail="Not enough permissions to export reports"
             )
         
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
         # Get purchase data using the same logic as the purchase report endpoint
-        query = TenantQueryMixin.filter_by_tenant(
-            db.query(PurchaseVoucher), PurchaseVoucher, org_id
-        ).join(Vendor)
+        query = select(PurchaseVoucher).join(Vendor).options(selectinload(PurchaseVoucher.vendor))
+        query = TenantQueryMixin.filter_by_tenant(query, PurchaseVoucher, org_id)
         
         if start_date:
             query = query.filter(PurchaseVoucher.date >= start_date)
@@ -557,7 +565,8 @@ async def export_purchase_report_excel(
         if vendor_id:
             query = query.filter(PurchaseVoucher.vendor_id == vendor_id)
         
-        purchase_vouchers = query.all()
+        result = await db.execute(query)
+        purchase_vouchers = result.scalars().all()
         
         total_purchases = sum(voucher.total_amount for voucher in purchase_vouchers)
         total_gst = sum(
@@ -570,7 +579,7 @@ async def export_purchase_report_excel(
                 {
                     "voucher_number": voucher.voucher_number,
                     "date": voucher.date,
-                    "vendor_name": voucher.vendor.name,
+                    "vendor_name": voucher.vendor.name if voucher.vendor else "Unknown",
                     "total_amount": voucher.total_amount,
                     "gst_amount": voucher.cgst_amount + voucher.sgst_amount + voucher.igst_amount,
                     "status": voucher.status
@@ -596,11 +605,10 @@ async def export_purchase_report_excel(
             detail="Failed to export purchase report"
         )
 
-
 @router.get("/inventory-report/export/excel")
 async def export_inventory_report_excel(
     include_zero_stock: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export inventory report to Excel"""
@@ -612,30 +620,30 @@ async def export_inventory_report_excel(
                 detail="Not enough permissions to export reports"
             )
         
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
         # Get inventory data using the same logic as the inventory report endpoint
-        query = TenantQueryMixin.filter_by_tenant(
-            db.query(Stock), Stock, org_id
-        ).join(Product).filter(Product.is_active == True)
+        query = select(Stock).join(Product).filter(Product.is_active == True).options(selectinload(Stock.product))
+        query = TenantQueryMixin.filter_by_tenant(query, Stock, org_id)
         
         if not include_zero_stock:
             query = query.filter(Stock.quantity > 0)
         
-        stocks = query.all()
+        result = await db.execute(query)
+        stocks = result.scalars().all()
         
-        total_value = sum(stock.quantity * stock.product.unit_price for stock in stocks)
-        low_stock_items = sum(1 for stock in stocks if stock.quantity <= stock.product.reorder_level)
+        total_value = sum(stock.quantity * stock.product.unit_price for stock in stocks if stock.product)
+        low_stock_items = sum(1 for stock in stocks if stock.product and stock.quantity <= stock.product.reorder_level)
         
         inventory_data = {
             "items": [
                 {
-                    "product_name": stock.product.name,
-                    "hsn_code": stock.product.hsn_code or "",
+                    "product_name": stock.product.product_name if stock.product else "Unknown",
+                    "hsn_code": stock.product.hsn_code or "" if stock.product else "",
                     "quantity": stock.quantity,
-                    "unit": stock.product.unit,
-                    "unit_price": stock.product.unit_price,
-                    "reorder_level": stock.product.reorder_level
+                    "unit": stock.product.unit if stock.product else "",
+                    "unit_price": stock.product.unit_price if stock.product else 0,
+                    "reorder_level": stock.product.reorder_level if stock.product else 0
                 }
                 for stock in stocks
             ],
@@ -658,11 +666,10 @@ async def export_inventory_report_excel(
             detail="Failed to export inventory report"
         )
 
-
 @router.get("/pending-orders/export/excel")
 async def export_pending_orders_excel(
     order_type: str = "all",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Export pending orders report to Excel"""
@@ -674,22 +681,24 @@ async def export_pending_orders_excel(
                 detail="Not enough permissions to export reports"
             )
         
-        org_id = require_current_organization_id()
+        org_id = require_current_organization_id(current_user)
         
         orders = []
         
-        # Get purchase orders
         if order_type in ["all", "purchase"]:
-            purchase_orders = TenantQueryMixin.filter_by_tenant(
-                db.query(PurchaseOrder), PurchaseOrder, org_id
-            ).filter(PurchaseOrder.status.in_(["pending", "partial"])).join(Vendor).all()
+            purchase_orders_query = select(PurchaseOrder).filter(
+                PurchaseOrder.status.in_(["pending", "partial"])
+            ).options(selectinload(PurchaseOrder.vendor))
+            purchase_orders_query = TenantQueryMixin.filter_by_tenant(purchase_orders_query, PurchaseOrder, org_id)
+            purchase_orders_result = await db.execute(purchase_orders_query)
+            purchase_orders = purchase_orders_result.scalars().all()
             
             orders.extend([
                 {
-                    "order_number": order.order_number,
+                    "order_number": order.voucher_number,
                     "order_type": "Purchase Order",
                     "date": order.date,
-                    "party_name": order.vendor.name,
+                    "party_name": order.vendor.name if order.vendor else "Unknown",
                     "total_amount": order.total_amount,
                     "status": order.status,
                     "days_pending": (datetime.now().date() - order.date).days
@@ -697,18 +706,20 @@ async def export_pending_orders_excel(
                 for order in purchase_orders
             ])
         
-        # Get sales orders
         if order_type in ["all", "sales"]:
-            sales_orders = TenantQueryMixin.filter_by_tenant(
-                db.query(SalesOrder), SalesOrder, org_id
-            ).filter(SalesOrder.status.in_(["pending", "partial"])).join(Customer).all()
+            sales_orders_query = select(SalesOrder).filter(
+                SalesOrder.status.in_(["pending", "partial"])
+            ).options(selectinload(SalesOrder.customer))
+            sales_orders_query = TenantQueryMixin.filter_by_tenant(sales_orders_query, SalesOrder, org_id)
+            sales_orders_result = await db.execute(sales_orders_query)
+            sales_orders = sales_orders_result.scalars().all()
             
             orders.extend([
                 {
-                    "order_number": order.order_number,
+                    "order_number": order.voucher_number,
                     "order_type": "Sales Order",
                     "date": order.date,
-                    "party_name": order.customer.name,
+                    "party_name": order.customer.name if order.customer else "Unknown",
                     "total_amount": order.total_amount,
                     "status": order.status,
                     "days_pending": (datetime.now().date() - order.date).days
@@ -738,110 +749,9 @@ async def export_pending_orders_excel(
             detail="Failed to export pending orders report"
         )
 
-
-@router.get("/complete-ledger/export/excel")
-async def export_complete_ledger_excel(
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-    account_type: str = "all",
-    account_id: Optional[int] = None,
-    voucher_type: str = "all",
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Export complete ledger to Excel"""
-    try:
-        # Check access permissions
-        _check_ledger_access(current_user)
-        
-        # Check if user has permission to export reports
-        if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions to export reports"
-            )
-        
-        # Get organization context
-        org_id = require_current_organization_id(current_user)
-        
-        # Prepare filters
-        filters = LedgerFilters(
-            start_date=start_date,
-            end_date=end_date,
-            account_type=account_type,
-            account_id=account_id,
-            voucher_type=voucher_type
-        )
-        
-        # Generate complete ledger
-        ledger_response = LedgerService.get_complete_ledger(db, org_id, filters)
-        
-        excel_data = ReportsExcelService.export_ledger_report(ledger_response.dict(), "complete")
-        return ExcelService.create_streaming_response(excel_data, "complete_ledger_report.xlsx")
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error exporting complete ledger: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to export complete ledger report"
-        )
-
-
-@router.get("/outstanding-ledger/export/excel")
-async def export_outstanding_ledger_excel(
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-    account_type: str = "all",
-    account_id: Optional[int] = None,
-    voucher_type: str = "all",
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Export outstanding ledger to Excel"""
-    try:
-        # Check access permissions
-        _check_ledger_access(current_user)
-        
-        # Check if user has permission to export reports
-        if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions to export reports"
-            )
-        
-        # Get organization context
-        org_id = require_current_organization_id(current_user)
-        
-        # Prepare filters
-        filters = LedgerFilters(
-            start_date=start_date,
-            end_date=end_date,
-            account_type=account_type,
-            account_id=account_id,
-            voucher_type=voucher_type
-        )
-        
-        # Generate outstanding ledger
-        ledger_response = LedgerService.get_outstanding_ledger(db, org_id, filters)
-        
-        excel_data = ReportsExcelService.export_ledger_report(ledger_response.dict(), "outstanding")
-        return ExcelService.create_streaming_response(excel_data, "outstanding_ledger_report.xlsx")
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error exporting outstanding ledger: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to export outstanding ledger report"
-        )
-
-
 @router.get("/pending-purchase-orders-with-grn-status")
 async def get_pending_purchase_orders_with_grn_status(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -859,7 +769,7 @@ async def get_pending_purchase_orders_with_grn_status(
     try:
         # Ensure organization context is set
         try:
-            org_id = require_current_organization_id()
+            org_id = require_current_organization_id(current_user)
         except Exception as org_err:
             logger.warning(f"Organization context error: {org_err}, using user's organization_id")
             org_id = current_user.organization_id
@@ -876,10 +786,14 @@ async def get_pending_purchase_orders_with_grn_status(
                 }
             }
         
-        # Get all purchase orders with items
-        purchase_orders = TenantQueryMixin.filter_by_tenant(
-            db.query(PurchaseOrder), PurchaseOrder, org_id
-        ).all()
+        # Get all purchase orders with items and vendor
+        purchase_orders_query = select(PurchaseOrder).options(
+            selectinload(PurchaseOrder.items),
+            selectinload(PurchaseOrder.vendor)
+        )
+        purchase_orders_query = TenantQueryMixin.filter_by_tenant(purchase_orders_query, PurchaseOrder, org_id)
+        purchase_orders_result = await db.execute(purchase_orders_query)
+        purchase_orders = purchase_orders_result.scalars().all()
         
         pending_orders = []
         
@@ -897,9 +811,12 @@ async def get_pending_purchase_orders_with_grn_status(
                 # Only include POs that have pending quantities
                 if total_pending_qty > 0:
                     # Check if GRN exists for this PO
-                    grns = TenantQueryMixin.filter_by_tenant(
-                        db.query(GoodsReceiptNote), GoodsReceiptNote, org_id
-                    ).filter(GoodsReceiptNote.purchase_order_id == po.id).all()
+                    grns_query = select(GoodsReceiptNote).filter(
+                        GoodsReceiptNote.purchase_order_id == po.id
+                    ).options(selectinload(GoodsReceiptNote.purchase_order))
+                    grns_query = TenantQueryMixin.filter_by_tenant(grns_query, GoodsReceiptNote, org_id)
+                    grns_result = await db.execute(grns_query)
+                    grns = grns_result.scalars().all()
                     
                     # Determine color coding
                     # Red: no tracking details (neither transporter_name nor tracking_number)
@@ -956,7 +873,6 @@ async def get_pending_purchase_orders_with_grn_status(
                 "without_tracking": 0
             }
         }
-
 
 def canAccessLedger(user) -> bool:
     """Check if user can access ledger functionality"""
