@@ -113,6 +113,13 @@ except Exception as e:
     logger.error(f"Failed to import erp_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
+try:
+    from .crm import router as crm_router
+    logger.debug("Imported crm_router")
+except Exception as e:
+    logger.error(f"Failed to import crm_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
 api_v1_router = APIRouter()
 
 # Include routers with detailed logging
@@ -255,6 +262,16 @@ try:
         logger.debug(f"  {route_path}")
 except Exception as e:
     logger.error(f"Failed to include erp_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(crm_router, tags=["CRM"])
+    crm_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in crm_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered crm endpoints: {len(crm_routes)} routes")
+    for route_path in crm_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include crm_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
 # Move user_router to the end to avoid generic {user_id} route conflicts

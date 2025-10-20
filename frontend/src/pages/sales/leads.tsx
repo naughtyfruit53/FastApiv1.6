@@ -34,6 +34,7 @@ import {
   Email as EmailIcon,
 } from "@mui/icons-material";
 import AddLeadModal from "../../components/AddLeadModal";
+import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
 import { crmService } from "../../services/crmService";
 interface Lead {
   id: number;
@@ -88,6 +89,23 @@ const LeadManagement: React.FC = () => {
       setAddLoading(false);
     }
   };
+
+  const handleImportLeads = async (importedLeads: any[]) => {
+    try {
+      setAddLoading(true);
+      // Import each lead
+      for (const leadData of importedLeads) {
+        await crmService.createLead(leadData);
+      }
+      await fetchLeads(); // Refresh the list
+      alert(`Successfully imported ${importedLeads.length} leads`);
+    } catch (err) {
+      console.error("Error importing leads:", err);
+      alert("Failed to import some leads. Please check the console for details.");
+    } finally {
+      setAddLoading(false);
+    }
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case "new":
@@ -135,13 +153,19 @@ const LeadManagement: React.FC = () => {
           <Typography variant="h4" component="h1">
             Lead Management
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenDialog(true)}
-          >
-            Add Lead
-          </Button>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <LeadsImportExportDropdown
+              leads={leads}
+              onImport={handleImportLeads}
+            />
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenDialog(true)}
+            >
+              Add Lead
+            </Button>
+          </Box>
         </Box>
         {/* Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
