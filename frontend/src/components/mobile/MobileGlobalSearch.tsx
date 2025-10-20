@@ -70,11 +70,6 @@ const MobileGlobalSearch: React.FC<MobileGlobalSearchProps> = ({
   const { isMobile } = useMobileDetection();
   const isSuperAdmin = user?.role === 'APP_SUPER_ADMIN';
 
-  // Early return after all hooks
-  if (!isMobile) {
-    return null;
-  }
-
   // Build comprehensive search index
   const searchIndex = useMemo(() => {
     const sections = mainMenuSections(isSuperAdmin);
@@ -298,6 +293,11 @@ const MobileGlobalSearch: React.FC<MobileGlobalSearchProps> = ({
     };
     return iconMap[category] || <Business />;
   };
+
+  // Early return after all hooks (moved here to ensure consistent hook calls)
+  if (!isMobile) {
+    return null;
+  }
 
   return (
     <Dialog

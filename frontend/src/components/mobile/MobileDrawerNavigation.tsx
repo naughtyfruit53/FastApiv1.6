@@ -72,11 +72,6 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
   const { isMobile } = useMobileDetection();
   const isSuperAdmin = user?.role === 'APP_SUPER_ADMIN';
 
-  // Early return after all hooks
-  if (!isMobile) {
-    return null;
-  }
-
   const handleSectionToggle = (sectionTitle: string) => {
     setExpandedSections(prev => 
       prev.includes(sectionTitle) 
@@ -277,6 +272,11 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
     });
     return allItems.filter(item => favorites.includes(item.name));
   }, [mobileNavigationItems, favorites]);
+
+  // Early return after all hooks (moved here to ensure consistent hook calls)
+  if (!isMobile) {
+    return null;
+  }
 
   return (
     <Drawer
