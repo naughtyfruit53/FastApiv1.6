@@ -1,5 +1,10 @@
 /* Mobile-Specific Theme Variables and Styles */
 
+/* Prevent zoom on double-tap for better mobile UX */
+* {
+  touch-action: manipulation;
+}
+
 /* Mobile Breakpoints */
 :root {
   --mobile-xs: 320px;

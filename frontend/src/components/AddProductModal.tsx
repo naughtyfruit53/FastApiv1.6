@@ -21,12 +21,15 @@ import {
   ListItemButton,
   InputAdornment,
   IconButton,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import SearchIcon from '@mui/icons-material/Search';
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts, hsnSearch } from "../services/masterService";
 import { toast } from "react-toastify";
+import ProductFileUpload from "./ProductFileUpload";
 interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
@@ -339,6 +342,20 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const normalizeGstRate = (rate: number): number => {
     return rate > 1 ? rate : rate * 100;
   };
+
+  // State for tabs (Basic Info vs Files)
+  const [currentTab, setCurrentTab] = React.useState(0);
+  const [savedProductId, setSavedProductId] = React.useState<number | undefined>(undefined);
+
+  // Update saved product ID when in edit mode
+  React.useEffect(() => {
+    if (mode === 'edit' && initialData?.id) {
+      setSavedProductId(initialData.id);
+    } else {
+      setSavedProductId(undefined);
+    }
+  }, [mode, initialData]);
+
   return (
     <>
       <Dialog
@@ -354,9 +371,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           <Typography variant="h6" component="div">
             {mode === 'edit' ? 'Edit Product' : 'Add New Product'}
           </Typography>
+          <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)} sx={{ mt: 1 }}>
+            <Tab label="Basic Information" />
+            <Tab label="Files" disabled={!savedProductId && mode !== 'edit'} />
+          </Tabs>
         </DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogContent>
+            {currentTab === 0 && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
@@ -512,6 +534,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 </Box>
               </Grid>
             </Grid>
+            )}
+            {currentTab === 1 && savedProductId && (
+              <Box sx={{ py: 2 }}>
+                <ProductFileUpload productId={savedProductId} disabled={loading} />
+              </Box>
+            )}
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
             <Button onClick={handleClose} disabled={loading} color="inherit">
