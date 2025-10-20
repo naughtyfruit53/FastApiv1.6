@@ -1,5 +1,7 @@
 // frontend/src/services/authService.ts
 import api from "../lib/api"; // Use the api client
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
+
 export const authService = {
   login: async (username: string, password: string): Promise<any> => {
     try {
@@ -20,19 +22,19 @@ export const authService = {
         mustChangePassword: response.data.must_change_password,
       });
       // Store token FIRST
-      localStorage.setItem("access_token", response.data.access_token);
+      localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
       // Store refresh token if provided
       if (response.data.refresh_token) {
-        localStorage.setItem("refresh_token", response.data.refresh_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, response.data.refresh_token);
         console.log("[AuthService] Stored refresh token");
       }
       // Store authentication context data (NOT organization_id - that stays in memory)
       if (response.data.user_role) {
-        localStorage.setItem("user_role", response.data.user_role);
+        localStorage.setItem(USER_ROLE_KEY, response.data.user_role);
         console.log("[AuthService] Stored user_role:", response.data.user_role);
       }
       localStorage.setItem(
-        "is_super_admin",
+        IS_SUPER_ADMIN_KEY,
         response.data.user?.is_super_admin ? "true" : "false",
       );
       console.log(
@@ -68,19 +70,19 @@ export const authService = {
         mustChangePassword: response.data.must_change_password,
       });
       // Store token FIRST
-      localStorage.setItem("access_token", response.data.access_token);
+      localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
       // Store ALL authentication context data immediately after token
       // Store refresh token if provided
       if (response.data.refresh_token) {
-        localStorage.setItem("refresh_token", response.data.refresh_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, response.data.refresh_token);
         console.log("[AuthService] Stored refresh token");
       }
       if (response.data.user_role) {
-        localStorage.setItem("user_role", response.data.user_role);
+        localStorage.setItem(USER_ROLE_KEY, response.data.user_role);
         console.log("[AuthService] Stored user_role:", response.data.user_role);
       }
       localStorage.setItem(
-        "is_super_admin",
+        IS_SUPER_ADMIN_KEY,
         response.data.user?.is_super_admin ? "true" : "false",
       );
       console.log(
@@ -122,14 +124,14 @@ export const authService = {
       );
       // Store role information
       if (response.data.role) {
-        localStorage.setItem("user_role", response.data.role);
+        localStorage.setItem(USER_ROLE_KEY, response.data.role);
         console.log(
           "[AuthService] Updated user_role in localStorage:",
           response.data.role,
         );
       }
       localStorage.setItem(
-        "is_super_admin",
+        IS_SUPER_ADMIN_KEY,
         response.data.is_super_admin ? "true" : "false",
       );
       console.log(
@@ -146,10 +148,10 @@ export const authService = {
     }
   },
   logout: () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user_role");
-    localStorage.removeItem("is_super_admin");
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_ROLE_KEY);
+    localStorage.removeItem(IS_SUPER_ADMIN_KEY);
     window.location.href = "/";
   },
   requestOTP: async (
@@ -191,7 +193,7 @@ export const authService = {
   refreshToken: async (): Promise<any> => {
     try {
       console.log("[AuthService] Attempting to refresh token");
-      const refreshToken = localStorage.getItem("refresh_token");
+      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
       if (!refreshToken) {
         console.error("[AuthService] No refresh token available");
         // Instead of throw, return null and let caller handle
@@ -203,24 +205,24 @@ export const authService = {
       console.log("[AuthService] Token refresh successful");
       // Update stored tokens
       if (response.data.access_token) {
-        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
       }
       if (response.data.refresh_token) {
-        localStorage.setItem("refresh_token", response.data.refresh_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, response.data.refresh_token);
       }
       return response.data;
     } catch (error: any) {
       console.error("[AuthService] Token refresh failed:", error);
       // Clear invalid tokens
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      localStorage.removeItem("user_role");
-      localStorage.removeItem("is_super_admin");
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem(USER_ROLE_KEY);
+      localStorage.removeItem(IS_SUPER_ADMIN_KEY);
       return null;  // Return null instead of throw
     }
   },
   isTokenValid: () => {
-    const token = localStorage.getItem("access_token");
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       return false;
     }
@@ -489,7 +491,7 @@ export const masterDataService = {
   bulkImportStock: async (file: File, mode: string = "replace") => {
     try {
       // Ensure user is authenticated before attempting import
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
       if (!token) {
         throw new Error(
           "Authentication required. Please log in before importing inventory.",
@@ -563,7 +565,7 @@ export const masterDataService = {
 };
 export const companyService = {
   getCurrentCompany: async () => {
-    const token = localStorage.getItem("access_token");
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       console.log(
         "[CompanyService] Skipping company fetch - no token available",
@@ -926,7 +928,7 @@ export const passwordService = {
         console.log(
           "[PasswordService] New token received after password change, updating storage",
         );
-        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
       }
       return response.data;
     } catch (error: any) {
@@ -955,7 +957,7 @@ export const passwordService = {
         console.log(
           "[PasswordService] New token received after password reset, updating storage",
         );
-        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
       }
       return response.data;
     } catch (error: any) {

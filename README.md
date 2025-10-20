@@ -4,6 +4,27 @@ A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the
 
 ## 🌟 Latest Enhancements
 
+### 🔒 Authentication Loop Fix (v1.6.1)
+- **Standardized Token Storage**: All frontend files now use consistent `ACCESS_TOKEN_KEY` constant
+- **Eliminated Auth Loops**: Fixed infinite 401 loops caused by inconsistent token storage keys
+- **Backward Compatibility**: Automatic migration from legacy "token" key to new "access_token" key
+- **Enhanced Debugging**: Added comprehensive logging throughout auth flow for easier troubleshooting
+- **Fixed Token Refresh**: Corrected refresh token endpoint path in API interceptor
+
+**Files Updated**:
+- `frontend/src/constants/auth.ts` (new) - Centralized auth constant definitions
+- `frontend/src/lib/api.ts` - Updated to use standardized token keys
+- `frontend/src/utils/api.ts` - Updated to use standardized token keys
+- `frontend/src/context/AuthContext.tsx` - Updated to use standardized token keys
+- `frontend/src/services/authService.ts` - Updated to use standardized token keys
+- `frontend/src/pages/login.tsx` - Updated to use standardized token keys
+
+**Troubleshooting**:
+- All tokens are now stored under the key `access_token` instead of `token`
+- Legacy tokens will be automatically migrated on first API call
+- Check browser console for detailed auth flow logs with `[AuthProvider]`, `[AuthService]`, and `[API]` prefixes
+- Use browser dev tools > Application > Local Storage to inspect token storage
+
 ### ⚡ Frontend: Turbopack Integration
 - **10x Faster Development**: Turbopack enabled for lightning-fast builds
 - **Instant Hot Reload**: Changes reflect immediately without losing state

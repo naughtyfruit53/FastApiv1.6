@@ -25,6 +25,7 @@ import {
   Edit as EditIcon,
   DragIndicator as DragIcon,
 } from "@mui/icons-material";
+import { crmService } from "../../services/crmService";
 interface PipelineStage {
   id: string;
   name: string;
@@ -61,141 +62,118 @@ const SalesPipeline: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  // Mock data - replace with actual API call
+  
+  // Define standard pipeline stages
+  const standardStages: PipelineStage[] = [
+    {
+      id: "qualification",
+      name: "Qualification",
+      probability: 10,
+      color: "#f44336",
+      order: 1,
+    },
+    {
+      id: "needs_analysis",
+      name: "Needs Analysis",
+      probability: 25,
+      color: "#ff9800",
+      order: 2,
+    },
+    {
+      id: "proposal",
+      name: "Proposal",
+      probability: 50,
+      color: "#2196f3",
+      order: 3,
+    },
+    {
+      id: "negotiation",
+      name: "Negotiation",
+      probability: 75,
+      color: "#4caf50",
+      order: 4,
+    },
+    {
+      id: "closed_won",
+      name: "Closed Won",
+      probability: 100,
+      color: "#8bc34a",
+      order: 5,
+    },
+    {
+      id: "closed_lost",
+      name: "Closed Lost",
+      probability: 0,
+      color: "#9e9e9e",
+      order: 6,
+    },
+  ];
+
+  // Fetch real opportunity data from API
   useEffect(() => {
     const fetchPipelineData = async () => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const mockStages: PipelineStage[] = [
-          {
-            id: "qualification",
-            name: "Qualification",
-            probability: 10,
-            color: "#f44336",
-            order: 1,
-          },
-          {
-            id: "needs-analysis",
-            name: "Needs Analysis",
-            probability: 25,
-            color: "#ff9800",
-            order: 2,
-          },
-          {
-            id: "proposal",
-            name: "Proposal",
-            probability: 50,
-            color: "#2196f3",
-            order: 3,
-          },
-          {
-            id: "negotiation",
-            name: "Negotiation",
-            probability: 75,
-            color: "#4caf50",
-            order: 4,
-          },
-          {
-            id: "closed-won",
-            name: "Closed Won",
-            probability: 100,
-            color: "#8bc34a",
-            order: 5,
-          },
-        ];
-        const mockPipeline: Pipeline = {
+        setError(null);
+        
+        // Fetch opportunities from CRM service
+        const opportunitiesData = await crmService.getOpportunities(0, 1000);
+        
+        console.log("[Pipeline] Fetched opportunities:", opportunitiesData);
+        
+        // Create standard pipeline
+        const standardPipeline: Pipeline = {
           id: 1,
           name: "Standard Sales Pipeline",
           description: "Default sales pipeline for all opportunities",
-          stages: mockStages,
+          stages: standardStages,
           isDefault: true,
           isActive: true,
         };
-        const mockOpportunities: { [stageId: string]: Opportunity[] } = {
-          qualification: [
-            {
-              id: 1,
-              name: "ERP Implementation",
-              account: "Manufacturing Co",
-              amount: 75000,
-              stage: "qualification",
-              owner: "Sarah Johnson",
-              closeDate: "2024-03-30",
-              probability: 10,
-            },
-            {
-              id: 4,
-              name: "CRM Software",
-              account: "Retail Corp",
-              amount: 25000,
-              stage: "qualification",
-              owner: "Mike Wilson",
-              closeDate: "2024-04-15",
-              probability: 10,
-            },
-          ],
-          "needs-analysis": [
-            {
-              id: 5,
-              name: "Analytics Platform",
-              account: "Data Co",
-              amount: 50000,
-              stage: "needs-analysis",
-              owner: "Lisa Davis",
-              closeDate: "2024-03-15",
-              probability: 25,
-            },
-          ],
-          proposal: [
-            {
-              id: 2,
-              name: "Enterprise Software License",
-              account: "TechCorp Ltd",
-              amount: 150000,
-              stage: "proposal",
-              owner: "Sarah Johnson",
-              closeDate: "2024-02-15",
-              probability: 50,
-            },
-          ],
-          negotiation: [
-            {
-              id: 3,
-              name: "Cloud Migration Project",
-              account: "Global Systems Inc",
-              amount: 300000,
-              stage: "negotiation",
-              owner: "David Brown",
-              closeDate: "2024-02-28",
-              probability: 75,
-            },
-          ],
-          "closed-won": [
-            {
-              id: 6,
-              name: "Small Business Package",
-              account: "Local Startup",
-              amount: 15000,
-              stage: "closed-won",
-              owner: "Mike Wilson",
-              closeDate: "2024-01-30",
-              probability: 100,
-            },
-          ],
-        };
-        // TODO: Define or import setPipelines
-        setPipelines([mockPipeline]);
-        setSelectedPipeline(mockPipeline);
-        setOpportunities(mockOpportunities);
+        
+        // Group opportunities by stage
+        const opportunitiesByStage: { [stageId: string]: Opportunity[] } = {};
+        
+        // Initialize empty arrays for each stage
+        standardStages.forEach(stage => {
+          opportunitiesByStage[stage.id] = [];
+        });
+        
+        // Map and group real opportunities
+        opportunitiesData.forEach((opp: any) => {
+          const mappedOpp: Opportunity = {
+            id: opp.id,
+            name: opp.title || opp.opportunity_number || `Opportunity #${opp.id}`,
+            account: opp.account_name || opp.lead?.company || "Unknown",
+            amount: opp.estimated_value || opp.amount || 0,
+            stage: opp.stage || "qualification",
+            owner: opp.assigned_to_name || "Unassigned",
+            closeDate: opp.expected_close_date || new Date().toISOString().split('T')[0],
+            probability: opp.probability || 0,
+          };
+          
+          // Add to appropriate stage, defaulting to qualification if stage not found
+          const stageId = mappedOpp.stage;
+          if (opportunitiesByStage[stageId]) {
+            opportunitiesByStage[stageId].push(mappedOpp);
+          } else {
+            opportunitiesByStage["qualification"].push(mappedOpp);
+          }
+        });
+        
+        console.log("[Pipeline] Grouped opportunities by stage:", opportunitiesByStage);
+        
+        setPipelines([standardPipeline]);
+        setSelectedPipeline(standardPipeline);
+        setOpportunities(opportunitiesByStage);
       } catch (err) {
-        setError("Failed to load pipeline data");
-        console.error("Error fetching pipeline data:", err);
+        console.error("[Pipeline] Error fetching pipeline data:", err);
+        setError("Failed to load pipeline data. Please try again.");
       } finally {
         setLoading(false);
       }
     };
+    
     fetchPipelineData();
   }, []);
   const calculateStageMetrics = (stageId: string) => {
