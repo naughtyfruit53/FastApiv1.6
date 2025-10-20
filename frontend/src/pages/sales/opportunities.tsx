@@ -52,6 +52,7 @@ const OpportunityTracking: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
 
   // Fetch opportunities from API
   const fetchOpportunities = async () => {
