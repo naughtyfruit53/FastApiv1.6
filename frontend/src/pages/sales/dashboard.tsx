@@ -69,7 +69,7 @@ const SalesDashboard: React.FC = () => {
           conversionRate,
         });
       } catch (err) {
-        console.error(msg, err);
+        console.error("Failed to fetch dashboard data:", err);
       } finally {
         setLoading(false);
       }
@@ -77,6 +77,7 @@ const SalesDashboard: React.FC = () => {
 
     fetchDashboardData();
   }, []);
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
