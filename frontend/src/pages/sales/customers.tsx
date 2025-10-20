@@ -31,7 +31,6 @@ import {
   Visibility as ViewIcon,
   Business as BusinessIcon,
   Analytics as AnalyticsIcon,
-  Link as LinkIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 
@@ -55,21 +54,49 @@ const SalesCustomerDatabase: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Define logout function
+  const logout = () => {
+    localStorage.removeItem("access_token");
+    router.push("/login");
+  };
+
   // Fetch customers from master data API
   useEffect(() => {
+    const token = localStorage.getItem("access_token");
+
     const fetchCustomers = async () => {
+      if (!token) {
+        setError("No authentication token found. Please log in.");
+        setLoading(false);
+        router.push("/login");
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
-        
-        // Fetch from actual master customer data API
-        const response = await fetch("/api/customers");
+
+        // Fetch with Authorization header
+        const response = await fetch("/api/v1/customers", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
         if (!response.ok) {
-          throw new Error("Failed to fetch customers");
+          const errorText = await response.text();
+          console.error("API Error:", response.status, response.statusText, errorText);
+          if (response.status === 401) {
+            setError("Session expired. Please log in again.");
+            logout();
+            return;
+          }
+          throw new Error(`Failed to fetch customers: ${response.status} ${response.statusText} - ${errorText}`);
         }
-        
+
         const data = await response.json();
-        
+
         // Map master customer data to sales customer format
         const mappedCustomers: Customer[] = data.map((customer: any) => ({
           id: customer.id,
@@ -85,16 +112,16 @@ const SalesCustomerDatabase: React.FC = () => {
         }));
 
         setCustomers(mappedCustomers);
-      } catch (err) {
-        setError("Failed to load customers. Please check your connection.");
+      } catch (err: any) {
         console.error("Error fetching customers:", err);
+        setError(`Failed to load customers: ${err.message}. Please check your connection or try logging in again.`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCustomers();
-  }, []);
+  }, [router]); // Depend on router only, as token is checked within useEffect
 
   const filteredCustomers = customers.filter(
     (customer) =>
@@ -119,7 +146,7 @@ const SalesCustomerDatabase: React.FC = () => {
   };
 
   const handleGoToMasterCustomers = () => {
-    router.push("/customers");
+    router.push("/masters/customers");
   };
 
   const handleViewCustomerAnalytics = (customerId: number) => {
@@ -145,6 +172,9 @@ const SalesCustomerDatabase: React.FC = () => {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">{error}</Alert>
+        <Button variant="contained" onClick={() => router.push("/login")} sx={{ mt: 2 }}>
+          Go to Login
+        </Button>
       </Container>
     );
   }
@@ -299,7 +329,7 @@ const SalesCustomerDatabase: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() =>
-                        router.push(`/customers?action=view&id=${customer.id}`)
+                        router.push(`/masters/customers?action=view&id=${customer.id}`)
                       }
                     >
                       <ViewIcon />
@@ -309,7 +339,7 @@ const SalesCustomerDatabase: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() =>
-                        router.push(`/customers?action=edit&id=${customer.id}`)
+                        router.push(`/masters/customers?action=edit&id=${customer.id}`)
                       }
                     >
                       <EditIcon />

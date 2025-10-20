@@ -33,32 +33,21 @@ import {
   Phone as PhoneIcon,
   Email as EmailIcon,
 } from "@mui/icons-material";
+import { useRouter } from "next/router";
 import AddLeadModal from "../../components/AddLeadModal";
 import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
-import { crmService } from "../../services/crmService";
-interface Lead {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  job_title?: string;
-  source: string;
-  status: string;
-  score: number;
-  created_at: string;
-  estimated_value?: number;
-  expected_close_date?: string;
-}
+import { crmService, Lead } from "@services/crmService";
+
 const LeadManagement: React.FC = () => {
+  const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [openDialog, setOpenDialog] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
   // Fetch leads from API
   const fetchLeads = async () => {
     try {
@@ -66,25 +55,30 @@ const LeadManagement: React.FC = () => {
       setError(null);
       const leadsData = await crmService.getLeads();
       setLeads(leadsData);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching leads:", err);
-      setError("Failed to load leads. Please try again.");
+      setError(err.message || "Failed to load leads. Please try again.");
+      if (err.message.includes("No authentication token")) {
+        router.push("/login");
+      }
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchLeads();
-  }, []);
+  }, [router]);
+
   const handleAddLead = async (leadData: any) => {
     try {
       setAddLoading(true);
       await crmService.createLead(leadData);
-      await fetchLeads(); // Refresh the list
+      await fetchLeads();
       setOpenDialog(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error adding lead:", err);
-      throw err; // Let the modal handle the error
+      throw new Error(err.message || "Failed to add lead");
     } finally {
       setAddLoading(false);
     }
@@ -93,19 +87,19 @@ const LeadManagement: React.FC = () => {
   const handleImportLeads = async (importedLeads: any[]) => {
     try {
       setAddLoading(true);
-      // Import each lead
       for (const leadData of importedLeads) {
         await crmService.createLead(leadData);
       }
-      await fetchLeads(); // Refresh the list
+      await fetchLeads();
       alert(`Successfully imported ${importedLeads.length} leads`);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error importing leads:", err);
-      alert("Failed to import some leads. Please check the console for details.");
+      alert(`Failed to import some leads: ${err.message || "Unknown error"}`);
     } finally {
       setAddLoading(false);
     }
   };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "new":
@@ -114,7 +108,7 @@ const LeadManagement: React.FC = () => {
         return "info";
       case "qualified":
         return "warning";
-      case "proposal_sent":
+      case "proposal":
         return "secondary";
       case "negotiation":
         return "error";
@@ -122,23 +116,23 @@ const LeadManagement: React.FC = () => {
         return "success";
       case "lost":
         return "default";
-      case "disqualified":
-        return "error";
+      case "nurturing":
+        return "info";
       default:
         return "default";
     }
   };
+
   const filteredLeads = leads.filter((lead) => {
-    const fullName =
-      `${lead.first_name || ""} ${lead.last_name || ""}`.toLowerCase();
+    const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.toLowerCase();
     const matchesSearch =
       fullName.includes(searchTerm.toLowerCase()) ||
       (lead.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (lead.company || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || lead.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -249,11 +243,11 @@ const LeadManagement: React.FC = () => {
               <MenuItem value="new">New</MenuItem>
               <MenuItem value="contacted">Contacted</MenuItem>
               <MenuItem value="qualified">Qualified</MenuItem>
-              <MenuItem value="proposal_sent">Proposal Sent</MenuItem>
+              <MenuItem value="proposal">Proposal</MenuItem>
               <MenuItem value="negotiation">Negotiation</MenuItem>
               <MenuItem value="converted">Converted</MenuItem>
               <MenuItem value="lost">Lost</MenuItem>
-              <MenuItem value="disqualified">Disqualified</MenuItem>
+              <MenuItem value="nurturing">Nurturing</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -261,6 +255,14 @@ const LeadManagement: React.FC = () => {
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={fetchLeads}
+              sx={{ ml: 2 }}
+            >
+              Retry
+            </Button>
           </Alert>
         )}
         {/* Loading Display */}
@@ -270,6 +272,11 @@ const LeadManagement: React.FC = () => {
           </Box>
         )}
         {/* Leads Table */}
+        {!loading && filteredLeads.length === 0 && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            No leads found. Start by adding your first lead!
+          </Alert>
+        )}
         {!loading && (
           <Card>
             <TableContainer>
@@ -365,10 +372,18 @@ const LeadManagement: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <IconButton size="small" title="View">
+                        <IconButton
+                          size="small"
+                          title="View"
+                          onClick={() => router.push(`/sales/leads/${lead.id}`)}
+                        >
                           <ViewIcon />
                         </IconButton>
-                        <IconButton size="small" title="Edit">
+                        <IconButton
+                          size="small"
+                          title="Edit"
+                          onClick={() => router.push(`/sales/leads/${lead.id}/edit`)}
+                        >
                           <EditIcon />
                         </IconButton>
                       </TableCell>
@@ -406,4 +421,5 @@ const LeadManagement: React.FC = () => {
     </Container>
   );
 };
+
 export default LeadManagement;

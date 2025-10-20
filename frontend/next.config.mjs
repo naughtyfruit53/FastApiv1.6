@@ -1,3 +1,5 @@
+import path from "path";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -10,10 +12,10 @@ const nextConfig = {
     NEXT_PUBLIC_ENABLE_PASSWORD_CHANGE:
       process.env.NEXT_PUBLIC_ENABLE_PASSWORD_CHANGE || "true",
   },
-  transpilePackages: ['@mui/x-data-grid'], // Add this to handle CSS from MUI X DataGrid
-  allowedDevOrigins: ["127.0.0.1", "localhost"], // Add this to fix the cross-origin warning
+  transpilePackages: ["@mui/x-data-grid"],
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
 
-  // ✅ Skip ESLint & TypeScript errors during build
+  // Skip ESLint & TypeScript errors during build
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -21,13 +23,22 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
+  webpack(config) {
+    config.resolve.alias["@services"] = path.join(process.cwd(), "src/services");
+    config.resolve.alias["@lib"] = path.join(process.cwd(), "src/lib");
+    return config;
+  },
+
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     return [
       {
+        source: "/api/customers",
+        destination: `${apiUrl}/api/v1/customers`, // Explicitly map to /api/v1/customers
+      },
+      {
         source: "/api/:path*",
-        destination: `${
-          process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
-        }/api/:path*`,
+        destination: `${apiUrl}/api/:path*`, // General rewrite for other API routes
       },
     ];
   },

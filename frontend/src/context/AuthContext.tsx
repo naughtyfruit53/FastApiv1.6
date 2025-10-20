@@ -42,13 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     console.log(
       `[AuthProvider] fetchUser started - attempt ${retryCount + 1}/${maxRetries + 1}`,
       {
-        hasToken: !!localStorage.getItem("token"),
+        hasToken: !!localStorage.getItem("access_token"),
         hasRefreshToken: !!localStorage.getItem("refresh_token"),
         timestamp: new Date().toISOString(),
       },
     );
     try {
-      const currentToken = localStorage.getItem("token");
+      const currentToken = localStorage.getItem("access_token");
       if (!currentToken) {
         console.log("[AuthProvider] No token found in localStorage");
         throw new Error("No token found");
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       }
       // On error, clear sensitive data and force re-auth
       console.log("[AuthProvider] Auth error - clearing data");
-      localStorage.removeItem("token");
+      localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user_role");
       localStorage.removeItem("is_super_admin");
@@ -159,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // On mount, check for token and initialize user session
   useEffect(() => {
     console.log("[AuthProvider] Component mounted, initializing auth state");
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     console.log("[AuthProvider] Token check result:", {
       hasToken: !!token,
       hasRefreshToken: !!localStorage.getItem("refresh_token"),
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       mustChangePassword: loginResponse.user.must_change_password,
       timestamp: new Date().toISOString(),
     });
-    localStorage.setItem("token", loginResponse.access_token);
+    localStorage.setItem("access_token", loginResponse.access_token);
     if (loginResponse.refresh_token) {
       localStorage.setItem("refresh_token", loginResponse.refresh_token);
       console.log("[AuthProvider] Stored refresh token");
@@ -316,7 +316,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // Logout: clear all sensitive data and redirect
   const logout = () => {
     console.log("[AuthProvider] Logout initiated");
-    localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_role");
     localStorage.removeItem("is_super_admin");
@@ -343,7 +343,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
 
   // Get auth headers for API requests
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 

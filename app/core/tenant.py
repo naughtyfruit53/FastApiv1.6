@@ -1,12 +1,5 @@
-# Revised: app/core/tenant.py
-
 # app/core/tenant.py
 
-# Enhanced core.tenant.py for strict organization-level data scoping
-
-"""
-Multi-tenant context and middleware for strict tenant isolation
-"""
 from typing import Optional, Any, Type, TypeVar, List
 from contextvars import ContextVar
 from fastapi import Request, HTTPException, Depends, status
@@ -17,61 +10,48 @@ from app.core.database import get_db
 from app.models import Organization, User, Company
 from starlette.responses import Response
 from app.core.config import settings as config_settings
-from app.core.security import oauth2_scheme, verify_token  # Added import for JWT auth
+from app.core.security import oauth2_scheme, verify_token
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Context variables for tenant isolation
 _current_organization_id: ContextVar[Optional[int]] = ContextVar("current_organization_id", default=None)
 _current_user_id: ContextVar[Optional[int]] = ContextVar("current_user_id", default=None)
 
-# Type variable for SQLAlchemy models
 ModelType = TypeVar("ModelType")
 
 class TenantContext:
-    """Enhanced tenant context manager for strict tenant isolation"""
-    
     @staticmethod
     def get_organization_id() -> Optional[int]:
-        """Get current organization ID from context"""
         return _current_organization_id.get()
     
     @staticmethod
     def set_organization_id(org_id: int) -> None:
-        """Set current organization ID in context"""
         _current_organization_id.set(org_id)
         logger.debug(f"Set tenant context: organization_id={org_id}")
     
     @staticmethod
     def get_user_id() -> Optional[int]:
-        """Get current user ID from context"""
         return _current_user_id.get()
     
     @staticmethod
     def set_user_id(user_id: int) -> None:
-        """Set current user ID in context"""
         _current_user_id.set(user_id)
         logger.debug(f"Set tenant context: user_id={user_id}")
     
     @staticmethod
     def clear() -> None:
-        """Clear tenant context"""
         _current_organization_id.set(None)
         _current_user_id.set(None)
         logger.debug("Cleared tenant context")
     
     @staticmethod
     def validate_organization_access(organization_id: int, user: User) -> bool:
-        """Validate that user has access to the specified organization"""
-        if user.organization_id is None:
-            # Platform users (no organization) have access to all organizations
+        if user.is_super_admin or user.organization_id is None:
             return True
         return user.organization_id == organization_id
 
 class TenantQueryFilter:
-    """Enhanced query filter for strict organization-level data isolation"""
-    
     @staticmethod
     def apply_organization_filter(
         stmt: select, 
@@ -79,38 +59,15 @@ class TenantQueryFilter:
         organization_id: Optional[int] = None,
         user: Optional[User] = None
     ) -> select:
-        """
-        Apply organization filter to a query with strict enforcement
-        
-        Args:
-            stmt: SQLAlchemy select statement
-            model: Model class
-            organization_id: Organization ID to filter by (optional, uses context if not provided)
-            user: Current user (for validation)
-        
-        Returns:
-            Filtered select statement
-        
-        Raises:
-            HTTPException: If organization access is denied
-        """
-        # Get organization ID from parameter or context
         org_id = organization_id or TenantContext.get_organization_id()
         
-        # Check if model has organization_id field
         if not hasattr(model, 'organization_id'):
             logger.warning(f"Model {model.__name__} does not have organization_id field")
             return stmt
         
-        # For platform users (no organization), allow access if organization_id is explicitly provided
-        if user and user.organization_id is None:
-            if org_id is not None:
-                return stmt.where(model.organization_id == org_id)
-            else:
-                # Platform user without specific organization - return empty result for safety
-                return stmt.where(model.organization_id.is_(None))
+        if user and user.is_super_admin and org_id is not None:
+            return stmt.where(model.organization_id == org_id)
         
-        # For organization users, enforce strict filtering
         if org_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -127,45 +84,28 @@ class TenantQueryFilter:
     
     @staticmethod
     def validate_organization_data(data: dict, user: User) -> dict:
-        """
-        Validate and set organization_id in data for create/update operations
-        
-        Args:
-            data: Data dictionary
-            user: Current user
-        
-        Returns:
-            Data with validated organization_id
-        """
         current_org_id = TenantContext.get_organization_id()
         
-        # Platform users must specify organization_id
-        if user.organization_id is None:
+        if user.is_super_admin:
             if 'organization_id' not in data or data['organization_id'] is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Platform users must specify organization_id"
+                    detail="Super admins must specify organization_id"
                 )
-            # Platform user can set any organization_id
             return data
         
-        # Organization users: enforce their organization
         if 'organization_id' in data and data['organization_id'] is not None and data['organization_id'] != user.organization_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Cannot create/update data for organization {data['organization_id']} - user belongs to organization {user.organization_id} - user context org_id {user.organization_id}"
+                detail=f"Cannot create/update data for organization {data['organization_id']}"
             )
         
-        # Set organization_id from user context
         data['organization_id'] = user.organization_id
         return data
 
 class TenantQueryMixin:
-    """Enhanced mixin for tenant-aware queries (backward compatibility)"""
-    
     @staticmethod
     def filter_by_tenant(result, model_class, org_id: Optional[int] = None):
-        """Filter query by tenant/organization (legacy method)"""
         if org_id is None:
             org_id = TenantContext.get_organization_id()
         
@@ -175,7 +115,6 @@ class TenantQueryMixin:
                 detail="No organization context available for query"
             )
         
-        # Check if model has organization_id field
         if hasattr(model_class, 'organization_id'):
             return result.filter(model_class.organization_id == org_id)
         
@@ -183,7 +122,6 @@ class TenantQueryMixin:
     
     @staticmethod
     def ensure_tenant_access(obj: Any, org_id: Optional[int] = None) -> None:
-        """Ensure object belongs to current tenant"""
         if org_id is None:
             org_id = TenantContext.get_organization_id()
         
@@ -200,8 +138,6 @@ class TenantQueryMixin:
             )
 
 class TenantMiddleware:
-    """Enhanced middleware to extract and set tenant context from requests"""
-    
     def __init__(self, app):
         self.app = app
     
@@ -209,13 +145,10 @@ class TenantMiddleware:
         if scope["type"] == "http":
             request = Request(scope, receive)
             
-            # Allow OPTIONS requests to pass through without tenant processing
-            # This is crucial for CORS preflight requests
             if request.method == "OPTIONS":
                 await self.app(scope, receive, send)
                 return
             
-            # Skip tenant extraction for auth endpoints and app-level/super admin endpoints
             if request.url.path.startswith("/api/v1/auth/"):
                 logger.debug(f"Skipping tenant extraction for auth path: {request.url.path}")
                 await self.app(scope, receive, send)
@@ -233,14 +166,12 @@ class TenantMiddleware:
                 "/api/v1/organizations/factory-default",
                 "/organizations/reset-data",
                 "/api/v1/organizations/reset-data",
-                # Add more as needed
             ]
             if request.url.path in excluded_paths:
                 logger.debug(f"Skipping tenant extraction for app-level path: {request.url.path}")
                 await self.app(scope, receive, send)
                 return
             
-            # Extract organization context from various sources for non-OPTIONS requests
             org_id = self._extract_organization_id(request)
             
             if org_id:
@@ -248,7 +179,6 @@ class TenantMiddleware:
                 logger.debug(f"Middleware set organization context: {org_id}")
                 await self.app(scope, receive, send)
             else:
-                # Instead of raising exception, return a 404 response with CORS headers
                 origin = request.headers.get("origin")
                 response = Response("Not Found", status_code=404)
                 if origin and (origin in config_settings.BACKEND_CORS_ORIGINS or '*' in config_settings.BACKEND_CORS_ORIGINS):
@@ -259,29 +189,20 @@ class TenantMiddleware:
                 await response(scope, receive, send)
                 return
         
-        # Clear context after request
         TenantContext.clear()
-
     
     def _extract_organization_id(self, request: Request) -> Optional[int]:
-        """Extract organization ID from request headers, subdomain, or path"""
         try:
-            # Method 1: From custom header
             org_header = request.headers.get("X-Organization-ID")
             if org_header and org_header.isdigit():
                 return int(org_header)
             
-            # Method 2: From subdomain-based extraction (e.g., tenant1.api.example.com)
             host = request.headers.get("host", "")
             if "." in host:
                 subdomain = host.split(".")[0]
                 if subdomain and subdomain not in ["www", "api", "admin"]:
-                    # Look up organization by subdomain
-                    # Note: This would require database access in middleware
-                    # For now, we'll handle this in the authentication dependency
                     pass
             
-            # Method 3: From path parameter (e.g., /api/v1/org/{org_id}/...)
             path_parts = request.url.path.split("/")
             if len(path_parts) >= 5 and path_parts[3] == "org":
                 if path_parts[4].isdigit():
@@ -293,9 +214,7 @@ class TenantMiddleware:
         return None
 
 async def get_organization_from_request(request: Request, db: AsyncSession = Depends(get_db)) -> Optional[Organization]:
-    """Get organization from request context"""
     try:
-        # Try subdomain first
         host = request.headers.get("host", "")
         if "." in host:
             subdomain = host.split(".")[0]
@@ -303,17 +222,17 @@ async def get_organization_from_request(request: Request, db: AsyncSession = Dep
                 result = await db.execute(select(Organization).filter_by(subdomain=subdomain, status="active"))
                 org = result.scalars().first()
                 if org:
+                    TenantContext.set_organization_id(org.id)
                     return org
         
-        # Try X-Organization-ID header
         org_id = request.headers.get("X-Organization-ID")
         if org_id and org_id.isdigit():
             result = await db.execute(select(Organization).filter_by(id=int(org_id), status="active"))
             org = result.scalars().first()
             if org:
+                TenantContext.set_organization_id(org.id)
                 return org
         
-        # Try path parameter
         path_parts = request.url.path.split("/")
         if len(path_parts) >= 5 and path_parts[3] == "org":
             if path_parts[4].isdigit():
@@ -321,6 +240,7 @@ async def get_organization_from_request(request: Request, db: AsyncSession = Dep
                 result = await db.execute(select(Organization).filter_by(id=org_id, status="active"))
                 org = result.scalars().first()
                 if org:
+                    TenantContext.set_organization_id(org.id)
                     return org
     
     except Exception as e:
@@ -332,7 +252,6 @@ async def require_organization(
     request: Request, 
     db: AsyncSession = Depends(get_db)
 ) -> Organization:
-    """Dependency to require valid organization context"""
     org = await get_organization_from_request(request, db)
     if not org:
         raise HTTPException(
@@ -340,97 +259,18 @@ async def require_organization(
             detail="Invalid or missing organization context"
         )
     
-    # Set in context for later use
     TenantContext.set_organization_id(org.id)
     return org
 
-def require_current_organization_id() -> int:
-    """Require and get current organization ID from context"""
-    org_id = TenantContext.get_organization_id()
-    if org_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="No current organization specified"
-        )
-    return org_id
-
-async def validate_company_setup(db: AsyncSession = Depends(get_db), organization_id: int = Depends(require_current_organization_id)) -> None:
-    """
-    Dependency to validate company setup.
-    """
-    # Validate that organization exists
-    result = await db.execute(select(Organization).filter_by(id=organization_id))
-    org = result.scalars().first()
-    if not org:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found. Please contact system administrator."
-        )
-    
-    # Check if company details are marked as completed
-    if not org.company_details_completed:
-        raise HTTPException(
-            status_code=status.HTTP_412_PRECONDITION_FAILED,
-            detail="Company details must be completed before performing this operation. Please set up your company information first."
-        )
-    
-    # Verify company record actually exists
-    result = await db.execute(select(Company).filter_by(organization_id=organization_id))
-    company = result.scalars().first()
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_412_PRECONDITION_FAILED,
-            detail="Company record not found. Please complete company setup before performing this operation."
-        )
-
-class TenantQueryMixin:
-    """Mixin to add tenant filtering to database queries"""
-    
-    @staticmethod
-    def filter_by_tenant(result, model_class, org_id: Optional[int] = None):
-        """Add tenant filter to query"""
-        if org_id is None:
-            org_id = TenantContext.get_organization_id()
-        
-        if org_id is None:
-            raise HTTPException(
-                status_code=500,
-                detail="No organization context available for query"
-            )
-        
-        # Check if model has organization_id field
-        if hasattr(model_class, 'organization_id'):
-            return result.filter(model_class.organization_id == org_id)
-        
-        return result
-    
-    @staticmethod
-    def ensure_tenant_access(obj: Any, org_id: Optional[int] = None) -> None:
-        """Ensure object belongs to current tenant"""
-        if org_id is None:
-            org_id = TenantContext.get_organization_id()
-        
-        if org_id is None:
-            raise HTTPException(
-                status_code=500,
-                detail="No organization context available"
-            )
-        
-        if hasattr(obj, 'organization_id') and obj.organization_id != org_id:
-            raise HTTPException(
-                status_code=404,
-                detail="Resource not found"
-            )
-
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
-    """Dependency to get current authenticated user from JWT token"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        email, organization_id, user_type = verify_token(token)
+        email, organization_id, user_role, user_type = verify_token(token)
+        logger.debug(f"Token decoded: email={email}, org_id={organization_id}, role={user_role}, type={user_type}")
         if email is None:
             raise credentials_exception
         result = await db.execute(select(User).filter_by(email=email))
@@ -438,27 +278,44 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         if user is None:
             raise credentials_exception
 
-        # Set organization context based on user type
+        # Set organization context
         if not user.is_super_admin:
-            # For organization users, always set from user's organization_id
             if user.organization_id is None:
                 raise credentials_exception
             TenantContext.set_organization_id(user.organization_id)
-        else:
-            # For super admins, set from token if provided
-            if organization_id is not None:
-                TenantContext.set_organization_id(organization_id)
-
+            logger.debug(f"Set organization context for user {email}: org_id={user.organization_id}")
+        elif organization_id is not None:
+            TenantContext.set_organization_id(organization_id)
+            logger.debug(f"Set organization context for super admin {email}: org_id={organization_id}")
+        
+        TenantContext.set_user_id(user.id)
         return user
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error validating user: {str(e)}")
         raise credentials_exception
 
-async def get_current_org_user(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Dependency to get current user with organization context validation"""
+def require_current_organization_id(current_user: User = Depends(get_current_user)) -> int:
     org_id = TenantContext.get_organization_id()
     if org_id is None:
         if current_user.organization_id is not None:
-            # Set from user if not set
+            TenantContext.set_organization_id(current_user.organization_id)
+            org_id = current_user.organization_id
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="No current organization specified"
+            )
+    if not current_user.is_super_admin and current_user.organization_id != org_id:
+        raise HTTPException(
+            status_code=403,
+            detail="User does not belong to the requested organization"
+        )
+    return org_id
+
+async def get_current_org_user(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    org_id = TenantContext.get_organization_id()
+    if org_id is None:
+        if current_user.organization_id is not None:
             TenantContext.set_organization_id(current_user.organization_id)
             org_id = current_user.organization_id
         else:
@@ -474,3 +331,26 @@ async def get_current_org_user(current_user: User = Depends(get_current_user), d
         )
     
     return current_user
+
+async def validate_company_setup(db: AsyncSession = Depends(get_db), organization_id: int = Depends(require_current_organization_id)) -> None:
+    result = await db.execute(select(Organization).filter_by(id=organization_id))
+    org = result.scalars().first()
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found. Please contact system administrator."
+        )
+    
+    if not org.company_details_completed:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail="Company details must be completed before performing this operation."
+        )
+    
+    result = await db.execute(select(Company).filter_by(organization_id=organization_id))
+    company = result.scalars().first()
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail="Company record not found. Please complete company setup."
+        )

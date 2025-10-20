@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
 
     // Always save token to localStorage before anything else
     if (token) {
-      localStorage.setItem("token", token);
+      localStorage.setItem("access_token", token);
     }
 
     try {
@@ -50,7 +50,7 @@ const LoginPage: React.FC = () => {
       await login(loginResponse);
       console.log("[Login] AuthContext login completed - session established");
       console.log("[Login] Current localStorage state:", {
-        hasToken: !!localStorage.getItem("token"),
+        hasToken: !!localStorage.getItem("access_token"),
         hasUserRole: !!localStorage.getItem("user_role"),
         hasSuperAdminFlag: !!localStorage.getItem("is_super_admin"),
         isDemoMode: !!localStorage.getItem("demoMode"),

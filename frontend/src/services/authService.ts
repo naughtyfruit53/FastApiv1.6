@@ -20,7 +20,7 @@ export const authService = {
         mustChangePassword: response.data.must_change_password,
       });
       // Store token FIRST
-      localStorage.setItem("token", response.data.access_token);
+      localStorage.setItem("access_token", response.data.access_token);
       // Store refresh token if provided
       if (response.data.refresh_token) {
         localStorage.setItem("refresh_token", response.data.refresh_token);
@@ -68,7 +68,7 @@ export const authService = {
         mustChangePassword: response.data.must_change_password,
       });
       // Store token FIRST
-      localStorage.setItem("token", response.data.access_token);
+      localStorage.setItem("access_token", response.data.access_token);
       // Store ALL authentication context data immediately after token
       // Store refresh token if provided
       if (response.data.refresh_token) {
@@ -146,7 +146,7 @@ export const authService = {
     }
   },
   logout: () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_role");
     localStorage.removeItem("is_super_admin");
@@ -203,7 +203,7 @@ export const authService = {
       console.log("[AuthService] Token refresh successful");
       // Update stored tokens
       if (response.data.access_token) {
-        localStorage.setItem("token", response.data.access_token);
+        localStorage.setItem("access_token", response.data.access_token);
       }
       if (response.data.refresh_token) {
         localStorage.setItem("refresh_token", response.data.refresh_token);
@@ -212,7 +212,7 @@ export const authService = {
     } catch (error: any) {
       console.error("[AuthService] Token refresh failed:", error);
       // Clear invalid tokens
-      localStorage.removeItem("token");
+      localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user_role");
       localStorage.removeItem("is_super_admin");
@@ -220,7 +220,7 @@ export const authService = {
     }
   },
   isTokenValid: () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     if (!token) {
       return false;
     }
@@ -489,7 +489,7 @@ export const masterDataService = {
   bulkImportStock: async (file: File, mode: string = "replace") => {
     try {
       // Ensure user is authenticated before attempting import
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) {
         throw new Error(
           "Authentication required. Please log in before importing inventory.",
@@ -563,7 +563,7 @@ export const masterDataService = {
 };
 export const companyService = {
   getCurrentCompany: async () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     if (!token) {
       console.log(
         "[CompanyService] Skipping company fetch - no token available",
@@ -926,7 +926,7 @@ export const passwordService = {
         console.log(
           "[PasswordService] New token received after password change, updating storage",
         );
-        localStorage.setItem("token", response.data.access_token);
+        localStorage.setItem("access_token", response.data.access_token);
       }
       return response.data;
     } catch (error: any) {
@@ -955,7 +955,7 @@ export const passwordService = {
         console.log(
           "[PasswordService] New token received after password reset, updating storage",
         );
-        localStorage.setItem("token", response.data.access_token);
+        localStorage.setItem("access_token", response.data.access_token);
       }
       return response.data;
     } catch (error: any) {

@@ -5,14 +5,12 @@ import axiosRetry from 'axios-retry';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-// Configure axios-retry with exponential backoff
 axiosRetry(axios, {
-  retries: 3, // Retry up to 3 times
+  retries: 3,
   retryDelay: (retryCount) => {
-    return axiosRetry.exponentialDelay(retryCount); // Exponential backoff
+    return axiosRetry.exponentialDelay(retryCount);
   },
   retryCondition: (error) => {
-    // Retry on network errors or 5xx server errors
     return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
   },
 });
@@ -45,7 +43,7 @@ const handleTokenExpiry = () => {
     sessionStorage.setItem("returnUrlAfterLogin", returnUrl);
     console.log("[API] Stored return URL:", returnUrl);
   }
-  localStorage.removeItem("token");
+  localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   localStorage.removeItem("user_role");
   localStorage.removeItem("is_super_admin");
@@ -88,12 +86,12 @@ const waitForAuthIfNeeded = async (config: any) => {
     "/auth/login",
     "/auth/otp/",
     "/auth/admin/setup",
-    "/users/me",  // Critical for initial user fetch
-    "/organizations/current",  // Organization info
-    "/rbac/users/users/permissions",  // Permissions
-    "/companies/current",  // Company info
-    "/organizations/org-statistics",  // Stats
-    "/organizations/recent-activities",  // Recent activities
+    "/users/me",
+    "/organizations/current",
+    "/rbac/users/users/permissions",
+    "/companies/current",
+    "/organizations/org-statistics",
+    "/organizations/recent-activities",
   ];
   const isPublicEndpoint = publicEndpoints.some((endpoint) =>
     config.url?.includes(endpoint),
@@ -135,7 +133,6 @@ const refreshAxios = axios.create({
   timeout: 15000,
 });
 
-// Apply retry logic to refreshAxios as well
 axiosRetry(refreshAxios, {
   retries: 3,
   retryDelay: axiosRetry.exponentialDelay,
@@ -149,22 +146,13 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000,  // Global timeout: 15 seconds to prevent hangs
-});
-
-// Apply retry logic to api instance
-axiosRetry(api, {
-  retries: 3,
-  retryDelay: axiosRetry.exponentialDelay,
-  retryCondition: (error) => {
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
-  },
+  timeout: 15000,
 });
 
 api.interceptors.request.use(
   async (config) => {
     await waitForAuthIfNeeded(config);
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
       hasToken: !!token,
       hasRefreshToken: !!localStorage.getItem("refresh_token"),
@@ -219,46 +207,52 @@ api.interceptors.response.use(
       });
     }
     if (status === 401 && !originalRequest._retry) {
-      if (originalRequest.headers?.Authorization) {
-        console.log(`[API] ${status} Auth error - attempting token refresh`);
-        originalRequest._retry = true;
-        try {
-          const refreshToken = localStorage.getItem("refresh_token");
-          if (!refreshToken) {
-            throw new Error("No refresh token available");
-          }
-          const response = await refreshAxios.post('/auth/refresh', {
-            refresh_token: refreshToken
-          });
-          const refreshData = response.data;
-          localStorage.setItem("token", refreshData.access_token);
-          if (refreshData.refresh_token) {
-            localStorage.setItem("refresh_token", refreshData.refresh_token);
-          }
-          console.log("[API] Token refreshed successfully");
-          originalRequest.headers.Authorization = `Bearer ${refreshData.access_token}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          console.error("[API] Token refresh failed:", refreshError);
-          const errorDetail = error.response?.data?.detail;
-          if (errorDetail && typeof errorDetail === "string") {
-            console.log(`[API] ${status} Error reason:`, errorDetail);
-            toast.error(`Session expired: ${errorDetail}`, {
-              position: "top-right",
-              autoClose: 3000,
-            });
-          } else {
-            toast.error("Session expired. Please login again.", {
-              position: "top-right",
-              autoClose: 3000,
-            });
-          }
-          handleTokenExpiry();
+      console.log(`[API] ${status} Auth error - attempting token refresh`);
+      originalRequest._retry = true;
+      try {
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (!refreshToken) {
+          throw new Error("No refresh token available");
         }
-      } else {
-        console.log(`[API] ${status} Error - No token present, not refreshing`);
-        return Promise.reject(error);
+        const response = await refreshAxios.post('/auth/refresh', {
+          refresh_token: refreshToken
+        });
+        const refreshData = response.data;
+        localStorage.setItem("access_token", refreshData.access_token);
+        if (refreshData.refresh_token) {
+          localStorage.setItem("refresh_token", refreshData.refresh_token);
+        }
+        console.log("[API] Token refreshed successfully");
+        originalRequest.headers.Authorization = `Bearer ${refreshData.access_token}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.error("[API] Token refresh failed:", refreshError);
+        const errorDetail = error.response?.data?.detail;
+        if (errorDetail && typeof errorDetail === "string") {
+          console.log(`[API] ${status} Error reason:`, errorDetail);
+          toast.error(`Session expired: ${errorDetail}`, {
+            position: "top-right",
+            autoClose: 3000,
+          });
+        } else {
+          toast.error("Session expired. Please login again.", {
+            position: "top-right",
+            autoClose: 3000,
+          });
+        }
+        handleTokenExpiry();
       }
+    } else if (status === 403) {
+      console.log(`[API] ${status} Permission denied:`, error.response?.data?.detail);
+      toast.error(`Permission denied: ${error.response?.data?.detail || "Insufficient permissions"}`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      return Promise.reject({
+        ...error,
+        userMessage: error.response?.data?.detail || "Insufficient permissions",
+        status,
+      });
     } else if (status === 404 && url?.includes("/companies/current")) {
       console.log(
         "[API] 404 on /companies/current - company setup required, not an auth error",
@@ -292,7 +286,7 @@ api.interceptors.response.use(
     return Promise.reject({
       ...error,
       userMessage: errorMessage,
-      status: status,
+      status,
     });
   },
 );
