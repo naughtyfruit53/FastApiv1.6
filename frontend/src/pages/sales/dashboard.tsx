@@ -102,7 +102,7 @@ const SalesDashboard: React.FC = () => {
                     <Typography variant="h6">Revenue</Typography>
                   </Box>
                   <Typography variant="h4" color="primary">
-                    ${stats.totalRevenue.toLocaleString()}
+                    ₹{stats.totalRevenue.toLocaleString()}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Closed won deals

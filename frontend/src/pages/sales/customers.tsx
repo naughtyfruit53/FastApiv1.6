@@ -55,56 +55,38 @@ const SalesCustomerDatabase: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Mock data - in production this would link to master customers
+  // Fetch customers from master data API
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setError(null);
+        
+        // Fetch from actual master customer data API
+        const response = await fetch("/api/customers");
+        if (!response.ok) {
+          throw new Error("Failed to fetch customers");
+        }
+        
+        const data = await response.json();
+        
+        // Map master customer data to sales customer format
+        const mappedCustomers: Customer[] = data.map((customer: any) => ({
+          id: customer.id,
+          name: customer.name || customer.customer_name || "Unknown",
+          contact_person: customer.contact_person || customer.contact_name || "",
+          email: customer.email || customer.contact_email || "",
+          phone: customer.phone || customer.contact_number || "",
+          address: customer.address || customer.address1 || "",
+          city: customer.city || "",
+          state: customer.state || "",
+          status: customer.is_active ? "active" : "inactive",
+          created_at: customer.created_at || new Date().toISOString(),
+        }));
 
-        const mockData: Customer[] = [
-          {
-            id: 1,
-            name: "TechCorp Ltd",
-            contact_person: "John Smith",
-            email: "john.smith@techcorp.com",
-            phone: "+1-555-0123",
-            address: "123 Tech Street",
-            city: "San Francisco",
-            state: "CA",
-            status: "active",
-            created_at: "2022-03-10",
-          },
-          {
-            id: 2,
-            name: "Global Systems Inc",
-            contact_person: "Mike Wilson",
-            email: "mike.wilson@globalsystems.com",
-            phone: "+1-555-0124",
-            address: "456 Business Ave",
-            city: "New York",
-            state: "NY",
-            status: "active",
-            created_at: "2021-07-15",
-          },
-          {
-            id: 3,
-            name: "Manufacturing Co",
-            contact_person: "Lisa Davis",
-            email: "lisa.davis@manufacturing.com",
-            phone: "+1-555-0125",
-            address: "789 Industrial Blvd",
-            city: "Detroit",
-            state: "MI",
-            status: "prospect",
-            created_at: "2024-01-10",
-          },
-        ];
-
-        setCustomers(mockData);
+        setCustomers(mappedCustomers);
       } catch (err) {
-        setError("Failed to load customers");
+        setError("Failed to load customers. Please check your connection.");
         console.error("Error fetching customers:", err);
       } finally {
         setLoading(false);
@@ -172,30 +154,6 @@ const SalesCustomerDatabase: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Customer Database
       </Typography>
-
-      {/* Integration Notice */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography>
-            This customer database is unified with Master Data. Changes made
-            here will reflect in the master customer records.
-          </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<LinkIcon />}
-            onClick={handleGoToMasterCustomers}
-            size="small"
-          >
-            Manage Master Data
-          </Button>
-        </Box>
-      </Alert>
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>

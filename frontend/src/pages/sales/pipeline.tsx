@@ -51,6 +51,7 @@ interface Pipeline {
   isActive: boolean;
 }
 const SalesPipeline: React.FC = () => {
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(
     null,
   );
