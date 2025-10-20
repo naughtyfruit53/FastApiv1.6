@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import { authService } from "../services/authService";
 import { User, getDisplayRole } from "../types/user.types";
 import { markAuthReady, resetAuthReady } from "../lib/api";
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -42,13 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     console.log(
       `[AuthProvider] fetchUser started - attempt ${retryCount + 1}/${maxRetries + 1}`,
       {
-        hasToken: !!localStorage.getItem("token"),
-        hasRefreshToken: !!localStorage.getItem("refresh_token"),
+        hasToken: !!localStorage.getItem(ACCESS_TOKEN_KEY),
+        hasRefreshToken: !!localStorage.getItem(REFRESH_TOKEN_KEY),
         timestamp: new Date().toISOString(),
       },
     );
     try {
-      const currentToken = localStorage.getItem("token");
+      const currentToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       if (!currentToken) {
         console.log("[AuthProvider] No token found in localStorage");
         throw new Error("No token found");
@@ -124,10 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       }
       // On error, clear sensitive data and force re-auth
       console.log("[AuthProvider] Auth error - clearing data");
-      localStorage.removeItem("token");
-      localStorage.removeItem("refresh_token");
-      localStorage.removeItem("user_role");
-      localStorage.removeItem("is_super_admin");
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem(USER_ROLE_KEY);
+      localStorage.removeItem(IS_SUPER_ADMIN_KEY);
       // Preserve refresh_token for potential recovery
       console.log("[AuthProvider] Preserving refresh_token for potential recovery");
       setUser(null);
@@ -159,10 +160,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // On mount, check for token and initialize user session
   useEffect(() => {
     console.log("[AuthProvider] Component mounted, initializing auth state");
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     console.log("[AuthProvider] Token check result:", {
       hasToken: !!token,
-      hasRefreshToken: !!localStorage.getItem("refresh_token"),
+      hasRefreshToken: !!localStorage.getItem(REFRESH_TOKEN_KEY),
       pathname: router.pathname,
       timestamp: new Date().toISOString(),
     });
@@ -262,20 +263,20 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       mustChangePassword: loginResponse.user.must_change_password,
       timestamp: new Date().toISOString(),
     });
-    localStorage.setItem("token", loginResponse.access_token);
+    localStorage.setItem(ACCESS_TOKEN_KEY, loginResponse.access_token);
     if (loginResponse.refresh_token) {
-      localStorage.setItem("refresh_token", loginResponse.refresh_token);
+      localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refresh_token);
       console.log("[AuthProvider] Stored refresh token");
     } else {
       console.warn("[AuthProvider] No refresh token in login response");
     }
     console.log("[AuthProvider] Token stored in localStorage");
     if (loginResponse.user_role) {
-      localStorage.setItem("user_role", loginResponse.user_role);
+      localStorage.setItem(USER_ROLE_KEY, loginResponse.user_role);
       console.log("[AuthProvider] Stored user_role:", loginResponse.user_role);
     }
     localStorage.setItem(
-      "is_super_admin",
+      IS_SUPER_ADMIN_KEY,
       loginResponse.user?.is_super_admin ? "true" : "false",
     );
     console.log(
@@ -316,10 +317,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // Logout: clear all sensitive data and redirect
   const logout = () => {
     console.log("[AuthProvider] Logout initiated");
-    localStorage.removeItem("token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user_role");
-    localStorage.removeItem("is_super_admin");
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_ROLE_KEY);
+    localStorage.removeItem(IS_SUPER_ADMIN_KEY);
     setUser(null);
     resetAuthReady();
     console.log("[AuthProvider] Auth data cleared");
@@ -343,7 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
 
   // Get auth headers for API requests
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 

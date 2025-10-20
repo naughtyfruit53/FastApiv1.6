@@ -9,6 +9,7 @@ import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import DemoModeDialog from "../components/DemoModeDialog";
 import { useAuth } from "../context/AuthContext";
 import useMobileRouting from "../hooks/mobile/useMobileRouting";  // Added import for mobile routing
+import { ACCESS_TOKEN_KEY } from "../constants/auth";
 
 const LoginPage: React.FC = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
@@ -39,7 +40,8 @@ const LoginPage: React.FC = () => {
 
     // Always save token to localStorage before anything else
     if (token) {
-      localStorage.setItem("token", token);
+      localStorage.setItem(ACCESS_TOKEN_KEY, token);
+      console.log("[Login] Stored access token in localStorage");
     }
 
     try {
