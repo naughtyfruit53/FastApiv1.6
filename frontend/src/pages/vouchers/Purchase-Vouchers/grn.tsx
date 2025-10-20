@@ -27,6 +27,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
+import InwardMaterialQCModal from '../../../components/InwardMaterialQCModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
@@ -143,6 +144,8 @@ const GoodsReceiptNotePage: React.FC = () => {
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
   const [grnCompleteDialogOpen, setGrnCompleteDialogOpen] = useState(false);
   const [existingGrnId, setExistingGrnId] = useState<number | null>(null);
+  const [qcModalOpen, setQcModalOpen] = useState(false);
+  const [selectedQcItem, setSelectedQcItem] = useState<any | null>(null);
 
   const { data: poData } = useQuery({
     queryKey: ['purchase-order', po_id],
@@ -842,12 +845,22 @@ const GoodsReceiptNotePage: React.FC = () => {
                                 variant="outlined"
                                 disabled={mode === 'view'}
                                 onClick={() => {
-                                  // TODO: Trigger Inward Material QC modal for this item
-                                  // This will be implemented in a future PR
-                                  alert('QC Modal will be implemented in a future PR');
+                                  const item = watch(`items.${index}`);
+                                  setSelectedQcItem({
+                                    ...field,
+                                    index,
+                                    product_id: field.product_id,
+                                    product_name: productList?.find((p: any) => p.id === field.product_id)?.product_name || 'Unknown',
+                                    ordered_quantity: item.ordered_quantity || 0,
+                                    received_quantity: item.received_quantity || 0,
+                                    accepted_quantity: item.accepted_quantity || item.received_quantity || 0,
+                                    rejected_quantity: item.rejected_quantity || 0,
+                                    unit: item.unit || 'PCS',
+                                  });
+                                  setQcModalOpen(true);
                                 }}
                                 sx={{ fontSize: 10, minWidth: 40, px: 1 }}
-                                title="Quality Check (Coming Soon)"
+                                title="Quality Check"
                               >
                                 QC
                               </Button>
@@ -941,6 +954,52 @@ const GoodsReceiptNotePage: React.FC = () => {
         onClose={() => setShowShippingModal(false)}
         loading={addShippingLoading}
         setLoading={setAddShippingLoading}
+      />
+      <InwardMaterialQCModal
+        open={qcModalOpen}
+        onClose={() => {
+          setQcModalOpen(false);
+          setSelectedQcItem(null);
+        }}
+        itemData={selectedQcItem || {
+          product_id: 0,
+          product_name: '',
+          ordered_quantity: 0,
+          received_quantity: 0,
+          accepted_quantity: 0,
+          rejected_quantity: 0,
+          unit: 'PCS',
+        }}
+        onSave={async (qcData, files) => {
+          try {
+            if (!selectedQcItem) return;
+            
+            // Update the item with QC data
+            const index = selectedQcItem.index;
+            setValue(`items.${index}.accepted_quantity`, qcData.accepted_quantity);
+            setValue(`items.${index}.rejected_quantity`, qcData.rejected_quantity);
+            
+            // Store QC data for backend submission
+            // This will be saved when the GRN is submitted
+            const currentItem = watch(`items.${index}`);
+            setValue(`items.${index}.qc_data`, {
+              inspection_date: qcData.inspection_date,
+              inspector_name: qcData.inspector_name,
+              qc_result: qcData.qc_result,
+              rejection_reason: qcData.rejection_reason,
+              measurements: qcData.measurements,
+              remarks: qcData.remarks,
+              // Files will be uploaded separately when implementing backend
+              file_count: files.length,
+            });
+            
+            toast.success('Quality check data recorded. Will be saved with GRN.');
+            setQcModalOpen(false);
+            setSelectedQcItem(null);
+          } catch (error: any) {
+            throw new Error(error.message || 'Failed to save QC data');
+          }
+        }}
       />
       <VoucherContextMenu
         contextMenu={contextMenu}
