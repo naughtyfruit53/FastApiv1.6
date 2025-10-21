@@ -1,6 +1,5 @@
 // frontend/src/pages/vouchers/Pre-Sales-Voucher/quotation.tsx
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { formatCurrency } from "../../../utils/currencyUtils";
 import {
   Box,
   TextField,

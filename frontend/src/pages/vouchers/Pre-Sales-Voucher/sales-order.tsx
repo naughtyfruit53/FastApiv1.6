@@ -1,7 +1,6 @@
 // frontend/src/pages/vouchers/Pre-Sales-Voucher/sales-order.tsx
 // Sales Order Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { formatCurrency } from "../../../utils/currencyUtils";
 import {
   Box,
   TextField,
