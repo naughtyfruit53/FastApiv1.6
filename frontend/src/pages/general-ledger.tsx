@@ -41,6 +41,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import axios from "axios";
+import { formatCurrency } from "../utils/currencyUtils";
 
 interface Account {
   id: number;
@@ -184,14 +185,6 @@ const GeneralLedger: React.FC = () => {
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to create entry");
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {

@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../components/DashboardLayout';
 import api from '../lib/api';
+import { formatCurrency } from "../utils/currencyUtils";
 
 interface Budget {
   id: number;
@@ -139,15 +140,6 @@ const BudgetManagementPage: React.FC = () => {
     } catch (error) {
       console.error('Error creating budget:', error);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   };
 
   const getUtilizationColor = (percentage: number) => {

@@ -1,6 +1,7 @@
 // frontend/src/pages/vouchers/Pre-Sales-Voucher/sales-order.tsx
 // Sales Order Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { formatCurrency } from "../../../utils/currencyUtils";
 import {
   Box,
   TextField,
@@ -47,6 +48,7 @@ import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for customer balance display
+import { formatCurrency } from "../../../utils/currencyUtils";
 
 const SalesOrderPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
@@ -473,7 +475,7 @@ const SalesOrderPage: React.FC = () => {
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{voucher.date ? new Date(voucher.date).toLocaleDateString() : "N/A"}</TableCell>
                 <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{customerList?.find((c: any) => c.id === voucher.customer_id)?.name || "N/A"}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || "0"}</TableCell>
+                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{formatCurrency(voucher.total_amount || 0)}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                   <VoucherContextMenu
                     voucher={voucher}

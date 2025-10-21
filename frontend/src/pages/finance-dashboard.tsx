@@ -43,6 +43,7 @@ import {
   BarElement,
 } from "chart.js";
 import axios from "axios";
+import { formatCurrency } from "../utils/currencyUtils";
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -141,14 +142,6 @@ const FinanceDashboard: React.FC = () => {
   }, []);
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   };
   const formatPercentage = (value: number) => {
     return `${value.toFixed(2)}%`;

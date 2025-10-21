@@ -48,6 +48,7 @@ import voucherFormStyles from "../../../styles/voucherFormStyles";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form";
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
+import { formatCurrency } from "../../../utils/currencyUtils";
 
 const PurchaseOrderPage: React.FC = () => {
   console.count('Render: PurchaseOrderPage');
@@ -595,7 +596,7 @@ const PurchaseOrderPage: React.FC = () => {
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{Math.round(voucher.total_amount).toLocaleString()}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{formatCurrency(Math.round(voucher.total_amount) || 0)}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                     <VoucherContextMenu
                       voucher={voucher}

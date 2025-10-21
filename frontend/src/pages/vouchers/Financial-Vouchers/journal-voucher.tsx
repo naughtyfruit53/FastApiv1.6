@@ -21,6 +21,7 @@ import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherLayout from "../../../components/VoucherLayout";
 import EntitySelector from "../../../components/EntitySelector";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import { formatCurrency } from "../../../utils/currencyUtils";
 import {
   getVoucherConfig,
   getVoucherStyles,
@@ -149,10 +150,10 @@ const JournalVoucher: React.FC = () => {
                   {new Date(voucher.date).toLocaleDateString()}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.debit_amount?.toFixed(2) || "0.00"}
+                  {formatCurrency(voucher.debit_amount || 0)}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.credit_amount?.toFixed(2) || "0.00"}
+                  {formatCurrency(voucher.credit_amount || 0)}
                 </TableCell>
                 <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
                   <VoucherContextMenu

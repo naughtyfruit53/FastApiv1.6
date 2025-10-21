@@ -53,6 +53,20 @@ export interface CRMAnalytics {
   period_end: string;
 }
 
+export interface CustomerAnalytics {
+  total_customers: number;
+  active_customers: number;
+  new_customers: number;
+  churned_customers: number;
+  total_revenue: number;
+  average_lifetime_value: number;
+  average_satisfaction_score: number;
+  customers_by_segment: { [key: string]: number };
+  top_customers: Array<{ id: number; name: string; revenue: number }>;
+  period_start: string;
+  period_end: string;
+}
+
 export interface Customer {
   id: number;
   name: string;
@@ -99,6 +113,25 @@ class CRMService {
         params,
       });
       throw new Error(`Failed to fetch analytics data: ${status} - ${detail}`);
+    }
+  }
+
+  async getCustomerAnalytics(params: { period_start: string; period_end: string }): Promise<CustomerAnalytics> {
+    try {
+      const response = await api.get(`${this.endpoint}/customer-analytics`, {
+        headers: this.getAuthHeaders(),
+        params,
+      });
+      return response.data;
+    } catch (error: any) {
+      const status = error.response?.status || 'unknown';
+      const detail = error.response?.data?.detail || error.message || 'No additional details';
+      console.error(`Error fetching customer analytics: Status ${status}, Detail: ${detail}`, {
+        fullError: error,
+        url: `${this.endpoint}/customer-analytics`,
+        params,
+      });
+      throw new Error(`Failed to fetch customer analytics data: ${status} - ${detail}`);
     }
   }
 
@@ -244,6 +277,18 @@ class CRMService {
     } catch (error: any) {
       console.error(`Error converting lead ${leadId} to opportunity:`, error.response?.data || error.message);
       throw new Error(error.response?.data?.detail || `Failed to convert lead ${leadId} to opportunity`);
+    }
+  }
+
+  async getLeadActivities(leadId: number): Promise<LeadActivity[]> {
+    try {
+      const response = await api.get(`${this.endpoint}/leads/${leadId}/activities`, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error fetching activities for lead ${leadId}:`, error.response?.data || error.message);
+      throw new Error(error.response?.data?.detail || `Failed to fetch lead activities`);
     }
   }
 }

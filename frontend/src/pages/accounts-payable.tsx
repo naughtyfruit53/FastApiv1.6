@@ -17,8 +17,7 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Tooltip,
-  LinearProgress
+  Tooltip
 } from '@mui/material';
 import { 
   Receipt,
@@ -31,6 +30,7 @@ import {
 import DashboardLayout from '../components/DashboardLayout';
 import api from '../lib/api';
 import { useRouter } from 'next/router';
+import { formatCurrency } from "../utils/currencyUtils";
 
 interface VendorBill {
   id: number;
@@ -110,15 +110,6 @@ const AccountsPayablePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   };
 
   const formatDate = (dateStr: string) => {

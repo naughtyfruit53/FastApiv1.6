@@ -25,6 +25,7 @@ import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import { formatCurrency } from "../../../utils/currencyUtils";
 import {
   getVoucherConfig,
   getVoucherStyles,
@@ -167,7 +168,7 @@ const CreditNotePage: React.FC = () => {
                             )?.name || "N/A"}
                           </TableCell>
                           <TableCell>
-                            ₹{voucher.total_amount?.toFixed(2) || "0.00"}
+                            {formatCurrency(voucher.total_amount || 0)}
                           </TableCell>
                         </TableRow>
                       ))}

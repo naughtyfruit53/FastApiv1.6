@@ -30,6 +30,7 @@ import { getVoucherConfig, getVoucherStyles, parseRateField } from '../../../uti
 import { useReferenceOptions } from '../../../utils/nameRefUtils';
 import { getEntityBalance, getVoucherBalance } from '../../../services/ledgerService';
 import financialVoucherStyles from "../../../styles/financialVoucherStyles";
+import { formatCurrency } from "../../../utils/currencyUtils";
 
 const ReceiptVoucher: React.FC = () => {
   const config = getVoucherConfig('receipt-voucher');
@@ -197,7 +198,7 @@ const ReceiptVoucher: React.FC = () => {
                   {voucher.entity?.name || 'N/A'}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.total_amount?.toFixed(2) || '0.00'}
+                  {formatCurrency(voucher.total_amount || 0)}
                 </TableCell>
                 <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
                   <VoucherContextMenu

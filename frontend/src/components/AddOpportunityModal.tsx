@@ -120,7 +120,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
       reset();
       onClose();
     } catch (err) {
-      console.error(msg, err);
+      console.error(err);
     }
   };
   const handleClose = () => {
@@ -212,7 +212,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   disabled={loading}
                   InputProps={{
                     startAdornment: (
-                      <InputAdornment position="start">$</InputAdornment>
+                      <InputAdornment position="start">₹</InputAdornment>
                     ),
                   }}
                   inputProps={{ min: 0 }}
@@ -346,7 +346,7 @@ const AddOpportunityModal: React.FC<AddOpportunityModalProps> = ({
                   label="Next Step"
                   fullWidth
                   disabled={loading}
-                  placeholder="What is the next next action required to move this opportunity forward?"
+                  placeholder="What is the next action required to move this opportunity forward?"
                 />
               </Grid>
               {/* Optional Reference Fields */}

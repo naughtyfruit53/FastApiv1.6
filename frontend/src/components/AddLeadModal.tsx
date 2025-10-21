@@ -407,7 +407,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   helperText={errors.estimated_value?.message}
                   disabled={loading}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                   }}
                   inputProps={{ min: 0 }}
                 />

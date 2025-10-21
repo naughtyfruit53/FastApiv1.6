@@ -24,6 +24,7 @@ import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherLayout from "../../../components/VoucherLayout";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import { formatCurrency } from "../../../utils/currencyUtils";
 import {
   getVoucherConfig,
   getVoucherStyles,
@@ -175,7 +176,7 @@ const ContraVoucher: React.FC = () => {
                   {voucher.transfer_type || "N/A"}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.amount?.toFixed(2) || "0.00"}
+                  {formatCurrency(voucher.amount || 0)}
                 </TableCell>
                 <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
                   <VoucherContextMenu

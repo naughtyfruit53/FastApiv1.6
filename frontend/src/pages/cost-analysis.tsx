@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../components/DashboardLayout';
 import api from '../lib/api';
+import { formatCurrency } from "../utils/currencyUtils";
 
 interface CostCenter {
   id: number;
@@ -192,15 +193,6 @@ const CostAnalysisPage: React.FC = () => {
     });
 
     setInsights(newInsights);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   };
 
   const getInsightColor = (type: string) => {

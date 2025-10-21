@@ -26,6 +26,7 @@ import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherLayout from "../../../components/VoucherLayout";
 import SearchableDropdown from "../../../components/SearchableDropdown";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import { formatCurrency } from "../../../utils/currencyUtils";
 import {
   getVoucherConfig,
   getVoucherStyles,
@@ -197,7 +198,7 @@ const NonSalesCreditNote: React.FC = () => {
                   {voucher.entity?.name || voucher.customer?.name || "N/A"}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
-                  ₹{voucher.total_amount?.toFixed(2) || "0.00"}
+                  {formatCurrency(voucher.total_amount || 0)}
                 </TableCell>
                 <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
                   <VoucherContextMenu

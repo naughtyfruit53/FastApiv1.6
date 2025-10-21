@@ -55,11 +55,12 @@ import {
   PersonAdd,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { crmService, Lead, CRMAnalytics } from "../../services/crmService";
 import AddLeadModal from "../../components/AddLeadModal";
 import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
+import { formatCurrency } from "../../utils/currencyUtils";
 
 interface LeadActivity {
   id: number;
@@ -240,6 +241,15 @@ const LeadManagement: React.FC = () => {
     toast.info("Convert to Opportunity functionality not implemented yet");
   };
 
+  const handleViewAnalytics = () => {
+    try {
+      router.push('/analytics/customer');
+    } catch (error) {
+      toast.error('Failed to navigate to analytics page');
+      console.error('Navigation error:', error);
+    }
+  };
+
   const getStatusColor = (status: Lead["status"]) => {
     switch (status) {
       case "new":
@@ -294,13 +304,6 @@ const LeadManagement: React.FC = () => {
     if (score >= 60) return "warning";
     if (score >= 40) return "info";
     return "error";
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
   };
 
   const filteredLeads = leads.filter((lead) => {
@@ -526,7 +529,7 @@ const LeadManagement: React.FC = () => {
               >
                 Clear Filters
               </Button>
-              <Button variant="outlined" startIcon={<Assessment />} onClick={handleConvertToOpportunity}>
+              <Button variant="outlined" startIcon={<Assessment />} onClick={handleViewAnalytics}>
                 Analytics
               </Button>
             </Stack>

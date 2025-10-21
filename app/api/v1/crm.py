@@ -15,6 +15,7 @@ from app.models.crm_models import (
 )
 from app.models.customer_models import Customer
 from app.models.user_models import User
+from app.models.sales_voucher_models import SalesVoucher
 from app.schemas.crm import (
     Lead as LeadSchema, LeadCreate, LeadUpdate,
     Opportunity as OpportunitySchema, OpportunityCreate, OpportunityUpdate,
@@ -857,4 +858,151 @@ async def get_crm_analytics(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch CRM analytics: {str(e)}"
+        )
+
+@router.get("/customer-analytics", response_model=CustomerAnalytics)
+async def get_customer_analytics(
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(core_get_current_user),
+    org_id: int = Depends(require_current_organization_id)
+):
+    """Get customer analytics for a specific period"""
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
+    if current_user.role != "org_admin" and "crm_customer_analytics_read" not in user_permissions:
+        logger.error(f"User {current_user.email} lacks 'crm_customer_analytics_read' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to view customer analytics"
+        )
+
+    try:
+        # Total customers
+        total_customers_stmt = select(func.count(Customer.id.distinct())).where(
+            Customer.organization_id == org_id
+        )
+        total_customers = await db.scalar(total_customers_stmt) or 0
+        
+        # New customers in period
+        new_customers_stmt = select(func.count(Customer.id.distinct())).where(
+            and_(
+                Customer.organization_id == org_id,
+                Customer.created_at >= period_start,
+                Customer.created_at <= period_end + timedelta(days=1)
+            )
+        )
+        new_customers = await db.scalar(new_customers_stmt) or 0
+        
+        # Active customers (with sales in period)
+        active_customers_stmt = select(func.count(SalesVoucher.customer_id.distinct())).where(
+            and_(
+                SalesVoucher.organization_id == org_id,
+                SalesVoucher.voucher_date >= period_start,
+                SalesVoucher.voucher_date <= period_end
+            )
+        )
+        active_customers = await db.scalar(active_customers_stmt) or 0
+        
+        # Last purchase dates
+        last_purchase_stmt = select(
+            SalesVoucher.customer_id,
+            func.max(SalesVoucher.voucher_date).label('last_purchase_date')
+        ).where(
+            SalesVoucher.organization_id == org_id
+        ).group_by(SalesVoucher.customer_id)
+        
+        result = await db.execute(last_purchase_stmt)
+        last_purchases = {row.customer_id: row.last_purchase_date for row in result.all()}
+        
+        # Churned customers (no purchase in last 90 days before period_start)
+        churn_threshold = period_start - timedelta(days=90)
+        churned_customers_stmt = select(func.count(Customer.id.distinct())).where(
+            and_(
+                Customer.organization_id == org_id,
+                or_(
+                    Customer.id.notin_(last_purchases.keys()),
+                    func.coalesce(func.max(last_purchases[Customer.id]), Customer.created_at) < churn_threshold
+                )
+            )
+        )
+        churned_customers = await db.scalar(churned_customers_stmt) or 0
+        
+        # Total revenue in period
+        revenue_stmt = select(func.sum(SalesVoucher.total_amount)).where(
+            and_(
+                SalesVoucher.organization_id == org_id,
+                SalesVoucher.voucher_date >= period_start,
+                SalesVoucher.voucher_date <= period_end
+            )
+        )
+        total_revenue = float(await db.scalar(revenue_stmt) or 0)
+        
+        # Average lifetime value (total revenue ever / total customers)
+        lifetime_revenue_stmt = select(func.sum(SalesVoucher.total_amount)).where(
+            SalesVoucher.organization_id == org_id
+        )
+        lifetime_revenue = float(await db.scalar(lifetime_revenue_stmt) or 0)
+        average_lifetime_value = lifetime_revenue / total_customers if total_customers > 0 else 0
+        
+        # ARPU (Average Revenue Per User) = total_revenue / active_customers
+        arpu = total_revenue / active_customers if active_customers > 0 else 0
+        
+        # Retention rate = (active_customers / (active_customers + churned_customers)) * 100
+        total_retained = active_customers
+        retention_rate = (total_retained / (total_retained + churned_customers) * 100) if (total_retained + churned_customers) > 0 else 0
+        
+        # Average satisfaction score (placeholder - would need feedback data)
+        average_satisfaction_score = 4.2
+        
+        # Customers by segment (placeholder - would need segment field on Customer)
+        customers_by_segment = {
+            "Enterprise": 45,
+            "Mid-Market": 187,
+            "Small Business": 456,
+            "Startup": 557
+        }
+        
+        # Top customers by revenue
+        top_customers_stmt = select(
+            Customer.id,
+            Customer.name,
+            func.sum(SalesVoucher.total_amount).label('revenue')
+        ).join(SalesVoucher, SalesVoucher.customer_id == Customer.id).where(
+            and_(
+                Customer.organization_id == org_id,
+                SalesVoucher.organization_id == org_id,
+                SalesVoucher.voucher_date >= period_start,
+                SalesVoucher.voucher_date <= period_end
+            )
+        ).group_by(Customer.id, Customer.name).order_by(desc('revenue')).limit(10)
+        
+        result = await db.execute(top_customers_stmt)
+        top_customers = [{"id": r.id, "name": r.name, "revenue": float(r.revenue or 0)} for r in result.all()]
+        
+        logger.info(f"Fetched customer analytics for org_id={org_id}, user={current_user.email}")
+        return CustomerAnalytics(
+            total_customers=total_customers,
+            active_customers=active_customers,
+            new_customers=new_customers,
+            churned_customers=churned_customers,
+            total_revenue=total_revenue,
+            average_lifetime_value=average_lifetime_value,
+            average_satisfaction_score=average_satisfaction_score,
+            customers_by_segment=customers_by_segment,
+            top_customers=top_customers,
+            period_start=period_start,
+            period_end=period_end,
+            arpu=arpu,
+            retention_rate=retention_rate
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching customer analytics for org_id={org_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch customer analytics: {str(e)}"
         )

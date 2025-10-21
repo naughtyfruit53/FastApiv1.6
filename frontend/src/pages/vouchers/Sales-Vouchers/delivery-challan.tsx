@@ -46,6 +46,7 @@ import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for customer balance display
+import { formatCurrency } from "../../../utils/currencyUtils";
 
 const DeliveryChallanPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
