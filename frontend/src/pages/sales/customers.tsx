@@ -33,6 +33,7 @@ import {
   Analytics as AnalyticsIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
+import AddCustomerModal from "../../components/AddCustomerModal";
 
 interface Customer {
   id: number;
@@ -53,6 +54,8 @@ const SalesCustomerDatabase: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [addCustomerModalOpen, setAddCustomerModalOpen] = useState(false);
+  const [addCustomerLoading, setAddCustomerLoading] = useState(false);
 
   // Define logout function
   const logout = () => {
@@ -147,6 +150,53 @@ const SalesCustomerDatabase: React.FC = () => {
 
   const handleGoToMasterCustomers = () => {
     router.push("/masters/customers");
+  };
+
+  const handleAddCustomer = async (customerData: any) => {
+    try {
+      setAddCustomerLoading(true);
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch("/api/v1/customers", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(customerData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create customer");
+      }
+
+      const newCustomer = await response.json();
+      
+      // Map new customer to display format
+      const mappedCustomer: Customer = {
+        id: newCustomer.id,
+        name: newCustomer.name || newCustomer.customer_name || "Unknown",
+        contact_person: newCustomer.contact_person || newCustomer.contact_name || "",
+        email: newCustomer.email || newCustomer.contact_email || "",
+        phone: newCustomer.phone || newCustomer.contact_number || "",
+        address: newCustomer.address || newCustomer.address1 || "",
+        city: newCustomer.city || "",
+        state: newCustomer.state || "",
+        status: newCustomer.is_active ? "active" : "inactive",
+        created_at: newCustomer.created_at || new Date().toISOString(),
+      };
+
+      setCustomers((prev) => [mappedCustomer, ...prev]);
+      setAddCustomerModalOpen(false);
+    } catch (err: any) {
+      console.error("Error creating customer:", err);
+      throw err; // Re-throw to let modal handle error display
+    } finally {
+      setAddCustomerLoading(false);
+    }
   };
 
   const handleViewCustomerAnalytics = (customerId: number) => {
@@ -277,7 +327,7 @@ const SalesCustomerDatabase: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={handleGoToMasterCustomers}
+            onClick={() => setAddCustomerModalOpen(true)}
           >
             Add Customer
           </Button>
@@ -369,6 +419,14 @@ const SalesCustomerDatabase: React.FC = () => {
           versa.
         </Typography>
       </Box>
+
+      {/* Add Customer Modal */}
+      <AddCustomerModal
+        open={addCustomerModalOpen}
+        onClose={() => setAddCustomerModalOpen(false)}
+        onAdd={handleAddCustomer}
+        loading={addCustomerLoading}
+      />
     </Container>
   );
 };

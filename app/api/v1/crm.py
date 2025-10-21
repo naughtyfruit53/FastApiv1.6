@@ -901,8 +901,8 @@ async def get_customer_analytics(
         active_customers_stmt = select(func.count(SalesVoucher.customer_id.distinct())).where(
             and_(
                 SalesVoucher.organization_id == org_id,
-                SalesVoucher.voucher_date >= period_start,
-                SalesVoucher.voucher_date <= period_end
+                SalesVoucher.date >= period_start,
+                SalesVoucher.date <= period_end
             )
         )
         active_customers = await db.scalar(active_customers_stmt) or 0
@@ -910,7 +910,7 @@ async def get_customer_analytics(
         # Last purchase dates
         last_purchase_stmt = select(
             SalesVoucher.customer_id,
-            func.max(SalesVoucher.voucher_date).label('last_purchase_date')
+            func.max(SalesVoucher.date).label('last_purchase_date')
         ).where(
             SalesVoucher.organization_id == org_id
         ).group_by(SalesVoucher.customer_id)
@@ -935,8 +935,8 @@ async def get_customer_analytics(
         revenue_stmt = select(func.sum(SalesVoucher.total_amount)).where(
             and_(
                 SalesVoucher.organization_id == org_id,
-                SalesVoucher.voucher_date >= period_start,
-                SalesVoucher.voucher_date <= period_end
+                SalesVoucher.date >= period_start,
+                SalesVoucher.date <= period_end
             )
         )
         total_revenue = float(await db.scalar(revenue_stmt) or 0)
@@ -975,8 +975,8 @@ async def get_customer_analytics(
             and_(
                 Customer.organization_id == org_id,
                 SalesVoucher.organization_id == org_id,
-                SalesVoucher.voucher_date >= period_start,
-                SalesVoucher.voucher_date <= period_end
+                SalesVoucher.date >= period_start,
+                SalesVoucher.date <= period_end
             )
         ).group_by(Customer.id, Customer.name).order_by(desc('revenue')).limit(10)
         

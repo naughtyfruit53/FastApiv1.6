@@ -76,127 +76,15 @@ const ContactManagement: React.FC = () => {
     "view",
   );
   const [tabValue, setTabValue] = useState(0);
-  // Mock data - replace with actual API call
+  
+  // Fetch contacts from backend - currently no API endpoint available
   useEffect(() => {
     const fetchContacts = async () => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const mockData: Contact[] = [
-          {
-            id: 1,
-            firstName: "John",
-            lastName: "Smith",
-            email: "john.smith@techcorp.com",
-            phone: "+1-555-0123",
-            jobTitle: "CTO",
-            company: "TechCorp Ltd",
-            department: "Technology",
-            address: "123 Tech Street",
-            city: "San Francisco",
-            state: "CA",
-            zipCode: "94105",
-            country: "USA",
-            source: "Website",
-            status: "active",
-            tags: ["decision-maker", "technical"],
-            lastContact: "2024-01-20",
-            created_at: "2023-08-15",
-            assignedTo: "Sarah Johnson",
-            notes:
-              "Primary technical contact. Interested in enterprise solutions.",
-          },
-          {
-            id: 2,
-            firstName: "Mike",
-            lastName: "Wilson",
-            email: "mike.wilson@globalsystems.com",
-            phone: "+1-555-0124",
-            jobTitle: "VP of Operations",
-            company: "Global Systems Inc",
-            department: "Operations",
-            address: "456 Business Ave",
-            city: "New York",
-            state: "NY",
-            zipCode: "10001",
-            country: "USA",
-            source: "Referral",
-            status: "active",
-            tags: ["decision-maker", "operations"],
-            lastContact: "2024-01-18",
-            created_at: "2023-06-20",
-            assignedTo: "David Brown",
-            notes: "Responsible for operational efficiency initiatives.",
-          },
-          {
-            id: 3,
-            firstName: "Lisa",
-            lastName: "Davis",
-            email: "lisa.davis@manufacturing.com",
-            phone: "+1-555-0125",
-            jobTitle: "IT Manager",
-            company: "Manufacturing Co",
-            department: "IT",
-            address: "789 Industrial Blvd",
-            city: "Detroit",
-            state: "MI",
-            zipCode: "48201",
-            country: "USA",
-            source: "Cold Call",
-            status: "lead",
-            tags: ["technical", "evaluating"],
-            lastContact: "2024-01-15",
-            created_at: "2024-01-10",
-            assignedTo: "Sarah Johnson",
-            notes: "Evaluating ERP solutions for manufacturing operations.",
-          },
-          {
-            id: 4,
-            firstName: "Robert",
-            lastName: "Chen",
-            email: "robert.chen@retailcorp.com",
-            phone: "+1-555-0126",
-            jobTitle: "Director of Finance",
-            company: "Retail Corp",
-            department: "Finance",
-            address: "321 Commerce St",
-            city: "Los Angeles",
-            state: "CA",
-            zipCode: "90210",
-            country: "USA",
-            source: "Trade Show",
-            status: "inactive",
-            tags: ["finance", "budget-holder"],
-            lastContact: "2023-12-08",
-            created_at: "2023-05-12",
-            assignedTo: "Mike Wilson",
-            notes: "Budget approved for Q2. Need to reconnect.",
-          },
-          {
-            id: 5,
-            firstName: "Emily",
-            lastName: "Rodriguez",
-            email: "emily.rodriguez@datasolutions.com",
-            phone: "+1-555-0127",
-            jobTitle: "Data Science Lead",
-            company: "Data Solutions Ltd",
-            department: "Analytics",
-            address: "654 Data Drive",
-            city: "Austin",
-            state: "TX",
-            zipCode: "73301",
-            country: "USA",
-            source: "LinkedIn",
-            status: "active",
-            tags: ["technical", "analytics"],
-            lastContact: "2024-01-22",
-            created_at: "2023-11-08",
-            assignedTo: "Lisa Thompson",
-            notes: "Interested in analytics and reporting capabilities.",
-          },
-        ];
-        setContacts(mockData);
+        // TODO: Implement contact API when backend endpoint is available
+        // For now, show empty state
+        setContacts([]);
       } catch (err) {
         setError("Failed to load contacts");
         console.error("Error fetching contacts:", err);
@@ -394,7 +282,32 @@ const ContactManagement: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredContacts.map((contact) => (
+            {filteredContacts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                  <Box>
+                    <Typography variant="h6" color="textSecondary" gutterBottom>
+                      No contacts found
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                      {searchTerm || filterStatus !== "all"
+                        ? "Try adjusting your filters"
+                        : "Get started by adding your first contact"}
+                    </Typography>
+                    {!searchTerm && filterStatus === "all" && (
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleCreateContact}
+                      >
+                        Add Contact
+                      </Button>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredContacts.map((contact) => (
               <TableRow key={contact.id} hover>
                 <TableCell>
                   <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -487,7 +400,8 @@ const ContactManagement: React.FC = () => {
                   </Tooltip>
                 </TableCell>
               </TableRow>
-            ))}
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
