@@ -15,7 +15,7 @@ from app.models.crm_models import (
 )
 from app.models.customer_models import Customer
 from app.models.user_models import User
-from app.models.sales_voucher_models import SalesVoucher
+from app.models.vouchers.sales import SalesVoucher
 from app.schemas.crm import (
     Lead as LeadSchema, LeadCreate, LeadUpdate,
     Opportunity as OpportunitySchema, OpportunityCreate, OpportunityUpdate,
