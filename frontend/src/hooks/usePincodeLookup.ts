@@ -6,7 +6,7 @@ interface PincodeData {
   state_code: string;
 }
 interface UsePincodeLookupReturn {
-  lookupPincode: (pincode: string) => Promise<void>;
+  lookupPincode: (pincode: string) => Promise<PincodeData | null>;
   pincodeData: PincodeData | null;
   loading: boolean;
   error: string | null;
@@ -45,18 +45,18 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
   const [pincodeData, setPincodeData] = useState<PincodeData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lookupPincode = async (pincode: string): Promise<void> => {
+  const lookupPincode = async (pincode: string): Promise<PincodeData | null> => {
     // Validate pincode format
     if (!pincode || !/^\d{6}$/.test(pincode)) {
       setError("Please enter a valid 6-digit PIN code");
-      return;
+      return null;
     }
     // Check cache first
     const cachedData = pincodeCache.get(pincode);
     if (cachedData) {
       setPincodeData(cachedData);
       setError(null);
-      return;
+      return cachedData;
     }
     setLoading(true);
     setError(null);
@@ -71,6 +71,7 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
       setPincodeData(data);
       // Cache successful lookup for the session
       pincodeCache.set(pincode, data);
+      return data;
     } catch (err: any) {
       if (err.response?.status === 404) {
         setError("PIN code not found. Please enter city and state manually.");
@@ -82,6 +83,7 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
         setError("Failed to lookup PIN code. Please enter details manually.");
       }
       setPincodeData(null);
+      return null;
     } finally {
       setLoading(false);
     }

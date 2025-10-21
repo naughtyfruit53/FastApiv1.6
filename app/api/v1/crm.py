@@ -1,6 +1,6 @@
 # app/api/v1/crm.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, BackgroundTasks, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, asc
 from typing import List, Optional, Dict, Any
@@ -73,7 +73,7 @@ async def get_leads(
     if "crm_lead_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_read' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to view leads"
         )
 
@@ -85,7 +85,7 @@ async def get_leads(
             if status not in [s.value for s in LeadStatus]:
                 logger.error(f"Invalid status filter: {status}")
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail=f"Invalid status: {status}. Valid values are {[s.value for s in LeadStatus]}"
                 )
             stmt = stmt.where(Lead.status == status)
@@ -93,7 +93,7 @@ async def get_leads(
             if source not in [s.value for s in LeadSource]:
                 logger.error(f"Invalid source filter: {source}")
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail=f"Invalid source: {source}. Valid values are {[s.value for s in LeadSource]}"
                 )
             stmt = stmt.where(Lead.source == source)
@@ -124,7 +124,7 @@ async def get_leads(
     except Exception as e:
         logger.error(f"Error fetching leads for org_id={org_id}: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to fetch leads: {str(e)}"
         )
 
@@ -143,7 +143,7 @@ async def create_lead(
     if "crm_lead_create" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_create' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to create leads"
         )
 
@@ -170,7 +170,7 @@ async def create_lead(
         logger.error(f"Error creating lead for org_id={org_id}: {str(e)}")
         await db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to create lead: {str(e)}"
         )
 
@@ -189,7 +189,7 @@ async def get_lead(
     if "crm_lead_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_read' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to view lead"
         )
 
@@ -210,7 +210,7 @@ async def get_lead(
     except Exception as e:
         logger.error(f"Error fetching lead {lead_id} for org_id={org_id}: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to fetch lead: {str(e)}"
         )
 
@@ -230,7 +230,7 @@ async def update_lead(
     if "crm_lead_update" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_update' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to update lead"
         )
 
@@ -261,7 +261,7 @@ async def update_lead(
         logger.error(f"Error updating lead {lead_id} for org_id={org_id}: {str(e)}")
         await db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to update lead: {str(e)}"
         )
 
@@ -280,7 +280,7 @@ async def delete_lead(
     if "crm_lead_delete" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_delete' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to delete lead"
         )
 
@@ -305,7 +305,7 @@ async def delete_lead(
         logger.error(f"Error deleting lead {lead_id} for org_id={org_id}: {str(e)}")
         await db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to delete lead: {str(e)}"
         )
 
@@ -325,7 +325,7 @@ async def convert_lead(
     if "crm_lead_convert" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_convert' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to convert lead"
         )
 
@@ -428,7 +428,7 @@ async def get_lead_activities(
     if "crm_lead_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_read' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to view lead activities"
         )
 
@@ -457,7 +457,7 @@ async def get_lead_activities(
     except Exception as e:
         logger.error(f"Error fetching activities for lead {lead_id} in org_id={org_id}: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to fetch lead activities: {str(e)}"
         )
 
@@ -477,7 +477,7 @@ async def create_lead_activity(
     if "crm_lead_activity_create" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_lead_activity_create' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to create lead activity"
         )
 
@@ -515,7 +515,7 @@ async def create_lead_activity(
         logger.error(f"Error creating activity for lead {lead_id} in org_id={org_id}: {str(e)}")
         await db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to create lead activity: {str(e)}"
         )
 
@@ -540,7 +540,7 @@ async def get_opportunities(
     if "crm_opportunity_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_opportunity_read' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to view opportunities"
         )
 
@@ -552,7 +552,7 @@ async def get_opportunities(
             if stage not in [s.value for s in OpportunityStage]:
                 logger.error(f"Invalid stage filter: {stage}")
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail=f"Invalid stage: {stage}. Valid values are {[s.value for s in OpportunityStage]}"
                 )
             stmt = stmt.where(Opportunity.stage == stage)
@@ -583,7 +583,7 @@ async def get_opportunities(
     except Exception as e:
         logger.error(f"Error fetching opportunities for org_id={org_id}: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to fetch opportunities: {str(e)}"
         )
 
@@ -602,7 +602,7 @@ async def create_opportunity(
     if "crm_opportunity_create" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_opportunity_create' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to create opportunity"
         )
 
@@ -632,7 +632,7 @@ async def create_opportunity(
         logger.error(f"Error creating opportunity for org_id={org_id}: {str(e)}")
         await db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to create opportunity: {str(e)}"
         )
 
@@ -651,7 +651,7 @@ async def get_opportunity(
     if "crm_opportunity_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_opportunity_read' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to view opportunity"
         )
 
@@ -672,7 +672,7 @@ async def get_opportunity(
     except Exception as e:
         logger.error(f"Error fetching opportunity {opportunity_id} for org_id={org_id}: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to fetch opportunity: {str(e)}"
         )
 
@@ -692,7 +692,7 @@ async def update_opportunity(
     if "crm_opportunity_update" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_opportunity_update' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to update opportunity"
         )
 
@@ -732,7 +732,7 @@ async def update_opportunity(
         logger.error(f"Error updating opportunity {opportunity_id} for org_id={org_id}: {str(e)}")
         await db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to update opportunity: {str(e)}"
         )
 
@@ -750,10 +750,10 @@ async def get_crm_analytics(
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
     logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_analytics_read" not in user_permissions:
+    if current_user.role != "org_admin" and "crm_analytics_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_analytics_read' permission")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Insufficient permissions to view CRM analytics"
         )
 
@@ -855,6 +855,6 @@ async def get_crm_analytics(
     except Exception as e:
         logger.error(f"Error fetching CRM analytics for org_id={org_id}: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Failed to fetch CRM analytics: {str(e)}"
         )

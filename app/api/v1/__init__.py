@@ -120,10 +120,16 @@ except Exception as e:
     logger.error(f"Failed to import crm_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
+try:
+    from ..pincode import router as pincode_router
+    logger.debug("Imported pincode_router")
+except Exception as e:
+    logger.error(f"Failed to import pincode_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
 api_v1_router = APIRouter()
 
 # Include routers with detailed logging
-# Place manufacturing_router and transport_router first to prioritize specific routes
 try:
     api_v1_router.include_router(manufacturing_router, tags=["Manufacturing"])
     manufacturing_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in manufacturing_router.routes if isinstance(route, APIRoute)]
@@ -274,7 +280,16 @@ except Exception as e:
     logger.error(f"Failed to include crm_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
-# Move user_router to the end to avoid generic {user_id} route conflicts
+try:
+    api_v1_router.include_router(pincode_router, prefix="/pincode", tags=["Pincode"])
+    pincode_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /pincode{route.path}" for route in pincode_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered pincode endpoints: {len(pincode_routes)} routes")
+    for route_path in pincode_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include pincode_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
 try:
     api_v1_router.include_router(user_router)
     user_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in user_router.routes if isinstance(route, APIRoute)]

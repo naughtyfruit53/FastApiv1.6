@@ -91,8 +91,14 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error("Error fetching CRM analytics:", error.response?.data || error.message);
-      throw new Error(error.response?.data?.detail || "Failed to fetch analytics data");
+      const status = error.response?.status || 'unknown';
+      const detail = error.response?.data?.detail || error.message || 'No additional details';
+      console.error(`Error fetching CRM analytics: Status ${status}, Detail: ${detail}`, {
+        fullError: error,
+        url: `${this.endpoint}/analytics`,
+        params,
+      });
+      throw new Error(`Failed to fetch analytics data: ${status} - ${detail}`);
     }
   }
 

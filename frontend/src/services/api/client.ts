@@ -3,6 +3,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import { ACCESS_TOKEN_KEY } from '../../constants/auth';  // Import the constant
 
 interface ApiResponse<T = any> {
   data: T;
@@ -26,7 +27,7 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config) => {
         // Get token from localStorage or context
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const token = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -46,7 +47,7 @@ class ApiClient {
         if (error.response?.status === 401) {
           // Handle unauthorized - redirect to login
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('token');
+            localStorage.removeItem(ACCESS_TOKEN_KEY);
             window.location.href = '/login';
           }
         }

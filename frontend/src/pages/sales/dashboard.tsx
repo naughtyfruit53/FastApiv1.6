@@ -113,10 +113,10 @@ const SalesDashboard: React.FC = () => {
         },
       ]);
     } catch (err: any) {
-      console.error("Error fetching dashboard data:", err);
-      const errorMessage = err.userMessage || err.message || "Failed to load dashboard data. Please try again.";
+      console.error("Error fetching dashboard data:", err.stack || err);
+      const errorMessage = err.message || "Failed to load dashboard data. Please try again.";
       setError(errorMessage);
-      if (err.status === 401 || err.message.includes("No authentication token") || err.message.includes("Session expired")) {
+      if (err.message.includes("401") || err.message.includes("No authentication token") || err.message.includes("Session expired")) {
         localStorage.removeItem("access_token");
         router.push("/login");
       }

@@ -360,7 +360,6 @@ export const menuItems = {
         items: [
           { name: 'Sales Dashboard', path: '/sales/dashboard', icon: <Dashboard /> },
           { name: 'Lead Management', path: '/sales/leads', icon: <PersonAdd /> },
-          { name: 'Enhanced Leads', path: '/sales/enhanced-leads', icon: <TrendingUp /> },
           { name: 'Opportunity Tracking', path: '/sales/opportunities', icon: <TrendingUp /> },
           { name: 'Sales Pipeline', path: '/sales/pipeline', icon: <Timeline /> },
           { name: 'Exhibition Mode', path: '/exhibition-mode', icon: <Business /> }

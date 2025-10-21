@@ -19,12 +19,11 @@ from app.schemas.rbac import (
     UserServiceRoleCreate, ServiceRoleType, ServiceModule, ServiceAction
 )
 from app.core.permissions import Permission
-from app.api.v1.auth import get_current_active_user  # Moved import outside TYPE_CHECKING
+from app.api.v1.auth import get_current_active_user
 from app.core.database import get_db
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class RBACService:
     """Service class for Role-Based Access Control operations"""
@@ -43,9 +42,9 @@ class RBACService:
         return db_permission
     
     async def get_permissions(self, 
-                       module: Optional[str] = None,
-                       action: Optional[str] = None,
-                       is_active: bool = True) -> List[ServicePermission]:
+                             module: Optional[str] = None,
+                             action: Optional[str] = None,
+                             is_active: bool = True) -> List[ServicePermission]:
         """Get service permissions with optional filtering"""
         from app.schemas.rbac import ServiceModule, ServiceAction
         
@@ -61,7 +60,6 @@ class RBACService:
         result = await self.db.execute(stmt.order_by(ServicePermission.module, ServicePermission.action))
         permissions = result.scalars().all()
         
-        # Filter out permissions with invalid modules (e.g., sticky_notes that shouldn't exist)
         valid_permissions = []
         valid_modules = {m.value for m in ServiceModule}
         valid_actions = {a.value for a in ServiceAction}
@@ -84,7 +82,6 @@ class RBACService:
     # Role Management
     async def create_role(self, role: ServiceRoleCreate, created_by_user_id: Optional[int] = None) -> ServiceRole:
         """Create a new service role with permissions"""
-        # Check if role already exists in organization
         result = await self.db.execute(
             select(ServiceRole).filter_by(organization_id=role.organization_id, name=role.name)
         )
@@ -96,13 +93,11 @@ class RBACService:
                 detail=f"Role '{role.name}' already exists in this organization"
             )
         
-        # Create role
         role_data = role.model_dump(exclude={'permission_ids'})
         db_role = ServiceRole(**role_data)
         self.db.add(db_role)
-        await self.db.flush()  # Get the ID without committing
+        await self.db.flush()
         
-        # Assign permissions
         if role.permission_ids:
             for permission_id in role.permission_ids:
                 result = await self.db.execute(
@@ -112,7 +107,7 @@ class RBACService:
                 
                 if permission:
                     role_permission = ServiceRolePermission(
-                        organization_id=role.organization_id,  # ADD THIS LINE
+                        organization_id=role.organization_id,
                         role_id=db_role.id,
                         permission_id=permission_id
                     )
@@ -163,21 +158,17 @@ class RBACService:
         if not db_role:
             raise HTTPException(status_code=404, detail="Role not found")
         
-        # Update basic fields
         update_data = updates.model_dump(exclude_unset=True, exclude={'permission_ids'})
         for field, value in update_data.items():
             setattr(db_role, field, value)
         
-        # Update permissions if provided
         if updates.permission_ids is not None:
-            # Remove existing permissions
             await self.db.execute(
                 ServiceRolePermission.__table__.delete().where(
                     ServiceRolePermission.role_id == role_id
                 )
             )
             
-            # Add new permissions
             for permission_id in updates.permission_ids:
                 perm_result = await self.db.execute(
                     select(ServicePermission).filter_by(id=permission_id, is_active=True)
@@ -186,7 +177,7 @@ class RBACService:
                 
                 if permission:
                     role_permission = ServiceRolePermission(
-                        organization_id=db_role.organization_id,  # ADD THIS LINE FOR CONSISTENCY
+                        organization_id=db_role.organization_id,
                         role_id=role_id,
                         permission_id=permission_id
                     )
@@ -208,7 +199,6 @@ class RBACService:
         if not db_role:
             return False
         
-        # Check if role is assigned to any users
         count_stmt = select(func.count('*')).select_from(UserServiceRole).where(
             UserServiceRole.role_id == role_id, UserServiceRole.is_active == True
         )
@@ -229,13 +219,11 @@ class RBACService:
     # User Role Assignment
     async def assign_role_to_user(self, user_id: int, role_id: int, assigned_by_id: Optional[int] = None) -> UserServiceRole:
         """Assign a service role to a user"""
-        # Check if user exists
         user_result = await self.db.execute(select(User).filter_by(id=user_id))
         user = user_result.scalars().first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Check if role exists and is active
         role_result = await self.db.execute(
             select(ServiceRole).filter_by(id=role_id, is_active=True)
         )
@@ -243,14 +231,12 @@ class RBACService:
         if not role:
             raise HTTPException(status_code=404, detail="Role not found or inactive")
         
-        # Check if user belongs to the same organization as the role
         if user.organization_id != role.organization_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User and role must belong to the same organization"
             )
         
-        # Check if assignment already exists
         existing_result = await self.db.execute(
             select(UserServiceRole).filter_by(user_id=user_id, role_id=role_id)
         )
@@ -263,7 +249,6 @@ class RBACService:
                     detail="User already has this role assigned"
                 )
             else:
-                # Reactivate existing assignment
                 existing.is_active = True
                 existing.assigned_by_id = assigned_by_id
                 await self.db.commit()
@@ -271,9 +256,8 @@ class RBACService:
                 logger.info(f"Reactivated role assignment: user {user_id} -> role {role_id}")
                 return existing
         
-        # Create new assignment
         assignment = UserServiceRole(
-            organization_id=user.organization_id,  # ADD THIS LINE FOR CONSISTENCY
+            organization_id=user.organization_id,
             user_id=user_id,
             role_id=role_id,
             assigned_by_id=assigned_by_id
@@ -331,20 +315,23 @@ class RBACService:
     
     async def user_has_service_permission(self, user_id: int, permission_name: str) -> bool:
         """Check if user has a specific service permission through their roles"""
-        # Fallback for org_admin users to have crm_admin and mail permissions
+        logger.debug(f"Checking permission '{permission_name}' for user_id {user_id}")
+        
         user_result = await self.db.execute(select(User).filter_by(id=user_id))
         user = user_result.scalars().first()
         if user:
+            logger.debug(f"User {user_id} role: {user.role}, is_super_admin: {user.is_super_admin}")
             if user.is_super_admin or user.role == 'super_admin':
+                logger.debug(f"Granted permission '{permission_name}' to super_admin user {user_id}")
                 return True
             if user.role == 'org_admin':
-                if permission_name == 'crm_admin' or permission_name.startswith('mail:'):
+                if permission_name.startswith('crm_') or permission_name == 'crm_admin' or permission_name.startswith('mail:'):
+                    logger.debug(f"Granted permission '{permission_name}' to org_admin user {user_id} via fallback")
                     return True
         
-        # Get user's active service roles
         user_roles = await self.get_user_service_roles(user_id)
+        logger.debug(f"User {user_id} active roles: {[role.name for role in user_roles]}")
         
-        # Check if any role has the required permission
         for role in user_roles:
             result = await self.db.execute(
                 select(ServicePermission)
@@ -356,17 +343,40 @@ class RBACService:
                 )
             )
             if result.scalars().first():
+                logger.debug(f"Granted permission '{permission_name}' to user {user_id} via role {role.name}")
                 return True
         
+        logger.debug(f"Denied permission '{permission_name}' for user {user_id}")
         return False
     
     async def get_user_service_permissions(self, user_id: int) -> Set[str]:
         """Get all service permissions for a user"""
+        logger.debug(f"Fetching permissions for user_id {user_id}")
+        
+        user_result = await self.db.execute(select(User).filter_by(id=user_id))
+        user = user_result.scalars().first()
+        
+        permissions = set()
+        if user and user.role == 'org_admin':
+            logger.debug(f"Adding org_admin fallback permissions for user {user_id}")
+            fallback_result = await self.db.execute(
+                select(ServicePermission.name).where(
+                    or_(
+                        ServicePermission.name.like('crm_%'),
+                        ServicePermission.name == 'crm_admin',
+                        ServicePermission.name.like('mail:%')
+                    ),
+                    ServicePermission.is_active == True
+                )
+            )
+            permissions.update({row[0] for row in fallback_result.fetchall()})
+            logger.debug(f"Fallback permissions for org_admin: {permissions}")
+        
         result = await self.db.execute(
             select(ServicePermission.name)
             .select_from(UserServiceRole)
             .join(UserServiceRole.role)
-            .join(ServiceRole.permissions)  # Fixed: was ServiceRole.role_permissions
+            .join(ServiceRole.permissions)
             .join(ServiceRolePermission.permission)
             .where(
                 UserServiceRole.user_id == user_id,
@@ -374,7 +384,13 @@ class RBACService:
                 ServicePermission.is_active == True
             )
         )
-        return {row[0] for row in result.fetchall()}
+        role_permissions = {row[0] for row in result.fetchall()}
+        logger.debug(f"Permissions from roles for user {user_id}: {role_permissions}")
+        
+        permissions.update(role_permissions)
+        logger.debug(f"Final permissions for user {user_id}: {permissions}")
+        
+        return permissions
     
     # Bulk Operations
     async def assign_multiple_roles_to_user(self, user_id: int, role_ids: List[int], assigned_by_id: Optional[int] = None) -> List[UserServiceRole]:
@@ -408,45 +424,30 @@ class RBACService:
     async def initialize_default_permissions(self) -> List[ServicePermission]:
         """Initialize default service permissions"""
         default_permissions = [
-            # Service Management
             ("service_create", "Create Services", "Create new services", "service", "create"),
             ("service_read", "View Services", "View service information", "service", "read"),
             ("service_update", "Update Services", "Modify service information", "service", "update"),
             ("service_delete", "Delete Services", "Delete services", "service", "delete"),
-            
-            # Technician Management
             ("technician_create", "Create Technicians", "Add new technicians", "technician", "create"),
             ("technician_read", "View Technicians", "View technician information", "technician", "read"),
             ("technician_update", "Update Technicians", "Modify technician information", "technician", "update"),
             ("technician_delete", "Delete Technicians", "Remove technicians", "technician", "delete"),
-            
-            # Appointment Management
             ("appointment_create", "Create Appointments", "Schedule new appointments", "appointment", "create"),
             ("appointment_read", "View Appointments", "View appointment information", "appointment", "read"),
             ("appointment_update", "Update Appointments", "Modify appointments", "appointment", "update"),
             ("appointment_delete", "Cancel Appointments", "Cancel appointments", "appointment", "delete"),
-            
-            # Customer Service
             ("customer_service_create", "Create Customer Records", "Create customer service records", "customer_service", "create"),
             ("customer_service_read", "View Customer Records", "View customer service information", "customer_service", "read"),
             ("customer_service_update", "Update Customer Records", "Modify customer service records", "customer_service", "update"),
             ("customer_service_delete", "Delete Customer Records", "Remove customer service records", "customer_service", "delete"),
-            
-            # Work Orders
             ("work_order_create", "Create Work Orders", "Create new work orders", "work_order", "create"),
             ("work_order_read", "View Work Orders", "View work order information", "work_order", "read"),
             ("work_order_update", "Update Work Orders", "Modify work orders", "work_order", "update"),
             ("work_order_delete", "Delete Work Orders", "Remove work orders", "work_order", "delete"),
-            
-            # Service Reports
             ("service_reports_read", "View Service Reports", "Access service reports", "service_reports", "read"),
             ("service_reports_export", "Export Service Reports", "Export service reports", "service_reports", "export"),
-            
-            # CRM Admin
             ("crm_admin", "CRM Administration", "Full CRM administration access", "crm_admin", "admin"),
             ("crm_settings", "CRM Settings", "Manage CRM settings", "crm_admin", "update"),
-            
-            # Mail Module Permissions
             ("mail:dashboard:read", "Read Mail Dashboard", "View mail dashboard statistics", "mail", "read"),
             ("mail:accounts:read", "Read Mail Accounts", "View email accounts", "mail", "read"),
             ("mail:accounts:create", "Create Mail Accounts", "Add new email accounts", "mail", "create"),
@@ -458,6 +459,25 @@ class RBACService:
             ("mail:emails:sync", "Sync Emails", "Synchronize email accounts", "mail", "update"),
             ("mail:templates:read", "Read Templates", "View email templates", "mail", "read"),
             ("mail:templates:create", "Create Templates", "Add new email templates", "mail", "create"),
+            ("crm_lead_read", "Read Leads", "View leads", "crm_lead", "read"),
+            ("crm_lead_create", "Create Leads", "Create new leads", "crm_lead", "create"),
+            ("crm_lead_update", "Update Leads", "Modify leads", "crm_lead", "update"),
+            ("crm_lead_delete", "Delete Leads", "Delete leads", "crm_lead", "delete"),
+            ("crm_lead_convert", "Convert Leads", "Convert leads to opportunities/customers", "crm_lead", "convert"),
+            ("crm_opportunity_read", "Read Opportunities", "View opportunities", "crm_opportunity", "read"),
+            ("crm_opportunity_create", "Create Opportunities", "Create new opportunities", "crm_opportunity", "create"),
+            ("crm_opportunity_update", "Update Opportunities", "Modify opportunities", "crm_opportunity", "update"),
+            ("crm_opportunity_delete", "Delete Opportunities", "Delete opportunities", "crm_opportunity", "delete"),
+            ("crm_activity_read", "Read Activities", "View activities", "crm_activity", "read"),
+            ("crm_activity_create", "Create Activities", "Create new activities", "crm_activity", "create"),
+            ("crm_activity_update", "Update Activities", "Modify activities", "crm_activity", "update"),
+            ("crm_activity_delete", "Delete Activities", "Delete activities", "crm_activity", "delete"),
+            ("crm_analytics_read", "Read Analytics", "View CRM analytics", "crm_analytics", "read"),
+            ("crm_analytics_export", "Export Analytics", "Export CRM analytics", "crm_analytics", "export"),
+            ("crm_settings_read", "Read Settings", "View CRM settings", "crm_settings", "read"),
+            ("crm_settings_update", "Update Settings", "Modify CRM settings", "crm_settings", "update"),
+            ("crm_import", "Import Data", "Import CRM data", "crm", "import"),
+            ("crm_export", "Export Data", "Export CRM data", "crm", "export"),
         ]
         
         created_permissions = []
@@ -477,20 +497,17 @@ class RBACService:
     
     async def initialize_default_roles(self, organization_id: int) -> List[ServiceRole]:
         """Initialize default service roles for an organization"""
-        # Ensure permissions exist
         await self.initialize_default_permissions()
         
-        # Get all permissions
         all_permissions = await self.get_permissions()
         permission_map = {p.name: p.id for p in all_permissions}
         
-        # Define default roles with their permissions
         default_roles = [
             {
                 "name": ServiceRoleType.ADMIN.value,
                 "display_name": "Service Admin",
                 "description": "Full access to all service CRM functionality",
-                "permissions": list(permission_map.keys())  # All permissions
+                "permissions": list(permission_map.keys())
             },
             {
                 "name": ServiceRoleType.MANAGER.value,
@@ -503,7 +520,13 @@ class RBACService:
                     "customer_service_read", "customer_service_update",
                     "work_order_read", "work_order_update", "work_order_create",
                     "service_reports_read", "service_reports_export",
-                    "mail:dashboard:read", "mail:accounts:read", "mail:accounts:update", "mail:emails:read", "mail:emails:compose", "mail:emails:update", "mail:emails:sync"
+                    "mail:dashboard:read", "mail:accounts:read", "mail:accounts:update", "mail:emails:read", "mail:emails:compose", "mail:emails:update", "mail:emails:sync",
+                    "crm_lead_read", "crm_lead_create", "crm_lead_update", "crm_lead_convert",
+                    "crm_opportunity_read", "crm_opportunity_create", "crm_opportunity_update",
+                    "crm_activity_read", "crm_activity_create", "crm_activity_update",
+                    "crm_analytics_read", "crm_analytics_export",
+                    "crm_settings_read", "crm_settings_update",
+                    "crm_import", "crm_export"
                 ]
             },
             {
@@ -517,7 +540,11 @@ class RBACService:
                     "customer_service_read", "customer_service_update", "customer_service_create",
                     "work_order_read", "work_order_update",
                     "service_reports_read",
-                    "mail:dashboard:read", "mail:emails:read", "mail:emails:compose"
+                    "mail:dashboard:read", "mail:emails:read", "mail:emails:compose",
+                    "crm_lead_read", "crm_lead_create", "crm_lead_update",
+                    "crm_opportunity_read", "crm_opportunity_update",
+                    "crm_activity_read", "crm_activity_create",
+                    "crm_analytics_read"
                 ]
             },
             {
@@ -531,7 +558,11 @@ class RBACService:
                     "customer_service_read",
                     "work_order_read",
                     "service_reports_read",
-                    "mail:dashboard:read", "mail:emails:read"
+                    "mail:dashboard:read", "mail:emails:read",
+                    "crm_lead_read",
+                    "crm_opportunity_read",
+                    "crm_activity_read",
+                    "crm_analytics_read"
                 ]
             }
         ]
@@ -558,7 +589,6 @@ class RBACService:
         return created_roles
     
     # Company-scoped permission methods for multi-company support
-    
     async def user_has_company_access(self, user_id: int, company_id: int) -> bool:
         """Check if user has access to a specific company"""
         from app.models.user_models import UserCompany
@@ -614,45 +644,49 @@ class RBACService:
     
     async def user_has_company_permission(self, user_id: int, company_id: int, permission_name: str) -> bool:
         """Check if user has a specific permission within a company scope"""
+        logger.debug(f"Checking company permission '{permission_name}' for user_id {user_id}, company_id {company_id}")
         
-        # First check if user has access to the company
         if not await self.user_has_company_access(user_id, company_id):
+            logger.debug(f"User {user_id} has no access to company {company_id}")
             return False
         
-        # Check user's role - org admin or super admin have all permissions
         user_result = await self.db.execute(select(User).filter_by(id=user_id))
         user = user_result.scalars().first()
         if not user:
+            logger.debug(f"User {user_id} not found")
             return False
         
         if user.role in ["org_admin", "super_admin"] or user.is_super_admin:
+            logger.debug(f"Granted company permission '{permission_name}' to user {user_id} due to role {user.role}")
             return True
         
-        # Check if user is company admin for this company
         if await self.user_is_company_admin(user_id, company_id):
-            # Company admins have most permissions except organization-level ones
             org_only_permissions = ["create_organization", "delete_organization", "manage_organization_settings"]
             if permission_name not in org_only_permissions:
+                logger.debug(f"Granted company permission '{permission_name}' to user {user_id} as company admin")
                 return True
         
-        # Check service role permissions
-        return await self.user_has_service_permission(user_id, permission_name)
+        has_permission = await self.user_has_service_permission(user_id, permission_name)
+        logger.debug(f"Service permission check for '{permission_name}': {'granted' if has_permission else 'denied'}")
+        return has_permission
     
     async def enforce_company_access(self, user_id: int, company_id: int, permission_name: Optional[str] = None):
         """Enforce company access and optionally permission - raises HTTPException if denied"""
+        logger.debug(f"Enforcing company access for user_id {user_id}, company_id {company_id}, permission {permission_name}")
         
         if not await self.user_has_company_access(user_id, company_id):
+            logger.debug(f"Access denied: User {user_id} has no access to company {company_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: User does not have access to this company"
             )
         
         if permission_name and not await self.user_has_company_permission(user_id, company_id, permission_name):
+            logger.debug(f"Access denied: User {user_id} lacks permission '{permission_name}' for company {company_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied: Missing permission '{permission_name}' for this company"
             )
-
 
 def require_permission(permission: str):
     """Dependency to check if current user has a specific permission"""

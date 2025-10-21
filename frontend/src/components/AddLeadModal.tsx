@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -15,14 +15,18 @@ import {
   Box,
   Grid,
   Chip,
+  InputAdornment,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
+import { usePincodeLookup } from "../hooks/usePincodeLookup";
+
 interface AddLeadModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (_data: any) => Promise<void>;
+  onAdd: (data: any) => Promise<void>;
   loading?: boolean;
 }
+
 interface LeadFormData {
   first_name: string;
   last_name: string;
@@ -35,7 +39,6 @@ interface LeadFormData {
   city?: string;
   state?: string;
   postal_code?: string;
-  country?: string;
   source: string;
   status: string;
   score: number;
@@ -43,6 +46,7 @@ interface LeadFormData {
   expected_close_date?: string;
   notes?: string;
 }
+
 const leadSources = [
   "Website",
   "Social Media",
@@ -55,6 +59,7 @@ const leadSources = [
   "Direct Mail",
   "Other",
 ];
+
 const leadStatuses = [
   "new",
   "contacted",
@@ -65,6 +70,7 @@ const leadStatuses = [
   "lost",
   "disqualified",
 ];
+
 const AddLeadModal: React.FC<AddLeadModalProps> = ({
   open,
   onClose,
@@ -77,6 +83,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     reset,
     control,
     formState: { errors },
+    setValue,
   } = useForm<LeadFormData>({
     defaultValues: {
       first_name: "",
@@ -90,7 +97,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       city: "",
       state: "",
       postal_code: "",
-      country: "",
       source: "Website",
       status: "new",
       score: 0,
@@ -99,33 +105,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       notes: "",
     },
   });
-  React.useEffect(() => {
+
+  const { lookupPincode, loading: pincodeLoading } = usePincodeLookup();
+
+  useEffect(() => {
     if (open) {
-      reset({
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        company: "",
-        job_title: "",
-        website: "",
-        address: "",
-        city: "",
-        state: "",
-        postal_code: "",
-        country: "",
-        source: "Website",
-        status: "new",
-        score: 0,
-        estimated_value: 0,
-        expected_close_date: "",
-        notes: "",
-      });
+      reset();
     }
   }, [open, reset]);
+
   const onSubmit = async (leadData: LeadFormData) => {
     try {
-      // Remove empty fields to match backend schema
       const cleanData = Object.fromEntries(
         Object.entries(leadData).filter(([key, value]) => {
           if (key === "score" || key === "estimated_value") {
@@ -138,15 +128,56 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       reset();
       onClose();
     } catch (err) {
-      console.error(msg, err);
+      console.error(err);
     }
   };
+
   const handleClose = () => {
     if (!loading) {
       reset();
       onClose();
     }
   };
+
+  const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pincode = e.target.value;
+    setValue("postal_code", pincode);
+    if (pincode.length === 6) {
+      try {
+        const result = await lookupPincode(pincode);
+        if (result) {
+          setValue("city", result.city);
+          setValue("state", result.state);
+        }
+      } catch (err) {
+        console.error("Pincode lookup failed:", err);
+      }
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "new":
+        return "info";
+      case "contacted":
+        return "warning";
+      case "qualified":
+        return "secondary";
+      case "proposal_sent":
+        return "primary";
+      case "negotiation":
+        return "error";
+      case "converted":
+        return "success";
+      case "lost":
+        return "default";
+      case "disqualified":
+        return "default";
+      default:
+        return "default";
+    }
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -168,10 +199,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 <TextField
                   {...register("first_name", {
                     required: "First name is required",
-                    minLength: {
-                      value: 2,
-                      message: "First name must be at least 2 characters",
-                    },
+                    minLength: { value: 2, message: "Must be at least 2 characters" },
                   })}
                   label="First Name"
                   fullWidth
@@ -184,10 +212,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 <TextField
                   {...register("last_name", {
                     required: "Last name is required",
-                    minLength: {
-                      value: 2,
-                      message: "Last name must be at least 2 characters",
-                    },
+                    minLength: { value: 2, message: "Must be at least 2 characters" },
                   })}
                   label="Last Name"
                   fullWidth
@@ -227,7 +252,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   Company Information
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register("company")}
                   label="Company"
@@ -243,7 +268,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={loading}
                 />
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   {...register("website")}
                   label="Website"
@@ -261,6 +286,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 <TextField
                   {...register("address")}
                   label="Address"
+                  multiline
+                  rows={3}
                   fullWidth
                   disabled={loading}
                 />
@@ -284,17 +311,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   {...register("postal_code")}
-                  label="Postal Code"
+                  label="Pin Code"
                   fullWidth
                   disabled={loading}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  {...register("country")}
-                  label="Country"
-                  fullWidth
-                  disabled={loading}
+                  onChange={handlePincodeChange}
+                  InputProps={{
+                    endAdornment: pincodeLoading ? <CircularProgress size={20} /> : null,
+                  }}
                 />
               </Grid>
               {/* Lead Details */}
@@ -321,11 +344,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     )}
                   />
                   {errors.source && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5, ml: 2 }}
-                    >
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
                       {errors.source.message}
                     </Typography>
                   )}
@@ -345,6 +364,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                             <Chip
                               label={status.replace("_", " ").toUpperCase()}
                               size="small"
+                              color={getStatusColor(status) as any}
                               variant="outlined"
                               sx={{ textTransform: "capitalize" }}
                             />
@@ -354,11 +374,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     )}
                   />
                   {errors.status && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5, ml: 2 }}
-                    >
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
                       {errors.status.message}
                     </Typography>
                   )}
@@ -390,6 +406,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   error={!!errors.estimated_value}
                   helperText={errors.estimated_value?.message}
                   disabled={loading}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
                   inputProps={{ min: 0 }}
                 />
               </Grid>
@@ -405,6 +424,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   }}
                 />
               </Grid>
+              {/* Additional Information */}
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="h6" color="primary" sx={{ mb: 2, mt: 2 }}>
+                  Additional Information
+                </Typography>
+              </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
                   {...register("notes")}
@@ -413,6 +438,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   rows={3}
                   fullWidth
                   disabled={loading}
+                  placeholder="Add any additional notes about the lead..."
                 />
               </Grid>
             </Grid>
@@ -435,4 +461,5 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     </Dialog>
   );
 };
+
 export default AddLeadModal;

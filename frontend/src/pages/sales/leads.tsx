@@ -24,83 +24,223 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Paper,
+  Stack,
+  Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  LinearProgress,
+  Menu,
+  Tooltip,
+  Divider,
+  Tab,
+  Tabs,
 } from "@mui/material";
 import {
-  Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
   Visibility as ViewIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
+  MoreVert as MoreVertIcon,
+  Schedule as ScheduleIcon,
+  Star as StarIcon,
+  StarBorder as StarBorderIcon,
+  FilterList,
+  Assessment,
+  Campaign,
+  Assignment,
+  PersonAdd,
 } from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
+import { toast } from "react-toastify";
+import { crmService, Lead, CRMAnalytics } from "../../services/crmService";
 import AddLeadModal from "../../components/AddLeadModal";
 import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
-import { crmService, Lead } from "@services/crmService";
+
+interface LeadActivity {
+  id: number;
+  lead_id: number;
+  type: "call" | "email" | "meeting" | "note" | "task";
+  description: string;
+  created_at: string;
+  created_by: string;
+}
+
+interface LeadStats {
+  total_leads: number;
+  new_leads: number;
+  qualified_leads: number;
+  conversion_rate: number;
+  avg_deal_size: number;
+  pipeline_value: number;
+}
 
 const LeadManagement: React.FC = () => {
   const router = useRouter();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [addLoading, setAddLoading] = useState(false);
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [temperatureFilter, setTemperatureFilter] = useState("all");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [detailDialog, setDetailDialog] = useState(false);
+  const [addDialog, setAddDialog] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuLead, setMenuLead] = useState<Lead | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
-  // Fetch leads from API
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const leadsData = await crmService.getLeads();
-      setLeads(leadsData);
-    } catch (err: any) {
-      console.error("Error fetching leads:", err);
-      setError(err.message || "Failed to load leads. Please try again.");
-      if (err.message.includes("No authentication token")) {
-        router.push("/login");
+  // Fetch leads using real API
+  const { data: leads = [], isLoading, error } = useQuery({
+    queryKey: ['leads'],
+    queryFn: async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        throw new Error("No authentication token found. Please log in.");
       }
-    } finally {
-      setLoading(false);
-    }
+      return crmService.getLeads();
+    },
+    retry: false,
+  });
+
+  // Fetch analytics for stats
+  const { data: analytics } = useQuery({
+    queryKey: ['crmAnalytics'],
+    queryFn: async () => {
+      const periodEnd = new Date();
+      const periodStart = new Date(periodEnd);
+      periodStart.setDate(periodEnd.getDate() - 30);
+      return crmService.getAnalytics({
+        period_start: periodStart.toISOString().split('T')[0],
+        period_end: periodEnd.toISOString().split('T')[0],
+      });
+    },
+    retry: false,
+  });
+
+  const stats: LeadStats = {
+    total_leads: analytics?.leads_total || 0,
+    new_leads: analytics?.leads_by_status?.new || 0,
+    qualified_leads: analytics?.leads_by_status?.qualified || 0,
+    conversion_rate: analytics?.conversion_rate || 0,
+    avg_deal_size: analytics?.average_deal_size || 0,
+    pipeline_value: analytics?.pipeline_value || 0,
   };
 
-  useEffect(() => {
-    fetchLeads();
-  }, [router]);
+  // Fetch activities for selected lead
+  const { data: activities = [] } = useQuery({
+    queryKey: ['leadActivities', selectedLead?.id],
+    queryFn: () => crmService.getLeadActivities(selectedLead?.id || 0),
+    enabled: !!selectedLead && detailDialog,
+  });
 
-  const handleAddLead = async (leadData: any) => {
-    try {
-      setAddLoading(true);
-      await crmService.createLead(leadData);
-      await fetchLeads();
-      setOpenDialog(false);
-    } catch (err: any) {
-      console.error("Error adding lead:", err);
-      throw new Error(err.message || "Failed to add lead");
-    } finally {
-      setAddLoading(false);
-    }
+  // Mutations
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ leadId, status }: { leadId: number; status: Lead["status"] }) =>
+      crmService.updateLead(leadId, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success("Lead status updated");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to update lead status");
+    },
+  });
+
+  const toggleStarredMutation = useMutation({
+    mutationFn: (leadId: number) => {
+      // TODO: Implement toggle starred API call
+      return Promise.resolve();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success("Lead starred status updated");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to update starred status");
+    },
+  });
+
+  const assignLeadMutation = useMutation({
+    mutationFn: ({ leadId, userId }: { leadId: number; userId: number }) => {
+      // TODO: Implement assign lead API call
+      return Promise.resolve();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success("Lead assigned successfully");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to assign lead");
+    },
+  });
+
+  const createLeadMutation = useMutation({
+    mutationFn: crmService.createLead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success("Lead created successfully");
+      setAddDialog(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to create lead");
+    },
+  });
+
+  const handleViewDetails = (lead: Lead) => {
+    setSelectedLead(lead);
+    setDetailDialog(true);
+    setAnchorEl(null);
   };
 
-  const handleImportLeads = async (importedLeads: any[]) => {
-    try {
-      setAddLoading(true);
-      for (const leadData of importedLeads) {
-        await crmService.createLead(leadData);
-      }
-      await fetchLeads();
-      alert(`Successfully imported ${importedLeads.length} leads`);
-    } catch (err: any) {
-      console.error("Error importing leads:", err);
-      alert(`Failed to import some leads: ${err.message || "Unknown error"}`);
-    } finally {
-      setAddLoading(false);
-    }
+  const handleEditLead = (lead: Lead) => {
+    toast.info("Edit lead functionality not implemented yet");
   };
 
-  const getStatusColor = (status: string) => {
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, lead: Lead) => {
+    setAnchorEl(event.currentTarget);
+    setMenuLead(lead);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuLead(null);
+  };
+
+  const handleAddLead = () => {
+    setAddDialog(true);
+  };
+
+  const handleImportLeads = (importedLeads: any[]) => {
+    importedLeads.forEach(leadData => {
+      createLeadMutation.mutate(leadData);
+    });
+  };
+
+  const handleCall = () => {
+    toast.info("Call functionality not implemented yet");
+  };
+
+  const handleEmail = () => {
+    toast.info("Email functionality not implemented yet");
+  };
+
+  const handleScheduleFollowUp = () => {
+    toast.info("Schedule Follow-up functionality not implemented yet");
+  };
+
+  const handleAddToCampaign = () => {
+    toast.info("Add to Campaign functionality not implemented yet");
+  };
+
+  const handleConvertToOpportunity = () => {
+    toast.info("Convert to Opportunity functionality not implemented yet");
+  };
+
+  const getStatusColor = (status: Lead["status"]) => {
     switch (status) {
       case "new":
         return "primary";
@@ -108,317 +248,641 @@ const LeadManagement: React.FC = () => {
         return "info";
       case "qualified":
         return "warning";
-      case "proposal":
+      case "proposal_sent":
         return "secondary";
       case "negotiation":
-        return "error";
-      case "converted":
+        return "warning";
+      case "won":
         return "success";
       case "lost":
+        return "error";
+      default:
         return "default";
-      case "nurturing":
+    }
+  };
+
+  const getPriorityColor = (priority: Lead["priority"]) => {
+    switch (priority) {
+      case "urgent":
+        return "error";
+      case "high":
+        return "warning";
+      case "medium":
+        return "info";
+      case "low":
+        return "default";
+      default:
+        return "default";
+    }
+  };
+
+  const getTemperatureColor = (temperature: Lead["lead_temperature"]) => {
+    switch (temperature) {
+      case "hot":
+        return "error";
+      case "warm":
+        return "warning";
+      case "cold":
         return "info";
       default:
         return "default";
     }
   };
 
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "success";
+    if (score >= 60) return "warning";
+    if (score >= 40) return "info";
+    return "error";
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
+
   const filteredLeads = leads.filter((lead) => {
-    const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.toLowerCase();
     const matchesSearch =
-      fullName.includes(searchTerm.toLowerCase()) ||
-      (lead.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.company || "").toLowerCase().includes(searchTerm.toLowerCase());
+      lead.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.email.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesPriority = priorityFilter === "all" || lead.priority === priorityFilter;
+    const matchesTemperature = temperatureFilter === "all" || lead.lead_temperature === temperatureFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesTemperature;
   });
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Typography variant="h4" component="h1">
-            Lead Management
-          </Typography>
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <LeadsImportExportDropdown
-              leads={leads}
-              onImport={handleImportLeads}
-            />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setOpenDialog(true)}
-            >
-              Add Lead
-            </Button>
-          </Box>
+  // Redirect to login if no token
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token && !isLoading && error?.message.includes("No authentication token")) {
+      router.push("/login");
+    }
+  }, [error, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
         </Box>
-        {/* Summary Cards */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="primary">
-                  Total Leads
-                </Typography>
-                <Typography variant="h4">{leads.length}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="success.main">
-                  Qualified
-                </Typography>
-                <Typography variant="h4" color="success.main">
-                  {leads.filter((l) => l.status === "qualified").length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="info.main">
-                  In Progress
-                </Typography>
-                <Typography variant="h4" color="info.main">
-                  {leads.filter((l) => l.status === "contacted").length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="warning.main">
-                  Avg. Score
-                </Typography>
-                <Typography variant="h4" color="warning.main">
-                  {leads.length > 0
-                    ? Math.round(
-                        leads.reduce((sum, l) => sum + l.score, 0) /
-                          leads.length,
-                      )
-                    : 0}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-        {/* Filters */}
-        <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-          <TextField
-            placeholder="Search leads..."
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          {error.message || "Failed to load leads"}
+          <Button
             variant="outlined"
             size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ minWidth: 250 }}
-          />
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              label="Status"
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="new">New</MenuItem>
-              <MenuItem value="contacted">Contacted</MenuItem>
-              <MenuItem value="qualified">Qualified</MenuItem>
-              <MenuItem value="proposal">Proposal</MenuItem>
-              <MenuItem value="negotiation">Negotiation</MenuItem>
-              <MenuItem value="converted">Converted</MenuItem>
-              <MenuItem value="lost">Lost</MenuItem>
-              <MenuItem value="nurturing">Nurturing</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-        {/* Error Display */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={fetchLeads}
-              sx={{ ml: 2 }}
-            >
-              Retry
-            </Button>
-          </Alert>
-        )}
-        {/* Loading Display */}
-        {loading && (
-          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
-        {/* Leads Table */}
-        {!loading && filteredLeads.length === 0 && (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            No leads found. Start by adding your first lead!
-          </Alert>
-        )}
-        {!loading && (
-          <Card>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Contact</TableCell>
-                    <TableCell>Company</TableCell>
-                    <TableCell>Source</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Score</TableCell>
-                    <TableCell>Created</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredLeads.map((lead) => (
-                    <TableRow key={lead.id}>
-                      <TableCell>
-                        <Typography variant="subtitle2">
-                          {`${lead.first_name || ""} ${lead.last_name || ""}`}
-                        </Typography>
-                        {lead.job_title && (
-                          <Typography variant="caption" color="text.secondary">
-                            {lead.job_title}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              mb: 0.5,
-                            }}
-                          >
-                            <EmailIcon
-                              sx={{
-                                fontSize: 16,
-                                mr: 0.5,
-                                color: "text.secondary",
-                              }}
-                            />
-                            <Typography variant="body2">
-                              {lead.email}
-                            </Typography>
-                          </Box>
-                          {lead.phone && (
-                            <Box sx={{ display: "flex", alignItems: "center" }}>
-                              <PhoneIcon
-                                sx={{
-                                  fontSize: 16,
-                                  mr: 0.5,
-                                  color: "text.secondary",
-                                }}
-                              />
-                              <Typography variant="body2">
-                                {lead.phone}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {lead.company || "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{lead.source}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={lead.status.replace("_", " ").toUpperCase()}
-                          color={getStatusColor(lead.status) as any}
-                          size="small"
-                          sx={{ textTransform: "capitalize" }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          color={
-                            lead.score >= 80 ? "success.main" : "text.primary"
-                          }
-                        >
-                          {lead.score}%
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {new Date(lead.created_at).toLocaleDateString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <IconButton
-                          size="small"
-                          title="View"
-                          onClick={() => router.push(`/sales/leads/${lead.id}`)}
-                        >
-                          <ViewIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          title="Edit"
-                          onClick={() => router.push(`/sales/leads/${lead.id}/edit`)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredLeads.length === 0 && !loading && (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center">
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ py: 4 }}
-                        >
-                          No leads found.{" "}
-                          {leads.length === 0
-                            ? "Start by adding your first lead!"
-                            : "Try adjusting your search filters."}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Card>
-        )}
-        {/* Add Lead Modal */}
-        <AddLeadModal
-          open={openDialog}
-          onClose={() => setOpenDialog(false)}
-          onAdd={handleAddLead}
-          loading={addLoading}
-        />
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['leads'] })}
+            sx={{ ml: 2 }}
+          >
+            Retry
+          </Button>
+        </Alert>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* Header */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1" fontWeight="bold">
+          Lead Management
+        </Typography>
+        <Stack direction="row" spacing={2}>
+          <LeadsImportExportDropdown leads={leads} onImport={handleImportLeads} />
+          <Button variant="contained" startIcon={<PersonAdd />} onClick={handleAddLead}>
+            Add Lead
+          </Button>
+        </Stack>
       </Box>
-    </Container>
+
+      {/* Statistics Cards */}
+      <Grid container spacing={3} mb={3}>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom variant="body2">
+                Total Leads
+              </Typography>
+              <Typography variant="h5" component="div">
+                {stats.total_leads}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom variant="body2">
+                New This Week
+              </Typography>
+              <Typography variant="h5" component="div" color="primary.main">
+                {stats.new_leads}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom variant="body2">
+                Qualified
+              </Typography>
+              <Typography variant="h5" component="div" color="warning.main">
+                {stats.qualified_leads}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom variant="body2">
+                Conversion Rate
+              </Typography>
+              <Typography variant="h5" component="div" color="success.main">
+                {stats.conversion_rate}%
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom variant="body2">
+                Avg Deal Size
+              </Typography>
+              <Typography variant="h5" component="div">
+                {formatCurrency(stats.avg_deal_size)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom variant="body2">
+                Pipeline Value
+              </Typography>
+              <Typography variant="h5" component="div" color="success.main">
+                {formatCurrency(stats.pipeline_value)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Filters */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              placeholder="Search leads..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="all">All Status</MenuItem>
+                <MenuItem value="new">New</MenuItem>
+                <MenuItem value="contacted">Contacted</MenuItem>
+                <MenuItem value="qualified">Qualified</MenuItem>
+                <MenuItem value="proposal_sent">Proposal Sent</MenuItem>
+                <MenuItem value="negotiation">Negotiation</MenuItem>
+                <MenuItem value="won">Won</MenuItem>
+                <MenuItem value="lost">Lost</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
+              <InputLabel>Priority</InputLabel>
+              <Select
+                value={priorityFilter}
+                label="Priority"
+                onChange={(e) => setPriorityFilter(e.target.value)}
+              >
+                <MenuItem value="all">All Priorities</MenuItem>
+                <MenuItem value="urgent">Urgent</MenuItem>
+                <MenuItem value="high">High</MenuItem>
+                <MenuItem value="medium">Medium</MenuItem>
+                <MenuItem value="low">Low</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
+              <InputLabel>Temperature</InputLabel>
+              <Select
+                value={temperatureFilter}
+                label="Temperature"
+                onChange={(e) => setTemperatureFilter(e.target.value)}
+              >
+                <MenuItem value="all">All Temperatures</MenuItem>
+                <MenuItem value="hot">Hot</MenuItem>
+                <MenuItem value="warm">Warm</MenuItem>
+                <MenuItem value="cold">Cold</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                startIcon={<FilterList />}
+                onClick={() => {
+                  setStatusFilter("all");
+                  setPriorityFilter("all");
+                  setTemperatureFilter("all");
+                  setSearchTerm("");
+                }}
+              >
+                Clear Filters
+              </Button>
+              <Button variant="outlined" startIcon={<Assessment />} onClick={handleConvertToOpportunity}>
+                Analytics
+              </Button>
+            </Stack>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Leads Table */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell padding="checkbox"></TableCell>
+              <TableCell>Lead</TableCell>
+              <TableCell>Company</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Priority</TableCell>
+              <TableCell>Temperature</TableCell>
+              <TableCell>Score</TableCell>
+              <TableCell>Value</TableCell>
+              <TableCell>Assigned To</TableCell>
+              <TableCell>Last Contact</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredLeads.map((lead) => (
+              <TableRow key={lead.id} hover>
+                <TableCell padding="checkbox">
+                  <IconButton
+                    size="small"
+                    onClick={() => toggleStarredMutation.mutate(lead.id)}
+                  >
+                    {lead.is_starred ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                  </IconButton>
+                </TableCell>
+                <TableCell>
+                  <Box display="flex" alignItems="center">
+                    <Avatar sx={{ mr: 2, width: 40, height: 40 }}>
+                      {lead.first_name.charAt(0)}{lead.last_name.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="medium">
+                        {lead.first_name} {lead.last_name}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {lead.email}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {lead.job_title}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="medium">
+                    {lead.company}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {lead.industry}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={lead.status.replace("_", " ")}
+                    color={getStatusColor(lead.status)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={lead.priority}
+                    color={getPriorityColor(lead.priority)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={lead.lead_temperature || "N/A"}
+                    color={getTemperatureColor(lead.lead_temperature)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Box display="flex" alignItems="center">
+                    <LinearProgress
+                      variant="determinate"
+                      value={lead.score}
+                      color={getScoreColor(lead.score)}
+                      sx={{ width: 60, mr: 1 }}
+                    />
+                    <Typography variant="body2">{lead.score}</Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="medium">
+                    {lead.estimated_value ? formatCurrency(lead.estimated_value) : "N/A"}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {lead.conversion_probability}% chance
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{lead.assigned_to_name || "Unassigned"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">
+                    {lead.last_contact_date ? new Date(lead.last_contact_date).toLocaleDateString() : "Never"}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={0.5}>
+                    <Tooltip title="View Details">
+                      <IconButton size="small" onClick={() => handleViewDetails(lead)}>
+                        <ViewIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Call">
+                      <IconButton size="small" onClick={handleCall}>
+                        <PhoneIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Email">
+                      <IconButton size="small" onClick={handleEmail}>
+                        <EmailIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <IconButton size="small" onClick={(e) => handleMenuClick(e, lead)}>
+                      <MoreVertIcon />
+                    </IconButton>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {filteredLeads.length === 0 && (
+        <Box textAlign="center" py={8}>
+          <Typography variant="h6" color="textSecondary" gutterBottom>
+            No leads found
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Try adjusting your search criteria or add new leads
+          </Typography>
+        </Box>
+      )}
+
+      {/* Action Menu */}
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <MenuItem onClick={() => menuLead && handleViewDetails(menuLead)}>
+          <ViewIcon sx={{ mr: 1 }} fontSize="small" />
+          View Details
+        </MenuItem>
+        <MenuItem onClick={() => menuLead && handleEditLead(menuLead)}>
+          <EditIcon sx={{ mr: 1 }} fontSize="small" />
+          Edit Lead
+        </MenuItem>
+        <MenuItem onClick={handleScheduleFollowUp}>
+          <ScheduleIcon sx={{ mr: 1 }} fontSize="small" />
+          Schedule Follow-up
+        </MenuItem>
+        <MenuItem onClick={handleAddToCampaign}>
+          <Campaign sx={{ mr: 1 }} fontSize="small" />
+          Add to Campaign
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleConvertToOpportunity}>
+          <Assignment sx={{ mr: 1 }} fontSize="small" />
+          Convert to Opportunity
+        </MenuItem>
+      </Menu>
+
+      {/* Add Lead Modal */}
+      <AddLeadModal
+        open={addDialog}
+        onClose={() => setAddDialog(false)}
+        onAdd={async (data) => {
+          await createLeadMutation.mutateAsync(data);
+        }}
+        loading={createLeadMutation.isPending}
+      />
+
+      {/* Lead Detail Dialog */}
+      <Dialog open={detailDialog} onClose={() => setDetailDialog(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">
+              {selectedLead?.first_name} {selectedLead?.last_name}
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Chip
+                label={selectedLead?.status.replace("_", " ")}
+                color={selectedLead ? getStatusColor(selectedLead.status) : "default"}
+                size="small"
+              />
+              <Chip
+                label={selectedLead?.priority}
+                color={selectedLead ? getPriorityColor(selectedLead.priority) : "default"}
+                size="small"
+              />
+            </Stack>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+              <Tab label="Overview" />
+              <Tab label="Activities" />
+              <Tab label="Notes" />
+              <Tab label="Documents" />
+            </Tabs>
+          </Box>
+
+          {activeTab === 0 && selectedLead && (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Contact Information
+                    </Typography>
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Email
+                        </Typography>
+                        <Typography variant="body2">{selectedLead.email}</Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Phone
+                        </Typography>
+                        <Typography variant="body2">{selectedLead.phone || "N/A"}</Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Company
+                        </Typography>
+                        <Typography variant="body2">{selectedLead.company}</Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Job Title
+                        </Typography>
+                        <Typography variant="body2">{selectedLead.job_title}</Typography>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Lead Details
+                    </Typography>
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Lead Score
+                        </Typography>
+                        <Box display="flex" alignItems="center">
+                          <LinearProgress
+                            variant="determinate"
+                            value={selectedLead.score}
+                            color={getScoreColor(selectedLead.score)}
+                            sx={{ width: 100, mr: 1 }}
+                          />
+                          <Typography variant="body2">{selectedLead.score}/100</Typography>
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Estimated Value
+                        </Typography>
+                        <Typography variant="body2">
+                          {selectedLead.estimated_value ? formatCurrency(selectedLead.estimated_value) : "N/A"}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Expected Close Date
+                        </Typography>
+                        <Typography variant="body2">
+                          {selectedLead.expected_close_date ? new Date(selectedLead.expected_close_date).toLocaleDateString() : "N/A"}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Conversion Probability
+                        </Typography>
+                        <Typography variant="body2">{selectedLead.conversion_probability}%</Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Assigned To
+                        </Typography>
+                        <Typography variant="body2">
+                          {selectedLead.assigned_to_name || "Unassigned"}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          )}
+
+          {activeTab === 1 && (
+            <Stack spacing={2}>
+              {activities.map((activity) => (
+                <Card key={activity.id} variant="outlined">
+                  <CardContent>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <Chip label={activity.type} size="small" sx={{ mr: 2 }} />
+                      <Typography variant="caption" color="textSecondary">
+                        {new Date(activity.created_at).toLocaleString()} by {activity.created_by}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2">{activity.description}</Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          )}
+
+          {activeTab === 2 && (
+            <Box textAlign="center" py={4}>
+              <NotesOutlined sx={{ fontSize: 48, color: "grey.400", mb: 2 }} />
+              <Typography variant="h6" color="textSecondary" gutterBottom>
+                No notes yet
+              </Typography>
+              <Button variant="outlined">Add Note</Button>
+            </Box>
+  )}
+
+  {activeTab === 3 && (
+    <Box textAlign="center" py={4}>
+      <Assignment sx={{ fontSize: 48, color: "grey.400", mb: 2 }} />
+      <Typography variant="h6" color="textSecondary" gutterBottom>
+        No documents attached
+      </Typography>
+      <Button variant="outlined">Upload Document</Button>
+    </Box>
+  )}
+</DialogContent>
+<DialogActions>
+  <Button onClick={() => setDetailDialog(false)}>Close</Button>
+  <Button variant="contained" onClick={() => selectedLead && handleEditLead(selectedLead)}>
+    Edit Lead
+  </Button>
+</DialogActions>
+</Dialog>
+</Container>
   );
 };
 
