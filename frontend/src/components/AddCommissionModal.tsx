@@ -25,6 +25,8 @@ interface AddCommissionModalProps {
 }
 interface CommissionFormData {
   sales_person_id: number;
+  sales_person_name?: string;
+  person_type?: "internal" | "external";
   opportunity_id?: number;
   lead_id?: number;
   commission_type: string;
@@ -53,6 +55,8 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
   } = useForm<CommissionFormData>({
     defaultValues: {
       sales_person_id: 0,
+      sales_person_name: "",
+      person_type: "internal",
       opportunity_id: undefined,
       lead_id: undefined,
       commission_type: "percentage",
@@ -71,6 +75,8 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
     if (open) {
       reset({
         sales_person_id: 0,
+        sales_person_name: "",
+        person_type: "internal",
         opportunity_id: undefined,
         lead_id: undefined,
         commission_type: "percentage",
@@ -150,6 +156,47 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
+                  {...register("sales_person_name", {
+                    required: "Person name is required",
+                  })}
+                  label="Person Name"
+                  fullWidth
+                  error={!!errors.sales_person_name}
+                  helperText={errors.sales_person_name?.message}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth disabled={loading}>
+                  <InputLabel>Person Type</InputLabel>
+                  <Controller
+                    name="person_type"
+                    control={control}
+                    rules={{ required: "Person type is required" }}
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        label="Person Type"
+                        error={!!errors.person_type}
+                      >
+                        <MenuItem value="internal">Internal (Employee)</MenuItem>
+                        <MenuItem value="external">External (Partner/Agent)</MenuItem>
+                      </Select>
+                    )}
+                  />
+                  {errors.person_type && (
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, ml: 2 }}
+                    >
+                      {errors.person_type.message}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
                   {...register("sales_person_id", {
                     required: "Sales person ID is required",
                     min: {
@@ -212,7 +259,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                   disabled={loading}
                   InputProps={{
                     startAdornment: (
-                      <InputAdornment position="start">$</InputAdornment>
+                      <InputAdornment position="start">₹</InputAdornment>
                     ),
                   }}
                   inputProps={{ min: 0, step: 0.01 }}
@@ -255,7 +302,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                     disabled={loading}
                     InputProps={{
                       startAdornment: (
-                        <InputAdornment position="start">$</InputAdornment>
+                        <InputAdornment position="start">₹</InputAdornment>
                       ),
                     }}
                     inputProps={{ min: 0, step: 0.01 }}

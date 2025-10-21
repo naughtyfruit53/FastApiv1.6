@@ -32,10 +32,12 @@ import {
   Assessment as AssessmentIcon,
 } from "@mui/icons-material";
 import AddCommissionModal from "../../components/AddCommissionModal";
+import { formatCurrency } from "../../utils/currencyUtils";
 interface Commission {
   id: number;
   sales_person_id: number;
   sales_person_name?: string;
+  person_type?: "internal" | "external"; // Internal employee or external partner
   opportunity_id?: number;
   lead_id?: number;
   commission_type: string;
@@ -167,7 +169,7 @@ const CommissionTracking: React.FC = () => {
                 <Typography variant="h6">Total Commissions</Typography>
               </Box>
               <Typography variant="h4" color="primary">
-                ${totalCommissions.toLocaleString()}
+                {formatCurrency(totalCommissions)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 All time
@@ -183,7 +185,7 @@ const CommissionTracking: React.FC = () => {
                 <Typography variant="h6">Pending</Typography>
               </Box>
               <Typography variant="h4" color="warning.main">
-                ${pendingCommissions.toLocaleString()}
+                {formatCurrency(pendingCommissions)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Awaiting payment
@@ -199,7 +201,7 @@ const CommissionTracking: React.FC = () => {
                 <Typography variant="h6">Paid</Typography>
               </Box>
               <Typography variant="h4" color="success.main">
-                ${paidCommissions.toLocaleString()}
+                {formatCurrency(paidCommissions)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Completed payments
@@ -296,24 +298,23 @@ const CommissionTracking: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    ${commission.base_amount.toLocaleString()}
+                    {formatCurrency(commission.base_amount)}
                   </TableCell>
                   <TableCell align="right">
                     {commission.commission_type === "percentage"
                       ? `${commission.commission_rate}%`
-                      : `$${commission.commission_amount?.toLocaleString() || 0}`}
+                      : formatCurrency(commission.commission_amount || 0)}
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="subtitle2" color="primary">
-                      $
-                      {(
+                      {formatCurrency(
                         commission.commission_amount ||
                         (commission.commission_rate
                           ? (commission.base_amount *
                               commission.commission_rate) /
                             100
                           : 0)
-                      ).toLocaleString()}
+                      )}
                     </Typography>
                   </TableCell>
                   <TableCell>
