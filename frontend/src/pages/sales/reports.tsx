@@ -43,6 +43,7 @@ import * as XLSX from "exceljs";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { formatCurrency } from "../../utils/currencyUtils";
 interface SalesData {
   period: string;
   revenue: number;
@@ -348,9 +349,9 @@ const SalesReports: React.FC = () => {
     // Add sales data table
     const tableData = salesData.map((data) => [
       data.period,
-      `$${data.revenue.toLocaleString()}`,
-      data.leads.toString(),
-      data.customers.toString(),
+      formatCurrency(data.revenue),
+      data.deals.toString(),
+      data.averageDealSize.toString(),
       `${data.conversionRate}%`,
       `${data.growth}%`,
     ]);
@@ -562,11 +563,11 @@ const SalesReports: React.FC = () => {
                         <TableRow key={index} hover>
                           <TableCell>{data.period}</TableCell>
                           <TableCell align="right">
-                            ${data.revenue.toLocaleString()}
+                            {formatCurrency(data.revenue)}
                           </TableCell>
                           <TableCell align="right">{data.deals}</TableCell>
                           <TableCell align="right">
-                            ${data.averageDealSize.toLocaleString()}
+                            {formatCurrency(data.averageDealSize)}
                           </TableCell>
                           <TableCell align="right">
                             {data.conversionRate}%
@@ -647,11 +648,11 @@ const SalesReports: React.FC = () => {
                             </Box>
                           </TableCell>
                           <TableCell align="right">
-                            ${person.revenue.toLocaleString()}
+                            {formatCurrency(person.revenue)}
                           </TableCell>
                           <TableCell align="right">{person.deals}</TableCell>
                           <TableCell align="right">
-                            ${person.quota.toLocaleString()}
+                            {formatCurrency(person.quota)}
                           </TableCell>
                           <TableCell align="right">
                             <Typography
@@ -667,7 +668,7 @@ const SalesReports: React.FC = () => {
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            ${person.commission.toLocaleString()}
+                            {formatCurrency(person.commission)}
                           </TableCell>
                           <TableCell>
                             <Box
@@ -740,7 +741,7 @@ const SalesReports: React.FC = () => {
                             </Box>
                           </TableCell>
                           <TableCell align="right">
-                            ${product.revenue.toLocaleString()}
+                            {formatCurrency(product.revenue)}
                           </TableCell>
                           <TableCell align="right">{product.units}</TableCell>
                           <TableCell align="right">
@@ -790,10 +791,7 @@ const SalesReports: React.FC = () => {
                             </Box>
                           </TableCell>
                           <TableCell align="right">
-                            $
-                            {Math.round(
-                              product.revenue / product.units,
-                            ).toLocaleString()}
+                            {formatCurrency(Math.round(product.revenue / product.units))}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -835,14 +833,11 @@ const SalesReports: React.FC = () => {
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            ${region.revenue.toLocaleString()}
+                            {formatCurrency(region.revenue)}
                           </TableCell>
                           <TableCell align="right">{region.deals}</TableCell>
                           <TableCell align="right">
-                            $
-                            {Math.round(
-                              region.revenue / region.deals,
-                            ).toLocaleString()}
+                            {formatCurrency(Math.round(region.revenue / region.deals))}
                           </TableCell>
                           <TableCell align="right">
                             <Box

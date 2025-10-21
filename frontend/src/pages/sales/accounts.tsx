@@ -46,6 +46,7 @@ import {
   Email as EmailIcon,
   Assignment as AssignmentIcon,
 } from "@mui/icons-material";
+import { formatCurrency } from "../../utils/currencyUtils";
 interface Account {
   id: number;
   name: string;
@@ -86,157 +87,24 @@ const AccountManagement: React.FC = () => {
     "view",
   );
   const [tabValue, setTabValue] = useState(0);
-  // Mock data - replace with actual API call
+  
+  // Fetch accounts from backend - currently no API endpoint available
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const mockData: Account[] = [
-          {
-            id: 1,
-            name: "TechCorp Ltd",
-            type: "customer",
-            industry: "Technology",
-            size: "large",
-            revenue: 50000000,
-            employees: 500,
-            website: "www.techcorp.com",
-            phone: "+1-555-0123",
-            email: "info@techcorp.com",
-            address: "123 Tech Street",
-            city: "San Francisco",
-            state: "CA",
-            zipCode: "94105",
-            country: "USA",
-            status: "active",
-            parentAccount: null,
-            accountManager: "Sarah Johnson",
-            source: "Website",
-            created_at: "2022-03-10",
-            lastActivity: "2024-01-20",
-            description:
-              "Leading technology company specializing in enterprise software solutions.",
-            totalContracts: 3,
-            totalRevenue: 450000,
-            primaryContact: "John Smith",
-          },
-          {
-            id: 2,
-            name: "Global Systems Inc",
-            type: "customer",
-            industry: "Manufacturing",
-            size: "enterprise",
-            revenue: 200000000,
-            employees: 2000,
-            website: "www.globalsystems.com",
-            phone: "+1-555-0124",
-            email: "contact@globalsystems.com",
-            address: "456 Business Ave",
-            city: "New York",
-            state: "NY",
-            zipCode: "10001",
-            country: "USA",
-            status: "active",
-            parentAccount: null,
-            accountManager: "David Brown",
-            source: "Referral",
-            created_at: "2021-07-15",
-            lastActivity: "2024-01-18",
-            description:
-              "Global manufacturing conglomerate with operations in 50+ countries.",
-            totalContracts: 5,
-            totalRevenue: 850000,
-            primaryContact: "Mike Wilson",
-          },
-          {
-            id: 3,
-            name: "Manufacturing Co",
-            type: "prospect",
-            industry: "Manufacturing",
-            size: "medium",
-            revenue: 25000000,
-            employees: 250,
-            website: "www.manufacturing.com",
-            phone: "+1-555-0125",
-            email: "info@manufacturing.com",
-            address: "789 Industrial Blvd",
-            city: "Detroit",
-            state: "MI",
-            zipCode: "48201",
-            country: "USA",
-            status: "prospect",
-            parentAccount: null,
-            accountManager: "Sarah Johnson",
-            source: "Cold Call",
-            created_at: "2024-01-10",
-            lastActivity: "2024-01-15",
-            description:
-              "Mid-size manufacturing company looking to modernize their ERP systems.",
-            totalContracts: 0,
-            totalRevenue: 0,
-            primaryContact: "Lisa Davis",
-          },
-          {
-            id: 4,
-            name: "Retail Corp",
-            type: "customer",
-            industry: "Retail",
-            size: "medium",
-            revenue: 15000000,
-            employees: 150,
-            website: "www.retailcorp.com",
-            phone: "+1-555-0126",
-            email: "contact@retailcorp.com",
-            address: "321 Commerce St",
-            city: "Los Angeles",
-            state: "CA",
-            zipCode: "90210",
-            country: "USA",
-            status: "inactive",
-            parentAccount: null,
-            accountManager: "Mike Wilson",
-            source: "Trade Show",
-            created_at: "2022-01-18",
-            lastActivity: "2023-12-08",
-            description:
-              "Regional retail chain with 25 locations across the west coast.",
-            totalContracts: 2,
-            totalRevenue: 125000,
-            primaryContact: "Robert Chen",
-          },
-          {
-            id: 5,
-            name: "Data Solutions Ltd",
-            type: "customer",
-            industry: "Technology",
-            size: "small",
-            revenue: 5000000,
-            employees: 50,
-            website: "www.datasolutions.com",
-            phone: "+1-555-0127",
-            email: "hello@datasolutions.com",
-            address: "654 Data Drive",
-            city: "Austin",
-            state: "TX",
-            zipCode: "73301",
-            country: "USA",
-            status: "active",
-            parentAccount: null,
-            accountManager: "Lisa Thompson",
-            source: "LinkedIn",
-            created_at: "2023-05-12",
-            lastActivity: "2024-01-22",
-            description:
-              "Data analytics startup focusing on AI-powered business intelligence.",
-            totalContracts: 1,
-            totalRevenue: 75000,
-            primaryContact: "Emily Rodriguez",
-          },
-        ];
-        setAccounts(mockData);
+        // TODO: Implement accounts API when backend endpoint is available
+        // For now, show empty state
+        setAccounts([]);
       } catch (err) {
+        setError("Failed to load accounts");
+        console.error("Error fetching accounts:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAccounts();
+  }, []);
         setError("Failed to load accounts");
         console.error("Error fetching accounts:", err);
       } finally {
@@ -390,7 +258,7 @@ const AccountManagement: React.FC = () => {
                 Total Revenue
               </Typography>
               <Typography variant="h4" color="success.main">
-                ${(accountStats.totalRevenue / 1000).toFixed(0)}K
+                {formatCurrency(accountStats.totalRevenue)}
               </Typography>
             </CardContent>
           </Card>
@@ -474,7 +342,32 @@ const AccountManagement: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredAccounts.map((account) => (
+            {filteredAccounts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                  <Box>
+                    <Typography variant="h6" color="textSecondary" gutterBottom>
+                      No accounts found
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                      {searchTerm || filterType !== "all" || filterStatus !== "all"
+                        ? "Try adjusting your filters"
+                        : "Get started by adding your first account"}
+                    </Typography>
+                    {!searchTerm && filterType === "all" && filterStatus === "all" && (
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleCreateAccount}
+                      >
+                        Add Account
+                      </Button>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredAccounts.map((account) => (
               <TableRow key={account.id} hover>
                 <TableCell>
                   <Box>
@@ -510,7 +403,7 @@ const AccountManagement: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell align="right">
-                  ${account.totalRevenue.toLocaleString()}
+                  {formatCurrency(account.totalRevenue)}
                 </TableCell>
                 <TableCell>{account.accountManager}</TableCell>
                 <TableCell>
@@ -533,7 +426,8 @@ const AccountManagement: React.FC = () => {
                   </IconButton>
                 </TableCell>
               </TableRow>
-            ))}
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
