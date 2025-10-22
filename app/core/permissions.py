@@ -478,9 +478,19 @@ def require_platform_permission(permission: str):
                     details={"required_permission": permission}
                 )
             
+            # Create more descriptive error message based on permission
+            permission_messages = {
+                Permission.MANAGE_ORGANIZATIONS: "manage organizations",
+                Permission.VIEW_ORGANIZATIONS: "view organizations",
+                Permission.CREATE_ORGANIZATIONS: "create organizations",
+                Permission.DELETE_ORGANIZATIONS: "delete organizations",
+            }
+            action = permission_messages.get(permission, permission.replace('_', ' '))
+            
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to manage organizations. Only platform super administrators can access this page."
+                detail=f"Insufficient permissions to {action}. This action requires platform administrator access. "
+                       f"Please contact your system administrator to request '{permission}' permission or upgrade to platform administrator role."
             )
         return current_user
     return dependency

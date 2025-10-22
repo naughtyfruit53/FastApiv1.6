@@ -18,10 +18,63 @@ class OrganizationCreate(OrganizationBase):
 class OrganizationUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
     subdomain: Optional[str] = Field(None, max_length=100)
+    # Business details
+    business_type: Optional[str] = Field(None, max_length=100)
+    industry: Optional[str] = Field(None, max_length=100)
+    website: Optional[str] = Field(None, max_length=255)
+    description: Optional[str] = None
+    # Contact information
+    primary_email: Optional[str] = Field(None, max_length=255)
+    primary_phone: Optional[str] = Field(None, max_length=20)
+    # Address
+    address1: Optional[str] = Field(None, max_length=255)
+    address2: Optional[str] = Field(None, max_length=255)
+    city: Optional[str] = Field(None, max_length=100)
+    state: Optional[str] = Field(None, max_length=100)
+    pin_code: Optional[str] = Field(None, max_length=20)
+    country: Optional[str] = Field(None, max_length=100)
+    state_code: Optional[str] = Field(None, max_length=10)
+    # Legal details
+    gst_number: Optional[str] = Field(None, max_length=50)
+    pan_number: Optional[str] = Field(None, max_length=50)
+    cin_number: Optional[str] = Field(None, max_length=50)
+    # Settings
+    timezone: Optional[str] = Field(None, max_length=100)
+    currency: Optional[str] = Field(None, max_length=10)
+    date_format: Optional[str] = Field(None, max_length=50)
+    financial_year_start: Optional[str] = Field(None, max_length=10)
 
 
 class OrganizationInDB(OrganizationBase):
     id: int
+    # Business details
+    business_type: Optional[str] = None
+    industry: Optional[str] = None
+    website: Optional[str] = None
+    description: Optional[str] = None
+    # Contact information
+    primary_email: str
+    primary_phone: str
+    # Address
+    address1: str
+    address2: Optional[str] = None
+    city: str
+    state: str
+    pin_code: str
+    country: Optional[str] = "India"
+    state_code: Optional[str] = None
+    # Legal details
+    gst_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    cin_number: Optional[str] = None
+    # Settings
+    timezone: Optional[str] = "Asia/Kolkata"
+    currency: Optional[str] = "INR"
+    date_format: Optional[str] = "DD/MM/YYYY"
+    financial_year_start: Optional[str] = "04/01"
+    # Module access
+    enabled_modules: Optional[Dict] = None
+    # Metadata
     created_at: datetime
     updated_at: Optional[datetime] = None
 

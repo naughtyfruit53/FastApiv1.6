@@ -137,8 +137,20 @@ const SalesReports: React.FC = () => {
       ? salesData.reduce((sum, data) => sum + data.conversionRate, 0) /
         salesData.length
       : 0;
+  // Calculate average growth rate from sales data
+  const avgGrowth =
+    salesData.length > 0
+      ? salesData.reduce((sum, data) => sum + data.growth, 0) /
+        salesData.length
+      : 0;
+  // Calculate total leads (using deals as proxy for leads)
+  const totalLeads = totalDeals;
   const handleExport = async (format: "excel" | "pdf") => {
     try {
+      if (salesData.length === 0) {
+        setError("No data available to export. Please select a different time range or wait for data to load.");
+        return;
+      }
       if (format === "excel") {
         await exportToExcel();
       } else if (format === "pdf") {
@@ -146,6 +158,7 @@ const SalesReports: React.FC = () => {
       }
     } catch (err) {
       console.error("Export error:", err);
+      setError(`Failed to export ${format.toUpperCase()} report. Please try again or contact support if the issue persists.`);
     }
   };
   const exportToExcel = async () => {
@@ -225,11 +238,8 @@ const SalesReports: React.FC = () => {
     doc.text("Summary Metrics:", 20, 65);
     doc.setFontSize(11);
     doc.text(`Total Revenue: $${totalRevenue.toLocaleString()}`, 20, 75);
-    // TODO: Define or import avgGrowth
     doc.text(`Revenue Growth: ${avgGrowth.toFixed(1)}%`, 20, 85);
-    // TODO: Define or import avgConversion
-    doc.text(`Conversion Rate: ${avgConversion.toFixed(1)}%`, 20, 95);
-    // TODO: Define or import totalLeads
+    doc.text(`Conversion Rate: ${avgConversionRate.toFixed(1)}%`, 20, 95);
     doc.text(`Total Leads: ${totalLeads}`, 20, 105);
     // Add sales data table
     const tableData = salesData.map((data) => [
