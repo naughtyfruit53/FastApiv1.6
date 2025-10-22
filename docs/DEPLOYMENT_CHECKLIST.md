@@ -355,16 +355,88 @@ Deployment is considered successful when:
 - [ ] DevOps Team Lead: _________________ Date: _______
 - [ ] Project Manager: _________________ Date: _______
 
+## v1.7 - A/B Testing & Streaming Analytics
+
+### Additional Pre-Deployment Tasks
+
+#### A/B Testing Setup
+- [ ] Database tables created:
+  - [ ] `ab_test_experiments`
+  - [ ] `ab_test_variants`
+  - [ ] `ab_test_results`
+  - [ ] `ab_test_assignments`
+- [ ] A/B testing endpoints tested
+- [ ] Variant assignment logic validated
+- [ ] Result aggregation tested
+
+#### Streaming Analytics Setup
+- [ ] Database tables created:
+  - [ ] `streaming_data_sources`
+  - [ ] `streaming_events`
+  - [ ] `live_predictions`
+  - [ ] `streaming_alerts`
+  - [ ] `streaming_metrics`
+- [ ] WebSocket server configuration validated
+- [ ] Kafka/streaming integration tested (if applicable)
+- [ ] Alert notification system tested
+- [ ] Real-time dashboard tested
+
+#### Environment Configuration
+- [ ] WebSocket settings configured:
+  - [ ] `WEBSOCKET_ENABLED` - Enable WebSocket support
+  - [ ] `WEBSOCKET_PING_INTERVAL` - Keep-alive interval
+- [ ] Streaming settings:
+  - [ ] `KAFKA_BOOTSTRAP_SERVERS` - Kafka connection (if using)
+  - [ ] `STREAM_BUFFER_SIZE` - Event buffer size
+  - [ ] `ALERT_RETENTION_DAYS` - Alert history retention
+
+### Post-Deployment Verification - v1.7
+
+#### A/B Testing Features
+- [ ] Create test experiment works
+- [ ] Add variants to experiment
+- [ ] Start/pause/complete experiment
+- [ ] User assignment working correctly
+- [ ] Results recording and aggregation
+- [ ] Dashboard displays experiments
+
+#### Streaming Analytics Features
+- [ ] Data source creation works
+- [ ] Event ingestion functional
+- [ ] Live predictions recording
+- [ ] Alert creation and management
+- [ ] WebSocket connection stable
+- [ ] Dashboard updates in real-time
+- [ ] Metrics aggregation working
+
+### Week 1 Post-Deployment - v1.7
+
+#### A/B Testing Monitoring
+- [ ] Monitor experiment creation and updates
+- [ ] Track variant assignment distribution
+- [ ] Review result collection rates
+- [ ] Check for assignment biases
+- [ ] Verify statistical calculations
+
+#### Streaming Analytics Monitoring
+- [ ] Monitor WebSocket connections
+- [ ] Track event processing lag
+- [ ] Review alert trigger rates
+- [ ] Check prediction throughput
+- [ ] Validate metric aggregations
+- [ ] Monitor data source health
+
 ## Additional Resources
 
 - [API Documentation](../API_DOCUMENTATION.md)
 - [User Guide](USER_GUIDE.md)
+- [A/B Testing & Streaming Guide](AB_TESTING_STREAMING_GUIDE.md)
 - [Advanced Analytics Training](ADVANCED_ANALYTICS_TRAINING.md)
 - [Deployment Guide](../DEPLOYMENT_GUIDE.md)
 - [Runbook](runbook.md)
 
 ---
 
-**Version**: 1.0
-**Last Updated**: 2024-01-15
-**Next Review**: 2024-02-15
+**Version**: 1.7
+**Last Updated**: 2024-10-22
+**Next Review**: 2024-11-22

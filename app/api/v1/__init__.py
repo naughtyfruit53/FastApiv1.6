@@ -141,6 +141,20 @@ except Exception as e:
     logger.error(f"Failed to import website_agent_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
+try:
+    from .ab_testing import router as ab_testing_router
+    logger.debug("Imported ab_testing_router")
+except Exception as e:
+    logger.error(f"Failed to import ab_testing_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    from .streaming_analytics import router as streaming_analytics_router
+    logger.debug("Imported streaming_analytics_router")
+except Exception as e:
+    logger.error(f"Failed to import streaming_analytics_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
 api_v1_router = APIRouter()
 
 # Include routers with detailed logging
@@ -332,4 +346,24 @@ try:
         logger.debug(f"  {route_path}")
 except Exception as e:
     logger.error(f"Failed to include website_agent_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(ab_testing_router, prefix="/ab-testing", tags=["A/B Testing"])
+    ab_testing_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /ab-testing{route.path}" for route in ab_testing_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered ab_testing endpoints: {len(ab_testing_routes)} routes")
+    for route_path in ab_testing_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include ab_testing_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(streaming_analytics_router, prefix="/streaming-analytics", tags=["Streaming Analytics"])
+    streaming_analytics_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /streaming-analytics{route.path}" for route in streaming_analytics_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered streaming_analytics endpoints: {len(streaming_analytics_routes)} routes")
+    for route_path in streaming_analytics_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include streaming_analytics_router: {str(e)}\n{traceback.format_exc()}")
     raise
