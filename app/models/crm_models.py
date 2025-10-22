@@ -388,3 +388,56 @@ class SalesForecast(Base):
         Index('idx_sales_forecast_org_period', 'organization_id', 'forecast_period', 'period_start'),
         UniqueConstraint('organization_id', 'forecast_period', 'period_start', 'period_end', name='uq_sales_forecast_period'),
     )
+
+
+class Commission(Base):
+    """
+    Model for commission tracking in CRM.
+    Tracks commissions for sales team (internal employees and external partners).
+    """
+    __tablename__ = "commissions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_commission_organization_id"), nullable=False, index=True)
+    
+    # Sales person information
+    sales_person_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_commission_sales_person_id"), nullable=False, index=True)
+    sales_person_name: Mapped[str] = mapped_column(String, nullable=False)
+    person_type: Mapped[str] = mapped_column(String, nullable=False)  # "internal" or "external"
+    
+    # Reference to opportunity or lead
+    opportunity_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("opportunities.id", name="fk_commission_opportunity_id"), nullable=True, index=True)
+    lead_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("leads.id", name="fk_commission_lead_id"), nullable=True, index=True)
+    
+    # Commission details
+    commission_type: Mapped[str] = mapped_column(String, nullable=False)  # percentage, fixed_amount, tiered, bonus
+    commission_rate: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # For percentage type
+    commission_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # For fixed_amount, bonus types
+    base_amount: Mapped[float] = mapped_column(Float, nullable=False)  # Base amount for calculation
+    
+    # Payment tracking
+    commission_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    payment_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # pending, paid, approved, rejected, on_hold
+    payment_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    
+    # Additional information
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_commission_created_by_id"), nullable=True)
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    sales_person: Mapped["User"] = relationship("User", foreign_keys=[sales_person_id])
+    opportunity: Mapped[Optional["Opportunity"]] = relationship("Opportunity")
+    lead: Mapped[Optional["Lead"]] = relationship("Lead")
+    created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
+    
+    __table_args__ = (
+        Index('idx_commission_org_person', 'organization_id', 'sales_person_id'),
+        Index('idx_commission_payment_status', 'payment_status', 'commission_date'),
+    )
