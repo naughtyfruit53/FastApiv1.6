@@ -140,7 +140,7 @@ class MLModelTraining(Base):
     resource_usage: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # Metadata
-    metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    training_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # User tracking
     created_by_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_ml_model_training_created_by"), nullable=False)

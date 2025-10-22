@@ -86,7 +86,7 @@ class AutoMLRun(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Metadata
-    metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    run_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # User tracking
     created_by_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_automl_run_created_by"), nullable=False)

@@ -60,7 +60,7 @@ class VariantCreate(BaseModel):
     model_id: Optional[int] = None
     model_version: Optional[str] = None
     traffic_percentage: float = Field(50.0, ge=0, le=100)
-    model_config: Optional[Dict[str, Any]] = None
+    variant_config: Optional[Dict[str, Any]] = None
 
 
 class VariantResponse(BaseModel):
@@ -72,7 +72,7 @@ class VariantResponse(BaseModel):
     model_id: Optional[int]
     model_version: Optional[str]
     traffic_percentage: float
-    model_config: Optional[Dict[str, Any]]
+    variant_config: Optional[Dict[str, Any]]
     created_at: datetime
     
     class Config:
@@ -101,7 +101,7 @@ class ResultCreate(BaseModel):
     metric_value: float
     user_id: Optional[int] = None
     session_id: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    result_metadata: Optional[Dict[str, Any]] = None
 
 
 class ResultResponse(BaseModel):
@@ -275,7 +275,7 @@ async def create_variant(
             model_id=variant_data.model_id,
             model_version=variant_data.model_version,
             traffic_percentage=variant_data.traffic_percentage,
-            model_config=variant_data.model_config
+            variant_config=variant_data.variant_config
         )
         
         return VariantResponse.model_validate(variant)
@@ -347,7 +347,7 @@ async def record_result(
         metric_value=result_data.metric_value,
         user_id=result_data.user_id or current_user.id,
         session_id=result_data.session_id,
-        metadata=result_data.metadata
+        result_metadata=result_data.result_metadata
     )
     
     return ResultResponse.model_validate(result)

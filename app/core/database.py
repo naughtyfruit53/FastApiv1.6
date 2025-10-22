@@ -1,4 +1,6 @@
-# app/core/database.py
+"""
+Database configuration and session management
+"""
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Cache for table and type existence
 _table_existence_cache = {}
 _type_existence_cache = {}
-_cache_file = "/app/.schema_cache"
+_cache_file = os.path.join(settings.SCHEMA_CACHE_DIR, '.schema_cache')
 _MEMORY_THRESHOLD_MB = 400  # Warn if RSS exceeds 400MB
 _MAX_CACHE_SIZE = 100  # Limit cache to 100 entries each
 _REFLECTION_TIMEOUT_SECONDS = 30  # Timeout for schema reflection
@@ -37,15 +39,13 @@ def log_memory_usage(context: str):
 
 def check_cache_permissions():
     try:
-        if os.path.exists(_cache_file):
-            if not os.access(_cache_file, os.R_OK | os.W_OK):
-                logger.warning(f"Schema cache file {_cache_file} exists but lacks read/write permissions")
-                return False
-        else:
-            cache_dir = os.path.dirname(_cache_file)
-            if not os.access(cache_dir, os.W_OK):
-                logger.warning(f"Cache directory {cache_dir} lacks write permissions")
-                return False
+        cache_dir = settings.SCHEMA_CACHE_DIR
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir, exist_ok=True)
+            logger.info(f"Created cache directory: {cache_dir}")
+        if not os.access(cache_dir, os.W_OK):
+            logger.warning(f"Cache directory {cache_dir} lacks write permissions")
+            return False
         return True
     except Exception as e:
         logger.warning(f"Error checking schema cache permissions: {str(e)}")

@@ -86,7 +86,7 @@ class PredictiveModel(Base):
     
     # Model artifacts
     model_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    model_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # User tracking
     created_by_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", name="fk_predictive_model_created_by"), nullable=False)

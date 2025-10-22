@@ -157,7 +157,7 @@ class IntegrationMessage(Base):
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     subject: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     attachments: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
-    metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    message_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     
     # Sender/Recipient information
     from_user: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

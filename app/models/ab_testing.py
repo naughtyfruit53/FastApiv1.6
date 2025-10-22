@@ -98,7 +98,7 @@ class ABTestVariant(Base):
         nullable=True
     )
     model_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    model_config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    variant_config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     
     # Traffic allocation
     traffic_percentage: Mapped[float] = mapped_column(Float, default=50.0, nullable=False)
@@ -150,7 +150,7 @@ class ABTestResult(Base):
     metric_value: Mapped[float] = mapped_column(Float, nullable=False)
     
     # Additional data
-    metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    result_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     
     # Timestamps
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

@@ -1,7 +1,7 @@
 """add_website_agent_tables
 
 Revision ID: add_website_agent_20251022
-Revises: add_commissions_table_20251022
+Revises: None
 Create Date: 2025-10-22 02:22:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_website_agent_20251022'
-down_revision = 'add_commissions_table_20251022'
+down_revision = None
 branch_labels = None
 depends_on = None
 

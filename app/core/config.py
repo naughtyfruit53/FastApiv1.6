@@ -1,4 +1,6 @@
-# app/core/config.py
+"""
+Application configuration
+"""
 
 import os
 from typing import Any, Dict, Optional, List
@@ -34,8 +36,8 @@ class Settings:
     
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "180"))
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", "1440"))
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 1440
     
     @classmethod
     def validate_token_expiry(cls, v: int) -> int:
@@ -118,6 +120,8 @@ class Settings:
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://naughtyfruit.in")
     
     RAPIDAPI_KEY: Optional[str] = os.getenv("RAPIDAPI_KEY")
+    
+    SCHEMA_CACHE_DIR: str = os.getenv("SCHEMA_CACHE_DIR", "./cache")
     
     @property
     def jwt_secret(self) -> str:

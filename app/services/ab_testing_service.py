@@ -190,7 +190,7 @@ class ABTestingService:
         model_id: Optional[int] = None,
         model_version: Optional[str] = None,
         traffic_percentage: float = 50.0,
-        model_config: Optional[Dict[str, Any]] = None
+        variant_config: Optional[Dict[str, Any]] = None
     ) -> ABTestVariant:
         """Create a variant for an experiment"""
         try:
@@ -206,7 +206,7 @@ class ABTestingService:
                 model_id=model_id,
                 model_version=model_version,
                 traffic_percentage=traffic_percentage,
-                model_config=model_config
+                variant_config=variant_config
             )
             self.db.add(variant)
             self.db.commit()
@@ -335,7 +335,7 @@ class ABTestingService:
         metric_value: float,
         user_id: Optional[int] = None,
         session_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        result_metadata: Optional[Dict[str, Any]] = None
     ) -> ABTestResult:
         """Record a result for a variant"""
         try:
@@ -346,7 +346,7 @@ class ABTestingService:
                 session_id=session_id,
                 metric_name=metric_name,
                 metric_value=metric_value,
-                metadata=metadata
+                result_metadata=result_metadata
             )
             self.db.add(result)
             self.db.commit()
