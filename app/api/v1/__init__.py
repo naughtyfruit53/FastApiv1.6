@@ -134,6 +134,13 @@ except Exception as e:
     logger.error(f"Failed to import pincode_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
+try:
+    from .website_agent import router as website_agent_router
+    logger.debug("Imported website_agent_router")
+except Exception as e:
+    logger.error(f"Failed to import website_agent_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
 api_v1_router = APIRouter()
 
 # Include routers with detailed logging
@@ -315,4 +322,14 @@ try:
         logger.debug(f"  {route_path}")
 except Exception as e:
     logger.error(f"Failed to include user_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(website_agent_router, tags=["Website Agent"])
+    website_agent_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in website_agent_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered website_agent endpoints: {len(website_agent_routes)} routes")
+    for route_path in website_agent_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include website_agent_router: {str(e)}\n{traceback.format_exc()}")
     raise
