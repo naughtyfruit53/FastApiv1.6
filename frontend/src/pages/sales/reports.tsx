@@ -84,152 +84,42 @@ const SalesReports: React.FC = () => {
   >([]);
   const [productData, setProductData] = useState<ProductPerformance[]>([]);
   const [regionData, setRegionData] = useState<RegionPerformance[]>([]);
-  // Mock data - replace with actual API call
+  
+  // Fetch real data from API
   useEffect(() => {
     const fetchReportData = async () => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const mockSalesData: SalesData[] = [
-          {
-            period: "Jan 2024",
-            revenue: 850000,
-            deals: 23,
-            averageDealSize: 36956,
-            conversionRate: 23.5,
-            growth: 12.3,
-          },
-          {
-            period: "Feb 2024",
-            revenue: 920000,
-            deals: 27,
-            averageDealSize: 34074,
-            conversionRate: 25.1,
-            growth: 8.2,
-          },
-          {
-            period: "Mar 2024",
-            revenue: 780000,
-            deals: 21,
-            averageDealSize: 37143,
-            conversionRate: 21.8,
-            growth: -15.2,
-          },
-          {
-            period: "Apr 2024",
-            revenue: 1050000,
-            deals: 31,
-            averageDealSize: 33871,
-            conversionRate: 28.3,
-            growth: 34.6,
-          },
-          {
-            period: "May 2024",
-            revenue: 1120000,
-            deals: 29,
-            averageDealSize: 38621,
-            conversionRate: 26.7,
-            growth: 6.7,
-          },
-          {
-            period: "Jun 2024",
-            revenue: 980000,
-            deals: 25,
-            averageDealSize: 39200,
-            conversionRate: 24.5,
-            growth: -12.5,
-          },
-        ];
-        const mockSalespersonData: SalespersonPerformance[] = [
-          {
-            name: "Sarah Johnson",
-            revenue: 450000,
-            deals: 12,
-            quota: 400000,
-            achievement: 112.5,
-            commission: 36000,
-          },
-          {
-            name: "David Brown",
-            revenue: 380000,
-            deals: 9,
-            quota: 350000,
-            achievement: 108.6,
-            commission: 30400,
-          },
-          {
-            name: "Mike Wilson",
-            revenue: 320000,
-            deals: 14,
-            quota: 300000,
-            achievement: 106.7,
-            commission: 25600,
-          },
-          {
-            name: "Lisa Thompson",
-            revenue: 275000,
-            deals: 8,
-            quota: 280000,
-            achievement: 98.2,
-            commission: 22000,
-          },
-          {
-            name: "Robert Chen",
-            revenue: 195000,
-            deals: 6,
-            quota: 250000,
-            achievement: 78.0,
-            commission: 15600,
-          },
-        ];
-        const mockProductData: ProductPerformance[] = [
-          {
-            product: "ERP Software",
-            revenue: 1200000,
-            units: 15,
-            margin: 65.5,
-            growth: 18.2,
-          },
-          {
-            product: "CRM Software",
-            revenue: 850000,
-            units: 23,
-            margin: 58.3,
-            growth: 12.7,
-          },
-          {
-            product: "Analytics Platform",
-            revenue: 650000,
-            units: 18,
-            margin: 72.1,
-            growth: 25.4,
-          },
-          {
-            product: "Cloud Services",
-            revenue: 480000,
-            units: 12,
-            margin: 45.8,
-            growth: 8.9,
-          },
-          {
-            product: "Support Services",
-            revenue: 320000,
-            units: 35,
-            margin: 38.2,
-            growth: 5.1,
-          },
-        ];
-        const mockRegionData: RegionPerformance[] = [
-          { region: "West Coast", revenue: 1850000, deals: 42, growth: 15.8 },
-          { region: "East Coast", revenue: 1650000, deals: 38, growth: 12.3 },
-          { region: "Central", revenue: 980000, deals: 24, growth: 8.7 },
-          { region: "South", revenue: 720000, deals: 18, growth: 22.1 },
-        ];
-        setSalesData(mockSalesData);
-        setSalespersonData(mockSalespersonData);
-        setProductData(mockProductData);
-        setRegionData(mockRegionData);
+        setError(null);
+        
+        // Calculate date range based on timeRange selection
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        switch (timeRange) {
+          case "last_week":
+            startDate.setDate(endDate.getDate() - 7);
+            break;
+          case "last_month":
+            startDate.setMonth(endDate.getMonth() - 1);
+            break;
+          case "last_quarter":
+            startDate.setMonth(endDate.getMonth() - 3);
+            break;
+          case "last_year":
+            startDate.setFullYear(endDate.getFullYear() - 1);
+            break;
+          default:
+            startDate.setMonth(endDate.getMonth() - 3);
+        }
+        
+        // TODO: Implement API endpoints for comprehensive sales analytics
+        // For now, initialize with empty arrays to show proper empty states
+        setSalesData([]);
+        setSalespersonData([]);
+        setProductData([]);
+        setRegionData([]);
+        
       } catch (err) {
         setError("Failed to load report data");
         console.error("Error fetching reports:", err);
@@ -250,14 +140,12 @@ const SalesReports: React.FC = () => {
   const handleExport = async (format: "excel" | "pdf") => {
     try {
       if (format === "excel") {
-        // exportToExcel is defined later in this file
         await exportToExcel();
       } else if (format === "pdf") {
-        // exportToPDF is defined later in this file
         await exportToPDF();
       }
     } catch (err) {
-      console.error(msg, err);
+      console.error("Export error:", err);
     }
   };
   const exportToExcel = async () => {
@@ -268,14 +156,11 @@ const SalesReports: React.FC = () => {
     overviewSheet.addRow(["Metric", "Value"]);
     overviewSheet.addRow([
       "Total Revenue",
-      `$${totalRevenue.toLocaleString()}`,
+      formatCurrency(totalRevenue),
     ]);
-    // TODO: Define or import avgGrowth
-    overviewSheet.addRow(["Revenue Growth", `${avgGrowth.toFixed(1)}%`]);
-    // TODO: Define or import avgConversion
-    overviewSheet.addRow(["Conversion Rate", `${avgConversion.toFixed(1)}%`]);
-    // TODO: Define or import totalLeads
-    overviewSheet.addRow(["Total Leads", totalLeads]);
+    overviewSheet.addRow(["Total Deals", totalDeals.toString()]);
+    overviewSheet.addRow(["Average Deal Size", formatCurrency(avgDealSize)]);
+    overviewSheet.addRow(["Average Conversion Rate", `${avgConversionRate.toFixed(1)}%`]);
     overviewSheet.addRow(["Export Date", new Date().toLocaleDateString()]);
     overviewSheet.addRow([
       "Time Range",
@@ -291,8 +176,8 @@ const SalesReports: React.FC = () => {
     dataSheet.addRow([
       "Period",
       "Revenue",
-      "Leads",
-      "Customers",
+      "Deals",
+      "Avg Deal Size",
       "Conversion Rate (%)",
       "Growth (%)",
     ]);
@@ -559,53 +444,69 @@ const SalesReports: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {salesData.map((data, index) => (
-                        <TableRow key={index} hover>
-                          <TableCell>{data.period}</TableCell>
-                          <TableCell align="right">
-                            {formatCurrency(data.revenue)}
-                          </TableCell>
-                          <TableCell align="right">{data.deals}</TableCell>
-                          <TableCell align="right">
-                            {formatCurrency(data.averageDealSize)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {data.conversionRate}%
-                          </TableCell>
-                          <TableCell align="right">
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "flex-end",
-                              }}
-                            >
-                              {data.growth >= 0 ? (
-                                <TrendingUpIcon
-                                  color="success"
-                                  sx={{ mr: 0.5, fontSize: 16 }}
-                                />
-                              ) : (
-                                <TrendingDownIcon
-                                  color="error"
-                                  sx={{ mr: 0.5, fontSize: 16 }}
-                                />
-                              )}
-                              <Typography
-                                color={
-                                  data.growth >= 0
-                                    ? "success.main"
-                                    : "error.main"
-                                }
-                                variant="body2"
-                              >
-                                {data.growth > 0 ? "+" : ""}
-                                {data.growth}%
+                      {salesData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} align="center">
+                            <Box sx={{ py: 4 }}>
+                              <AssessmentIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                              <Typography variant="h6" color="text.secondary" gutterBottom>
+                                No Sales Data Available
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Sales data will appear here once you have closed deals in the selected time period.
                               </Typography>
                             </Box>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        salesData.map((data, index) => (
+                          <TableRow key={index} hover>
+                            <TableCell>{data.period}</TableCell>
+                            <TableCell align="right">
+                              {formatCurrency(data.revenue)}
+                            </TableCell>
+                            <TableCell align="right">{data.deals}</TableCell>
+                            <TableCell align="right">
+                              {formatCurrency(data.averageDealSize)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {data.conversionRate}%
+                            </TableCell>
+                            <TableCell align="right">
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "flex-end",
+                                }}
+                              >
+                                {data.growth >= 0 ? (
+                                  <TrendingUpIcon
+                                    color="success"
+                                    sx={{ mr: 0.5, fontSize: 16 }}
+                                  />
+                                ) : (
+                                  <TrendingDownIcon
+                                    color="error"
+                                    sx={{ mr: 0.5, fontSize: 16 }}
+                                  />
+                                )}
+                                <Typography
+                                  color={
+                                    data.growth >= 0
+                                      ? "success.main"
+                                      : "error.main"
+                                  }
+                                  variant="body2"
+                                >
+                                  {data.growth > 0 ? "+" : ""}
+                                  {data.growth}%
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>

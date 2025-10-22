@@ -82,6 +82,26 @@ async def get_leads(
     try:
         stmt = select(Lead).where(Lead.organization_id == org_id)
         
+        # Apply lead ownership filtering based on user role
+        # Check if user has admin/manager permissions (can see all leads)
+        has_admin_access = (
+            "crm_lead_manage_all" in user_permissions or 
+            "crm_admin" in user_permissions or
+            current_user.is_company_admin
+        )
+        
+        # If user doesn't have admin access, only show leads assigned to them or created by them
+        if not has_admin_access:
+            stmt = stmt.where(
+                or_(
+                    Lead.assigned_to_id == current_user.id,
+                    Lead.created_by_id == current_user.id
+                )
+            )
+            logger.info(f"Applied ownership filter for user {current_user.email}")
+        else:
+            logger.info(f"User {current_user.email} has admin access, showing all leads")
+        
         # Apply filters
         if status:
             if status not in [s.value for s in LeadStatus]:
@@ -96,7 +116,7 @@ async def get_leads(
                 logger.error(f"Invalid source filter: {source}")
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid source: {source}. Valid values are {[s.value for s in LeadSource]}"
+                    detail=f"Invalid source: {status}. Valid values are {[s.value for s in LeadSource]}"
                 )
             stmt = stmt.where(Lead.source == source)
         if assigned_to_id:
@@ -120,6 +140,26 @@ async def get_leads(
         
         result = await db.execute(stmt)
         leads = result.scalars().all()
+        
+        # Enrich leads with owner names for permitted users
+        if has_admin_access:
+            for lead in leads:
+                # Fetch assigned_to user name if exists
+                if lead.assigned_to_id:
+                    assigned_user_stmt = select(User).where(User.id == lead.assigned_to_id)
+                    assigned_user_result = await db.execute(assigned_user_stmt)
+                    assigned_user = assigned_user_result.scalar_one_or_none()
+                    if assigned_user:
+                        lead.assigned_to_name = f"{assigned_user.first_name} {assigned_user.last_name}".strip() or assigned_user.email
+                
+                # Fetch created_by user name if exists
+                if lead.created_by_id:
+                    created_user_stmt = select(User).where(User.id == lead.created_by_id)
+                    created_user_result = await db.execute(created_user_stmt)
+                    created_user = created_user_result.scalar_one_or_none()
+                    if created_user:
+                        lead.created_by_name = f"{created_user.first_name} {created_user.last_name}".strip() or created_user.email
+        
         logger.info(f"Fetched {len(leads)} leads for org_id={org_id}, user={current_user.email}")
         return leads
 

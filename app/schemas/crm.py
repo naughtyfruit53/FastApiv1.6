@@ -104,7 +104,9 @@ class LeadInDB(LeadBase):
     last_contacted: Optional[datetime] = None
 
 class Lead(LeadInDB):
-    pass
+    # Additional fields for display (populated from joins)
+    assigned_to_name: Optional[str] = Field(None, description="Name of assigned user")
+    created_by_name: Optional[str] = Field(None, description="Name of user who created lead")
 
 # Lead Activity Schemas
 class LeadActivityBase(BaseModel):
