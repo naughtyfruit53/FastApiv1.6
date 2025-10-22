@@ -86,6 +86,13 @@ except Exception as e:
     raise
 
 try:
+    from .ai import router as ai_router
+    logger.debug("Imported ai_router")
+except Exception as e:
+    logger.error(f"Failed to import ai_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
     from .manufacturing import router as manufacturing_router
     logger.debug("Imported manufacturing_router")
 except Exception as e:
@@ -248,6 +255,16 @@ try:
         logger.debug(f"  {route_path}")
 except Exception as e:
     logger.error(f"Failed to include chatbot_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    api_v1_router.include_router(ai_router, prefix="/ai", tags=["AI Agent"])
+    ai_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /ai{route.path}" for route in ai_router.routes if isinstance(route, APIRoute)]
+    logger.debug(f"Registered ai_router endpoints: {len(ai_routes)} routes")
+    for route_path in ai_routes:
+        logger.debug(f"  {route_path}")
+except Exception as e:
+    logger.error(f"Failed to include ai_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
 try:
