@@ -598,10 +598,259 @@ Improve productivity with keyboard shortcuts:
 
 ---
 
+## CRM Module
+
+### Overview
+
+The CRM (Customer Relationship Management) module helps you manage leads, opportunities, contacts, accounts, and customer analytics.
+
+### Lead Management
+
+**Creating a Lead:**
+1. Navigate to **CRM** > **Leads**
+2. Click **Add Lead**
+3. Enter lead information:
+   - Contact details (name, email, phone)
+   - Company information
+   - Lead source (website, referral, etc.)
+   - Status (new, contacted, qualified, etc.)
+4. Assign to a sales representative (optional)
+5. Click **Save**
+
+**Lead Ownership:**
+- **Regular Users**: See only leads assigned to them or created by them
+- **Managers/Admins**: See all leads in the organization with owner names displayed
+- Leads are automatically filtered based on your permissions
+
+**Converting Leads:**
+1. Open a qualified lead
+2. Click **Convert to Opportunity**
+3. System creates:
+   - Customer record (if new)
+   - Opportunity record linked to the lead
+4. Lead status updates to "Converted"
+
+### Commission Tracking
+
+**Recording Commissions:**
+1. Go to **CRM** > **Commissions**
+2. Click **Add Commission**
+3. Fill in details:
+   - **Person Type**: Internal (employee) or External (partner/agent)
+   - **Person Name**: Name of the sales person
+   - **Commission Type**: Percentage, fixed amount, tiered, or bonus
+   - **Base Amount**: Deal value for calculation
+   - **Commission Rate/Amount**: Based on type selected
+   - **Payment Status**: Pending, approved, paid, etc.
+4. Click **Submit**
+
+**Viewing Commission Reports:**
+- Filter by status, date range, or person
+- Export to Excel or PDF
+- Track payment history
+
+### Customer Analytics
+
+**Accessing Analytics:**
+- From **CRM** > **Customer Analytics**
+- From **Sales Dashboard** > **Analytics** button
+- Direct URL: `/sales/customer-analytics`
+
+**Key Metrics:**
+- Total customers and active customers
+- New customers in period
+- Customer lifetime value (CLV)
+- Revenue analytics
+- Top customers by revenue
+- Retention rate
+
+**Using Analytics:**
+1. Select date range (period start and end)
+2. View summary cards with key metrics
+3. Analyze customer segments
+4. Review top customers table
+5. Export reports as needed
+
+### Exhibition Mode
+
+**Managing Exhibition Events:**
+1. Go to **Exhibition Mode**
+2. Click **Create Event**
+3. Enter event details:
+   - Event name and description
+   - Location and venue
+   - Start and end dates
+   - Status (planned, active, completed)
+4. Save the event
+
+**Scanning Business Cards:**
+1. Select an active event
+2. Click **Scan Card** or switch to **Card Scans** tab
+3. Upload business card image
+4. System extracts information using AI:
+   - Name, company, designation
+   - Email, phone
+   - Confidence score displayed
+5. Validate and save the scan
+
+**Managing Prospects:**
+1. Switch to **Prospects** tab
+2. View all prospects from the event
+3. Qualify prospects:
+   - Mark as hot, warm, or cold
+   - Convert to leads
+   - Schedule follow-ups
+4. Track conversion metrics
+
+---
+
+## AI Chatbot
+
+### Overview
+
+The AI Chatbot provides intelligent assistance for navigation, business advice, and task execution.
+
+### Accessing the Chatbot
+
+- Click the **chat icon** in the bottom-right corner
+- Type your query or question
+- Chatbot responds with helpful information and action buttons
+
+### Features
+
+**Business Advice:**
+- Ask: "How can I improve inventory management?"
+- Ask: "What's the best way to manage cash flow?"
+- Ask: "How do I grow my sales?"
+- Receive actionable recommendations and quick links
+
+**Navigation Assistance:**
+- Say: "Take me to sales reports"
+- Say: "Show me customer list"
+- Say: "I want to create an invoice"
+- Chatbot provides direct navigation links
+
+**Voucher Creation:**
+- Say: "Create a sales invoice"
+- Say: "Make a purchase order"
+- Chatbot guides you to the correct voucher form
+
+**Analytics Queries:**
+- Ask: "Show me sales trends"
+- Ask: "Who are my top customers?"
+- Access analytics dashboards directly
+
+### Tips for Using the Chatbot
+
+1. **Be specific**: "Show low stock items" works better than "stock"
+2. **Use natural language**: Ask questions as you would to a colleague
+3. **Follow suggestions**: Chatbot provides related actions
+4. **Provide context**: Include relevant details in your queries
+
+### Chatbot Integration (For Developers)
+
+To integrate the chatbot into your customer-facing website:
+
+1. Review the complete integration guide: `/docs/CHATBOT_INTEGRATION.md`
+2. Choose integration method:
+   - Direct script injection (simplest)
+   - NPM package (for React/Vue/Angular)
+   - iframe embedding
+3. Configure with your API credentials
+4. Customize theme and features
+5. Deploy to your website
+
+**Quick Start Script:**
+```html
+<script>
+  (function() {
+    var config = {
+      apiUrl: 'https://your-erp-domain.com/api/v1',
+      organizationId: 'YOUR_ORG_ID',
+      apiKey: 'YOUR_API_KEY',
+      theme: {
+        primaryColor: '#1976d2',
+        headerText: 'Chat with us'
+      }
+    };
+    // ... rest of integration script
+  })();
+</script>
+```
+
+See full documentation for complete implementation details.
+
+---
+
+## AI Analytics & Business Insights
+
+### Overview
+
+AI Analytics provides intelligent insights, predictions, and recommendations based on your business data.
+
+### Accessing AI Analytics
+
+1. Navigate to **Analytics** > **AI Insights**
+2. Select the type of analysis:
+   - Sales forecasting
+   - Customer segmentation
+   - Inventory optimization
+   - Cash flow prediction
+3. Set parameters and time ranges
+4. View AI-generated insights
+
+### Features
+
+**Predictive Analytics:**
+- Sales forecasting based on historical data
+- Demand prediction for inventory planning
+- Customer churn risk analysis
+- Revenue projections
+
+**Smart Recommendations:**
+- Optimal stock levels
+- Pricing suggestions
+- Customer targeting
+- Resource allocation
+
+**Automated Alerts:**
+- Low stock warnings
+- Payment due reminders
+- Unusual transaction alerts
+- Performance anomalies
+
+### Using AI Insights
+
+**Sales Forecasting:**
+1. Go to **Analytics** > **Sales Forecast**
+2. Select forecast period (monthly, quarterly)
+3. Review prediction accuracy score
+4. View trend charts and confidence intervals
+5. Export forecasts for planning
+
+**Customer Insights:**
+1. Navigate to **Analytics** > **Customer Insights**
+2. View customer segments:
+   - High value customers
+   - At-risk customers
+   - Growth opportunities
+3. Review recommended actions
+4. Track segment performance
+
+**Inventory Optimization:**
+1. Access **Analytics** > **Inventory AI**
+2. Review stock level recommendations
+3. Identify slow-moving items
+4. Plan reorder quantities
+5. Optimize warehouse space
+
+---
+
 ## Glossary
 
 **Terms and Definitions:**
 
+### Core ERP Terms
 - **BOM**: Bill of Materials - list of raw materials for a finished product
 - **CoA**: Chart of Accounts - hierarchical list of all ledger accounts
 - **CGST**: Central Goods and Services Tax
@@ -613,6 +862,34 @@ Improve productivity with keyboard shortcuts:
 - **SLA**: Service Level Agreement
 - **Voucher**: Accounting transaction document
 - **Master Data**: Core business data (customers, vendors, products, etc.)
+
+### CRM Terms
+- **Lead**: Potential customer who has shown interest
+- **Opportunity**: Qualified sales prospect with defined value
+- **Lead Qualification**: Process of determining if a lead is worth pursuing
+- **Lead Ownership**: Assignment of leads to specific sales representatives
+- **CLV**: Customer Lifetime Value - total revenue expected from a customer
+- **Conversion Rate**: Percentage of leads that become customers
+- **Commission**: Payment to sales person based on sales performance
+- **Prospect**: Potential customer identified at an exhibition or event
+
+### AI & Analytics Terms
+- **AI Chatbot**: Artificial intelligence-powered conversational assistant
+- **Intent Classification**: AI's understanding of user's purpose
+- **Confidence Score**: AI's certainty level in its prediction (0-100%)
+- **Predictive Analytics**: Using historical data to forecast future outcomes
+- **Customer Segmentation**: Grouping customers by characteristics
+- **Churn Rate**: Percentage of customers who stop doing business
+- **ARPU**: Average Revenue Per User
+- **Retention Rate**: Percentage of customers who continue purchasing
+
+### RBAC Terms
+- **RBAC**: Role-Based Access Control - permission system
+- **Admin Access**: Full access to all organization data
+- **Manager Role**: Can view and manage team's data
+- **User Role**: Limited access to owned/assigned items
+- **Permission**: Specific action a user can perform
+- **Organization Scope**: Data limited to user's organization
 
 ---
 
@@ -650,9 +927,36 @@ Improve productivity with keyboard shortcuts:
 
 ## Version History
 
-- **v1.6**: Latest version with PDF templates, budget management, cost analysis
-- Last Updated: October 2024
-- Next Update: Check Help → What's New
+### v1.6.1 - CRM, AI & Chatbot Enhancement Release (Latest)
+**Released: October 2024**
+
+**New Features:**
+- ✨ Lead ownership & RBAC filtering
+- 🤖 AI Chatbot with business advice and navigation
+- 💼 Commission tracking with internal/external selector
+- 📊 Enhanced customer analytics with CLV and retention metrics
+- 🎪 Exhibition Mode with business card scanning
+- 💱 Multi-currency support (₹ default)
+- 🔒 Role-based data access control
+- 📱 Chatbot website integration
+
+**Improvements:**
+- Removed all mock data from reports
+- Added empty state handling across all modules
+- Enhanced currency utility with organization support
+- Improved customer and lead management UX
+- Updated tax code activation/deactivation
+
+**Bug Fixes:**
+- Fixed SalesVoucher.date field usage in analytics
+- Corrected lead ownership filtering logic
+- Improved modal validation and error handling
+
+### v1.6 - Core Features
+- PDF templates, budget management, cost analysis
+- Last Updated: September 2024
+
+**Check Latest Updates:** Help → What's New
 
 ---
 
