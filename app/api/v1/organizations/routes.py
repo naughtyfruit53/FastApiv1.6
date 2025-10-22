@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from typing import List, Any
 from datetime import datetime
+import logging
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
@@ -36,6 +37,7 @@ def get_rbac(db: AsyncSession = Depends(get_db)):
 # Import RBAC models from rbac_models
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["organizations"])
 
 router.include_router(user_router)
@@ -121,19 +123,27 @@ async def update_current_organization(
             detail="Organization not found"
         )
   
-    for field, value in org_update.dict(exclude_unset=True).items():
+    update_data = org_update.dict(exclude_unset=True)
+    logger.info(f"Updating organization {organization.id} with fields: {list(update_data.keys())}")
+    
+    for field, value in update_data.items():
         if hasattr(organization, field):
             setattr(organization, field, value)
+            logger.debug(f"Set {field} = {value}")
+        else:
+            logger.warning(f"Field {field} not found on Organization model")
   
     try:
         await db.commit()
         await db.refresh(organization)
+        logger.info(f"Successfully updated organization {organization.id}. GST: {organization.gst_number}, State Code: {organization.state_code}")
         return organization
     except Exception as e:
         await db.rollback()
+        logger.error(f"Failed to update organization {organization.id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update organization"
+            detail=f"Failed to update organization: {str(e)}"
         )
 
 @router.get("/available-modules")
