@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -28,6 +28,7 @@ import {
   CardContent,
   Switch,
   FormControlLabel,
+  CircularProgress,
 } from "@mui/material";
 import {
   Add,
@@ -37,11 +38,17 @@ import {
   Receipt,
   Percent,
 } from "@mui/icons-material";
+import { getTaxCodes, toggleTaxCodeStatus, TaxCode } from "../../services/masterService";
+import { toast } from "react-toastify";
+
 const TaxCodesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [selectedTaxCode, setSelectedTaxCode] = useState<any>(null);
+  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     tax_code: "",
     tax_name: "",
@@ -51,8 +58,47 @@ const TaxCodesPage: React.FC = () => {
     is_default: false,
     is_active: true,
   });
-  // Actual statutory data for Indian taxes as per law
-  const taxCodes = [
+
+  // Fetch tax codes from API
+  useEffect(() => {
+    const fetchTaxCodes = async () => {
+      try {
+        setLoading(true);
+        const data = await getTaxCodes();
+        setTaxCodes(data);
+        setError(null);
+      } catch (err: any) {
+        console.error("Error fetching tax codes:", err);
+        setError(err?.response?.data?.detail || "Failed to load tax codes");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTaxCodes();
+  }, []);
+
+  // Toggle tax code active status
+  const handleToggleStatus = async (taxCodeId: number, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus;
+      await toggleTaxCodeStatus(taxCodeId, newStatus);
+      // Update local state
+      setTaxCodes(prevCodes =>
+        prevCodes.map(code =>
+          code.id === taxCodeId ? { ...code, is_active: newStatus } : code
+        )
+      );
+      toast.success(`Tax code ${newStatus ? "activated" : "deactivated"} successfully`);
+    } catch (err: any) {
+      console.error("Error toggling tax code status:", err);
+      toast.error(err?.response?.data?.detail || "Failed to update tax code status");
+    }
+  };
+
+  // NOTE: The hardcoded tax codes array has been removed. 
+  // Tax codes are now loaded from the backend API via getTaxCodes()
+  // Keeping the mock data structure below for reference only
+  const _mockTaxCodes = [
     // GST Tax Codes (Goods and Services Tax)
     {
       id: 1,
@@ -356,6 +402,8 @@ const TaxCodesPage: React.FC = () => {
       usage_count: 0,
     },
   ];
+  // End of mock data - only used if API fails or for reference
+
   const taxTypes = [
     { value: "GST", label: "GST (Goods and Services Tax)" },
     { value: "IGST", label: "IGST (Integrated GST)" },
@@ -416,7 +464,7 @@ const TaxCodesPage: React.FC = () => {
       taxCode.tax_type?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   const getTotalUsage = () => {
-    return taxCodes.reduce((sum, taxCode) => sum + taxCode.usage_count, 0);
+    return taxCodes.reduce((sum, taxCode) => sum + (taxCode.usage_count || 0), 0);
   };
   const getAverageRate = () => {
     const activeTaxCodes = taxCodes.filter(
@@ -428,6 +476,18 @@ const TaxCodesPage: React.FC = () => {
     const total = activeTaxCodes.reduce((sum, tc) => sum + tc.tax_rate, 0);
     return (total / activeTaxCodes.length).toFixed(1);
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ mt: 3, display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
+          <CircularProgress size={60} />
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -450,11 +510,17 @@ const TaxCodesPage: React.FC = () => {
             Add Tax Code
           </Button>
         </Box>
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 3 }}>
           Configure tax codes for different tax rates and types. These will be
           used automatically in invoices, purchase orders, and financial
-          calculations.
+          calculations. Toggle the switch to activate/deactivate tax codes.
         </Alert>
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -640,11 +706,17 @@ const TaxCodesPage: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={taxCode.is_active ? "Active" : "Inactive"}
-                        color={taxCode.is_active ? "success" : "default"}
-                        size="small"
-                      />
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Switch
+                          checked={taxCode.is_active}
+                          onChange={() => handleToggleStatus(taxCode.id, taxCode.is_active)}
+                          color="success"
+                          size="small"
+                        />
+                        <Typography variant="body2" color={taxCode.is_active ? "success.main" : "text.secondary"}>
+                          {taxCode.is_active ? "Active" : "Inactive"}
+                        </Typography>
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <IconButton

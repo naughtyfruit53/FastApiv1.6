@@ -128,7 +128,7 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
       reset();
       onClose();
     } catch (err) {
-      console.error(msg, err);
+      console.error("Error adding commission:", err);
     }
   };
   const handleClose = () => {
@@ -404,10 +404,10 @@ const AddCommissionModal: React.FC<AddCommissionModalProps> = ({
                         Calculated Commission Amount
                       </Typography>
                       <Typography variant="h6" color="primary">
-                        ${((baseAmount * commissionRate) / 100).toFixed(2)}
+                        ₹{((baseAmount * commissionRate) / 100).toFixed(2)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {commissionRate}% of ${baseAmount}
+                        {commissionRate}% of ₹{baseAmount}
                       </Typography>
                     </Box>
                   </Grid>

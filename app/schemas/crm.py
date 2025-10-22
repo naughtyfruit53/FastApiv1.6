@@ -365,3 +365,46 @@ class CustomerAnalytics(BaseModel):
     customer_satisfaction_score: float
     period_start: date
     period_end: date
+
+
+# Commission Schemas
+class CommissionBase(BaseModel):
+    sales_person_id: int = Field(..., description="ID of the sales person")
+    sales_person_name: str = Field(..., description="Name of the sales person")
+    person_type: str = Field(..., description="Type: internal or external")
+    opportunity_id: Optional[int] = Field(None, description="Related opportunity ID")
+    lead_id: Optional[int] = Field(None, description="Related lead ID")
+    commission_type: str = Field(..., description="Commission type: percentage, fixed_amount, tiered, bonus")
+    commission_rate: Optional[float] = Field(None, description="Commission rate (for percentage type)")
+    commission_amount: Optional[float] = Field(None, description="Commission amount (for fixed_amount, bonus types)")
+    base_amount: float = Field(..., description="Base amount for commission calculation")
+    commission_date: date = Field(..., description="Date of commission")
+    payment_status: str = Field("pending", description="Payment status: pending, paid, approved, rejected, on_hold")
+    payment_date: Optional[date] = Field(None, description="Date of payment")
+    notes: Optional[str] = Field(None, description="Additional notes")
+
+class CommissionCreate(CommissionBase):
+    pass
+
+class CommissionUpdate(BaseModel):
+    sales_person_name: Optional[str] = None
+    person_type: Optional[str] = None
+    opportunity_id: Optional[int] = None
+    lead_id: Optional[int] = None
+    commission_type: Optional[str] = None
+    commission_rate: Optional[float] = None
+    commission_amount: Optional[float] = None
+    base_amount: Optional[float] = None
+    commission_date: Optional[date] = None
+    payment_status: Optional[str] = None
+    payment_date: Optional[date] = None
+    notes: Optional[str] = None
+
+class Commission(CommissionBase):
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+    
+    model_config = ConfigDict(from_attributes=True)

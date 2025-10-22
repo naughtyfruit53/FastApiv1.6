@@ -335,3 +335,91 @@ export const getNextAccountCode = async (accountType: string): Promise<string> =
     throw error; // Rethrow to handle in caller
   }
 };
+
+// Tax Code Management
+export interface TaxCode {
+  id: number;
+  organization_id: number;
+  company_id?: number;
+  name: string;
+  code: string;
+  tax_type: string;
+  tax_rate: number;
+  is_compound: boolean;
+  is_active: boolean;
+  components?: Record<string, number>;
+  tax_account_id?: number;
+  effective_from?: string;
+  effective_to?: string;
+  description?: string;
+  hsn_sac_codes?: string[];
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface TaxCodeUpdate {
+  name?: string;
+  code?: string;
+  tax_type?: string;
+  tax_rate?: number;
+  is_compound?: boolean;
+  is_active?: boolean;
+  components?: Record<string, number>;
+  tax_account_id?: number;
+  effective_from?: string;
+  effective_to?: string;
+  description?: string;
+  hsn_sac_codes?: string[];
+}
+
+// Get all tax codes
+export const getTaxCodes = async (params?: {
+  tax_type?: string;
+  is_active?: boolean;
+  skip?: number;
+  limit?: number;
+}): Promise<TaxCode[]> => {
+  try {
+    const response = await api.get("/api/v1/master-data/tax-codes", { params });
+    console.log("[getTaxCodes] Response:", response.data);
+    return response.data.items || response.data;
+  } catch (error) {
+    console.error("[getTaxCodes] Error:", error);
+    throw error;
+  }
+};
+
+// Get single tax code
+export const getTaxCode = async (taxCodeId: number): Promise<TaxCode> => {
+  try {
+    const response = await api.get(`/api/v1/master-data/tax-codes/${taxCodeId}`);
+    console.log("[getTaxCode] Response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("[getTaxCode] Error:", error);
+    throw error;
+  }
+};
+
+// Update tax code (including toggle active/inactive)
+export const updateTaxCode = async (
+  taxCodeId: number,
+  data: TaxCodeUpdate
+): Promise<TaxCode> => {
+  try {
+    const response = await api.put(`/api/v1/master-data/tax-codes/${taxCodeId}`, data);
+    console.log("[updateTaxCode] Response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("[updateTaxCode] Error:", error);
+    throw error;
+  }
+};
+
+// Toggle tax code active status
+export const toggleTaxCodeStatus = async (
+  taxCodeId: number,
+  isActive: boolean
+): Promise<TaxCode> => {
+  return updateTaxCode(taxCodeId, { is_active: isActive });
+};

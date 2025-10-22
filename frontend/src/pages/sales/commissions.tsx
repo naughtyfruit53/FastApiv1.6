@@ -33,27 +33,13 @@ import {
 } from "@mui/icons-material";
 import AddCommissionModal from "../../components/AddCommissionModal";
 import { formatCurrency } from "../../utils/currencyUtils";
-interface Commission {
-  id: number;
-  sales_person_id: number;
-  sales_person_name?: string;
-  person_type?: "internal" | "external"; // Internal employee or external partner
-  opportunity_id?: number;
-  lead_id?: number;
-  commission_type: string;
-  commission_rate?: number;
-  commission_amount?: number;
-  base_amount: number;
-  commission_date: string;
-  payment_status: string;
-  notes?: string;
-  created_at: string;
-}
+import commissionService, { Commission } from "../../services/commissionService";
 const CommissionTracking: React.FC = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  // const [filterStatus, setFilterStatus] = useState<string>("all"); // TODO: Add filter UI
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   // Fetch commissions from backend
@@ -61,12 +47,11 @@ const CommissionTracking: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      // TODO: Implement commission service when backend endpoint is available
-      // For now, show empty state
-      setCommissions([]);
-    } catch (err) {
+      const data = await commissionService.getCommissions();
+      setCommissions(data);
+    } catch (err: any) {
       console.error("Error fetching commissions:", err);
-      setError("Failed to load commissions. Please try again.");
+      setError(err?.response?.data?.detail || "Failed to load commissions. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -77,16 +62,7 @@ const CommissionTracking: React.FC = () => {
   const handleAddCommission = async (commissionData: any) => {
     try {
       setAddLoading(true);
-      // TODO: Implement commission creation when backend endpoint is available
-      console.log("Commission data:", commissionData);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // Mock adding to state for now
-      const newCommission: Commission = {
-        id: Date.now(),
-        ...commissionData,
-        created_at: new Date().toISOString(),
-      };
+      const newCommission = await commissionService.createCommission(commissionData);
       setCommissions((prev) => [newCommission, ...prev]);
       setDialogOpen(false);
     } catch (err) {
@@ -102,10 +78,9 @@ const CommissionTracking: React.FC = () => {
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       (commission.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-    // TODO: Define or import filterStatus
-    const matchesStatus =
-      filterStatus === "all" || commission.payment_status === filterStatus;
-    return matchesSearch && matchesStatus;
+    // TODO: Add filter UI and uncomment
+    // const matchesStatus = filterStatus === "all" || commission.payment_status === filterStatus;
+    return matchesSearch; // && matchesStatus;
   });
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.tenant import require_current_organization_id
 from app.models.crm_models import (
     Lead, Opportunity, OpportunityProduct, LeadActivity, OpportunityActivity,
-    SalesPipeline, SalesForecast, LeadStatus, LeadSource, OpportunityStage
+    SalesPipeline, SalesForecast, LeadStatus, LeadSource, OpportunityStage, Commission
 )
 from app.models.customer_models import Customer
 from app.models.user_models import User
@@ -25,7 +25,8 @@ from app.schemas.crm import (
     SalesPipeline as SalesPipelineSchema, SalesPipelineCreate, SalesPipelineUpdate,
     SalesForecast as SalesForecastSchema, SalesForecastCreate, SalesForecastUpdate,
     LeadConversionRequest, LeadConversionResponse,
-    CRMAnalytics, CustomerAnalytics
+    CRMAnalytics, CustomerAnalytics,
+    Commission as CommissionSchema, CommissionCreate, CommissionUpdate
 )
 from app.services.rbac import RBACService
 from app.core.security import get_current_user as core_get_current_user
@@ -1005,4 +1006,212 @@ async def get_customer_analytics(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch customer analytics: {str(e)}"
+        )
+
+
+# Commission Management Endpoints
+@router.get("/commissions", response_model=List[CommissionSchema])
+async def get_commissions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    person_type: Optional[str] = Query(None, description="Filter by person type (internal/external)"),
+    payment_status: Optional[str] = Query(None, description="Filter by payment status"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(core_get_current_user),
+    org_id: int = Depends(require_current_organization_id)
+):
+    """Get all commissions with filtering and pagination"""
+    try:
+        stmt = select(Commission).where(Commission.organization_id == org_id)
+        
+        # Apply filters
+        if person_type:
+            stmt = stmt.where(Commission.person_type == person_type)
+        if payment_status:
+            stmt = stmt.where(Commission.payment_status == payment_status)
+        
+        # Order by commission_date descending
+        stmt = stmt.order_by(desc(Commission.commission_date)).offset(skip).limit(limit)
+        
+        result = await db.execute(stmt)
+        commissions = result.scalars().all()
+        
+        logger.info(f"Retrieved {len(commissions)} commissions for organization {org_id}")
+        return list(commissions)
+        
+    except Exception as e:
+        logger.error(f"Error retrieving commissions for org_id={org_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve commissions: {str(e)}"
+        )
+
+
+@router.get("/commissions/{commission_id}", response_model=CommissionSchema)
+async def get_commission(
+    commission_id: int = Path(..., description="The commission ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(core_get_current_user),
+    org_id: int = Depends(require_current_organization_id)
+):
+    """Get a specific commission by ID"""
+    try:
+        stmt = select(Commission).where(
+            and_(
+                Commission.id == commission_id,
+                Commission.organization_id == org_id
+            )
+        )
+        result = await db.execute(stmt)
+        commission = result.scalar_one_or_none()
+        
+        if not commission:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Commission with ID {commission_id} not found"
+            )
+        
+        return commission
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving commission {commission_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve commission: {str(e)}"
+        )
+
+
+@router.post("/commissions", response_model=CommissionSchema, status_code=status.HTTP_201_CREATED)
+async def create_commission(
+    commission_data: CommissionCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(core_get_current_user),
+    org_id: int = Depends(require_current_organization_id)
+):
+    """Create a new commission record"""
+    try:
+        # Create commission instance
+        commission = Commission(
+            organization_id=org_id,
+            sales_person_id=commission_data.sales_person_id,
+            sales_person_name=commission_data.sales_person_name,
+            person_type=commission_data.person_type,
+            opportunity_id=commission_data.opportunity_id,
+            lead_id=commission_data.lead_id,
+            commission_type=commission_data.commission_type,
+            commission_rate=commission_data.commission_rate,
+            commission_amount=commission_data.commission_amount,
+            base_amount=commission_data.base_amount,
+            commission_date=commission_data.commission_date,
+            payment_status=commission_data.payment_status,
+            payment_date=commission_data.payment_date,
+            notes=commission_data.notes,
+            created_by_id=current_user.id
+        )
+        
+        db.add(commission)
+        await db.commit()
+        await db.refresh(commission)
+        
+        logger.info(f"Created commission {commission.id} for organization {org_id}")
+        return commission
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating commission for org_id={org_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create commission: {str(e)}"
+        )
+
+
+@router.put("/commissions/{commission_id}", response_model=CommissionSchema)
+async def update_commission(
+    commission_id: int = Path(..., description="The commission ID"),
+    commission_data: CommissionUpdate = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(core_get_current_user),
+    org_id: int = Depends(require_current_organization_id)
+):
+    """Update a commission record"""
+    try:
+        # Get existing commission
+        stmt = select(Commission).where(
+            and_(
+                Commission.id == commission_id,
+                Commission.organization_id == org_id
+            )
+        )
+        result = await db.execute(stmt)
+        commission = result.scalar_one_or_none()
+        
+        if not commission:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Commission with ID {commission_id} not found"
+            )
+        
+        # Update fields if provided
+        update_data = commission_data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(commission, field, value)
+        
+        await db.commit()
+        await db.refresh(commission)
+        
+        logger.info(f"Updated commission {commission_id} for organization {org_id}")
+        return commission
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating commission {commission_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update commission: {str(e)}"
+        )
+
+
+@router.delete("/commissions/{commission_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_commission(
+    commission_id: int = Path(..., description="The commission ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(core_get_current_user),
+    org_id: int = Depends(require_current_organization_id)
+):
+    """Delete a commission record"""
+    try:
+        # Get existing commission
+        stmt = select(Commission).where(
+            and_(
+                Commission.id == commission_id,
+                Commission.organization_id == org_id
+            )
+        )
+        result = await db.execute(stmt)
+        commission = result.scalar_one_or_none()
+        
+        if not commission:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Commission with ID {commission_id} not found"
+            )
+        
+        await db.delete(commission)
+        await db.commit()
+        
+        logger.info(f"Deleted commission {commission_id} for organization {org_id}")
+        return None
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error deleting commission {commission_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete commission: {str(e)}"
         )
