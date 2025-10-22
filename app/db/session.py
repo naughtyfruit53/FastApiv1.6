@@ -1,3 +1,5 @@
+# app/db/session.py
+
 """
 Enhanced database session management with automatic rollback and retry logic.
 """
@@ -5,14 +7,18 @@ Enhanced database session management with automatic rollback and retry logic.
 from contextlib import contextmanager, asynccontextmanager
 from typing import Generator, Callable, Any, Optional, Type, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError, TimeoutError
-from app.core.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal, sync_engine  # Import sync_engine for sync session
 from app.core.logging import get_logger, log_database_operation
 import time
 import logging
 import asyncio
 
 logger = get_logger("session")
+
+# Add sync SessionLocal
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 class SessionManager:
     """Enhanced session manager with automatic error handling and rollback"""
@@ -282,8 +288,8 @@ async def get_pool_status() -> dict:
         Dictionary with pool status information
     """
     try:
-        from app.core.database import engine
-        pool = engine.pool
+        from app.core.database import async_engine
+        pool = async_engine.pool
         
         return {
             "pool_size": pool.size(),

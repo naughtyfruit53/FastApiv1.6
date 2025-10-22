@@ -5,8 +5,8 @@ RBAC service layer for Service CRM role-based access control
 """
 
 from typing import List, Optional, Dict, Set
-from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, or_, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status, Depends
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class RBACService:
     """Service class for Role-Based Access Control operations"""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
     
     # Permission Management
@@ -325,7 +325,12 @@ class RBACService:
                 logger.debug(f"Granted permission '{permission_name}' to super_admin user {user_id}")
                 return True
             if user.role == 'org_admin':
-                if permission_name.startswith('crm_') or permission_name == 'crm_admin' or permission_name.startswith('mail:'):
+                # Extended fallback permissions for org_admin
+                if (permission_name.startswith('crm_') or 
+                    permission_name == 'crm_admin' or 
+                    permission_name.startswith('mail:') or 
+                    permission_name in ['crm_commission_read', 'crm_commission_create', 
+                                      'crm_commission_update', 'crm_commission_delete']):
                     logger.debug(f"Granted permission '{permission_name}' to org_admin user {user_id} via fallback")
                     return True
         
@@ -364,7 +369,9 @@ class RBACService:
                     or_(
                         ServicePermission.name.like('crm_%'),
                         ServicePermission.name == 'crm_admin',
-                        ServicePermission.name.like('mail:%')
+                        ServicePermission.name.like('mail:%'),
+                        ServicePermission.name.in_(['crm_commission_read', 'crm_commission_create', 
+                                                  'crm_commission_update', 'crm_commission_delete'])
                     ),
                     ServicePermission.is_active == True
                 )
@@ -478,6 +485,10 @@ class RBACService:
             ("crm_settings_update", "Update Settings", "Modify CRM settings", "crm_settings", "update"),
             ("crm_import", "Import Data", "Import CRM data", "crm", "import"),
             ("crm_export", "Export Data", "Export CRM data", "crm", "export"),
+            ("crm_commission_read", "Read Commissions", "View commissions", "crm_commission", "read"),
+            ("crm_commission_create", "Create Commissions", "Create new commissions", "crm_commission", "create"),
+            ("crm_commission_update", "Update Commissions", "Modify commissions", "crm_commission", "update"),
+            ("crm_commission_delete", "Delete Commissions", "Delete commissions", "crm_commission", "delete"),
         ]
         
         created_permissions = []
@@ -526,7 +537,8 @@ class RBACService:
                     "crm_activity_read", "crm_activity_create", "crm_activity_update",
                     "crm_analytics_read", "crm_analytics_export",
                     "crm_settings_read", "crm_settings_update",
-                    "crm_import", "crm_export"
+                    "crm_import", "crm_export",
+                    "crm_commission_read", "crm_commission_create", "crm_commission_update",
                 ]
             },
             {
@@ -544,7 +556,8 @@ class RBACService:
                     "crm_lead_read", "crm_lead_create", "crm_lead_update",
                     "crm_opportunity_read", "crm_opportunity_update",
                     "crm_activity_read", "crm_activity_create",
-                    "crm_analytics_read"
+                    "crm_analytics_read",
+                    "crm_commission_read",
                 ]
             },
             {
@@ -562,7 +575,8 @@ class RBACService:
                     "crm_lead_read",
                     "crm_opportunity_read",
                     "crm_activity_read",
-                    "crm_analytics_read"
+                    "crm_analytics_read",
+                    "crm_commission_read",
                 ]
             }
         ]
@@ -690,7 +704,7 @@ class RBACService:
 
 def require_permission(permission: str):
     """Dependency to check if current user has a specific permission"""
-    async def dependency(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    async def dependency(current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
         rbac = RBACService(db)
         if not await rbac.user_has_service_permission(current_user.id, permission):
             raise HTTPException(
@@ -711,7 +725,7 @@ class PermissionChecker:
     def __init__(self, allowed_permissions: List[str]):
         self.allowed_permissions = allowed_permissions
 
-    async def __call__(self, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    async def __call__(self, current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
         rbac = RBACService(db)
         for perm in self.allowed_permissions:
             if await rbac.user_has_service_permission(current_user.id, perm):

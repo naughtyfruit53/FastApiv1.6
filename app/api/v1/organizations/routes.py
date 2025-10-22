@@ -18,7 +18,6 @@ from app.schemas.organization import (
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.core.logging import log_license_creation, log_email_operation
-from app.services.rbac import RBACService
 from .services import OrganizationService
 from .user_routes import user_router
 from .invitation_routes import invitation_router
@@ -28,6 +27,11 @@ from .settings_routes import router as settings_router
 from app.services.otp_service import OTPService
 from app.schemas.reset import OTPRequest, OTPVerify
 from app.scripts.seed_default_coa_accounts import create_default_accounts  # Fixed import
+
+# Import RBACService lazily to avoid circular import
+def get_rbac(db: AsyncSession = Depends(get_db)):
+    from app.services.rbac import RBACService
+    return RBACService(db)
 
 # Import RBAC models from rbac_models
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole

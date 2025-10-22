@@ -105,14 +105,6 @@ const AccountManagement: React.FC = () => {
     };
     fetchAccounts();
   }, []);
-        setError("Failed to load accounts");
-        console.error("Error fetching accounts:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAccounts();
-  }, []);
   const filteredAccounts = accounts.filter((account) => {
     const matchesSearch =
       account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

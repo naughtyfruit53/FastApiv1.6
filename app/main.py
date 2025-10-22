@@ -10,6 +10,9 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
 from app.core.seed_super_admin import seed_super_admin
+from app.db.session import SessionLocal
+import concurrent.futures
+from app.models import Organization
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +174,8 @@ def include_minimal_routers():
 
     # Include v1 API router (includes chart_of_accounts, erp, etc.)
     try:
-        from app.api.v1 import api_v1_router
+        from app.api.v1 import api_v1_router, register_subrouters
+        register_subrouters()
         routers.append((api_v1_router, "/api/v1", ["v1-api"]))
     except Exception as e:
         logger.error(f"Failed to import v1 API router: {str(e)}")
@@ -193,6 +197,52 @@ async def log_request_headers(request: Request, call_next):
     response = await call_next(request)
     return response
 
+# Initialize default permissions asynchronously
+async def init_default_permissions():
+    from app.services.rbac import RBACService  # Lazy import to avoid circular import
+    async with AsyncSessionLocal() as db:
+        try:
+            rbac = RBACService(db)
+            await rbac.initialize_default_permissions()
+            logger.info("Default permissions initialized")
+        except Exception as e:
+            logger.error(f"Error initializing default permissions: {str(e)}")
+
+# Initialize roles and assign to org_admins for existing organizations asynchronously
+async def init_org_roles():
+    from app.services.rbac import RBACService  # Lazy import to avoid circular import
+    async with AsyncSessionLocal() as db:
+        try:
+            rbac = RBACService(db)
+            orgs = (await db.execute(select(Organization))).scalars().all()
+            for org in orgs:
+                roles = await rbac.get_roles(org.id)
+                if not roles:
+                    await rbac.initialize_default_roles(org.id)
+                    logger.info(f"Initialized default roles for organization {org.id}: {org.name}")
+                else:
+                    logger.debug(f"Roles already exist for organization {org.id}")
+                
+                # Assign 'admin' role to org_admins if not assigned
+                admin_role = (await db.execute(select(ServiceRole).filter_by(organization_id=org.id, name="admin"))).scalars().first()
+                if admin_role:
+                    org_admins = (await db.execute(select(User).filter_by(organization_id=org.id, role="org_admin"))).scalars().all()
+                    for admin in org_admins:
+                        existing = (await db.execute(select(UserServiceRole).filter_by(user_id=admin.id, role_id=admin_role.id))).scalars().first()
+                        if not existing:
+                            assignment = UserServiceRole(
+                                user_id=admin.id, 
+                                role_id=admin_role.id, 
+                                organization_id=org.id,
+                                is_active=True
+                            )
+                            db.add(assignment)
+                            logger.info(f"Assigned admin role to user {admin.email} in org {org.id}")
+                    await db.commit()
+        except Exception as e:
+            logger.error(f"Error initializing organization roles: {str(e)}")
+            await db.rollback()
+
 # Include routers and mounts on startup
 @app.on_event("startup")
 async def startup_event():
@@ -202,15 +252,12 @@ async def startup_event():
         await create_tables()
         logger.info("Database tables created successfully")
         from app.core.seed_super_admin import check_database_schema_updated
-        db = AsyncSessionLocal()
-        try:
+        async with AsyncSessionLocal() as db:
             if await check_database_schema_updated(db):
                 await seed_super_admin(db)
                 logger.info("Super admin seeding completed")
             else:
                 logger.warning("Database schema is not updated. Run 'alembic upgrade head' to enable super admin seeding.")
-        finally:
-            await db.close()
         include_minimal_routers()
         # Conditionally mount static directories
         if os.path.exists("app/static"):
@@ -219,6 +266,11 @@ async def startup_event():
         if os.path.exists("Uploads"):
             app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
             logger.info("Mounted /Uploads directory")
+        
+        # Initialize default permissions and org roles
+        await init_default_permissions()
+        await init_org_roles()
+        
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         raise

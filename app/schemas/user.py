@@ -113,6 +113,7 @@ class UserInDB(UserBase):
     assigned_modules: Optional[Dict[str, bool]] = None  # Module access control for managers
     reporting_manager_id: Optional[int] = None  # For executives
     sub_module_permissions: Optional[Dict[str, List[str]]] = None  # For executives
+    is_company_admin: bool = False  # Added is_company_admin field
     
     model_config = ConfigDict(from_attributes = True, use_enum_values=True)  # Changed orm_mode to from_attributes
 

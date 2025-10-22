@@ -94,6 +94,12 @@ class Permission:
     # Voucher management permissions
     VIEW_VOUCHERS = "view_vouchers"
     MANAGE_VOUCHERS = "manage_vouchers"
+    
+    # Commission Permissions
+    CRM_COMMISSION_READ = "crm_commission_read"
+    CRM_COMMISSION_CREATE = "crm_commission_create"
+    CRM_COMMISSION_UPDATE = "crm_commission_update"
+    CRM_COMMISSION_DELETE = "crm_commission_delete"
 
 
 class PermissionChecker:

@@ -1,5 +1,3 @@
-# Revised: v1/app/core/seed_super_admin.py
-
 """
 Super Admin Seeding Logic (Supabase Auth integrated)
 
@@ -14,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import select, text
 from app.core.database import AsyncSessionLocal, Base
-from app.models import User
+from app.models.user_models import User
 from app.schemas.user import UserRole
 from app.core.security import get_password_hash
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError

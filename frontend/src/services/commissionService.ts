@@ -60,19 +60,19 @@ const commissionService = {
     person_type?: string;
     payment_status?: string;
   }): Promise<Commission[]> => {
-    const response = await api.get("/api/v1/crm/commissions", { params });
+    const response = await api.get("/crm/commissions", { params });
     return response.data;
   },
 
   // Get single commission
   getCommission: async (commissionId: number): Promise<Commission> => {
-    const response = await api.get(`/api/v1/crm/commissions/${commissionId}`);
+    const response = await api.get(`/crm/commissions/${commissionId}`);
     return response.data;
   },
 
   // Create commission
   createCommission: async (data: CommissionCreate): Promise<Commission> => {
-    const response = await api.post("/api/v1/crm/commissions", data);
+    const response = await api.post("/crm/commissions", data);
     return response.data;
   },
 
@@ -81,13 +81,13 @@ const commissionService = {
     commissionId: number,
     data: CommissionUpdate
   ): Promise<Commission> => {
-    const response = await api.put(`/api/v1/crm/commissions/${commissionId}`, data);
+    const response = await api.put(`/crm/commissions/${commissionId}`, data);
     return response.data;
   },
 
   // Delete commission
   deleteCommission: async (commissionId: number): Promise<void> => {
-    await api.delete(`/api/v1/crm/commissions/${commissionId}`);
+    await api.delete(`/crm/commissions/${commissionId}`);
   },
 };
 

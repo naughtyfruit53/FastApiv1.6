@@ -21,7 +21,6 @@ from app.schemas.organization import (
 )
 from app.core.security import get_password_hash
 from app.core.logging import log_license_creation, log_email_operation
-from app.services.rbac import RBACService
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
 from app.services.system_email_service import system_email_service
 
@@ -249,6 +248,8 @@ class OrganizationService:
             db.add(super_admin_user)
             await db.flush()
             
+            # Lazy import to avoid circular import
+            from app.services.rbac import RBACService
             rbac_service = RBACService(db)
             logger.info(f"Initializing RBAC for organization {organization.id}")
             permissions = await rbac_service.initialize_default_permissions()

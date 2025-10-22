@@ -91,11 +91,11 @@ class OrganizationService:
         rbac_service.initialize_default_permissions()
         rbac_service.initialize_default_roles(org.id)
         
-        # Assign super admin role
+        # Assign admin role
         RoleManagementService.assign_role_to_user(
             db=db,
             user_id=super_admin.id,
-            role_name="super_admin",
+            role_name="admin",
             organization_id=org.id
         )
         

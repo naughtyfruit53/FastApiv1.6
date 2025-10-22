@@ -7,13 +7,12 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-import logging
-
+from sqlalchemy import select, and_
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.user_models import User, PlatformUser
+from app.models.user_models import User, PlatformUser, UserCompany
 from app.schemas.user import UserInDB, PlatformUserInDB
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -141,8 +140,24 @@ async def get_current_user(db: AsyncSession = Depends(get_db), token: str = Depe
             logger.debug("User not found in DB, raising credentials_exception")
             raise credentials_exception
 
+        # Add is_company_admin by checking UserCompany
+        is_company_admin = False
+        if user.organization_id:
+            stmt = select(UserCompany).where(
+                and_(
+                    UserCompany.user_id == user.id,
+                    UserCompany.is_company_admin == True
+                )
+            )
+            result = await db.execute(stmt)
+            admin_assignment = result.scalar_one_or_none()
+            is_company_admin = admin_assignment is not None
+
+        user_in_db = UserInDB.model_validate(user)
+        user_in_db.is_company_admin = is_company_admin
+
         logger.debug("Authenticated user: %s", user.email)
-        return UserInDB.model_validate(user)
+        return user_in_db
 
 async def get_current_active_user(current_user: Union[UserInDB, PlatformUserInDB] = Depends(get_current_user)):
     if not current_user.is_active:

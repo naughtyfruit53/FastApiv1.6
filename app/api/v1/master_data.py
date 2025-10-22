@@ -17,7 +17,6 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.core.tenant import validate_company_setup
 from app.core.org_restrictions import require_current_organization_id
-from app.services.rbac import require_permission, RBACService
 from app.models.user_models import User
 from app.models.master_data_models import (
     Category, Unit, TaxCode, PaymentTermsExtended
@@ -35,6 +34,19 @@ from app.services.master_service import search_hsn_codes  # Added import for HSN
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Lazy imports to avoid circular imports
+def get_rbac(db: AsyncSession = Depends(get_db)):
+    from app.services.rbac import RBACService
+    return RBACService(db)
+
+def require_permission(perm: str):
+    async def dependency(current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+        rbac = get_rbac(db)
+        if not await rbac.user_has_service_permission(current_user.id, perm):
+            raise HTTPException(status_code=403, detail=f"Insufficient permissions: {perm} required")
+        return current_user
+    return dependency
 
 
 class MasterDataService:

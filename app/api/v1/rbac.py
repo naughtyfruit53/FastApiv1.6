@@ -7,6 +7,7 @@ Service CRM RBAC API endpoints for role and permission management
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.models import User
@@ -28,6 +29,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Permission Assignment Request Schema
+class PermissionAssignmentRequest(BaseModel):
+    permission_names: List[str]
+
+# Permission Assignment Response Schema
+class PermissionAssignmentResponse(BaseModel):
+    success: bool
+    message: str
+    assigned_permissions: List[str]
+    failed_permissions: List[str]
 
 # Permission Management Endpoints
 @router.get("/permissions", response_model=List[ServicePermissionInDB])
@@ -102,7 +114,7 @@ async def get_organization_roles(
             )
         
         logger.info(f"User {current_user.id} requesting roles for organization {organization_id}")
-        roles = await rbac_service.get_roles(organization_id, is_active=is_active, exclude_super_admin=not current_user.is_super_admin)
+        roles = await rbac_service.get_roles(organization_id, is_active=is_active)
         return roles
     except HTTPException:
         raise
@@ -395,6 +407,92 @@ async def get_users_with_role(
         ))
     
     return result
+
+@router.post("/users/{user_id}/permissions", response_model=PermissionAssignmentResponse)
+async def assign_permissions_to_user(
+    user_id: int,
+    assignment: PermissionAssignmentRequest,
+    rbac_service: RBACService = Depends(get_rbac_service),
+    current_user: User = Depends(require_role_management_permission),
+    db: AsyncSession = Depends(get_db)
+):
+    """Assign specific permissions to a user by creating a custom role"""
+    try:
+        logger.info(f"User {current_user.id} assigning permissions to user {user_id}")
+        
+        # Validate user exists
+        user_result = await db.execute(select(User).filter_by(id=user_id))
+        user = user_result.scalars().first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Create or find a custom role for the user
+        custom_role_name = f"custom_{user_id}_{current_user.id}"
+        role_result = await db.execute(
+            select(ServiceRole).filter_by(organization_id=user.organization_id, name=custom_role_name)
+        )
+        custom_role = role_result.scalars().first()
+        
+        if not custom_role:
+            role_create = ServiceRoleCreate(
+                name=custom_role_name,
+                display_name=f"Custom Role for User {user_id}",
+                description="Auto-generated custom role for direct permission assignments",
+                organization_id=user.organization_id,
+                permission_ids=[]
+            )
+            custom_role = await rbac_service.create_role(role_create, created_by_user_id=current_user.id)
+        
+        # Validate and assign permissions
+        permission_ids = []
+        failed_permissions = []
+        for perm_name in assignment.permission_names:
+            perm_result = await db.execute(
+                select(ServicePermission).filter_by(name=perm_name, is_active=True)
+            )
+            permission = perm_result.scalars().first()
+            if permission:
+                permission_ids.append(permission.id)
+            else:
+                failed_permissions.append(perm_name)
+        
+        if permission_ids:
+            # Update role with new permissions
+            role_update = ServiceRoleUpdate(
+                name=custom_role.name,
+                display_name=custom_role.display_name,
+                description=custom_role.description,
+                permission_ids=permission_ids
+            )
+            await rbac_service.update_role(custom_role.id, role_update, organization_id=user.organization_id)
+        
+        # Assign the custom role to the user if not already assigned
+        existing_assignment = await db.execute(
+            select(UserServiceRole).filter_by(user_id=user_id, role_id=custom_role.id)
+        )
+        assignment_record = existing_assignment.scalars().first()
+        
+        if not assignment_record:
+            await rbac_service.assign_role_to_user(user_id, custom_role.id, assigned_by_id=current_user.id)
+        elif not assignment_record.is_active:
+            assignment_record.is_active = True
+            await db.commit()
+        
+        return PermissionAssignmentResponse(
+            success=len(failed_permissions) == 0,
+            message=f"Assigned {len(permission_ids)} permissions to user {user_id}",
+            assigned_permissions=[perm_name for perm_name in assignment.permission_names if perm_name not in failed_permissions],
+            failed_permissions=failed_permissions
+        )
+    except HTTPException as e:
+        logger.error(f"HTTP error assigning permissions to user {user_id}: {e.detail}")
+        raise
+    except Exception as e:
+        logger.error(f"Error assigning permissions to user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign permissions: {str(e)}"
+        )
 
 # Permission Checking Endpoints
 @router.post("/permissions/check", response_model=PermissionCheckResponse)
