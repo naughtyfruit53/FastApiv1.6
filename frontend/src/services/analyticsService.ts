@@ -116,4 +116,87 @@ export const analyticsService = {
       );
     }
   },
+
+  // ===========================================
+  // ADVANCED ANALYTICS ENDPOINTS
+  // ===========================================
+
+  getAdvancedMetrics: async (metricType: string, timeRange?: string) => {
+    try {
+      const response = await api.get(`/analytics/advanced/${metricType}`, {
+        params: { time_range: timeRange },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get advanced metrics");
+    }
+  },
+
+  getTrendAnalysis: async (metric: string, period: string = '30d') => {
+    try {
+      const response = await api.get('/analytics/trends', {
+        params: { metric, period },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get trend analysis");
+    }
+  },
+
+  getComparativeAnalysis: async (metrics: string[], compareBy: string = 'period') => {
+    try {
+      const response = await api.get('/analytics/comparative', {
+        params: { metrics: metrics.join(','), compare_by: compareBy },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get comparative analysis");
+    }
+  },
+
+  getCustomReport: async (reportConfig: {
+    metrics: string[];
+    dimensions: string[];
+    filters?: Record<string, any>;
+    date_range?: { start: string; end: string };
+  }) => {
+    try {
+      const response = await api.post('/analytics/custom-report', reportConfig);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to generate custom report");
+    }
+  },
+
+  exportAnalytics: async (format: 'csv' | 'excel' | 'pdf', dataType: string) => {
+    try {
+      const response = await api.get(`/analytics/export/${dataType}`, {
+        params: { format },
+        responseType: 'blob',
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to export analytics");
+    }
+  },
+
+  getRealtimeMetrics: async () => {
+    try {
+      const response = await api.get('/analytics/realtime');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get realtime metrics");
+    }
+  },
+
+  getPredictiveInsights: async (metricType: string, horizon: number = 30) => {
+    try {
+      const response = await api.get('/analytics/predictive', {
+        params: { metric_type: metricType, horizon },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get predictive insights");
+    }
+  },
 };
