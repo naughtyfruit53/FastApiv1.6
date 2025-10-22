@@ -27,7 +27,14 @@ class ServiceModule(str, Enum):
     CRM_ADMIN = "crm_admin"
     CUSTOMER_FEEDBACK = "customer_feedback"
     SERVICE_CLOSURE = "service_closure"
-    MAIL = "mail"  # Added for mail permissions
+    MAIL = "mail"
+    CRM_LEAD = "crm_lead"
+    CRM_OPPORTUNITY = "crm_opportunity"
+    CRM_ACTIVITY = "crm_activity"
+    CRM_ANALYTICS = "crm_analytics"
+    CRM_SETTINGS = "crm_settings"
+    CRM = "crm"
+    CRM_COMMISSION = "crm_commission"
     
     @classmethod
     def is_valid(cls, value: str) -> bool:
@@ -51,6 +58,8 @@ class ServiceAction(str, Enum):
     CLOSE = "close"  # For service closure
     COMPOSE = "compose"  # Added for mail compose
     SYNC = "sync"  # Added for mail sync
+    CONVERT = "convert"  # Added for lead conversion
+    IMPORT = "import"  # Added for data import
 
 
 # Service Permission Schemas

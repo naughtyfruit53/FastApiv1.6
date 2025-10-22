@@ -315,6 +315,7 @@ class RBACService:
     
     async def user_has_service_permission(self, user_id: int, permission_name: str) -> bool:
         """Check if user has a specific service permission through their roles"""
+        await self.initialize_default_permissions()
         logger.debug(f"Checking permission '{permission_name}' for user_id {user_id}")
         
         user_result = await self.db.execute(select(User).filter_by(id=user_id))
@@ -356,6 +357,7 @@ class RBACService:
     
     async def get_user_service_permissions(self, user_id: int) -> Set[str]:
         """Get all service permissions for a user"""
+        await self.initialize_default_permissions()
         logger.debug(f"Fetching permissions for user_id {user_id}")
         
         user_result = await self.db.execute(select(User).filter_by(id=user_id))
@@ -602,7 +604,7 @@ class RBACService:
         
         return created_roles
     
-    # Company-scoped permission methods for multi-company support
+    # Company-scoped RBAC
     async def user_has_company_access(self, user_id: int, company_id: int) -> bool:
         """Check if user has access to a specific company"""
         from app.models.user_models import UserCompany
