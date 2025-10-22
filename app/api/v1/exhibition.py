@@ -17,6 +17,7 @@ from app.schemas.exhibition import (
     CardScanWithProspect, BulkCardScanResponse
 )
 from app.services.exhibition_service import exhibition_service
+from app.services.rbac import RBACService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,16 @@ async def create_exhibition_event(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new exhibition event"""
+    
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "exhibition_event_create" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'exhibition_event_create' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to create exhibition events"
+        )
     
     org_id = require_current_organization_id(current_user)
     
@@ -55,6 +66,16 @@ async def get_exhibition_events(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get exhibition events for the current organization"""
+    
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "exhibition_event_read" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'exhibition_event_read' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to view exhibition events"
+        )
     
     org_id = require_current_organization_id(current_user)
     
@@ -145,6 +166,16 @@ async def scan_business_card(
     current_user: User = Depends(get_current_active_user)
 ):
     """Scan a business card for an exhibition event"""
+    
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "exhibition_scan_create" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'exhibition_scan_create' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to scan business cards"
+        )
     
     org_id = require_current_organization_id(current_user)
     
@@ -252,6 +283,16 @@ async def create_prospect(
 ):
     """Create a new exhibition prospect"""
     
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "exhibition_prospect_create" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'exhibition_prospect_create' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to create exhibition prospects"
+        )
+    
     org_id = require_current_organization_id(current_user)
     
     prospect = await exhibition_service.create_prospect(
@@ -276,6 +317,16 @@ async def get_prospects(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get exhibition prospects for the current organization"""
+    
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "exhibition_prospect_read" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'exhibition_prospect_read' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to view exhibition prospects"
+        )
     
     org_id = require_current_organization_id(current_user)
     
