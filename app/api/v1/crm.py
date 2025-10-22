@@ -1065,10 +1065,10 @@ async def get_commissions(
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
     if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
-        logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission")
+        logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission. User permissions: {user_permissions}")
         raise HTTPException(
             status_code=403,
-            detail="Insufficient permissions to view commissions"
+            detail="Insufficient permissions to view commissions. Required permission: 'crm_commission_read'. Please contact your administrator to request access."
         )
     
     try:
@@ -1109,10 +1109,10 @@ async def get_commission(
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
     if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
-        logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission")
+        logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission. User permissions: {user_permissions}")
         raise HTTPException(
             status_code=403,
-            detail="Insufficient permissions to view commission"
+            detail="Insufficient permissions to view commission details. Required permission: 'crm_commission_read'. Please contact your administrator to request access."
         )
     
     try:

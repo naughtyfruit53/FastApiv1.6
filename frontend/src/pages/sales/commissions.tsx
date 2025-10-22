@@ -51,7 +51,17 @@ const CommissionTracking: React.FC = () => {
       setCommissions(data);
     } catch (err: any) {
       console.error("Error fetching commissions:", err);
-      setError(err?.response?.data?.detail || "Failed to load commissions. Please try again.");
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      
+      if (status === 403) {
+        setError(
+          "You do not have permission to view commission tracking. " +
+          "Please contact your administrator to request 'crm_commission_read' permission."
+        );
+      } else {
+        setError(detail || "Failed to load commissions. Please try again or contact support if the issue persists.");
+      }
     } finally {
       setLoading(false);
     }
