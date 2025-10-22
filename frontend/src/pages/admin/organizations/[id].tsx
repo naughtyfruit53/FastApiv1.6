@@ -23,7 +23,7 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
-import axios from "axios";
+import api from "../../../utils/api";  // Import the axios api instance
 interface Organization {
   id: number;
   name: string;
@@ -86,34 +86,15 @@ const OrganizationDetailPage: React.FC = () => {
   const fetchOrganization = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/v1/organizations/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Handle unauthorized - perhaps redirect to login
-          router.push("/login");
-          return;
-        }
-        if (response.status === 404) {
-          setError("Organization not found");
-          return;
-        }
-        throw new Error(`Failed to fetch organization: ${response.statusText}`);
-      }
-      const data = await response.json();
+      const response = await api.get(`/organizations/${id}`);
+      const data = response.data;
       setOrganization(data);
       setEditedOrg(data);
       setError(null);
-    } catch (err) {
-      console.error(msg, err);
+    } catch (err: any) {
+      console.error(err);
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load organization details",
+        err.response?.data?.detail || "Failed to load organization details",
       );
     } finally {
       setLoading(false);
@@ -130,55 +111,32 @@ const OrganizationDetailPage: React.FC = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/v1/organizations/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(editedOrg),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to update organization");
-      }
-      const updatedOrg = await response.json();
+      const response = await api.put(`/organizations/${id}`, editedOrg);
+      const updatedOrg = response.data;
       setOrganization(updatedOrg);
       setEditing(false);
       toast.success("Organization updated successfully");
     } catch (err) {
       toast.error("Failed to update organization");
-      console.error(msg, err);
+      console.error(err);
     } finally {
       setSaving(false);
     }
   };
   const handleDelete = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/v1/organizations/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        let errorMessage = "Failed to delete organization";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.detail || errorData.message || errorMessage;
-        } catch (jsonError) {
-          // If JSON parsing fails, use status text
-          errorMessage = response.statusText || errorMessage;
-        }
-        toast.error(errorMessage);
-        return;
-      }
+      const response = await api.delete(`/organizations/${id}`);
       toast.success("Organization deleted successfully");
       router.push("/admin/license-management");
     } catch (error: any) {
-      toast.error(error.message);
-      console.error(msg, err);
+      let errorMessage = "Failed to delete organization";
+      if (error.response?.data) {
+        errorMessage = error.response.data.detail || error.response.data.message || errorMessage;
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+      toast.error(errorMessage);
+      console.error(error);
     } finally {
       setOpenDeleteDialog(false);
     }
@@ -199,13 +157,13 @@ const OrganizationDetailPage: React.FC = () => {
     if (value.length === 6 && editing) {
       setPincodeLoading(true);
       try {
-        const response = await axios.get(`/api/v1/pincode/lookup/${value}`);
+        const response = await api.get(`/pincode/lookup/${value}`);
         const { city, state, state_code } = response.data;
         handleInputChange("city", city);
         handleInputChange("state", state);
         handleInputChange("state_code", state_code);
       } catch (err) {
-        console.error(msg, err);
+        console.error(err);
         toast.error("Failed to autofill city and state from PIN code");
       } finally {
         setPincodeLoading(false);
@@ -214,29 +172,19 @@ const OrganizationDetailPage: React.FC = () => {
   };
   const handleResetPassword = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/v1/password/admin-reset`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ user_email: organization?.primary_email }),
+      const response = await api.post(`/password/admin-reset`, {
+        user_email: organization?.primary_email
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to reset password");
-      }
-      const data = await response.json();
+      const data = response.data;
       setResetPassword(data.new_password);
       setOpenResetDialog(false);
       setResetSnackbarOpen(true);
       toast.success("Password reset successfully");
-    } catch (err) {
+    } catch (err: any) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to reset password",
+        err.response?.data?.detail || "Failed to reset password",
       );
-      console.error(msg, err);
+      console.error(err);
     }
   };
   const getStatusColor = (

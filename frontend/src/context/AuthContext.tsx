@@ -50,6 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     );
     try {
       const currentToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+      // Validate token format before proceeding
+      if (currentToken === 'null' || (currentToken && currentToken.split('.').length !== 3)) {
+        console.log('[AuthProvider] Invalid token format detected - clearing storage');
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+        throw new Error('Invalid token format');
+      }
       if (!currentToken) {
         console.log("[AuthProvider] No token found in localStorage");
         throw new Error("No token found");
@@ -260,7 +267,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       userRole: loginResponse.user_role,
       isSuperAdmin: loginResponse.user?.is_super_admin,
       hasOrgId: !!loginResponse.user.organization_id,
-      mustChangePassword: loginResponse.user.must_change_password,
       timestamp: new Date().toISOString(),
     });
     localStorage.setItem(ACCESS_TOKEN_KEY, loginResponse.access_token);

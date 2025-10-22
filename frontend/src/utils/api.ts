@@ -54,7 +54,14 @@ api.interceptors.request.use(
     );
 
     if (token && !isPublic) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Validate token format: not 'null' and has exactly 3 parts (header.payload.signature)
+      if (token !== 'null' && token.split('.').length === 3) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.warn('[utils/api] Invalid token format detected - clearing storage');
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(LEGACY_TOKEN_KEY);
+      }
     }
     // Organization context is derived from backend session, not headers
     return config;

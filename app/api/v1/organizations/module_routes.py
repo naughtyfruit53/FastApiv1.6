@@ -1,7 +1,7 @@
 # app/api/v1/organizations/module_routes.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict
 from datetime import datetime, timedelta
 import logging
@@ -9,12 +9,15 @@ import logging
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
+from app.api.v1.auth import get_current_active_user
 from app.models import Organization, User, Product, Customer, Vendor, Stock
 from app.schemas.user import UserRole
 from app.schemas import OrganizationUpdate, OrganizationInDB
 import logging
 from app.utils.supabase_auth import supabase_auth_service
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole  # Changed to absolute from rbac_models
+
+from sqlalchemy import select, delete, func  # Added imports for async queries
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,7 @@ module_router = router  # Alias for backward compatibility
 @router.get("/{organization_id:int}/modules")
 async def get_organization_modules(
     organization_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get organization's enabled modules"""
@@ -34,7 +37,8 @@ async def get_organization_modules(
             detail="Access denied to this organization"
         )
   
-    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    result = await db.execute(select(Organization).filter(Organization.id == organization_id))
+    organization = result.scalars().first()
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -57,7 +61,7 @@ async def get_organization_modules(
 async def update_organization_modules(
     organization_id: int,
     modules_data: dict,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Update organization's enabled modules (super admin only)"""
@@ -67,7 +71,8 @@ async def update_organization_modules(
             detail="Only super administrators can modify organization modules"
         )
   
-    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    result = await db.execute(select(Organization).filter(Organization.id == organization_id))
+    organization = result.scalars().first()
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -84,13 +89,13 @@ async def update_organization_modules(
                 )
       
         organization.enabled_modules = modules_data.get("enabled_modules", {})
-        db.commit()
+        await db.commit()
       
         logger.info(f"Organization {organization_id} modules updated by {current_user.email}")
         return {"message": "Organization modules updated successfully", "enabled_modules": organization.enabled_modules}
       
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating organization modules: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -100,7 +105,7 @@ async def update_organization_modules(
 @router.get("/{organization_id:int}", response_model=OrganizationInDB)
 async def get_organization(
     organization_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get organization by ID"""
@@ -110,7 +115,8 @@ async def get_organization(
             detail="Access denied to this organization"
         )
   
-    org = db.query(Organization).filter(Organization.id == organization_id).first()
+    result = await db.execute(select(Organization).filter(Organization.id == organization_id))
+    org = result.scalars().first()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -123,7 +129,7 @@ async def get_organization(
 async def update_organization(
     organization_id: int,
     org_update: OrganizationUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Update organization"""
@@ -134,7 +140,8 @@ async def update_organization(
                 detail="Insufficient permissions to update this organization"
             )
   
-    org = db.query(Organization).filter(Organization.id == organization_id).first()
+    result = await db.execute(select(Organization).filter(Organization.id == organization_id))
+    org = result.scalars().first()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -150,19 +157,20 @@ async def update_organization(
             current_date = datetime.now()
             yy = current_date.strftime('%y')
             mm = current_date.strftime('%m')
-            total_users = db.query(func.count(User.id)).scalar() or 0
-            seq_num = total_users + 1
+            result = await db.execute(select(func.count(User.id)))
+            yy = result.scalar() or 0
+            seq_num = yy + 1
             tqnnnn = f"tq{seq_num:04d}"
             org.org_code = f"{yy}/{mm}-({org.max_users})- {tqnnnn}"
       
-        db.commit()
-        db.refresh(org)
+        await db.commit()
+        await db.refresh(org)
       
         logger.info(f"Updated organization {org.name} by user {current_user.email}")
         return org
       
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating organization: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -172,7 +180,7 @@ async def update_organization(
 @router.delete("/{organization_id:int}")
 async def delete_organization(
     organization_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Delete organization (Super admin only)"""
@@ -182,7 +190,8 @@ async def delete_organization(
             detail="Only super administrators can delete organizations"
         )
   
-    org = db.query(Organization).filter(Organization.id == organization_id).first()
+    result = await db.execute(select(Organization).filter(Organization.id == organization_id))
+    org = result.scalars().first()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -192,25 +201,26 @@ async def delete_organization(
     try:
         # Delete all related data
         # Delete user_service_roles
-        db.query(UserServiceRole).filter(UserServiceRole.organization_id == organization_id).delete()
+        await db.execute(delete(UserServiceRole).where(UserServiceRole.organization_id == organization_id))
         
         # Delete service_role_permissions
-        db.query(ServiceRolePermission).filter(ServiceRolePermission.organization_id == organization_id).delete()
+        await db.execute(delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id))
         
         # Delete stock
-        db.query(Stock).filter(Stock.organization_id == organization_id).delete()
+        await db.execute(delete(Stock).where(Stock.organization_id == organization_id))
         
         # Delete products
-        db.query(Product).filter(Product.organization_id == organization_id).delete()
+        await db.execute(delete(Product).where(Product.organization_id == organization_id))
         
         # Delete customers
-        db.query(Customer).filter(Customer.organization_id == organization_id).delete()
+        await db.execute(delete(Customer).where(Customer.organization_id == organization_id))
         
         # Delete vendors
-        db.query(Vendor).filter(Vendor.organization_id == organization_id).delete()
+        await db.execute(delete(Vendor).where(Vendor.organization_id == organization_id))
         
         # Delete users (including auth users)
-        users = db.query(User).filter(User.organization_id == organization_id).all()
+        result = await db.execute(select(User).where(User.organization_id == organization_id))
+        users = result.scalars().all()
         for user in users:
             if user.supabase_uuid:
                 try:
@@ -219,23 +229,23 @@ async def delete_organization(
                 except Exception as supabase_error:
                     logger.error(f"Failed to delete Supabase user {user.supabase_uuid}: {supabase_error}")
                     # Continue deletion even if Supabase fails
-            db.delete(user)
+            await db.delete(user)
         
         # Delete service_roles
-        db.query(ServiceRole).filter(ServiceRole.organization_id == organization_id).delete()
+        await db.execute(delete(ServiceRole).where(ServiceRole.organization_id == organization_id))
         
         # Commit deletions
-        db.commit()
+        await db.commit()
         
         # Now delete the organization
-        db.delete(org)
-        db.commit()
+        await db.delete(org)
+        await db.commit()
         
         logger.info(f"Deleted organization {org.name} and all related data by user {current_user.email}")
         return {"message": "Organization and all related data deleted successfully"}
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting organization and related data: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -246,7 +256,7 @@ async def delete_organization(
 async def get_user_modules(
     organization_id: int,
     user_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get user's assigned modules"""
@@ -263,10 +273,11 @@ async def get_user_modules(
                 detail="Insufficient permissions to view user modules"
             )
   
-    user = db.query(User).filter(
+    result = await db.execute(select(User).where(
         User.id == user_id,
         User.organization_id == organization_id
-    ).first()
+    ))
+    user = result.scalars().first()
   
     if not user:
         raise HTTPException(
@@ -291,7 +302,7 @@ async def update_user_modules(
     organization_id: int,
     user_id: int,
     modules_data: dict,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Update user's assigned modules (HR role or org admin)"""
@@ -307,10 +318,11 @@ async def update_user_modules(
             detail="Only HR personnel and organization administrators can manage user modules"
         )
   
-    user = db.query(User).filter(
+    result = await db.execute(select(User).where(
         User.id == user_id,
         User.organization_id == organization_id
-    ).first()
+    ))
+    user = result.scalars().first()
   
     if not user:
         raise HTTPException(
@@ -319,7 +331,8 @@ async def update_user_modules(
         )
   
     try:
-        organization = db.query(Organization).filter(Organization.id == organization_id).first()
+        result = await db.execute(select(Organization).where(Organization.id == organization_id))
+        organization = result.scalars().first()
         org_enabled_modules = organization.enabled_modules or {}
       
         valid_modules = ["CRM", "ERP", "HR", "Inventory", "Service", "Analytics", "Finance"]
@@ -338,13 +351,13 @@ async def update_user_modules(
                 )
       
         user.assigned_modules = assigned_modules
-        db.commit()
+        await db.commit()
       
         logger.info(f"User {user_id} modules updated by {current_user.email}")
         return {"message": "User modules updated successfully", "assigned_modules": user.assigned_modules}
       
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating user modules: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
