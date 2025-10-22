@@ -13,8 +13,10 @@
 9. [Service Management](#service-management)
 10. [HR Management](#hr-management)
 11. [Reports & Analytics](#reports--analytics)
-12. [Settings & Configuration](#settings--configuration)
-13. [Troubleshooting](#troubleshooting)
+12. [AutoML & Machine Learning](#automl--machine-learning)
+13. [Model Explainability](#model-explainability)
+14. [Settings & Configuration](#settings--configuration)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1083,6 +1085,222 @@ AI Analytics provides intelligent insights, predictions, and recommendations bas
 3. Identify slow-moving items
 4. Plan reorder quantities
 5. Optimize warehouse space
+
+---
+
+## AutoML & Machine Learning
+
+### Overview
+
+AutoML (Automated Machine Learning) automatically selects and optimizes machine learning models for your business needs without requiring ML expertise.
+
+### Accessing AutoML
+
+1. Navigate to **Analytics** > **AutoML**
+2. View your AutoML dashboard showing:
+   - Total runs (completed, running, pending)
+   - Recent AutoML runs
+   - Model performance metrics
+
+### Creating an AutoML Run
+
+**Step-by-Step:**
+1. Click **New AutoML Run** button
+2. Configure your run:
+   - **Run Name**: Descriptive name (e.g., "Sales Forecast Q1 2025")
+   - **Task Type**: Select classification, regression, time series, or clustering
+   - **Target Column**: The value you want to predict
+   - **Feature Columns**: Input variables for prediction
+   - **Metric**: Optimization metric (accuracy, f1, rmse, etc.)
+   - **Framework**: Optuna (recommended), Auto-sklearn, TPOT, or H2O
+   - **Max Trials**: Number of models to try (default: 100)
+   - **Time Budget**: Maximum time in seconds (default: 3600)
+3. Click **Create Run**
+
+### Monitoring AutoML Runs
+
+**Real-time Progress:**
+- View current trial number and progress percentage
+- Monitor best model found so far
+- Track best score achieved
+- See estimated time remaining
+
+**Leaderboard:**
+- View top 10 performing models
+- Compare model algorithms and scores
+- Review training time for each model
+- Access detailed evaluation metrics
+
+### Using AutoML Results
+
+Once completed:
+1. Review the best model selected
+2. Check performance metrics
+3. Deploy model for predictions
+4. Generate explanations (see Model Explainability section)
+
+### Supported ML Frameworks
+
+#### Scikit-learn
+- Traditional ML algorithms
+- RandomForest, GradientBoosting, SVM
+- Best for: Tabular data, general purpose
+
+#### CatBoost
+- Gradient boosting with categorical support
+- Handles missing values automatically
+- Best for: Datasets with categorical features
+
+#### LightGBM
+- Fast gradient boosting
+- Lower memory usage
+- Best for: Large datasets, fast training
+
+#### TensorFlow & PyTorch
+- Deep learning frameworks
+- Neural networks
+- Best for: Images, text, complex patterns
+
+### Best Practices
+
+1. **Data Preparation**
+   - Clean your data before running AutoML
+   - Remove duplicates and handle missing values
+   - Ensure target column is correctly formatted
+
+2. **Time Budget**
+   - Start with 30 minutes for testing
+   - Use 1-2 hours for production models
+   - Longer runs generally find better models
+
+3. **Trial Count**
+   - More trials = better chance of finding optimal model
+   - Default 100 trials is good for most cases
+   - Increase to 200-500 for complex problems
+
+---
+
+## Model Explainability
+
+### Overview
+
+Model Explainability helps you understand and trust ML model predictions by showing which features influence decisions.
+
+### Accessing Explainability
+
+1. Navigate to **Analytics** > **Model Explainability**
+2. View dashboard showing:
+   - Models with explainability enabled
+   - Total prediction explanations
+   - Generated reports
+
+### Explainability Methods
+
+#### SHAP (SHapley Additive exPlanations)
+- Most accurate method
+- Shows exact contribution of each feature
+- Works with any model type
+- **Use for**: Detailed analysis, regulatory compliance
+
+#### LIME (Local Interpretable Model-agnostic Explanations)
+- Fast computation
+- Explains individual predictions
+- Intuitive visualizations
+- **Use for**: Quick explanations, debugging
+
+#### Feature Importance
+- Shows overall feature rankings
+- Native to tree-based models
+- Very fast to compute
+- **Use for**: Quick overview, model selection
+
+### Adding Explainability to a Model
+
+1. Go to **Model Explainability** tab
+2. Click **Add Explainability**
+3. Select:
+   - **Model**: Choose from your trained models
+   - **Method**: SHAP, LIME, or Feature Importance
+   - **Scope**: Global (overall) or Local (per prediction)
+4. Click **Create**
+
+### Understanding Feature Importance
+
+**Interpreting Results:**
+- Higher importance = bigger impact on predictions
+- Positive contribution = increases predicted value
+- Negative contribution = decreases predicted value
+
+**Feature Importance Chart:**
+- View bar chart of top features
+- See relative importance percentages
+- Export charts for presentations
+
+### Explaining Individual Predictions
+
+1. Navigate to a model with explainability
+2. Click **Explain Prediction**
+3. Enter input values
+4. View explanation showing:
+   - Top positive features (pushing prediction up)
+   - Top negative features (pushing prediction down)
+   - Feature contributions visualization
+   - Confidence score
+
+### Generating Explainability Reports
+
+**Create a Report:**
+1. Click **Generate Report**
+2. Select models to analyze
+3. Choose report type:
+   - Global Summary: Overall model behavior
+   - Feature Analysis: Deep dive into features
+   - Model Comparison: Compare multiple models
+4. Add custom insights and recommendations
+5. Generate and download report
+
+**Report Contents:**
+- Executive summary
+- Model performance metrics
+- Feature importance rankings
+- Key insights and patterns
+- Business recommendations
+
+### Best Practices
+
+1. **Start with SHAP for critical models**
+   - Most accurate explanations
+   - Required for regulated industries
+   - Use for high-stakes decisions
+
+2. **Use LIME for quick checks**
+   - Fast iteration during development
+   - Good for debugging
+   - Sufficient for internal use
+
+3. **Regular Review**
+   - Generate monthly explainability reports
+   - Monitor feature importance changes
+   - Update stakeholders on model behavior
+
+4. **Business Integration**
+   - Share explanations with decision makers
+   - Use insights to improve data collection
+   - Validate with domain experts
+
+### Compliance and Regulation
+
+Model explainability supports:
+- GDPR "right to explanation"
+- Fair lending requirements
+- Medical AI transparency
+- Financial services regulations
+
+Always maintain audit trails of:
+- Model decisions
+- Feature contributions
+- Explanation methods used
+- Review and approval records
 
 ---
 
