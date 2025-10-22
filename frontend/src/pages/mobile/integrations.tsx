@@ -18,7 +18,6 @@ import {
   Alert,
 } from '@mui/material';
 import {
-  Settings,
   CheckCircle,
   Error,
   Refresh,
@@ -27,7 +26,6 @@ import {
 import {
   MobileDashboardLayout,
   MobileCard,
-  MobileButton,
   MobileSearchBar,
 } from '../../components/mobile';
 import integrationService, { IntegrationConfig } from '../../services/integrationService';
@@ -48,7 +46,7 @@ const MobileIntegrationsPage: React.FC = () => {
       setLoading(true);
       const data = await integrationService.getAllIntegrations();
       setIntegrations(data);
-    } catch (error: any) {
+    } catch (_error: any) {
       setAlert({ type: 'error', message: 'Failed to load integrations' });
     } finally {
       setLoading(false);

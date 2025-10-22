@@ -24,11 +24,9 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Stack,
 } from '@mui/material';
 import {
   Refresh,
-  FilterList,
   Search,
   Info,
 } from '@mui/icons-material';

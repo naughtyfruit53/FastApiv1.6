@@ -12,8 +12,6 @@ import {
   Paper,
   Avatar,
   Chip,
-  List,
-  ListItem,
 } from '@mui/material';
 import {
   Send,
@@ -90,7 +88,7 @@ const MobileAIChatbot: React.FC = () => {
         setMessages((prev) => [...prev, botMessage]);
         setIsTyping(false);
       }, 500);
-    } catch (error) {
+    } catch (_error) {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: 'Sorry, I encountered an error. Please try again.',
