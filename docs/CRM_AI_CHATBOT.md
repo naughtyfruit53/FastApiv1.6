@@ -80,19 +80,146 @@ GET /api/v1/crm/customer-analytics?period_start=YYYY-MM-DD&period_end=YYYY-MM-DD
 
 ### Currency Standardization
 
-All CRM modules now use **Indian Rupee (₹)** consistently:
+All CRM modules now support organization-specific currency with **Indian Rupee (₹)** as default:
 - Customer analytics displays
-- Commission tracking
+- Commission tracking  
 - Sales reports
 - Account management
 - Opportunity values
 
 **Implementation:**
 ```typescript
-import { formatCurrency } from "../../utils/currencyUtils";
+import { formatCurrency, getCurrencySymbol } from "../../utils/currencyUtils";
 
-// Usage
+// Usage with default INR
 formatCurrency(125000) // Returns "₹1,25,000.00"
+
+// Usage with custom currency
+formatCurrency(125000, "USD", "en-US") // Returns "$125,000.00"
+
+// Get currency symbol
+getCurrencySymbol("INR") // Returns "₹"
+getCurrencySymbol("USD") // Returns "$"
+```
+
+---
+
+## Lead Ownership & RBAC
+
+### Overview
+
+The CRM system now implements role-based lead ownership filtering to ensure users only see leads they have permission to view.
+
+### Features
+
+#### Ownership Filtering
+
+**Regular Users (No Admin Access):**
+- See only leads assigned to them (`assigned_to_id == user.id`)
+- See leads they created (`created_by_id == user.id`)
+- Cannot view other users' leads
+
+**Managers/Admins (With Admin Access):**
+- See all leads in the organization
+- Have permissions: `crm_lead_manage_all`, `crm_admin`, or `is_company_admin`
+- Can view owner names for all leads
+
+#### Owner Name Display
+
+For users with admin access, lead lists now include:
+- **assigned_to_name**: Name of the user the lead is assigned to
+- **created_by_name**: Name of the user who created the lead
+
+**Schema Update:**
+```python
+class Lead(LeadInDB):
+    # Additional fields for display (populated from joins)
+    assigned_to_name: Optional[str] = Field(None, description="Name of assigned user")
+    created_by_name: Optional[str] = Field(None, description="Name of user who created lead")
+```
+
+#### Permission Checks
+
+The backend automatically applies ownership filtering in the `/api/v1/crm/leads` endpoint:
+
+```python
+# Check if user has admin/manager permissions
+has_admin_access = (
+    "crm_lead_manage_all" in user_permissions or 
+    "crm_admin" in user_permissions or
+    current_user.is_company_admin
+)
+
+# If user doesn't have admin access, filter to owned leads
+if not has_admin_access:
+    stmt = stmt.where(
+        or_(
+            Lead.assigned_to_id == current_user.id,
+            Lead.created_by_id == current_user.id
+        )
+    )
+```
+
+### API Usage
+
+**Get Leads (Automatically Filtered):**
+```http
+GET /api/v1/crm/leads?skip=0&limit=100
+Authorization: Bearer {token}
+X-Organization-ID: {org_id}
+```
+
+**Response (Admin User):**
+```json
+[
+  {
+    "id": 1,
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john@example.com",
+    "assigned_to_id": 42,
+    "assigned_to_name": "Jane Smith",
+    "created_by_id": 15,
+    "created_by_name": "Mike Johnson",
+    "status": "qualified",
+    ...
+  }
+]
+```
+
+**Response (Regular User - Only Their Leads):**
+```json
+[
+  {
+    "id": 5,
+    "first_name": "Alice",
+    "last_name": "Brown",
+    "email": "alice@example.com",
+    "assigned_to_id": 15,
+    "assigned_to_name": null,  // Not populated for regular users
+    "created_by_id": 15,
+    "created_by_name": null,
+    "status": "new",
+    ...
+  }
+]
+```
+
+### Frontend Integration
+
+The frontend automatically receives filtered leads based on user permissions. No additional filtering needed in UI code:
+
+```typescript
+// Leads are automatically filtered by backend
+const leads = await crmService.getLeads();
+
+// Display owner names if available (only for admins)
+{lead.assigned_to_name && (
+  <Chip 
+    label={`Assigned to: ${lead.assigned_to_name}`} 
+    size="small" 
+  />
+)}
 ```
 
 ---
