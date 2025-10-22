@@ -54,6 +54,7 @@ const CommissionTracking: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   // Fetch commissions from backend
@@ -102,7 +103,6 @@ const CommissionTracking: React.FC = () => {
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       (commission.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-    // TODO: Define or import filterStatus
     const matchesStatus =
       filterStatus === "all" || commission.payment_status === filterStatus;
     return matchesSearch && matchesStatus;

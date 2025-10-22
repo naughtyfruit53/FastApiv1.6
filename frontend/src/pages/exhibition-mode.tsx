@@ -35,156 +35,9 @@ import {
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-interface ExhibitionEvent {
-  id: number;
-  name: string;
-  description?: string;
-  location?: string;
-  venue?: string;
-  start_date?: string;
-  end_date?: string;
-  status: "planned" | "active" | "completed" | "cancelled";
-  is_active: boolean;
-  auto_send_intro_email: boolean;
-  created_at: string;
-  card_scan_count?: number;
-  prospect_count?: number;
-}
-interface BusinessCardScan {
-  id: number;
-  scan_id: string;
-  exhibition_event_id: number;
-  full_name?: string;
-  company_name?: string;
-  designation?: string;
-  email?: string;
-  phone?: string;
-  mobile?: string;
-  website?: string;
-  address?: string;
-  confidence_score?: number;
-  validation_status: "pending" | "validated" | "rejected";
-  processing_status: "scanned" | "processed" | "converted" | "failed";
-  prospect_created: boolean;
-  intro_email_sent: boolean;
-  created_at: string;
-}
-interface ExhibitionProspect {
-  id: number;
-  exhibition_event_id: number;
-  card_scan_id?: number;
-  full_name: string;
-  company_name: string;
-  designation?: string;
-  email?: string;
-  phone?: string;
-  mobile?: string;
-  website?: string;
-  address?: string;
-  lead_score?: number;
-  qualification_status: "unqualified" | "qualified" | "hot" | "cold";
-  interest_level?: "high" | "medium" | "low";
-  status: "new" | "contacted" | "qualified" | "converted" | "lost";
-  conversion_status: "prospect" | "lead" | "customer";
-  created_at: string;
-  intro_email_sent_at?: string;
-  contact_attempts: number;
-}
-// Mock API service - would be replaced with actual API calls
-const exhibitionAPI = {
-  getEvents: () =>
-    Promise.resolve([
-      {
-        id: 1,
-        name: "Tech Expo 2024",
-        description: "Annual technology exhibition",
-        location: "Convention Center",
-        venue: "Hall A",
-        start_date: "2024-03-15",
-        end_date: "2024-03-17",
-        status: "active" as const,
-        is_active: true,
-        auto_send_intro_email: true,
-        created_at: "2024-02-01T10:00:00Z",
-        card_scan_count: 25,
-        prospect_count: 18,
-      },
-      {
-        id: 2,
-        name: "Business Summit 2024",
-        description: "Corporate networking event",
-        location: "Downtown Hotel",
-        venue: "Ballroom",
-        start_date: "2024-04-10",
-        end_date: "2024-04-11",
-        status: "planned" as const,
-        is_active: true,
-        auto_send_intro_email: true,
-        created_at: "2024-02-15T09:00:00Z",
-        card_scan_count: 0,
-        prospect_count: 0,
-      },
-    ] as ExhibitionEvent[]),
-  getCardScans: (eventId: number) =>
-    Promise.resolve([
-      {
-        id: 1,
-        scan_id: "scan_001",
-        exhibition_event_id: eventId,
-        full_name: "John Smith",
-        company_name: "TechCorp Solutions",
-        designation: "CEO",
-        email: "john.smith@techcorp.com",
-        phone: "+1-555-0123",
-        mobile: "+1-555-0124",
-        website: "https://techcorp.com",
-        address: "123 Business Ave, Tech City",
-        confidence_score: 0.95,
-        validation_status: "validated" as const,
-        processing_status: "converted" as const,
-        prospect_created: true,
-        intro_email_sent: true,
-        created_at: "2024-02-20T14:30:00Z",
-      },
-      {
-        id: 2,
-        scan_id: "scan_002",
-        exhibition_event_id: eventId,
-        full_name: "Sarah Johnson",
-        company_name: "Innovation Labs",
-        designation: "CTO",
-        email: "sarah.j@innovationlabs.com",
-        phone: "+1-555-0125",
-        confidence_score: 0.87,
-        validation_status: "pending" as const,
-        processing_status: "processed" as const,
-        prospect_created: false,
-        intro_email_sent: false,
-        created_at: "2024-02-21T09:15:00Z",
-      },
-    ] as BusinessCardScan[]),
-  getProspects: (eventId: number) =>
-    Promise.resolve([
-      {
-        id: 1,
-        exhibition_event_id: eventId,
-        card_scan_id: 1,
-        full_name: "John Smith",
-        company_name: "TechCorp Solutions",
-        designation: "CEO",
-        email: "john.smith@techcorp.com",
-        phone: "+1-555-0123",
-        lead_score: 85,
-        qualification_status: "qualified" as const,
-        interest_level: "high" as const,
-        status: "contacted" as const,
-        conversion_status: "lead" as const,
-        created_at: "2024-02-20T14:30:00Z",
-        intro_email_sent_at: "2024-02-20T15:00:00Z",
-        contact_attempts: 2,
-      },
-    ] as ExhibitionProspect[]),
-};
+import exhibitionService, {
+  ExhibitionEvent,
+} from "../services/exhibitionService";
 const ExhibitionMode: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<ExhibitionEvent | null>(
     null,
@@ -198,46 +51,36 @@ const ExhibitionMode: React.FC = () => {
   const [scanning, setScanning] = useState(false);
   const queryClient = useQueryClient();
   // Queries
-  const { data: events, isLoading: eventsLoading } = useQuery({
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ["exhibition-events"],
-    queryFn: exhibitionAPI.getEvents,
+    queryFn: () => exhibitionService.getEvents(),
   });
-  const { data: cardScans, isLoading: scansLoading } = useQuery({
+  const { data: cardScans = [], isLoading: scansLoading } = useQuery({
     queryKey: ["card-scans", selectedEvent?.id],
     queryFn: () =>
       selectedEvent
-        ? exhibitionAPI.getCardScans(selectedEvent.id)
+        ? exhibitionService.getCardScans(selectedEvent.id)
         : Promise.resolve([]),
     enabled: !!selectedEvent,
   });
-  const { data: prospects, isLoading: prospectsLoading } = useQuery({
+  const { data: prospects = [], isLoading: prospectsLoading } = useQuery({
     queryKey: ["prospects", selectedEvent?.id],
     queryFn: () =>
       selectedEvent
-        ? exhibitionAPI.getProspects(selectedEvent.id)
+        ? exhibitionService.getProspects(selectedEvent.id)
         : Promise.resolve([]),
     enabled: !!selectedEvent,
   });
-  // Mock scan mutation
+  // Real scan mutation using backend API
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
+      if (!selectedEvent) {
+        throw new Error("No event selected");
+      }
       setScanning(true);
-      // Simulate OCR processing
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const result = await exhibitionService.scanBusinessCard(selectedEvent.id, file);
       setScanning(false);
-      return {
-        id: Date.now(),
-        scan_id: `scan_${Date.now()}`,
-        exhibition_event_id: selectedEvent?.id || 0,
-        full_name: "Demo Contact",
-        company_name: "Demo Company",
-        confidence_score: 0.9,
-        validation_status: "pending" as const,
-        processing_status: "processed" as const,
-        prospect_created: false,
-        intro_email_sent: false,
-        created_at: new Date().toISOString(),
-      };
+      return result;
     },
     onSuccess: () => {
       toast.success("Business card scanned successfully!");
@@ -245,9 +88,9 @@ const ExhibitionMode: React.FC = () => {
       setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ["card-scans"] });
     },
-    onError: () => {
+    onError: (error: any) => {
       setScanning(false);
-      toast.error("Failed to scan business card");
+      toast.error(error?.response?.data?.detail || "Failed to scan business card");
     },
   });
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,93 +199,121 @@ const ExhibitionMode: React.FC = () => {
               Create Event
             </Button>
           </Box>
-          <Grid container spacing={3}>
-            {events?.map((event) => (
-              <Grid item xs={12} md={6} lg={4} key={event.id}>
-                <Card
-                  sx={{
-                    cursor: "pointer",
-                    border: selectedEvent?.id === event.id ? 2 : 0,
-                    borderColor: "primary.main",
-                  }}
-                  onClick={() => setSelectedEvent(event)}
+          {events.length === 0 ? (
+            <Card>
+              <CardContent>
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  py={6}
                 >
-                  <CardContent>
-                    <Box
-                      display="flex"
-                      justifyContent="between"
-                      alignItems="start"
-                      mb={2}
-                    >
-                      <Typography variant="h6" noWrap>
-                        {event.name}
-                      </Typography>
-                      <Chip
-                        label={event.status}
-                        color={getStatusColor(event.status) as any}
-                        size="small"
-                      />
-                    </Box>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mb: 2 }}
-                    >
-                      {event.description}
-                    </Typography>
-                    <Box display="flex" gap={2} mb={2}>
-                      <Typography variant="body2">
-                        📍 {event.location}
-                      </Typography>
-                    </Box>
-                    {event.start_date && (
+                  <Event sx={{ fontSize: 80, color: "text.secondary", mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    No Exhibition Events
+                  </Typography>
+                  <Typography color="text.secondary" align="center" sx={{ mb: 3 }}>
+                    Create your first exhibition event to start tracking business cards and prospects.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<Event />}
+                    onClick={() => setEventModalOpen(true)}
+                  >
+                    Create First Event
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          ) : (
+            <Grid container spacing={3}>
+              {events.map((event) => (
+                <Grid item xs={12} md={6} lg={4} key={event.id}>
+                  <Card
+                    sx={{
+                      cursor: "pointer",
+                      border: selectedEvent?.id === event.id ? 2 : 0,
+                      borderColor: "primary.main",
+                    }}
+                    onClick={() => setSelectedEvent(event)}
+                  >
+                    <CardContent>
+                      <Box
+                        display="flex"
+                        justifyContent="between"
+                        alignItems="start"
+                        mb={2}
+                      >
+                        <Typography variant="h6" noWrap>
+                          {event.name}
+                        </Typography>
+                        <Chip
+                          label={event.status}
+                          color={getStatusColor(event.status) as any}
+                          size="small"
+                        />
+                      </Box>
                       <Typography
                         variant="body2"
                         color="text.secondary"
                         sx={{ mb: 2 }}
                       >
-                        {formatDate(event.start_date)} -{" "}
-                        {event.end_date
-                          ? formatDate(event.end_date)
-                          : "Ongoing"}
+                        {event.description}
                       </Typography>
-                    )}
-                    <Box
-                      display="flex"
-                      justifyContent="between"
-                      alignItems="center"
-                    >
-                      <Box display="flex" gap={2}>
-                        <Chip
-                          label={`${event.card_scan_count || 0} Scans`}
-                          size="small"
-                          variant="outlined"
-                        />
-                        <Chip
-                          label={`${event.prospect_count || 0} Prospects`}
-                          size="small"
-                          variant="outlined"
-                        />
+                      <Box display="flex" gap={2} mb={2}>
+                        <Typography variant="body2">
+                          📍 {event.location}
+                        </Typography>
                       </Box>
-                      {event.status === "active" && (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          startIcon={<CameraAlt />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setScanModalOpen(true);
-                          }}
+                      {event.start_date && (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 2 }}
                         >
-                          Scan Card
-                        </Button>
+                          {formatDate(event.start_date)} -{" "}
+                          {event.end_date
+                            ? formatDate(event.end_date)
+                            : "Ongoing"}
+                        </Typography>
                       )}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                      <Box
+                        display="flex"
+                        justifyContent="between"
+                        alignItems="center"
+                      >
+                        <Box display="flex" gap={2}>
+                          <Chip
+                            label={`${event.card_scan_count || 0} Scans`}
+                            size="small"
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={`${event.prospect_count || 0} Prospects`}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </Box>
+                        {event.status === "active" && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            startIcon={<CameraAlt />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setScanModalOpen(true);
+                            }}
+                          >
+                            Scan Card
+                          </Button>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Box>
       )}
       {/* Card Scans Tab */}
@@ -466,10 +337,38 @@ const ExhibitionMode: React.FC = () => {
             </Button>
           </Box>
           {scansLoading ? (
-            <CircularProgress />
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : cardScans.length === 0 ? (
+            <Card>
+              <CardContent>
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  py={6}
+                >
+                  <QrCodeScanner sx={{ fontSize: 80, color: "text.secondary", mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    No Card Scans Yet
+                  </Typography>
+                  <Typography color="text.secondary" align="center" sx={{ mb: 3 }}>
+                    Start scanning business cards to capture leads from this exhibition event.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<CameraAlt />}
+                    onClick={() => setScanModalOpen(true)}
+                  >
+                    Scan First Card
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
           ) : (
             <List>
-              {cardScans?.map((scan) => (
+              {cardScans.map((scan) => (
                 <ListItem key={scan.id} divider>
                   <Avatar sx={{ mr: 2, bgcolor: "primary.main" }}>
                     <BusinessCenter />
@@ -533,10 +432,38 @@ const ExhibitionMode: React.FC = () => {
             Prospects - {selectedEvent.name}
           </Typography>
           {prospectsLoading ? (
-            <CircularProgress />
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : prospects.length === 0 ? (
+            <Card>
+              <CardContent>
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  py={6}
+                >
+                  <ContactMail sx={{ fontSize: 80, color: "text.secondary", mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    No Prospects Yet
+                  </Typography>
+                  <Typography color="text.secondary" align="center" sx={{ mb: 3 }}>
+                    Scan business cards or manually add prospects to start tracking potential leads from this event.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<CameraAlt />}
+                    onClick={() => setScanModalOpen(true)}
+                  >
+                    Scan Business Card
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
           ) : (
             <List>
-              {prospects?.map((prospect) => (
+              {prospects.map((prospect) => (
                 <ListItem key={prospect.id} divider>
                   <Avatar sx={{ mr: 2, bgcolor: "secondary.main" }}>
                     <ContactMail />
