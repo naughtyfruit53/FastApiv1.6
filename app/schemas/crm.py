@@ -372,16 +372,16 @@ class CustomerAnalytics(BaseModel):
 # Commission Schemas
 class CommissionBase(BaseModel):
     sales_person_id: int = Field(..., description="ID of the sales person")
-    sales_person_name: str = Field(..., description="Name of the sales person")
-    person_type: str = Field(..., description="Type: internal or external")
+    sales_person_name: str = Field(..., min_length=1, description="Name of the sales person")
+    person_type: str = Field(..., pattern="^(internal|external)$", description="Type: internal or external")
     opportunity_id: Optional[int] = Field(None, description="Related opportunity ID")
     lead_id: Optional[int] = Field(None, description="Related lead ID")
-    commission_type: str = Field(..., description="Commission type: percentage, fixed_amount, tiered, bonus")
-    commission_rate: Optional[float] = Field(None, description="Commission rate (for percentage type)")
-    commission_amount: Optional[float] = Field(None, description="Commission amount (for fixed_amount, bonus types)")
-    base_amount: float = Field(..., description="Base amount for commission calculation")
+    commission_type: str = Field(..., pattern="^(percentage|fixed_amount|tiered|bonus)$", description="Commission type: percentage, fixed_amount, tiered, bonus")
+    commission_rate: Optional[float] = Field(None, ge=0, le=100, description="Commission rate (for percentage type, 0-100)")
+    commission_amount: Optional[float] = Field(None, ge=0, description="Commission amount (for fixed_amount, bonus types)")
+    base_amount: float = Field(..., ge=0, description="Base amount for commission calculation")
     commission_date: date = Field(..., description="Date of commission")
-    payment_status: str = Field("pending", description="Payment status: pending, paid, approved, rejected, on_hold")
+    payment_status: str = Field("pending", pattern="^(pending|paid|approved|rejected|on_hold)$", description="Payment status: pending, paid, approved, rejected, on_hold")
     payment_date: Optional[date] = Field(None, description="Date of payment")
     notes: Optional[str] = Field(None, description="Additional notes")
 
@@ -389,16 +389,16 @@ class CommissionCreate(CommissionBase):
     pass
 
 class CommissionUpdate(BaseModel):
-    sales_person_name: Optional[str] = None
-    person_type: Optional[str] = None
+    sales_person_name: Optional[str] = Field(None, min_length=1)
+    person_type: Optional[str] = Field(None, pattern="^(internal|external)$")
     opportunity_id: Optional[int] = None
     lead_id: Optional[int] = None
-    commission_type: Optional[str] = None
-    commission_rate: Optional[float] = None
-    commission_amount: Optional[float] = None
-    base_amount: Optional[float] = None
+    commission_type: Optional[str] = Field(None, pattern="^(percentage|fixed_amount|tiered|bonus)$")
+    commission_rate: Optional[float] = Field(None, ge=0, le=100)
+    commission_amount: Optional[float] = Field(None, ge=0)
+    base_amount: Optional[float] = Field(None, ge=0)
     commission_date: Optional[date] = None
-    payment_status: Optional[str] = None
+    payment_status: Optional[str] = Field(None, pattern="^(pending|paid|approved|rejected|on_hold)$")
     payment_date: Optional[date] = None
     notes: Optional[str] = None
 

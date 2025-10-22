@@ -1061,6 +1061,16 @@ async def get_commissions(
     org_id: int = Depends(require_current_organization_id)
 ):
     """Get all commissions with filtering and pagination"""
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to view commissions"
+        )
+    
     try:
         stmt = select(Commission).where(Commission.organization_id == org_id)
         
@@ -1095,6 +1105,16 @@ async def get_commission(
     org_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific commission by ID"""
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to view commission"
+        )
+    
     try:
         stmt = select(Commission).where(
             and_(
@@ -1131,6 +1151,16 @@ async def create_commission(
     org_id: int = Depends(require_current_organization_id)
 ):
     """Create a new commission record"""
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "crm_commission_create" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'crm_commission_create' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to create commissions"
+        )
+    
     try:
         # Create commission instance
         commission = Commission(
@@ -1170,12 +1200,22 @@ async def create_commission(
 @router.put("/commissions/{commission_id}", response_model=CommissionSchema)
 async def update_commission(
     commission_id: int = Path(..., description="The commission ID"),
-    commission_data: CommissionUpdate = None,
+    commission_data: CommissionUpdate = ...,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(core_get_current_user),
     org_id: int = Depends(require_current_organization_id)
 ):
     """Update a commission record"""
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "crm_commission_update" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'crm_commission_update' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to update commissions"
+        )
+    
     try:
         # Get existing commission
         stmt = select(Commission).where(
@@ -1198,6 +1238,7 @@ async def update_commission(
         for field, value in update_data.items():
             setattr(commission, field, value)
         
+        commission.updated_at = datetime.utcnow()
         await db.commit()
         await db.refresh(commission)
         
@@ -1223,6 +1264,16 @@ async def delete_commission(
     org_id: int = Depends(require_current_organization_id)
 ):
     """Delete a commission record"""
+    # Check RBAC permissions
+    rbac = RBACService(db)
+    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    if "crm_commission_delete" not in user_permissions and not current_user.is_company_admin:
+        logger.error(f"User {current_user.email} lacks 'crm_commission_delete' permission")
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions to delete commissions"
+        )
+    
     try:
         # Get existing commission
         stmt = select(Commission).where(
