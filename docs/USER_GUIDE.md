@@ -496,6 +496,166 @@ The Website Agent allows you to create and manage customer websites from within 
 4. Click **Generate**
 5. Export to PDF or Excel
 
+### Advanced ML/AI Analytics
+
+**NEW in v1.6:** Leverage machine learning and artificial intelligence for predictive insights, anomaly detection, and data-driven decision-making.
+
+#### Accessing Advanced Analytics
+
+1. Navigate to **Analytics** > **Advanced Analytics**
+2. Choose from available analytics modules:
+   - **Dashboard**: Overview of ML models and predictions
+   - **Predictive Models**: Forecasting and predictions
+   - **Anomaly Detection**: Identify unusual patterns
+   - **Data Sources**: External data integration
+   - **AI Insights**: Automated recommendations
+
+#### Predictive Models
+
+Build and deploy ML models to forecast future trends:
+
+**Available Model Types:**
+- **Sales Forecast**: Predict future sales revenue
+- **Demand Prediction**: Forecast product demand
+- **Churn Prediction**: Identify at-risk customers
+- **Revenue Forecast**: Project revenue streams
+- **Inventory Optimization**: Optimize stock levels
+- **Customer Lifetime Value**: Calculate CLV
+- **Price Optimization**: Determine optimal pricing
+- **Lead Scoring**: Prioritize sales leads
+
+**Creating a Predictive Model:**
+1. Click **Predictive Models** tab
+2. Click **Create Model**
+3. Configure model parameters:
+   - Model name and type
+   - Algorithm selection
+   - Feature configuration
+   - Training settings
+4. Click **Train Model**
+5. Review performance metrics
+6. Deploy when satisfied with accuracy
+
+**Making Predictions:**
+1. Select an active model
+2. Click **Make Prediction**
+3. Enter input values
+4. View predicted results with confidence scores
+5. Save or export predictions
+
+#### Anomaly Detection
+
+Automatically detect unusual patterns in your business operations:
+
+**Detection Types:**
+- Revenue anomalies
+- Inventory irregularities
+- Transaction anomalies
+- Customer behavior anomalies
+- Operational inefficiencies
+- Quality issues
+
+**Setting Up Anomaly Detection:**
+1. Click **Anomaly Detection** tab
+2. Click **Create Detection**
+3. Configure:
+   - Detection name and type
+   - Monitored metrics
+   - Detection algorithm
+   - Threshold settings
+   - Alert frequency
+4. Activate monitoring
+5. Receive alerts when anomalies detected
+
+**Responding to Anomalies:**
+1. View detected anomalies in dashboard
+2. Click on anomaly for details
+3. Investigate root cause
+4. Take corrective action
+5. Mark as resolved with notes
+6. Mark as false positive if applicable
+
+#### External Data Sources
+
+Connect external data sources to enrich your analytics:
+
+**Supported Sources:**
+- Database connections
+- API integrations
+- File uploads (CSV, Excel, JSON)
+- Cloud storage (S3, Azure, Google Cloud)
+- Real-time data streams
+
+**Connecting a Data Source:**
+1. Click **Data Sources** tab
+2. Click **Add Data Source**
+3. Select source type
+4. Configure connection details
+5. Set up authentication
+6. Map data fields
+7. Configure sync schedule
+8. Test and activate
+
+**Managing Data Sources:**
+- Monitor sync status and health
+- View sync history and logs
+- Update configurations
+- Pause or deactivate sources
+- Handle sync errors
+
+#### AI-Powered Insights
+
+Get automated insights and recommendations:
+
+**Features:**
+- Trend analysis and pattern recognition
+- Performance optimization suggestions
+- Risk identification and mitigation
+- Opportunity detection
+- Automated reporting
+
+**Viewing Insights:**
+1. Click **Insights** tab
+2. Browse generated insights
+3. Filter by type and priority
+4. Click for detailed analysis
+5. Take action on recommendations
+6. Mark as implemented or dismissed
+
+#### Dashboard
+
+The ML Analytics Dashboard provides:
+- Total models (active/inactive)
+- Total predictions made
+- Anomalies detected and unresolved
+- Active data sources
+- Model performance summary
+- Recent anomalies
+- Prediction trends
+
+**Customizing Dashboard:**
+- Filter by date range
+- Select specific models
+- Set anomaly severity filters
+- Export dashboard data
+
+#### Best Practices
+
+1. **Start Simple**: Begin with basic models and iterate
+2. **Monitor Performance**: Regularly check model accuracy
+3. **Regular Retraining**: Schedule periodic model updates
+4. **Address Anomalies**: Promptly investigate and resolve
+5. **Data Quality**: Ensure high-quality input data
+6. **Security**: Protect sensitive model configurations
+
+#### Training Resources
+
+For comprehensive training on Advanced ML/AI Analytics:
+- See [Advanced Analytics Training Guide](ADVANCED_ANALYTICS_TRAINING.md)
+- Watch video tutorials (available in-app)
+- Attend training webinars
+- Contact support for personalized training
+
 ### Inventory Reports
 
 **Stock Reports:**
