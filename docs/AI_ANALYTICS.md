@@ -1,10 +1,426 @@
-# AI Analytics Implementation Plan
+# AI Analytics Implementation Guide
+
+## Overview
+
+This document provides comprehensive information about the AI Analytics and Chatbot features in the TritIQ ERP system. The AI system includes natural language processing (NLP), intent classification, business intelligence, predictive analytics, and automated insights across all modules.
+
+## ✅ IMPLEMENTED FEATURES
+
+### AI Chatbot Service
+- ✅ Natural Language Processing (NLP) with intent classification
+- ✅ Business advice engine for inventory, cash flow, sales, customer retention
+- ✅ Intelligent navigation assistance
+- ✅ Voucher creation guidance
+- ✅ Lead management support
+- ✅ Tax and GST queries
+- ✅ Contextual suggestions based on time of day
+- ✅ Multi-intent classification with confidence scoring
+
+### AI Agent APIs
+- ✅ Intent classification endpoint (`/api/v1/ai/intent/classify`)
+- ✅ Business advice endpoint (`/api/v1/ai/advice`)
+- ✅ Navigation suggestions (`/api/v1/ai/navigation/suggestions`)
+- ✅ Quick actions (`/api/v1/ai/navigation/quickactions`)
+- ✅ Smart insights (`/api/v1/ai/insights/smart`)
+- ✅ Recommendations (`/api/v1/ai/insights/recommendations`)
+- ✅ Chatbot configuration (`/api/v1/ai/chatbot/config`)
+
+### AI Analytics Dashboard
+- ✅ Model management and monitoring
+- ✅ Prediction tracking and analysis
+- ✅ Anomaly detection system
+- ✅ AI insights generation
+- ✅ Automation workflow management
+
+### Frontend Components
+- ✅ Full-featured AI Chatbot page (`/ai-chatbot`)
+- ✅ AI Analytics dashboard (`/ai-analytics`)
+- ✅ Embeddable ChatbotWidget component
+- ✅ Comprehensive AI service client (aiService.ts)
+- ✅ Integration with existing ChatbotNavigator
 
 ## Overview
 
 This document outlines the comprehensive AI analytics strategy for the TritiQ ERP system, covering predictive analytics, business intelligence, automated insights, and smart notifications across all modules.
 
 ## Table of Contents
+
+1. [Getting Started](#getting-started)
+2. [AI Chatbot Usage](#ai-chatbot-usage)
+3. [AI Agent APIs](#ai-agent-apis)
+4. [AI Analytics Dashboard](#ai-analytics-dashboard-1)
+5. [Business Advice System](#business-advice-system)
+6. [Embedding Chatbot](#embedding-chatbot)
+7. [API Reference](#api-reference)
+8. [Vision & Goals](#vision--goals)
+9. [Architecture](#architecture)
+10. [Technical Specifications](#technical-specifications)
+
+---
+
+## Getting Started
+
+### Accessing AI Features
+
+The AI system can be accessed through multiple interfaces:
+
+1. **AI Chatbot Page**: Navigate to `/ai-chatbot` for full chatbot interface
+2. **Floating Widget**: Use the ChatbotNavigator component (bottom-right corner)
+3. **AI Analytics**: Access `/ai-analytics` for model and prediction management
+4. **API Integration**: Use REST APIs for programmatic access
+
+### Quick Start
+
+**Using the Chatbot:**
+```typescript
+import ChatbotWidget from '@/components/ChatbotWidget';
+
+// Add to your page
+<ChatbotWidget 
+  position="bottom-right"
+  primaryColor="#1976d2"
+  onNavigate={(path) => router.push(path)}
+/>
+```
+
+**Using AI Service:**
+```typescript
+import aiService from '@/services/aiService';
+
+// Process a chat message
+const response = await aiService.processChatMessage({
+  message: "Show me low stock items"
+});
+
+// Get business advice
+const advice = await aiService.getBusinessAdvice({
+  category: 'inventory'
+});
+```
+
+---
+
+## AI Chatbot Usage
+
+### Supported Intents
+
+The chatbot recognizes the following intent categories:
+
+1. **Business Advice** - Get recommendations on business operations
+   - Example: "Give me inventory advice"
+   - Example: "How can I improve cash flow?"
+
+2. **Create Vouchers** - Assistance with document creation
+   - Example: "Create a sales order"
+   - Example: "Make a new invoice"
+
+3. **Navigation** - Quick access to pages
+   - Example: "Open customers page"
+   - Example: "Show me reports"
+
+4. **Tax & GST** - Tax information and compliance
+   - Example: "What are GST rates?"
+   - Example: "GST filing deadlines"
+
+5. **Lead Management** - CRM and prospect tracking
+   - Example: "How do I manage leads?"
+   - Example: "Show me hot leads"
+
+6. **Inventory Queries** - Stock and warehouse management
+   - Example: "Show low stock items"
+   - Example: "Check inventory status"
+
+7. **Payment Queries** - Financial information
+   - Example: "Show outstanding payments"
+   - Example: "View accounts receivable"
+
+### Chatbot Features
+
+- **Intent Classification**: Automatic understanding of user requests
+- **Confidence Scoring**: Shows how confident the AI is in understanding
+- **Quick Actions**: One-click navigation and execution
+- **Smart Suggestions**: Context-aware follow-up suggestions
+- **Business Insights**: Real-time insights and recommendations
+- **Multi-turn Conversations**: Maintains context across messages
+
+---
+
+## AI Agent APIs
+
+### Intent Classification
+
+Classify user intent from natural language:
+
+```typescript
+POST /api/v1/ai/intent/classify
+
+Request:
+{
+  "message": "I need to create a purchase order"
+}
+
+Response:
+{
+  "intent": "create_voucher",
+  "confidence": 0.95,
+  "entities": {
+    "voucher_type": "purchase_order",
+    "action": "create"
+  }
+}
+```
+
+### Business Advice
+
+Get category-specific business recommendations:
+
+```typescript
+POST /api/v1/ai/advice
+
+Request:
+{
+  "category": "inventory"  // inventory, cash_flow, sales, customer_retention
+}
+
+Response:
+{
+  "category": "inventory",
+  "recommendations": [
+    {
+      "title": "Maintain Optimal Stock Levels",
+      "description": "Keep inventory balanced...",
+      "priority": "high",
+      "actionable_steps": [
+        "Review current stock levels monthly",
+        "Analyze fast-moving vs slow-moving items",
+        "Set min/max stock levels for each item"
+      ]
+    }
+  ]
+}
+```
+
+### Navigation Assistance
+
+Get smart navigation suggestions:
+
+```typescript
+GET /api/v1/ai/navigation/suggestions?query=inventory
+
+Response:
+{
+  "suggestions": [
+    {
+      "path": "/inventory",
+      "label": "Inventory",
+      "category": "inventory",
+      "keywords": ["inventory", "stock", "warehouse"]
+    }
+  ]
+}
+```
+
+### Smart Insights
+
+Get AI-powered business insights:
+
+```typescript
+GET /api/v1/ai/insights/smart?category=inventory
+
+Response:
+{
+  "insights": [
+    {
+      "category": "inventory",
+      "priority": "high",
+      "title": "Low Stock Alert",
+      "message": "5 items are below reorder level...",
+      "action": "view_low_stock",
+      "action_label": "View Items"
+    }
+  ]
+}
+```
+
+---
+
+## AI Analytics Dashboard
+
+### Dashboard Overview
+
+The AI Analytics dashboard provides:
+
+- **Model Management**: Create, train, and deploy AI models
+- **Prediction Tracking**: Monitor predictions and accuracy
+- **Anomaly Detection**: Identify unusual patterns in business data
+- **Insights Generation**: Automated business insights
+- **Automation Workflows**: Configure AI-driven automations
+
+### Key Metrics
+
+- Total AI Models
+- Active Models
+- Predictions Today/Week/Month
+- Active Anomalies
+- AI Insights
+- Automation Workflows
+
+### Accessing the Dashboard
+
+Navigate to `/ai-analytics` to access the full dashboard.
+
+---
+
+## Business Advice System
+
+### Available Advice Categories
+
+#### 1. Inventory Management
+- Optimal stock level maintenance
+- ABC analysis implementation
+- Reorder point configuration
+- Regular cycle counts
+
+#### 2. Cash Flow Management
+- Accounts receivable monitoring
+- Payment term negotiations
+- Cash reserve maintenance
+- Purchase order controls
+
+#### 3. Sales Growth
+- Top performer analysis
+- Quotation follow-ups
+- Loyalty program implementation
+- Cross-selling and upselling
+
+#### 4. Customer Retention
+- Regular communication strategies
+- Feedback collection and action
+- Proactive support initiatives
+- Customer health monitoring
+
+### Getting Advice
+
+```typescript
+// Frontend
+import aiService from '@/services/aiService';
+
+const advice = await aiService.getBusinessAdvice({
+  category: 'cash_flow'
+});
+
+// Backend
+POST /api/v1/ai/advice
+{
+  "category": "cash_flow"
+}
+```
+
+---
+
+## Embedding Chatbot
+
+### Embed in Customer Websites
+
+To embed the chatbot widget in customer websites:
+
+#### 1. Using React Component
+
+```typescript
+import { ChatbotWidget } from '@tritiq/chatbot-widget';
+
+function App() {
+  return (
+    <ChatbotWidget 
+      position="bottom-right"
+      primaryColor="#1976d2"
+      onNavigate={(path) => {
+        // Handle navigation
+        window.location.href = path;
+      }}
+    />
+  );
+}
+```
+
+#### 2. Using Standalone Script
+
+```html
+<!-- Add to your website -->
+<script src="https://your-domain.com/chatbot-widget.js"></script>
+<script>
+  TritIQChatbot.init({
+    position: 'bottom-right',
+    primaryColor: '#1976d2',
+    apiUrl: 'https://your-api.com'
+  });
+</script>
+```
+
+#### 3. Configuration Options
+
+```typescript
+interface ChatbotConfig {
+  position?: 'bottom-right' | 'bottom-left';
+  primaryColor?: string;
+  apiUrl?: string;
+  onNavigate?: (path: string) => void;
+  enableSuggestions?: boolean;
+  showInsights?: boolean;
+}
+```
+
+---
+
+## API Reference
+
+### Chatbot Endpoints
+
+```
+POST /api/v1/chatbot/process
+GET  /api/v1/chatbot/suggestions
+GET  /api/v1/chatbot/business-insights
+```
+
+### AI Agent Endpoints
+
+```
+POST /api/v1/ai/intent/classify
+GET  /api/v1/ai/intent/patterns
+POST /api/v1/ai/advice
+GET  /api/v1/ai/advice/categories
+GET  /api/v1/ai/navigation/suggestions
+GET  /api/v1/ai/navigation/quickactions
+POST /api/v1/ai/agent/execute
+GET  /api/v1/ai/insights/smart
+GET  /api/v1/ai/insights/recommendations
+GET  /api/v1/ai/chatbot/config
+GET  /api/v1/ai/chatbot/health
+```
+
+### AI Analytics Endpoints
+
+```
+GET  /api/v1/ai-analytics/dashboard
+POST /api/v1/ai-analytics/models
+GET  /api/v1/ai-analytics/models
+GET  /api/v1/ai-analytics/models/{id}
+PUT  /api/v1/ai-analytics/models/{id}
+POST /api/v1/ai-analytics/models/{id}/train
+POST /api/v1/ai-analytics/models/{id}/deploy
+POST /api/v1/ai-analytics/predict
+GET  /api/v1/ai-analytics/predictions
+POST /api/v1/ai-analytics/anomalies/detect
+GET  /api/v1/ai-analytics/anomalies
+POST /api/v1/ai-analytics/insights/generate
+GET  /api/v1/ai-analytics/insights
+POST /api/v1/ai-analytics/workflows
+GET  /api/v1/ai-analytics/workflows
+```
+
+---
+
+## Table of Contents (Original)
 
 1. [Vision & Goals](#vision--goals)
 2. [Architecture](#architecture)
