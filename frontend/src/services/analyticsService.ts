@@ -200,3 +200,362 @@ export const analyticsService = {
     }
   },
 };
+
+// ===========================================
+// ML ANALYTICS INTERFACES AND SERVICE
+// ===========================================
+
+export interface MLAnalyticsDashboard {
+  total_models: number;
+  active_models: number;
+  total_predictions: number;
+  total_anomalies_detected: number;
+  unresolved_anomalies: number;
+  active_data_sources: number;
+  model_performance_summary: Array<{
+    model_id: number;
+    model_name: string;
+    model_type: string;
+    accuracy_score?: number;
+    prediction_count: number;
+    is_active: boolean;
+  }>;
+  recent_anomalies: Array<{
+    id: number;
+    organization_id: number;
+    anomaly_model_id: number;
+    detected_at: string;
+    severity: string;
+    anomaly_score: number;
+    affected_data: Record<string, any>;
+    is_resolved: boolean;
+    created_at: string;
+  }>;
+  prediction_trends: Record<string, any>;
+}
+
+export interface PredictiveModel {
+  id: number;
+  organization_id: number;
+  model_name: string;
+  model_type: string;
+  description?: string;
+  algorithm: string;
+  version: string;
+  accuracy_score?: number;
+  precision_score?: number;
+  recall_score?: number;
+  f1_score?: number;
+  mae?: number;
+  rmse?: number;
+  r2_score?: number;
+  is_active: boolean;
+  deployed_at?: string;
+  prediction_count: number;
+  last_prediction_at?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface AnomalyDetectionModel {
+  id: number;
+  organization_id: number;
+  detection_name: string;
+  anomaly_type: string;
+  description?: string;
+  algorithm: string;
+  detection_config: Record<string, any>;
+  threshold_config: Record<string, any>;
+  monitored_metrics: string[];
+  detection_frequency: string;
+  is_active: boolean;
+  last_detection_at?: string;
+  anomalies_detected_count: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface AnomalyDetectionResult {
+  id: number;
+  organization_id: number;
+  anomaly_model_id: number;
+  detected_at: string;
+  severity: string;
+  anomaly_score: number;
+  affected_data: Record<string, any>;
+  expected_range?: Record<string, any>;
+  actual_value?: Record<string, any>;
+  context?: Record<string, any>;
+  root_cause_analysis?: string;
+  is_resolved: boolean;
+  resolved_at?: string;
+  resolution_notes?: string;
+  is_false_positive: boolean;
+  false_positive_reason?: string;
+  created_at: string;
+}
+
+export interface ExternalDataSource {
+  id: number;
+  organization_id: number;
+  source_name: string;
+  source_type: string;
+  description?: string;
+  connection_config: Record<string, any>;
+  data_schema?: Record<string, any>;
+  field_mapping?: Record<string, any>;
+  sync_frequency: string;
+  is_active: boolean;
+  sync_status: string;
+  last_sync_at?: string;
+  next_sync_at?: string;
+  last_error?: string;
+  total_records_synced: number;
+  last_sync_duration_seconds?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface PredictionRequest {
+  model_id: number;
+  input_data: Record<string, any>;
+  context_metadata?: Record<string, any>;
+}
+
+export interface PredictionResponse {
+  prediction_id: number;
+  model_id: number;
+  predicted_value: Record<string, any>;
+  confidence_score?: number;
+  prediction_timestamp: string;
+}
+
+export interface PredictionHistory {
+  id: number;
+  organization_id: number;
+  model_id: number;
+  prediction_timestamp: string;
+  input_data: Record<string, any>;
+  predicted_value: Record<string, any>;
+  confidence_score?: number;
+  actual_value?: Record<string, any>;
+  prediction_error?: number;
+  context_metadata?: Record<string, any>;
+  created_at: string;
+}
+
+export const mlAnalyticsService = {
+  // Dashboard
+  getDashboard: async (): Promise<MLAnalyticsDashboard> => {
+    try {
+      const response = await api.get("/api/v1/ml-analytics/dashboard");
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get ML analytics dashboard");
+    }
+  },
+
+  // Predictive Models
+  getPredictiveModels: async (
+    model_type?: string,
+    is_active?: boolean
+  ): Promise<PredictiveModel[]> => {
+    try {
+      const response = await api.get("/api/v1/ml-analytics/models/predictive", {
+        params: { model_type, is_active },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get predictive models");
+    }
+  },
+
+  getPredictiveModel: async (modelId: number): Promise<PredictiveModel> => {
+    try {
+      const response = await api.get(`/api/v1/ml-analytics/models/predictive/${modelId}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get predictive model");
+    }
+  },
+
+  createPredictiveModel: async (modelData: any): Promise<PredictiveModel> => {
+    try {
+      const response = await api.post("/api/v1/ml-analytics/models/predictive", modelData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to create predictive model");
+    }
+  },
+
+  updatePredictiveModel: async (
+    modelId: number,
+    modelData: any
+  ): Promise<PredictiveModel> => {
+    try {
+      const response = await api.put(
+        `/api/v1/ml-analytics/models/predictive/${modelId}`,
+        modelData
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update predictive model");
+    }
+  },
+
+  deletePredictiveModel: async (modelId: number): Promise<void> => {
+    try {
+      await api.delete(`/api/v1/ml-analytics/models/predictive/${modelId}`);
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to delete predictive model");
+    }
+  },
+
+  trainPredictiveModel: async (modelId: number, trainingParams?: any): Promise<any> => {
+    try {
+      const response = await api.post(
+        `/api/v1/ml-analytics/models/predictive/${modelId}/train`,
+        { model_id: modelId, training_parameters: trainingParams }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to train predictive model");
+    }
+  },
+
+  deployPredictiveModel: async (modelId: number, deploymentConfig?: any): Promise<PredictiveModel> => {
+    try {
+      const response = await api.post(
+        `/api/v1/ml-analytics/models/predictive/${modelId}/deploy`,
+        { model_id: modelId, deployment_config: deploymentConfig }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to deploy predictive model");
+    }
+  },
+
+  // Anomaly Detection
+  getAnomalyDetectionModels: async (
+    anomaly_type?: string,
+    is_active?: boolean
+  ): Promise<AnomalyDetectionModel[]> => {
+    try {
+      const response = await api.get("/api/v1/ml-analytics/anomaly-detection/models", {
+        params: { anomaly_type, is_active },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get anomaly detection models");
+    }
+  },
+
+  createAnomalyDetectionModel: async (modelData: any): Promise<AnomalyDetectionModel> => {
+    try {
+      const response = await api.post("/api/v1/ml-analytics/anomaly-detection/models", modelData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to create anomaly detection model");
+    }
+  },
+
+  getAnomalyDetectionResults: async (
+    model_id?: number,
+    is_resolved?: boolean,
+    severity?: string,
+    limit?: number
+  ): Promise<AnomalyDetectionResult[]> => {
+    try {
+      const response = await api.get("/api/v1/ml-analytics/anomaly-detection/results", {
+        params: { model_id, is_resolved, severity, limit },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get anomaly detection results");
+    }
+  },
+
+  resolveAnomaly: async (
+    anomalyId: number,
+    resolutionData: {
+      resolution_notes: string;
+      is_false_positive: boolean;
+      false_positive_reason?: string;
+    }
+  ): Promise<AnomalyDetectionResult> => {
+    try {
+      const response = await api.post(
+        `/api/v1/ml-analytics/anomaly-detection/results/${anomalyId}/resolve`,
+        resolutionData
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to resolve anomaly");
+    }
+  },
+
+  // External Data Sources
+  getExternalDataSources: async (
+    source_type?: string,
+    is_active?: boolean
+  ): Promise<ExternalDataSource[]> => {
+    try {
+      const response = await api.get("/api/v1/ml-analytics/data-sources", {
+        params: { source_type, is_active },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get external data sources");
+    }
+  },
+
+  createExternalDataSource: async (sourceData: any): Promise<ExternalDataSource> => {
+    try {
+      const response = await api.post("/api/v1/ml-analytics/data-sources", sourceData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to create external data source");
+    }
+  },
+
+  // Predictions
+  makePrediction: async (
+    predictionRequest: PredictionRequest
+  ): Promise<PredictionResponse> => {
+    try {
+      const response = await api.post("/api/v1/ml-analytics/predictions", predictionRequest);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to make prediction");
+    }
+  },
+
+  getPredictionHistory: async (
+    model_id?: number,
+    limit?: number
+  ): Promise<PredictionHistory[]> => {
+    try {
+      const response = await api.get("/api/v1/ml-analytics/predictions/history", {
+        params: { model_id, limit },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get prediction history");
+    }
+  },
+
+  // Advanced Analytics
+  performAdvancedAnalytics: async (analyticsRequest: {
+    analysis_type: string;
+    data_source: string;
+    parameters: Record<string, any>;
+    date_range?: Record<string, string>;
+  }): Promise<any> => {
+    try {
+      const response = await api.post("/api/v1/ml-analytics/advanced-analytics", analyticsRequest);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to perform advanced analytics");
+    }
+  },
+};
