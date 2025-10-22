@@ -1414,12 +1414,144 @@ Always maintain audit trails of:
 - PDF templates, budget management, cost analysis
 - Last Updated: September 2024
 
+### v1.7 - A/B Testing & Streaming Analytics
+- A/B testing framework for model comparison
+- Real-time streaming analytics with Kafka/WebSockets
+- Live dashboards for predictions and anomalies
+- Alert management and real-time notifications
+- Last Updated: October 2024
+
 **Check Latest Updates:** Help → What's New
+
+---
+
+## A/B Testing & Experimentation
+
+### Overview
+
+The A/B Testing feature allows you to compare different AI model versions and configurations to determine which performs better for your specific use case.
+
+### Creating an Experiment
+
+1. Navigate to **Analytics** > **A/B Testing**
+2. Click **Create Experiment**
+3. Enter experiment details:
+   - **Experiment Name**: Descriptive name
+   - **Description**: Optional details about the test
+   - **Traffic Split**: Define how traffic is distributed (e.g., 50/50)
+4. Click **Create**
+
+### Managing Variants
+
+1. Select an experiment from the list
+2. Click **Add Variant**
+3. Configure the variant:
+   - **Variant Name**: e.g., "Control" or "Treatment A"
+   - **Variant Type**: Control or Treatment
+   - **Model Version**: Specific model version to test
+   - **Traffic Percentage**: Portion of traffic for this variant
+4. Add multiple variants as needed
+
+### Running Experiments
+
+1. Once variants are configured, click **Start** on the experiment
+2. The system automatically assigns users to variants
+3. Monitor real-time results in the **Results** tab
+4. When sufficient data is collected, click **Complete**
+
+### Analyzing Results
+
+- **Sample Size**: Number of users exposed to each variant
+- **Metrics**: Performance metrics for each variant (mean, min, max)
+- **Comparison**: Side-by-side comparison of variants
+- **Statistical Significance**: Automated significance testing
+
+**Best Practices:**
+- Run experiments for at least 7 days for reliable results
+- Ensure minimum sample size of 1000 per variant
+- Monitor for confounding variables
+- Document experiment conclusions
+
+---
+
+## Real-Time Streaming Analytics
+
+### Overview
+
+The Streaming Analytics module provides real-time monitoring and analysis of data streams from various sources including Kafka, WebSockets, and HTTP streams.
+
+### Setting Up Data Sources
+
+1. Navigate to **Analytics** > **Streaming Dashboard**
+2. Click **Add Data Source** (if available in admin mode)
+3. Configure the data source:
+   - **Source Name**: Descriptive identifier
+   - **Source Type**: kafka, websocket, http_stream
+   - **Connection Config**: Source-specific connection details
+4. Activate the source
+
+### Monitoring Live Data
+
+The Streaming Dashboard displays:
+
+- **Active Data Sources**: Number of connected sources
+- **Recent Events**: Real-time event stream (last hour)
+- **Live Predictions**: Model predictions in real-time
+- **Open Alerts**: Active system alerts
+
+### Working with Alerts
+
+**Acknowledging Alerts:**
+1. Review the alert details in the Active Alerts section
+2. Click the acknowledge icon
+3. Alert status changes to "Acknowledged"
+
+**Resolving Alerts:**
+1. Investigate and address the alert cause
+2. Click the resolve icon
+3. Optionally add resolution notes
+4. Alert moves to resolved status
+
+**Alert Severity Levels:**
+- **Critical**: Immediate action required
+- **Error**: Significant issue requiring attention
+- **Warning**: Potential issue to monitor
+- **Info**: Informational notification
+
+### Live Predictions
+
+Monitor real-time model predictions:
+- **Prediction Type**: Category of prediction
+- **Confidence Score**: Model confidence (0-100%)
+- **Result**: Prediction output
+- **Timestamp**: When prediction was made
+
+### Using the WebSocket Connection
+
+The dashboard maintains a live WebSocket connection for real-time updates:
+- Green "Live" indicator shows active connection
+- Automatic reconnection on disconnect
+- Real-time data push from server
+- No manual refresh needed for live data
+
+### Metrics and Trends
+
+View time-series metrics:
+- **1-minute aggregations**: Short-term trends
+- **5-minute aggregations**: Medium-term patterns
+- **1-hour aggregations**: Long-term analysis
+
+The LiveAnalyticsDashboard component automatically calculates:
+- Metric trends (up/down/stable)
+- Percentage changes
+- Comparison with previous periods
 
 ---
 
 **Need More Help?**
 
 Contact your system administrator or reach out to our support team at support@tritiq.com
+
+For detailed guides on A/B Testing and Streaming Analytics, see the **AB_TESTING_STREAMING_GUIDE.md** document.
 
 *This guide is maintained by the development team and updated regularly. For the latest version, visit the Help section in the application.*
