@@ -10,6 +10,7 @@ from datetime import datetime
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
+from app.services.ai_service import AIService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,24 @@ async def process_chat_message(
     - Intent classification with high accuracy
     """
     try:
+        # Use AI Service for intelligent message processing
+        ai_service = AIService(db)
+        response_data = ai_service.process_chat_message(
+            message=chat_message.message,
+            organization_id=current_user.organization_id,
+            user_id=current_user.id,
+            context=chat_message.context
+        )
+        
+        return ChatResponse(
+            message=response_data.get('message', ''),
+            actions=response_data.get('actions'),
+            intent=response_data.get('intent'),
+            confidence=response_data.get('confidence'),
+            suggestions=response_data.get('suggestions')
+        )
+        
+        # Legacy implementation below for reference (can be removed)
         message = chat_message.message.lower().strip()
         
         # Business advice and recommendations
@@ -558,55 +577,29 @@ async def process_chat_message(
 
 @router.get("/suggestions")
 async def get_chat_suggestions(
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get contextual chat suggestions based on user's typical workflows"""
     
-    # Get current hour to provide time-appropriate suggestions
-    current_hour = datetime.now().hour
-    
-    # Morning suggestions (6 AM - 12 PM)
-    if 6 <= current_hour < 12:
+    try:
+        ai_service = AIService(db)
+        suggestions = ai_service.get_contextual_suggestions(
+            organization_id=current_user.organization_id
+        )
+        
+        return {"suggestions": suggestions}
+        
+    except Exception as e:
+        logger.error(f"Error getting suggestions: {str(e)}")
+        # Fallback to basic suggestions
         return {
             "suggestions": [
-                "Show today's pending orders",
-                "View low stock items",
-                "Check outstanding payments",
-                "Create sales order",
-                "View dashboard"
-            ]
-        }
-    # Afternoon suggestions (12 PM - 5 PM)
-    elif 12 <= current_hour < 17:
-        return {
-            "suggestions": [
+                "View dashboard",
                 "Create invoice",
-                "Record payment received",
-                "Generate sales report",
-                "View customer analytics",
-                "Check GST reports"
-            ]
-        }
-    # Evening suggestions (5 PM - 10 PM)
-    elif 17 <= current_hour < 22:
-        return {
-            "suggestions": [
-                "View today's summary",
-                "Close pending orders",
-                "Generate profit & loss",
-                "Backup data",
-                "Tomorrow's schedule"
-            ]
-        }
-    # Night/Late suggestions (10 PM - 6 AM)
-    else:
-        return {
-            "suggestions": [
+                "Check inventory",
                 "View reports",
-                "Check analytics",
-                "Review pending approvals",
-                "Help",
-                "Settings"
+                "Help"
             ]
         }
 
