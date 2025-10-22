@@ -401,6 +401,58 @@ Track manufacturing progress with work orders:
 - Monitor SLA compliance
 - Get alerts for SLA breaches
 
+### Website Agent
+
+The Website Agent allows you to create and manage customer websites from within the service module.
+
+**Creating a Website Project:**
+1. Navigate to **Service** > **Website Agent**
+2. Click **Create Website**
+3. Follow the wizard steps:
+   - **Step 1: Basic Info**
+     - Enter project name
+     - Select project type (Landing Page, E-Commerce, Corporate, Blog, Portfolio)
+     - Optionally link to a customer
+   - **Step 2: Design**
+     - Choose a theme (Modern, Classic, Minimal, Bold)
+     - Set primary and secondary colors
+     - Upload logo and favicon
+   - **Step 3: Content**
+     - Enter site title and description
+     - Default pages (Home, About, Contact) are auto-generated
+   - **Step 4: Integration**
+     - Enable AI Chatbot integration
+     - Enable analytics tracking
+     - Enable SEO optimization
+4. Click **Create Project**
+
+**Managing Projects:**
+- View all website projects in the main dashboard
+- Click on a project to view details, deployments, and maintenance logs
+- Use the menu (⋮) to edit, deploy, or delete projects
+
+**Deploying Websites:**
+1. Select a project from the list
+2. Click the **Deploy** button
+3. The system will create a new deployment
+4. View deployment history in the **Deployments** tab
+
+**Managing Pages:**
+1. Select a project
+2. Navigate to the project details
+3. Add, edit, or delete pages as needed
+4. Set page order and publish status
+
+**Maintenance Logs:**
+- Track all updates and changes to your websites
+- View automated maintenance activities
+- Monitor security patches and performance optimizations
+
+**Integration with Service Chatbot:**
+- When chatbot integration is enabled, your service chatbot is automatically embedded on the website
+- Customers can get instant support while browsing
+- Conversations can be escalated to human agents as needed
+
 ---
 
 ## HR Management
@@ -561,6 +613,34 @@ Track manufacturing progress with work orders:
 3. Perform physical stock verification
 4. Reconcile with system stock
 5. Make stock adjustment if needed
+
+#### Website Deployment Failing
+**Solution:**
+1. Check project status is not "archived"
+2. Verify all required fields are filled (site title, theme)
+3. Ensure at least one page is published
+4. Check deployment provider configuration
+5. Review deployment logs in the Deployments tab
+6. Try redeploying with a new version
+7. Contact support if issue persists
+
+#### Website Not Displaying Correctly
+**Solution:**
+1. Clear browser cache and reload
+2. Check if deployment completed successfully
+3. Verify page content is properly formatted
+4. Check theme and color settings
+5. Test in different browsers
+6. Review maintenance logs for recent changes
+
+#### Chatbot Not Showing on Website
+**Solution:**
+1. Verify chatbot integration is enabled for the project
+2. Check chatbot configuration settings
+3. Ensure website is deployed after enabling chatbot
+4. Clear browser cache
+5. Check browser console for JavaScript errors
+6. Verify service chatbot is active in Service Desk settings
 
 ### Getting Help
 
