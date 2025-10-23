@@ -57,7 +57,7 @@ describe('PWAInstallPrompt', () => {
 
     render(<PWAInstallPrompt />);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(30000);
     });
 
@@ -71,7 +71,7 @@ describe('PWAInstallPrompt', () => {
   it('should call promptInstall when install button clicked', async () => {
     jest.useFakeTimers();
 
-    const mockPromptInstall = jest.fn();
+    const mockPromptInstall = jest.fn().mockResolvedValue(undefined);
 
     mockUsePWA.mockReturnValue({
       isInstallable: true,
@@ -84,7 +84,7 @@ describe('PWAInstallPrompt', () => {
 
     render(<PWAInstallPrompt />);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(30000);
     });
 
@@ -92,7 +92,9 @@ describe('PWAInstallPrompt', () => {
       expect(screen.getByText('Install')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Install'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Install'));
+    });
 
     expect(mockPromptInstall).toHaveBeenCalled();
 
@@ -113,7 +115,7 @@ describe('PWAInstallPrompt', () => {
 
     render(<PWAInstallPrompt />);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(30000);
     });
 
@@ -121,7 +123,9 @@ describe('PWAInstallPrompt', () => {
       expect(screen.getByText('Not Now')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Not Now'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Not Now'));
+    });
 
     expect(localStorage.getItem('pwa-install-dismissed')).toBe('true');
 

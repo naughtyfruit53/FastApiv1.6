@@ -36,8 +36,8 @@ describe('OnboardingTour', () => {
       />
     );
 
-    expect(screen.getByText('Welcome')).toBeInTheDocument();
     expect(screen.getByText('Welcome to the tour')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
   });
 
   it('should not render when closed', () => {
@@ -65,9 +65,9 @@ describe('OnboardingTour', () => {
 
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
 
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('This is your dashboard')).toBeInTheDocument();
     expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
   });
 
@@ -81,11 +81,11 @@ describe('OnboardingTour', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Next'));
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    expect(screen.getByText('This is your dashboard')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Back'));
-    expect(screen.getByText('Welcome')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    expect(screen.getByText('Welcome to the tour')).toBeInTheDocument();
   });
 
   it('should complete tour on last step', () => {
@@ -98,13 +98,14 @@ describe('OnboardingTour', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Next'));
-    fireEvent.click(screen.getByText('Next'));
+    const nextButtons = screen.getAllByRole('button', { name: /next/i });
+    fireEvent.click(nextButtons[0]);
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
 
-    expect(screen.getByText('Complete')).toBeInTheDocument();
-    expect(screen.getByText('Complete', { selector: 'button span' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Complete', { selector: 'button span' }));
+    expect(screen.getByText('Tour complete')).toBeInTheDocument();
+    
+    const completeButton = screen.getByRole('button', { name: /complete/i });
+    fireEvent.click(completeButton);
 
     expect(mockOnComplete).toHaveBeenCalled();
     expect(mockOnClose).toHaveBeenCalled();
