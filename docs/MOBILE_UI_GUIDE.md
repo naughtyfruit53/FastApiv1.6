@@ -2,7 +2,7 @@
 
 ## Overview
 
-This comprehensive guide documents the complete mobile UI implementation for FastAPI v1.6 TritIQ Business Suite. The mobile interface provides 100% feature parity with desktop while delivering an optimized touch-first experience.
+This comprehensive guide documents the complete mobile UI implementation for FastAPI v1.6 TritIQ Business Suite. The mobile interface provides 100% feature parity with desktop while delivering an optimized touch-first experience. This includes Progressive Web App (PWA) capabilities, offline support, and device feature integrations.
 
 ## Architecture & Design Principles
 
@@ -727,6 +727,264 @@ useEffect(() => {
   return () => window.removeEventListener('resize', handleResize);
 }, []);
 ```
+
+## Progressive Web App (PWA) Features
+
+### PWA Overview
+
+TritIQ Business Suite is fully PWA-enabled, providing app-like experiences on mobile and desktop browsers.
+
+#### PWA Benefits
+- **Installable**: Add to home screen on mobile devices
+- **Offline Support**: Work without internet connection
+- **Fast Loading**: Cached resources for instant load times
+- **Push Notifications**: Real-time updates even when app is closed
+- **Auto-Updates**: Seamless updates without app store
+
+### PWA Implementation
+
+#### 1. Service Worker
+
+The service worker handles caching, offline support, and background sync.
+
+**Features:**
+- Cache-first strategy for static assets
+- Network-first strategy for API calls
+- Offline fallback page
+- Background sync for offline actions
+- Push notification handling
+
+**Location:** `/public/service-worker.js`
+
+#### 2. Web App Manifest
+
+Defines app metadata, icons, and behavior.
+
+**Configuration:**
+```json
+{
+  "name": "TritIQ Business Suite",
+  "short_name": "TritIQ ERP",
+  "display": "standalone",
+  "start_url": "/",
+  "theme_color": "#1976d2",
+  "background_color": "#ffffff"
+}
+```
+
+**Location:** `/public/manifest.json`
+
+#### 3. PWA Hooks
+
+**usePWA Hook:**
+```typescript
+import { usePWA } from '@/hooks/usePWA';
+
+const { 
+  isInstallable,
+  isInstalled,
+  isOnline,
+  promptInstall,
+  updateAvailable,
+  updateServiceWorker 
+} = usePWA();
+
+// Show install prompt
+if (isInstallable) {
+  await promptInstall();
+}
+```
+
+### Offline Support
+
+#### Offline Detection
+
+**OfflineIndicator Component:**
+```typescript
+import OfflineIndicator from '@/components/OfflineIndicator';
+
+// Add to app root
+<OfflineIndicator />
+```
+
+**Features:**
+- Persistent banner when offline
+- Toast notification when back online
+- Auto-reload when connection restored
+
+#### Offline Data Access
+
+**Cached Resources:**
+- Essential pages (dashboard, login)
+- Static assets (icons, images)
+- Previously viewed data
+- User profile information
+
+**Offline Actions:**
+- Queue actions when offline
+- Sync automatically when back online
+- Show pending sync status
+
+### Install Prompt
+
+**PWAInstallPrompt Component:**
+```typescript
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+
+// Add to app root
+<PWAInstallPrompt />
+```
+
+**Features:**
+- Auto-show after 30 seconds
+- Dismissible with localStorage tracking
+- Beautiful gradient design
+- Lists installation benefits
+
+### Update Management
+
+**UpdatePrompt Component:**
+```typescript
+import UpdatePrompt from '@/components/UpdatePrompt';
+
+// Add to app root
+<UpdatePrompt />
+```
+
+**Features:**
+- Detects new app versions
+- One-click update
+- Seamless reload after update
+
+## Device Features Integration
+
+### Biometric Authentication
+
+Enable secure, convenient login using fingerprint or face recognition.
+
+**useBiometric Hook:**
+```typescript
+import { useBiometric } from '@/hooks/useBiometric';
+
+const { 
+  isAvailable,
+  isSupported,
+  authenticate,
+  error 
+} = useBiometric();
+
+// Authenticate user
+const success = await authenticate();
+```
+
+**BiometricLoginButton Component:**
+```typescript
+import BiometricLoginButton from '@/components/BiometricLoginButton';
+
+<BiometricLoginButton
+  onSuccess={() => handleLogin()}
+  onError={(error) => console.error(error)}
+/>
+```
+
+**Features:**
+- Platform authenticator support
+- Fallback to password
+- Error handling
+- User-friendly messaging
+
+### Camera Integration
+
+Capture photos for documents, receipts, products, and profiles.
+
+**useCamera Hook:**
+```typescript
+import { useCamera } from '@/hooks/useCamera';
+
+const {
+  isSupported,
+  isActive,
+  startCamera,
+  stopCamera,
+  capturePhoto,
+  switchCamera
+} = useCamera();
+
+// Start camera
+await startCamera('environment'); // or 'user' for selfie
+
+// Capture photo
+const photo = await capturePhoto();
+```
+
+**CameraCapture Component:**
+```typescript
+import CameraCapture from '@/components/CameraCapture';
+
+<CameraCapture
+  open={showCamera}
+  onClose={() => setShowCamera(false)}
+  onCapture={(photo) => handlePhoto(photo)}
+  title="Capture Receipt"
+/>
+```
+
+**Features:**
+- Front and back camera switching
+- Photo preview before confirm
+- Retake capability
+- Full-screen capture interface
+- Touch-friendly controls
+
+### Push Notifications
+
+Keep users informed with real-time push notifications.
+
+**usePushNotifications Hook:**
+```typescript
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+
+const {
+  isSupported,
+  permission,
+  subscription,
+  requestPermission,
+  subscribe,
+  unsubscribe,
+  sendNotification
+} = usePushNotifications();
+
+// Request permission and subscribe
+await requestPermission();
+await subscribe();
+
+// Send test notification
+sendNotification('Test', {
+  body: 'This is a test notification',
+  icon: '/icons/icon-192x192.png'
+});
+```
+
+**NotificationSettings Component:**
+```typescript
+import NotificationSettings from '@/components/NotificationSettings';
+
+<NotificationSettings />
+```
+
+**Features:**
+- Permission management
+- Subscription toggle
+- Notification preferences (order updates, inventory alerts, etc.)
+- Test notification button
+- Browser compatibility detection
+
+**Notification Types:**
+- Order updates and status changes
+- Inventory alerts (low stock, reorders)
+- Task reminders and deadlines
+- System updates and maintenance
+- Custom business events
 
 ## Future Enhancements
 
