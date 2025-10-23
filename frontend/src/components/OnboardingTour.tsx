@@ -10,7 +10,6 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Paper,
 } from '@mui/material';
 import {
   Close as CloseIcon,
