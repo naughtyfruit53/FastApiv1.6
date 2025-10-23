@@ -1161,15 +1161,218 @@ const trackDemoFeature = (feature: string) => {
 - Mobile vs desktop demo usage
 - Exit points in demo flow
 
+## Onboarding & Tutorial System
+
+### Demo Onboarding
+
+TritIQ includes a comprehensive onboarding system that guides new demo users through key features.
+
+#### DemoOnboarding Component
+
+Automatically shows a guided tour to first-time demo users.
+
+**Usage:**
+```typescript
+import DemoOnboarding from '@/components/DemoOnboarding';
+
+// Add to demo page
+<DemoOnboarding onComplete={() => console.log('Tour completed')} />
+```
+
+**Features:**
+- Auto-starts for first-time users
+- Skip and resume capability
+- Progress tracking
+- Element highlighting
+- Step-by-step guidance
+
+**Tour Steps:**
+1. Welcome message
+2. Dashboard overview
+3. Module navigation
+4. Mobile features
+5. Demo safety reminder
+6. Demo mode indicator
+7. Getting started guide
+
+**Configuration:**
+```typescript
+const demoSteps = [
+  {
+    title: 'Welcome to TritIQ Demo',
+    description: 'Explore all features with realistic demo data.',
+    image: '/icons/icon-512x512.png',
+  },
+  {
+    title: 'Navigate the Dashboard',
+    description: 'Your dashboard provides key metrics overview.',
+    target: '[data-tour="dashboard"]',
+  },
+  // ... more steps
+];
+```
+
+#### OnboardingTour Component
+
+Reusable tour component for creating custom onboarding flows.
+
+**Usage:**
+```typescript
+import OnboardingTour from '@/components/OnboardingTour';
+
+const [showTour, setShowTour] = useState(true);
+
+<OnboardingTour
+  open={showTour}
+  onClose={() => setShowTour(false)}
+  onComplete={() => handleTourComplete()}
+  steps={customSteps}
+/>
+```
+
+**Props:**
+- `open`: Boolean to control visibility
+- `onClose`: Callback when tour is closed
+- `onComplete`: Callback when tour is completed
+- `steps`: Array of tour steps
+
+**Step Configuration:**
+```typescript
+interface TourStep {
+  title: string;
+  description: string;
+  target?: string;      // CSS selector for element to highlight
+  image?: string;       // Optional image URL
+  action?: () => void;  // Optional action to perform
+}
+```
+
+**Features:**
+- Linear progress indicator
+- Step navigation (next/back)
+- Element spotlight overlay
+- Smooth scrolling to elements
+- Stepper visualization
+- Custom images per step
+
+#### InteractiveTutorial Component
+
+Context-sensitive tutorials for specific features.
+
+**Usage:**
+```typescript
+import InteractiveTutorial from '@/components/InteractiveTutorial';
+
+<InteractiveTutorial
+  featureId="sales-orders"
+  steps={salesOrderSteps}
+  onComplete={() => markFeatureLearned('sales-orders')}
+/>
+```
+
+**Features:**
+- Contextual help popover
+- Persistent help button
+- Auto-start on feature entry
+- Completion tracking per feature
+- Spotlight overlay
+- Action suggestions
+
+**Example Tutorial Steps:**
+```typescript
+const salesOrderSteps = [
+  {
+    id: 'create-order',
+    target: '[data-tutorial="create-order-btn"]',
+    title: 'Create New Order',
+    content: 'Click here to start creating a new sales order.',
+    placement: 'bottom',
+    action: 'Try clicking the button to create your first order',
+  },
+  {
+    id: 'order-details',
+    target: '[data-tutorial="order-form"]',
+    title: 'Order Details',
+    content: 'Fill in customer information and order items.',
+    placement: 'right',
+  },
+  // ... more steps
+];
+```
+
+**Tutorial Lifecycle:**
+```typescript
+// Check if tutorial completed
+const completed = localStorage.getItem('tutorial-completed-sales-orders');
+
+// Mark as completed
+localStorage.setItem('tutorial-completed-sales-orders', 'true');
+
+// Reset tutorial
+localStorage.removeItem('tutorial-completed-sales-orders');
+```
+
+### Onboarding Best Practices
+
+1. **Keep It Short**: 5-7 steps maximum for main tour
+2. **Highlight Value**: Focus on key features and benefits
+3. **Make It Skippable**: Always provide skip option
+4. **Allow Restart**: Include help button to restart tour
+5. **Progressive Disclosure**: Introduce features gradually
+6. **Mobile Optimized**: Ensure tours work well on mobile
+7. **Contextual**: Show tutorials when user needs them
+8. **Track Completion**: Monitor which steps users skip
+
+### Tutorial Targeting
+
+Add data attributes to elements for tutorial targeting:
+
+```typescript
+// In your components
+<Button data-tour="create-order" data-tutorial="create-order-btn">
+  Create Order
+</Button>
+
+<Box data-tour="dashboard">
+  {/* Dashboard content */}
+</Box>
+
+<Chip data-tour="demo-badge" label="DEMO MODE" />
+```
+
+### Customizing Tours
+
+Create custom tours for different user types:
+
+```typescript
+// For temporary users
+const tempUserTour = [
+  { title: 'Welcome Guest', description: 'Your session will last 1 hour...' },
+  // ...
+];
+
+// For existing users trying demo
+const existingUserTour = [
+  { title: 'Welcome to Demo Mode', description: 'All your real data is safe...' },
+  // ...
+];
+
+// For mobile users
+const mobileTour = [
+  { title: 'Mobile Features', description: 'Swipe, tap, and gesture controls...' },
+  // ...
+];
+```
+
 ## Future Enhancements
 
 See [FUTURE_SUGGESTIONS.md](./FUTURE_SUGGESTIONS.md) for:
-- Guided demo tours
-- Interactive tutorials
+- Video walkthroughs
 - Demo mode personalization
 - Multi-language demo support
 - Voice-guided demo
-- Video walkthroughs
+- Advanced analytics
+- A/B testing for onboarding flows
 
 ## Support Resources
 
