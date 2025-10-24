@@ -33,12 +33,11 @@ import VoucherItemTable from '../../../components/VoucherItemTable'; // New comm
 import VoucherFormTotals from '../../../components/VoucherFormTotals'; // New common totals
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
+import api from '../../../lib/api';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
-import api from '../../../lib/api';
 import { useCompany } from "../../../context/CompanyContext";
 import { useGstValidation } from "../../../hooks/useGstValidation"; // New GST hook
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New discounts hook
@@ -411,14 +410,16 @@ const QuotationPage: React.FC = () => {
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/quotations/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/quotations/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/quotations/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/quotations/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {
@@ -468,6 +469,27 @@ const QuotationPage: React.FC = () => {
   };
 
   const enhancedCustomerOptions = [...(customerList || []), { id: null, name: "Add New Customer..." }];
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
 
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -533,7 +555,7 @@ const QuotationPage: React.FC = () => {
   const formContent = (
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
-      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>
         <Grid container spacing={1}>
           <Grid size={6}>
             <TextField 
@@ -752,29 +774,7 @@ const QuotationPage: React.FC = () => {
   );
 
   if (isLoading || companyLoading) {
-  
-
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
-  return (
+    return (
       <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />

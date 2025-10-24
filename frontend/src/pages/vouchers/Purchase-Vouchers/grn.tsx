@@ -33,11 +33,10 @@ import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
+import api from '../../../lib/api';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles } from '../../../utils/voucherUtils';
 import { voucherService } from '../../../services/vouchersService';
-import api from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
@@ -505,14 +504,16 @@ const GoodsReceiptNotePage: React.FC = () => {
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/goods-receipt-notes/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/goods-receipt-notes/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/goods-receipt-notes/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/goods-receipt-notes/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {
@@ -528,6 +529,29 @@ const GoodsReceiptNotePage: React.FC = () => {
     
     fetchVoucherNumber();
   }, [watch('date'), mode, setValue]);
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+    // Keep the current date
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      // Revert to previous date or clear
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
 
   const indexContent = (
     <>
@@ -946,29 +970,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     </Box>
   );
 
-
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-    // Keep the current date
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      // Revert to previous date or clear
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
 
     if (isLoading) {
     return (

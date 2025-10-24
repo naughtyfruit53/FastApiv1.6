@@ -35,12 +35,11 @@ import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
+import api from "../../../lib/api";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
 import { voucherService } from "../../../services/vouchersService";
-import api from "../../../lib/api";
 import { useCompany } from "../../../context/CompanyContext";
 import { useRouter } from "next/router";
 import { useGstValidation } from "../../../hooks/useGstValidation";
@@ -480,14 +479,16 @@ const PurchaseOrderPage: React.FC = () => {
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/purchase-orders/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/purchase-orders/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/purchase-orders/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/purchase-orders/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {
@@ -600,6 +601,27 @@ const PurchaseOrderPage: React.FC = () => {
     }
   };
 
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
       <Table stickyHeader size="small">
@@ -621,29 +643,7 @@ const PurchaseOrderPage: React.FC = () => {
               const colorCode = getColorCode(colorStatus);
               const dateStr = voucher.date ? voucher.date.split('T')[0] : '';
               const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
-            
-
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
-  return (
+              return (
                 <TableRow 
                   key={voucher.id} 
                   hover 

@@ -152,8 +152,6 @@ async def create_goods_receipt_note(
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "GRN", current_user.organization_id, GoodsReceiptNote, voucher_date=voucher_date
                 )
-                    db, "GRN", current_user.organization_id, GoodsReceiptNote
-                )
         
         db_invoice = GoodsReceiptNote(**invoice_data)
         db.add(db_invoice)

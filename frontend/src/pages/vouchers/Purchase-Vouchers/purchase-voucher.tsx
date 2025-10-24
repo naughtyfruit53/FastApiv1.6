@@ -1,5 +1,6 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/purchase-voucher.tsx
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Box,
   TextField,
@@ -7,7 +8,6 @@ import {
   Grid,
   CircularProgress,
   Container,
-  Autocomplete,
   Alert,
   Button,
   Dialog,
@@ -20,40 +20,42 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-} from '@mui/material';
-import AddVendorModal from '../../../components/AddVendorModal';
-import AddProductModal from '../../../components/AddProductModal';
-import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
-import VoucherContextMenu from '../../../components/VoucherContextMenu'; // Updated to merged component
-import VoucherLayout from '../../../components/VoucherLayout';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-import VoucherListModal from '../../../components/VoucherListModal';
-import VoucherReferenceDropdown from '../../../components/VoucherReferenceDropdown';
-import VoucherItemTable from '../../../components/VoucherItemTable'; // New common table
-import VoucherFormTotals from '../../../components/VoucherFormTotals';
-import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges'; // New common totals
+  Autocomplete,
+} from "@mui/material";
+import { toast } from "react-toastify";
+import AddVendorModal from "../../../components/AddVendorModal";
+import AddProductModal from "../../../components/AddProductModal";
+import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherLayout from "../../../components/VoucherLayout";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import VoucherListModal from "../../../components/VoucherListModal";
+import VoucherItemTable from "../../../components/VoucherItemTable";
+import VoucherFormTotals from "../../../components/VoucherFormTotals";
+import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from '../../../utils/voucherUtils';
-import { getStock } from '../../../services/masterService';
-import { voucherService } from '../../../services/vouchersService';
-import api from '../../../lib/api';
+import api from "../../../lib/api";
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
+import { getStock } from "../../../services/masterService";
+import { voucherService } from "../../../services/vouchersService";
 import { useCompany } from "../../../context/CompanyContext";
-import { useGstValidation } from "../../../hooks/useGstValidation"; // New GST hook
-import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts"; // New discounts hook
-import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers"; // New utils
-import voucherFormStyles from "../../../styles/voucherFormStyles"; // New common styles import
 import { useRouter } from "next/router";
+import { useGstValidation } from "../../../hooks/useGstValidation";
+import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
+import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
+import voucherFormStyles from "../../../styles/voucherFormStyles";
 import { useQueryClient } from "@tanstack/react-query";
-import { useWatch } from "react-hook-form"; // Added missing import for useWatch
-import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for vendor balance display
+import { useWatch } from "react-hook-form";
+import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
 import { formatCurrency } from "../../../utils/currencyUtils";
 
 const PurchaseVoucherPage: React.FC = () => {
-  const { company, isLoading: companyLoading } = useCompany();
+  console.count('Render: PurchaseVoucherPage');
+  const { company, isLoading: companyLoading, error: companyError } = useCompany();
   const router = useRouter();
-  const config = getVoucherConfig('purchase-voucher');
+  const { productId, vendorId } = router.query;
+  const config = getVoucherConfig("purchase-voucher");
   const voucherStyles = getVoucherStyles();
   const queryClient = useQueryClient();
   const processedRef = useRef<Set<number>>(new Set());
@@ -123,10 +125,14 @@ const PurchaseVoucherPage: React.FC = () => {
     handleView,
     handleContextMenu,
     handleCloseContextMenu,
+    handleSearch,
+    handleModalOpen,
+    handleModalClose,
     handleGeneratePDF,
     handleDelete,
     refreshMasterData,
     getAmountInWords,
+    isViewMode,
     totalRoundOff,
   } = useVoucherPage(config);
 
@@ -136,10 +142,8 @@ const PurchaseVoucherPage: React.FC = () => {
   const [stockLoading, setStockLoading] = useState<{ [key: number]: boolean }>({});
   const selectedVendorId = watch("vendor_id");
   
-  // Local state for selected vendor object to prevent display clearing
-  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [selectedVendor, setSelectedVendor] = useState(null as any);
   
-  // Sync selectedVendor with vendorList and selectedVendorId
   useEffect(() => {
     if (selectedVendorId && vendorList) {
       const foundVendor = vendorList.find((v: any) => v.id === selectedVendorId);
@@ -150,11 +154,9 @@ const PurchaseVoucherPage: React.FC = () => {
       setSelectedVendor(null);
     }
   }, [selectedVendorId, vendorList]);
-
-  // Fetch vendor balance
+  
   const { balance: vendorBalance, loading: vendorBalanceLoading } = useEntityBalance('vendor', selectedVendorId);
 
-  // Use new hooks
   const { gstError } = useGstValidation(selectedVendorId, vendorList);
   const {
     lineDiscountEnabled,
@@ -181,11 +183,16 @@ const PurchaseVoucherPage: React.FC = () => {
     miscellaneous: 0,
   });
   const [localAdditionalCharges, setLocalAdditionalCharges] = useState<AdditionalChargesData>(additionalCharges);
-  
-  // State for voucher date conflict detection
-  const [conflictInfo, setConflictInfo] = useState<any>(null);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [pendingDate, setPendingDate] = useState<string | null>(null);
+
+  const enhancedVendorOptions = useMemo(() => {
+    const sortedVendors = [...(vendorList || [])].sort((a, b) => 
+      (a.name || '').localeCompare(b.name || '')
+    );
+    return [
+      { id: null, name: 'Add New Vendor...' },
+      ...sortedVendors
+    ];
+  }, [vendorList]);
 
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
@@ -242,13 +249,11 @@ const PurchaseVoucherPage: React.FC = () => {
     });
   }, [fields.length, productList, productIds, productNames]);
 
-  // Use useWatch for items and total_discount to ensure reactivity
   const items = useWatch({ control, name: "items" }) || [];
   const totalDiscountValue = useWatch({ control, name: "total_discount" }) || 0;
 
-  // Override totals with additional charges
   const totalsWithAdditionalCharges = useMemo(() => {
-    console.log('Calculating totals with items:', items); // Debug log to check if items are updating correctly
+    console.log('Calculating totals with items:', items);
     return calculateVoucherTotals(
       items,
       isIntrastate,
@@ -259,27 +264,25 @@ const PurchaseVoucherPage: React.FC = () => {
     );
   }, [items, isIntrastate, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, totalDiscountValue, additionalCharges]);
 
-  const localComputedItems = totalsWithAdditionalCharges.computedItems; // Use the fully calculated items for table display
-
+  const localComputedItems = totalsWithAdditionalCharges.computedItems;
   const finalTotalAmount = totalsWithAdditionalCharges.totalAmount;
   const finalTotalAdditionalCharges = totalsWithAdditionalCharges.totalAdditionalCharges;
 
-  // Reset processed when fields length changes
   useEffect(() => {
     processedRef.current = new Set();
   }, [fields.length]);
 
-  // Fetch stock when productIds change or on load
   useEffect(() => {
     productIds.forEach((productId: number, index: number) => {
       if (productId && !processedRef.current.has(index) && !stockLoading[index]) {
         const currentStock = watch(`items.${index}.current_stock`);
         if (currentStock === 0 || currentStock === undefined) {
           setStockLoading(prev => ({ ...prev, [index]: true }));
-          getStock({ queryKey: ["", { product_id: productId }] })
+          getStock({ queryKey: ["", { product_id: productId, organization_id: company?.organization_id }] })
             .then(res => {
+              console.log("Stock fetch response for product", productId, ":", res);
               const stockData = res[0] || { quantity: 0 };
-              setValue(`items.${index}.current_stock`, stockData.quantity);
+              setValue(`items.${index}.current_stock`, parseFloat(stockData.quantity || 0));
             })
             .catch(err => console.error("Failed to fetch stock:", err))
             .finally(() => {
@@ -291,7 +294,7 @@ const PurchaseVoucherPage: React.FC = () => {
         }
       }
     });
-  }, [productIds, fields, stockLoading, setValue, watch]);
+  }, [productIds, fields.length, setValue, watch, company?.organization_id]);
 
   useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {
@@ -301,17 +304,79 @@ const PurchaseVoucherPage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
+  useEffect(() => {
+    if (mode === "create" && productId && productList) {
+      const product = productList.find((p) => p.id === Number(productId));
+      if (product) {
+        const gst_rate = normalizeGstRate(product.gst_rate ?? 18);
+        if (fields.length === 1 && !watch(`items.0.product_id`)) {
+          remove(0);
+        }
+        append({
+          product_id: product.id,
+          product_name: product.product_name || product.name,
+          quantity: 0.0,
+          unit_price: parseFloat(product.unit_price || 0),
+          original_unit_price: parseFloat(product.unit_price || 0),
+          discount_percentage: 0,
+          discount_amount: 0,
+          gst_rate: gst_rate,
+          cgst_rate: isIntrastate ? gst_rate / 2 : 0,
+          sgst_rate: isIntrastate ? gst_rate / 2 : 0,
+          igst_rate: isIntrastate ? 0 : gst_rate,
+          amount: 0,
+          unit: product.unit,
+          current_stock: 0,
+          reorder_level: parseFloat(product.reorder_level || 0),
+          description: '',
+        });
+      }
+    }
+  }, [mode, productId, productList, append, isIntrastate, fields.length, watch, remove]);
+
+  useEffect(() => {
+    if (mode === "create" && vendorId && vendorList && !watch("vendor_id")) {
+      const vendor = vendorList.find((v) => v.id === Number(vendorId));
+      if (vendor) {
+        setValue("vendor_id", vendor.id);
+        setSelectedVendor(vendor);
+        console.log("Set initial vendor from query:", vendor.id);
+      }
+    }
+  }, [mode, vendorId, vendorList, setValue, watch]);
+
+  useEffect(() => {
+    console.log("Vendor list in purchase-voucher:", vendorList);
+  }, [vendorList]);
+
+  const handleVendorAdded = (newVendor: any) => {
+    if (newVendor?.id) {
+      setValue("vendor_id", newVendor.id);
+      setSelectedVendor(newVendor);
+      console.log("Vendor added, updating vendor_id:", newVendor.id);
+      queryClient.setQueryData(["vendors", "", company?.organization_id], (old: any[]) => {
+        const updatedList = old ? [...old, newVendor] : [newVendor];
+        console.log("Updated vendor list:", updatedList);
+        return updatedList;
+      });
+      queryClient.invalidateQueries(["vendors"]);
+      setShowAddVendorModal(false);
+      refreshMasterData();
+    } else {
+      console.error("New vendor ID is missing:", newVendor);
+    }
+  };
+
   const handleVoucherClick = (voucher: any) => {
-    // Use the voucher from list (assumes full data from backend joins)
     setMode("view");
     reset({
       ...voucher,
-      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : item.gst_rate,
+        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
       })),
     });
     if (voucher.additional_charges) {
@@ -328,12 +393,12 @@ const PurchaseVoucherPage: React.FC = () => {
     handleEdit(voucher.id);
     reset({
       ...voucher,
-      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : item.gst_rate,
+        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
       })),
     });
     if (voucher.additional_charges) {
@@ -343,7 +408,6 @@ const PurchaseVoucherPage: React.FC = () => {
       setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
       setAdditionalChargesEnabled(false);
     }
-    // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['purchase-voucher', voucher.id], voucher);
   };
 
@@ -352,12 +416,12 @@ const PurchaseVoucherPage: React.FC = () => {
     handleView(voucher.id);
     reset({
       ...voucher,
-      date: voucher.date ? new Date(voucher.date).toISOString().split('T')[0] : '',
+      date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
-        igst_rate: isIntrastate ? 0 : item.gst_rate,
+        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
+        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
       })),
     });
     if (voucher.additional_charges) {
@@ -367,17 +431,35 @@ const PurchaseVoucherPage: React.FC = () => {
       setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
       setAdditionalChargesEnabled(false);
     }
-    // Prefill cache to avoid duplicate fetch
     queryClient.setQueryData(['purchase-voucher', voucher.id], voucher);
   };
 
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
-      const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
+      const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : '';
       const formattedData = {
         ...voucherData,
         date: formattedDate,
+        items: voucherData.items?.map((item: any) => ({
+          ...item,
+          product_id: item.product_id,
+          product_name: item.product?.product_name || item.product_name || "",
+          unit_price: parseFloat(item.unit_price || 0),
+          original_unit_price: parseFloat(item.product?.unit_price || item.unit_price || 0),
+          discount_percentage: parseFloat(item.discount_percentage || 0),
+          discount_amount: parseFloat(item.discount_amount || 0),
+          gst_rate: normalizeGstRate(item.gst_rate ?? 18),
+          cgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : normalizeGstRate(item.gst_rate ?? 18),
+          unit: item.unit || item.product?.unit || "",
+          current_stock: parseFloat(item.current_stock || 0),
+          reorder_level: parseFloat(item.reorder_level || 0),
+          description: item.description || '',
+          quantity: parseFloat(item.quantity || 0),
+        })) || [],
       };
+      console.log("[PurchaseVoucherPage] Resetting form with voucherData:", formattedData);
       reset(formattedData);
       if (voucherData.additional_charges) {
         setAdditionalCharges(voucherData.additional_charges);
@@ -386,32 +468,8 @@ const PurchaseVoucherPage: React.FC = () => {
         setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
         setAdditionalChargesEnabled(false);
       }
-
-      if (voucherData.items && voucherData.items.length > 0) {
-        remove();
-        voucherData.items.forEach((item: any) => {
-          append({
-            ...item,
-            product_id: item.product_id,
-            product_name: item.product?.product_name || item.product_name || "",
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            original_unit_price: item.product?.unit_price || item.unit_price || 0,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            gst_rate: item.gst_rate ?? 18,
-            cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
-            unit: item.unit,
-            current_stock: item.current_stock || 0,
-            reorder_level: item.reorder_level || 0,
-            description: item.description || '',
-          });
-        });
-      }
     }
-  }, [voucherData, mode, reset, append, remove, isIntrastate]);
+  }, [voucherData, mode, reset, setValue, isIntrastate]);
 
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
@@ -420,14 +478,16 @@ const PurchaseVoucherPage: React.FC = () => {
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/purchase-vouchers/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/purchase-vouchers/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/purchase-vouchers/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/purchase-vouchers/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {
@@ -444,7 +504,7 @@ const PurchaseVoucherPage: React.FC = () => {
     fetchVoucherNumber();
   }, [watch('date'), mode, setValue]);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     if (totalRoundOff !== 0) {
       setSubmitData(data);
       setRoundOffConfirmOpen(true);
@@ -453,7 +513,7 @@ const PurchaseVoucherPage: React.FC = () => {
     handleFinalSubmit(
       data,
       watch,
-      localComputedItems, // Use localComputedItems for consistency
+      localComputedItems,
       isIntrastate,
       finalTotalAmount,
       totalRoundOff,
@@ -476,7 +536,38 @@ const PurchaseVoucherPage: React.FC = () => {
     if (voucherData) reset(voucherData);
   };
 
-  const enhancedVendorOptions = [...(vendorList || []), { id: null, name: "Add New Vendor..." }];
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
+
+  const handleCreateGRN = (voucher: any) => {
+    router.push({
+      pathname: '/vouchers/Purchase-Vouchers/grn',
+      query: { po_id: voucher.id }
+    });
+  };
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
 
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -494,27 +585,37 @@ const PurchaseVoucherPage: React.FC = () => {
           {latestVouchers.length === 0 ? (
             <TableRow><TableCell colSpan={5} align="center">No purchase vouchers available</TableCell></TableRow>
           ) : (
-            latestVouchers.slice(0, 7).map((voucher: any) => (
-              <TableRow key={voucher.id} hover onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} sx={{ cursor: "pointer" }}>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{voucher.date ? new Date(voucher.date).toLocaleDateString() : "N/A"}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
-                <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{formatCurrency(voucher.total_amount || 0)}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
-                  <VoucherContextMenu
-                    voucher={voucher}
-                    voucherType="Purchase Voucher"
-                    onView={handleViewWithData}
-                    onEdit={handleEditWithData}
-                    onDelete={handleDelete}
-                    onPrint={handleGeneratePDF}
-                    onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Voucher")}
-                    showKebab={true}
-                    onClose={() => {}}
-                  />
-                </TableCell>
-              </TableRow>
-            ))
+            latestVouchers.slice(0, 7).map((voucher: any) => {
+              const dateStr = voucher.date ? voucher.date.split('T')[0] : '';
+              const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
+              return (
+                <TableRow 
+                  key={voucher.id} 
+                  hover 
+                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} 
+                  sx={{ cursor: "pointer" }}
+                >
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{formatCurrency(Math.round(voucher.total_amount) || 0)}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
+                    <VoucherContextMenu
+                      voucher={voucher}
+                      voucherType="Purchase Voucher"
+                      onView={handleViewWithData}
+                      onEdit={handleEditWithData}
+                      onDelete={handleDelete}
+                      onPrint={handleGeneratePDF}
+                      onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Voucher")}
+                      onCreateGRN={handleCreateGRN}
+                      showKebab={true}
+                      onClose={() => {}}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
@@ -538,12 +639,12 @@ const PurchaseVoucherPage: React.FC = () => {
     </Box>
   );
 
-  const formContent = (
+  const formBody = (
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
-      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>
         <Grid container spacing={1}>
-          <Grid size={6}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Voucher Number" 
@@ -556,7 +657,7 @@ const PurchaseVoucherPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid size={6}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Date" 
@@ -571,29 +672,44 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
           <Grid size={4}>
-            <VoucherReferenceDropdown
-              voucherType="purchase-voucher"
-              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}
-              onChange={(reference) => { setValue('reference_type', reference.referenceType || ''); setValue('reference_id', reference.referenceId || null); setValue('reference_number', reference.referenceNumber || ''); }}
-              disabled={mode === 'view'}
-              onReferenceSelected={handleReferenceSelected}
+            <TextField 
+              fullWidth 
+              label="Required by Date" 
+              type="date" 
+              {...control.register("required_by_date")} 
+              disabled={mode === "view"} 
+              sx={{ 
+                ...voucherFormStyles.field, 
+                '& .MuiInputBase-input': { textAlign: 'center' } 
+              }} 
+              InputLabelProps={{ shrink: true }} 
+            />
+          </Grid>
+          <Grid size={4}>
+            <TextField 
+              fullWidth 
+              label="Reference" 
+              {...control.register("reference")} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.field} 
+              InputLabelProps={{ shrink: true }} 
             />
           </Grid>
           <Grid size={3}>
             <Autocomplete 
-              key={selectedVendorId || 'vendor-autocomplete'} // Key to stabilize re-renders
+              key={selectedVendorId || 'vendor-autocomplete'} 
               size="small" 
               options={enhancedVendorOptions} 
               getOptionLabel={(option: any) => {
                 if (typeof option === 'number') return '';
                 return option?.name || "";
               }} 
-              value={selectedVendor || (vendorList?.find((v: any) => v.id === selectedVendorId) || null)} // Use local state first, fallback to find()
+              value={selectedVendor || (vendorList?.find((v: any) => v.id === selectedVendorId) || null)} 
               onChange={(_, newValue) => { 
                 if (newValue?.id === null) setShowAddVendorModal(true); 
                 else {
                   setValue("vendor_id", newValue?.id || null); 
-                  setSelectedVendor(newValue); // Store full object locally
+                  setSelectedVendor(newValue);
                 } 
               }} 
               renderInput={(params) => 
@@ -661,7 +777,7 @@ const PurchaseVoucherPage: React.FC = () => {
               append={append}
               mode={mode}
               isIntrastate={isIntrastate}
-              computedItems={localComputedItems} // Use fully calculated items for accurate line totals
+              computedItems={localComputedItems}
               lineDiscountEnabled={lineDiscountEnabled}
               lineDiscountType={lineDiscountType}
               totalDiscountEnabled={totalDiscountEnabled}
@@ -678,6 +794,7 @@ const PurchaseVoucherPage: React.FC = () => {
               showTotalDiscountCheckbox={mode !== "view"}
               showDescriptionCheckbox={mode !== "view"}
               showAdditionalChargesCheckbox={mode !== "view"}
+              showDeliveryStatus={mode === "view" || mode === "edit"}
             />
           </Grid>
           {additionalChargesEnabled && mode === 'view' && (
@@ -698,7 +815,7 @@ const PurchaseVoucherPage: React.FC = () => {
               totalAmount={totalsWithAdditionalCharges.totalAmount}
               totalRoundOff={totalsWithAdditionalCharges.totalRoundOff}
               totalAdditionalCharges={totalsWithAdditionalCharges.totalAdditionalCharges}
-              additionalCharges={additionalCharges} // Added passing detailed charges
+              additionalCharges={additionalCharges}
               isIntrastate={isIntrastate}
               totalDiscountEnabled={totalDiscountEnabled}
               totalDiscountType={totalDiscountType}
@@ -764,33 +881,21 @@ const PurchaseVoucherPage: React.FC = () => {
   );
 
   if (isLoading || companyLoading) {
-  
-
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
-  return (
+    return (
       <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
+      </Container>
+    );
+  }
+
+  if (companyError) {
+    return (
+      <Container>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Error loading company details: {companyError.message}. Please try refreshing or contact support.
+        </Alert>
       </Container>
     );
   }
@@ -802,7 +907,7 @@ const PurchaseVoucherPage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formContent={formContent}
+        formContent={formBody}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={
@@ -820,10 +925,51 @@ const PurchaseVoucherPage: React.FC = () => {
           />
         }
       />
-      <AddVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} onAdd={(newVendor) => { setValue("vendor_id", newVendor.id); setSelectedVendor(newVendor); refreshMasterData(); }} loading={addVendorLoading} setLoading={setAddVendorLoading} />
-      <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
-      <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Purchase Voucher" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Voucher")} />
+      <AddVendorModal 
+        open={showAddVendorModal} 
+        onClose={() => setShowAddVendorModal(false)} 
+        onSave={handleVendorAdded} 
+        loading={addVendorLoading} 
+        setLoading={setAddVendorLoading} 
+        organization_id={company?.organization_id}
+      />
+      <AddProductModal 
+        open={showAddProductModal} 
+        onClose={() => setShowAddProductModal(false)} 
+        onAdd={(newProduct) => { 
+          setValue(`items.${addingItemIndex}.product_id`, newProduct.id); 
+          setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); 
+          setValue(`items.${addingItemIndex}.unit_price`, parseFloat(newProduct.unit_price || 0)); 
+          setValue(`items.${addingItemIndex}.original_unit_price`, parseFloat(newProduct.unit_price || 0)); 
+          setValue(`items.${addingItemIndex}.gst_rate`, normalizeGstRate(newProduct.gst_rate ?? 18)); 
+          setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
+          setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
+          setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : normalizeGstRate(newProduct.gst_rate ?? 18)); 
+          setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); 
+          setValue(`items.${addingItemIndex}.reorder_level`, parseFloat(newProduct.reorder_level || 0)); 
+          refreshMasterData(); 
+        }} 
+        loading={addProductLoading} 
+        setLoading={setAddProductLoading} 
+      />
+      <AddShippingAddressModal 
+        open={showShippingModal} 
+        onClose={() => setShowShippingModal(false)} 
+        loading={addShippingLoading} 
+        setLoading={setAddShippingLoading} 
+      />
+      <VoucherContextMenu 
+        contextMenu={contextMenu} 
+        voucher={null} 
+        voucherType="Purchase Voucher" 
+        onView={handleViewWithData} 
+        onEdit={handleEditWithData} 
+        onDelete={handleDelete} 
+        onPrint={handleGeneratePDF} 
+        onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Voucher")}
+        onCreateGRN={handleCreateGRN}
+        onClose={() => {}}
+      />
       <VoucherDateConflictModal
         open={showConflictModal}
         onClose={handleCancelConflict}
@@ -834,6 +980,10 @@ const PurchaseVoucherPage: React.FC = () => {
       />
     </>
   );
+};
+
+const normalizeGstRate = (rate: number): number => {
+  return rate > 1 ? rate : rate * 100;
 };
 
 export default PurchaseVoucherPage;
