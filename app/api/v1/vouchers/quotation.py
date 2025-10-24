@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, asc, desc, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
+from datetime import datetime
+from dateutil import parser as date_parser
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
@@ -58,13 +60,39 @@ async def get_quotations(
 
 @router.get("/next-number", response_model=str)
 async def get_next_quotation_number(
+    voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get the next available quotation number"""
+    """Get the next available quotation number for a given date"""
+    # Parse the voucher_date if provided
+    date_to_use = None
+    if voucher_date:
+        try:
+            date_to_use = date_parser.parse(voucher_date)
+        except Exception:
+            pass
+    
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "QT", current_user.organization_id, Quotation
+        db, "QTN", current_user.organization_id, Quotation, voucher_date=date_to_use
     )
+
+@router.get("/check-backdated-conflict")
+async def check_backdated_conflict(
+    voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Check if creating a voucher with the given date would create conflicts"""
+    try:
+        parsed_date = date_parser.parse(voucher_date)
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "QTN", current_user.organization_id, Quotation, parsed_date
+        )
+        return conflict_info
+    except Exception as e:
+        logger.error(f"Error checking backdated conflict: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
 
 # Register both "" and "/" for POST to support both /api/v1/quotations and /api/v1/quotations/
 @router.post("", response_model=QuotationInDB, include_in_schema=False)
@@ -81,6 +109,11 @@ async def create_quotation(
         quotation_data = quotation.dict(exclude={'items'})
         quotation_data['created_by'] = current_user.id
         quotation_data['organization_id'] = current_user.organization_id
+        
+        # Get the voucher date for numbering
+        voucher_date = None
+        if 'date' in quotation_data and quotation_data['date']:
+            voucher_date = quotation_data['date'] if hasattr(quotation_data['date'], 'year') else None
         
         # Handle revisions: If parent_id provided, generate revised number
         if quotation.parent_id:
@@ -105,7 +138,7 @@ async def create_quotation(
             # Generate unique voucher number if not provided or blank
             if not quotation_data.get('voucher_number') or quotation_data['voucher_number'] == '':
                 quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "QT", current_user.organization_id, Quotation
+                    db, "QTN", current_user.organization_id, Quotation, voucher_date=voucher_date
                 )
             else:
                 stmt = select(Quotation).where(
@@ -116,7 +149,7 @@ async def create_quotation(
                 existing = result.scalar_one_or_none()
                 if existing:
                     quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                        db, "QT", current_user.organization_id, Quotation
+                        db, "QTN", current_user.organization_id, Quotation, voucher_date=voucher_date
                     )
         
         db_quotation = Quotation(**quotation_data)

@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional
+from datetime import datetime
+from dateutil import parser as date_parser
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
@@ -112,13 +114,39 @@ async def get_receipt_vouchers(
 
 @router.get("/next-number", response_model=str)
 async def get_next_receipt_voucher_number(
+    voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get the next available receipt voucher number using standard service"""
+    """Get the next available receipt voucher number for a given date"""
+    # Parse the voucher_date if provided
+    date_to_use = None
+    if voucher_date:
+        try:
+            date_to_use = date_parser.parse(voucher_date)
+        except Exception:
+            pass
+    
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "RCT", current_user.organization_id, ReceiptVoucher
+        db, "RCT", current_user.organization_id, ReceiptVoucher, voucher_date=date_to_use
     )
+
+@router.get("/check-backdated-conflict")
+async def check_backdated_conflict(
+    voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Check if creating a voucher with the given date would create conflicts"""
+    try:
+        parsed_date = date_parser.parse(voucher_date)
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "RCT", current_user.organization_id, ReceiptVoucher, parsed_date
+        )
+        return conflict_info
+    except Exception as e:
+        logger.error(f"Error checking backdated conflict: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
 
 @router.post("", response_model=ReceiptVoucherInDB)
 async def create_receipt_voucher(
@@ -136,9 +164,16 @@ async def create_receipt_voucher(
         voucher_data['created_by'] = current_user.id
         voucher_data['organization_id'] = current_user.organization_id
         
+        # Get the voucher date for numbering
+        voucher_date = None
+        if 'date' in voucher_data and voucher_data['date']:
+            voucher_date = voucher_data['date'] if hasattr(voucher_data['date'], 'year') else None
+        
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
-            voucher_data['voucher_number'] = await get_next_receipt_voucher_number(db=db, current_user=current_user)
+            voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
+                db, "RCT", current_user.organization_id, ReceiptVoucher, voucher_date=voucher_date
+            )
         else:
             stmt = select(ReceiptVoucher).where(
                 ReceiptVoucher.organization_id == current_user.organization_id,
@@ -147,7 +182,9 @@ async def create_receipt_voucher(
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
-                voucher_data['voucher_number'] = await get_next_receipt_voucher_number(db=db, current_user=current_user)
+                voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
+                    db, "RCT", current_user.organization_id, ReceiptVoucher, voucher_date=voucher_date
+                )
         
         db_voucher = ReceiptVoucher(**voucher_data)
         db.add(db_voucher)

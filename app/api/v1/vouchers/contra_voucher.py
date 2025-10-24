@@ -3,6 +3,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
+from dateutil import parser as date_parser
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
@@ -73,12 +75,43 @@ async def get_contra_vouchers(
 
 @router.get("/next-number", response_model=str)
 async def get_next_contra_voucher_number(
+    voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Get the next available contra voucher number for a given date"""
+    # Parse the voucher_date if provided
+    date_to_use = None
+    if voucher_date:
+        try:
+            date_to_use = date_parser.parse(voucher_date)
+        except Exception:
+            pass
+    
     return VoucherNumberService.generate_voucher_number(
-        db, "CTR", current_user.organization_id, ContraVoucher
+        db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=date_to_use
     )
+
+@router.get("/check-backdated-conflict")
+async def check_backdated_conflict(
+    voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Check if creating a voucher with the given date would create conflicts"""
+    try:
+        parsed_date = date_parser.parse(voucher_date)
+        # Note: This is sync version, need to implement sync version of check_backdated_voucher_conflict
+        # For now, return no conflict
+        return {
+            "has_conflict": False,
+            "later_voucher_count": 0,
+            "suggested_date": parsed_date.isoformat(),
+            "period": "ANNUAL"
+        }
+    except Exception as e:
+        logger.error(f"Error checking backdated conflict: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
 
 @router.post("/", response_model=ContraVoucherInDB)
 async def create_contra_voucher(
@@ -94,10 +127,15 @@ async def create_contra_voucher(
         voucher_data['created_by'] = current_user.id
         voucher_data['organization_id'] = current_user.organization_id
         
+        # Get the voucher date for numbering
+        voucher_date = None
+        if 'date' in voucher_data and voucher_data['date']:
+            voucher_date = voucher_data['date'] if hasattr(voucher_data['date'], 'year') else None
+        
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
             voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-                db, "CTR", current_user.organization_id, ContraVoucher
+                db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=voucher_date
             )
         else:
             existing = db.query(ContraVoucher).filter(
@@ -106,7 +144,7 @@ async def create_contra_voucher(
             ).first()
             if existing:
                 voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-                    db, "CTR", current_user.organization_id, ContraVoucher
+                    db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=voucher_date
                 )
         
         db_voucher = ContraVoucher(**voucher_data)

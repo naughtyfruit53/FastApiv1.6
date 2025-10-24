@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
+from datetime import datetime
+from dateutil import parser as date_parser
 from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -59,13 +61,39 @@ async def get_proforma_invoices(
 
 @router.get("/next-number", response_model=str)
 async def get_next_proforma_invoice_number(
+    voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get the next available proforma invoice number"""
+    """Get the next available proforma invoice number for a given date"""
+    # Parse the voucher_date if provided
+    date_to_use = None
+    if voucher_date:
+        try:
+            date_to_use = date_parser.parse(voucher_date)
+        except Exception:
+            pass
+    
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "PI", current_user.organization_id, ProformaInvoice
+        db, "PRO", current_user.organization_id, ProformaInvoice, voucher_date=date_to_use
     )
+
+@router.get("/check-backdated-conflict")
+async def check_backdated_conflict(
+    voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Check if creating a voucher with the given date would create conflicts"""
+    try:
+        parsed_date = date_parser.parse(voucher_date)
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "PRO", current_user.organization_id, ProformaInvoice, parsed_date
+        )
+        return conflict_info
+    except Exception as e:
+        logger.error(f"Error checking backdated conflict: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
 
 # Register both "" and "/" for POST to support both /api/v1/proforma-invoices and /api/v1/proforma-invoices/
 @router.post("", response_model=ProformaInvoiceInDB, include_in_schema=False)
@@ -82,6 +110,11 @@ async def create_proforma_invoice(
         invoice_data = invoice.dict(exclude={'items'})
         invoice_data['created_by'] = current_user.id
         invoice_data['organization_id'] = current_user.organization_id
+        
+        # Get the voucher date for numbering
+        voucher_date = None
+        if 'date' in invoice_data and invoice_data['date']:
+            voucher_date = invoice_data['date'] if hasattr(invoice_data['date'], 'year') else None
         
         # Handle revisions: If parent_id provided, generate revised number
         if invoice.parent_id:
@@ -106,7 +139,7 @@ async def create_proforma_invoice(
             # Generate unique voucher number if not provided or blank
             if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "PI", current_user.organization_id, ProformaInvoice
+                    db, "PRO", current_user.organization_id, ProformaInvoice, voucher_date=voucher_date
                 )
             else:
                 stmt = select(ProformaInvoice).where(
@@ -117,7 +150,7 @@ async def create_proforma_invoice(
                 existing = result.scalar_one_or_none()
                 if existing:
                     invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                        db, "PI", current_user.organization_id, ProformaInvoice
+                        db, "PRO", current_user.organization_id, ProformaInvoice, voucher_date=voucher_date
                     )
         
         db_invoice = ProformaInvoice(**invoice_data)
