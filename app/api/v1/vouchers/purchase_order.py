@@ -14,7 +14,8 @@ from app.schemas.vouchers.purchase import PurchaseOrderCreate, PurchaseOrderInDB
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
-from datetime import timezone
+from datetime import timezone, datetime
+from dateutil import parser as date_parser
 import re
 from fastapi.responses import StreamingResponse
 
@@ -97,13 +98,40 @@ async def get_purchase_orders(
 
 @router.get("/next-number", response_model=str)
 async def get_next_purchase_order_number(
+    voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get the next available purchase order number"""
+    """Get the next available purchase order number for a given date"""
+    # Parse the voucher_date if provided
+    date_to_use = None
+    if voucher_date:
+        try:
+            date_to_use = date_parser.parse(voucher_date)
+        except Exception:
+            pass
+    
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "PO", current_user.organization_id, PurchaseOrder
+        db, "PO", current_user.organization_id, PurchaseOrder, voucher_date=date_to_use
     )
+
+@router.get("/check-backdated-conflict")
+async def check_backdated_conflict(
+    voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Check if creating a voucher with the given date would create conflicts"""
+    try:
+        parsed_date = date_parser.parse(voucher_date)
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "PO", current_user.organization_id, PurchaseOrder, parsed_date
+        )
+        return conflict_info
+    except Exception as e:
+        logger.error(f"Error checking backdated conflict: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
+
 
 @router.post("", response_model=PurchaseOrderInDB, include_in_schema=False)
 @router.post("/", response_model=PurchaseOrderInDB)
@@ -120,14 +148,18 @@ async def create_purchase_order(
         invoice_data['created_by'] = current_user.id
         invoice_data['organization_id'] = current_user.organization_id
         
+        # Get the voucher date for numbering
+        voucher_date = None
         if 'date' in invoice_data and invoice_data['date']:
             invoice_data['date'] = invoice_data['date'].replace(tzinfo=timezone.utc)
+            voucher_date = invoice_data['date']
         if 'delivery_date' in invoice_data and invoice_data['delivery_date']:
             invoice_data['delivery_date'] = invoice_data['delivery_date'].replace(tzinfo=timezone.utc)
         
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
+            # Generate voucher number based on the entered date
             invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "PO", current_user.organization_id, PurchaseOrder
+                db, "PO", current_user.organization_id, PurchaseOrder, voucher_date=voucher_date
             )
         else:
             stmt = select(PurchaseOrder).where(
@@ -138,7 +170,7 @@ async def create_purchase_order(
             existing = result.scalar_one_or_none()
             if existing:
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "PO", current_user.organization_id, PurchaseOrder
+                    db, "PO", current_user.organization_id, PurchaseOrder, voucher_date=voucher_date
                 )
         
         product_ids = [item.product_id for item in invoice.items]

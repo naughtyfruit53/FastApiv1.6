@@ -19,7 +19,8 @@ class VoucherNumberService:
         db: Union[AsyncSession, Any], 
         prefix: str, 
         organization_id: int, 
-        model: Type[Any]
+        model: Type[Any],
+        voucher_date: Optional[datetime] = None
     ) -> str:
         """
         Synchronous version of generate_voucher_number for sync database sessions.
@@ -29,12 +30,15 @@ class VoucherNumberService:
         - With prefix: PM-PO/2526/00001
         - Quarterly: PO/2526/Q1/00001
         - Monthly: PO/2526/APR/00001
+        
+        Args:
+            voucher_date: If provided, uses this date for period calculation instead of system date
         """
         from sqlalchemy.orm import Session
         
         is_sync = isinstance(db, Session)
         
-        current_date = datetime.now()
+        current_date = voucher_date if voucher_date else datetime.now()
         current_year = current_date.year
         current_month = current_date.month
         
@@ -102,7 +106,8 @@ class VoucherNumberService:
         db: AsyncSession, 
         prefix: str, 
         organization_id: int, 
-        model: Type[Any]
+        model: Type[Any],
+        voucher_date: Optional[datetime] = None
     ) -> str:
         """
         Async version of generate_voucher_number for async database sessions.
@@ -111,8 +116,11 @@ class VoucherNumberService:
         - With prefix: PM-PO/2526/00001
         - Quarterly: PO/2526/Q1/00001
         - Monthly: PO/2526/APR/00001
+        
+        Args:
+            voucher_date: If provided, uses this date for period calculation instead of system date
         """
-        current_date = datetime.now()
+        current_date = voucher_date if voucher_date else datetime.now()
         current_year = current_date.year
         current_month = current_date.month
         
@@ -176,6 +184,83 @@ class VoucherNumberService:
             voucher_number = f"{base_number}/{next_sequence:05d}"
         
         return voucher_number
+    
+    @staticmethod
+    async def check_backdated_voucher_conflict(
+        db: AsyncSession,
+        prefix: str,
+        organization_id: int,
+        model: Type[Any],
+        voucher_date: datetime
+    ) -> dict:
+        """
+        Check if creating a voucher with the given date would create a conflict
+        with existing vouchers that have later dates but earlier numbers.
+        
+        Returns:
+            dict with keys:
+                - has_conflict: bool
+                - later_vouchers: list of vouchers with later dates in same period
+                - suggested_date: datetime of the last voucher in the period
+        """
+        current_year = voucher_date.year
+        current_month = voucher_date.month
+        
+        # Get organization settings for period calculation
+        stmt = select(OrganizationSettings).where(
+            OrganizationSettings.organization_id == organization_id
+        )
+        result = await db.execute(stmt)
+        org_settings = result.scalar_one_or_none()
+        
+        full_prefix = prefix
+        if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
+            full_prefix = f"{org_settings.voucher_prefix}-{prefix}"
+        
+        fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
+        
+        reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+        
+        period_segment = ""
+        if reset_period == VoucherCounterResetPeriod.MONTHLY:
+            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                          'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            period_segment = month_names[current_month - 1]
+        elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+            quarter = ((current_month - 1) // 3) + 1
+            period_segment = f"Q{quarter}"
+        
+        if period_segment:
+            search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+        else:
+            search_pattern = f"{full_prefix}/{fiscal_year}/%"
+        
+        # Find vouchers in the same period with dates after the proposed date
+        stmt = select(model).where(
+            model.organization_id == organization_id,
+            model.voucher_number.like(search_pattern),
+            model.date > voucher_date
+        ).order_by(model.date.desc())
+        
+        result = await db.execute(stmt)
+        later_vouchers = result.scalars().all()
+        
+        # Get the last voucher in this period to suggest as alternative date
+        stmt = select(model).where(
+            model.organization_id == organization_id,
+            model.voucher_number.like(search_pattern)
+        ).order_by(desc(model.date)).limit(1)
+        
+        result = await db.execute(stmt)
+        last_voucher = result.scalar_one_or_none()
+        
+        return {
+            "has_conflict": len(later_vouchers) > 0,
+            "later_vouchers": later_vouchers,
+            "later_voucher_count": len(later_vouchers),
+            "suggested_date": last_voucher.date if last_voucher else voucher_date,
+            "period": period_segment if period_segment else "ANNUAL"
+        }
 
 class VoucherValidationService:
     """Service for voucher validation logic"""
