@@ -73,6 +73,21 @@ def include_minimal_routers():
         raise
     
     try:
+        from app.api.v1 import api_v1_router, register_subrouters
+        register_subrouters()
+        routers.append((api_v1_router, "/api/v1", ["v1-api"]))
+    except Exception as e:
+        logger.error(f"Failed to import v1 API router: {str(e)}")
+        raise
+    
+    try:
+        from app.api.v1 import rbac as v1_rbac
+        routers.append((v1_rbac.router, "/api/v1/rbac", ["rbac"]))
+    except Exception as e:
+        logger.error(f"Failed to import rbac router: {str(e)}")
+        raise
+    
+    try:
         from app.api.v1.organizations import router as organizations_router
         routers.append((organizations_router, "/api/v1/organizations", ["organizations"]))
     except Exception as e:
@@ -105,13 +120,6 @@ def include_minimal_routers():
         routers.append((products.router, "/api/v1/products", ["products"]))
     except Exception as e:
         logger.error(f"Failed to import products router: {str(e)}")
-        raise
-    
-    try:
-        from app.api.v1 import rbac as v1_rbac
-        routers.append((v1_rbac.router, "/api/v1/rbac", ["rbac"]))
-    except Exception as e:
-        logger.error(f"Failed to import rbac router: {str(e)}")
         raise
     
     try:
@@ -179,15 +187,6 @@ def include_minimal_routers():
         except Exception as e:
             logger.error(f"Failed to import ai_analytics router: {str(e)}")
             raise
-
-    # Include v1 API router (includes chart_of_accounts, erp, etc.)
-    try:
-        from app.api.v1 import api_v1_router, register_subrouters
-        register_subrouters()
-        routers.append((api_v1_router, "/api/v1", ["v1-api"]))
-    except Exception as e:
-        logger.error(f"Failed to import v1 API router: {str(e)}")
-        raise
 
     for router, prefix, tags in routers:
         try:

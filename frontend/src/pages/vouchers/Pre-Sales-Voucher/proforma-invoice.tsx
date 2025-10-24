@@ -309,6 +309,27 @@ const ProformaInvoicePage: React.FC = () => {
     }
   };
 
+  // Conflict modal handlers
+const handleChangeDateToSuggested = () => {
+  if (conflictInfo?.suggested_date) {
+    setValue('date', conflictInfo.suggested_date.split('T')[0]);
+    setShowConflictModal(false);
+    setPendingDate(null);
+  }
+};
+
+const handleProceedAnyway = () => {
+  setShowConflictModal(false);
+};
+
+const handleCancelConflict = () => {
+  setShowConflictModal(false);
+  if (pendingDate) {
+    setValue('date', '');
+  }
+  setPendingDate(null);
+};
+  
   const handleEditWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
     handleEdit(voucher.id);
@@ -776,27 +797,6 @@ const ProformaInvoicePage: React.FC = () => {
 
   if (isLoading || companyLoading) {
   
-
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
   return (
       <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">

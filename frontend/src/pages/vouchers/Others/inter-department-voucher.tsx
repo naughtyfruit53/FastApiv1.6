@@ -2,10 +2,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
+import { useRouter } from 'next/router';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import api from '../../../lib/api';
+import api from '../../../utils/api';
 
 interface InterDepartmentVoucherItem {
   id?: number;
@@ -39,21 +39,14 @@ const defaultVoucherData: InterDepartmentVoucherData = {
 };
 
 const InterDepartmentVoucherPage: React.FC = () => {
-  const {
-    voucherData,
-    setVoucherData,
-    loading,
-    submitting,
-    error,
-    success,
-    submitVoucher,
-    resetForm,
-    isEditMode,
-    mode
-  } = useVoucherPage<InterDepartmentVoucherData>({
-    voucherType: 'inter-department-vouchers',
-    defaultData: defaultVoucherData
-  });
+  const router = useRouter();
+  const { id, mode = 'create' } = router.query;
+  const isEditMode = mode === 'edit';
+  const [voucherData, setVoucherData] = useState<InterDepartmentVoucherData>(defaultVoucherData);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<boolean>(false);
 
   const [departments] = useState([
     'Finance',
@@ -73,28 +66,47 @@ const InterDepartmentVoucherPage: React.FC = () => {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
 
+  // Load voucher data if in edit or view mode
+  useEffect(() => {
+    if (id && (mode === 'edit' || mode === 'view')) {
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          const response = await api.get(`/vouchers/inter-department-vouchers/${id}`);
+          setVoucherData(response.data);
+        } catch (err: any) {
+          setError(err.message || 'Error loading voucher data');
+          console.error('Error fetching voucher data:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [id, mode]);
+
   // Calculate total amount when items change
   useEffect(() => {
-    const total = voucherData.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const total = (voucherData?.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
     setVoucherData((prev) => ({ ...prev, total_amount: total }));
-  }, [voucherData.items, setVoucherData]);
+  }, [voucherData?.items]);
 
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
     const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
+      const currentDate = voucherData?.date || '';
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
           const response = await api.get(
-            `/inter-department-vouchers/next-number`,
+            `/vouchers/inter-department-vouchers/next-number`,
             { params: { voucher_date: currentDate } }
           );
-          setValue('voucher_number', response.data);
+          setVoucherData((prev) => ({ ...prev, voucher_number: response.data }));
           
           // Check for backdated conflicts
           const conflictResponse = await api.get(
-            `/inter-department-vouchers/check-backdated-conflict`,
+            `/vouchers/inter-department-vouchers/check-backdated-conflict`,
             { params: { voucher_date: currentDate } }
           );
           
@@ -110,10 +122,10 @@ const InterDepartmentVoucherPage: React.FC = () => {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [voucherData?.date, mode]);
 
   const handleItemChange = (index: number, field: keyof InterDepartmentVoucherItem, value: any) => {
-    const updatedItems = [...voucherData.items];
+    const updatedItems = [...(voucherData?.items || [])];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     
     // Auto-calculate amount when quantity or rate changes
@@ -133,25 +145,57 @@ const InterDepartmentVoucherPage: React.FC = () => {
       amount: 0,
       description: ''
     };
-    setVoucherData((prev) => ({ ...prev, items: [...prev.items, newItem] }));
+    setVoucherData((prev) => ({ ...prev, items: [...(prev.items || []), newItem] }));
   };
 
   const removeItem = (index: number) => {
-    const updatedItems = voucherData.items.filter((_, i) => i !== index);
+    const updatedItems = (voucherData?.items || []).filter((_, i) => i !== index);
     setVoucherData((prev) => ({ ...prev, items: updatedItems }));
+  };
+
+  const submitVoucher = async (data: InterDepartmentVoucherData) => {
+    setSubmitting(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      let response;
+      if (mode === 'create') {
+        response = await api.post('/vouchers/inter-department-vouchers', data);
+      } else if (mode === 'edit') {
+        response = await api.put(`/vouchers/inter-department-vouchers/${id}`, data);
+      }
+      console.log('Voucher submitted successfully:', response?.data);
+      setSuccess(true);
+      // Optional: Redirect or reset after success
+      setTimeout(() => {
+        setSuccess(false);
+        if (mode === 'create') {
+          setVoucherData(defaultVoucherData);
+        }
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message || 'Error submitting voucher');
+      console.error('Error submitting voucher:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitVoucher(voucherData);
+    await submitVoucher(voucherData || defaultVoucherData);
   };
 
-
+  const resetForm = () => {
+    setVoucherData(defaultVoucherData);
+    setError(null);
+    setSuccess(false);
+  };
 
   // Conflict modal handlers
   const handleChangeDateToSuggested = () => {
     if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setVoucherData((prev) => ({ ...prev, date: conflictInfo.suggested_date.split('T')[0] }));
       setShowConflictModal(false);
       setPendingDate(null);
     }
@@ -164,7 +208,7 @@ const InterDepartmentVoucherPage: React.FC = () => {
   const handleCancelConflict = () => {
     setShowConflictModal(false);
     if (pendingDate) {
-      setValue('date', '');
+      setVoucherData((prev) => ({ ...prev, date: '' }));
     }
     setPendingDate(null);
   };
@@ -172,7 +216,7 @@ const InterDepartmentVoucherPage: React.FC = () => {
     <>
       <VoucherLayout
       title="Inter Department Voucher"
-      voucherData={voucherData}
+      voucherData={voucherData || defaultVoucherData}
       onSubmit={handleSubmit}
       loading={loading}
       submitting={submitting}
@@ -180,12 +224,12 @@ const InterDepartmentVoucherPage: React.FC = () => {
       success={success}
       onReset={resetForm}
       isEditMode={isEditMode}
-      mode={mode}
+      mode={mode as string}
       customFields={
         <>
           {/* From Department Field */}
           <select
-            value={voucherData.from_department}
+            value={voucherData?.from_department || ''}
             onChange={(e) => setVoucherData((prev) => ({ ...prev, from_department: e.target.value }))}
             required
             style={{
@@ -204,7 +248,7 @@ const InterDepartmentVoucherPage: React.FC = () => {
 
           {/* To Department Field */}
           <select
-            value={voucherData.to_department}
+            value={voucherData?.to_department || ''}
             onChange={(e) => setVoucherData((prev) => ({ ...prev, to_department: e.target.value }))}
             required
             style={{
@@ -216,13 +260,13 @@ const InterDepartmentVoucherPage: React.FC = () => {
             }}
           >
             <option value="">Select To Department</option>
-            {departments.filter(dept => dept !== voucherData.from_department).map((dept) => (
+            {departments.filter(dept => dept !== voucherData?.from_department).map((dept) => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>
         </>
       }
-      items={voucherData.items}
+      items={voucherData?.items || []}
       onItemChange={handleItemChange}
       onAddItem={addItem}
       onRemoveItem={removeItem}

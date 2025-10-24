@@ -196,7 +196,7 @@ const NonSalesCreditNote: React.FC = () => {
                   sx={{ fontSize: 11, p: 1 }}
                   onClick={() => handleVoucherClick(voucher)}
                 >
-                  {voucher.credit_note_number || voucher.voucher_number}
+                  {voucher.voucher_number}
                 </TableCell>
                 <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
                   {new Date(voucher.date).toLocaleDateString()}
@@ -254,11 +254,11 @@ const NonSalesCreditNote: React.FC = () => {
           mode={mode}
           voucherType="Non Sales Credit Note"
           voucherRoute="/vouchers/Financial-Vouchers/non-sales-credit-note"
-          currentId={selectedEntity?.id}
+          currentId={watch("id")}
         />
       </Box>
       {(createMutation.isPending || updateMutation.isPending) && (
-        <Box display="flex" justifyContent="center" my={2}>
+        <Box display="flex" justifyContent="center" my= {2}>
           <CircularProgress />
         </Box>
       )}
@@ -273,7 +273,7 @@ const NonSalesCreditNote: React.FC = () => {
         <Grid container spacing={2}>
           <Grid size={6}>
             <TextField
-              {...control.register("credit_note_number")}
+              {...control.register("voucher_number")}
               label="Credit Note Number"
               fullWidth
               disabled={true}

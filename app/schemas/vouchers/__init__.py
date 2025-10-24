@@ -48,7 +48,9 @@ from .financial import (
     ContraVoucherCreate, ContraVoucherUpdate, ContraVoucherInDB,
     JournalVoucherCreate, JournalVoucherUpdate, JournalVoucherInDB,
     InterDepartmentVoucherItemCreate, InterDepartmentVoucherItemInDB,
-    InterDepartmentVoucherCreate, InterDepartmentVoucherUpdate, InterDepartmentVoucherInDB
+    InterDepartmentVoucherCreate, InterDepartmentVoucherUpdate, InterDepartmentVoucherInDB,
+    NonSalesCreditNoteItemCreate, NonSalesCreditNoteItemInDB,
+    NonSalesCreditNoteCreate, NonSalesCreditNoteUpdate, NonSalesCreditNoteInDB
 )
 
 # Re-export all for backward compatibility in vouchers submodule
@@ -92,5 +94,7 @@ __all__ = [
     'ContraVoucherCreate', 'ContraVoucherUpdate', 'ContraVoucherInDB',
     'JournalVoucherCreate', 'JournalVoucherUpdate', 'JournalVoucherInDB',
     'InterDepartmentVoucherItemCreate', 'InterDepartmentVoucherItemInDB',
-    'InterDepartmentVoucherCreate', 'InterDepartmentVoucherUpdate', 'InterDepartmentVoucherInDB'
+    'InterDepartmentVoucherCreate', 'InterDepartmentVoucherUpdate', 'InterDepartmentVoucherInDB',
+    'NonSalesCreditNoteItemCreate', 'NonSalesCreditNoteItemInDB',
+    'NonSalesCreditNoteCreate', 'NonSalesCreditNoteUpdate', 'NonSalesCreditNoteInDB'
 ]

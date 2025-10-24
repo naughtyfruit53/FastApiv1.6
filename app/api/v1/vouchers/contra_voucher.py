@@ -1,7 +1,8 @@
 # app/api/v1/vouchers/contra_voucher.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Optional
 from datetime import datetime
 from dateutil import parser as date_parser
@@ -17,13 +18,15 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/contra-vouchers", tags=["contra-vouchers"])
 
-def validate_chart_account(db: Session, chart_account_id: int, organization_id: int) -> ChartOfAccounts:
+async def validate_chart_account(db: AsyncSession, chart_account_id: int, organization_id: int) -> ChartOfAccounts:
     """Validate that chart_account_id exists and belongs to organization"""
-    chart_account = db.query(ChartOfAccounts).filter(
+    stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == chart_account_id,
         ChartOfAccounts.organization_id == organization_id,
         ChartOfAccounts.is_active == True
-    ).first()
+    )
+    result = await db.execute(stmt)
+    chart_account = result.scalar_one_or_none()
     
     if not chart_account:
         raise HTTPException(
@@ -40,35 +43,38 @@ async def get_contra_vouchers(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all contra vouchers with enhanced sorting and pagination"""
-    query = db.query(ContraVoucher).filter(
+    stmt = select(ContraVoucher).where(
         ContraVoucher.organization_id == current_user.organization_id
     )
     
     if status:
-        query = query.filter(ContraVoucher.status == status)
+        stmt = stmt.where(ContraVoucher.status == status)
     
     # Enhanced sorting - latest first by default
     if hasattr(ContraVoucher, sortBy):
         sort_attr = getattr(ContraVoucher, sortBy)
         if sort.lower() == "asc":
-            query = query.order_by(sort_attr.asc())
+            stmt = stmt.order_by(sort_attr.asc())
         else:
-            query = query.order_by(sort_attr.desc())
+            stmt = stmt.order_by(sort_attr.desc())
     else:
         # Default to created_at desc if invalid sortBy field
-        query = query.order_by(ContraVoucher.created_at.desc())
+        stmt = stmt.order_by(ContraVoucher.created_at.desc())
     
-    vouchers = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    vouchers = result.scalars().all()
     
     # Load chart account details for each voucher
     for voucher in vouchers:
-        chart_account = db.query(ChartOfAccounts).filter(
+        stmt_chart = select(ChartOfAccounts).where(
             ChartOfAccounts.id == voucher.chart_account_id
-        ).first()
+        )
+        result_chart = await db.execute(stmt_chart)
+        chart_account = result_chart.scalar_one_or_none()
         voucher.chart_account = chart_account
     
     return vouchers
@@ -76,11 +82,10 @@ async def get_contra_vouchers(
 @router.get("/next-number", response_model=str)
 async def get_next_contra_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available contra voucher number for a given date"""
-    # Parse the voucher_date if provided
     date_to_use = None
     if voucher_date:
         try:
@@ -88,27 +93,23 @@ async def get_next_contra_voucher_number(
         except Exception:
             pass
     
-    return VoucherNumberService.generate_voucher_number(
+    return await VoucherNumberService.generate_voucher_number_async(
         db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Check if creating a voucher with the given date would create conflicts"""
     try:
         parsed_date = date_parser.parse(voucher_date)
-        # Note: This is sync version, need to implement sync version of check_backdated_voucher_conflict
-        # For now, return no conflict
-        return {
-            "has_conflict": False,
-            "later_voucher_count": 0,
-            "suggested_date": parsed_date.isoformat(),
-            "period": "ANNUAL"
-        }
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "CTR", current_user.organization_id, ContraVoucher, parsed_date
+        )
+        return conflict_info
     except Exception as e:
         logger.error(f"Error checking backdated conflict: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
@@ -116,12 +117,12 @@ async def check_backdated_conflict(
 @router.post("/", response_model=ContraVoucherInDB)
 async def create_contra_voucher(
     voucher: ContraVoucherCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
         # Validate chart account
-        chart_account = validate_chart_account(db, voucher.chart_account_id, current_user.organization_id)
+        chart_account = await validate_chart_account(db, voucher.chart_account_id, current_user.organization_id)
         
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
@@ -134,23 +135,25 @@ async def create_contra_voucher(
         
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
-            voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+            voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                 db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=voucher_date
             )
         else:
-            existing = db.query(ContraVoucher).filter(
+            stmt = select(ContraVoucher).where(
                 ContraVoucher.organization_id == current_user.organization_id,
                 ContraVoucher.voucher_number == voucher_data['voucher_number']
-            ).first()
+            )
+            result = await db.execute(stmt)
+            existing = result.scalar_one_or_none()
             if existing:
-                voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
                     db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=voucher_date
                 )
         
         db_voucher = ContraVoucher(**voucher_data)
         db.add(db_voucher)
-        db.commit()
-        db.refresh(db_voucher)
+        await db.commit()
+        await db.refresh(db_voucher)
         
         # Add chart account details
         db_voucher.chart_account = chart_account
@@ -159,27 +162,31 @@ async def create_contra_voucher(
         return db_voucher
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating contra voucher: {e}")
         raise HTTPException(status_code=500, detail="Failed to create contra voucher")
 
 @router.get("/{voucher_id}", response_model=ContraVoucherInDB)
 async def get_contra_voucher(
     voucher_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    voucher = db.query(ContraVoucher).filter(
+    stmt = select(ContraVoucher).where(
         ContraVoucher.id == voucher_id,
         ContraVoucher.organization_id == current_user.organization_id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    voucher = result.scalar_one_or_none()
     if not voucher:
         raise HTTPException(status_code=404, detail="Contra voucher not found")
     
     # Load chart account details
-    chart_account = db.query(ChartOfAccounts).filter(
+    stmt_chart = select(ChartOfAccounts).where(
         ChartOfAccounts.id == voucher.chart_account_id
-    ).first()
+    )
+    result_chart = await db.execute(stmt_chart)
+    chart_account = result_chart.scalar_one_or_none()
     voucher.chart_account = chart_account
     
     return voucher
@@ -188,14 +195,16 @@ async def get_contra_voucher(
 async def update_contra_voucher(
     voucher_id: int,
     voucher_update: ContraVoucherUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        voucher = db.query(ContraVoucher).filter(
+        stmt = select(ContraVoucher).where(
             ContraVoucher.id == voucher_id,
             ContraVoucher.organization_id == current_user.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        voucher = result.scalar_one_or_none()
         if not voucher:
             raise HTTPException(status_code=404, detail="Contra voucher not found")
         
@@ -203,49 +212,53 @@ async def update_contra_voucher(
         
         # Validate chart account if being updated
         if 'chart_account_id' in update_data:
-            validate_chart_account(db, update_data['chart_account_id'], current_user.organization_id)
+            await validate_chart_account(db, update_data['chart_account_id'], current_user.organization_id)
         
         for field, value in update_data.items():
             setattr(voucher, field, value)
         
-        db.commit()
-        db.refresh(voucher)
+        await db.commit()
+        await db.refresh(voucher)
         
         # Load chart account details
-        chart_account = db.query(ChartOfAccounts).filter(
+        stmt_chart = select(ChartOfAccounts).where(
             ChartOfAccounts.id == voucher.chart_account_id
-        ).first()
+        )
+        result_chart = await db.execute(stmt_chart)
+        chart_account = result_chart.scalar_one_or_none()
         voucher.chart_account = chart_account
         
         logger.info(f"Contra voucher {voucher.voucher_number} updated by {current_user.email}")
         return voucher
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating contra voucher: {e}")
         raise HTTPException(status_code=500, detail="Failed to update contra voucher")
 
 @router.delete("/{voucher_id}")
 async def delete_contra_voucher(
     voucher_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        voucher = db.query(ContraVoucher).filter(
+        stmt = select(ContraVoucher).where(
             ContraVoucher.id == voucher_id,
             ContraVoucher.organization_id == current_user.organization_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        voucher = result.scalar_one_or_none()
         if not voucher:
             raise HTTPException(status_code=404, detail="Contra voucher not found")
         
-        db.delete(voucher)
-        db.commit()
+        await db.delete(voucher)
+        await db.commit()
         
         logger.info(f"Contra voucher {voucher.voucher_number} deleted by {current_user.email}")
         return {"message": "Contra voucher deleted successfully"}
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting contra voucher: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete contra voucher")

@@ -1,5 +1,3 @@
-# app/api/v1/vouchers/credit_note.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -9,16 +7,16 @@ from dateutil import parser as date_parser
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models import User
-from app.models.vouchers.financial import CreditNote
-from app.schemas.vouchers import CreditNoteCreate, CreditNoteInDB, CreditNoteUpdate
+from app.models.vouchers.financial import NonSalesCreditNote
+from app.schemas.vouchers import NonSalesCreditNoteCreate, NonSalesCreditNoteInDB, NonSalesCreditNoteUpdate
 from app.services.voucher_service import VoucherNumberService
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/credit-notes", tags=["credit-notes"])
+router = APIRouter(prefix="/non-sales-credit-notes", tags=["non-sales-credit-notes"])
 
-@router.get("/", response_model=List[CreditNoteInDB])
-async def get_credit_notes(
+@router.get("/", response_model=List[NonSalesCreditNoteInDB])
+async def get_non_sales_credit_notes(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
     limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
@@ -27,36 +25,36 @@ async def get_credit_notes(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get all credit notes with enhanced sorting and pagination"""
-    stmt = select(CreditNote).where(
-        CreditNote.organization_id == current_user.organization_id
+    """Get all non-sales credit notes with enhanced sorting and pagination"""
+    stmt = select(NonSalesCreditNote).where(
+        NonSalesCreditNote.organization_id == current_user.organization_id
     )
     
     if status:
-        stmt = stmt.where(CreditNote.status == status)
+        stmt = stmt.where(NonSalesCreditNote.status == status)
     
     # Enhanced sorting - latest first by default
-    if hasattr(CreditNote, sortBy):
-        sort_attr = getattr(CreditNote, sortBy)
+    if hasattr(NonSalesCreditNote, sortBy):
+        sort_attr = getattr(NonSalesCreditNote, sortBy)
         if sort.lower() == "asc":
             stmt = stmt.order_by(sort_attr.asc())
         else:
             stmt = stmt.order_by(sort_attr.desc())
     else:
         # Default to created_at desc if invalid sortBy field
-        stmt = stmt.order_by(CreditNote.created_at.desc())
+        stmt = stmt.order_by(NonSalesCreditNote.created_at.desc())
     
     result = await db.execute(stmt.offset(skip).limit(limit))
     notes = result.scalars().all()
     return notes
 
 @router.get("/next-number", response_model=str)
-async def get_next_credit_note_number(
+async def get_next_non_sales_credit_note_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get the next available credit note number for a given date"""
+    """Get the next available non-sales credit note number for a given date"""
     date_to_use = None
     if voucher_date:
         try:
@@ -65,7 +63,7 @@ async def get_next_credit_note_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "CN", current_user.organization_id, CreditNote, voucher_date=date_to_use
+        db, "NSCN", current_user.organization_id, NonSalesCreditNote, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
@@ -78,16 +76,16 @@ async def check_backdated_conflict(
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "CN", current_user.organization_id, CreditNote, parsed_date
+            db, "NSCN", current_user.organization_id, NonSalesCreditNote, parsed_date
         )
         return conflict_info
     except Exception as e:
         logger.error(f"Error checking backdated conflict: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
 
-@router.post("/", response_model=CreditNoteInDB)
-async def create_credit_note(
-    note: CreditNoteCreate,
+@router.post("/", response_model=NonSalesCreditNoteInDB)
+async def create_non_sales_credit_note(
+    note: NonSalesCreditNoteCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -104,90 +102,83 @@ async def create_credit_note(
         # Generate unique voucher number if not provided or blank
         if not note_data.get('voucher_number') or note_data['voucher_number'] == '':
             note_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "CN", current_user.organization_id, CreditNote, voucher_date=voucher_date
+                db, "NSCN", current_user.organization_id, NonSalesCreditNote, voucher_date=voucher_date
             )
         else:
-            stmt = select(CreditNote).where(
-                CreditNote.organization_id == current_user.organization_id,
-                CreditNote.voucher_number == note_data['voucher_number']
+            stmt = select(NonSalesCreditNote).where(
+                NonSalesCreditNote.organization_id == current_user.organization_id,
+                NonSalesCreditNote.voucher_number == note_data['voucher_number']
             )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
                 note_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "CN", current_user.organization_id, CreditNote, voucher_date=voucher_date
+                    db, "NSCN", current_user.organization_id, NonSalesCreditNote, voucher_date=voucher_date
                 )
         
-        db_note = CreditNote(**note_data)
+        db_note = NonSalesCreditNote(**note_data)
         db.add(db_note)
         await db.flush()
         
         for item_data in note.items:
-            from app.models.vouchers import CreditNoteItem
-            stmt = select(CreditNoteItem).where(CreditNoteItem.credit_note_id == db_note.id)
-            result = await db.execute(stmt)
-            existing_item = result.scalar_one_or_none()
-            if existing_item:
-                for field, value in item_data.dict().items():
-                    setattr(existing_item, field, value)
-            else:
-                item = CreditNoteItem(
-                    credit_note_id=db_note.id,
-                    **item_data.dict()
-                )
-                db.add(item)
+            from app.models.vouchers import NonSalesCreditNoteItem
+            item = NonSalesCreditNoteItem(
+                non_sales_credit_note_id=db_note.id,
+                **item_data.dict()
+            )
+            db.add(item)
         
         await db.commit()
         await db.refresh(db_note)
         
-        logger.info(f"Credit note {db_note.voucher_number} created by {current_user.email}")
+        logger.info(f"Non-sales credit note {db_note.voucher_number} created by {current_user.email}")
         return db_note
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error creating credit note: {e}")
+        logger.error(f"Error creating non-sales credit note: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create credit note"
+            detail="Failed to create non-sales credit note"
         )
 
-@router.get("/{note_id}", response_model=CreditNoteInDB)
-async def get_credit_note(
+@router.get("/{note_id}", response_model=NonSalesCreditNoteInDB)
+async def get_non_sales_credit_note(
     note_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    stmt = select(CreditNote).where(
-        CreditNote.id == note_id,
-        CreditNote.organization_id == current_user.organization_id
+    stmt = select(NonSalesCreditNote).where(
+        NonSalesCreditNote.id == note_id,
+        NonSalesCreditNote.organization_id == current_user.organization_id
     )
     result = await db.execute(stmt)
     note = result.scalar_one_or_none()
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Credit note not found"
+            detail="Non-sales credit note not found"
         )
     return note
 
-@router.put("/{note_id}", response_model=CreditNoteInDB)
-async def update_credit_note(
+@router.put("/{note_id}", response_model=NonSalesCreditNoteInDB)
+async def update_non_sales_credit_note(
     note_id: int,
-    note_update: CreditNoteUpdate,
+    note_update: NonSalesCreditNoteUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        stmt = select(CreditNote).where(
-            CreditNote.id == note_id,
-            CreditNote.organization_id == current_user.organization_id
+        stmt = select(NonSalesCreditNote).where(
+            NonSalesCreditNote.id == note_id,
+            NonSalesCreditNote.organization_id == current_user.organization_id
         )
         result = await db.execute(stmt)
         note = result.scalar_one_or_none()
         if not note:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Credit note not found"
+                detail="Non-sales credit note not found"
             )
         
         update_data = note_update.dict(exclude_unset=True, exclude={'items'})
@@ -195,9 +186,9 @@ async def update_credit_note(
             setattr(note, field, value)
         
         if note_update.items is not None:
-            from app.models.vouchers import CreditNoteItem
-            stmt_items = select(CreditNoteItem).where(
-                CreditNoteItem.credit_note_id == note_id
+            from app.models.vouchers import NonSalesCreditNoteItem
+            stmt_items = select(NonSalesCreditNoteItem).where(
+                NonSalesCreditNoteItem.non_sales_credit_note_id == note_id
             )
             result_items = await db.execute(stmt_items)
             existing_items = result_items.scalars().all()
@@ -205,8 +196,8 @@ async def update_credit_note(
                 await db.delete(existing)
             
             for item_data in note_update.items:
-                item = CreditNoteItem(
-                    credit_note_id=note_id,
+                item = NonSalesCreditNoteItem(
+                    non_sales_credit_note_id=note_id,
                     **item_data.dict()
                 )
                 db.add(item)
@@ -214,39 +205,39 @@ async def update_credit_note(
         await db.commit()
         await db.refresh(note)
         
-        logger.info(f"Credit note {note.voucher_number} updated by {current_user.email}")
+        logger.info(f"Non-sales credit note {note.voucher_number} updated by {current_user.email}")
         return note
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating credit note: {e}")
+        logger.error(f"Error updating non-sales credit note: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update credit note"
+            detail="Failed to update non-sales credit note"
         )
 
 @router.delete("/{note_id}")
-async def delete_credit_note(
+async def delete_non_sales_credit_note(
     note_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        stmt = select(CreditNote).where(
-            CreditNote.id == note_id,
-            CreditNote.organization_id == current_user.organization_id
+        stmt = select(NonSalesCreditNote).where(
+            NonSalesCreditNote.id == note_id,
+            NonSalesCreditNote.organization_id == current_user.organization_id
         )
         result = await db.execute(stmt)
         note = result.scalar_one_or_none()
         if not note:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Credit note not found"
+                detail="Non-sales credit note not found"
             )
         
-        from app.models.vouchers import CreditNoteItem
-        stmt_items = select(CreditNoteItem).where(
-            CreditNoteItem.credit_note_id == note_id
+        from app.models.vouchers import NonSalesCreditNoteItem
+        stmt_items = select(NonSalesCreditNoteItem).where(
+            NonSalesCreditNoteItem.non_sales_credit_note_id == note_id
         )
         result_items = await db.execute(stmt_items)
         items = result_items.scalars().all()
@@ -256,13 +247,13 @@ async def delete_credit_note(
         await db.delete(note)
         await db.commit()
         
-        logger.info(f"Credit note {note.voucher_number} deleted by {current_user.email}")
-        return {"message": "Credit note deleted successfully"}
+        logger.info(f"Non-sales credit note {note.voucher_number} deleted by {current_user.email}")
+        return {"message": "Non-sales credit note deleted successfully"}
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error deleting credit note: {e}")
+        logger.error(f"Error deleting non-sales credit note: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete credit note"
+            detail="Failed to delete non-sales credit note"
         )

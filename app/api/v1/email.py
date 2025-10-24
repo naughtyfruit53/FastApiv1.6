@@ -33,7 +33,7 @@ from app.schemas.email_schemas import (
     SyncStatusResponse, ManualSyncRequest, EmailListResponse, EmailListItemResponse
 )
 
-router = APIRouter(prefix="/email", tags=["Email"])
+router = APIRouter(tags=["email"])
 
 logger = logging.getLogger(__name__)
 
@@ -1154,7 +1154,7 @@ async def compose_email(
             if "REFRESH_FAILED" in error or "cannot be reused" in error:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"{error} To fix, revoke the token using POST /api/v1/email/oauth/revoke/{account.oauth_token_id}, then re-authorize via POST /api/v1/oauth/login/{account.provider}. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
+                    detail=f"{error} To fix, revoke the token using POST /api/v1/email/oauth/revoke/{account.oauth_token_id}, then re-authorize via POST /api/v1/oauth/login/{account.provider}. If recently recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
                 )
             else:
                 raise HTTPException(
@@ -1172,7 +1172,7 @@ async def compose_email(
             provider = account.provider if account else "unknown"
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Token refresh failed: {str(e)}. Revoke token with POST /api/v1/email/oauth/revoke/{token_id}, then re-authorize with POST /api/v1/oauth/login/{provider}. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
+                detail=f"Token refresh failed: {str(e)}. Revoke token with POST /api/v1/email/oauth/revoke/{token_id}, then re-authorize with POST /api/v1/oauth/login/{provider}. If recently changed to production, re-auth to get non-expiring refresh token. If recently recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
             )
         else:
             raise HTTPException(

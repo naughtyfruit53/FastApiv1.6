@@ -305,6 +305,27 @@ const DeliveryChallanPage: React.FC = () => {
     fetchVoucherNumber();
   }, [watch('date'), mode, setValue]);
 
+  // Conflict modal handlers
+const handleChangeDateToSuggested = () => {
+  if (conflictInfo?.suggested_date) {
+    setValue('date', conflictInfo.suggested_date.split('T')[0]);
+    setShowConflictModal(false);
+    setPendingDate(null);
+  }
+};
+
+const handleProceedAnyway = () => {
+  setShowConflictModal(false);
+};
+
+const handleCancelConflict = () => {
+  setShowConflictModal(false);
+  if (pendingDate) {
+    setValue('date', '');
+  }
+  setPendingDate(null);
+};
+  
   const onSubmit = (data: any) => {
     if (totalRoundOff !== 0) {
       setSubmitData(data);
@@ -562,28 +583,7 @@ const DeliveryChallanPage: React.FC = () => {
   );
 
   if (isLoading || companyLoading) {
-  
 
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
   return (
       <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">

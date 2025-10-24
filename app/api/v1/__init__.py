@@ -12,9 +12,81 @@ api_v1_router = APIRouter()
 def register_subrouters():
     # Import routers lazily inside this function to avoid circular imports
     try:
+        from .chart_of_accounts import router as chart_of_accounts_router
+        logger.debug("Imported chart_of_accounts_router")
+        api_v1_router.include_router(chart_of_accounts_router, tags=["Chart of Accounts"])
+        chart_of_accounts_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in chart_of_accounts_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered chart_of_accounts endpoints: {len(chart_of_accounts_routes)} routes")
+        for route_path in chart_of_accounts_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include chart_of_accounts_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .vouchers.journal_voucher import router as journal_voucher_router
+        logger.debug("Imported journal_voucher_router")
+        api_v1_router.include_router(journal_voucher_router)
+        journal_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in journal_voucher_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered journal_voucher endpoints: {len(journal_routes)} routes")
+        for route_path in journal_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include journal_voucher_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .vouchers.contra_voucher import router as contra_voucher_router
+        logger.debug("Imported contra_voucher_router")
+        api_v1_router.include_router(contra_voucher_router)
+        contra_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in contra_voucher_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered contra_voucher endpoints: {len(contra_routes)} routes")
+        for route_path in contra_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include contra_voucher_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .vouchers.credit_note import router as credit_note_router
+        logger.debug("Imported credit_note_router")
+        api_v1_router.include_router(credit_note_router)
+        credit_note_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in credit_note_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered credit_note endpoints: {len(credit_note_routes)} routes")
+        for route_path in credit_note_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include credit_note_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .vouchers.debit_note import router as debit_note_router
+        logger.debug("Imported debit_note_router")
+        api_v1_router.include_router(debit_note_router)
+        debit_note_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in debit_note_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered debit_note endpoints: {len(debit_note_routes)} routes")
+        for route_path in debit_note_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include debit_note_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .vouchers.non_sales_credit_note import router as non_sales_credit_note_router
+        logger.debug("Imported non_sales_credit_note_router")
+        api_v1_router.include_router(non_sales_credit_note_router)
+        non_sales_credit_note_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in non_sales_credit_note_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered non_sales_credit_note endpoints: {len(non_sales_credit_note_routes)} routes")
+        for route_path in non_sales_credit_note_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include non_sales_credit_note_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
         from .user import router as user_router
         logger.debug("Imported user_router")
-        api_v1_router.include_router(user_router, tags=["users"])
+        api_v1_router.include_router(user_router, prefix="/users", tags=["users"])
         user_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in user_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered user endpoints: {len(user_routes)} routes")
         for route_path in user_routes:
@@ -74,8 +146,8 @@ def register_subrouters():
     try:
         from .ledger import router as ledger_router
         logger.debug("Imported ledger_router")
-        api_v1_router.include_router(ledger_router)
-        ledger_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in ledger_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(ledger_router, prefix="/ledger")
+        ledger_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /ledger{route.path}" for route in ledger_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered ledger endpoints: {len(ledger_routes)} routes")
         for route_path in ledger_routes:
             logger.debug(f"  {route_path}")
@@ -110,8 +182,8 @@ def register_subrouters():
     try:
         from .voucher_email_templates import router as voucher_email_templates_router
         logger.debug("Imported voucher_email_templates_router")
-        api_v1_router.include_router(voucher_email_templates_router)
-        voucher_email_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in voucher_email_templates_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(voucher_email_templates_router, prefix="/voucher-email-templates")
+        voucher_email_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /voucher-email-templates{route.path}" for route in voucher_email_templates_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered voucher_email_templates endpoints: {len(voucher_email_routes)} routes")
         for route_path in voucher_email_routes:
             logger.debug(f"  {route_path}")
@@ -122,8 +194,8 @@ def register_subrouters():
     try:
         from .voucher_format_templates import router as voucher_format_templates_router
         logger.debug("Imported voucher_format_templates_router")
-        api_v1_router.include_router(voucher_format_templates_router)
-        voucher_format_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in voucher_format_templates_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(voucher_format_templates_router, prefix="/voucher-format-templates")
+        voucher_format_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /voucher-format-templates{route.path}" for route in voucher_format_templates_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered voucher_format_templates endpoints: {len(voucher_format_routes)} routes")
         for route_path in voucher_format_routes:
             logger.debug(f"  {route_path}")
@@ -158,8 +230,8 @@ def register_subrouters():
     try:
         from .manufacturing import router as manufacturing_router
         logger.debug("Imported manufacturing_router")
-        api_v1_router.include_router(manufacturing_router, tags=["Manufacturing"])
-        manufacturing_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in manufacturing_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(manufacturing_router, prefix="/manufacturing", tags=["Manufacturing"])
+        manufacturing_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /manufacturing{route.path}" for route in manufacturing_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered manufacturing endpoints: {len(manufacturing_routes)} routes")
         for route_path in manufacturing_routes:
             logger.debug(f"  {route_path}")
@@ -180,34 +252,10 @@ def register_subrouters():
         raise
 
     try:
-        from .chart_of_accounts import router as chart_of_accounts_router
-        logger.debug("Imported chart_of_accounts_router")
-        api_v1_router.include_router(chart_of_accounts_router, tags=["Chart of Accounts"])
-        chart_of_accounts_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in chart_of_accounts_router.routes if isinstance(route, APIRoute)]
-        logger.debug(f"Registered chart_of_accounts endpoints: {len(chart_of_accounts_routes)} routes")
-        for route_path in chart_of_accounts_routes:
-            logger.debug(f"  {route_path}")
-    except Exception as e:
-        logger.error(f"Failed to import/include chart_of_accounts_router: {str(e)}\n{traceback.format_exc()}")
-        raise
-
-    try:
-        from .erp import router as erp_router
-        logger.debug("Imported erp_router")
-        api_v1_router.include_router(erp_router, prefix="/erp", tags=["ERP"])
-        erp_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /erp{route.path}" for route in erp_router.routes if isinstance(route, APIRoute)]
-        logger.debug(f"Registered erp endpoints: {len(erp_routes)} routes")
-        for route_path in erp_routes:
-            logger.debug(f"  {route_path}")
-    except Exception as e:
-        logger.error(f"Failed to import/include erp_router: {str(e)}\n{traceback.format_exc()}")
-        raise
-
-    try:
         from .crm import router as crm_router
         logger.debug("Imported crm_router")
-        api_v1_router.include_router(crm_router, tags=["CRM"])
-        crm_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in crm_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(crm_router, prefix="/crm", tags=["CRM"])
+        crm_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /crm{route.path}" for route in crm_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered crm endpoints: {len(crm_routes)} routes")
         for route_path in crm_routes:
             logger.debug(f"  {route_path}")
@@ -230,8 +278,8 @@ def register_subrouters():
     try:
         from .website_agent import router as website_agent_router
         logger.debug("Imported website_agent_router")
-        api_v1_router.include_router(website_agent_router, tags=["Website Agent"])
-        website_agent_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in website_agent_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(website_agent_router, prefix="/website-agent", tags=["Website Agent"])
+        website_agent_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /website-agent{route.path}" for route in website_agent_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered website_agent endpoints: {len(website_agent_routes)} routes")
         for route_path in website_agent_routes:
             logger.debug(f"  {route_path}")
@@ -262,3 +310,17 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include streaming_analytics_router: {str(e)}\n{traceback.format_exc()}")
         raise
+
+    try:
+        from .vouchers import router as vouchers_router
+        logger.debug("Imported vouchers_router")
+        api_v1_router.include_router(vouchers_router)
+        vouchers_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in vouchers_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered vouchers endpoints: {len(vouchers_routes)} routes")
+        for route_path in vouchers_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include vouchers_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+register_subrouters()

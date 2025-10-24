@@ -194,3 +194,30 @@ class InterDepartmentVoucherInDB(VoucherInDBBase):
     from_department: str
     to_department: str
     items: List[InterDepartmentVoucherItemInDB]
+
+# Non-Sales Credit Note
+class NonSalesCreditNoteItemCreate(SimpleVoucherItem):
+    pass
+
+class NonSalesCreditNoteItemInDB(NonSalesCreditNoteItemCreate):
+    id: int
+    non_sales_credit_note_id: int
+
+class NonSalesCreditNoteCreate(VoucherBase):
+    reason: str
+    chart_account_id: int
+    items: List[NonSalesCreditNoteItemCreate] = []
+
+class NonSalesCreditNoteUpdate(BaseModel):
+    reason: Optional[str] = None
+    total_amount: Optional[float] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    chart_account_id: Optional[int] = None
+    items: Optional[List[NonSalesCreditNoteItemCreate]] = None
+
+class NonSalesCreditNoteInDB(VoucherInDBBase):
+    reason: str
+    chart_account_id: int
+    chart_account: Optional[ChartOfAccountMinimal] = None
+    items: List[NonSalesCreditNoteItemInDB]

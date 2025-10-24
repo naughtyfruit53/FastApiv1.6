@@ -161,3 +161,26 @@ class InterDepartmentVoucherItem(SimpleVoucherItemBase):
     
     inter_department_voucher_id = Column(Integer, ForeignKey("inter_department_vouchers.id"), nullable=False)
     inter_department_voucher = relationship("InterDepartmentVoucher", back_populates="items")
+
+# Non-Sales Credit Note
+class NonSalesCreditNote(BaseVoucher):
+    __tablename__ = "non_sales_credit_notes"
+    
+    reason = Column(String, nullable=False)
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    
+    # Relationships
+    chart_account = relationship("app.models.erp_models.ChartOfAccounts")
+    items = relationship("NonSalesCreditNoteItem", back_populates="non_sales_credit_note", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'voucher_number', name='uq_nscn_org_voucher_number'),
+        Index('idx_nscn_org_date', 'organization_id', 'date'),
+        Index('idx_nscn_chart_account', 'chart_account_id'),
+    )
+
+class NonSalesCreditNoteItem(SimpleVoucherItemBase):
+    __tablename__ = "non_sales_credit_note_items"
+    
+    non_sales_credit_note_id = Column(Integer, ForeignKey("non_sales_credit_notes.id"), nullable=False)
+    non_sales_credit_note = relationship("NonSalesCreditNote", back_populates="items")

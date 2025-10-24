@@ -14,7 +14,7 @@ from app.services.voucher_service import VoucherNumberService
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/inter-department-vouchers", tags=["inter-department-vouchers"])
+router = APIRouter(tags=["inter-department-vouchers"])
 
 @router.get("/", response_model=List[InterDepartmentVoucherInDB])
 async def get_inter_department_vouchers(
