@@ -1,3 +1,4 @@
+// frontend/src/pages/login.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { Box, Typography, Container, Button, Divider } from "@mui/material";
@@ -8,16 +9,17 @@ import UnifiedLoginForm from "../components/UnifiedLoginForm";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import DemoModeDialog from "../components/DemoModeDialog";
 import { useAuth } from "../context/AuthContext";
-import useMobileRouting from "../hooks/mobile/useMobileRouting";  // Added import for mobile routing
+import useMobileRouting from "../hooks/mobile/useMobileRouting";
 import { ACCESS_TOKEN_KEY } from "../constants/auth";
+import { useCompany } from "../context/CompanyContext"; // Added import
 
 const LoginPage: React.FC = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [demoModeOpen, setDemoModeOpen] = useState(false);
   const { login } = useAuth();
-  const { getMobileRoute } = useMobileRouting();  // Added hook for mobile-aware routing
+  const { getMobileRoute } = useMobileRouting();
+  const { refetch: refetchCompany } = useCompany(); // Added to refetch company data
 
-  // Check if demo mode should be activated after login
   useEffect(() => {
     const pendingDemo = localStorage.getItem("pendingDemoMode");
     if (pendingDemo === "true") {
@@ -38,19 +40,20 @@ const LoginPage: React.FC = () => {
       timestamp: new Date().toISOString(),
     });
 
-    // Always save token to localStorage before anything else
     if (token) {
       localStorage.setItem(ACCESS_TOKEN_KEY, token);
       console.log("[Login] Stored access token in localStorage");
     }
 
     try {
-      console.log(
-        "[Login] Calling AuthContext login method to establish session",
-      );
-      // Use AuthContext login method to establish full context before navigation
+      console.log("[Login] Calling AuthContext login method to establish session");
       await login(loginResponse);
       console.log("[Login] AuthContext login completed - session established");
+
+      // Force refetch company data to ensure CompanyContext is updated
+      await refetchCompany();
+      console.log("[Login] Company data refetched");
+
       console.log("[Login] Current localStorage state:", {
         hasToken: !!localStorage.getItem("access_token"),
         hasUserRole: !!localStorage.getItem("user_role"),
@@ -58,28 +61,21 @@ const LoginPage: React.FC = () => {
         isDemoMode: !!localStorage.getItem("demoMode"),
       });
 
-      // Check if this is demo mode - only redirect to demo if explicitly in demo mode
-      // Organization users should go to dashboard, not demo page
       if (
         loginResponse?.demo_mode ||
         (localStorage.getItem("demoMode") === "true" && !loginResponse?.organization_id)
       ) {
         console.log("[Login] Demo mode activated - redirecting to demo page");
-        window.location.href = getMobileRoute("/demo");  // Updated to use mobile-aware route
+        window.location.href = getMobileRoute("/demo");
         return;
       }
 
-      // Check if password change is required (not mandatory for OTP login)
       if (loginResponse?.must_change_password && !loginResponse?.otp_login) {
-        console.log(
-          "[Login] Password change required - redirecting to password reset",
-        );
-        // Use hard reload to avoid SPA race condition - ensures token is present for AuthProvider's effect
-        window.location.href = getMobileRoute("/password-reset");  // Updated to use mobile-aware route
+        console.log("[Login] Password change required - redirecting to password reset");
+        window.location.href = getMobileRoute("/password-reset");
       } else {
         console.log("[Login] Login complete - redirecting to dashboard");
-        // Use hard reload to avoid SPA race condition - ensures token is present for AuthProvider's effect
-        window.location.href = getMobileRoute("/dashboard");  // Updated to use mobile-aware route
+        window.location.href = getMobileRoute("/dashboard");
       }
     } catch (err) {
       console.error("Failed to establish secure session:", err);
@@ -142,16 +138,13 @@ const LoginPage: React.FC = () => {
           </Box>
         </Box>
       </Box>
-      {/* Forgot Password Modal */}
       <ForgotPasswordModal
         open={forgotPasswordOpen}
         onClose={() => setForgotPasswordOpen(false)}
         onSuccess={() => {
           setForgotPasswordOpen(false);
-          // Show success message or redirect
         }}
       />
-      {/* Demo Mode Dialog */}
       <DemoModeDialog
         open={demoModeOpen}
         onClose={() => setDemoModeOpen(false)}
@@ -160,4 +153,5 @@ const LoginPage: React.FC = () => {
     </Container>
   );
 };
+
 export default LoginPage;

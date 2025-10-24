@@ -1,4 +1,4 @@
-// revised fastapi_migration/frontend/src/pages/vouchers/index.tsx
+// frontend/src/pages/vouchers/index.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import {
@@ -18,6 +18,8 @@ import {
   Grid,
   Tabs,
   Tab,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { voucherService, reportsService } from '../../services/authService';
@@ -26,11 +28,14 @@ import { generateVoucherPDF, getVoucherPdfConfig } from '../../utils/pdfUtils';
 import MegaMenu from '../../components/MegaMenu';
 import VoucherContextMenu from '../../components/VoucherContextMenu';
 import VoucherListModal from '../../components/VoucherListModal';
+import { useCompany } from '../../context/CompanyContext'; // Added import
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
+
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -49,14 +54,16 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
+
 const VoucherManagement: React.FC = () => {
   const router = useRouter();
+  const { company, isLoading: companyLoading, error: companyError, refetch: refetchCompany } = useCompany(); // Added
   const [user] = useState({ email: 'demo@example.com', role: 'admin' });
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; voucher: any; type: string } | null>(null);
   const [showAllModal, setShowAllModal] = useState(false);
   const [modalVoucherType, setModalVoucherType] = useState('');
   const [modalVouchers, setModalVouchers] = useState<any[]>([]);
-  // Get tab from URL parameter
+
   const getInitialTab = () => {
     const { tab } = router.query;
     switch (tab) {
@@ -67,49 +74,74 @@ const VoucherManagement: React.FC = () => {
       default: return 0;
     }
   };
+
   const [tabValue, setTabValue] = useState(getInitialTab());
-  // Update tab when URL changes
+
   useEffect(() => {
     setTabValue(getInitialTab());
   }, [router.query.tab]);
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    // Update URL without full navigation
     const tabNames = ['purchase', 'sales', 'financial', 'internal'];
     router.replace(`/vouchers?tab=${tabNames[newValue]}`, undefined, { shallow: true });
   };
+
   const handleShowAll = (type: string, vouchers: any[]) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     setModalVoucherType(type);
     setModalVouchers(vouchers);
     setShowAllModal(true);
   };
+
   const handleCloseModal = () => {
     setShowAllModal(false);
     setModalVoucherType('');
     setModalVouchers([]);
   };
+
   const handleLogout = () => {
     // Handle logout
   };
+
   const handleCreateVoucher = (tabIndex: number) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     const tabNames = ['purchase', 'sales', 'financial', 'internal'];
     router.push(`/vouchers/${tabNames[tabIndex]}`);
   };
+
   const handleViewVoucher = (type: string, id: number) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     router.push(`/vouchers/${type.toLowerCase()}/view/${id}`);
   };
+
   const handleEditVoucher = (type: string, id: number) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     router.push(`/vouchers/${type.toLowerCase()}/edit/${id}`);
   };
+
   const handlePrintVoucher = async (type: string, id: number) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     try {
-      // Map display type to API type
       const voucherType = type === 'Purchase' ? 'purchase-vouchers' : 
                          type === 'Sales' ? 'sales-vouchers' : 
                          type.toLowerCase().replace(' ', '-');
-      // Fetch voucher data
       const voucherData = await voucherApi.getVoucherById(voucherType, id);
-      // Generate PDF using the existing PDF utility
       const pdfConfig = getVoucherPdfConfig(voucherType);
       await generateVoucherPDF(voucherData, pdfConfig);
     } catch (error: any) {
@@ -117,9 +149,17 @@ const VoucherManagement: React.FC = () => {
       alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
     }
   };
+
   const handleEmailVoucher = async (type: string, id: number) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     const voucherType = type === 'Purchase' ? 'purchase-vouchers' : (type === 'Sales' ? 'sales-vouchers' : '');
-    if (!voucherType) {return alert('Email not supported for this type');}
+    if (!voucherType) {
+      alert('Email not supported for this type');
+      return;
+    }
     try {
       await voucherService.sendVoucherEmail(voucherType, id);
       alert('Email sent successfully');
@@ -127,15 +167,18 @@ const VoucherManagement: React.FC = () => {
       alert(`Error sending email: ${error.message || 'Unknown error'}`);
     }
   };
+
   const handleDeleteVoucher = async (type: string, id: number) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     if (window.confirm(`Are you sure you want to delete this ${type} voucher?`)) {
       try {
-        // Map display type to API type
         const voucherType = type === 'Purchase' ? 'purchase-vouchers' : 
                            type === 'Sales' ? 'sales-vouchers' : 
                            type.toLowerCase().replace(' ', '-');
         await voucherApi.deleteVoucher(voucherType, id);
-        // Refresh the appropriate voucher data
         if (type === 'Purchase') {
           refetchPurchaseVouchers();
         } else if (type === 'Sales') {
@@ -152,34 +195,42 @@ const VoucherManagement: React.FC = () => {
       }
     }
   };
+
   const handleContextMenu = (event: React.MouseEvent, voucher: any, voucherType: string) => {
+    if (!company?.state_code && !company?.gst_number) {
+      router.push('/settings/company');
+      return;
+    }
     event.preventDefault();
     setContextMenu({
       mouseX: event.clientX + 2,
       mouseY: event.clientY - 6,
       voucher,
-      type: voucherType
+      type: voucherType,
     });
   };
+
   const handleCloseContextMenu = () => {
     setContextMenu(null);
   };
-  // Fetch real data from APIs
+
   const { data: dashboardStats } = useQuery({
     queryKey: ['dashboardStats'],
-    queryFn: reportsService.getDashboardStats
+    queryFn: reportsService.getDashboardStats,
   });
+
   const { data: purchaseVouchers, isLoading: purchaseLoading, refetch: refetchPurchaseVouchers } = useQuery({
     queryKey: ['purchaseVouchers'],
     queryFn: () => voucherService.getVouchers('purchase-vouchers'),
-    enabled: tabValue === 0
+    enabled: tabValue === 0,
   });
+
   const { data: salesVouchers, isLoading: salesLoading, refetch: refetchSalesVouchers } = useQuery({
     queryKey: ['salesVouchers'],
     queryFn: () => voucherService.getVouchers('sales-vouchers'),
-    enabled: tabValue === 1
+    enabled: tabValue === 1,
   });
-  // Financial vouchers queries
+
   const { data: financialVouchers, isLoading: financialLoading, refetch: refetchFinancialVouchers } = useQuery({
     queryKey: ['financialVouchers'],
     queryFn: async () => {
@@ -187,55 +238,56 @@ const VoucherManagement: React.FC = () => {
         voucherService.getVouchers('payment-vouchers').catch(() => []),
         voucherService.getVouchers('receipt-vouchers').catch(() => []),
         voucherService.getVouchers('journal-vouchers').catch(() => []),
-        voucherService.getVouchers('contra-vouchers').catch(() => [])
+        voucherService.getVouchers('contra-vouchers').catch(() => []),
       ]);
       return [...payments, ...receipts, ...journals, ...contras];
     },
-    enabled: tabValue === 2
+    enabled: tabValue === 2,
   });
-  // Internal vouchers queries  
+
   const { data: internalVouchers, isLoading: internalLoading, refetch: refetchInternalVouchers } = useQuery({
     queryKey: ['internalVouchers'],
     queryFn: async () => {
       const [manufacturing, stock] = await Promise.all([
         voucherService.getVouchers('manufacturing-journals').catch(() => []),
-        voucherService.getVouchers('stock-journals').catch(() => [])
+        voucherService.getVouchers('stock-journals').catch(() => []),
       ]);
       return [...manufacturing, ...stock];
     },
-    enabled: tabValue === 3
+    enabled: tabValue === 3,
   });
-  // Voucher types with real data
+
   const voucherTypes = [
     {
       title: 'Purchase Vouchers',
       description: 'Manage purchase transactions, orders, and returns',
       count: dashboardStats?.vouchers?.purchase_vouchers || 0,
       color: '#1976D2',
-      vouchers: purchaseVouchers || []
+      vouchers: purchaseVouchers || [],
     },
     {
       title: 'Sales Vouchers',
       description: 'Manage sales transactions, orders, and returns',
       count: dashboardStats?.vouchers?.sales_vouchers || 0,
       color: '#2E7D32',
-      vouchers: salesVouchers || []
+      vouchers: salesVouchers || [],
     },
     {
       title: 'Financial Vouchers',
       description: 'Manage payments, receipts, and journal entries',
       count: (financialVouchers || []).length,
       color: '#7B1FA2',
-      vouchers: financialVouchers || []
+      vouchers: financialVouchers || [],
     },
     {
       title: 'Internal Vouchers',
       description: 'Manage internal transfers and adjustments',
       count: (internalVouchers || []).length,
       color: '#F57C00',
-      vouchers: internalVouchers || []
-    }
+      vouchers: internalVouchers || [],
+    },
   ];
+
   const renderVoucherTable = (vouchers: any[], type: string, isLoading: boolean = false) => {
     if (isLoading) {
       return <Typography>Loading {type} vouchers...</Typography>;
@@ -243,7 +295,6 @@ const VoucherManagement: React.FC = () => {
     if (!vouchers || vouchers.length === 0) {
       return <Typography>No {type} vouchers found.</Typography>;
     }
-    // Show only latest 5 vouchers in the table
     const latestVouchers = vouchers.slice(0, 5);
     return (
       <Box>
@@ -268,7 +319,7 @@ const VoucherManagement: React.FC = () => {
                   sx={{ 
                     '&:hover': {
                       backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    }
+                    },
                   }}
                 >
                   <TableCell>{index + 1}</TableCell>
@@ -326,6 +377,43 @@ const VoucherManagement: React.FC = () => {
       </Box>
     );
   };
+
+  if (companyLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (companyError) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error" action={
+          <Button color="inherit" size="small" onClick={() => refetchCompany()}>
+            Retry
+          </Button>
+        }>
+          Error loading company details: {companyError.message}. Please try refreshing or contact support.
+        </Alert>
+      </Container>
+    );
+  }
+
+  if (!company?.state_code && !company?.gst_number) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error" action={
+          <Button color="inherit" size="small" onClick={() => router.push('/settings/company')}>
+            Update Settings
+          </Button>
+        }>
+          Company state code or GST number is missing. Please update company details in settings.
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <MegaMenu user={user} onLogout={handleLogout} />
@@ -336,7 +424,6 @@ const VoucherManagement: React.FC = () => {
         <Typography variant="body1" color="textSecondary" sx={{ mb: 4 }}>
           Comprehensive management of all voucher types in your ERP system
         </Typography>
-        {/* Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {voucherTypes.map((voucherType, index) => (
             <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
@@ -360,7 +447,6 @@ const VoucherManagement: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-        {/* Voucher Tabs */}
         <Paper sx={{ mb: 4 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={handleTabChange} aria-label="voucher tabs">
@@ -395,7 +481,6 @@ const VoucherManagement: React.FC = () => {
             {renderVoucherTable(voucherTypes[3].vouchers, 'Internal', internalLoading)}
           </TabPanel>
         </Paper>
-        {/* Summary */}
         <Paper sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
             Voucher System Features
@@ -426,7 +511,6 @@ const VoucherManagement: React.FC = () => {
           </Grid>
         </Paper>
       </Container>
-      {/* Global Context Menu for Right-Click */}
       {contextMenu && (
         <VoucherContextMenu
           voucher={contextMenu.voucher}
@@ -442,7 +526,6 @@ const VoucherManagement: React.FC = () => {
           onClose={handleCloseContextMenu}
         />
       )}
-      {/* Show All Modal */}
       {showAllModal && (
         <VoucherListModal
           open={showAllModal}
@@ -459,4 +542,5 @@ const VoucherManagement: React.FC = () => {
     </Box>
   );
 };
+
 export default VoucherManagement;

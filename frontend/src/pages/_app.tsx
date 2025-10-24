@@ -12,7 +12,7 @@ import "../styles/email-reader.css";  // Moved global CSS import here
 import Layout from "../components/layout";
 import { useRouter } from "next/router";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { CompanyProvider } from "../context/CompanyContext"; // Add CompanyProvider import
+import { CompanyProvider, useCompany } from "../context/CompanyContext"; // Updated import
 import { EmailProvider } from "../context/EmailContext"; // Added import for EmailProvider
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
@@ -173,10 +173,18 @@ const ClientOnly = ({ children }: { children: React.ReactNode }) => {
 function MyApp({ Component, pageProps }: AppProps): any {
   const LayoutWrapper = () => {
     const { user, logout } = useAuth();
+    const { refetch: refetchCompany } = useCompany(); // Added
     const router = useRouter();
     const showMegaMenu =
       !!user && router.pathname !== "/login" && router.pathname !== "/";
     const showChatbot = !!user && router.pathname !== "/login" && router.pathname !== "/";
+
+    // Refetch company data on initial load and user change
+    useEffect(() => {
+      if (user) {
+        refetchCompany();
+      }
+    }, [user, refetchCompany]);
     
     return (
       <>

@@ -1,5 +1,5 @@
 // frontend/src/context/CompanyContext.tsx
-import React, { createContext, useContext, useEffect, useState } from "react"; // Added useState
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { companyService } from "../services/authService";
 import { useAuth } from "./AuthContext";
@@ -37,7 +37,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   } = useQuery({
     queryKey: ["currentCompany"],
     queryFn: async () => {
-      const response = await companyService.getCurrentCompany(); // Change to /companies/current if needed
+      const response = await companyService.getCurrentCompany();
       const companyData = {
         ...response,
         state_code: response.state_code || response.gst_number?.slice(0, 2) || null,
@@ -51,10 +51,19 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
       return companyData;
     },
     enabled,
-    retry: false,
+    retry: 3, // Retry up to 3 times on failure
+    retryDelay: 1000, // 1 second delay between retries
     onSuccess: (data) => {
-      if (!data) {
+      if (!data || (!data.state_code && !data.gst_number)) {
         setIsCompanySetupNeeded(true);
+        toast.error("Company state code or GST number is missing. Please update in settings.", {
+          toastId: "company-setup-required",
+        });
+        if (router.pathname !== "/settings/company") {
+          router.push("/settings/company");
+        }
+      } else {
+        setIsCompanySetupNeeded(false);
       }
     },
     onError: (err: any) => {
@@ -68,11 +77,14 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("[CompanyContext] 401 Unauthorized - redirecting to login");
         router.push("/login");
       } else if (status === 404 || err.isCompanySetupRequired) {
-        console.log(
-          "[CompanyContext] Company setup needed due to 404/missing company",
-        );
+        console.log("[CompanyContext] Company setup needed due to 404/missing company");
         setIsCompanySetupNeeded(true);
-        toast.error("Company details not found. Please complete company setup.");
+        toast.error("Company details not found. Please complete company setup.", {
+          toastId: "company-setup-not-found",
+        });
+        if (router.pathname !== "/settings/company") {
+          router.push("/settings/company");
+        }
       } else if (status === 403) {
         toast.error("Access denied. Insufficient permissions for company details.");
       } else {
@@ -82,10 +94,13 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   useEffect(() => {
-    if (enabled && !isLoading && !error && company === null) {
+    if (enabled && !isLoading && !error && (company === null || (!company?.state_code && !company?.gst_number))) {
       setIsCompanySetupNeeded(true);
+      if (router.pathname !== "/settings/company") {
+        router.push("/settings/company");
+      }
     }
-  }, [enabled, isLoading, error, company]);
+  }, [enabled, isLoading, error, company, router]);
 
   useEffect(() => {
     if (company) {
