@@ -86,6 +86,11 @@ const statusOptions = [
 export default function MaterialReceiptVoucher() {
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { control, handleSubmit, watch, setValue, reset, formState } =
     useForm<MaterialReceiptVoucher>({
@@ -155,6 +160,37 @@ export default function MaterialReceiptVoucher() {
     );
     setValue("total_amount", total);
   }, [watch("items"), setValue]);
+
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await axios.get(
+            `/api/v1/material-receipts/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await axios.get(
+            `/api/v1/material-receipts/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: MaterialReceiptVoucher) =>
@@ -255,7 +291,31 @@ export default function MaterialReceiptVoucher() {
       console.error("Error generating PDF:", err);
     }
   };
-  if (isLoading) {
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+    // Keep the current date
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      // Revert to previous date or clear
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+
+    if (isLoading) {
     return (
       <Container>
         <Box

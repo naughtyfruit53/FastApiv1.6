@@ -420,7 +420,31 @@ const ContraVoucher: React.FC = () => {
       </Box>
     </Box>
   );
-  if (isLoading) {
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+    // Keep the current date
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      // Revert to previous date or clear
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+
+    if (isLoading) {
     return (
       <Container>
         <Box

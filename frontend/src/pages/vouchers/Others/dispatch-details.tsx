@@ -42,6 +42,11 @@ import VoucherLayout from "../../../components/VoucherLayout";
 import { dispatchService } from "../../../services/dispatchService";
 const DispatchDetailsPage: React.FC = () => {
   const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");

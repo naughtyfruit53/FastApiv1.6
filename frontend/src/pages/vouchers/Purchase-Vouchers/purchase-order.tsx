@@ -471,6 +471,37 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [voucherData, mode, reset, setValue, isIntrastate]);
 
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await axios.get(
+            `/api/v1/purchase-orders/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await axios.get(
+            `/api/v1/purchase-orders/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
+
   const onSubmit = async (data: any) => {
     if (totalRoundOff !== 0) {
       setSubmitData(data);
@@ -505,6 +536,11 @@ const PurchaseOrderPage: React.FC = () => {
 
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
   const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   const handleEditTracking = (voucher: any) => {
     console.log('[PurchaseOrderPage] Opening tracking for PO:', voucher.id);

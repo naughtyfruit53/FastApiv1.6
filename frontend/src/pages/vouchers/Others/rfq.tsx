@@ -69,6 +69,11 @@ interface RFQFormData {
 const RFQPage: React.FC = () => {
   const [mode, setMode] = useState<"create" | "view" | "edit">("view");
   const [selectedRFQ, setSelectedRFQ] = useState<any>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");

@@ -72,6 +72,37 @@ const InterDepartmentVoucherPage: React.FC = () => {
     setVoucherData((prev) => ({ ...prev, total_amount: total }));
   }, [voucherData.items, setVoucherData]);
 
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await axios.get(
+            `/api/v1/inter-department-vouchers/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await axios.get(
+            `/api/v1/inter-department-vouchers/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
+
   const handleItemChange = (index: number, field: keyof InterDepartmentVoucherItem, value: any) => {
     const updatedItems = [...voucherData.items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
