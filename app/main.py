@@ -141,6 +141,14 @@ def include_minimal_routers():
     except Exception as e:
         logger.error(f"Failed to import reports router: {str(e)}")
         raise
+    
+    try:
+        from app.api.routes import websocket as websocket_routes
+        routers.append((websocket_routes.router, "/api", ["websocket"]))
+        logger.info("WebSocket routes included for real-time collaboration")
+    except Exception as e:
+        logger.warning(f"Failed to import websocket router: {str(e)}")
+        # Don't raise - WebSocket is optional
 
     # Conditionally include extended routers
     if os.getenv("ENABLE_EXTENDED_ROUTERS", "false").lower() == "true":
