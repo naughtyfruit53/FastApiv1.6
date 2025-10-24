@@ -28,7 +28,6 @@ import {
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
-  TrendingUp as TrendingUpIcon,
   Description as DescriptionIcon,
   Insights as InsightsIcon,
   Add as AddIcon,

@@ -16,8 +16,7 @@ import {
   DialogContent,
   DialogActions,
   Typography,
-  TextField,
-  Divider
+  TextField
 } from '@mui/material';
 import {
   PictureAsPdf as PdfIcon,

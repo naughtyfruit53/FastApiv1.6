@@ -57,7 +57,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { crmService, Lead, CRMAnalytics } from "../../services/crmService";
+import { crmService, Lead } from "../../services/crmService";
 import AddLeadModal from "../../components/AddLeadModal";
 import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
 import { formatCurrency } from "../../utils/currencyUtils";

@@ -22,7 +22,6 @@ import {
   TableRow,
   Autocomplete,
 } from "@mui/material";
-import { toast } from "react-toastify";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";

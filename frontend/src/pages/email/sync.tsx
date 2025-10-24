@@ -20,13 +20,10 @@ import {
   CircularProgress,
   Alert,
   Button,
-  IconButton,
-  Tooltip,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
   Sync as SyncIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';

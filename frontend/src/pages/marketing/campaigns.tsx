@@ -25,11 +25,9 @@ import {
   Email,
   Sms,
   Groups,
-  TrendingUp,
   Schedule,
   CheckCircle,
   PlayArrow,
-  Pause,
   Edit,
   Visibility,
   BarChart

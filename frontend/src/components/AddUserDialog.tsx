@@ -1,5 +1,5 @@
 // frontend/src/components/AddUserDialog.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -22,15 +22,14 @@ import {
   Checkbox,
 } from "@mui/material";
 import { Close, Person, Save, Cancel } from "@mui/icons-material";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext"; // Adjusted path
 import {
-  getDisplayRole,
   canManageUsers,
 } from "../types/user.types"; // Adjusted path
 import organizationService from "../services/organizationService"; // Import to get managers
-import rbacService from "../services/rbacService"; // To get modules
-import userService from "../services/userService"; // NEW: Import userService
+// To get modules
+// NEW: Import userService
 import { useSnackbar } from "notistack"; // NEW: For toast notifications (assume notistack is installed)
 
 interface AddUserDialogProps {

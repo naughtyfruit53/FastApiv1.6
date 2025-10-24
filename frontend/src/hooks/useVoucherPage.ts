@@ -21,7 +21,7 @@ import {
   getAmountInWords,
 } from "../utils/voucherUtils";
 import { showErrorToast, showSuccessToast, handleVoucherError } from "../utils/errorHandling";
-import { SUCCESS_MESSAGES, CONFIRM_MESSAGES, getDynamicMessage } from "../constants/messages";
+import { SUCCESS_MESSAGES, getDynamicMessage } from "../constants/messages";
 import {
   generateVoucherPDF,
   getVoucherPdfConfig,

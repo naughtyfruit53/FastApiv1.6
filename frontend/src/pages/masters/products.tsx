@@ -17,9 +17,6 @@ import {
   Chip,
   IconButton,
   TextField,
-  Alert,
-  FormControlLabel,
-  Checkbox,
   TableSortLabel,
   InputAdornment,
 } from "@mui/material";
@@ -28,9 +25,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { masterDataService } from "../../services/authService";
 import ExcelImportExport from "../../components/ExcelImportExport";
 import { bulkImportProducts } from "../../services/masterService";
-import Grid from "@mui/material/Grid";
 import { useAuth } from "../../context/AuthContext";
-import { toast } from "react-toastify";
 import AddProductModal from "../../components/AddProductModal"; // Added import for unified modal
 
 // Utility function to get product display name

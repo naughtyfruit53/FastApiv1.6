@@ -28,7 +28,6 @@ import {
   Add,
   Edit,
   Delete,
-  Schedule,
   CheckCircle,
   Warning
 } from '@mui/icons-material';

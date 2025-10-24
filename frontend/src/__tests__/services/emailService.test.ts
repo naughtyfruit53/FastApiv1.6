@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { emailService, Email, MailAccount, ComposeEmail } from '../../services/emailService';
+import { emailService, MailAccount, ComposeEmail } from '../../services/emailService';
 import { api } from '../../lib/api';
 
 // Mock the api module

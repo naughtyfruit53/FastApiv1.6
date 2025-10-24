@@ -1,7 +1,6 @@
 // frontend/src/hooks/useSharedHR.ts
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
 
 export interface Employee {
   id: string;

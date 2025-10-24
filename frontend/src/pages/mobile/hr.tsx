@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Grid, Typography, Avatar, Chip } from '@mui/material';
-import { Add, Work, Person, Schedule, TrendingUp, Group } from '@mui/icons-material';
+import { Add, Work, Person, Schedule, Group } from '@mui/icons-material';
 import { 
   MobileDashboardLayout, 
   MobileCard, 

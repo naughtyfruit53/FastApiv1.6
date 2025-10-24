@@ -28,7 +28,6 @@ import {
 import {
   Delete as DeleteIcon,
   Add as AddIcon,
-  Edit as EditIcon,
   Email as EmailIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';

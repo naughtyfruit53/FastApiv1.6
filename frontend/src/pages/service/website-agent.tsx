@@ -23,7 +23,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -42,8 +41,6 @@ import DashboardLayout from '../../components/DashboardLayout';
 import WebsiteAgentWizard from '../../components/WebsiteAgentWizard';
 import websiteAgentService, {
   WebsiteProject,
-  WebsiteDeployment,
-  WebsiteMaintenanceLog,
 } from '../../services/websiteAgentService';
 
 interface TabPanelProps {

@@ -2,16 +2,11 @@ import React, { useState } from 'react';
 import { Box, Grid, Typography, Chip, List, ListItem, ListItemIcon, ListItemText, LinearProgress } from '@mui/material';
 import { 
   Assignment, 
-  Schedule, 
-  People, 
   TrendingUp, 
-  CheckCircle, 
-  Warning, 
   Add,
   Analytics,
   Timeline,
   AttachMoney,
-  CalendarToday,
   Group
 } from '@mui/icons-material';
 import { 

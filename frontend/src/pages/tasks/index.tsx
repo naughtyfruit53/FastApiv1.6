@@ -18,10 +18,8 @@ import {
   Fab
 } from '@mui/material';
 import { 
-  Task, 
   Add, 
   Assignment,
-  TrendingUp,
   CheckCircle,
   Schedule,
   Flag
