@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
+from datetime import datetime
+from dateutil import parser as date_parser
 from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -59,6 +61,7 @@ async def get_proforma_invoices(
 
 @router.get("/next-number", response_model=str)
 async def get_next_proforma_invoice_number(
+    voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

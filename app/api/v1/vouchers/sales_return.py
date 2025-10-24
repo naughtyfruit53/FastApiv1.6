@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
+from datetime import datetime
+from dateutil import parser as date_parser
 from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
@@ -59,13 +61,14 @@ async def get_sales_returns(
 
 @router.get("/next-number", response_model=str)
 async def get_next_sales_return_number(
+    voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the next available sales return number"""
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "SR", current_user.organization_id, SalesReturn
-    )
+                db, "SR", current_user.organization_id, SalesReturn, voucher_date=voucher_date
+            )
 
 # Register both "" and "/" for POST to support both /api/v1/sales-returns and /api/v1/sales-returns/
 @router.post("", response_model=SalesReturnInDB, include_in_schema=False)
@@ -86,7 +89,7 @@ async def create_sales_return(
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
             invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "SR", current_user.organization_id, SalesReturn
+                db, "SR", current_user.organization_id, SalesReturn, voucher_date=voucher_date
             )
         else:
             stmt = select(SalesReturn).where(
@@ -97,8 +100,8 @@ async def create_sales_return(
             existing = result.scalar_one_or_none()
             if existing:
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "SR", current_user.organization_id, SalesReturn
-                )
+                db, "SR", current_user.organization_id, SalesReturn, voucher_date=voucher_date
+            )
         
         db_invoice = SalesReturn(**invoice_data)
         db.add(db_invoice)
