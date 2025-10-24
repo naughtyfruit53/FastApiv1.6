@@ -26,7 +26,7 @@ import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherLayout from "../../../components/VoucherLayout";
 import SearchableDropdown from "../../../components/SearchableDropdown";
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
+import api from '../../../lib/api';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { formatCurrency } from "../../../utils/currencyUtils";
 import {
@@ -449,13 +449,15 @@ const NonSalesCreditNote: React.FC = () => {
       const currentDate = watch('date');
       if (currentDate && mode === 'create') {
         try {
-          const response = await axios.get(
-            `/api/v1/non-sales-credit-notes/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/non-sales-credit-notes/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
-          const conflictResponse = await axios.get(
-            `/api/v1/non-sales-credit-notes/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/non-sales-credit-notes/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {
