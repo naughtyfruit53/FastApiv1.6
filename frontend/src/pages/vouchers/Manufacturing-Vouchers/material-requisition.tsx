@@ -73,6 +73,11 @@ const MaterialRequisition: React.FC = () => {
     mouseY: number;
     voucher: any;
   } | null>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const {
     control,
@@ -143,6 +148,37 @@ const MaterialRequisition: React.FC = () => {
     );
     setValue("total_amount", total);
   }, [watch("items"), setValue]);
+
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await axios.get(
+            `/api/v1/material-requisitions/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await axios.get(
+            `/api/v1/material-requisitions/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: MaterialIssue) => api.post("/material-issues", data),

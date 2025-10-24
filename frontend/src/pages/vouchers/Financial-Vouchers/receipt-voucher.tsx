@@ -25,6 +25,8 @@ import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import axios from 'axios';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles, parseRateField } from '../../../utils/voucherUtils';
 import { useReferenceOptions } from '../../../utils/nameRefUtils';
@@ -106,6 +108,11 @@ const ReceiptVoucher: React.FC = () => {
 
   const [entityBalance, setEntityBalance] = useState<number | null>(null);
   const [voucherBalance, setVoucherBalance] = useState<number | null>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedEntity && selectedEntity.type && selectedEntity.id) {
@@ -136,6 +143,37 @@ const ReceiptVoucher: React.FC = () => {
       setVoucherBalance(null);
     }
   }, [reference, referenceOptions]);
+
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await axios.get(
+            `/api/v1/receipt-vouchers/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await axios.get(
+            `/api/v1/receipt-vouchers/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
 
   const handleSubmitFormMapped = (data: any) => {
     if (data.entity) {
@@ -396,7 +434,31 @@ const ReceiptVoucher: React.FC = () => {
     </Box>
   );
 
-  if (isLoading) {
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+    // Keep the current date
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      // Revert to previous date or clear
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+
+    if (isLoading) {
     return (
       <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -439,6 +501,14 @@ const ReceiptVoucher: React.FC = () => {
         onView={(v) => handleView(v.id)}
         onEdit={(v) => handleEdit(v.id)}
         onDelete={(v) => handleDelete(v)}
+      />
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Receipt Voucher"
       />
     </>
   );

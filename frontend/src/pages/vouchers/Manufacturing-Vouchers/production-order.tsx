@@ -84,6 +84,11 @@ const ProductionOrder: React.FC = () => {
   const [bomCostBreakdown, setBomCostBreakdown] = useState<any>(null);
   const [showAddBOMModal, setShowAddBOMModal] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<ManufacturingOrder | null>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
   // Shortage checking hook
@@ -173,6 +178,37 @@ const ProductionOrder: React.FC = () => {
       setValue("total_amount", costBreakdown.cost_breakdown.total_cost);
     }
   }, [costBreakdown, setValue]);
+
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await axios.get(
+            `/api/v1/production-orders/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await axios.get(
+            `/api/v1/production-orders/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: ManufacturingOrder) =>

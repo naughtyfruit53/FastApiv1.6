@@ -34,6 +34,8 @@ import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
+import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import axios from 'axios';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
@@ -471,6 +473,37 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [voucherData, mode, reset, setValue, isIntrastate]);
 
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await axios.get(
+            `/api/v1/purchase-orders/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await axios.get(
+            `/api/v1/purchase-orders/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
+
   const onSubmit = async (data: any) => {
     if (totalRoundOff !== 0) {
       setSubmitData(data);
@@ -505,6 +538,11 @@ const PurchaseOrderPage: React.FC = () => {
 
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
   const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   const handleEditTracking = (voucher: any) => {
     console.log('[PurchaseOrderPage] Opening tracking for PO:', voucher.id);
@@ -583,7 +621,29 @@ const PurchaseOrderPage: React.FC = () => {
               const colorCode = getColorCode(colorStatus);
               const dateStr = voucher.date ? voucher.date.split('T')[0] : '';
               const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
-              return (
+            
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+  return (
                 <TableRow 
                   key={voucher.id} 
                   hover 
@@ -978,6 +1038,14 @@ const PurchaseOrderPage: React.FC = () => {
           voucherNumber={selectedVoucherForTracking.voucher_number}
         />
       )}
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Purchase Order"
+      />
     </>
   );
 };
