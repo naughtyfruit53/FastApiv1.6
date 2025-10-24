@@ -1,5 +1,5 @@
 // Journal Voucher Page - Refactored using VoucherLayout
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -20,6 +20,8 @@ import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherLayout from "../../../components/VoucherLayout";
 import EntitySelector from "../../../components/EntitySelector";
+import VoucherDateConflictModal from "../../../components/VoucherDateConflictModal";
+import axios from 'axios';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { formatCurrency } from "../../../utils/currencyUtils";
 import {
@@ -75,6 +77,11 @@ const JournalVoucher: React.FC = () => {
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
   // Watch form values
   // Handle voucher click to load details
   const handleVoucherClick = (voucher: any) => {
@@ -393,6 +400,36 @@ const JournalVoucher: React.FC = () => {
     </Box>
   );
 
+
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          const response = await axios.get(
+            `/api/v1/journal-vouchers/next-number?voucher_date=${currentDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          const conflictResponse = await axios.get(
+            `/api/v1/journal-vouchers/check-backdated-conflict?voucher_date=${currentDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
+
   // Conflict modal handlers
   const handleChangeDateToSuggested = () => {
     if (conflictInfo?.suggested_date) {
@@ -473,6 +510,14 @@ const JournalVoucher: React.FC = () => {
           handleDelete(id);
           handleContextMenuClose();
         }}
+      />
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Journal Voucher"
       />
     </>
   );

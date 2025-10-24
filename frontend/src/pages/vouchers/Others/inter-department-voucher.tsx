@@ -4,6 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import VoucherLayout from '../../../components/VoucherLayout';
+import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import axios from 'axios';
 
 interface InterDepartmentVoucherItem {
   id?: number;
@@ -65,6 +67,11 @@ const InterDepartmentVoucherPage: React.FC = () => {
     'Warehouse',
     'Maintenance'
   ]);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   // Calculate total amount when items change
   useEffect(() => {
@@ -137,8 +144,31 @@ const InterDepartmentVoucherPage: React.FC = () => {
     await submitVoucher(voucherData);
   };
 
+
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
   return (
-    <VoucherLayout
+    <>
+      <VoucherLayout
       title="Inter Department Voucher"
       voucherData={voucherData}
       onSubmit={handleSubmit}
@@ -202,6 +232,15 @@ const InterDepartmentVoucherPage: React.FC = () => {
         { key: 'amount', label: 'Amount', type: 'number', readOnly: true }
       ]}
     />
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Inter-Department Voucher"
+      />
+    </>
   );
 };
 

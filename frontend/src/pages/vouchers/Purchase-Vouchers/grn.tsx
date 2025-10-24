@@ -32,6 +32,8 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
+import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import axios from 'axios';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles } from '../../../utils/voucherUtils';
 import { voucherService } from '../../../services/vouchersService';
@@ -577,6 +579,14 @@ const GoodsReceiptNotePage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Goods Receipt Note"
+      />
     </>
   );
 

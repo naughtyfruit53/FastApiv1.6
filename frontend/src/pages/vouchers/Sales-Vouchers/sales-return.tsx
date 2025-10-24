@@ -33,6 +33,8 @@ import VoucherReferenceDropdown from "../../../components/VoucherReferenceDropdo
 import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
+import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import axios from 'axios';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
 import { getStock } from '../../../services/masterService';
@@ -737,7 +739,29 @@ const SalesReturnPage: React.FC = () => {
   );
 
   if (isLoading || companyLoading) {
-    return (
+  
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+  return (
       <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
@@ -775,6 +799,14 @@ const SalesReturnPage: React.FC = () => {
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
       <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Return" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Return")} />
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Sales Return"
+      />
     </>
   );
 };

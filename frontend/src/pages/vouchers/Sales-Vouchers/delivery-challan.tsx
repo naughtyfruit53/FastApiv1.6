@@ -32,6 +32,8 @@ import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherReferenceDropdown from '../../../components/VoucherReferenceDropdown';
 import VoucherItemTable from '../../../components/VoucherItemTable';
 import VoucherFormTotals from '../../../components/VoucherFormTotals';
+import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import axios from 'axios';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
@@ -561,7 +563,29 @@ const DeliveryChallanPage: React.FC = () => {
   );
 
   if (isLoading || companyLoading) {
-    return (
+  
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+  return (
       <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
@@ -619,6 +643,14 @@ const DeliveryChallanPage: React.FC = () => {
           voucherNumber={selectedVoucherForTracking.voucher_number}
         />
       )}
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Delivery Challan"
+      />
     </>
   );
 };

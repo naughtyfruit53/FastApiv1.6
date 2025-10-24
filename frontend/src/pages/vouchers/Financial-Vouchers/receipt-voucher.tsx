@@ -502,6 +502,14 @@ const ReceiptVoucher: React.FC = () => {
         onEdit={(v) => handleEdit(v.id)}
         onDelete={(v) => handleDelete(v)}
       />
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Receipt Voucher"
+      />
     </>
   );
 };

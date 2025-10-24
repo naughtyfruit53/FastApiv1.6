@@ -34,6 +34,8 @@ import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherItemTable from "../../../components/VoucherItemTable";
 import VoucherFormTotals from "../../../components/VoucherFormTotals";
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
+import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import axios from 'axios';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from "../../../utils/voucherUtils";
 import { getStock } from "../../../services/masterService";
@@ -619,7 +621,29 @@ const PurchaseOrderPage: React.FC = () => {
               const colorCode = getColorCode(colorStatus);
               const dateStr = voucher.date ? voucher.date.split('T')[0] : '';
               const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
-              return (
+            
+
+  // Conflict modal handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
+  return (
                 <TableRow 
                   key={voucher.id} 
                   hover 
@@ -1014,6 +1038,14 @@ const PurchaseOrderPage: React.FC = () => {
           voucherNumber={selectedVoucherForTracking.voucher_number}
         />
       )}
+      <VoucherDateConflictModal
+        open={showConflictModal}
+        onClose={handleCancelConflict}
+        conflictInfo={conflictInfo}
+        onChangeDateToSuggested={handleChangeDateToSuggested}
+        onProceedAnyway={handleProceedAnyway}
+        voucherType="Purchase Order"
+      />
     </>
   );
 };
