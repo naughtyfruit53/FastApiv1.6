@@ -17,7 +17,8 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Tooltip
+  Tooltip,
+  LinearProgress
 } from '@mui/material';
 import { 
   Receipt,
@@ -242,7 +243,7 @@ const AccountsPayablePage: React.FC = () => {
                 </Typography>
                 <Button 
                   variant="contained" 
-                  onClick={() => router.push('/vouchers/purchase-vouchers/new')}
+                  onClick={() => router.push('/vouchers/Purchase-Vouchers/purchase-voucher/')}
                 >
                   Record New Bill
                 </Button>
