@@ -28,7 +28,6 @@ import {
 } from '@mui/material';
 import {
   Add,
-  Settings,
   Delete,
   CheckCircle,
   Error,
@@ -38,9 +37,6 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import integrationService, {
   IntegrationConfig,
-  SlackConfig,
-  WhatsAppConfig,
-  GoogleWorkspaceConfig,
 } from '../../services/integrationService';
 
 interface TabPanelProps {

@@ -34,7 +34,6 @@ import VoucherItemTable from '../../../components/VoucherItemTable';
 import VoucherFormTotals from '../../../components/VoucherFormTotals';
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
@@ -407,14 +406,16 @@ const SalesVoucherPage: React.FC = () => {
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/sales-vouchers/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/sales-vouchers/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/sales-vouchers/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/sales-vouchers/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {

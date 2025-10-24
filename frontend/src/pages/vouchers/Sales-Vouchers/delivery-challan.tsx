@@ -31,9 +31,7 @@ import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherReferenceDropdown from '../../../components/VoucherReferenceDropdown';
 import VoucherItemTable from '../../../components/VoucherItemTable';
-import VoucherFormTotals from '../../../components/VoucherFormTotals';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
@@ -41,7 +39,6 @@ import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';
 import { useCompany } from "../../../context/CompanyContext";
 import { useGstValidation } from "../../../hooks/useGstValidation";
-import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
 import voucherFormStyles from "../../../styles/voucherFormStyles";
 import { useRouter } from "next/router";
@@ -282,14 +279,16 @@ const DeliveryChallanPage: React.FC = () => {
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/delivery-challans/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/delivery-challans/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/delivery-challans/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/delivery-challans/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {

@@ -1,6 +1,6 @@
 // pages/analytics/advanced-analytics.tsx
 // Advanced ML/AI Analytics page with predictive models and anomaly detection
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { NextPage } from "next";
 import {
   Box,

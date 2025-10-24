@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
-import { menuItems, mainMenuSections } from '../menuConfig';
+import { mainMenuSections } from '../menuConfig';
 
 interface SearchResult {
   id: string;

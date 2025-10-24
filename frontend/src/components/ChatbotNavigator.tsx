@@ -21,9 +21,7 @@ import {
   IconButton,
   List,
   ListItem,
-  ListItemText,
   Chip,
-  Avatar,
   Divider,
   CircularProgress
 } from '@mui/material';

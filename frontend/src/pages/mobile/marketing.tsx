@@ -11,8 +11,7 @@ import {
   Analytics,
   Schedule,
   LocalOffer,
-  Share,
-  Chat
+  Share
 } from '@mui/icons-material';
 import { 
   MobileDashboardLayout, 

@@ -1,7 +1,6 @@
 // frontend/src/hooks/useSharedCRM.ts
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
 
 export interface CRMContact {
   id: string;

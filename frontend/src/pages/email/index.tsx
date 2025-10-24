@@ -9,7 +9,7 @@ import React, { useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, Alert, CircularProgress, Button } from '@mui/material';
 import { Menu as MenuIcon, Settings as SettingsIcon, Add as AddIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMailAccounts, Email, MailAccount } from '../../services/emailService';
+import { getMailAccounts, Email } from '../../services/emailService';
 import { useOAuth } from '../../hooks/useOAuth';
 import { useEmail } from '../../context/EmailContext';
 import Inbox from './Inbox';

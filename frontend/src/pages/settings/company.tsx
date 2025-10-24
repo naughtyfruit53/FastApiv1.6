@@ -12,7 +12,6 @@ import {
   Divider,
   Alert,
   CircularProgress,
-  Avatar,
 } from "@mui/material";
 import { Business, Save, Upload } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";

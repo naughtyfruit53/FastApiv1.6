@@ -12,8 +12,7 @@ import {
 } from '@mui/material';
 import { 
   CalendarToday, 
-  Add, 
-  Event,
+  Add,
   Today,
   ViewWeek,
   ViewModule,

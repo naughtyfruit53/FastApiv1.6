@@ -33,7 +33,6 @@ import {
   TrendingDown,
   Add,
   Edit,
-  Delete,
   Visibility,
   Warning,
   CheckCircle

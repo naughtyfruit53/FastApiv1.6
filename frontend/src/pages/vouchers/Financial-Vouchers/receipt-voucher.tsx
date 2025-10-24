@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Button,
   TextField,
   Typography,
   Grid,
@@ -26,7 +25,7 @@ import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
 import SearchableDropdown from '../../../components/SearchableDropdown';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
-import axios from 'axios';
+import api from '../../../lib/api';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles, parseRateField } from '../../../utils/voucherUtils';
 import { useReferenceOptions } from '../../../utils/nameRefUtils';
@@ -151,14 +150,16 @@ const ReceiptVoucher: React.FC = () => {
       if (currentDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/receipt-vouchers/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/receipt-vouchers/next-number`,
+            { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/receipt-vouchers/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/receipt-vouchers/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
           );
           
           if (conflictResponse.data.has_conflict) {

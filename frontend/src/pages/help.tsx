@@ -25,7 +25,6 @@ import {
   Receipt,
   Engineering,
   AccountBalance,
-  TrendingUp,
   Settings,
   Help as HelpIcon,
   KeyboardArrowDown,

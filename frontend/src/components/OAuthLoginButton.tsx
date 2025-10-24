@@ -25,7 +25,6 @@ import {
   Google as GoogleIcon,
   Microsoft as MicrosoftIcon,
   Email as EmailIcon,
-  Add as AddIcon,
   Security as SecurityIcon
 } from '@mui/icons-material';
 import { useOAuth } from '../hooks/useOAuth';

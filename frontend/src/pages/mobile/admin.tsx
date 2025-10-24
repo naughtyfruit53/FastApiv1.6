@@ -10,10 +10,8 @@ import {
   Settings,
   Add,
   ManageAccounts,
-  Group,
   Shield,
   Backup,
-  Update,
   BugReport
 } from '@mui/icons-material';
 import { 
@@ -23,8 +21,7 @@ import {
   MobileSearchBar,
   MobilePullToRefresh,
   MobileBottomSheet,
-  MobileContextualActions,
-  createStandardActions
+  MobileContextualActions
 } from '../../components/mobile';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { useAuth } from '../../context/AuthContext';

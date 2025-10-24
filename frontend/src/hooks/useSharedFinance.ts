@@ -1,7 +1,6 @@
 // frontend/src/hooks/useSharedFinance.ts
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
 
 export interface FinancialTransaction {
   id: string;

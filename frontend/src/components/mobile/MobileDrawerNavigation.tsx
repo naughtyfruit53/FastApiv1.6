@@ -40,7 +40,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
-import { menuItems, mainMenuSections } from '../menuConfig';
+import { mainMenuSections } from '../menuConfig';
 
 interface MobileDrawerNavigationProps {
   open: boolean;

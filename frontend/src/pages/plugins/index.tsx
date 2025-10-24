@@ -31,14 +31,12 @@ import {
   Paper,
 } from '@mui/material';
 import {
-  Add,
   Settings,
   Delete,
   CheckCircle,
   Error,
   Refresh,
   Extension,
-  Info,
   CloudUpload,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';

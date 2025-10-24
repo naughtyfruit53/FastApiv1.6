@@ -21,8 +21,6 @@ import {
 } from '@mui/material';
 import {
   SmartToy as AIIcon,
-  Analytics as AnalyticsIcon,
-  Visibility as ViewIcon,
 } from '@mui/icons-material';
 
 // Import our new features
