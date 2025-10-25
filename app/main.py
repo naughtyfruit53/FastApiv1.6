@@ -12,7 +12,7 @@ from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
 from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
-from sqlalchemy import select, text  # Added text import
+from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
 
 logger = logging.getLogger(__name__)
@@ -33,10 +33,11 @@ async def init_org_roles():
     from app.services.rbac import RBACService  # Lazy import to avoid circular import
     from app.models.user_models import User
     from app.models.rbac_models import UserServiceRole, ServiceRole
+    from app.models.organization_settings import Organization
     async with AsyncSessionLocal() as db:
         try:
             # Check if user_service_roles table exists
-            query = text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_service_roles')")  # Wrapped in text()
+            query = text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_service_roles')")
             result = await db.execute(query)
             table_exists = result.scalar()
             if not table_exists:
@@ -70,10 +71,10 @@ async def init_org_roles():
                             logger.info(f"Assigned admin role to user {admin.email} in org {org.id}")
                     await db.commit()
         except ProgrammingError as e:
-            logger.error(f"Database error during role initialization: {str(e)}")
+            logger.error(f"Database error during role initialization: {str(e)} - skipping role init")
             await db.rollback()
         except Exception as e:
-            logger.error(f"Error initializing organization roles: {str(e)}")
+            logger.error(f"Error initializing organization roles: {str(e)} - skipping role init")
             await db.rollback()
 
 @asynccontextmanager
@@ -97,7 +98,7 @@ async def lifespan(app: FastAPI):
         app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
         logger.info("Mounted /Uploads directory")
     
-    # Initialize default permissions and org roles
+    # Initialize default permissions and org roles (errors logged but startup continues)
     await init_default_permissions()
     await init_org_roles()
     
