@@ -5,10 +5,11 @@ WORKDIR /src
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    libyaml-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip wheel setuptools \
+RUN python -m pip install --upgrade pip wheel setuptools 'cython<3' \
  && pip wheel --wheel-dir /wheels -r requirements.txt
 
 # ---------- runtime ----------
@@ -23,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmupdf-dev \
     procps \
     postgresql-client \
+    libyaml-0-2 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
