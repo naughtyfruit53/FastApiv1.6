@@ -12,12 +12,11 @@ import psutil
 import os
 import json
 from fastapi import HTTPException
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 import psycopg.errors as pg_errors
 import asyncio
 import urllib.parse
 from sqlalchemy.engine.url import make_url
-from sqlalchemy.pool import NullPool
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +118,26 @@ async def check_database_initialized(db: AsyncSession) -> bool:
         logger.warning(f"Error checking database initialization: {str(e)}")
         return False
 
+async def test_database_connection():
+    """Test database connection with detailed error logging"""
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+            logger.info("Database connection test successful")
+            return True
+    except OperationalError as e:
+        logger.error(f"Database connection failed: {str(e)}")
+        if "authentication failed" in str(e).lower():
+            logger.error("Authentication error: Check DATABASE_URL credentials (username/password)")
+        elif "connection refused" in str(e).lower():
+            logger.error("Connection refused: Check host/port or Supabase availability")
+        elif "ssl" in str(e).lower():
+            logger.error("SSL error: Ensure sslmode=require is set correctly")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected database connection error: {str(e)}")
+        return False
+
 database_url = settings.DATABASE_URL
 if not database_url:
     raise ValueError("DATABASE_URL is required in .env file for database connection. Please configure it to connect to Supabase.")
@@ -138,38 +157,39 @@ is_session_mode = port == 5432
 if is_session_mode:
     engine_kwargs = {
         "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_recycle": 3600,  # Increased for stability
         "echo": settings.DEBUG,
-        "pool_size": 10,
-        "max_overflow": 5,
-        "pool_timeout": 300,
-        "pool_reset_on_return": "rollback",
+        "pool_size": 5,  # Reduced for direct connections
+        "max_overflow": 2,
+        "pool_timeout": 600,  # Increased timeout
     }
-    logger.info("Using Supabase session mode (port 5432) - pool_size=10, max_overflow=5, timeout=300s")
+    logger.info("Using Supabase direct session mode (port 5432) - pool_size=5, max_overflow=2, timeout=600s")
 else:
     engine_kwargs = {
         "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_recycle": 3600,
         "echo": settings.DEBUG,
-        "poolclass": NullPool,
+        "pool_size": 5,
+        "max_overflow": 2,
+        "pool_timeout": 600,
     }
-    logger.info("Using Supabase transaction mode (port 6543) - Using NullPool to avoid client-side pooling issues")
+    logger.info("Using Supabase non-session mode - pool_size=5, max_overflow=2, timeout=600s")
 
 connect_args = {
-    "timeout": 300,
-    "command_timeout": 120,
-    "server_settings": {"statement_timeout": "120s", "tcp_keepalives_idle": "60"},
+    "timeout": 600,  # Increased timeout
+    "command_timeout": 300,
+    "server_settings": {"statement_timeout": "300s", "tcp_keepalives_idle": "60"},
     "ssl": "require"  # Enforce SSL for Supabase
 }
 
 exec_options = {}
 if not is_session_mode:
     exec_options["compiled_cache"] = None
-    logger.info("Disabled compiled cache for transaction mode")
+    logger.info("Disabled compiled cache for non-session mode")
 
-if not is_session_mode and 'asyncpg' in driver:
+if 'asyncpg' in driver:
     connect_args["statement_cache_size"] = 0
-    logger.info("Set statement_cache_size=0 for asyncpg in transaction mode")
+    logger.info("Set statement_cache_size=0 for asyncpg")
 
 logger.debug(f"Creating async engine with connect_args: {connect_args} and kwargs: {engine_kwargs}")
 
@@ -185,14 +205,14 @@ AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False,
 sync_driver = driver.replace('asyncpg', 'psycopg')
 sync_database_url = url_obj.set(drivername=sync_driver).render_as_string(hide_password=False)
 sync_connect_args = {
-    "connect_timeout": 300,
+    "connect_timeout": 600,
     "keepalives_idle": 60,
-    "options": "-c statement_timeout=120s",
+    "options": "-c statement_timeout=300s",
     "sslmode": "require"
 }
 if not is_session_mode:
     sync_connect_args["prepare_threshold"] = None
-    logger.info("Disabled prepared statements for sync engine in transaction mode")
+    logger.info("Disabled prepared statements for sync engine in non-session mode")
 
 sync_exec_options = {}
 if not is_session_mode:
@@ -256,7 +276,7 @@ async def safe_database_operation(operation_func, *args, **kwargs):
         logger.error(f"Database operation failed: {e}")
         return None
 
-async def execute_with_retry(operation_func, max_retries: int = 3, *args, **kwargs):
+async def execute_with_retry(operation_func, max_retries: int = 5, *args, **kwargs):
     last_exception = None
     for attempt in range(max_retries + 1):
         try:
@@ -369,7 +389,7 @@ async def create_tables():
     except ProgrammingError as e:
         if isinstance(e.orig, (pg_errors.DuplicateTable, pg_errors.DuplicateObject)):
             logger.warning(f"Some tables or indexes already exist, skipping creation: {str(e)}")
-        else
+        else:
             logger.error(f"Unexpected database error during table creation: {str(e)}")
             raise
     except Exception as e:
