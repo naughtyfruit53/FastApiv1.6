@@ -2,7 +2,8 @@
 
 import logging
 import os
-from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRoute
@@ -13,6 +14,7 @@ from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
 import concurrent.futures
 from app.models import Organization
+from app.services.rbac import RBACService
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,8 @@ app = FastAPI(
     title=config_settings.PROJECT_NAME,
     version=config_settings.VERSION,
     description=config_settings.DESCRIPTION,
-    openapi_url="/api/v1/openapi.json"
+    openapi_url="/api/v1/openapi.json",
+    lifespan=lifespan
 )
 
 # Set up CORS
@@ -250,51 +253,35 @@ async def init_org_roles():
             logger.error(f"Error initializing organization roles: {str(e)}")
             await db.rollback()
 
-# Include routers and mounts on startup
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application: log CORS config, setup database, and seed super admin"""
-    logger.info("Starting up TritIQ Business Suite API...")
-    try:
-        await create_tables()
-        logger.info("Database tables created successfully")
-        from app.core.seed_super_admin import check_database_schema_updated
-        async with AsyncSessionLocal() as db:
-            if await check_database_schema_updated(db):
-                await seed_super_admin(db)
-                logger.info("Super admin seeding completed")
-            else:
-                logger.warning("Database schema is not updated. Run 'alembic upgrade head' to enable super admin seeding.")
-        include_minimal_routers()
-        # Conditionally mount static directories
-        if os.path.exists("app/static"):
-            app.mount("/static", StaticFiles(directory="app/static"), name="static")
-            logger.info("Mounted /static directory")
-        if os.path.exists("Uploads"):
-            app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
-            logger.info("Mounted /Uploads directory")
-        
-        # Initialize default permissions and org roles
-        await init_default_permissions()
-        await init_org_roles()
-        
-    except Exception as e:
-        logger.error(f"Failed to initialize application: {e}")
-        raise
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    await create_tables()
+    logger.info("Database tables created successfully")
+    from app.core.seed_super_admin import check_database_schema_updated
+    async with AsyncSessionLocal() as db:
+        if await check_database_schema_updated(db):
+            await seed_super_admin(db)
+            logger.info("Super admin seeding completed")
+        else:
+            logger.warning("Database schema is not updated. Run 'alembic upgrade head' to enable super admin seeding.")
+    include_minimal_routers()
+    # Conditionally mount static directories
+    if os.path.exists("app/static"):
+        app.mount("/static", StaticFiles(directory="app/static"), name="static")
+        logger.info("Mounted /static directory")
+    if os.path.exists("Uploads"):
+        app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
+        logger.info("Mounted /Uploads directory")
+    
+    # Initialize default permissions and org roles
+    await init_default_permissions()
+    await init_org_roles()
+    
+    yield
+    # Shutdown
 
-    logger.info("=" * 50)
-    logger.info("Registered Routes (for debugging):")
-    critical_routes = ["/api/v1/erp/bank-accounts", "/api/v1/chart-of-accounts", "/api/v1/reports/sales-report", "/api/v1/reports/dashboard-stats"]
-    for route in app.routes:
-        if isinstance(route, APIRoute):
-            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            route_path = route.path
-            logger.info(f"{methods} {route_path}")
-            if route_path in critical_routes:
-                critical_routes.remove(route_path)
-    if critical_routes:
-        logger.warning(f"Critical routes not registered: {critical_routes}")
-    logger.info("=" * 50)
+app = FastAPI(lifespan=lifespan)
 
 @app.on_event("shutdown")
 async def shutdown_event():

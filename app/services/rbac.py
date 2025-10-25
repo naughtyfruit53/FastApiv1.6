@@ -5,7 +5,7 @@ RBAC service layer for Service CRM role-based access control
 """
 
 from typing import List, Optional, Dict, Set
-from sqlalchemy import select, and_, or_, func
+from sqlalchemy import select, and_, or_, func, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status, Depends
@@ -493,18 +493,36 @@ class RBACService:
             ("crm_commission_delete", "Delete Commissions", "Delete commissions", "crm_commission", "delete"),
         ]
         
+        # Batch check existing permissions
+        stmt = select(ServicePermission.name).where(
+            ServicePermission.name.in_([name for name, _, _, _, _ in default_permissions]),
+            ServicePermission.is_active == True
+        )
+        result = await self.db.execute(stmt)
+        existing_names = set(result.scalars().all())
+        
         created_permissions = []
+        to_create = []
+        
         for name, display_name, description, module, action in default_permissions:
-            existing = await self.get_permission_by_name(name)
-            if not existing:
-                permission = ServicePermissionCreate(
-                    name=name,
-                    display_name=display_name,
-                    description=description,
-                    module=module,
-                    action=action
-                )
-                created_permissions.append(await self.create_permission(permission))
+            if name not in existing_names:
+                to_create.append({
+                    "name": name,
+                    "display_name": display_name,
+                    "description": description,
+                    "module": module,
+                    "action": action,
+                    "is_active": True
+                })
+        
+        if to_create:
+            insert_stmt = insert(ServicePermission).values(to_create)
+            result = await self.db.execute(insert_stmt.returning(ServicePermission))
+            created_permissions = result.scalars().all()
+            await self.db.commit()
+            
+            for perm in created_permissions:
+                logger.info(f"Created service permission: {perm.name}")
         
         return created_permissions
     
@@ -583,14 +601,17 @@ class RBACService:
             }
         ]
         
+        # Batch check existing roles
+        stmt = select(ServiceRole.name).filter_by(
+            organization_id=organization_id
+        ).where(ServiceRole.name.in_([r["name"] for r in default_roles]))
+        result = await self.db.execute(stmt)
+        existing_names = set(result.scalars().all())
+        
         created_roles = []
+        
         for role_data in default_roles:
-            existing_result = await self.db.execute(
-                select(ServiceRole).filter_by(organization_id=organization_id, name=role_data["name"])
-            )
-            existing = existing_result.scalars().first()
-            
-            if not existing:
+            if role_data["name"] not in existing_names:
                 permission_ids = [permission_map[p] for p in role_data["permissions"] if p in permission_map]
                 
                 role_create = ServiceRoleCreate(

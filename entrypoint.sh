@@ -33,6 +33,28 @@ log_memory_usage() {
     fi
 }
 
+# Wait for database to be ready
+if [ -n "$DATABASE_URL" ]; then
+    echo "Waiting for database to be ready..."
+    host=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@([^:]+):[0-9]+\/.+$/\1/')
+    port=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@[^:]+:([0-9]+)\/.+$/\1/')
+    
+    # Use pg_isready if available
+    if command -v pg_isready >/dev/null 2>&1; then
+        until pg_isready -h $host -p $port -t 1; do
+            sleep 1
+        done
+    else
+        # Fallback to netcat
+        until nc -z $host $port; do
+            sleep 1
+        done
+    fi
+    echo "Database is ready"
+else
+    echo "DATABASE_URL not set, skipping database wait"
+fi
+
 # Run Alembic migrations only if needed
 log_memory_usage "Before migrations"
 if [ -n "$DATABASE_URL" ]; then
