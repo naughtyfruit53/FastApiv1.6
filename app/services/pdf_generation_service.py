@@ -156,8 +156,10 @@ class VoucherPDFGenerator:
         
         wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
         if not os.path.exists(wkhtmltopdf_path):
-            raise FileNotFoundError(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Please install it and set WKHTMLTOPDF_PATH in .env.")
-        self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+            logger.warning(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Skipping PDF generation initialization.")
+            self.pdfkit_config = None
+        else:
+            self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
     
     def _add_custom_filters(self):
         """Add custom Jinja2 filters"""

@@ -111,7 +111,7 @@ class Settings:
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
-    WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf" if platform.system() != 'Windows' else r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe")
+    WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf")
     
     FASTGST_API_URL: str = os.getenv("FASTGST_API_URL", "https://api.fastgst.in")
     
