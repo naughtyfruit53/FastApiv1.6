@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN python -m pip install --upgrade pip wheel setuptools 'cython<3' \
+ && pip install --no-build-isolation pyyaml==6.0.1 \
  && pip wheel --wheel-dir /wheels -r requirements.txt
 
 # ---------- runtime ----------
