@@ -15,6 +15,7 @@ from app.db.session import SessionLocal
 import concurrent.futures
 from app.models import Organization
 from app.services.rbac import RBACService
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ async def init_default_permissions():
 # Initialize roles and assign to org_admins for existing organizations asynchronously
 async def init_org_roles():
     from app.services.rbac import RBACService  # Lazy import to avoid circular import
+    from app.models.user_models import User, UserServiceRole, ServiceRole
     async with AsyncSessionLocal() as db:
         try:
             rbac = RBACService(db)

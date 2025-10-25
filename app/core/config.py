@@ -106,7 +106,7 @@ class Settings:
     UPLOAD_FOLDER: str = os.getenv("UPLOAD_FOLDER", "uploads")
     MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "5242880"))  # 5MB to match pdf_extraction.py
     
-    BACKEND_CORS_ORIGINS: List[str] = assemble_cors_origins(os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8000,http://127.0.0.1:8080"))
+    BACKEND_CORS_ORIGINS: List[str] = assemble_cors_origins(os.getenv("BACKEND_CORS_ORIGINS", "https://tritiqbusinesssuite.vercel.app,https://naughtyfruit.in,http://localhost:3000,http://127.0.0.1:3000"))
     
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"

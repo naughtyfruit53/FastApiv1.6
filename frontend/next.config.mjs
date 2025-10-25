@@ -7,10 +7,8 @@ const nextConfig = {
     reactCompiler: false,
   },
   env: {
-    NEXT_PUBLIC_API_URL:
-      process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000",
-    NEXT_PUBLIC_ENABLE_PASSWORD_CHANGE:
-      process.env.NEXT_PUBLIC_ENABLE_PASSWORD_CHANGE || "true",
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://fastapiv16-production.up.railway.app",
+    NEXT_PUBLIC_SNAPPYMAIL_URL: process.env.NEXT_PUBLIC_SNAPPYMAIL_URL || "http://localhost:8888",
   },
   transpilePackages: ["@mui/x-data-grid"],
   allowedDevOrigins: ["127.0.0.1", "localhost"],
@@ -30,14 +28,14 @@ const nextConfig = {
   },
 
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://fastapiv16-production.up.railway.app";
     return [
       {
-        source: "/api/customers",
+        source: '/api/customers',
         destination: `${apiUrl}/api/v1/customers`, // Explicitly map to /api/v1/customers
       },
       {
-        source: "/api/:path*",
+        source: '/api/:path*',
         destination: `${apiUrl}/api/:path*`, // General rewrite for other API routes
       },
     ];
