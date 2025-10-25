@@ -33,24 +33,35 @@ log_memory_usage() {
     fi
 }
 
-# Wait for database to be ready
+# Wait for database to be ready with retry
 if [ -n "$DATABASE_URL" ]; then
     echo "Waiting for database to be ready..."
     host=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@([^:]+):[0-9]+\/.+$/\1/')
     port=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@[^:]+:([0-9]+)\/.+$/\1/')
     
-    # Use pg_isready if available
-    if command -v pg_isready >/dev/null 2>&1; then
-        until pg_isready -h $host -p $port -t 1; do
-            sleep 1
-        done
-    else
-        # Fallback to netcat
-        until nc -z $host $port; do
-            sleep 1
-        done
+    retries=10
+    count=0
+    while [ $count -lt $retries ]; do
+        if command -v pg_isready >/dev/null 2>&1; then
+            if pg_isready -h $host -p $port -t 1; then
+                echo "Database is ready"
+                break
+            fi
+        else
+            if nc -z $host $port; then
+                echo "Database is ready"
+                break
+            fi
+        fi
+        count=$((count + 1))
+        sleep 5
+        echo "Retry $count/$retries..."
+    done
+    
+    if [ $count -eq $retries ]; then
+        echo "Database connection timeout after $retries retries"
+        exit 1
     fi
-    echo "Database is ready"
 else
     echo "DATABASE_URL not set, skipping database wait"
 fi

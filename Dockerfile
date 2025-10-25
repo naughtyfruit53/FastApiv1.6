@@ -40,7 +40,7 @@ RUN mkdir -p /app/uploads \
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=10000 \
-    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=60 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload" \
+    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=120 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload" \
     ENABLE_EXTENDED_ROUTERS=false \
     ENABLE_AI_ANALYTICS=false
 

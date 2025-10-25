@@ -1,5 +1,3 @@
-# app/services/rbac.py
-
 """
 RBAC service layer for Service CRM role-based access control
 """
@@ -8,7 +6,7 @@ from typing import List, Optional, Dict, Set
 from sqlalchemy import select, and_, or_, func, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status
 
 from app.models import (
     User, ServiceRole, ServicePermission, ServiceRolePermission, 
@@ -19,7 +17,6 @@ from app.schemas.rbac import (
     UserServiceRoleCreate, ServiceRoleType, ServiceModule, ServiceAction
 )
 from app.core.permissions import Permission
-from app.api.v1.auth import get_current_active_user
 from app.core.database import get_db
 import logging
 
@@ -724,33 +721,3 @@ class RBACService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied: Missing permission '{permission_name}' for this company"
             )
-
-def require_permission(permission: str):
-    """Dependency to check if current user has a specific permission"""
-    async def dependency(current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
-        rbac = RBACService(db)
-        if not await rbac.user_has_service_permission(current_user.id, permission):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions: {permission} required"
-            )
-        return current_user
-    return dependency
-
-def check_permissions(user: User, required_permissions: List[str]) -> bool:
-    """
-    Check if user has all required permissions
-    """
-    user_permissions = user.permissions or []
-    return all(perm in user_permissions for perm in required_permissions)
-
-class PermissionChecker:
-    def __init__(self, allowed_permissions: List[str]):
-        self.allowed_permissions = allowed_permissions
-
-    async def __call__(self, current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
-        rbac = RBACService(db)
-        for perm in self.allowed_permissions:
-            if await rbac.user_has_service_permission(current_user.id, perm):
-                return current_user
-        raise HTTPException(status_code=403, detail="Insufficient permissions")

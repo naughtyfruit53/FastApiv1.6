@@ -12,7 +12,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.core.database import get_db, SessionLocal
-from app.services.rbac import PermissionChecker
+from app.services.dependencies import PermissionChecker
 from app.services.system_email_service import system_email_service, link_email_to_customer_vendor, auto_link_emails_by_sender
 from app.services.user_email_service import user_email_service
 from app.services.email_sync_worker import email_sync_worker
@@ -1172,7 +1172,7 @@ async def compose_email(
             provider = account.provider if account else "unknown"
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Token refresh failed: {str(e)}. Revoke token with POST /api/v1/email/oauth/revoke/{token_id}, then re-authorize with POST /api/v1/oauth/login/{provider}. If recently changed to production, re-auth to get non-expiring refresh token. If recently recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one."
+                detail=f"Token refresh failed: {str(e)}. Revoke token with POST /api/v1/email/oauth/revoke/{token_id}, then re-authorize with POST /api/v1/oauth/login/{provider}. If recently changed to production, re-auth to get non-expiring refresh token. If issues persist, check Google account permissions at myaccount.google.com/permissions and revoke old access."
             )
         else:
             raise HTTPException(
