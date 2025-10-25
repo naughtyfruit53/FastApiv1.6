@@ -12,7 +12,7 @@ from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
 from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
-from sqlalchemy import select
+from sqlalchemy import select, text  # Added text import
 from sqlalchemy.exc import ProgrammingError
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ async def init_org_roles():
     async with AsyncSessionLocal() as db:
         try:
             # Check if user_service_roles table exists
-            query = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_service_roles')"
+            query = text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_service_roles')")  # Wrapped in text()
             result = await db.execute(query)
             table_exists = result.scalar()
             if not table_exists:
