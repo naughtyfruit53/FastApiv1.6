@@ -66,5 +66,5 @@ fi
 # Log memory before Gunicorn start
 log_memory_usage "Before Gunicorn start"
 
-# Start Gunicorn without -b, relying on GUNICORN_CMD_ARGS
-exec gunicorn $GUNICORN_CMD_ARGS app.main:app
+# Start Gunicorn with bind handled here (expansion works in shell)
+exec gunicorn --bind 0.0.0.0:${PORT:-8000} $GUNICORN_CMD_ARGS app.main:app
