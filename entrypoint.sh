@@ -39,7 +39,7 @@ if [ -n "$DATABASE_URL" ]; then
     host=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@([^:]+):[0-9]+\/.+$/\1/')
     port=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@[^:]+:([0-9]+)\/.+$/\1/')
     
-    retries=10
+    retries=30
     count=0
     while [ $count -lt $retries ]; do
         if command -v pg_isready >/dev/null 2>&1; then
@@ -48,13 +48,11 @@ if [ -n "$DATABASE_URL" ]; then
                 break
             fi
         else
-            if nc -z $host $port; then
-                echo "Database is ready"
-                break
-            fi
+            # Fallback to sleep if no pg_isready
+            echo "pg_isready not available, waiting 10s..."
+            sleep 10
         fi
         count=$((count + 1))
-        sleep 5
         echo "Retry $count/$retries..."
     done
     
